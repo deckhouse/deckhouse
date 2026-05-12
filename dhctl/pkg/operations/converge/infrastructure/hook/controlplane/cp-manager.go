@@ -21,15 +21,27 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
+var ErrControlPlaneIsNotReady = errors.New("control plane is not ready")
+
+var requiredControlPlaneNodeConditions = []string{
+	"EtcdReady",
+	"APIServerReady",
+	"ControllerManagerReady",
+	"SchedulerReady",
+	"CertificatesHealthy",
+}
 
 type ManagerReadinessChecker struct {
 	getter kubernetes.KubeClientProviderWithCtx
@@ -47,52 +59,23 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).RunContext(ctx, func() error {
-		nodes, err := kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{
-			LabelSelector: "node.deckhouse.io/group=master",
-		})
-		if err != nil {
-			log.DebugF("Error while getting nodes count: %v\n", err)
-			return ErrControlPlaneIsNotReady
-		}
+	return retry.NewLoop("Control-plane readiness", 50, 10*time.Second).RunContext(ctx, func() error {
+		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
 
-		cpmPodsList, err := kubeClient.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
-			LabelSelector: "app=d8-control-plane-manager",
-		})
-		if err != nil {
-			log.DebugF("Error while getting control-plane manager pods: %v\n", err)
-			return ErrControlPlaneIsNotReady
-		}
-
-		readyPods := make(map[string]struct{})
-		for _, pod := range cpmPodsList.Items {
-			p := pod
-			ready, err := isPodReady(&p)
-			if err != nil {
-				log.DebugF("Error while getting control-plane manager pod readiness: %v\n", err)
-			}
-			if ready {
-				readyPods[p.Name] = struct{}{}
-			}
-		}
-
-		message := fmt.Sprintf("Pods Ready %v of %v\n", len(readyPods), len(nodes.Items))
-		for _, pod := range cpmPodsList.Items {
-			p := pod
-			condition := "NotReady"
-			if _, ok := readyPods[p.Name]; ok {
-				condition = "Ready"
-			}
-
-			message += fmt.Sprintf("* %s (%s) | %s\n", p.Name, p.Spec.NodeName, condition)
-		}
-
-		if len(readyPods) >= len(nodes.Items) {
-			log.InfoLn(message)
+		// all ControlPlaneNodes are ready
+		if err == nil {
+			log.InfoLn(msg)
 			return nil
 		}
 
-		return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
+		// some ControlPlaneNodes are not ready
+		if msg != "" {
+			return fmt.Errorf("%s", msg)
+		}
+
+		// some other error occurred
+		log.DebugF("Error while checking control-plane nodes readiness: %v\n", err)
+		return ErrControlPlaneIsNotReady
 	})
 }
 
@@ -102,45 +85,138 @@ func (c *ManagerReadinessChecker) IsReady(ctx context.Context, nodeName string) 
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	cpmPodsList, err := kubeClient.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
-		LabelSelector: "app=d8-control-plane-manager",
-		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
-	})
-
+	conditions, err := getControlPlaneNodeConditions(ctx, kubeClient, nodeName)
 	if err != nil {
 		return false, err
 	}
 
-	if len(cpmPodsList.Items) == 0 {
-		return false, fmt.Errorf("Not found control plane manage pod")
-	}
-
-	if len(cpmPodsList.Items) > 1 {
-		return false, fmt.Errorf("Found multiple control plane manager pods for one node")
-	}
-
-	return isPodReady(&cpmPodsList.Items[0])
+	return isControlPlaneNodeReady(conditions), nil
 }
 
 func (c *ManagerReadinessChecker) Name() string {
-	return "Control plane manager readiness"
+	return "Control plane readiness"
 }
 
-func isPodReady(p *corev1.Pod) (bool, error) {
-	podName := p.GetName()
-	phase := p.Status.Phase
-
-	if p.Status.Phase != corev1.PodRunning {
-		return false, fmt.Errorf("Control plane manager pod %s is not running (%s)", podName, phase)
+// checkControlPlaneNodesReady verifies that every master node has a ready ControlPlaneNode.
+// Returns a short readiness summary and an error when at least one required condition is not True.
+func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClient) (string, error) {
+	nodes, err := kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{
+		LabelSelector: "node.deckhouse.io/group=master",
+	})
+	if err != nil {
+		return "", fmt.Errorf("get nodes count: %w", err)
 	}
 
-	for _, status := range p.Status.ContainerStatuses {
-		if status.Name != "control-plane-manager" {
+	readyNodes := 0
+	var msg strings.Builder
+
+	for _, node := range nodes.Items {
+		conditions, err := getControlPlaneNodeConditions(ctx, kubeClient, node.Name)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				log.DebugF("Error while getting control-plane node %s readiness: %v\n", node.Name, err)
+			}
+			appendControlPlaneNodeReadinessMessage(&msg, node.Name, nil, err)
 			continue
 		}
 
-		return status.Ready, nil
+		if isControlPlaneNodeReady(conditions) {
+			readyNodes++
+		}
+
+		appendControlPlaneNodeReadinessMessage(&msg, node.Name, conditions, nil)
 	}
 
-	return false, fmt.Errorf("Not found control-plane-manager container in pod %s", podName)
+	header := fmt.Sprintf("ControlPlaneNodes Ready %v of %v", readyNodes, len(nodes.Items))
+	if msg.Len() > 0 {
+		header = fmt.Sprintf("%s\n%s", header, msg.String())
+	}
+
+	if readyNodes >= len(nodes.Items) {
+		return header, nil
+	}
+
+	return header, ErrControlPlaneIsNotReady
+}
+
+// isControlPlaneNodeReady checks if all required ControlPlaneNode conditions are True.
+func isControlPlaneNodeReady(conditions []metav1.Condition) bool {
+	conditionsByType := controlPlaneNodeConditionsByType(conditions)
+	for _, conditionType := range requiredControlPlaneNodeConditions {
+		condition, ok := conditionsByType[conditionType]
+		if !ok || condition.Status != metav1.ConditionTrue {
+			return false
+		}
+	}
+
+	return true
+}
+
+// getControlPlaneNodeConditions retrieves a ControlPlaneNode by node name and returns its status conditions.
+func getControlPlaneNodeConditions(ctx context.Context, kubeClient client.KubeClient, nodeName string) ([]metav1.Condition, error) {
+	cpn, err := kubeClient.Dynamic().Resource(schema.GroupVersionResource{
+		Group:    "control-plane.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "controlplanenodes",
+	}).Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("get ControlPlaneNode %s: %w", nodeName, err)
+	}
+
+	return controlPlaneNodeConditions(cpn)
+}
+
+// controlPlaneNodeConditions converts unstructured ControlPlaneNode status.conditions to metav1.Condition.
+func controlPlaneNodeConditions(cpn *unstructured.Unstructured) ([]metav1.Condition, error) {
+	type controlPlaneNodeStatus struct {
+		Conditions []metav1.Condition `json:"conditions"`
+	}
+
+	type controlPlaneNode struct {
+		Status controlPlaneNodeStatus `json:"status"`
+	}
+
+	var obj controlPlaneNode
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(cpn.Object, &obj); err != nil {
+		return nil, fmt.Errorf("convert ControlPlaneNode status: %w", err)
+	}
+
+	return obj.Status.Conditions, nil
+}
+
+// appendControlPlaneNodeReadinessMessage appends one diagnostic line for a ControlPlaneNode.
+func appendControlPlaneNodeReadinessMessage(msg *strings.Builder, nodeName string, conditions []metav1.Condition, err error) {
+	if msg.Len() > 0 {
+		msg.WriteString("\n")
+	}
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			fmt.Fprintf(msg, "* %s: ControlPlaneNode not found", nodeName)
+			return
+		}
+
+		fmt.Fprintf(msg, "* %s: %v", nodeName, err)
+		return
+	}
+
+	conditionsByType := controlPlaneNodeConditionsByType(conditions)
+	readyConditionTypes := make([]string, 0, len(requiredControlPlaneNodeConditions))
+	for _, conditionType := range requiredControlPlaneNodeConditions {
+		condition, ok := conditionsByType[conditionType]
+		if ok && condition.Status == metav1.ConditionTrue {
+			readyConditionTypes = append(readyConditionTypes, condition.Type)
+		}
+	}
+
+	fmt.Fprintf(msg, "* %s: | %s", nodeName, strings.Join(readyConditionTypes, ", "))
+}
+
+func controlPlaneNodeConditionsByType(conditions []metav1.Condition) map[string]metav1.Condition {
+	result := make(map[string]metav1.Condition, len(conditions))
+	for _, condition := range conditions {
+		result[condition.Type] = condition
+	}
+
+	return result
 }

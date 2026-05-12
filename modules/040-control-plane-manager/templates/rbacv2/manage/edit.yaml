@@ -32,3 +32,22 @@ rules:
   - update
   - patch
   - delete
+- apiGroups:
+  - control-plane.deckhouse.io
+  resources:
+  - controlplanenodes
+  - controlplaneoperations
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - control-plane.deckhouse.io
+  resources:
+  - controlplanenodes/status
+  - controlplaneoperations/status
+  verbs:
+  - update
+  - patch

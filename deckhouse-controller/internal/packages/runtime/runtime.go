@@ -63,7 +63,7 @@ import (
 const (
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	kubernetesVersionValue  = "kubernetesVersion"
-	deckhouseVersionValue   = "version"
+	deckhouseVersionValue   = "deckhouseVersion"
 
 	runtimeTracer = "package-runtime"
 )
@@ -399,6 +399,10 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		version, ok := value.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid deckhouse version")
+		}
+
+		if version == "dev" {
+			version = "v2.0.0"
 		}
 
 		return semver.NewVersion(version)

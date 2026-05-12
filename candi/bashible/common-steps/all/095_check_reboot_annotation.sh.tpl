@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{ if eq .runType "Normal" }}
 REBOOT_ANNOTATION="$( bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
 
 if [[ $REBOOT_ANNOTATION != "null" ]]
@@ -44,3 +45,4 @@ if [[ $REBOOT_ANNOTATION != "null" ]]
         attempts=$(( attempts - 1 ))
     done
 fi
+{{- end }}

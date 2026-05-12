@@ -183,6 +183,20 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
+	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
+	if err != nil {
+		return fmt.Errorf("read discovered node name: %w", err)
+	}
+
+	discoveredNodeIP, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
+	if err != nil {
+		return fmt.Errorf("read discovered node IP: %w", err)
+	}
+
+	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, dc); err != nil {
+		return err
+	}
+
 	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
@@ -247,6 +261,84 @@ func PrepareBashibleBundle(
 	return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible", func(ctx context.Context) error {
 		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, dc)
 	})
+}
+
+// PrepareControlPlaneArtifacts renders the PKI bundle, kubeconfig files and
+// control-plane static-pod manifests into the local template tmp dir for the
+// node identified by (nodeName, nodeIP).
+func PrepareControlPlaneArtifacts(
+	nodeName, nodeIP string,
+	metaConfig *config.MetaConfig,
+	controller *template.Controller,
+	dc *directoryconfig.DirectoryConfig,
+) error {
+	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
+		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
+
+		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		if err != nil {
+			return fmt.Errorf("get control-plane template data: %w", err)
+		}
+
+		// For first-master bootstrap we use the node IP itself as the
+		// control-plane endpoint that goes into the apiserver SAN list.
+		// Multi-master installations re-issue certificates later via
+		// control-plane-manager once additional master endpoints are known.
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+			return fmt.Errorf("prepare PKI: %w", err)
+		}
+
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+			return fmt.Errorf("prepare control plane manifests: %w", err)
+		}
+
+		return nil
+	})
+}
+
+func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
+	cmd := nodeInterface.Command("cat", path)
+	cmd.Sudo(ctx)
+	cmd.WithTimeout(10 * time.Second)
+
+	stdout, stderr, err := cmd.Output(ctx)
+	if err != nil {
+		return "", fmt.Errorf("read remote file %s: %w; stderr: %s", path, err, string(stderr))
+	}
+
+	output := string(stdout)
+	// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
+	// strip everything up to and including the last occurrence so we keep only
+	// the actual file payload. For non-sudo paths the marker is absent and
+	// output stays untouched.
+	if idx := strings.LastIndex(output, "SUDO-SUCCESS"); idx >= 0 {
+		output = output[idx+len("SUDO-SUCCESS"):]
+	}
+
+	return strings.TrimSpace(output), nil
+}
+
+// readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
+func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
+	const (
+		attempts = 5
+		wait     = 3 * time.Second
+	)
+
+	var value string
+	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
+		RunContext(ctx, func() error {
+			v, err := readRemoteFile(ctx, nodeInterface, path)
+			if err != nil {
+				return err
+			}
+			value = v
+			return nil
+		})
+	if err != nil {
+		return "", err
+	}
+	return value, nil
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
