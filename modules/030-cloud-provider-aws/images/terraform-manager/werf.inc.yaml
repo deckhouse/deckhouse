@@ -40,7 +40,7 @@ shell:
 ---
 image: terraform-provider-aws
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -52,8 +52,6 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - apk add --no-cache make bash
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
