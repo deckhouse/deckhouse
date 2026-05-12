@@ -71,6 +71,9 @@ func updateControlPlane(_ context.Context, input *go_hook.HookInput) error {
 			"initialized":                 true,
 			"ready":                       true,
 			"externalManagedControlPlane": true,
+			"initialization": map[string]interface{}{
+				"controlPlaneInitialized": true,
+			},
 		},
 	}
 	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.Snapshots.Get("control_plane")) {
