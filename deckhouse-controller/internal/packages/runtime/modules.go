@@ -31,6 +31,7 @@ import (
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -74,7 +75,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 		return
 	}
 
-	r.status.ClearRuntimeConditions(name)
+	r.status.ClearStatus(name)
 
 	tasks := []queue.Task{
 		taskdeploy.NewModuleTask(name, version, repo, r.moduleDeployer, r.status, r.logger),
@@ -83,7 +84,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 
 	// If there's an existing module, disable it first
 	if pkg := r.modules[name]; pkg != nil {
-		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, modulesNamespace, true, r.nelmService, r.queueService, r.status, r.logger))
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, modulesNamespace, true, r.nelmService, r.queueService, r.logger))
 	}
 
 	for _, task := range tasks {
@@ -104,7 +105,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	conf, err := loader.LoadModuleConf(ctx, packagePath, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
+		return "", status.NewError("LoadFailed", err)
 	}
 
 	conf.Repository = repo
@@ -116,7 +117,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
+		return "", status.NewError("LoadFailed", err)
 	}
 
 	r.mu.Lock()
@@ -143,7 +144,7 @@ func (r *Runtime) RemoveModule(name string) {
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {
@@ -153,7 +154,7 @@ func (r *Runtime) RemoveModule(name string) {
 
 			if r.packages.Delete(name) {
 				r.queueService.Remove(name)
-				r.status.Delete(name)
+				r.status.DeleteStatus(name)
 				delete(r.modules, name)
 			}
 		}()

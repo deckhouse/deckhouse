@@ -43,6 +43,14 @@ const (
 	templatesDir = "templates"  // Helm templates directory
 )
 
+const (
+	conditionReasonRenderFailed           status.ConditionReason = "RenderFailed"
+	conditionReasonCheckTemplatesFailed   status.ConditionReason = "CheckTemplatesFailed"
+	conditionReasonCreateValuesFileFailed status.ConditionReason = "CreateValuesFileFailed"
+	conditionReasonCheckReleaseFailed     status.ConditionReason = "CheckReleaseFailed"
+	conditionReasonApplyManifestsFailed   status.ConditionReason = "ApplyManifestsFailed"
+)
+
 var ErrPackageNotHelm = errors.New("package not helm")
 
 // Package provides access to package data needed for Helm operations.
@@ -203,7 +211,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	isHelm, err := s.isHelmChart(pkg.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckChartError(err)
+		return status.NewError(conditionReasonCheckTemplatesFailed, err)
 	}
 
 	if !isHelm {
@@ -213,7 +221,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateValuesError(err)
+		return status.NewError(conditionReasonCreateValuesFileFailed, err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
@@ -230,7 +238,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newRenderError(err)
+		return status.NewError(conditionReasonRenderFailed, err)
 	}
 
 	// Calculate checksum to detect changes in rendered manifests
@@ -240,7 +248,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, namespace, pkg.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckReleaseError(err)
+		return status.NewError(conditionReasonCheckReleaseFailed, err)
 	}
 
 	if !shouldUpgrade {
@@ -262,7 +270,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newInstallChartError(err)
+		return status.NewError(conditionReasonApplyManifestsFailed, err)
 	}
 
 	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)

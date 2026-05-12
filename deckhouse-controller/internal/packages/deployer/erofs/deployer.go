@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -45,6 +46,19 @@ const (
 	deployedDir = "deployed"
 	// loggerName is the logger scope for erofs deployment.
 	loggerName = "erofs-deployer"
+)
+
+const (
+	conditionReasonCreatePackageDirFailed status.ConditionReason = "CreatePackageDirFailed"
+	conditionReasonGetRootHashFailed      status.ConditionReason = "GetRootHashFailed"
+	conditionReasonGetImageReaderFailed   status.ConditionReason = "GetImageReaderFailed"
+	conditionReasonImageByTarFailed       status.ConditionReason = "ImageByTarFailed"
+
+	conditionReasonUnmountFailed            status.ConditionReason = "UnmountFailed"
+	conditionReasonCloseDeviceMapperFailed  status.ConditionReason = "CloseDeviceMapperFailed"
+	conditionReasonComputeHashFailed        status.ConditionReason = "ComputeHashFailed"
+	conditionReasonCreateDeviceMapperFailed status.ConditionReason = "CreateDeviceMapperFailed"
+	conditionReasonMountFailed              status.ConditionReason = "MountFailed"
 )
 
 // Deployer handles package lifecycle using erofs images with dm-verity integrity.
@@ -339,13 +353,13 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	imagePath := packageImagePath(packageDir, version)
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(conditionReasonCreatePackageDirFailed, err)
 	}
 
 	rootHash, err := d.registry.GetImageRootHash(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newGetRootHashErr(err)
+		return status.NewError(conditionReasonGetRootHashFailed, err)
 	}
 
 	// skip download if image exists and passes integrity check
@@ -361,13 +375,13 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 
 	if err = cleanupTempImageFiles(packageDir, version); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newImageByTarErr(err)
+		return status.NewError(conditionReasonImageByTarFailed, err)
 	}
 
 	tempImagePath, err := createTempImagePath(packageDir, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(conditionReasonCreatePackageDirFailed, err)
 	}
 
 	cleanupTemp := true
@@ -381,26 +395,26 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	img, err := d.registry.GetImageReader(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newGetImageReaderErr(err)
+		return status.NewError(conditionReasonGetImageReaderFailed, err)
 	}
 	defer img.Close()
 
 	logger.Debug("create erofs image by package image", slog.String("path", tempImagePath))
 	if err = verity.CreateImageByTar(ctx, img, tempImagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newImageByTarErr(err)
+		return status.NewError(conditionReasonImageByTarFailed, err)
 	}
 
 	if err = d.verifyImage(ctx, tempImagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newImageByTarErr(err)
+		return status.NewError(conditionReasonImageByTarFailed, err)
 	}
 
 	_ = os.Remove(verityPath(tempImagePath))
 
 	if err = os.Rename(tempImagePath, imagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newImageByTarErr(err)
+		return status.NewError(conditionReasonImageByTarFailed, err)
 	}
 
 	cleanupTemp = false
@@ -502,33 +516,33 @@ func (d *Deployer) mount(ctx context.Context, packageDir, deployed, name, versio
 	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newComputeHashErr(err)
+		return status.NewError(conditionReasonComputeHashFailed, err)
 	}
 
 	// cleanup any existing mount before deploying new version
 	logger.Debug("unmount old erofs image", slog.String("path", deployed))
 	if err = verity.Unmount(ctx, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newUnmountErr(err)
+		return status.NewError(conditionReasonUnmountFailed, err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err = verity.CloseMapper(ctx, name); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCloseDeviceMapperErr(err)
+		return status.NewError(conditionReasonCloseDeviceMapperFailed, err)
 	}
 
 	// setup dm-verity device mapper with root hash for runtime integrity checks
 	logger.Debug("create device mapper", slog.String("path", deployed))
 	if err = verity.CreateMapper(ctx, name, imagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateDeviceMapperErr(err)
+		return status.NewError(conditionReasonCreateDeviceMapperFailed, err)
 	}
 
 	logger.Debug("mount erofs image mapper", slog.String("path", deployed))
 	if err = verity.Mount(ctx, name, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newMountErr(err)
+		return status.NewError(conditionReasonMountFailed, err)
 	}
 
 	return nil
