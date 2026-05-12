@@ -34,7 +34,7 @@ description: "Балансировка и терминация трафика HT
 - Proxy Protocol: поддерживается организация приема Proxy Protocol-трафика засчет использования [соответствующих инлетов](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet);
 - SSL Passthrough: поддерживается сквозная маршрутизация SSL-трафика засчет использования [соответствующих инлетов](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet).
 
-На данный момент в нашей реализации `ingress-nginx` не поддерживается маршрутизация TCP/UDP трафика (функционал `tcp-services/udp-services`). Для маршрутизации TCP/UDP трафика предлагается применять нативное решение Kubernetes [NodePort Service](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) или рассмотреть использование [модуля `alb`](m/modules/alb/) для организации маршрутизации трафика на основе Gateway API (доступен к использованию начиная с версии DKP 1.76).
+На данный момент в нашей реализации `ingress-nginx` не поддерживается маршрутизация TCP/UDP трафика (функционал `tcp-services/udp-services`). Для маршрутизации TCP/UDP трафика предлагается применять нативное решение Kubernetes [NodePort Service](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) или рассмотреть использование модуля [`alb`](/modules/alb/) для организации маршрутизации трафика на основе Gateway API (доступен к использованию начиная с версии DKP 1.76).
 
 ## Использование HTTPS
 
@@ -51,7 +51,7 @@ description: "Балансировка и терминация трафика HT
 
 При использовании TLSv1.3 набор протоколов шифрования определяется библиотекой OpenSSL (версии 3.3.3+).
 
-Также модуль `ingress-nginx` интегрирован с [модулем `cert-manager`](/modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и дальнейшее использование сертификатов Ingress NGINX Controller.
+Также модуль `ingress-nginx` интегрирован с модулем [`cert-manager`](/modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и дальнейшее использование сертификатов Ingress NGINX Controller.
 
 ## Мониторинг и статистика
 
