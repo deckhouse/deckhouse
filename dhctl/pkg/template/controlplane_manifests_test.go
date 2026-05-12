@@ -231,7 +231,7 @@ func testAPIServerConfiguration(t *testing.T) {
 						"failureThreshold: 24",
 					} {
 						if !strings.Contains(manifest, expected) {
-							t.Errorf("Expected kubeadm static pod default %s not found in %s", expected, name)
+							t.Errorf("Expected static pod default %s not found in %s", expected, name)
 						}
 					}
 				}
