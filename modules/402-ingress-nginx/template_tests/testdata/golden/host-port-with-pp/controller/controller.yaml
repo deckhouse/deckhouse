@@ -38,8 +38,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 66cd85a8780f3c2fe95c27b0b1fd277e5cd58e6475247d58ef72fbb1d81c52c2
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/checksum: 0e7af8470f777c7de50382d304f8f5d07dbf7a62701a37a9aaca0221cb68bfc8
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.15"
     ingress-nginx-controller.deckhouse.io/inlet: HostPortWithProxyProtocol
   labels:
     app: controller
@@ -74,6 +74,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --enable-metrics=true
         - --shutdown-grace-period=60
         - --controller-class=ingress-nginx.deckhouse.io/test
         - --enable-annotation-validation=false
@@ -98,7 +99,7 @@ spec:
           value: 127.0.0.1
         - name: LUA_USE_GEOIP2
           value: "true"
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
             exec:

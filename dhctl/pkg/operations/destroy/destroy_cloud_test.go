@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -54,6 +55,7 @@ var (
 )
 
 func TestCloudDestroy(t *testing.T) {
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	defer func() {
 		logger := log.GetDefaultLogger()
 		if err := os.RemoveAll(rootTmpDirCloud); err != nil {
@@ -661,7 +663,7 @@ func (ts *testCloudDestroyTest) assertConvergeLockSetInCache(t *testing.T, locke
 func (ts *testCloudDestroyTest) assertDestroyLocked(t *testing.T, locked bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
-	lockConfig := lock.GetLockLeaseConfig("not necessary")
+	lockConfig := lock.GetLockLeaseConfig("not necessary", "")
 	lockedInCluster, err := lock.IsConvergeLocked(context.TODO(), kubernetes.NewSimpleKubeClientGetter(ts.kubeCl), lockConfig, false)
 	require.NoError(t, err, "is locked should not be error")
 

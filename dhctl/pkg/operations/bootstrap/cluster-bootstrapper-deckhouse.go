@@ -17,7 +17,6 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -25,12 +24,9 @@ import (
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	metaConfig, err := config.ParseConfig(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
@@ -49,8 +45,8 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
-	installConfig.KubeadmBootstrap = app.KubeadmBootstrap
-	installConfig.MasterNodeSelector = app.MasterNodeSelector
+	installConfig.KubeadmBootstrap = b.Options.Bootstrap.KubeadmBootstrap
+	installConfig.MasterNodeSelector = b.Options.Bootstrap.MasterNodeSelector
 
 	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
@@ -60,6 +56,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error { return nil },
 		State:               NewBootstrapState(cache.Global()),
+		DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
 	})
 
 	return err

@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	ConditionReasonRender           status.ConditionReason = "RenderFailed"
-	ConditionReasonCheckChart       status.ConditionReason = "CheckChart"
-	ConditionReasonCreateValuesFile status.ConditionReason = "CreateValuesFile"
-	ConditionReasonCheckRelease     status.ConditionReason = "CheckRelease"
-	ConditionReasonInstallChart     status.ConditionReason = "InstallChart"
+	ConditionReasonRenderFailed           status.ConditionReason = "RenderFailed"
+	ConditionReasonCheckTemplatesFailed   status.ConditionReason = "CheckTemplatesFailed"
+	ConditionReasonCreateValuesFileFailed status.ConditionReason = "CreateValuesFileFailed"
+	ConditionReasonCheckReleaseFailed     status.ConditionReason = "CheckReleaseFailed"
+	ConditionReasonApplyManifestsFailed   status.ConditionReason = "ApplyManifestsFailed"
 )
 
 func newRenderError(err error) error {
@@ -37,7 +37,7 @@ func newRenderError(err error) error {
 			{
 				Type:    status.ConditionHelmApplied,
 				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonRender,
+				Reason:  ConditionReasonRenderFailed,
 				Message: err.Error(),
 			},
 		},
@@ -51,7 +51,7 @@ func newCheckChartError(err error) error {
 			{
 				Type:    status.ConditionHelmApplied,
 				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonCheckChart,
+				Reason:  ConditionReasonCheckTemplatesFailed,
 				Message: err.Error(),
 			},
 		},
@@ -65,7 +65,7 @@ func newCreateValuesError(err error) error {
 			{
 				Type:    status.ConditionHelmApplied,
 				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonCreateValuesFile,
+				Reason:  ConditionReasonCreateValuesFileFailed,
 				Message: err.Error(),
 			},
 		},
@@ -79,7 +79,7 @@ func newCheckReleaseError(err error) error {
 			{
 				Type:    status.ConditionHelmApplied,
 				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonCheckRelease,
+				Reason:  ConditionReasonCheckReleaseFailed,
 				Message: err.Error(),
 			},
 		},
@@ -93,7 +93,7 @@ func newInstallChartError(err error) error {
 			{
 				Type:    status.ConditionHelmApplied,
 				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonInstallChart,
+				Reason:  ConditionReasonApplyManifestsFailed,
 				Message: err.Error(),
 			},
 		},

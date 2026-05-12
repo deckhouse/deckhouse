@@ -27,7 +27,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -133,6 +132,9 @@ type Executor struct {
 	killError error
 
 	timeout time.Duration
+
+	// IsDebug enables verbose stdout/stderr passthrough.
+	IsDebug bool
 }
 
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
@@ -144,6 +146,12 @@ func NewExecutor(sess *Session, cmd *exec.Cmd) *Executor {
 		Session: sess,
 		cmd:     cmd,
 	}
+}
+
+// EnableDebug turns on verbose stdout/stderr passthrough for this executor.
+func (e *Executor) EnableDebug(d bool) *Executor {
+	e.IsDebug = d
+	return e
 }
 
 func (e *Executor) EnableLive() *Executor {
@@ -332,7 +340,7 @@ func (e *Executor) SetupStreamHandlers() error {
 			n, err := stderrReadPipe.Read(buf)
 
 			// TODO logboek
-			if e.Live || app.IsDebug {
+			if e.Live || e.IsDebug {
 				os.Stderr.Write(buf[:n])
 			}
 			if e.StderrBuffer != nil {
@@ -413,7 +421,7 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 		}
 
 		// TODO logboek
-		if app.IsDebug {
+		if e.IsDebug {
 			os.Stdout.Write(buf[:n])
 		}
 		if e.Live {

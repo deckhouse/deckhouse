@@ -24,6 +24,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const testRPPBootstrapServerPort = 4282
+
 func TestClusterUUIDIsPreservedInTemplateContexts(t *testing.T) {
 	const clusterUUID = "ce64db27-f724-4b50-bb86-e4ac57a1d49d"
 
@@ -69,12 +71,12 @@ func TestClusterMasterEndpointAddresses(t *testing.T) {
 			Address:                "10.0.0.1",
 			KubeAPIPort:            6443,
 			RPPServerPort:          4219,
-			RPPBootstrapServerPort: 4300,
+			RPPBootstrapServerPort: testRPPBootstrapServerPort,
 		},
 		{
 			Address:                "10.0.0.2",
 			RPPServerPort:          4219,
-			RPPBootstrapServerPort: 4300,
+			RPPBootstrapServerPort: testRPPBootstrapServerPort,
 		},
 	})
 
@@ -84,7 +86,7 @@ func TestClusterMasterEndpointAddresses(t *testing.T) {
 	if got, want := fmt.Sprint(rppAddresses), "[10.0.0.1:4219 10.0.0.2:4219]"; got != want {
 		t.Fatalf("rppAddresses = %s, want %s", got, want)
 	}
-	if got, want := fmt.Sprint(rppBootstrapAddresses), "[10.0.0.1:4300 10.0.0.2:4300]"; got != want {
+	if got, want := fmt.Sprint(rppBootstrapAddresses), fmt.Sprintf("[10.0.0.1:%d 10.0.0.2:%d]", testRPPBootstrapServerPort, testRPPBootstrapServerPort); got != want {
 		t.Fatalf("rppBootstrapAddresses = %s, want %s", got, want)
 	}
 }
@@ -168,7 +170,7 @@ updateEpoch: "1680009541"
 					"address":                "10.0.0.1",
 					"kubeApiPort":            6443,
 					"rppServerPort":          4219,
-					"rppBootstrapServerPort": 4300,
+					"rppBootstrapServerPort": testRPPBootstrapServerPort,
 				},
 			},
 		},

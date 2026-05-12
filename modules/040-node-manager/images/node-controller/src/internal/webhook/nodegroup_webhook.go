@@ -78,8 +78,8 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		},
 	})
 
-	// Conversion webhook with cluster state access
-	hookServer.Register("/convert", &NodeGroupConversionHandler{
+	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
+	hookServer.Register("/convert", &ConversionHandler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	})
@@ -589,6 +589,7 @@ func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) ([]st
 // getKubernetesEndpointsCount returns the number of kubernetes API server endpoints.
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getKubernetesEndpointsCount(ctx context.Context) (int, error) {
+	//nolint:staticcheck // default kubernetes Endpoints is used for compatibility with current validation logic
 	endpoints := &corev1.Endpoints{}
 	webhookLog.Info("reading Endpoints", "namespace", "default", "name", "kubernetes")
 	err := w.Client.Get(ctx, types.NamespacedName{

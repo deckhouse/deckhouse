@@ -18,6 +18,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -25,7 +26,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -55,7 +55,7 @@ const (
 	// This value should be low enough to minimize the delay between webhook registration
 	// and shell-operator becoming aware of the new hook, but high enough to avoid
 	// unnecessary restarts when multiple webhooks are created in quick succession.
-	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS environment variable.
+	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL environment variable.
 	DefaultShellOperatorReloadInterval = 5 * time.Second
 )
 
@@ -244,72 +244,57 @@ func main() {
 		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
 		log.WithHandlerType(log.TextHandlerType))
 
-	setupLog.Info("starting shell-operator")
-	// synchronous run
-	cmd := exec.Command("./shell-operator")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Start()
-	if err != nil {
-		setupLog.Error(err, "unable to start shell-operator")
-		os.Exit(1)
-	}
-	logger.Info("new shell-operator PID",
-		slog.Int("pid", cmd.Process.Pid),
-	)
 	// non-blocking sync variable to know that we need to reload shell-operator
 	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
 
+	reloadInterval := DefaultShellOperatorReloadInterval
+	if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL"); envInterval != "" {
+		if parsedInterval, err := time.ParseDuration(envInterval); err == nil && parsedInterval > 0 {
+			reloadInterval = parsedInterval
+			logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
+		}
+	}
+
+	var cmd *exec.Cmd
+	processExited := make(chan struct{})
+
+	// go-routine that runs shell-operator and signals when it exited
+	go func() {
+		for {
+			logger.Debug("running shell-operator")
+			cmd = exec.Command("./shell-operator")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			err := cmd.Run()
+			if err != nil {
+				logger.Info("shell-operator exited", slog.String("error", err.Error()))
+			}
+
+			// if exited not by signal
+			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+				isReloadShellNeed.Store(true)
+			}
+
+			processExited <- struct{}{}
+		}
+	}()
+
 	// go-routine that reloads shell-operator periodically when new hooks are registered
 	go func() {
-		reloadInterval := DefaultShellOperatorReloadInterval
-		if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS"); envInterval != "" {
-			if seconds, err := strconv.Atoi(envInterval); err == nil && seconds > 0 {
-				reloadInterval = time.Duration(seconds) * time.Second
-				logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
-			}
-		}
-		ticker := time.NewTicker(reloadInterval)
-
-		for range ticker.C {
+		for range time.Tick(reloadInterval) {
 			if isReloadShellNeed.Load() {
 				logger.Info("restarting shell-operator")
-				isReloadShellNeed.Store(false)
-
-				err := cmd.Process.Signal(syscall.SIGTERM)
-				if err != nil {
-					log.Error("sigterm shell-operator: %w", err)
-				}
 
 				// TODO: what if SIGTERM don't killed shell-operator?
-				// err = cmd.Process.Kill()
-				// if err != nil {
-				// 	log.Error("kill shell-operator: %w", err)
-				// }
-
-				err = cmd.Wait()
-				if err != nil {
-					log.Error("wait shell-operator: %w", err)
+				err := cmd.Process.Signal(syscall.SIGTERM)
+				if err != nil && !errors.Is(err, os.ErrProcessDone) {
+					logger.Error("sigterm shell-operator", slog.String("error", err.Error()), slog.Int("pid", cmd.Process.Pid))
 				}
-				logger.Info("killed shell-operator",
-					slog.Int("pid", cmd.Process.Pid),
-					slog.Bool("exited", cmd.ProcessState.Exited()),
-					slog.Int("exitcode", cmd.ProcessState.ExitCode()),
-				)
 
-				// start new shell-operator
-				cmd = exec.Command("./shell-operator")
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err = cmd.Start()
-				if err != nil {
-					log.Error("start shell-operator: %w", err)
-					isAlive = false
-				}
-				logger.Info("new shell-operator PID",
-					slog.Int("pid", cmd.Process.Pid),
-				)
+				<-processExited // wait for shell-operator to exit
+				isReloadShellNeed.Store(false)
 			}
 		}
 	}()

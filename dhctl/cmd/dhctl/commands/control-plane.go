@@ -20,6 +20,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -29,23 +30,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
-	app.DefineControlPlaneFlags(cmd, false)
+func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineControlPlaneFlags(cmd, &opts.ControlPlane, false)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
-			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -65,7 +66,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		checker := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))
-		ready, err := checker.IsReady(ctx, app.ControlPlaneHostname)
+		ready, err := checker.IsReady(ctx, opts.ControlPlane.Hostname)
 		if err != nil {
 			return fmt.Errorf("Control plane manager is not ready: %s", err)
 		}
@@ -80,23 +81,23 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 	})
 }
 
-func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
-	app.DefineControlPlaneFlags(cmd, true)
+func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineControlPlaneFlags(cmd, &opts.ControlPlane, true)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
-			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -115,11 +116,11 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
-		nodeToHostForChecks := map[string]string{app.ControlPlaneHostname: app.ControlPlaneIP}
+		nodeToHostForChecks := map[string]string{opts.ControlPlane.Hostname: opts.ControlPlane.IP}
 
 		checkers := []hook.NodeChecker{hook.NewKubeNodeReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))}
 
-		if app.ControlPlaneHostname != "" {
+		if opts.ControlPlane.Hostname != "" {
 			checkers = append(checkers, controlplane.NewKubeProxyChecker().WithExternalIPs(nodeToHostForChecks))
 		}
 

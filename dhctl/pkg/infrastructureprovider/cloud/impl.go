@@ -161,6 +161,7 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 				RootDir:          rootDir,
 				TerraformBinPath: infraUtilDestination,
 				ExecutorID:       executorID,
+				IsDebug:          p.isDebug,
 			},
 		}, logger)
 	}
@@ -172,6 +173,7 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 			RootDir:     rootDir,
 			TofuBinPath: infraUtilDestination,
 			ExecutorID:  executorID,
+			IsDebug:     p.isDebug,
 		},
 	}, logger)
 }
@@ -249,6 +251,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 				RootDir:          infraRootDir,
 				TerraformBinPath: infraUtilDestination,
 				ExecutorID:       executorID,
+				IsDebug:          p.isDebug,
 			},
 			Step:           step,
 			VMChangeTester: p.IsVMChange,
@@ -264,6 +267,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 			RootDir:     infraRootDir,
 			TofuBinPath: infraUtilDestination,
 			ExecutorID:  executorID,
+			IsDebug:     p.isDebug,
 		},
 		Step:           step,
 		VMChangeTester: p.IsVMChange,

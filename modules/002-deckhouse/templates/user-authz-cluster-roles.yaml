@@ -11,7 +11,6 @@ rules:
   - deckhouse.io
   resources:
   - deckhousereleases
-  - moduleconfigs
   - moduledocumentations
   - modulepulloverrides
   - modulereleases
@@ -58,3 +57,13 @@ rules:
   - deletecollection
   - patch
   - update
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - deckhouse
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

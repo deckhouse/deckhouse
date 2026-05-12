@@ -222,15 +222,10 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 		pkeys = sshClient.PrivateKeys()
 	}
 
-	becomePass, err := base64.StdEncoding.DecodeString(cred.SudoPasswordEncoded)
-	if err != nil {
-		return err
-	}
-
 	config := session.NewSession(session.Input{
 		User:       cred.User,
 		Port:       strconv.Itoa(cred.SSHPort),
-		BecomePass: string(becomePass),
+		BecomePass: cred.SudoPasswordEncoded,
 	})
 	config.AddAvailableHosts(session.Host{Host: address})
 
@@ -260,12 +255,14 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 	n := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	privateKeyPath := fmt.Sprintf("%s.%d", privateKeyPrefixPathWithoutSuffix, n)
 
-	err = os.WriteFile(privateKeyPath, []byte(cred.PrivateSSHKey), 0o600)
-	if err != nil {
-		return fmt.Errorf("Failed to write private key: %w", err)
-	}
+	if cred.PrivateSSHKey != "" {
+		err = os.WriteFile(privateKeyPath, []byte(cred.PrivateSSHKey), 0o600)
+		if err != nil {
+			return fmt.Errorf("Failed to write private key: %w", err)
+		}
 
-	pkeys = append(pkeys, session.AgentPrivateKey{Key: privateKeyPath})
+		pkeys = append(pkeys, session.AgentPrivateKey{Key: privateKeyPath})
+	}
 	client, err := sshProvider.NewStandaloneClient(ctx, config, pkeys)
 	if err != nil {
 		return fmt.Errorf("Cannot create SSH client: %w", err)

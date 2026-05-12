@@ -24,7 +24,7 @@ import (
 const (
 	ConditionReasonBeforeHelmHooksFailed status.ConditionReason = "BeforeHelmHooksFailed"
 	ConditionReasonAfterHelmHooksFailed  status.ConditionReason = "AfterHelmHooksFailed"
-	ConditionReasonHelmUpgradeFailed     status.ConditionReason = "HelmUpgradeFailed"
+	ConditionReasonApplyManifestsFailed  status.ConditionReason = "ApplyManifestsFailed"
 )
 
 // newHelmUpgradeErr wraps an error when Helm install/upgrade fails.
@@ -36,7 +36,7 @@ func newHelmUpgradeErr(err error) error {
 			{
 				Type:    status.ConditionReadyInCluster,
 				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonHelmUpgradeFailed,
+				Reason:  ConditionReasonApplyManifestsFailed,
 				Message: err.Error(),
 			},
 		},

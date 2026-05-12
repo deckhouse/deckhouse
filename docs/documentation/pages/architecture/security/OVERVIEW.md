@@ -17,8 +17,3 @@ The Security subsystem includes the following modules:
 * [`cert-manager`](/modules/cert-manager/): Manages TLS certificates in the cluster.
 * [`secrets-store-integration`](/modules/secrets-store-integration/): Delivers secrets to Kubernetes applications by integrating secrets, keys, and certificates stored in external secret stores.
 * [`secret-copier`](/modules/secret-copier/): Automatically copies secrets to cluster namespaces.
-
-The following Security subsystem components are currently described in this subsection:
-
-* [Integrity control](integrity-control.html)
-* [Security event auditing](runtime-audit.html)

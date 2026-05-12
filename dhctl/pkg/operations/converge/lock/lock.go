@@ -24,7 +24,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -45,8 +44,8 @@ type InLockRunner struct {
 	unlockConverge func(fullUnlock bool)
 }
 
-func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity string) *InLockRunner {
-	lockConfig := GetLockLeaseConfig(identity)
+func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
+	lockConfig := GetLockLeaseConfig(identity, sshUser)
 	return &InLockRunner{
 		getter:     getter,
 		lockConfig: lockConfig,
@@ -55,9 +54,9 @@ func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity strin
 	}
 }
 
-func NewInLockLocalRunner(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, identity string) *InLockRunner {
+func NewInLockLocalRunner(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
 	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
-	return NewInLockRunner(getter, localIdentity)
+	return NewInLockRunner(getter, localIdentity, sshUser)
 }
 
 func (r *InLockRunner) WithForceLock(f bool) *InLockRunner {
@@ -120,9 +119,9 @@ func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
 }
 
-func LockConverge(ctx context.Context, provider kubernetes.KubeClientProviderWithCtx, identity string) (func(bool), error) {
+func LockConverge(ctx context.Context, provider kubernetes.KubeClientProviderWithCtx, identity, sshUser string) (func(bool), error) {
 	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
-	lockConfig := GetLockLeaseConfig(localIdentity)
+	lockConfig := GetLockLeaseConfig(localIdentity, sshUser)
 	return LockConvergeWithConfig(ctx, provider, lockConfig)
 }
 
@@ -145,13 +144,13 @@ func IsConvergeLocked(ctx context.Context, getter kubernetes.KubeClientProviderW
 	return leaseLock.IsLocked(ctx, checkIsStillLocked)
 }
 
-func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
+func GetLockLeaseConfig(identity, sshUser string) *lease.LeaseLockConfig {
 	additionalInfo := ""
-	if app.SSHUser != "" {
+	if sshUser != "" {
 		info := struct {
 			SSHUser string `json:"ssh_user,omitempty"`
 		}{
-			SSHUser: app.SSHUser,
+			SSHUser: sshUser,
 		}
 
 		infoStr, err := json.Marshal(info)

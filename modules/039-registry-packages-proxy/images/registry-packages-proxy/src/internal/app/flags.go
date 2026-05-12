@@ -24,6 +24,8 @@ import (
 
 var RppSignCheck = "false"
 
+const defaultRPPGetBinaryListenAddress = ":4282"
+
 type Config struct {
 	KubeConfig                string
 	ListenAddress             string
@@ -40,7 +42,7 @@ func InitFlags() (*Config, error) {
 	config := &Config{}
 
 	flag.StringVar(&config.ListenAddress, "listen-address", ":5080", "Listen address for HTTP")
-	flag.StringVar(&config.RPPGetBinaryListenAddress, "rpp-get-binary-listen-address", ":4300", "Listen address for bootstrap rpp-get binary server")
+	flag.StringVar(&config.RPPGetBinaryListenAddress, "rpp-get-binary-listen-address", defaultRPPGetBinaryListenAddress, "Listen address for bootstrap rpp-get binary server")
 	flag.StringVar(&config.KubeConfig, "kubeconfig", "", "Path to kubeconfig")
 	flag.BoolVar(&config.DisableCache, "disable-cache", false, "Disable cache")
 	flag.StringVar(&config.ClusterUUID, "cluster-uuid", "", "Cluster UUID path prefix for bootstrap binary listener")

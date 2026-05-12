@@ -54,8 +54,34 @@ properties:
             type: string
           key:
             type: string
-      publishedAPIKubeconfigGeneratorMasterCA:
-        type: string
+      publishAPI:
+        type: object
+        default: {}
+        properties:
+          publishedAPIKubeconfigGeneratorMasterCA:
+            type: string
+          enabled:
+            type: boolean
+            default: false
+          ingressClass:
+            type: string
+            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+          addKubeconfigGeneratorEntry:
+            type: boolean
+            default: true
+          whitelistSourceRanges:
+            type: array
+            items:
+              type: string
+              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))?$'
+          https:
+            type: object
+            default: {}
+            properties:
+              mode:
+                type: string
+                enum: ["SelfSigned", "Global"]
+                default: "SelfSigned"
       dexTLS:
         type: object
         default: {}

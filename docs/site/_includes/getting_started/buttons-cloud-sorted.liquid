@@ -13,6 +13,9 @@
           {%- if provider.languages %}
             {%- unless provider.languages contains page.lang %}{% continue %}{% endunless %}
           {%- endif %}
+          {%- if include.installer_support == true %}
+            {%- unless provider.installer_support == true %}{% continue %}{% endunless %}
+          {%- endif %}
 
           {%- comment %}Add in array for sorting{% endcomment %}
           {%- assign sort_item = provider.name[page.lang] | append: "|" | append: provider_key %}
@@ -30,14 +33,14 @@
           {%- if provider.wip == true %}
             <a class="button button_default button_card button_disabled">{{ provider.name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
           {%- else %}
-            <a class="button button_default button_card" href="/products/kubernetes-platform/gs/{{ provider_key }}/step2.html">
+            <a class="button button_default button_card" href="/products/kubernetes-platform/gs/{% if include.installer_support == true %}installer/{% endif %}{{ provider_key }}/step2.html">
               {% if provider.iconPath %}<div class="icon"><img src="/{{ provider.iconPath }}" alt="{{ provider.name[page.lang] }} icon"/></div>{% endif %}
               <span class="name">{{ provider.name[page.lang] }}</span>
               {% if provider.extraIcons %}
                 <div class="footer">
                   {%- for extraIcon in provider.extraIcons %}
                     <img src="/{{ extraIcon[1] }}" alt=""/>
-                  {% endfor %}
+                  {%- endfor %}
                 </div>
               {% endif %}
             </a>

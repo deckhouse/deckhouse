@@ -25,6 +25,7 @@ import (
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -34,18 +35,18 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineConfigFlags(cmd)
-	app.DefineBecomeFlags(cmd)
-	app.DefineCacheFlags(cmd)
-	app.DefineDropCacheFlags(cmd)
-	app.DefineResourcesFlags(cmd, false)
-	app.DefineTFResourceManagementTimeout(cmd)
-	app.DefineDeckhouseFlags(cmd)
-	app.DefineDontUsePublicImagesFlags(cmd)
-	app.DefinePostBootstrapScriptFlags(cmd)
-	app.DefinePreflight(cmd)
+func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineConfigFlags(cmd, &opts.Global)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineCacheFlags(cmd, &opts.Cache)
+	app.DefineDropCacheFlags(cmd, &opts.Cache)
+	app.DefineResourcesFlags(cmd, &opts.Bootstrap, false)
+	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
+	app.DefineDeckhouseFlags(cmd, &opts.Bootstrap)
+	app.DefineDontUsePublicImagesFlags(cmd, &opts.Bootstrap)
+	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -72,8 +73,8 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(extLogger.GetLogger())
-		params := app.GetProviderParams(loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -83,13 +84,14 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:                 app.TmpDirName,
+			TmpDir:                 opts.Global.TmpDir,
 			Logger:                 logger,
-			IsDebug:                app.IsDebug,
+			IsDebug:                opts.Global.IsDebug,
 			ResetInitialState:      false,
-			DirectoryConfig:        app.GetDirConfig(),
+			DirectoryConfig:        opts.DirConfig(),
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
+			Options:                opts,
 		})
 		err = bootstraper.Bootstrap(ctx)
 		if err != nil {

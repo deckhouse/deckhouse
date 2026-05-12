@@ -23,6 +23,14 @@ rules:
   - patch
   - delete
   - deletecollection
+# UserOperations are write-only action objects (force-logout, reset 2FA, etc.). Manager creates
+# them on demand; existing operations are immutable, so create-only is enough.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - useroperations
+  verbs:
+  - create
 - apiGroups:
   - deckhouse.io
   resourceNames:

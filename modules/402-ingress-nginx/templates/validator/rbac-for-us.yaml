@@ -4,7 +4,7 @@
   {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
     {{- $controllerVersion := ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
     {{- $validationIsolationMode := ($crd.spec.validationIsolationMode | default "NoIsolation") }}
-    {{- if and (eq $controllerVersion "1.14") (ne $validationIsolationMode "NoIsolation") }}
+    {{- if and (or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15")) (ne $validationIsolationMode "NoIsolation") }}
       {{- $_ := set $validatorFullState "enabled" true }}
     {{- end }}
   {{- end }}

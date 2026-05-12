@@ -31,7 +31,6 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -69,6 +68,11 @@ type MetaConfig struct {
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
 	DownloadCacheDir          string                  `json:"-"`
+
+	// VersionFilePath is the absolute path to the deckhouse version file
+	// embedded in the installer image. Required by LoadInstallerVersion and
+	// DeckhouseInstaller.GetImageTag.
+	VersionFilePath string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -83,7 +87,7 @@ type ClusterMasterEndpoint struct {
 const (
 	defaultClusterMasterAddress                = "127.0.0.1"
 	defaultClusterMasterRPPServerPort          = 5444
-	defaultClusterMasterRPPBootstrapServerPort = 4300
+	defaultClusterMasterRPPBootstrapServerPort = 4282
 )
 
 func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
@@ -768,15 +772,14 @@ func (m *MetaConfig) LoadImagesDigests() error {
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {
-	rawFile, err := os.ReadFile(app.VersionFile)
+	rawFile, err := os.ReadFile(m.VersionFilePath)
 	if err != nil {
-		// TODO param instead of hardcode path
-		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
-		rawFile, err = os.ReadFile(versionFilePath)
+		// fallback to the unpacked deckhouse image location
+		fallbackPath := filepath.Join(m.DownloadRootDir, "deckhouse", "version")
+		rawFile, err = os.ReadFile(fallbackPath)
 		if err != nil {
-			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+			return fmt.Errorf("could not read both %s and %s: %w", m.VersionFilePath, fallbackPath, err)
 		}
-
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

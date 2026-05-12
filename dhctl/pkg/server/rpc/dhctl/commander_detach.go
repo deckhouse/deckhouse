@@ -27,7 +27,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -156,12 +155,12 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -202,7 +201,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 		err = cache.InitWithOptions(
 			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
@@ -252,6 +251,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
+		DownloadDir:      s.params.DownloadDirConfig.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
@@ -266,11 +266,14 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
-		TmpDir:                s.params.TmpDir,
-		Logger:                loggerFor,
-		IsDebug:               s.params.IsDebug,
-		Embedded:              true,
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+			WithUseTfCache(opts.Cache.UseTfCache).
+			WithDebug(s.params.IsDebug),
+		TmpDir:   s.params.TmpDir,
+		Logger:   loggerFor,
+		IsDebug:  s.params.IsDebug,
+		Embedded: true,
+		Options:  opts,
 	})
 
 	detacher := detach.NewDetacher(checker, sshProvider, &detach.Params{
@@ -282,9 +285,10 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 			Template: p.request.DeleteResourcesTemplate,
 			Values:   p.request.DeleteResourcesValues.AsMap(),
 		},
-		OnCheckResult:  onCheckResult,
-		OnPhaseFunc:    func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
-		OnProgressFunc: p.sendProgress,
+		OnCheckResult:    onCheckResult,
+		OnPhaseFunc:      func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc:   p.sendProgress,
+		ResourcesTimeout: opts.Bootstrap.ResourcesTimeout,
 	})
 
 	detachErr := detacher.Detach(ctx)
