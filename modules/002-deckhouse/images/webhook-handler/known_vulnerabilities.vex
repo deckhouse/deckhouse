@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 14,
+  "version": 15,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,68 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду.",
       "timestamp": "2026-04-09T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35469"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/spdystream@v0.4.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/moby/spdystream версии 0.4.0 является транзитивной, поступающей через встроенный бинарь. В корневом go.mod уже используется фикс-версия v0.5.1. Уязвимый функционал spdystream-протокола не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента webhook-handler.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-3219"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pip@25.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал обработки TAR/ZIP polyglot-архивов pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {"@id": "pkg:golang/google.golang.org/grpc@v1.66.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость google.golang.org/grpc версии 1.66.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus, Prometheus v2.55.1). Бинарь promtool в webhook-handler используется только для валидации правил Prometheus и не обрабатывает входящие gRPC-запросы — уязвимый код CWE-285 не входит в исполняемый путь. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus, Prometheus v2.55.1). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus, Prometheus v2.55.1). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил. Бамп требует обновления Prometheus в модуле 300-prometheus.",
+      "timestamp": "2026-04-22T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:00Z",
-  "last_updated": "2026-03-04T12:00:00Z"
+  "last_updated": "2026-04-22T12:00:00Z"
 }
