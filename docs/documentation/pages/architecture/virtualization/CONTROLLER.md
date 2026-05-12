@@ -73,7 +73,7 @@ Virtualization сontroller/API состоит из следующих компо
    
    - запуск подов dvcr-importer и dvcr-uploader для выполнения сценариев импорта и загрузки дисков и образов ВМ в хранилище образов DVCR. [DVCR (или Deckhouse Virtualization Container Registry)](dvcr.html) — специализированный реестр для хранения и кеширования образов ВМ.
 
-   - выполнение операций над виртуальными машинами посредством запросов к сабресурсам API-группы `subresources.virtualization.deckhouse.io`, например, freeze/unfreeze, port-forward и т.д.
+   - выполнение операций над виртуальными машинами посредством запросов к некоторым сабресурсам API-группы `subresources.virtualization.deckhouse.io`, например, `virtualmachines/freeze` и `virtualmachines/unfreeze`.
 
    Компонент содержит следующие контейнеры:
 
