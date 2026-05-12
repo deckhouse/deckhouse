@@ -277,7 +277,7 @@ lang: ru
 
 ![Лимиты](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
 
-![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-podse.png)
+![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-pods.png)
 
 ![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
 
