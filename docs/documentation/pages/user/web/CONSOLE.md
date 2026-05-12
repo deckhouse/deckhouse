@@ -301,7 +301,7 @@ You can also configure resource limits and quotas.
 
 ![Limits](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
 
-![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-podse.png)
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-pods.png)
 
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
 
