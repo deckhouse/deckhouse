@@ -28,26 +28,19 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-{{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
-- id: WERF_SIGN_KEY
-  env: WERF_SIGN_KEY
 - id: TRANSIT_SECRET_ENGINE_PATH
   env: TRANSIT_SECRET_ENGINE_PATH
+- id: SIGN_KEY
+  env: WERF_SIGN_KEY
 - id: VAULT_ROLE
   env: WERF_VAULT_AUTH_ROLE
+{{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
 - id: VAULT_JWT
   env: WERF_VAULT_AUTH_JWT
 {{- else }}
-- id: VAULT_ADDR
-  env: COSIGN_VAULT_ADDRESS
-- id: COSIGN_VAULT_KEY
-  env: COSIGN_VAULT_KEY
-- id: VAULT_ROLE
-  env: COSIGN_AUTH_ROLE
-- id: TRANSIT_SECRET_ENGINE_PATH
-  env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
   env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
 - id: ACTIONS_ID_TOKEN_REQUEST_URL
@@ -74,12 +67,11 @@ shell:
   - export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
   - export VAULT_ROLE="$(cat /run/secrets/VAULT_ROLE)"
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
+  - export SIGN_KEY="$(cat /run/secrets/SIGN_KEY)"
 {{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
-  - export VAULT_KEY="$(cat /run/secrets/WERF_SIGN_KEY)"
   - export VAULT_JWT="$(cat /run/secrets/VAULT_JWT)"
   - export VAULT_AUTH_PATH="fox"
 {{- else }}
-  - export VAULT_KEY="hashivault://$(cat /run/secrets/COSIGN_VAULT_KEY)"
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
   - export VAULT_AUTH_PATH="github"
@@ -108,7 +100,7 @@ shell:
       --registry-password="${REGISTRY_PASSWORD}" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key ${VAULT_KEY} \
+      --key ${SIGN_KEY} \
       --tlog-upload=false \
       -y -d \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
