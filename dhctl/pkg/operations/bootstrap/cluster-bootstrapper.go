@@ -423,10 +423,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
 		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
-
 	} else {
 		ctx, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
 		defer staticPreflightSpan.End()

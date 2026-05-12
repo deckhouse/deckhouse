@@ -84,6 +84,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 		if err != nil {
 			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 

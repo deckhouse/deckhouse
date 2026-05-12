@@ -62,13 +62,13 @@ func Bootstrap(ctx context.Context) error {
 		return fmt.Errorf("failed to initialize trace exporter for %q: %w", traceFileName, err)
 	}
 
-	tracesShutdown, err := initTraces(exporters.Trace)
-	metricsShutdown, err := initMetrics(exporters.Metric)
-	logsShutdown, err := initLogs(exporters.Log)
+	tracesShutdown, _ := initTraces(exporters.Trace)
+	metricsShutdown, _ := initMetrics(exporters.Metric)
+	logsShutdown, _ := initLogs(exporters.Log)
 
-	tomb.RegisterOnShutdown("OTel - traces", func() { tracesShutdown(ctx) })
-	tomb.RegisterOnShutdown("OTel - metrics", func() { metricsShutdown(ctx) })
-	tomb.RegisterOnShutdown("OTel - logs", func() { logsShutdown(ctx) })
+	tomb.RegisterOnShutdown("OTel: traces", func() { tracesShutdown(ctx) })
+	tomb.RegisterOnShutdown("OTel: metrics", func() { metricsShutdown(ctx) })
+	tomb.RegisterOnShutdown("OTel: logs", func() { logsShutdown(ctx) })
 
 	return nil
 }

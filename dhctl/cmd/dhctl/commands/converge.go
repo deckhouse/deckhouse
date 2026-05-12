@@ -90,7 +90,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			Logger:             logger,
 			IsDebug:            opts.Global.IsDebug,
 			DirectoryConfig:    opts.DirConfig(),
-			Options:         opts,
+			Options:            opts,
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
 
@@ -210,6 +210,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
 		logger := log.GetDefaultLogger()
+
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
 			return fmt.Errorf("cannot convert logger to ExternalLogger")
@@ -217,6 +218,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
 
 		params := app.ProviderParams(&opts.Global, loggerProvider)
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
@@ -255,20 +257,24 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			DirectoryConfig:                       opts.DirConfig(),
 			Options:                               opts,
 		})
+
 		cacheIdentity := ""
 		if opts.Kube.InCluster {
 			cacheIdentity = "in-cluster"
 		}
+
 		if sshProviderInitializer != nil {
 			if sshProviderInitializer.CheckHosts() {
 				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 				if err != nil {
 					return err
 				}
+
 				sshClient, err := sshProvider.Client(ctx)
 				if err != nil {
 					return err
 				}
+
 				cacheIdentity = sshClient.Check().String()
 			}
 		}
@@ -284,6 +290,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		if err := converger.ConvergeMigration(ctx); err != nil {
 			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 
