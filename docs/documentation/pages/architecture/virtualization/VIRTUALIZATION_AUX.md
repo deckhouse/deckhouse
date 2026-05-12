@@ -98,7 +98,7 @@ Vm-route-forge взаимодействует со следующими комп
 
 Pre-delete-hook взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver** — удаляет кастомные ресурсы KubeVirt и CDI internal.virtualization.deckhouse.io API Group.
+1. **Kube-apiserver** — удаляет InternalVirtualizationKubeVirt/config и InternalVirtualizationCDI/config через Kubernetes API и ожидает их удаления.
 
 С Virtualization-dra взаимодействуют следующие внешние компоненты:
 
