@@ -82,7 +82,7 @@ Virtualization-audit взаимодействует со следующими к
    - **init-load** — init-контейнер, загружающий модули ядра Linux, необходимые для работы DRA-драйвера;
    - **virtualization-dra** — основной контейнер.
 
-1. **Vm-route-forge** — контроллер, следящий за кастомными ресурсами VirtualMachines из `virtualization.deckhouse.io` API group и обновляющий сетевые маршруты для маршрутизации трафика между ВМ через агентов [CNI Cilium](/modules/cni-cilium/). 
+1. **Vm-route-forge** — контроллер, следящий за кастомными ресурсами VirtualMachines из `virtualization.deckhouse.io` API group и обновляющий сетевые на узле через Linux netlink/eBPF в таблицах маршрутизации, используемых Cilium [CNI Cilium](/modules/cni-cilium/) для маршрутизации трафика между ВМ. . 
 
 1. **Pre-delete-hook** (Job) — задание, удаляющее кастомные ресурсы KubeVirt и CDI `internal.virtualization.deckhouse.io` API Group перед деактивацией модуля [`virtualization`](/modules/virtualization/).
 
