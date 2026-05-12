@@ -20,7 +20,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: ClusterEditor
+    user-authz.deckhouse.io/access-level: ClusterAdmin
   name: d8:user-authz:{{ .Chart.Name }}:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
