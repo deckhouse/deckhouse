@@ -102,24 +102,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			TmpDir:          opts.Global.TmpDir,
 			DirectoryConfig: opts.DirConfig(),
 			Options:         opts,
-		}
-		interactive := input.IsTerminal()
-		if interactive {
-			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
-			if err != nil {
-				return err
-			}
-
-			onUpdateFunc := func(progress phases.Progress) error {
-				phasesChan <- progress
-				return nil
-			}
-			destroyerParams.OnProgressFunc = onUpdateFunc
-
-			defer onComplete()
-		}
-
-		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)
+		})
 		if err != nil {
 			return err
 		}
