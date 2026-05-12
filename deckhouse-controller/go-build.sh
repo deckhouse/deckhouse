@@ -31,6 +31,8 @@ if [ -z "${defaultKubernetesVer}" ]; then
   exit 1
 fi
 
+echo "EE_EDITIONS=${EE_EDITIONS} - eeEditions $eeEditions"
+
 if [ -z "${eeEditions}" ]; then
   echo "EE_EDITIONS is not set"
   exit 1
