@@ -59,7 +59,17 @@ The "Overview" subsection provides key information about the cluster and its com
 
 ### Updates
 
-The "Updates" subsection provides information about available releases.
+The "Updates" subsection contains information about releases.
+
+![Releases](../../images/console/releases.png)
+
+You can also view API information in Swagger format.
+
+![Swagger API](../../images/console/swagger-1.png)
+
+![Swagger API](../../images/console/swagger-2.png)
+
+![Swagger API](../../images/console/swagger-3.png)
 
 ### Modules
 
@@ -298,6 +308,24 @@ You can also configure resource limits and quotas.
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
 
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core.png)
+
+## Access
+
+### “User operations” subsection
+
+Provides an interface for managing users.
+
+![User operations](../../images/console/operation-with-users-1.png)
+
+![User operations](../../images/console/operation-with-users-2.png)
+
+![User operations](../../images/console/operation-with-users-3.png)
+
+![User operations](../../images/console/operation-with-users-4.png)
+
+![User operations](../../images/console/operation-with-users-5.png)
+
+![User operations](../../images/console/operation-with-users-6.png)
 
 ## Network
 
