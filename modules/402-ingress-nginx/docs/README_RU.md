@@ -34,7 +34,7 @@ description: "Балансировка и терминация трафика HT
 - Proxy Protocol: поддерживается организация приема Proxy Protocol-трафика засчет использования [соответствующих инлетов](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet);
 - SSL Passthrough: поддерживается сквозная маршрутизация SSL-трафика засчет использования [соответствующих инлетов](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet).
 
-На данный момент в нашей реализации `ingress-nginx` не поддерживается маршрутизация TCP/UDP трафика (функционал `tcp-services/udp-services`). Для маршрутизации TCP/UDP трафика предлагается применять нативное решение Kubernetes [NodePort Service](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) или рассмотреть использования [модуля `alb`](m/modules/alb/) для организации маршрутизации трафика на основе Gateway API (доступен к использованию начиная с версии DKP 1.76).
+На данный момент в нашей реализации `ingress-nginx` не поддерживается маршрутизация TCP/UDP трафика (функционал `tcp-services/udp-services`). Для маршрутизации TCP/UDP трафика предлагается применять нативное решение Kubernetes [NodePort Service](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) или рассмотреть использование [модуля `alb`](m/modules/alb/) для организации маршрутизации трафика на основе Gateway API (доступен к использованию начиная с версии DKP 1.76).
 
 ## Использование HTTPS
 
