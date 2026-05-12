@@ -84,7 +84,7 @@ Virtualization-audit взаимодействует со следующими к
 
 1. **Vm-route-forge** — контроллер, следящий за кастомными ресурсами VirtualMachines из `virtualization.deckhouse.io` API group и обновляющий сетевые на узле через Linux netlink/eBPF в таблицах маршрутизации, используемых Cilium [CNI Cilium](/modules/cni-cilium/) для маршрутизации трафика между ВМ. . 
 
-1. **Pre-delete-hook** (Job) — задание, удаляющее кастомные ресурсы KubeVirt и CDI `internal.virtualization.deckhouse.io` API Group перед деактивацией модуля [`virtualization`](/modules/virtualization/).
+1. **Pre-delete-hook** (Job) — задание, удаляющее singleton-ресурсы InternalVirtualizationKubeVirt/config и InternalVirtualizationCDI/config перед деактивацией модуля [`virtualization`](/modules/virtualization/).
 
 ### Взаимодействия
 
