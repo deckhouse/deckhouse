@@ -1143,11 +1143,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/cse/modules/040-control-plane-manager/openapi/config-values.yaml
-  to: /deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
   to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
   stageDependencies:
