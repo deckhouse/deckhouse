@@ -29,6 +29,6 @@ destination:
     password: {{ .registry.bootstrap.init.rw_user.password | quote }}
 EOF
 
-syncer $syncer_config_path | bb-log-stream-dhctl
+registry-syncer $syncer_config_path | bb-log-stream-dhctl
 
 {{- end }}

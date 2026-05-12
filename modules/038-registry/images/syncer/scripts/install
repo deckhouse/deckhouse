@@ -16,4 +16,4 @@
 
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
-cp -f syncer /opt/deckhouse/bin/syncer
+cp -f syncer /opt/deckhouse/bin/registry-syncer

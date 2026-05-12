@@ -15,4 +15,4 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/syncer
+rm -f /opt/deckhouse/bin/registry-syncer
