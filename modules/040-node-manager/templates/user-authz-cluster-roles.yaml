@@ -5,7 +5,8 @@
 # - Node Feature Discovery resources
 # - Machine Controller Manager resources
 # - Cluster API resources
-# - Cluster API infrastructure resources
+# - CAPS infrastructure resources owned by node-manager
+# Provider-specific Cluster API infrastructure resources must be covered by cloud-provider modules.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -90,26 +91,10 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - deckhouseclusters
   - deckhousecontrolplanes
-  - deckhousemachines
-  - deckhousemachinetemplates
-  - dynamixclusters
-  - dynamixmachines
-  - dynamixmachinetemplates
-  - huaweicloudclusters
-  - huaweicloudmachines
-  - huaweicloudmachinetemplates
   - staticclusters
   - staticmachines
   - staticmachinetemplates
-  - vcdclusters
-  - vcdclustertemplates
-  - vcdmachines
-  - vcdmachinetemplates
-  - zvirtclusters
-  - zvirtmachines
-  - zvirtmachinetemplates
   verbs:
   - get
   - list
@@ -141,7 +126,8 @@ rules:
 # - Node Feature Discovery resources
 # - Machine Controller Manager resources
 # - Cluster API resources
-# - Cluster API infrastructure resources
+# - CAPS infrastructure resources owned by node-manager
+# Provider-specific Cluster API infrastructure resources must be covered by cloud-provider modules.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -211,26 +197,10 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - deckhouseclusters
   - deckhousecontrolplanes
-  - deckhousemachines
-  - deckhousemachinetemplates
-  - dynamixclusters
-  - dynamixmachines
-  - dynamixmachinetemplates
-  - huaweicloudclusters
-  - huaweicloudmachines
-  - huaweicloudmachinetemplates
   - staticclusters
   - staticmachines
   - staticmachinetemplates
-  - vcdclusters
-  - vcdclustertemplates
-  - vcdmachines
-  - vcdmachinetemplates
-  - zvirtclusters
-  - zvirtmachines
-  - zvirtmachinetemplates
   verbs:
   - get
   - list
