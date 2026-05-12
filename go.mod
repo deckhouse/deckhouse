@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.26.1
+go 1.25.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -96,7 +96,7 @@ require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
-	github.com/090809/oteljsonl v0.0.1 // indirect
+	github.com/090809/oteljsonl v0.0.2 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

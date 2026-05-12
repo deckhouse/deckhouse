@@ -4,8 +4,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
 dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
-github.com/090809/oteljsonl v0.0.1 h1:F1qaETNRM6gGf4hfvUXx3KdOqsCFb4cMNE9w+0Bz6yw=
-github.com/090809/oteljsonl v0.0.1/go.mod h1:+ltf91lSZUTVy3ZZxd7fFvdHGgcm3A1l0FK35bM2BDs=
+github.com/090809/oteljsonl v0.0.2 h1:m4EhwqOJZeG02Dk4fAb0yx3G7UjdaPOg2A72vfe2zig=
+github.com/090809/oteljsonl v0.0.2/go.mod h1:F/8qX+VKm482xCULZIYjqPwJo13PXm3hX1sTAwcq12I=
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25UVaW/CKtUDjefjrs0SPonmDGUVOYP0=
 github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
