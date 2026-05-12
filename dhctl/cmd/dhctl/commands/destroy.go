@@ -94,6 +94,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			IsDebug:         opts.Global.IsDebug,
 			TmpDir:          opts.Global.TmpDir,
 			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
 		})
 		if err != nil {
 			return err
