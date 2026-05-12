@@ -15,8 +15,10 @@
 package status
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmapper"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
+	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
 // =============================================================================
@@ -30,136 +32,187 @@ const (
 	ConditionUpdateInstalled string = "UpdateInstalled"
 	// ConditionReady indicates package is ready and operational
 	ConditionReady string = "Ready"
-	// ConditionPartiallyDegraded indicates package is partially degraded
-	ConditionPartiallyDegraded string = "PartiallyDegraded"
+	// ConditionScaled indicates package is fully scaled
+	ConditionScaled string = "Scaled"
 	// ConditionManaged indicates package is being managed
 	ConditionManaged string = "Managed"
 	// ConditionConfigurationApplied indicates configuration was applied
 	ConditionConfigurationApplied string = "ConfigurationApplied"
 )
 
-// core conditions checked for install/ready states
-var coreConds = []string{
-	string(status.ConditionDownloaded),
-	string(status.ConditionReadyOnFilesystem),
-	string(status.ConditionReadyInRuntime),
-	string(status.ConditionReadyInCluster),
-	string(status.ConditionRequirementsMet),
-}
-
-// managed conditions for operational state
-var managedConds = []string{
-	string(status.ConditionReadyInRuntime),
-	string(status.ConditionReadyInCluster),
-	string(status.ConditionHooksProcessed),
-}
-
-// config conditions for configuration state
-var configConds = []string{
-	string(status.ConditionSettingsValid),
-	string(status.ConditionHooksProcessed),
-	string(status.ConditionHelmApplied),
-}
-
 // BuildMapper returns a mapper with all standard rules.
-func buildMapper() condmapper.Mapper {
-	return condmapper.Mapper{
-		Rules: []condmapper.Rule{
-			installedRule(),
-			updateInstalledRule(),
-			readyRule(),
-			partiallyDegradedRule(),
-			managedRule(),
-			configAppliedRule(),
+func buildMapper() condmap.Mapper {
+	return condmap.Mapper{
+		Maps: []condmap.Map{
+			mapInstalled,
+			mapUpdateInstalled,
+			mapReady,
+			mapScaled,
+			mapManaged,
+			mapConfigurationApplied,
 		},
 	}
 }
 
-// installedRule: True when first install completes, stays True forever.
-func installedRule() condmapper.Rule {
-	return condmapper.Rule{
-		Type: ConditionInstalled,
-		TrueIf: condmapper.And(
-			condmapper.IsTrue(string(status.ConditionReadyInCluster)),
-			condmapper.Not(condmapper.VersionChanged()),
-		),
-		FalseIf: condmapper.AnyFalse(coreConds...),
-		Sticky:  true,
+// mapInstalled is sticky: after the first successful install, it stops emitting
+// updates so the existing Installed=True condition is preserved.
+func mapInstalled(state condmap.State) metav1.Condition {
+	if state.ExtEqual(ConditionInstalled, metav1.ConditionTrue) {
+		return metav1.Condition{}
 	}
+
+	if state.IntEqual(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue) && !state.IsUpdating() {
+		return state.ConditionByInt(ConditionInstalled, metav1.ConditionTrue, string(intstatus.ConditionReadyInCluster))
+	}
+
+	if cond, ok := firstInstallBlocker(state); ok {
+		return state.ConditionByInt(ConditionInstalled, metav1.ConditionFalse, cond)
+	}
+
+	return metav1.Condition{}
 }
 
-// updateInstalledRule: True when an update completes successfully.
-// False only during an active update (version changed) when core conditions fail.
-// This ensures that after a rollback from a failed update, the error is cleared.
-// Only applies when Installed is True AND either:
-// - VersionChanged (an update is currently in progress), OR
-// - UpdateInstalled already exists (a previous update occurred)
-func updateInstalledRule() condmapper.Rule {
-	return condmapper.Rule{
-		Type:   ConditionUpdateInstalled,
-		TrueIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
-		FalseIf: condmapper.And(
-			condmapper.VersionChanged(),
-			condmapper.AnyFalse(coreConds...),
-		),
-		OnlyIf: condmapper.And(
-			condmapper.ExtTrue(ConditionInstalled),
-			condmapper.Or(
-				condmapper.VersionChanged(),
-				condmapper.ExtPresent(ConditionUpdateInstalled),
-			),
-		),
+// mapUpdateInstalled reports update progress only after the Application has
+// been installed and either the desired version changed or an update condition
+// already exists from an earlier update attempt.
+func mapUpdateInstalled(state condmap.State) metav1.Condition {
+	if !state.ExtEqual(ConditionInstalled, metav1.ConditionTrue) {
+		return metav1.Condition{}
 	}
+
+	if !state.IsUpdating() && !state.HasExt(ConditionUpdateInstalled) {
+		return metav1.Condition{}
+	}
+
+	if state.IntEqual(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue) {
+		return state.ConditionByInt(ConditionUpdateInstalled, metav1.ConditionTrue, string(intstatus.ConditionReadyInCluster))
+	}
+
+	if state.IsUpdating() {
+		if cond, ok := firstInstallBlocker(state); ok {
+			return state.ConditionByInt(ConditionUpdateInstalled, metav1.ConditionFalse, cond)
+		}
+	}
+
+	return metav1.Condition{}
 }
 
-// readyRule: True when package is operational.
-func readyRule() condmapper.Rule {
-	return condmapper.Rule{
-		Type:   ConditionReady,
-		TrueIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
-		FalseIf: condmapper.Or(
-			condmapper.AnyFalse(coreConds...),
-			condmapper.And(
-				condmapper.Not(condmapper.ExtTrue(ConditionInstalled)),
-				condmapper.Or(
-					condmapper.IsTrue(string(status.ConditionWaitConverge)),
-					condmapper.IsTrue(string(status.ConditionRequirementsMet)),
-				),
-			),
-		),
+// mapReady answers the user-facing question "why is the application not ready
+// right now?". RequirementsMet=True is a passed gate, so it never produces
+// Ready=False. RequirementsMet=False still blocks readiness.
+func mapReady(state condmap.State) metav1.Condition {
+	if state.IntEqual(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue) {
+		return state.ConditionByInt(ConditionReady, metav1.ConditionTrue, string(intstatus.ConditionReadyInCluster))
 	}
+
+	for _, cond := range []string{
+		string(intstatus.ConditionPending),
+		string(intstatus.ConditionRequirementsMet),
+		string(intstatus.ConditionReadyOnFilesystem),
+		string(intstatus.ConditionReadyInRuntime),
+		string(intstatus.ConditionSettingsValid),
+		string(intstatus.ConditionHooksProcessed),
+		string(intstatus.ConditionHelmApplied),
+		string(intstatus.ConditionReadyInCluster),
+	} {
+		if cond == string(intstatus.ConditionPending) {
+			if state.IntEqual(cond, metav1.ConditionTrue) {
+				return state.ConditionByInt(ConditionReady, metav1.ConditionFalse, cond)
+			}
+
+			continue
+		}
+
+		if state.IntEqual(cond, metav1.ConditionFalse) {
+			return state.ConditionByInt(ConditionReady, metav1.ConditionFalse, cond)
+		}
+	}
+
+	return metav1.Condition{}
 }
 
-// partiallyDegradedRule: True when functionality degraded (inverted semantics).
-func partiallyDegradedRule() condmapper.Rule {
-	return condmapper.Rule{
-		Type:    ConditionPartiallyDegraded,
-		TrueIf:  condmapper.AnyFalse(managedConds...),
-		FalseIf: condmapper.AllTrue(managedConds...),
-		OnlyIf:  condmapper.ExtTrue(ConditionInstalled),
+// mapScaled is intentionally bound only to ReadyInCluster. Other lifecycle
+// gates can affect Ready, but they should not make Scaled report unrelated
+// reasons such as RequirementsMet.
+func mapScaled(state condmap.State) metav1.Condition {
+	if state.IntEqual(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue) {
+		return state.ConditionByInt(ConditionScaled, metav1.ConditionTrue, string(intstatus.ConditionReadyInCluster))
 	}
+
+	if state.IntEqual(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse) {
+		return state.ConditionByInt(ConditionScaled, metav1.ConditionFalse, string(intstatus.ConditionReadyInCluster))
+	}
+
+	return metav1.Condition{}
 }
 
-// managedRule: True when package is under active management.
-func managedRule() condmapper.Rule {
-	return condmapper.Rule{
-		Type:   ConditionManaged,
-		TrueIf: condmapper.AllTrue(managedConds...),
-		FalseIf: condmapper.And(
-			condmapper.ExtTrue(ConditionInstalled),
-			condmapper.Or(
-				condmapper.AnyFalse(managedConds...),
-				condmapper.IsTrue(string(status.ConditionWaitConverge)),
-			),
-		),
+// mapManaged describes whether runtime management is active for an already
+// installed Application. Before first install there is no useful Managed update.
+func mapManaged(state condmap.State) metav1.Condition {
+	if state.ExtEqual(ConditionInstalled, metav1.ConditionTrue) {
+		if state.IntEqual(string(intstatus.ConditionPending), metav1.ConditionTrue) {
+			return state.ConditionByInt(ConditionManaged, metav1.ConditionFalse, string(intstatus.ConditionPending))
+		}
+
+		for _, cond := range []string{
+			string(intstatus.ConditionReadyInRuntime),
+			string(intstatus.ConditionReadyInCluster),
+			string(intstatus.ConditionHooksProcessed),
+		} {
+			if state.IntEqual(cond, metav1.ConditionFalse) {
+				return state.ConditionByInt(ConditionManaged, metav1.ConditionFalse, cond)
+			}
+		}
 	}
+
+	if state.AllIntEqual(metav1.ConditionTrue,
+		string(intstatus.ConditionReadyInRuntime),
+		string(intstatus.ConditionReadyInCluster),
+		string(intstatus.ConditionHooksProcessed),
+	) {
+		return state.ConditionByInt(ConditionManaged, metav1.ConditionTrue, string(intstatus.ConditionReadyInRuntime))
+	}
+
+	return metav1.Condition{}
 }
 
-// configAppliedRule: True when configuration is applied.
-func configAppliedRule() condmapper.Rule {
-	return condmapper.Rule{
-		Type:    ConditionConfigurationApplied,
-		TrueIf:  condmapper.AllTrue(configConds...),
-		FalseIf: condmapper.AnyFalse(configConds...),
+// mapConfigurationApplied tracks settings validation, hook processing, and
+// manifest apply. The internal reason/message explain the concrete blocker.
+func mapConfigurationApplied(state condmap.State) metav1.Condition {
+	if state.AllIntEqual(metav1.ConditionTrue,
+		string(intstatus.ConditionSettingsValid),
+		string(intstatus.ConditionHooksProcessed),
+		string(intstatus.ConditionHelmApplied),
+	) {
+		return state.ConditionByInt(ConditionConfigurationApplied, metav1.ConditionTrue, string(intstatus.ConditionSettingsValid))
 	}
+
+	for _, cond := range []string{
+		string(intstatus.ConditionSettingsValid),
+		string(intstatus.ConditionHooksProcessed),
+		string(intstatus.ConditionHelmApplied),
+	} {
+		if state.IntEqual(cond, metav1.ConditionFalse) {
+			return state.ConditionByInt(ConditionConfigurationApplied, metav1.ConditionFalse, cond)
+		}
+	}
+
+	return metav1.Condition{}
+}
+
+// firstInstallBlocker keeps Installed and UpdateInstalled false reasons stable
+// without coupling them to Ready's broader user-facing priority order.
+func firstInstallBlocker(state condmap.State) (string, bool) {
+	for _, cond := range []string{
+		string(intstatus.ConditionRequirementsMet),
+		string(intstatus.ConditionReadyOnFilesystem),
+		string(intstatus.ConditionReadyInRuntime),
+		string(intstatus.ConditionReadyInCluster),
+	} {
+		if state.IntEqual(cond, metav1.ConditionFalse) {
+			return cond, true
+		}
+	}
+
+	return "", false
 }

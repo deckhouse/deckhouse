@@ -23,13 +23,11 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -38,8 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type bootstrapParams struct {
@@ -174,10 +171,12 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -243,31 +242,14 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var kubeProvider libcon.KubeProvider
 	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
 		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
+			return fmt.Errorf("preparing providers: %w", err)
 		}
-
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-
-		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
-		}
 
 		return nil
 	})
@@ -283,8 +265,10 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		}
 	}
 
+	opts.Global.ConfigPaths = configPaths
+	opts.Bootstrap.PostBootstrapScriptPath = postBootstrapScriptPath
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		NodeInterface:              ssh.NewNodeInterfaceWrapper(sshClient),
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,
@@ -292,17 +276,14 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		OnProgressFunc:             p.sendProgress,
 		CommanderMode:              p.request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		ConfigPaths:                configPaths,
-		ResourcesTimeout:           p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           p.request.Options.DeckhouseTimeout.AsDuration(),
-		PostBootstrapScriptPath:    postBootstrapScriptPath,
-		UseTfCache:                 ptr.To(true),
-		AutoApprove:                ptr.To(true),
 		KubernetesInitParams:       nil,
 		TmpDir:                     s.params.TmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		SSHProviderInitializer:     sshProviderInitializer,
+		KubeProvider:               kubeProvider,
 		DirectoryConfig:            s.params.DownloadDirConfig,
+		Options:                    opts,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)

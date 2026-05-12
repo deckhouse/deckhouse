@@ -20,13 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -177,12 +178,12 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -221,7 +222,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		err = cache.InitWithOptions(
 			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
@@ -236,12 +237,15 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           tmpDir,
+		DownloadDir:      s.params.DownloadDirConfig.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
-	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor)
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+		WithUseTfCache(opts.Cache.UseTfCache).
+		WithDebug(s.params.IsDebug)
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {
@@ -264,6 +268,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                tmpDir,
 		Logger:                loggerFor,
 		InfrastructureContext: infrastructureContext,
+		Options:               opts,
 	}
 
 	convergeParams := &converge.Params{
@@ -292,36 +297,30 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                     tmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		Options:                    opts,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: p.request.Options.CommanderMode,
-		APIServerURL:  p.request.Options.ApiServerUrl,
-		APIServerOptions: helper.APIServerOptions{
-			Token:                    p.request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
-		},
-		SchemaStore:         s.params.SchemaStore,
-		SSHConnectionConfig: p.request.ConnectionConfig,
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+		var cleanup func() error
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		cleanuper.Add(cleanup)
+		if err != nil {
+			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		return nil
 	})
-	cleanuper.Add(cleanup)
+
 	if err != nil {
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.ConvergeResult{Err: err.Error()}
-		}
-	}
+	checkParams.KubeProvider = kubeProvider
 
-	checkParams.KubeClient = kubeClient
-	checkParams.SSHClient = sshClient
-
-	convergeParams.KubeClient = kubeClient
-	convergeParams.SSHClient = sshClient
+	convergeParams.KubeProvider = kubeProvider
+	convergeParams.SSHProviderInitializer = sshProviderInitializer
 
 	checker := check.NewChecker(checkParams)
 	convergeParams.Checker = checker

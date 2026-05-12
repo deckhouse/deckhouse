@@ -95,6 +95,10 @@ entries:
                         ru: Экспериментальная модель авторизации
                       url: /admin/configuration/access/authorization/rbac-experimental.html
                     - title:
+                        en: Cluster admin access model
+                        ru: Модель административного доступа к кластеру
+                      url: /admin/configuration/access/authorization/cluster-admin-access-model.html
+                    - title:
                         en: Granting permissions to users and service accounts
                         ru: Выдача прав пользователям и сервисным аккаунтам
                       url: /admin/configuration/access/authorization/granting.html
@@ -1366,6 +1370,14 @@ entries:
                 en: Security events audit
                 ru: Аудит событий безопасности
               url: /architecture/security/runtime-audit.html
+            - title:
+                en: Admission-policy-engine module
+                ru: Модуль admission-policy-engine
+              url: /architecture/security/admission-policy-engine.html
+            - title:
+                en: Cert-manager module
+                ru: Модуль cert-manager
+              url: /architecture/security/cert-manager.html
         - title:
             en: Network subsystem
             ru: Подсистема Network

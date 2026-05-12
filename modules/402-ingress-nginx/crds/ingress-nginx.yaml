@@ -117,7 +117,7 @@ spec:
                     Ingress NGINX Controller version.
 
                     **By default**, the version set in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ["1.10", "1.12", "1.14"]
+                  enum: ["1.12", "1.14", "1.15"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -150,6 +150,22 @@ spec:
                     Enables validation for Ingress rules.
                     
                     > **Warning.** Enabling validation increases the load on the master nodes of the cluster.
+                validationIsolationMode:
+                  type: string
+                  enum: ["NoIsolation", "IsolatedFilesystem", "IsolatedProcess"]
+                  default: NoIsolation
+                  description: |
+                    Selects the validation isolation mode.
+
+                    > **Note.** This configuration is applied only to controller versions `1.14` and `1.15`.
+
+                    Supported modes:
+                    
+                    * `NoIsolation`: No isolation is applied during NGINX configuration validation. To minimize security risks, the validation scope is limited to a single Ingress object resulting in weak validation.
+                    * `IsolatedFilesystem`: NGINX configuration validation is executed in a separate file system with no access to the file system of the running NGINX server, effectively limiting the attack surface. The validation scope is limited by the `ingressClass` parameter, resulting in strong validation.
+                    * `IsolatedProcess`: NGINX configuration validation is executed inside a sandboxed environment where every syscall is traced. It is the most secure isolation mode limited by the `ingressClass` parameter. 
+                    > **Note.** Some hardened operating system may block syscall tracing without additional configuration so this mode is optional at the moment.
+                    > **Note.** This mode is considered experimental.
                 annotationValidationEnabled:
                   type: boolean
                   default: false
@@ -716,7 +732,7 @@ spec:
                           type: string
                           description: |
                             VPA operating mode.
-                          enum: ['Initial', 'Auto']
+                          enum: ['Initial', 'InPlaceOrRecreate']
                           default: 'Initial'
                         cpu:
                           type: object
@@ -904,21 +920,6 @@ spec:
                     - "Extended information about changes in system state."
                     - "Verbose debugging output, potentially very noisy."
                     - "Trace-level logs with detailed step-by-step context."
-                nginxProfilingEnabled:
-                  type: boolean
-                  description: |
-                    Enables NGINX profiling using Valgrind.
-                    
-                    A memory analysis report is saved to the `/var/log/valgrind` directory on the host.
-                    When enabled, Valgrind creates a file named `memcheck.${timestamp}.log`.
-
-                    After debugging is complete, don't forget to disable profiling mode!
-
-                    The report contains information about the process behavior, including potential memory leaks.
-
-                    > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/HTTPS request handling by the NGINX process.
-
-                    > **Be aware.** When the option is enabled, the ingress-nginx controller pod starts in privileged mode.
               oneOf:
                 - properties:
                     inlet:
@@ -956,8 +957,8 @@ spec:
                   rule: "!((has(self.enableHTTP3) && self.enableHTTP3 == true) && self.inlet in ['HostPortWithProxyProtocol', 'LoadBalancerWithProxyProtocol'])"
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
-                - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
-                  rule: "!has(self.nginxProfilingEnabled) || !self.nginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
+                - message: .spec.validationIsolationMode values "IsolatedFilesystem" and "IsolatedProcess" are available only in versions 1.14 and 1.15
+                  rule: "!has(self.validationIsolationMode) || self.validationIsolationMode in ['NoIsolation'] || (has(self.controllerVersion) && self.controllerVersion in ['1.14', '1.15'])"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
@@ -1080,7 +1081,7 @@ spec:
                     Ingress NGINX Controller version.
 
                     **By default**, the version set in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ["1.10", "1.12", "1.14"]
+                  enum: ["1.12", "1.14", "1.15"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -1112,6 +1113,23 @@ spec:
                   description: |
                     Enables validation for Ingress rules.
                     > **Warning.** Enabling validation increases the load on the master nodes of the cluster.
+                validationIsolationMode:
+                  type: string
+                  enum: ["NoIsolation", "IsolatedFilesystem", "IsolatedProcess"]
+                  default: NoIsolation
+                  description: |
+                    Selects the validation isolation mode.
+
+                    > **Note.** This configuration is applied only to controller versions `1.14` and `1.15`.
+
+                    Supported modes:
+                    
+                    * `NoIsolation`: No isolation is applied during NGINX configuration validation. To minimize security risks, the validation scope is limited to a single Ingress object resulting in weak validation.
+                    * `IsolatedFilesystem`: NGINX configuration validation is executed in a separate file system with no access to the file system of the running NGINX server, effectively limiting the attack surface. The validation scope is limited by the `ingressClass` parameter, resulting in strong validation.
+                    * `IsolatedProcess`: NGINX configuration validation is executed inside a sandboxed environment where every syscall is traced. It is the most secure isolation mode limited by the `ingressClass` parameter. 
+                    > **Note.** Some hardened operating system may block syscall tracing without additional configuration so this mode is optional at the moment.
+                    > **Note.** This mode is considered experimental.
+
                 annotationValidationEnabled:
                   type: boolean
                   default: false
@@ -1677,7 +1695,7 @@ spec:
                           type: string
                           description: |
                             VPA usage mode.
-                          enum: ['Initial', 'Auto']
+                          enum: ['Initial', 'InPlaceOrRecreate']
                           default: 'Initial'
                         cpu:
                           type: object
@@ -1860,20 +1878,6 @@ spec:
                     - "Extended information about changes in system state."
                     - "Verbose debugging output, potentially very noisy."
                     - "Trace-level logs with detailed step-by-step context."
-                nginxProfilingEnabled:
-                  type: boolean
-                  description: |
-                    Enables NGINX profiling using Valgrind.
-                    A memory analysis report is saved to the `/var/log/valgrind` directory on the host.
-                    When enabled, Valgrind creates a file named `memcheck.${timestamp}.log`.
-
-                    After debugging is complete, don't forget to disable profiling mode!
-
-                    The report contains information about the process behavior, including potential memory leaks.
-
-                    > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/HTTPS request handling by the NGINX process.
-
-                    > **Be aware.** When the option is enabled, the ingress-nginx controller pod starts in privileged mode.
               oneOf:
                 - properties:
                     inlet:
@@ -1911,8 +1915,8 @@ spec:
                   rule: "!((has(self.enableHTTP3) && self.enableHTTP3 == true) && self.inlet in ['HostPortWithProxyProtocol', 'LoadBalancerWithProxyProtocol'])"
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
-                - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
-                  rule: "!has(self.nginxProfilingEnabled) || !self.nginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
+                - message: .spec.validationIsolationMode values "IsolatedFilesystem" and "IsolatedProcess" are available only in versions 1.14 and 1.15
+                  rule: "!has(self.validationIsolationMode) || self.validationIsolationMode in ['NoIsolation'] || (has(self.controllerVersion) && self.controllerVersion in ['1.14', '1.15'])"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class

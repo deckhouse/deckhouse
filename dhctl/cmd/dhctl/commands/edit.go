@@ -20,45 +20,52 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func connectionFlags(parent *kingpin.CmdClause) {
-	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(parent)
+func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
+	app.DefineKubeFlags(parent, &opts.Kube)
+	app.DefineSSHFlags(parent, &opts.SSH, nil)
+	app.DefineBecomeFlags(parent, &opts.Become)
 }
 
-func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) *kingpin.CmdClause {
+func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, secret, dataKey string) *kingpin.CmdClause {
 	cmd := parent.Command(name, fmt.Sprintf("Edit %s in Kubernetes cluster.", name))
-	app.DefineEditorConfigFlags(cmd)
-	app.DefineSanityFlags(cmd)
+	app.DefineEditorConfigFlags(cmd, &opts.Render)
+	app.DefineSanityFlags(cmd, &opts.Global)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
-
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
 		if err != nil {
 			return err
 		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		return operations.SecretEdit(
 			ctx,
@@ -66,44 +73,52 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			name, "kube-system", secret, dataKey, map[string]string{
 				"name": name,
 			},
-			app.GetDirConfig(),
+			opts.DirConfig(),
+			operations.EditOptions{
+				Editor:      opts.Render.Editor,
+				TmpDir:      opts.Global.TmpDir,
+				SanityCheck: opts.Global.SanityCheck,
+			},
 		)
 	})
 }
 
-func DefineEditCommands(parent *kingpin.CmdClause, wConnFlags bool) {
-	clusterCmd := DefineEditClusterConfigurationCommand(parent)
-	providerCmd := DefineEditProviderClusterConfigurationCommand(parent)
-	staticCmd := DefineEditStaticClusterConfigurationCommand(parent)
+func DefineEditCommands(parent *kingpin.CmdClause, opts *options.Options, wConnFlags bool) {
+	clusterCmd := DefineEditClusterConfigurationCommand(parent, opts)
+	providerCmd := DefineEditProviderClusterConfigurationCommand(parent, opts)
+	staticCmd := DefineEditStaticClusterConfigurationCommand(parent, opts)
 
 	if wConnFlags {
-		connectionFlags(clusterCmd)
-		connectionFlags(providerCmd)
-		connectionFlags(staticCmd)
+		connectionFlags(clusterCmd, opts)
+		connectionFlags(providerCmd, opts)
+		connectionFlags(staticCmd, opts)
 	}
 }
 
-func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineEditClusterConfigurationCommand(parent *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	return baseEditConfigCMD(
 		parent,
+		opts,
 		"cluster-configuration",
 		"d8-cluster-configuration",
 		"cluster-configuration.yaml",
 	)
 }
 
-func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineEditProviderClusterConfigurationCommand(parent *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	return baseEditConfigCMD(
 		parent,
+		opts,
 		"provider-cluster-configuration",
 		"d8-provider-cluster-configuration",
 		"cloud-provider-cluster-configuration.yaml",
 	)
 }
 
-func DefineEditStaticClusterConfigurationCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineEditStaticClusterConfigurationCommand(parent *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	return baseEditConfigCMD(
 		parent,
+		opts,
 		"static-cluster-configuration",
 		"d8-static-cluster-configuration",
 		"static-cluster-configuration.yaml",

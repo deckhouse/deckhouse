@@ -51,7 +51,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -73,7 +73,7 @@ spec:
   "annotationValidationEnabled": false,
   "chaosMonkey": false,
   "config": {},
-  "controllerVersion": "1.10",
+  "controllerVersion": "1.12",
   "disableHTTP2": false,
   "enableHTTP3": false,
   "geoIP2": {},
@@ -98,11 +98,13 @@ spec:
     },
     "vpa": {
       "cpu": {},
-      "memory": {}
+      "memory": {},
+      "mode": "Initial"
     }
   },
   "underscoresInHeaders": false,
-  "validationEnabled": true
+  "validationEnabled": true,
+  "validationIsolationMode": "NoIsolation"
 }
 }]`))
 			})
@@ -219,11 +221,13 @@ spec:
   },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true
+"validationEnabled": true,
+"validationIsolationMode": "NoIsolation"
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.name").String()).To(Equal("test-2"))
@@ -259,6 +263,7 @@ spec:
     "requests": {}
   },
   "vpa": {
+    "mode": "InPlaceOrRecreate",
     "cpu": {
       "limitRatio": 1.5,
       "max": "100m",
@@ -274,6 +279,7 @@ spec:
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
+"validationIsolationMode": "NoIsolation",
 "controllerLogLevel": "Info"
 }`))
 
@@ -305,11 +311,13 @@ spec:
   },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
+"validationIsolationMode": "NoIsolation",
 "controllerLogLevel": "Info"
 }`))
 		})

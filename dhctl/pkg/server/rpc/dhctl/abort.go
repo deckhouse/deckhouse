@@ -24,12 +24,9 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/ptr"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -38,8 +35,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -175,12 +170,12 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -234,25 +229,8 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	var sshClient node.SSHClient
 	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir, helper.AllowMissingHostsFromCache())
 		if err != nil {
 			return fmt.Errorf("preparing providers: %w", err)
 		}
@@ -272,14 +250,10 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		}
 	}
 
+	opts.Global.ConfigPaths = configPaths
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:            configPaths,
 		InitialState:           initialState,
-		NodeInterface:          ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:             ptr.To(true),
-		AutoApprove:            ptr.To(true),
-		ResourcesTimeout:       p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:       p.request.Options.DeckhouseTimeout.AsDuration(),
 		ResetInitialState:      true,
 		OnPhaseFunc:            p.switchPhase,
 		OnProgressFunc:         p.sendProgress,
@@ -291,6 +265,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		SSHProviderInitializer: sshProviderInitializer,
 		KubeProvider:           kubeProvider,
 		DirectoryConfig:        s.params.DownloadDirConfig,
+		Options:                opts,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

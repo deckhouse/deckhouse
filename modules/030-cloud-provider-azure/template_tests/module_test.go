@@ -61,7 +61,7 @@ const globalValues = `
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
-  enabledModules: ["vertical-pod-autoscaler"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
   discovery:
@@ -333,7 +333,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]`)
 			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
 			f.HelmRender()
 		})

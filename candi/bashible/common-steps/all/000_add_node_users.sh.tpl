@@ -20,7 +20,7 @@
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
-API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
+API_SERVERS="{{ .clusterMasterKubeAPIEndpoints | join " " }}"
 read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
 
 
@@ -358,4 +358,3 @@ set +e
 main
 set -e
 {{- end  }}
-

@@ -94,6 +94,7 @@
     In HA cluster mode hubble-ui and hubble-relay will be restarted
  - **[cloud-provider-aws]** fix getInstancesByIDs to comply with the describeInstanceBatcher. [#18312](https://github.com/deckhouse/deckhouse/pull/18312)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
+ - **[cloud-provider-azure]** fix disk discovery for Ubuntu 22.04 Gen2 VMs with NVMe controllers [#19330](https://github.com/deckhouse/deckhouse/pull/19330)
  - **[cloud-provider-azure]** fixed patch in azure [#17696](https://github.com/deckhouse/deckhouse/pull/17696)
  - **[cloud-provider-azure]** fixed cve [#16839](https://github.com/deckhouse/deckhouse/pull/16839)
  - **[cloud-provider-dvp]** added fixes an infinite deletion state of DeckhouseMachine. [#18163](https://github.com/deckhouse/deckhouse/pull/18163)
@@ -179,6 +180,8 @@
  - **[ingress-nginx]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
+ - **[istio]** fixed CVEs in module images [#19363](https://github.com/deckhouse/deckhouse/pull/19363)
+    module pods will be restarted
  - **[istio]** fixed CVE-2026-39882, CVE-2026-39883 and CVE-2026-35206 [#19091](https://github.com/deckhouse/deckhouse/pull/19091)
     istio module pods will be restarted
  - **[istio]** fixed CVE-2026-34986 [#18973](https://github.com/deckhouse/deckhouse/pull/18973)
@@ -202,6 +205,7 @@
  - **[network-gateway]** Fixed werf import syntax for compatibility with older werf versions. [#19276](https://github.com/deckhouse/deckhouse/pull/19276)
  - **[node-local-dns]** Return stale-dns-connections-cleaner [#18707](https://github.com/deckhouse/deckhouse/pull/18707)
     An additional service daemonset will be added.
+ - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19657](https://github.com/deckhouse/deckhouse/pull/19657)
  - **[node-manager]** Fix panic in cluster-autoscaler caused by nil pointer dereference during node removal simulation. [#17924](https://github.com/deckhouse/deckhouse/pull/17924)
  - **[node-manager]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[node-manager]** It fixes issues in the DaemonSet manifest for fencing module. [#17087](https://github.com/deckhouse/deckhouse/pull/17087)

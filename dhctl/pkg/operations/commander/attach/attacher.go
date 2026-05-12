@@ -23,11 +23,13 @@ import (
 	"github.com/google/uuid"
 	"k8s.io/utils/ptr"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -36,15 +38,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type Params struct {
 	CommanderMode         bool
 	CommanderUUID         uuid.UUID
-	SSHClient             node.SSHClient
+	SSHProvider           libcon.SSHProvider
+	KubeProvider          libcon.KubeProvider
 	OnCheckResult         func(context.Context, *check.CheckResult) error
 	InfrastructureContext *infrastructure.Context
 	OnPhaseFunc           OnPhaseFunc
@@ -54,6 +55,11 @@ type Params struct {
 	TmpDir                string
 	Logger                log.Logger
 	IsDebug               bool
+
+	// Options carries the per-operation parsed configuration. RPC handlers
+	// must populate this with a fresh *options.Options to avoid sharing global
+	// state between concurrent requests.
+	Options *options.Options
 }
 
 type AttachResources struct {
@@ -92,12 +98,15 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           i.Params.TmpDir,
+		DownloadDir:      i.Params.Options.Global.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           i.Params.Logger,
 		IsDebug:          i.Params.IsDebug,
 	})
 
-	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger)
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger).
+		WithUseTfCache(i.Params.Options.Cache.UseTfCache).
+		WithDebug(i.Params.IsDebug)
 
 	provider, err := i.Params.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
 	if err != nil {
@@ -170,7 +179,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		return &AttachResult{Status: StatusAttached}, nil
 	}
 
-	checkResult, err := i.check(ctx, kubeClient, scanResult)
+	checkResult, err := i.check(ctx, i.Params.KubeProvider, scanResult)
 	if err != nil {
 		// check is optional
 		log.WarnF("Can't check attached cluster: %s\n", err)
@@ -198,10 +207,11 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 	return kubeClient, metaConfig, log.ProcessCtx(ctx, "attach", "Prepare cluster attach", func(ctx context.Context) error {
 		var err error
 
-		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
+		kubeCl, err := i.Params.KubeProvider.Client(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
+			return fmt.Errorf("connect to kubernetes api: %w", err)
 		}
+		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
@@ -225,7 +235,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		}
 
 		cachePath := metaConfig.CachePath()
-		if err := cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
+		if err := cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true, Cache: i.Params.Options.Cache}); err != nil {
 			return fmt.Errorf("unable to init cache: %w", err)
 		}
 
@@ -271,8 +281,14 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		if len(i.Params.SSHClient.PrivateKeys()) > 0 {
-			sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
+		sshCl, err := i.Params.SSHProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+
+		// TODO keep keys in session instead of ReadFile
+		if len(sshCl.PrivateKeys()) > 0 {
+			sshPrivateKey, err := os.ReadFile(sshCl.PrivateKeys()[0].Key)
 			if err != nil {
 				return fmt.Errorf("unable to read ssh private key: %w", err)
 			}
@@ -349,7 +365,7 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(ctx, kubeClient, attachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, attachResources, checkers, nil, i.Params.Options.Bootstrap.ResourcesTimeout)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
@@ -360,7 +376,7 @@ func (i *Attacher) capture(
 
 func (i *Attacher) check(
 	ctx context.Context,
-	kubeClient *client.KubernetesClient,
+	kubeProvider libcon.KubeProvider,
 	scanResult *ScanResult,
 ) (*check.CheckResult, error) {
 	var res *check.CheckResult
@@ -369,7 +385,7 @@ func (i *Attacher) check(
 		var err error
 
 		checker := check.NewChecker(&check.Params{
-			KubeClient:    kubeClient,
+			KubeProvider:  kubeProvider,
 			StateCache:    cache.Global(),
 			CommanderMode: i.Params.CommanderMode,
 			CommanderModeParams: commander.NewCommanderModeParams(

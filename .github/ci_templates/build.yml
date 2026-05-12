@@ -83,6 +83,7 @@ steps:
     id: build
     env:
       WERF_PARALLEL_TASKS_LIMIT: 3
+      WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
@@ -173,7 +174,7 @@ steps:
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
     {!{- if eq $buildType "release" }!}
-      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
       export WERF_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}

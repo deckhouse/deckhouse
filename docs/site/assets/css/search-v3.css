@@ -385,10 +385,13 @@
 
 /* Message and Status Styles */
 .searchV3 .no-results {
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 2rem;
   text-align: center;
   color: #666;
   font-style: italic;
+  overflow-wrap: break-word;
 }
 
 .searchV3 .loading {
@@ -441,23 +444,67 @@
     padding: 8px 10px;
     font-size: 14px;
   }
+
+  .searchV3 .results {
+    padding: 1rem;
+  }
+
+  .searchV3 .results-group {
+    padding: 1rem;
+  }
+
+  .searchV3 .results-group-header {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 1.15rem;
+  }
+
+  .searchV3 .result-item {
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 768px) {
   .searchV3 .results {
-    padding: 1rem;
+    width: 80vw;
     flex-direction: column;
     flex-wrap: nowrap;
     gap: 1rem;
     right: 0;
+    padding: .8rem;
+  }
+
+  .searchV3 .results-group {
+    padding: .8rem;
+  }
+
+  .searchV3 .results-group-header {
+    padding: .8rem;
+    font-size: 1rem;
+  }
+
+  .searchV3 .result-item {
+    padding: .8rem;
+  }
+
+  .searchV3 .result-title {
+    font-size: 1rem;
+  }
+
+  .searchV3 .result-description {
+    font-size: .9rem;
   }
 
   .searchV3 .modules-row {
     width: 100%;
     flex-basis: 100%;
-    padding: 1rem;
-    margin: 0 0 0.75rem 0;
-    font-size: 0.9rem;
+    padding: .8rem;
+    margin: 0;
+    font-size: .9rem;
+  }
+
+  .searchV3 .modules-row .modules-label {
+    font-size: .8rem;
   }
 
   .searchV3 .results > * {
@@ -476,6 +523,10 @@
 @media (max-width: 550px) {
   .searchV3 .input {
     padding: 5px 7px;
+  }
+
+  .searchV3 .result-title {
+    font-size: .95rem;
   }
 }
 

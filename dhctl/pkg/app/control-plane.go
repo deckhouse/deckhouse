@@ -16,18 +16,16 @@ package app
 
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var (
-	ControlPlaneHostname = ""
-	ControlPlaneIP       = ""
-)
-
-func DefineControlPlaneFlags(cmd *kingpin.CmdClause, ipRequired bool) {
+// DefineControlPlaneFlags registers the control-plane test-target flags into o.
+func DefineControlPlaneFlags(cmd *kingpin.CmdClause, o *options.ControlPlaneOptions, ipRequired bool) {
 	cmd.Flag("control-plane-node-hostname", "Control plane node hostname to check").
 		Envar(configEnvName("CONTROL_PLANE_NODE_HOSTNAME")).
 		Required().
-		StringVar(&ControlPlaneHostname)
+		StringVar(&o.Hostname)
 
 	ipFlag := cmd.Flag("control-plane-node-ip", "Control plane node ip to check").
 		Envar(configEnvName("CONTROL_PLANE_NODE_IP"))
@@ -36,5 +34,5 @@ func DefineControlPlaneFlags(cmd *kingpin.CmdClause, ipRequired bool) {
 		ipFlag.Required()
 	}
 
-	ipFlag.StringVar(&ControlPlaneIP)
+	ipFlag.StringVar(&o.IP)
 }

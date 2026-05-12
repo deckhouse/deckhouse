@@ -21,13 +21,14 @@ import (
 	"os/exec"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type LocalhostDomainCheck struct {
-	Node node.Interface
+	NodeInterface libcon.Interface
 }
 
 const LocalhostDomainCheckName preflight.CheckName = "resolve-localhost"
@@ -50,7 +51,7 @@ func (c LocalhostDomainCheck) Run(ctx context.Context) error {
 		return err
 	}
 
-	cmd := c.Node.UploadScript(file)
+	cmd := c.NodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
 		var ee *exec.ExitError
@@ -64,8 +65,8 @@ func (c LocalhostDomainCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func LocalhostDomain(nodeInterface node.Interface) preflight.Check {
-	check := LocalhostDomainCheck{Node: nodeInterface}
+func LocalhostDomain(nodeInterface libcon.Interface) preflight.Check {
+	check := LocalhostDomainCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        LocalhostDomainCheckName,
 		Description: check.Description(),

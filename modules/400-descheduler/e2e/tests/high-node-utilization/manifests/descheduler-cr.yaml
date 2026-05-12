@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: e2e-high-node-utilization
+spec:
+  strategies:
+    highNodeUtilization:
+      enabled: true
+      thresholds:
+        cpu: 55
+        memory: 65
+        pods: 50

@@ -111,7 +111,7 @@ func (t *task) Execute(ctx context.Context) error {
 		Err: errors.New("startup package"),
 		Conditions: []status.Condition{
 			{
-				Type:   status.ConditionWaitConverge,
+				Type:   status.ConditionPending,
 				Status: metav1.ConditionFalse,
 			},
 		},

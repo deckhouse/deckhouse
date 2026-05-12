@@ -8,8 +8,8 @@ title: "Управление control plane: FAQ"
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
-В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
-Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -44,7 +44,7 @@ spec:
 ```
 
 {% alert level="info" %}
-При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
+При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
 
 При бутстрапе кластера в конфигурации указывается первый master-узел, на который происходит установка.
 Если после бутстрапа нужно сделать мультимастер и добавить master-узлы с помощь CAPS, в параметре `spec.staticInstances.count` NodeGroup `master` необходимо указать количество узлов на один меньше желаемого.
@@ -53,7 +53,7 @@ spec:
 {% endalert %}
 
 В остальном добавление master-узла в статический или гибридный кластер аналогично добавлению обычного узла.
-Воспользуйтесь для этого соответствующими [примерами](../node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
+Воспользуйтесь для этого соответствующими [примерами](/modules/node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
 
 <div id='как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master'></div>
 
@@ -71,7 +71,7 @@ spec:
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -196,7 +196,7 @@ spec:
 
 1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -245,7 +245,7 @@ spec:
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -384,7 +384,7 @@ spec:
    Измените настройки облачного провайдера:
 
    * В параметре `masterNodeGroup.replicas` укажите `2`.
-   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node.deckhouse.io/etcd-arbiter: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
 
      ```yaml
      nodeGroups:
@@ -436,7 +436,7 @@ spec:
 
 Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в статическом кластере, выполните следующие действия:
 
-1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node.deckhouse.io/etcd-arbiter: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -783,7 +783,7 @@ d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 2
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -829,7 +829,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -848,7 +848,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -858,7 +858,7 @@ spec:
 
 ### Как работать с журналом аудита?
 
-Предполагается, что на master-узлах установлен «скрейпер логов»: [log-shipper](../log-shipper/cr.html#clusterloggingconfig), `promtail`, `filebeat`,  который будет мониторить файл с логами:
+Предполагается, что на master-узлах установлен «скрейпер логов»: [log-shipper](/modules/log-shipper/cr.html#clusterloggingconfig), `promtail`, `filebeat`,  который будет мониторить файл с логами:
 
 ```bash
 /var/log/kube-audit/audit.log
@@ -908,7 +908,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50

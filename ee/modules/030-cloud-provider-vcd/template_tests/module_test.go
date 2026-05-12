@@ -752,7 +752,7 @@ node-role.deckhouse.io/control-plane: ""`))
 			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-vcd", "capcd-controller-manager")
 			Expect(securityPolicyException.Exists()).To(BeTrue())
 			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
-			Expect(securityPolicyException.Field("spec.network.hostNetwork.metadata.description").String()).To(ContainSubstring("CAPCD"))
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.metadata.description").String()).To(ContainSubstring("CAPI"))
 		})
 
 		It("must render SecurityPolicyException for csi-controller", func() {

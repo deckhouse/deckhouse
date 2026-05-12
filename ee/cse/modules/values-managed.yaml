@@ -1,1 +1,19 @@
 # CSE Bundle "Managed"
+chronyEnabled: true
+consoleEnabled: true
+controlPlaneManagerEnabled: true
+deschedulerEnabled: false
+kubeDnsEnabled: true
+kubeProxyEnabled: true
+lokiEnabled: true
+monitoringKubernetesControlPlaneEnabled: true
+nodeLocalDnsEnabled: true
+nodeManagerEnabled: true
+operatorTrivyEnabled: true
+promppEnabled: true
+registryEnabled: true
+registryPackagesProxyEnabled: true
+runtimeAuditEngineEnabled: true
+secretCopierEnabled: false
+snapshotControllerEnabled: true
+userAuthnEnabled: true

@@ -16,6 +16,7 @@ package providerinitializer
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -29,7 +30,9 @@ import (
 )
 
 type providerOptions struct {
-	connectionConfig string
+	connectionConfig    string
+	kubeFlagsDefined    bool
+	requireKubeProvider bool
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -40,44 +43,52 @@ func WithConnectionConfig(s string) ProviderOptions {
 	}
 }
 
+func WithKubeFlagsDefined(b bool) ProviderOptions {
+	return func(o *providerOptions) {
+		o.kubeFlagsDefined = b
+	}
+}
+
+func WithRequiredKubeProvider() ProviderOptions {
+	return func(o *providerOptions) {
+		o.requireKubeProvider = true
+	}
+}
+
+func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
+	baseProviderSettings := settings.NewBaseProviders(params)
+	return getProviderInitializer(baseProviderSettings, opts...)
+}
+
 // func to initialize both SSHProviderInitializer and KubeProvider
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
+	options := newProviderOptions(opts...)
 	baseProviderSettings := settings.NewBaseProviders(params)
 
-	options := &providerOptions{}
-	for _, o := range opts {
-		o(options)
+	sshProviderInitializer, err := getProviderInitializer(baseProviderSettings, opts...)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	var config *libcon_config.ConnectionConfig
-	var err error
-	if len(options.connectionConfig) > 0 {
-		config, err = libcon_config.ParseConnectionConfig(
-			strings.NewReader(options.connectionConfig),
-			baseProviderSettings,
-			libcon_config.ParseWithRequiredSSHHost(false),
-		)
+	parser := kube.NewFlagsParser(baseProviderSettings)
+	fset := flag.NewFlagSet("my-set", flag.ExitOnError)
+	flags, err := parser.InitFlags(fset)
+	if err != nil {
+		return nil, nil, err
+	}
+	cfg, err := flags.ExtractConfig()
+	if err != nil {
+		return nil, nil, err
+	}
 
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		parser := libcon_config.NewFlagsParser(baseProviderSettings)
-		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-		flags, err := parser.InitFlags(fset)
-		if err != nil {
-			return nil, nil, err
-		}
-		config, err = flags.ExtractConfig(os.Args[1:])
-		if err != nil {
-			return nil, nil, err
+	if options.requireKubeProvider && cfg.OverSSH() {
+		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts() {
+			return sshProviderInitializer, nil, ErrSSHHostRequiredForKubernetesConnection
 		}
 	}
 
-	sshProviderInitializer := NewSSHProviderInitializer(baseProviderSettings, config)
-
-	cfg := &kube.Config{}
-	runnerInterface, err := provider.GetRunnerInterface(ctx,
+	runnerInterface, err := provider.GetRunnerInterface(
+		ctx,
 		cfg,
 		baseProviderSettings,
 		sshProviderInitializer,
@@ -88,4 +99,47 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 
 	return sshProviderInitializer, kubeProvider, nil
+}
+
+func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
+	options := newProviderOptions(opts...)
+
+	var config *libcon_config.ConnectionConfig
+	var err error
+	var sshProviderInitializer *SSHProviderInitializer
+	if len(options.connectionConfig) > 0 {
+		config, err = libcon_config.ParseConnectionConfig(
+			strings.NewReader(options.connectionConfig),
+			baseProviderSettings,
+			libcon_config.ParseWithRequiredSSHHost(false),
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		parser := libcon_config.NewFlagsParser(baseProviderSettings)
+		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
+		flags, err := parser.InitFlags(fset)
+		if err != nil {
+			return nil, fmt.Errorf("init flags: %w", err)
+		}
+		config, err = flags.ExtractConfig(os.Args[1:])
+		if err != nil {
+			if strings.Contains(err.Error(), "Failed to read private keys from flags") && options.kubeFlagsDefined {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("extract config: %w", err)
+		}
+	}
+
+	sshProviderInitializer = NewSSHProviderInitializer(baseProviderSettings, config)
+	return sshProviderInitializer, nil
+}
+
+func newProviderOptions(opts ...ProviderOptions) *providerOptions {
+	options := &providerOptions{}
+	for _, o := range opts {
+		o(options)
+	}
+	return options
 }

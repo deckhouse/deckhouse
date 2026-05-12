@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: priority-class
+spec:
+  testDirectory: priority-class
+  suite:
+    expectedTestBlockNames:
+      - d8priorityclass

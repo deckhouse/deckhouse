@@ -18,18 +18,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type LabelSelector struct {
@@ -78,44 +72,6 @@ func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error)
 	withNg = append(withNg, selectors...)
 
 	return GetLabelSelector(withNg)
-}
-
-func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
-	var kubeCl *client.KubernetesClient
-
-	err := log.ProcessCtx(ctx, "common", "Connect to Kubernetes API", func(ctx context.Context) error {
-		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
-				return fmt.Errorf("await master available: %v", err)
-			}
-		}
-
-		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).
-			RunContext(ctx, func() error {
-				kubeCl = client.NewKubernetesClient().WithNodeInterface(nodeInterface)
-				if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams()); err != nil {
-					return fmt.Errorf("open kubernetes connection: %v", err)
-				}
-				return nil
-			})
-		if err != nil {
-			return err
-		}
-
-		time.Sleep(50 * time.Millisecond) // tick to prevent first probable fail
-		err = deckhouse.WaitForKubernetesAPI(ctx, kubeCl)
-		if err != nil {
-			return fmt.Errorf("wait kubernetes api: %v", err)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("start kubernetes proxy: %v", err)
-	}
-
-	return kubeCl, nil
 }
 
 type KubeClientProvider interface {

@@ -11,6 +11,7 @@ lang: ru
 Миграция на containerd v2 возможна при выполнении следующих условий:
 
 - Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+- Версия ядра Linux не входит в диапазоны 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS).
 - На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 
 При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Virtualization Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если  на узле есть кастомные конфигурации  в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config=custom`.
@@ -33,6 +34,12 @@ ls -l /etc/containerd/conf.d
 ```
 
 ## Как включить containerd v2
+
+{% alert level="info" %}
+В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
+
+Также обратите внимание, что обновление узла приводит к прерыванию его работы ([disruptive-обновлению](./node-management.html#обновления-требующие-прерывания-работы-узла)). Если для группы узлов установлено значение [`spec.disruptions.approvalMode: Manual`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode), запустите обновление вручную на соответствующих узлах с помощью аннотации: `d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=`.
+{% endalert %}
 
 Включение containerd v2 возможно двумя способами:
 
@@ -61,9 +68,4 @@ ls -l /etc/containerd/conf.d
        type: ContainerdV2
    ```
 
-При переходе на containerd v2 Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов.
-Обновление узла приводит к прерыванию работы размещенной на нем нагрузки (disruptive-обновление). На процесс обновления узла влияют параметры применения disruptive-обновлений группы узлов ([spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
-
-{% alert level="info" %}
-В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
-{% endalert %}
+   При переходе на containerd v2 Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов.

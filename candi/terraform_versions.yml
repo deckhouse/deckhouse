@@ -1,15 +1,12 @@
 # Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
 # and ee/candi/cloud-providers/*/terraform-modules/versions.tf
-
 terraform: 0.14.8
-
 opentofu: 1.9.4
-
 aws:
   namespace: hashicorp
   cloudName: AWS
   type: aws
-  version: 5.83.1
+  version: "5.83.1"
   # artifact name with provider binary
   artifact: terraform-provider-aws
   # provider binary name with artifact and destination image
@@ -28,12 +25,11 @@ aws:
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   # after migration, please remove this comment
   useOpentofu: false
-
 azure:
   namespace: hashicorp
   cloudName: Azure
   type: azurerm
-  version: 3.117.1
+  version: "3.117.1"
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm
@@ -49,12 +45,11 @@ azure:
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   # after migration, please remove this comment
   useOpentofu: false
-
 gcp:
   namespace: hashicorp
   cloudName: GCP
   type: google
-  version: 4.85.0
+  version: "4.85.0"
   artifact: terraform-provider-gcp
   artifactBinary: terraform-provider-gcp
   destinationBinary: terraform-provider-google
@@ -70,12 +65,11 @@ gcp:
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   # after migration, please remove this comment
   useOpentofu: false
-
 openstack:
   namespace: terraform-provider-openstack
   cloudName: OpenStack
   type: openstack
-  version: 1.54.1
+  version: "1.54.1"
   artifact: terraform-provider-openstack
   artifactBinary: terraform-provider-openstack
   destinationBinary: terraform-provider-openstack
@@ -91,23 +85,21 @@ openstack:
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   # after migration, please remove this comment
   useOpentofu: false
-
 ovirt:
   namespace: terraform-provider-ovirt
   cloudName: Zvirt
   type: ovirt
-  version: 2.2.0
+  version: "2.2.0"
   artifact: terraform-provider-ovirt
   artifactBinary: terraform-provider-ovirt
   destinationBinary: terraform-provider-ovirt
   vmResourceType: ovirt_vm
   useOpentofu: true
-
 vsphere:
   namespace: hashicorp
   cloudName: vSphere
   type: vsphere
-  version: 2.0.2
+  version: "2.0.2"
   artifact: terraform-provider-vsphere
   artifactBinary: terraform-provider-vsphere
   destinationBinary: terraform-provider-vsphere
@@ -123,12 +115,13 @@ vsphere:
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   # after migration, please remove this comment
   useOpentofu: false
-
 vcd:
   namespace: vmware
   cloudName: VCD
   type: vcd
-  versions: ["3.10.0", "3.14.1"]
+  versions:
+    - "3.10.0"
+    - "3.14.1"
   artifact: terraform-provider-vcd-artifact
   artifactBinary: terraform-provider-vcd
   destinationBinary: terraform-provider-vcd
@@ -144,34 +137,31 @@ vcd:
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   # after migration, please remove this comment
   useOpentofu: false
-
 yandex:
   namespace: yandex-cloud
   cloudName: Yandex
   type: yandex
-  version: 0.174.0
+  version: "0.174.0"
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
   vmResourceType: yandex_compute_instance
   useOpentofu: true
-
 decort:
   namespace: terraform-provider-decort
   cloudName: Dynamix
   type: decort
-  version: 4.7.3
+  version: "4.7.3"
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort
   vmResourceType: decort_kvmvm
   useOpentofu: true
-
 huaweicloud:
   namespace: terraform-provider-huaweicloud
   cloudName: Huaweicloud
   type: huaweicloud
-  version: 1.69.0
+  version: "1.69.0"
   artifact: terraform-provider-huaweicloud
   artifactBinary: terraform-provider-huaweicloud
   destinationBinary: terraform-provider-huaweicloud
@@ -186,12 +176,11 @@ huaweicloud:
   # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
   #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
   useOpentofu: false
-
 kubernetes:
   namespace: hashicorp
   cloudName: DVP
   type: kubernetes
-  version: 2.38.0
+  version: "2.38.0"
   artifact: terraform-provider-kubernetes
   artifactBinary: terraform-provider-kubernetes
   destinationBinary: terraform-provider-kubernetes

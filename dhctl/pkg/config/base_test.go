@@ -26,10 +26,10 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -437,10 +437,10 @@ spec:
 }
 
 func TestParseConfigFromFiles(t *testing.T) {
-	app.VersionFile = "./mocks/version"
 	dc := &directoryconfig.DirectoryConfig{
 		DownloadDir:      "/tmp",
 		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "./mocks/version",
 	}
 	t.Run("parse wildcard", func(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(t.Context(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), dc)
@@ -461,6 +461,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 }
 
 func TestParseConfigFromCluster(t *testing.T) {
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
 		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, nil)
 

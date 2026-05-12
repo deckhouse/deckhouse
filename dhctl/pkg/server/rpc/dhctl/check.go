@@ -22,11 +22,11 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -152,12 +152,12 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -198,7 +198,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		err = cache.InitWithOptions(
 			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 
 		if err != nil {
@@ -221,6 +221,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
+		DownloadDir:      s.params.DownloadDirConfig.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
@@ -234,39 +235,33 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
-		Logger:                loggerFor,
-		IsDebug:               s.params.IsDebug,
-		TmpDir:                s.params.TmpDir,
-		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
-		OnProgressFunc:        p.sendProgress,
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+			WithUseTfCache(opts.Cache.UseTfCache).
+			WithDebug(s.params.IsDebug),
+		Logger:         loggerFor,
+		IsDebug:        s.params.IsDebug,
+		TmpDir:         s.params.TmpDir,
+		OnPhaseFunc:    func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc: p.sendProgress,
+		Options:        opts,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: p.request.Options.CommanderMode,
-		APIServerURL:  p.request.Options.ApiServerUrl,
-		APIServerOptions: helper.APIServerOptions{
-			Token:                    p.request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
-		},
-		SchemaStore:         s.params.SchemaStore,
-		SSHConnectionConfig: p.request.ConnectionConfig,
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+		var cleanup func() error
+		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		cleanuper.Add(cleanup)
+		if err != nil {
+			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		return nil
 	})
-	cleanuper.Add(cleanup)
 	if err != nil {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	if !govalue.IsNil(sshClient) {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.CheckResult{Err: err.Error()}
-		}
-	}
-
-	checkParams.KubeClient = kubeClient
-	checkParams.SSHClient = sshClient
+	checkParams.KubeProvider = kubeProvider
 
 	checker := check.NewChecker(checkParams)
 

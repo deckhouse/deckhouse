@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pause-deployment
+  labels:
+    e2e-test: low-node-utilization
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      e2e-test: low-node-utilization
+  template:
+    metadata:
+      labels:
+        e2e-test: low-node-utilization
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi

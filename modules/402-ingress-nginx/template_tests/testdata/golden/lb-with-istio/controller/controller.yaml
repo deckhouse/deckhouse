@@ -38,8 +38,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: c86b1c30807395a33e44cd42b34d3504b2d412b2990834b2cba1757fc8a86092
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/checksum: 965fd6ef26b6b04776935f6d3c2b47ab2a71402d1e3a3649024d94f7603354ac
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.15"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
     app: controller
@@ -74,6 +74,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --enable-metrics=true
         - --publish-service=d8-ingress-nginx/test-load-balancer
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
@@ -93,7 +94,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
             exec:
@@ -144,16 +145,23 @@ spec:
           seccompProfile:
             type: Unconfined
         volumeMounts:
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/tmp
+          name: tmp
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-        - mountPath: /chroot/etc/nginx/ssl/
-          name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp
-          name: tmp
-        - mountPath: /chroot/etc/ingress-controller
-          name: etc-ingress-controller
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -243,13 +251,13 @@ spec:
         - -ec
         - |
           mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
-            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
-            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
-            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
-            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi \
+            /etc/ingress-controller/ssl /etc/ingress-controller/lua /etc/ingress-controller/nginx \
+            /etc/ingress-controller/resolv /etc/ingress-controller/geoip \
+            /etc/ingress-controller/auth /etc/ingress-controller/telemetry \
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
-          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /etc/ingress-controller/nginx/nginx.conf
         image: registry.example.com@imageHash-ingressNginx-init
         name: init
         resources:
@@ -266,7 +274,7 @@ spec:
           runAsNonRoot: true
           runAsUser: 64535
         volumeMounts:
-        - mountPath: /chroot/etc/ingress-controller
+        - mountPath: /etc/ingress-controller
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp

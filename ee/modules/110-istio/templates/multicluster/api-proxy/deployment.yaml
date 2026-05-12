@@ -1,6 +1,6 @@
 {{- define "api_proxy_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: 15m
+memory: 32Mi
 {{- end }}
 
 {{- if .Values.istio.multicluster.enabled }}
@@ -18,15 +18,15 @@ spec:
     kind: Deployment
     name: api-proxy
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
     - containerName: api-proxy
       minAllowed:
         {{- include "api_proxy_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 40m
+        memory: 64Mi
   {{- end }}
 ---
 apiVersion: apps/v1

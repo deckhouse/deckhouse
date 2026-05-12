@@ -17,6 +17,9 @@ package detach
 import (
 	"context"
 	"fmt"
+	"time"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -24,7 +27,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -34,6 +36,10 @@ type Params struct {
 	OnCheckResult         func(context.Context, *check.CheckResult) error
 	OnPhaseFunc           phases.DefaultOnPhaseFunc
 	OnProgressFunc        phases.OnProgressFunc
+
+	// ResourcesTimeout caps how long the create-resources loop waits for the
+	// detach resources to converge.
+	ResourcesTimeout time.Duration
 }
 
 type Detacher struct {
@@ -41,7 +47,7 @@ type Detacher struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	AgentModuleName string
-	SSHClient       node.SSHClient
+	SSHProvider     libcon.SSHProvider
 	Checker         *check.Checker
 }
 
@@ -50,14 +56,14 @@ type DetachResources struct {
 	Values   map[string]any
 }
 
-func NewDetacher(checker *check.Checker, sshClient node.SSHClient, params *Params) *Detacher {
+func NewDetacher(checker *check.Checker, sshProvider libcon.SSHProvider, params *Params) *Detacher {
 	return &Detacher{
 		Params: params,
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationCommanderDetach, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		SSHClient: sshClient,
-		Checker:   checker,
+		SSHProvider: sshProvider,
+		Checker:     checker,
 	}
 }
 
@@ -126,7 +132,7 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil, op.Params.ResourcesTimeout)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

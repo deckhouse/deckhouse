@@ -112,13 +112,14 @@ help:
 
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
-GATOR_VERSION = 3.9.0
+GATOR_VERSION = 3.22.0
+OPA_VERSION = 1.15.1
 GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/opa bin/werf bin/gh ## Install dev dependencies.
 
 ##@ Security
 bin:
@@ -144,12 +145,22 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
+bin/opa-${OPA_VERSION}/opa:
+	mkdir -p bin/opa-${OPA_VERSION}
+	curl -sSfL https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_${GOHOSTOS}_${GOHOSTARCH}_static -o bin/opa-${OPA_VERSION}/opa
+	chmod +x bin/opa-${OPA_VERSION}/opa
+
+.PHONY: bin/opa
+bin/opa: bin/opa-${OPA_VERSION}/opa
+	rm -f bin/opa
+	ln -s /deckhouse/bin/opa-${OPA_VERSION}/opa bin/opa
+
 .PHONY: bin/yq
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
-tests-modules: gotestsum ## Run unit tests for modules hooks and templates.
+tests-modules: bin/gator bin/opa gotestsum ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
@@ -207,12 +218,16 @@ define iterateAllGoModules
 endef
 
 .PHONY: lint-all
-lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+lint-all: golangci-lint check-dhctl-cmd-drift ## Run golangci-lint run in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: check-dhctl-cmd-drift
+check-dhctl-cmd-drift: ## Verify dhctl ↔ deckhouse-controller CLI command-builder duplicates are in sync.
+	@bash tools/check-dhctl-cmd-drift.sh
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:

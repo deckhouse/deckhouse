@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: descheduler
+  namespace: d8-descheduler
+status:
+  (readyReplicas >= `1`): true

@@ -1,0 +1,263 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: descheduler-low-node-utilization
+spec:
+  timeouts:
+    apply: 30s
+    assert: 120s
+    delete: 30s
+    exec: 120s
+
+  steps:
+    - name: assert-descheduler-ready
+      description: Verify that the descheduler deployment exists and is ready
+      try:
+        - description: Check descheduler deployment has ready replicas
+          assert:
+            file: ../common/assert-descheduler-ready.yaml
+
+    - name: check-minimum-nodes
+      description: Verify that the cluster has at least 2 worker nodes for the balancing test
+      try:
+        - description: Count worker nodes and verify at least 2 exist
+          script:
+            content: |
+              NODE_COUNT=$(kubectl get nodes --no-headers -l 'node-role.kubernetes.io/control-plane!=' | wc -l | tr -d ' ')
+              echo "Worker node count: $NODE_COUNT"
+              [ "$NODE_COUNT" -ge 2 ]
+            check:
+              ($error == null): true
+
+    - name: create-imbalanced-workload
+      description: Cordon all worker nodes except one and create a Deployment to concentrate pods on the target node
+      try:
+        - description: Select a worker node and cordon all others
+          script:
+            content: |
+              WORKER_NODES=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name' -l 'node-role.kubernetes.io/control-plane!=' 2>/dev/null)
+              TARGET_NODE=$(echo "$WORKER_NODES" | head -1)
+              for NODE in $WORKER_NODES; do
+                if [ "$NODE" != "$TARGET_NODE" ]; then
+                  kubectl cordon "$NODE" >&2
+                fi
+              done
+              printf '%s' "$TARGET_NODE"
+            outputs:
+              - name: targetNode
+                value: ($stdout)
+            check:
+              ($error == null): true
+        - description: Create pause Deployment (all pods land on the only schedulable node)
+          create:
+            file: manifests/pause-deployment.yaml
+      catch:
+        - description: Show pod status on failure
+          get:
+            apiVersion: v1
+            kind: Pod
+        - description: Show events on failure
+          events: {}
+      cleanup:
+        - description: Uncordon all nodes
+          script:
+            content: |
+              kubectl get nodes -o jsonpath='{range .items[?(@.spec.unschedulable)]}{.metadata.name}{"\n"}{end}' | \
+                xargs -r kubectl uncordon 2>/dev/null || true
+
+    - name: wait-deployment-ready
+      description: Wait for the pause Deployment to have all replicas available
+      try:
+        - description: Wait for Deployment Available condition
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: pause-deployment
+            timeout: 120s
+            for:
+              condition:
+                name: Available
+                value: 'True'
+        - description: Assert Deployment has 10 ready replicas
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: pause-deployment
+              status:
+                readyReplicas: 10
+
+    - name: assert-pods-on-target-node
+      description: Verify all Deployment pods are concentrated on the target node
+      try:
+        - description: Check all pods are running on one node
+          script:
+            content: |
+              NODE_COUNT=$(kubectl get pods -n "$NAMESPACE" -l e2e-test=low-node-utilization \
+                -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')
+              echo "Pods are on $NODE_COUNT node(s)"
+              [ "$NODE_COUNT" -eq 1 ]
+            check:
+              ($error == null): true
+
+    - name: uncordon-nodes
+      description: Uncordon all worker nodes so the descheduler can redistribute pods
+      try:
+        - description: Uncordon all previously cordoned nodes
+          script:
+            content: |
+              kubectl get nodes -o jsonpath='{range .items[?(@.spec.unschedulable)]}{.metadata.name}{"\n"}{end}' | while read -r NODE; do
+                echo "Uncordoning node: $NODE"
+                kubectl uncordon "$NODE"
+              done
+
+    - name: apply-descheduler-cr
+      description: Create Descheduler CR with LowNodeUtilization strategy
+      try:
+        - description: Apply the Descheduler CR manifest
+          apply:
+            file: manifests/descheduler-cr.yaml
+        - description: Assert the Descheduler CR exists
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Descheduler
+              metadata:
+                name: e2e-low-node-utilization
+      cleanup:
+        - description: Delete the Descheduler CR
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: Descheduler
+              name: e2e-low-node-utilization
+
+    - name: assert-configmap-updated
+      description: Verify that Deckhouse reconciled the CR into the descheduler policy ConfigMap
+      try:
+        - description: Assert ConfigMap data contains the e2e-low-node-utilization profile
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-low-node-utilization')): true
+      catch:
+        - description: Show ConfigMap content on failure
+          get:
+            apiVersion: v1
+            kind: ConfigMap
+            name: descheduler-policy
+            namespace: d8-descheduler
+        - description: Show Descheduler CRs on failure
+          get:
+            apiVersion: deckhouse.io/v1alpha2
+            kind: Descheduler
+        - description: Show events in descheduler namespace
+          events:
+            namespace: d8-descheduler
+
+    - name: wait-descheduler-ready
+      description: Wait for descheduler deployment to be ready with the new policy
+      try:
+        - description: Wait for descheduler deployment Available condition
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: descheduler
+            namespace: d8-descheduler
+            timeout: 120s
+            for:
+              condition:
+                name: Available
+                value: 'True'
+        - description: Assert descheduler has ready replicas
+          assert:
+            file: ../common/assert-descheduler-ready.yaml
+      catch:
+        - description: Describe descheduler deployment on failure
+          describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: descheduler
+            namespace: d8-descheduler
+        - description: Show descheduler pods on failure
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-descheduler
+            selector: app=descheduler
+        - description: Show events in descheduler namespace
+          events:
+            namespace: d8-descheduler
+
+    - name: wait-for-descheduler-cycle
+      description: Wait for descheduler to execute the LowNodeUtilization plugin
+      try:
+        - description: Poll descheduler logs for LowNodeUtilization execution
+          script:
+            timeout: 420s
+            content: |
+              echo "Watching descheduler logs for LowNodeUtilization..."
+              for i in $(seq 1 80); do
+                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --tail=-1 2>/dev/null | grep -q "LowNodeUtilization"; then
+                  echo "LowNodeUtilization plugin has executed"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Timed out waiting for LowNodeUtilization to execute"
+              kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --tail=-1 2>/dev/null | tail -50
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Describe descheduler pod on failure
+          describe:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-descheduler
+            selector: app=descheduler
+        - description: Show descheduler pod logs on failure
+          podLogs:
+            namespace: d8-descheduler
+            selector: app=descheduler
+
+    - name: verify-pod-redistribution
+      description: Verify that descheduler redistributed pods across at least 2 nodes
+      try:
+        - description: Check pods are distributed across multiple nodes
+          script:
+            timeout: 420s
+            content: |
+              echo "Waiting for pods to be redistributed across nodes..."
+              for i in $(seq 1 80); do
+                NODE_COUNT=$(kubectl get pods -n "$NAMESPACE" -l e2e-test=low-node-utilization \
+                  -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')
+                echo "Attempt $i: pods are on $NODE_COUNT node(s)"
+                if [ "$NODE_COUNT" -ge 2 ]; then
+                  echo "PASS: Pods redistributed across $NODE_COUNT nodes"
+                  kubectl get pods -n "$NAMESPACE" -l e2e-test=low-node-utilization -o wide --no-headers
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "FAIL: Pods remain on 1 node after descheduler cycle"
+              kubectl get pods -n "$NAMESPACE" -l e2e-test=low-node-utilization -o wide --no-headers
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Show all pods on failure
+          get:
+            apiVersion: v1
+            kind: Pod
+        - description: Show descheduler pod logs on failure
+          podLogs:
+            namespace: d8-descheduler
+            selector: app=descheduler

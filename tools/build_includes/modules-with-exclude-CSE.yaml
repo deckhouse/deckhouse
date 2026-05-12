@@ -623,16 +623,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/be/modules/040-node-manager/openapi/config-values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/be/modules/040-node-manager/openapi/doc-ru-config-values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
@@ -929,22 +919,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-node-manager/templates/nvidia-gpu
-  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /ee/modules/040-node-manager/templates/podmonitor.yaml
   to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
   stageDependencies:
@@ -1140,6 +1114,84 @@
         - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
+  to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-control-plane-manager/openapi/config-values.yaml
+  to: /deckhouse/modules/040-control-plane-manager/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
+  to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/early-oom
+  to: /deckhouse/modules/040-node-manager/templates/early-oom
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
+  to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/cse/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
+  to: /deckhouse/modules/101-cert-manager/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/140-user-authz/openapi/config-values.yaml
+  to: /deckhouse/modules/140-user-authz/openapi/config-values.yaml
   stageDependencies:
     install:
         - '**/*'

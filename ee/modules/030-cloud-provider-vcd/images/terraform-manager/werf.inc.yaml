@@ -1,3 +1,4 @@
+{{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "terraform-provider-vcd" "mode" $) | fromYaml }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
@@ -12,7 +13,7 @@ git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
 import:
-{{- range $version := .TF.vcd.versions }}
+{{- range $_, $version := $version_map }}
 - image: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd-v{{ $version }}
   to: /terraform-manager/terraform-provider-vcd-v{{ $version }}
@@ -35,7 +36,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-{{- range $version := .TF.vcd.versions }}
+{{- range $_, $version := $version_map }}
   - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/vmware/terraform-provider-vcd.git /src/v{{ $version }}
   - cd /src/v{{ $version }}
   - git apply /patches/v{{ $version }}/*.patch --verbose
@@ -61,7 +62,7 @@ shell:
   - apk add --no-cache make bash
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-{{- range $version := .TF.vcd.versions }}
+{{- range $_, $version := $version_map }}
   - cd /src/v{{ $version }}
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X 'github.com/vmware/terraform-provider-vcd/v3/vcd.BuildVersion={{ $version }}'" -o /terraform-provider-vcd-v{{ $version }}  .
   - strip /terraform-provider-vcd-v{{ $version }}

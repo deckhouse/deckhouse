@@ -30,7 +30,7 @@ permissions:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
   WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
@@ -295,6 +295,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}

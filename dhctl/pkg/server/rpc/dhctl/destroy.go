@@ -27,7 +27,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -177,12 +176,12 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -223,7 +222,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		err = cache.InitWithOptions(
 			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 
 		if err != nil {
@@ -239,7 +238,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
 		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
@@ -282,6 +281,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		SSHProvider:     sshProvider,
 		KubeProvider:    kubeProvider,
 		DirectoryConfig: s.params.DownloadDirConfig,
+		Options:         opts,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

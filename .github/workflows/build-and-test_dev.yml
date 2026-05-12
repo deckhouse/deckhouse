@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
   WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
@@ -533,6 +533,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -831,6 +832,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1128,6 +1130,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1425,6 +1428,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1722,6 +1726,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2019,6 +2024,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2316,6 +2322,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2865,7 +2872,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:4aaf81659fa6ea3cbbb0f241d739dda485bce79ec98b0fd5014ef4f4210e1cd5"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:2fa0da12f239d1696f2f790ac8332ae4790f1b9db9d1e785778c4a64e2481544"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

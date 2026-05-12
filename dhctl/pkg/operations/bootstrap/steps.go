@@ -31,9 +31,10 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -50,9 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -61,13 +60,12 @@ const (
 )
 
 type BashiblePipelineParams struct {
-	// Node
-	// do not use provider here, we need to run with one node!
-	Node           node.Interface
+	Node           libcon.Interface
 	NodeIP         string
 	MetaConfig     *config.MetaConfig
 	DevicePath     string
 	CommanderMode  bool
+	IsDebug        bool
 	DirsConfig     *directoryconfig.DirectoryConfig
 	LoggerProvider dhctllog.LoggerProvider
 }
@@ -162,7 +160,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
-		if !app.IsDebug {
+		if !params.IsDebug {
 			_ = os.RemoveAll(templateController.TmpDir)
 		}
 	})
@@ -177,7 +175,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	})
 }
 
-func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, controller *template.Controller) error {
+func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
 	upload := func(ctx context.Context, scriptPath string) error {
 		if _, err := os.Stat(scriptPath); err != nil {
 			if os.IsNotExist(err) {
@@ -209,7 +207,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, contro
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Initial bootstrap", func(ctx context.Context) error {
-		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
+		for _, bootstrapScript := range []string{"01-bootstrap-prerequisites.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			name := fmt.Sprintf("Execute %s", bootstrapScript)
@@ -237,7 +235,7 @@ func PrepareBashibleBundle(
 	})
 }
 
-func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient node.SSHClient) error {
+func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on Master become Ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
 		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
@@ -245,7 +243,10 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient node.SSHClient)
 			return nil
 		})
 
-		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
+		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
+			retry.WithWait(5*time.Second),
+			retry.WithAttempts(50),
+		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil
@@ -259,6 +260,7 @@ type InstallDeckhouseResult struct {
 type InstallDeckhouseParams struct {
 	BeforeDeckhouseTask func() error
 	State               *State
+	DeckhouseTimeout    time.Duration
 }
 
 func InstallDeckhouse(
@@ -286,7 +288,7 @@ func InstallDeckhouse(
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
-		err = deckhouse.WaitForReadiness(ctx, kubeCl)
+		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
 		if err != nil {
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}

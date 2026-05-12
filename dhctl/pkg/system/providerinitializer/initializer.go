@@ -16,6 +16,7 @@ package providerinitializer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -29,6 +30,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+)
+
+var (
+	ErrHostsFromCacheNotFound = errors.New("failed to get hosts from cache")
+
+	ErrSSHHostRequiredForKubernetesConnection = errors.New(
+		"SSH connection parameters are not configured. Verify SSH connection settings, or use direct Kubernetes access via --kubeconfig or --kube-client-from-cluster",
+	)
 )
 
 type SSHProviderInitializer struct {
@@ -54,7 +63,7 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 		},
 	}
 
-	if len(config.Hosts) > 0 {
+	if config != nil && len(config.Hosts) > 0 {
 		initializer.provider = provider.NewDefaultSSHProvider(
 			baseProviderSettings,
 			config,
@@ -81,7 +90,7 @@ func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHPr
 		return i.provider, nil
 	}
 
-	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), fmt.Errorf("failed to get hosts from cache: %w", err)
+	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), ErrHostsFromCacheNotFound
 }
 
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
@@ -99,4 +108,40 @@ func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.Kub
 		return nil
 	}
 	return provider.NewDefaultKubeProvider(i.baseProviderSettings, cfg, runnerInterface)
+}
+
+func (i *SSHProviderInitializer) GetSettings() *settings.BaseProviders {
+	return i.baseProviderSettings
+}
+
+func (i *SSHProviderInitializer) GetConfig() *sshconfig.ConnectionConfig {
+	return i.config
+}
+
+// IsLegacyMode reports whether the connection config opts the SSH backend
+// into the legacy clissh path (sshconfig.Config.ForceLegacy). Returns false
+// when the connection config is not yet initialised.
+func (i *SSHProviderInitializer) IsLegacyMode() bool {
+	if i == nil || i.config == nil || i.config.Config == nil {
+		return false
+	}
+	return i.config.Config.ForceLegacy
+}
+
+func (i *SSHProviderInitializer) CheckHosts() bool {
+	if i.config != nil {
+		if len(i.config.Hosts) > 0 {
+			return true
+		}
+	}
+
+	lateHosts, err := i.hostsProvider()
+	if err != nil {
+		return false
+	}
+	if len(lateHosts) > 0 {
+		return true
+	}
+
+	return false
 }

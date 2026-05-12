@@ -8,7 +8,7 @@ title: "Managing control plane: FAQ"
 
 > It is important to have an odd number of masters to ensure a quorum.
 
-When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/ node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
 To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
 
 ```yaml
@@ -52,7 +52,7 @@ If, after bootstrapping, you need to create a multi-master cluster and add maste
 For example, if you need to create a multi-master with three master nodes in `spec.staticInstances.count` NodeGroup `master`, specify the value `2` and create two `staticInstances` for the nodes to be added. After adding them to the cluster, the number of master nodes will be three: the master node on which the installation took place and two master nodes added using CAPS.
 {% endalert %}
 
-Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](../node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
+Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
 <div id='how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master'></div>
 
@@ -70,7 +70,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
-1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
+1. Ensure there are no [alerts](/modules/prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
 1. Make sure that Deckhouse queue is empty:
 
    ```shell
@@ -194,7 +194,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
-1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. Ensure there are no [alerts](/modules/prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Make sure that Deckhouse queue is empty:
 
    ```shell
@@ -241,7 +241,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
-1. Ensure there are no [alerts](../prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. Ensure there are no [alerts](/modules/prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Make sure that Deckhouse queue is empty:
 
    ```shell
@@ -377,7 +377,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    Change the cloud provider settings:
 
    * Set `masterNodeGroup.replicas` to `2`.
-   * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+   * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node.deckhouse.io/etcd-arbiter: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
 
      ```yaml
      nodeGroups:
@@ -429,7 +429,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 To configure HA mode with two master nodes and an arbiter node in a static cluster, follow these steps:
 
-1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node.deckhouse.io/etcd-arbiter: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -774,7 +774,7 @@ This credential bypasses all RBAC checks. Use it only as a last resort and restr
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 2
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -819,7 +819,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -838,7 +838,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -898,7 +898,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50

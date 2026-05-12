@@ -50,6 +50,8 @@ rules:
   resources:
   - users
   - groups
+  - dexproviders
+  - useroperations
   verbs:
   - get
   - list
@@ -59,3 +61,15 @@ rules:
   - deletecollection
   - patch
   - update
+# Read-only audit access to internal Dex storage CRDs. Deliberately list-only:
+# `passwords` contain bcrypt-hashed credentials, `offlinesessionses` carry refresh tokens —
+# `get` on a single object would return the same secret material, so we keep ClusterAdmin
+# at the listing level only (enough to enumerate sessions for incident response).
+# NOTE: plural is `offlinesessionses` (matches Dex CRD name in crds/external/offlinesessionses.yaml).
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - passwords
+  - offlinesessionses
+  verbs:
+  - list

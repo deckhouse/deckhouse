@@ -149,16 +149,24 @@ func (s *OperationService) DiscoverPackage(ctx context.Context) (*DiscoverResult
 	return res, nil
 }
 
-// UpdateRepositoryStatus updates the PackageRepository status with the processed packages
+// UpdateRepositoryStatus updates the PackageRepository status with the processed packages.
 func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
 	original := s.repo.DeepCopy()
+
+	// Type is stable per package; recover it from the previous status when an incremental scan returned empty.
+	cachedTypes := make(map[string]string, len(s.repo.Status.Packages))
+	for _, p := range s.repo.Status.Packages {
+		cachedTypes[p.Name] = p.Type
+	}
 
 	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
 
 	for _, pkg := range packages {
 		pkgType := pkg.Type
 		if pkgType == "" {
-			// Skip packages without a resolved type (safety guard)
+			pkgType = cachedTypes[pkg.Name]
+		}
+		if pkgType == "" {
 			continue
 		}
 		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{

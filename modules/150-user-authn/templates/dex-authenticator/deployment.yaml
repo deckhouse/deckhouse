@@ -99,9 +99,19 @@ spec:
   template:
     metadata:
       labels:
+        {{- with $crd.spec.podMetadata }}
+          {{- with .labels }}
+{{ toYaml . | nindent 8 }}
+          {{- end }}
+        {{- end }}
         app: dex-authenticator
         name: {{ $crd.name | quote}}
       annotations:
+        {{- with $crd.spec.podMetadata }}
+          {{- with .annotations }}
+{{ toYaml . | nindent 8 }}
+          {{- end }}
+        {{- end }}
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
     spec:
 {{- if $crd.spec.nodeSelector }}

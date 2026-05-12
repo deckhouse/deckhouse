@@ -10,16 +10,17 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so*
   excludePaths:
-  - usr/lib/python3.12/site-packages/pip-25.3*
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
-{{- include "image mount points" . }}  
+{{- include "image mount points" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-from: {{ index $.Images "base/python" }}
+from: {{ index $.Images "base/python-3.12" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
