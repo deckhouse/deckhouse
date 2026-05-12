@@ -28,14 +28,14 @@ func TestNormalizeSandboxArgs(t *testing.T) {
 		want []string
 	}{
 		{
-			name: "drops leading separator",
-			in:   []string{"--", "/usr/bin/unshare", "-R", "/validation-chroot"},
-			want: []string{"/usr/bin/unshare", "-R", "/validation-chroot"},
+			name: "drops leading separator for child argv",
+			in:   []string{"--", "/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
+			want: []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
 		},
 		{
 			name: "keeps plain argv intact",
-			in:   []string{"/usr/bin/unshare", "-R", "/validation-chroot"},
-			want: []string{"/usr/bin/unshare", "-R", "/validation-chroot"},
+			in:   []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
+			want: []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
 		},
 	}
 
@@ -44,6 +44,46 @@ func TestNormalizeSandboxArgs(t *testing.T) {
 			got := normalizeSandboxArgs(tt.in)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("unexpected argv, got %v want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseSandboxMode(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       []string
+		wantMode sandboxMode
+		wantArgv []string
+	}{
+		{
+			name:     "isolated process mode",
+			in:       []string{"--isolated-process", "--", "/usr/local/nginx/sbin/nginx"},
+			wantMode: sandboxModeIsolatedProcess,
+			wantArgv: []string{"--", "/usr/local/nginx/sbin/nginx"},
+		},
+		{
+			name:     "isolated process child mode",
+			in:       []string{"--isolated-process-child", "--", "/usr/local/nginx/sbin/nginx"},
+			wantMode: sandboxModeIsolatedProcessChild,
+			wantArgv: []string{"--", "/usr/local/nginx/sbin/nginx"},
+		},
+		{
+			name:     "default mode",
+			in:       []string{"--", "/usr/local/nginx/sbin/nginx"},
+			wantMode: sandboxModeDefault,
+			wantArgv: []string{"--", "/usr/local/nginx/sbin/nginx"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotMode, gotArgv := parseSandboxMode(tt.in)
+			if gotMode != tt.wantMode {
+				t.Fatalf("unexpected mode, got %v want %v", gotMode, tt.wantMode)
+			}
+			if !reflect.DeepEqual(gotArgv, tt.wantArgv) {
+				t.Fatalf("unexpected argv, got %v want %v", gotArgv, tt.wantArgv)
 			}
 		})
 	}

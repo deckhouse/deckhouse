@@ -142,11 +142,11 @@ index 776440658..6f1b8f5b7 100644
 +	cmdArgs := []string{"-c", cfg, "-t", "-e", "/dev/null"}
 +	switch nc.ValidationIsolationMode {
 +	case "IsolatedProcess":
-+		sandboxArgs := append([]string{"--", "/usr/bin/unshare", "--map-root-user", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		sandboxArgs := append([]string{"--isolated-process", "--", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
 +		klog.InfoS("Running config test with process isolation", "dir", cfg)
 +		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
 +	case "IsolatedFilesystem":
-+		standardArgs := append([]string{"--map-root-user", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		standardArgs := append([]string{"-S", "64535", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
 +		klog.InfoS("Running config test with filesystem isolation", "dir", cfg)
 +		return exec.Command("/usr/bin/unshare", standardArgs...).CombinedOutput()
 +	}

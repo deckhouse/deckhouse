@@ -20,7 +20,10 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
+	"syscall"
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
 	"github.com/criyle/go-sandbox/pkg/forkexec"
@@ -29,6 +32,7 @@ import (
 	"github.com/criyle/go-sandbox/ptracer"
 	"github.com/criyle/go-sandbox/runner"
 	sbptrace "github.com/criyle/go-sandbox/runner/ptrace"
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -36,6 +40,7 @@ func main() {
 }
 
 func run(argv []string) int {
+	mode, argv := parseSandboxMode(argv)
 	debug := isDebug()
 	debugCrashOnDeny := isDebugCrashOnDeny()
 	argv = normalizeSandboxArgs(argv)
@@ -51,14 +56,30 @@ func run(argv []string) int {
 	}
 
 	extraRead := getSandboxExtraRead(nginxConfigPath)
-
-	workDir, err := os.Getwd()
-	if err != nil {
-		log.Printf("failed get pwd: %v", err)
-		return 1
-	}
 	extraWrite := getSandboxExtraWrite()
-	// Wrapper chain (`/usr/bin/nginx` shell script -> `unshare` -> nginx binary) needs fork/exec syscalls.
+
+	workDir := ""
+	switch mode {
+	case sandboxModeIsolatedProcess:
+		return runIsolatedProcessHelper(argv)
+	case sandboxModeIsolatedProcessChild:
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
+		if err := setupIsolatedProcessChild(); err != nil {
+			log.Printf("failed to setup isolated process mode: %v", err)
+			return 1
+		}
+		workDir = "/"
+	default:
+		var err error
+		workDir, err = os.Getwd()
+		if err != nil {
+			log.Printf("failed get pwd: %v", err)
+			return 1
+		}
+	}
+
 	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
 	var traceHandler sbptrace.Handler = handler
 	if debug {
@@ -155,6 +176,74 @@ func normalizeSandboxArgs(argv []string) []string {
 		return argv[1:]
 	}
 	return argv
+}
+
+type sandboxMode uint8
+
+const (
+	sandboxModeDefault sandboxMode = iota
+	sandboxModeIsolatedProcess
+	sandboxModeIsolatedProcessChild
+)
+
+func parseSandboxMode(argv []string) (sandboxMode, []string) {
+	if len(argv) > 0 && argv[0] == "--isolated-process" {
+		return sandboxModeIsolatedProcess, argv[1:]
+	}
+	if len(argv) > 0 && argv[0] == "--isolated-process-child" {
+		return sandboxModeIsolatedProcessChild, argv[1:]
+	}
+
+	return sandboxModeDefault, argv
+}
+
+func runIsolatedProcessHelper(argv []string) int {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Printf("failed to resolve sandbox executable: %v", err)
+		return 1
+	}
+
+	// The helper mode creates an exec boundary before entering user/net namespaces.
+	// Unsharing CLONE_NEWUSER from the already running Go sandbox process is unreliable
+	// because the runtime may already have multiple OS threads.
+	childArgs := append([]string{"--isolated-process-child", "--"}, argv...)
+	cmd := exec.Command(exe, childArgs...)
+	cmd.Env = os.Environ()
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNET,
+		UidMappings: []syscall.SysProcIDMap{{
+			ContainerID: os.Getuid(),
+			HostID:      os.Getuid(),
+			Size:        1,
+		}},
+		GidMappings: []syscall.SysProcIDMap{{
+			ContainerID: os.Getgid(),
+			HostID:      os.Getgid(),
+			Size:        1,
+		}},
+		GidMappingsEnableSetgroups: false,
+		// The child must be able to bring loopback up, chroot into /validation-chroot
+		// and keep low-port bind capability for the final nginx exec in the private netns.
+		AmbientCaps: []uintptr{
+			unix.CAP_NET_ADMIN,
+			unix.CAP_NET_BIND_SERVICE,
+			unix.CAP_SYS_CHROOT,
+		},
+	}
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitErr.ExitCode()
+		}
+		log.Printf("failed to run isolated process child: %v", err)
+		return 1
+	}
+
+	return 0
 }
 
 // getNginxConfByArg return parametr args of nginx, as sample for `-c` flag return path config
