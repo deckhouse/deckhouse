@@ -193,7 +193,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 
 	// check that the module sign annotation exists
 	if len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
-		s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
+		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
 	}
 
 	// Extract version from image
@@ -207,12 +207,12 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		slog.Bool("found", imageMeta.ModuleDefinitionFound),
 		slog.Bool("critical", imageMeta.ModuleCritical))
 	if !imageMeta.ModuleDefinitionFound {
-		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
+		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
 	}
 
 	// Track critical modules to identify potential "critical" field misuse
 	if imageMeta.ModuleCritical {
-		s.ms.GaugeSet(metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
+		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
 	}
 
 	versionData.Version = imageMeta.Version
