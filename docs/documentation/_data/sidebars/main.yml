@@ -1195,6 +1195,10 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
+                en: Web interface modules
+                ru: Модули веб-интерфейса
+              url: /architecture/deckhouse/web-modules.html
+            - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
