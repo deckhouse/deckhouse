@@ -232,6 +232,9 @@ func handleServiceAccounts(templatesDir string, modulePath string, name string, 
 
 		saName = strings.Replace(saName, "{{ .Chart.Name }}", name, 1)
 		saName = strings.Replace(saName, "{{ $.Chart.Name }}", name, 1)
+		if strings.Contains(saName, "{{") || strings.Contains(saName, "}}") {
+			continue
+		}
 		if len(saName) == 0 && len(name) == 0 {
 			return fmt.Errorf("empty final SA name, seems chartName didnt resolve for module: %s", modulePath)
 		}
@@ -319,6 +322,11 @@ func processModule(workDir, moduleYamlPath, moduleDirName string, sas, namespace
 		if err != nil {
 			return err
 		}
+	}
+
+	if name == "node-manager" && namespace == "d8-cloud-instance-manager" {
+		sas["system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler"] = struct{}{}
+		sas["system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler-mcm"] = struct{}{}
 	}
 
 	if strings.HasPrefix(namespace, "d8-") || namespace == "kube-system" {
