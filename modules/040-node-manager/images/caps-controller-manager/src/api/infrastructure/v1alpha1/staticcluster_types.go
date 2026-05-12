@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,12 +61,12 @@ type StaticClusterStatus struct {
 	Initialization StaticClusterInitializationStatus `json:"initialization,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:metadata:labels="heritage=deckhouse"
-//+kubebuilder:metadata:labels="module=node-manager"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
-//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=node-manager"
+// +kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
+// +kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta2=v1alpha1"
 
 // StaticCluster is the Schema for the Cluster API Provider Static.
 type StaticCluster struct {
@@ -77,7 +77,7 @@ type StaticCluster struct {
 	Status StaticClusterStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // StaticClusterList contains a list of StaticCluster.
 type StaticClusterList struct {

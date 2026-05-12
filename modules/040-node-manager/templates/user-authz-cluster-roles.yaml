@@ -36,9 +36,20 @@ rules:
 - apiGroups:
   - cluster.x-k8s.io
   resources:
+  - clusters
   - machines
   - machinesets
   - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - staticclusters
+  - staticmachines
+  - staticmachinetemplates
   verbs:
   - get
   - list
@@ -84,14 +95,33 @@ rules:
   - machinesets
   - machinedeployments
   verbs:
+  - create
+  - delete
+  - deletecollection
   - patch
   - update
 - apiGroups:
   - cluster.x-k8s.io
   resources:
+  - clusters
   - machines
   - machinesets
   - machinedeployments
   verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - staticclusters
+  - staticmachines
+  - staticmachinetemplates
+  verbs:
+  - create
+  - delete
+  - deletecollection
   - patch
   - update
