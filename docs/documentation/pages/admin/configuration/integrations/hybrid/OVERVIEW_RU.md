@@ -60,27 +60,116 @@ lang: ru
 
 ### Добавление автоматически создаваемых узлов в Yandex Cloud
 
-1. Создайте Service Account в нужном каталоге Yandex Cloud:
+В этом сценарии исходный кластер DKP уже развёрнут как статический кластер. Control plane остаётся на статическом узле, а дополнительные worker-узлы создаются в Yandex Cloud через модуль `cloud-provider-yandex`.
 
-   - Назначьте роль `editor`.
-   - Предоставьте доступ к используемой VPC с ролью `vpc.admin`.
+Для выполнения подготовительных команд нужен Yandex Cloud CLI (`yc`). Его можно использовать на рабочей машине администратора. На master-узле кластера `yc` не требуется: в кластере нужно применить только подготовленные манифесты.
 
-   Пример создания через Yandex CLI:
+1. Подготовьте идентификаторы облака, каталога, сети, подсети и зоны, где будут создаваться worker-узлы:
 
    ```shell
-   export FOLDER_ID=b1g...
-   yc iam service-account create --name dkp-hybrid --folder-id "$FOLDER_ID"
-   export SA_ID=$(yc iam service-account get --name dkp-hybrid --folder-id "$FOLDER_ID" --format json | jq -r .id)
-   yc resource-manager folder add-access-binding "$FOLDER_ID" --role editor --subject "serviceAccount:${SA_ID}"
-   yc vpc network list --folder-id "$FOLDER_ID"
-   yc iam
+   export CLOUD_ID="<CLOUD_ID>"
+   export FOLDER_ID="<FOLDER_ID>"
+   export NETWORK_ID="<NETWORK_ID>"
+   export SUBNET_ID="<SUBNET_ID>"
+   export ZONE="ru-central1-a"
    ```
+
+   Получить значения можно через Yandex Cloud CLI:
+
+   ```shell
+   yc resource-manager cloud list
+   yc resource-manager folder list
+   yc vpc network list --folder-id "$FOLDER_ID"
+   yc vpc subnet list --folder-id "$FOLDER_ID"
+   ```
+
+   Где:
+
+   - `CLOUD_ID` — ID облака Yandex Cloud;
+   - `FOLDER_ID` — ID каталога, в котором будут создаваться ресурсы;
+   - `NETWORK_ID` — ID VPC-сети;
+   - `SUBNET_ID` — ID подсети, в которой будут создаваться worker-узлы;
+   - `ZONE` — зона доступности, соответствующая выбранной подсети.
 
    Подробнее в разделе [Авторизация в Yandex Cloud](../public/yandex/authorization.html)
 
-1. Создайте секрет `d8-provider-cluster-configuration` с нужными данными. Пример содержимого `cloud-provider-cluster-configuration.yaml`:
+1. Создайте Service Account в нужном каталоге Yandex Cloud и назначьте ему права:
+
+   ```shell
+   yc iam service-account create \
+     --name dkp-hybrid \
+     --folder-id "$FOLDER_ID"
+
+   export SA_ID="$(yc iam service-account get \
+     --name dkp-hybrid \
+     --folder-id "$FOLDER_ID" \
+     --format json | jq -r .id)"
+
+   yc resource-manager folder add-access-binding "$FOLDER_ID" \
+     --role editor \
+     --subject "serviceAccount:${SA_ID}"
+
+   yc resource-manager folder add-access-binding "$FOLDER_ID" \
+     --role vpc.admin \
+     --subject "serviceAccount:${SA_ID}"
+   ```
+
+   Роль `editor` нужна для создания и управления облачными ресурсами, а `vpc.admin` — для работы с сетевыми ресурсами VPC.
+
+1. Создайте ключ Service Account и сохраните его в JSON-файл:
+
+   ```shell
+   yc iam key create \
+     --service-account-id "$SA_ID" \
+     --output dkp-hybrid-sa-key.json
+   ```
+
+   Подготовьте значение `serviceAccountJSON` в однострочном формате:
+
+   ```shell
+   export SERVICE_ACCOUNT_JSON="$(jq -c . dkp-hybrid-sa-key.json)"
+   ```
+
+1. Подготовьте публичный SSH-ключ, который будет добавлен на создаваемые worker-узлы:
+
+   ```shell
+   export SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)"
+   ```
+
+   Если используется другой ключ, укажите путь к нему вместо `~/.ssh/id_rsa.pub`.
+
+   {% alert level="warning" %}
+   В параметре `sshPublicKey` нужно передавать публичный SSH-ключ администратора, а не публичный ключ из JSON-файла Service Account.
+   {% endalert %}
+
+1. Получите ID образа операционной системы, из которого будут создаваться виртуальные машины:
+
+   ```shell
+   export IMAGE_ID="$(yc compute image get-latest-from-family ubuntu-2404-lts \
+     --folder-id standard-images \
+     --format json | jq -r .id)"
+   ```
+
+   {% alert level="warning" %}
+   Параметр `imageID` — это ID образа ОС в Yandex Cloud. Не используйте в этом поле ID существующей виртуальной машины или ID ключа Service Account.
+   {% endalert %}
+
+1. Укажите CIDR сети, в которой будут размещаться узлы Yandex Cloud:
+
+   ```shell
+   export NODE_NETWORK_CIDR="<NODE_NETWORK_CIDR>"
+   ```
+
+   Узнать CIDR подсети можно командой:
+
+   ```shell
+   yc vpc subnet list --folder-id "$FOLDER_ID"
+   ```
+
+1. Создайте файл, например `cloud-provider-cluster-configuration.yaml` с конфигурацией провайдера:
 
    ```yaml
+   cat > cloud-provider-cluster-configuration.yaml <<EOF
    apiVersion: deckhouse.io/v1
    kind: YandexClusterConfiguration
    layout: WithoutNAT
@@ -89,37 +178,43 @@ lang: ru
      instanceClass:
        cores: 4
        memory: 8192
-       imageID: fd80bm0rh4rkepi5ksdi
+       imageID: ${IMAGE_ID}
        diskSizeGB: 100
        platform: standard-v3
        externalIPAddresses:
-       - "Auto"
-   nodeNetworkCIDR: 10.160.0.0/16
+         - "Auto"
+   nodeNetworkCIDR: ${NODE_NETWORK_CIDR}
    existingNetworkID: empty
    provider:
-     cloudID: CLOUD_ID
-     folderID: FOLDER_ID
-     serviceAccountJSON: '{"id":"ajevk1dp8f9...--END PRIVATE KEY-----\n"}'
-   sshPublicKey: <SSH_PUBLIC_KEY>
+     cloudID: ${CLOUD_ID}
+     folderID: ${FOLDER_ID}
+     serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'
+   sshPublicKey: '${SSH_PUBLIC_KEY}'
+   EOF
    ```
 
-   Значения параметров:
-   - `nodeNetworkCIDR` — CIDR сети, который включает адреса всех используемых подсетей узлов в Yandex Cloud;
-   - `cloudID` — ID вашего облака;
-   - `folderID` — ID каталога;
-   - `serviceAccountJSON` — service account в каталоге, выгруженный в формате JSON;
-   - `sshPublicKey` — публичный ключ, который будет добавлен на разворачиваемые машины.
+   Где:
 
-   Поля в `masterNodeGroup` в гибриде часто формальны: **master-узлы в Yandex не создаются**, если кластер изначально статический.
+   - `nodeNetworkCIDR` — CIDR сети, который включает адреса подсетей, используемых для узлов Yandex Cloud;
+   - `imageID` — ID образа ОС для создаваемых виртуальных машин;
+   - `cloudID` — ID облака Yandex Cloud;
+   - `folderID` — ID каталога Yandex Cloud;
+   - `serviceAccountJSON` — JSON-ключ Service Account в однострочном формате;
+   - `sshPublicKey` — публичный SSH-ключ для доступа к создаваемым узлам.
 
-1. Заполните значения для файла `data.cloud-provider-discovery-data.json` в этом же секрете. Пример:
+   {% alert level="info" %}
+   В гибридном сценарии, когда control plane уже развёрнут как статический кластер, секция `masterNodeGroup` не приводит к созданию master-узлов в Yandex Cloud, но остаётся частью конфигурации провайдера.
+   {% endalert %}
 
-   ```yaml
+1. Создайте файл, например `cloud-provider-discovery-data.json` с discovery-данными Yandex Cloud:
+
+   ```shell
+   cat > cloud-provider-discovery-data.json <<EOF
    {
      "apiVersion": "deckhouse.io/v1",
      "defaultLbTargetGroupNetworkId": "empty",
      "internalNetworkIDs": [
-       "<NETWORK-ID>"
+       "${NETWORK_ID}"
      ],
      "kind": "YandexCloudDiscoveryData",
      "monitoringAPIKey": "",
@@ -127,30 +222,38 @@ lang: ru
      "routeTableID": "empty",
      "shouldAssignPublicIPAddress": false,
      "zoneToSubnetIdMap": {
-       "ru-central1-a": "<A-SUBNET-ID>",
-       "ru-central1-b": "<B-SUBNET-ID>", 
-       "ru-central1-d": "<D-SUBNET-ID>"
+       "${ZONE}": "${SUBNET_ID}"
      },
      "zones": [
-       "ru-central1-a",
-       "ru-central1-b",
-      "ru-central1-d"
+       "${ZONE}"
      ]
    }
+   EOF
    ```
 
-    Значения параметров:
-    - `internalNetworkIDs` — список ID сетей в Yandex Cloud, через которые обеспечивается внутренняя связность между узлами.
-    - `zoneToSubnetIdMap` — отображение зон на соответствующие подсети внутри указанных сетей (по одной подсети на зону).
-    - `shouldAssignPublicIPAddress: true` — указывает, требуется ли назначать публичные IP-адреса для создаваемых узлов. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
+   Где:
 
-1. Закодируйте полученные выше файлы YandexClusterConfiguration и YandexCloudDiscoveryData в формат Base64. Затем вставьте закодированные строки в поля `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` секрета, как показано в примере ниже:
+   - `internalNetworkIDs` — список ID сетей Yandex Cloud, через которые обеспечивается внутренняя связность между узлами;
+   - `zoneToSubnetIdMap` — соответствие зоны доступности и подсети, в которой будут создаваться узлы;
+   - `zones` — список зон, доступных для создания узлов;
+   - `shouldAssignPublicIPAddress` — управляет назначением публичных IP-адресов создаваемым узлам.
 
-   ```yaml
+   {% alert level="warning" %}
+   Если параметр `shouldAssignPublicIPAddress` установлен в `false`, у создаваемых узлов не будет публичного IP-адреса. В этом случае узлы должны иметь доступ к registry и внешним сервисам через NAT Gateway, NAT-инстанс, proxy или другой egress-механизм. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
+   {% endalert %}
+
+1. Закодируйте файлы `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` в Base64:
+
+   ```shell
+   export CLUSTER_CONFIGURATION_B64="$(base64 -w0 cloud-provider-cluster-configuration.yaml)"
+   export DISCOVERY_DATA_B64="$(base64 -w0 cloud-provider-discovery-data.json)"
+   ```
+
+1. Создайте манифест с секретом `d8-provider-cluster-configuration` и ModuleConfig для модуля `cloud-provider-yandex`:
+
+   ```shell
+   cat > yandex-provider-secret-and-mc.yaml <<EOF
    apiVersion: v1
-   data:
-     cloud-provider-cluster-configuration.yaml: <YANDEXCLUSTERCONFIGURATION_BASE64_ENCODED>
-     cloud-provider-discovery-data.json: <YANDEXCLOUDDISCOVERYDATA-BASE64-ENCODED>
    kind: Secret
    metadata:
      labels:
@@ -159,6 +262,9 @@ lang: ru
      name: d8-provider-cluster-configuration
      namespace: kube-system
    type: Opaque
+   data:
+     cloud-provider-cluster-configuration.yaml: ${CLUSTER_CONFIGURATION_B64}
+     cloud-provider-discovery-data.json: ${DISCOVERY_DATA_B64}
    ---
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
@@ -170,65 +276,92 @@ lang: ru
      settings:
        storageClass:
          default: network-ssd
+   EOF
    ```
 
-1. Удалите объект ValidatingAdmissionPolicyBinding, чтобы избежать конфликтов:
+1. Скопируйте файл `yandex-provider-secret-and-mc.yaml` на master-узел кластера. Перед применением удалите объект ValidatingAdmissionPolicyBinding, если он запрещает создание объектов с лейблом `heritage: deckhouse`:
 
    ```shell
-   d8 k delete validatingadmissionpolicybindings.admissionregistration.k8s.io heritage-label-objects.deckhouse.io
+   d8 k delete validatingadmissionpolicybindings.admissionregistration.k8s.io \
+     heritage-label-objects.deckhouse.io \
+     --ignore-not-found
    ```
 
-1. Примените два созданных на предыдущем шаге манифеста в кластере (секрет и ModuleConfig из шага 4, при необходимости — в одном файле).
-
-1. После применения дождитесь активации модуля `cloud-provider-yandex` и появления ресурса YandexInstanceClass:
+   Примените манифест:
 
    ```shell
-   d8 k get mc cloud-provider-yandex
-   d8 k get crd yandexinstanceclass
+   d8 k apply -f yandex-provider-secret-and-mc.yaml
    ```
 
-1. Создайте YandexInstanceClass и NodeGroup. Пример:
+1. Дождитесь включения модуля `cloud-provider-yandex` и появления ресурса YandexInstanceClass:
+
+   ```shell
+   d8 k get moduleconfig cloud-provider-yandex
+   d8 k get crd yandexinstanceclasses.deckhouse.io
+   d8 k -n d8-cloud-provider-yandex get pods -o wide
+   ```
+
+1. Создайте файл, например `yandex-instanceclass-nodegroup.yaml` с ресурсами YandexInstanceClass и NodeGroup:
 
    ```yaml
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroup
-   metadata:
-     name: worker
-   spec:
-     nodeType: CloudEphemeral
-     cloudInstances:
-       classReference:
-         kind: YandexInstanceClass
-         name: worker
-       minPerZone: 1
-       maxPerZone: 3
-       zones:
-         - ru-central1-d
-   ---
    apiVersion: deckhouse.io/v1alpha1
    kind: YandexInstanceClass
    metadata:
-     name: worker
+     name: yc-worker
    spec:
      cores: 4
      memory: 8192
      diskSizeGB: 50
      diskType: network-ssd
-     mainSubnet: <YOUR-SUBNET-ID>
+     mainSubnet: <SUBNET_ID>
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroup
+   metadata:
+     name: yc-worker
+   spec:
+     nodeType: Cloud
+     cloudInstances:
+       classReference:
+         kind: YandexInstanceClass
+         name: yc-worker
+       minPerZone: 1
+       maxPerZone: 1
+       zones:
+         - ru-central1-a
    ```
 
-   В `mainSubnet` укажите ID подсети в Yandex Cloud, из которой ВМ доступны сети статических узлов.
+   Где:
 
-   Примените манифест в кластере:
+   - YandexInstanceClass описывает параметры виртуальной машины, которая будет создана в Yandex Cloud;
+   - `mainSubnet` — ID подсети, из которой создаваемые worker-узлы должны иметь доступ к статическим узлам кластера;
+   - NodeGroup описывает группу узлов, которую DKP должен поддерживать в кластере;
+   - `nodeType: Cloud` означает, что узлы будут создаваться автоматически через облачного проавйдера;
+   - `cloudInstances.zones` должен содержать зоны из списка `zones` в `cloud-provider-discovery-data.json`.
+
+1. Примените манифест:
 
    ```shell
    d8 k apply -f yandex-instanceclass-nodegroup.yaml
    ```
 
-   После применения манифестов начнётся заказ виртуальных машин в Yandex Cloud, управляемых модулем `node-manager`.
+   После применения DKP начнёт создавать виртуальную машину в Yandex Cloud через machine-controller-manager.
 
-1. Для диагностики состояния и поиска возможных проблем проверьте логи `machine-controller-manager`:
+1. Проверьте появление узла в кластере:
+
+   ```shell
+   d8 k get nodes -o wide
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME                                 STATUS   ROLES                  AGE   VERSION    INTERNAL-IP
+   static-master-0                      Ready    control-plane,master   1h    v1.33.10   10.128.0.15
+   yc-worker-f3564dca-7fc59-s2w5d       Ready    yc-worker              10m   v1.33.10   10.128.0.21
+   ```
+
+1. Для диагностики состояния и поиска возможных проблем проверьте логи machine-controller-manager:
 
    ```shell
    d8 k -n d8-cloud-provider-yandex get machine
