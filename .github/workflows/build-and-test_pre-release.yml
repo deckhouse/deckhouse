@@ -760,7 +760,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_EE:
     name: Build EE
@@ -1067,7 +1067,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_BE:
     name: Build BE
@@ -1374,7 +1374,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_SE:
     name: Build SE
@@ -1681,7 +1681,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_SE-plus:
     name: Build SE-plus
@@ -1988,7 +1988,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_CSE:
     name: Build CSE
@@ -2295,7 +2295,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
 
   doc_web_build:
@@ -3258,6 +3258,114 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
+
+  doc_pdf_build:
+    name: Doc PDF build
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
+    needs:
+      - git_info
+      - doc_web_build
+    continue-on-error: true
+    # <template: doc_pdf_build_template>
+    runs-on: [self-hosted, large]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+
+      # <template: doc_release_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
+      # </template: doc_release_version_template>
+
+      - name: Generate PDF documentation
+        env:
+          WERF_ENV: "EE"
+          WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+          DOC_VERSION: "${{ env.DOC_VERSION }}"
+        run: |
+          make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
+
+      - name: Install awscli
+        if: ${{ success() }}
+        run: |
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          unzip -q /tmp/awscliv2.zip -d /tmp/awscliv2
+          /tmp/awscliv2/aws/install -i "${HOME}/.local/aws-cli" -b "${HOME}/.local/bin"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          rm -rf /tmp/awscliv2.zip /tmp/awscliv2
+
+      - name: Upload PDF files to S3
+        if: ${{ success() }}
+        env:
+          AWS_ACCESS_KEY_ID: "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
+          AWS_SECRET_ACCESS_KEY: "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
+          S3_BUCKET: "${{ secrets.DOC_S3_BUCKET_PROD }}"
+          S3_REGION: "${{ secrets.DOC_S3_REGION }}"
+          S3_EP: "${{ secrets.DOC_S3_EP }}"
+          DOC_VERSION: "${{ env.DOC_VERSION }}"
+        run: |
+          for lang in en ru; do
+            for guide in admin user; do
+              aws s3 cp \
+                "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
+                "s3://${S3_BUCKET}/deckhouse-web-production/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+                --endpoint-url "https://${S3_EP}" \
+                --region "${S3_REGION}"
+            done
+          done
+    # </template: doc_pdf_build_template>
 
 
   deploy_release_doc_prod:

@@ -280,6 +280,75 @@ steps:
 # </template: deploy_doc_template>
 {!{- end -}!}
 
+{!{ define "doc_pdf_build_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $versionTmpl := index . 1 -}!}
+{!{- $buildType := index . 2 -}!}
+{!{- $env := index . 3 -}!}
+{!{- $webEnv := printf "web-%s" $env -}!}
+
+# <template: doc_pdf_build_template>
+runs-on: [self-hosted, large]
+steps:
+  {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+{!{- if eq $buildType "release" }!}
+  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
+{!{- else }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{- end }!}
+  {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec $versionTmpl | strings.Indent 2 }!}
+
+  - name: Generate PDF documentation
+    env:
+{!{- if eq $buildType "release" }!}
+      WERF_ENV: "EE"
+      WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+{!{- else }!}
+      WERF_ENV: "development"
+      WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+{!{- end }!}
+      DOC_VERSION: "${{ env.DOC_VERSION }}"
+    run: |
+      make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
+
+  - name: Install awscli
+    if: ${{ success() }}
+    run: |
+      curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+      unzip -q /tmp/awscliv2.zip -d /tmp/awscliv2
+      /tmp/awscliv2/aws/install -i "${HOME}/.local/aws-cli" -b "${HOME}/.local/bin"
+      echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      rm -rf /tmp/awscliv2.zip /tmp/awscliv2
+
+  - name: Upload PDF files to S3
+    if: ${{ success() }}
+    env:
+      AWS_ACCESS_KEY_ID: "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
+      AWS_SECRET_ACCESS_KEY: "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
+      S3_BUCKET: "${{ secrets.DOC_S3_BUCKET_PROD }}"
+      S3_REGION: "${{ secrets.DOC_S3_REGION }}"
+      S3_EP: "${{ secrets.DOC_S3_EP }}"
+      DOC_VERSION: "${{ env.DOC_VERSION }}"
+    run: |
+      for lang in en ru; do
+        for guide in admin user; do
+          aws s3 cp \
+            "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
+            "s3://${S3_BUCKET}/deckhouse-{!{ $webEnv }!}/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+            --endpoint-url "https://${S3_EP}" \
+            --region "${S3_REGION}"
+        done
+      done
+# </template: doc_pdf_build_template>
+{!{- end -}!}
+
 {!{ define "deploy_site_template" }!}
 {!{- $env := . -}!}
 {!{- $webEnv := printf "web-%s" $env -}!}
