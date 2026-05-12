@@ -47,7 +47,7 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
 	// Registry shoud run before LoadConfigFromFile
-	registryStop, err := registry.InitFromOptions(
+	registryStop, err := registry.InitWithCLIOptions(
 		ctx,
 		b.loggerProvider(),
 		b.Options,

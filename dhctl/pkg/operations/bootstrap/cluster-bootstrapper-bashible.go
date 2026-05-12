@@ -26,7 +26,7 @@ import (
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
-	registryStop, err := registry.InitFromOptions(
+	registryStop, err := registry.InitWithCLIOptions(
 		ctx,
 		b.loggerProvider(),
 		b.Options,

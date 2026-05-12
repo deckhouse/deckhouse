@@ -92,7 +92,7 @@ func Init(ctx context.Context, params Params) (Stop, error) {
 	}, nil
 }
 
-func InitFromOptions(ctx context.Context, logger log.Logger, opts *options.Options) (Stop, error) {
+func InitWithCLIOptions(ctx context.Context, logger log.Logger, opts *options.Options) (Stop, error) {
 	nop := func() {}
 
 	if logger == nil {

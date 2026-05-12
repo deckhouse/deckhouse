@@ -48,7 +48,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		loggerProvider := log.ExternalLoggerProvider(logger)
 
 		// Registry shoud run before LoadConfigFromFile
-		registryStop, err := registry.InitFromOptions(
+		registryStop, err := registry.InitWithCLIOptions(
 			ctx,
 			loggerProvider(),
 			opts,
@@ -105,7 +105,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		loggerProvider := log.ExternalLoggerProvider(logger)
 
 		// Registry shoud run before LoadConfigFromFile
-		registryStop, err := registry.InitFromOptions(
+		registryStop, err := registry.InitWithCLIOptions(
 			ctx,
 			loggerProvider(),
 			opts,
