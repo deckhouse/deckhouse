@@ -51,7 +51,7 @@ description: Архитектура модуля upmeter в Deckhouse Kubernetes
     - `monitoring-and-autoscaling` — проверки того, что подсистема Observability исправно работает и собирает метрики с системных компонент;
     - `nginx` — проверки того, что все Ingress Controller имеют хотя бы 1 Pod в состоянии `Ready`;
     - `nodegroups` — проверка количества `desired` узлов в каждой NodeGroup;
-    - `synthetic` — проверка сетевого взаимодействия между нодами через HTTP-запросы к компоненту smoke-mini-\[a-e\].
+    - `synthetic` — проверка сетевого взаимодействия между узлами кластера через HTTP-запросы к компоненту smoke-mini-\[a-e\].
 
     В группу проверок `control-plane` входят следующие пробы:
     - `apiserver` — upmeter-agent проверяет доступность Kubernetes API;
