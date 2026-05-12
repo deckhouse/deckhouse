@@ -40,7 +40,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - cd /src
+    - cd /src/cmd/control-plane-manager
     {{ if $.isEE}}
     - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-node.SignatureEnabled=true"
     {{ else }}

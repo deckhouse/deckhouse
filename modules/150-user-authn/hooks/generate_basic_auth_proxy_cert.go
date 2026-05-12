@@ -106,7 +106,7 @@ type provider struct {
 
 func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// check proxy rollout conditions
-	if !input.Values.Get("userAuthn.publishAPI.enabled").Bool() {
+	if !input.Values.Get("userAuthn.internal.publishAPI.enabled").Bool() {
 		return nil
 	}
 
@@ -157,17 +157,19 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 		if err := snap[0].UnmarshalTo(&secret); err != nil {
 			return fmt.Errorf("failed to unmarshal 'secret' snapshot: %w", err)
 		}
+		// if fields in the secret are empty, go to generating
+		if secret.Crt != nil && secret.Key != nil {
+			// if cert is valid more than two days - skip renewal
+			expiring, err := certificate.IsCertificateExpiringSoon(secret.Crt, 2*24*time.Hour)
+			if err != nil {
+				return err
+			}
 
-		// if cert is valid more than two days - skip renewal
-		expiring, err := certificate.IsCertificateExpiringSoon(secret.Crt, 2*24*time.Hour)
-		if err != nil {
-			return err
-		}
-
-		if !expiring {
-			input.Values.Set("userAuthn.internal.basicAuthProxyCert", base64.StdEncoding.EncodeToString(secret.Crt))
-			input.Values.Set("userAuthn.internal.basicAuthProxyKey", base64.StdEncoding.EncodeToString(secret.Key))
-			return nil
+			if !expiring {
+				input.Values.Set("userAuthn.internal.basicAuthProxyCert", base64.StdEncoding.EncodeToString(secret.Crt))
+				input.Values.Set("userAuthn.internal.basicAuthProxyKey", base64.StdEncoding.EncodeToString(secret.Key))
+				return nil
+			}
 		}
 	}
 

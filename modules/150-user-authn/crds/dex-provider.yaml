@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/150-user-authn/crds/dex-provider.yaml
+# /ee/cse/modules/150-user-authn/crds/dex-provider.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -491,8 +495,8 @@ spec:
                       description: |
                         Enables Basic Authentication for access to the Kubernetes API server.
 
-                        The credentials are the Crowd user's username and password (from the application configured for this provider). 
-                        
+                        The credentials are the Crowd user's username and password (from the application configured for this provider).
+
                         Limitations:
                         - works only when [`publishAPI`](configuration.html#parameters-publishapi) is enabled;
                         - can be enabled for only one OIDC or Crowd provider in the cluster.
@@ -555,7 +559,7 @@ spec:
                       type: string
                       description: |
                         Issuer value expected in the SAML response.
-                        
+
                         Defaults to the callback URL.
                     ssoIssuer:
                       type: string
@@ -565,7 +569,7 @@ spec:
                       type: string
                       description: |
                         Callback URI.
-                        
+
                         Overrides the default callback URL. Should be set to `https://<dex-domain>/callback`.
                     usernameAttr:
                       type: string
@@ -719,7 +723,7 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'Name'
                          - ['acme:site-reliability-engineers'] for 'Slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
-      
+
                         'name' will be used by default.
                     useLoginAsID:
                       type: boolean

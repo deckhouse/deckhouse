@@ -50,6 +50,7 @@ type KubeClientSwitcher struct {
 
 type KubeClientSwitcherParams struct {
 	TmpDir        string
+	DownloadDir   string
 	IsDebug       bool
 	Logger        log.Logger
 	DisableSwitch bool
@@ -714,6 +715,7 @@ func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractor
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           e.tmpDir,
+		DownloadDir:      e.switcher.params.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           logger,
 		IsDebug:          e.switcher.params.IsDebug,

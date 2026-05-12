@@ -35,7 +35,6 @@ import (
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -72,6 +71,7 @@ type BashiblePipelineParams struct {
 	MetaConfig     *config.MetaConfig
 	DevicePath     string
 	CommanderMode  bool
+	IsDebug        bool
 	DirsConfig     *directoryconfig.DirectoryConfig
 	LoggerProvider dhctllog.LoggerProvider
 }
@@ -168,21 +168,13 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
-		if !app.IsDebug {
+		if !params.IsDebug {
 			_ = os.RemoveAll(templateController.TmpDir)
 		}
 	})
 
 	if err := prepareMasterNode(ctx, nodeInterface, templateController); err != nil {
 		return err
-	}
-
-	modulesPreparators := getModulesPreparators(params)
-	for _, preparator := range modulesPreparators {
-		logger.DebugF("Starting prepare module %s", preparator.Module())
-		if err := preparator.PrepareModule(ctx); err != nil {
-			return err
-		}
 	}
 
 	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
@@ -197,6 +189,18 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, dc); err != nil {
 		return err
+	}
+
+	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, dc); err != nil {
+		return err
+	}
+
+	modulesPreparators := getModulesPreparators(params)
+	for _, preparator := range modulesPreparators {
+		logger.DebugF("Starting prepare module %s", preparator.Module())
+		if err := preparator.PrepareModule(ctx); err != nil {
+			return err
+		}
 	}
 
 	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
@@ -385,6 +389,7 @@ type InstallDeckhouseResult struct {
 type InstallDeckhouseParams struct {
 	BeforeDeckhouseTask func() error
 	State               *State
+	DeckhouseTimeout    time.Duration
 }
 
 func InstallDeckhouse(
@@ -412,7 +417,7 @@ func InstallDeckhouse(
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
-		err = deckhouse.WaitForReadiness(ctx, kubeCl)
+		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
 		if err != nil {
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}

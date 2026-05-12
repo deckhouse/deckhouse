@@ -54,9 +54,9 @@ type ComponentStatus struct {
 	// +optional
 	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
 
-	// LastObservedAt is the time of the last successful CertObserve step for the component.
+	// LastCertObserveTime is the time of the last successful CertObserve step for the component.
 	// +optional
-	LastObservedAt metav1.Time `json:"lastObservedAt,omitempty"`
+	LastCertObserveTime metav1.Time `json:"lastCertObserveTime,omitempty"`
 }
 
 // ComponentsSpec describes the desired fingerprints of every control plane component on the node.

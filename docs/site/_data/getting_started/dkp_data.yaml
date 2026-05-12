@@ -14,6 +14,7 @@ global:
     header: getting_started/global/HEADER.md
     footer: getting_started/global/FOOTER.md
     output_dir_template: '<LANG>/gs/<INSTALL_CODE>/'
+    installer_output_dir_template: '<LANG>/gs/installer/<INSTALL_CODE>/'
 
 presets:
   minimal:
@@ -81,6 +82,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
       ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
     type: cloud
+    installer_support: true
     name:
       en: DVP
       ru: DVP
@@ -106,6 +108,42 @@ installTypes:
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -235,6 +273,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform on OpenStack"
       ru: "Deckhouse Kubernetes Platform на OpenStack"
     type: cloud
+    installer_support: true
     name:
       en: OpenStack
       ru: OpenStack
@@ -260,6 +299,42 @@ installTypes:
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -313,6 +388,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform on Selectel (OpenStack)"
       ru: "Deckhouse Kubernetes Platform в Selectel (OpenStack)"
     type: cloud
+    installer_support: true
     name:
       en: Selectel
       ru: Selectel
@@ -342,6 +418,42 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   openstack_vk:
     iconPath: images/icons/platforms/vk_logo.svg
     ee_only: true
@@ -352,6 +464,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform on VK Cloud (OpenStack)"
       ru: "Deckhouse Kubernetes Platform в VK Cloud (OpenStack)"
     type: cloud
+    installer_support: true
     name:
       en: VK Cloud
       ru: VK Cloud
@@ -381,10 +494,47 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   vcd:
     iconPath: images/icons/platforms/vmware-vcd.png
     ee_only: true
     type: cloud
+    installer_support: true
     name:
       en: VMware Cloud Director
       ru: VMware Cloud Director
@@ -420,11 +570,48 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   vsphere:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     ee_only: true
     se_support: true
     type: cloud
+    installer_support: true
     name:
       en: VMware vSphere
       ru: VMware vSphere
@@ -460,6 +647,42 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   yandex:
     iconPath: images/icons/platforms/yandex_cloud.png
     layout:
@@ -469,6 +692,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform in Yandex Cloud"
       ru: "Deckhouse Kubernetes Platform в Yandex Cloud"
     type: cloud
+    installer_support: true
     name:
       en: "Yandex Cloud"
       ru: "Yandex Cloud"
@@ -498,6 +722,42 @@ installTypes:
           en: What can I do next?
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
   zvirt:
     iconPath: images/icons/platforms/zvirt.png
     ee_only: true
@@ -509,6 +769,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform on Zvirt"
       ru: "Deckhouse Kubernetes Platform на Zvirt"
     type: cloud
+    installer_support: true
     # Например, это надписи на плитке
     name:
       en: zVirt
@@ -535,6 +796,42 @@ installTypes:
           ru: Получаем доступ к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/global/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Preparing environment
+          ru: Подготовка окружения
+        template: getting_started/<INSTALL_CODE>/STEP_ENV.md
+      step5:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
+      step6:
+        name:
+          en: Cluster parameters
+          ru: Параметры кластера
+        template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
+      step7:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -672,6 +969,7 @@ installTypes:
       en: "Deckhouse Kubernetes Platform for bare metal"
       ru: "Deckhouse Kubernetes Platform на bare metal"
     type: baremetal
+    installer_support: true
     name:
       en: Bare metal
       ru: Bare metal
@@ -697,6 +995,37 @@ installTypes:
           ru: Завершение установки
         template: getting_started/<INSTALL_CODE>/STEP_FINALIZE.md
       step6:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/global/STEP_FINISH.md
+    installerSteps:
+      step2:
+        name:
+          en: Installation information
+          ru: Информация об установке
+        template: getting_started/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+      step3:
+        name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
+          en: Basic installation parameters
+          ru: Базовые параметры установки
+        template: getting_started/global/partials/installer/STEP_BASE_PARAMS.md
+      step5:
+        name:
+          en: Cluster parameters and connection setup
+          ru: Параметры кластера и настройка подключения
+        template: getting_started/global/partials/installer/STEP_CLUSTER_AND_CONNECTION.md
+      step6:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/global/partials/installer/STEP_INSTALL.md
+      step7:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?

@@ -1,4 +1,4 @@
-{{- if and (.Values.global.modules.publicDomainTemplate) (or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator)) }}
+{{- if and (.Values.global.modules.publicDomainTemplate) (or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator)) }}
   {{- $moduleGateway := dict }}
   {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
   {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}

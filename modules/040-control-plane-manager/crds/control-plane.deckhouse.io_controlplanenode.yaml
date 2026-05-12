@@ -212,7 +212,7 @@ spec:
                             description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
-                      lastObservedAt:
+                      lastCertObserveTime:
                         description: Time of the last successful
                           `CertObserve` step for the component.
                         format: date-time
@@ -249,7 +249,7 @@ spec:
                             description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
-                      lastObservedAt:
+                      lastCertObserveTime:
                         description: Time of the last successful
                           `CertObserve` step for the component.
                         format: date-time
@@ -286,7 +286,7 @@ spec:
                             description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
-                      lastObservedAt:
+                      lastCertObserveTime:
                         description: Time of the last successful
                           `CertObserve` step for the component.
                         format: date-time
@@ -323,7 +323,7 @@ spec:
                             description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
-                      lastObservedAt:
+                      lastCertObserveTime:
                         description: Time of the last successful
                           `CertObserve` step for the component.
                         format: date-time

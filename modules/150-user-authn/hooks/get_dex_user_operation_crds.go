@@ -43,12 +43,23 @@ type UserOperation struct {
 }
 
 type UserOperationSpec struct {
-	User          string                `json:"user"`
+	User          string                `json:"user,omitempty"`
+	Target        *UserOperationTarget  `json:"target,omitempty"`
 	Type          UserOperationSpecType `json:"type"`
 	InitiatorType string                `json:"initiatorType"`
 
 	ResetPassword *UserOperationResetPasswordSpec `json:"resetPassword,omitempty"`
 	Lock          *UserOperationLockSpec          `json:"lock,omitempty"`
+}
+
+// UserOperationTarget identifies an external (non-local) user managed by an
+// authentication provider such as LDAP or Atlassian Crowd. It is mutually
+// exclusive with UserOperationSpec.User and is used by the Lock / Unlock
+// operations against the OfflineSessions object that holds the failed-attempt
+// counter and the lock state for the corresponding (connectorID, email) pair.
+type UserOperationTarget struct {
+	ConnectorID string `json:"connectorID"`
+	Email       string `json:"email"`
 }
 
 type UserOperationResetPasswordSpec struct {
@@ -85,10 +96,13 @@ const (
 // We intentionally keep it flexible: different Dex versions/storages may store user identity differently,
 // and OfflineSessions may not have userID at all but contain refresh token references.
 type OfflineSessionSnapshot struct {
-	Name            string   `json:"name"`
-	Namespace       string   `json:"namespace"`
-	UserID          string   `json:"userID"`
-	RefreshTokenIDs []string `json:"refreshTokenIDs,omitempty"`
+	Name            string       `json:"name"`
+	Namespace       string       `json:"namespace"`
+	UserID          string       `json:"userID"`
+	ConnID          string       `json:"connID,omitempty"`
+	Email           string       `json:"email,omitempty"`
+	LockedUntil     *metav1.Time `json:"lockedUntil,omitempty"`
+	RefreshTokenIDs []string     `json:"refreshTokenIDs,omitempty"`
 }
 
 // RefreshTokenSnapshot is a minimal representation of Dex RefreshToken object used by this hook.
@@ -154,6 +168,20 @@ func applyOfflineSessionFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 		snap.UserID = v
 	} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userId"); found {
 		snap.UserID = v
+	}
+
+	if v, found, _ := unstructured.NestedString(obj.Object, "connID"); found {
+		snap.ConnID = v
+	} else if v, found, _ := unstructured.NestedString(obj.Object, "connId"); found {
+		snap.ConnID = v
+	}
+	if v, found, _ := unstructured.NestedString(obj.Object, "email"); found {
+		snap.Email = v
+	}
+	if v, found, _ := unstructured.NestedString(obj.Object, "lockedUntil"); found && v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			snap.LockedUntil = &metav1.Time{Time: t}
+		}
 	}
 
 	// Collect refresh token IDs referenced by OfflineSessions. They can be used to infer user identity.
@@ -283,6 +311,12 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		return errors.New("lock spec is nil")
 	}
 
+	// Non-local users (LDAP, Crowd, ...): lock state lives in OfflineSessions
+	// indexed by (email, connID).
+	if operation.Spec.Target != nil {
+		return lockOfflineSession(input, operation, operation.Spec.Lock.For.Duration)
+	}
+
 	var userPassword *Password
 	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
 		if err != nil {
@@ -320,10 +354,22 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		return u, nil
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
+	// Force-terminate active sessions: with LockedUntil set on Password, Dex
+	// will refuse new logins, but already-issued access tokens stay valid until
+	// expiry and offline_access refreshes would still rotate them. Deleting
+	// OfflineSessions and RefreshTokens makes the lock immediate.
+	if _, err := invalidateLocalUserSessions(input, operation.Spec.User, "Locking user"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func executeUnlock(input *go_hook.HookInput, operation UserOperation) error {
+	if operation.Spec.Target != nil {
+		return unlockOfflineSession(input, operation)
+	}
+
 	var userPassword *Password
 	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
 		if err != nil {
@@ -407,16 +453,48 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 		return sdk.ToUnstructured(&pass)
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
+	// Force-terminate active sessions so the user must log in again with the
+	// new hash; combined with requireResetHashOnNextSuccLogin this guarantees
+	// they hit the forced password-change form on the next authentication.
+	if _, err := invalidateLocalUserSessions(input, operation.Spec.User, "Resetting user password"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
+	anyDeleted, err := invalidateLocalUserSessions(input, operation.Spec.User, "Resetting user 2FA")
+	if err != nil {
+		return err
+	}
+	if !anyDeleted {
+		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
+	}
+	return nil
+}
+
+// invalidateLocalUserSessions deletes every Dex OfflineSessions and RefreshToken
+// object that belongs to the given local user. It is shared by Lock,
+// ResetPassword and Reset2FA so that admin-initiated actions reliably terminate
+// active authenticated sessions: ongoing access tokens stop being refreshable
+// (offline_access flow becomes invalid the moment the OfflineSessions is gone)
+// and the user has to log in again — which, for ResetPassword, is the moment
+// they are presented with the forced password-change form because we set
+// Password.requireResetHashOnNextSuccLogin = true.
+//
+// Matching strategy mirrors Reset2FA history: prefer OfflineSessions.userID,
+// fall back to RefreshToken claims (userID/username/preferredUsername) for
+// sessions that don't carry userID directly. Returns whether anything was
+// actually deleted (used by Reset2FA for an informational log) and the first
+// iteration error, if any. logPrefix appears in info logs and lets each caller
+// keep its own narrative ("Locking user", "Resetting user password", etc.).
+func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix string) (bool, error) {
 	refreshTokensByID := make(map[string]RefreshTokenSnapshot, len(input.Snapshots.Get("refreshtokens")))
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return false, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
 		}
-		// metadata.name is the refresh token ID
 		refreshTokensByID[rt.Name] = rt
 	}
 
@@ -424,19 +502,19 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 
 	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
-			return fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+			return anyDeleted, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
 		}
 
 		matchesUser := false
 		if sess.UserID != "" {
-			matchesUser = (sess.UserID == operation.Spec.User)
+			matchesUser = (sess.UserID == username)
 		} else if len(sess.RefreshTokenIDs) > 0 {
 			for _, id := range sess.RefreshTokenIDs {
 				rt, ok := refreshTokensByID[id]
 				if !ok {
 					continue
 				}
-				if rt.ClaimsUsername == operation.Spec.User || rt.ClaimsUserID == operation.Spec.User || rt.ClaimsPreferred == operation.Spec.User {
+				if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
 					matchesUser = true
 					break
 				}
@@ -444,31 +522,134 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 		}
 
 		if !matchesUser {
-			input.Logger.Debug("OfflineSessions does not match requested user", "offlinesession", sess.Name, "userID", sess.UserID, "requestedUser", operation.Spec.User, "refreshTokenIDs", sess.RefreshTokenIDs)
 			continue
 		}
 
-		input.Logger.Info("Resetting user 2FA: deleting OfflineSessions", "user", operation.Spec.User, "offlinesession", sess.Name)
+		input.Logger.Info(logPrefix+": deleting OfflineSessions", "user", username, "offlinesession", sess.Name)
 		input.PatchCollector.Delete("dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
 		anyDeleted = true
 	}
 
-	// Also delete refresh tokens for the user to invalidate offline_access sessions and ensure consistent 2FA reset.
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return anyDeleted, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
 		}
-		if rt.ClaimsUsername == operation.Spec.User || rt.ClaimsUserID == operation.Spec.User || rt.ClaimsPreferred == operation.Spec.User {
-			input.Logger.Info("Resetting user 2FA: deleting RefreshToken", "user", operation.Spec.User, "refreshtoken", rt.Name)
+		if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
+			input.Logger.Info(logPrefix+": deleting RefreshToken", "user", username, "refreshtoken", rt.Name)
 			input.PatchCollector.Delete("dex.coreos.com/v1", "RefreshToken", rt.Namespace, rt.Name)
 			anyDeleted = true
 		}
 	}
 
-	if !anyDeleted {
-		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
-		return nil
+	return anyDeleted, nil
+}
+
+// findOfflineSessionByTarget locates the OfflineSessions object that matches the
+// (connectorID, email) pair from operation.Spec.Target. Email comparison is
+// case-insensitive: connectors normalise to lower case but admins may type the
+// email in any case in the UI.
+func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationTarget) (*OfflineSessionSnapshot, error) {
+	if target == nil {
+		return nil, errors.New("target is nil")
 	}
+	if target.Email == "" || target.ConnectorID == "" {
+		return nil, errors.New("target.connectorID and target.email are required")
+	}
+
+	wantEmail := strings.ToLower(target.Email)
+	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
+		if err != nil {
+			return nil, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+		}
+		if sess.ConnID != target.ConnectorID {
+			continue
+		}
+		if strings.ToLower(sess.Email) != wantEmail {
+			continue
+		}
+		sessCopy := sess
+		return &sessCopy, nil
+	}
+	return nil, fmt.Errorf("no OfflineSessions found for connector %q and email %q (the user has likely never logged in yet)", target.ConnectorID, target.Email)
+}
+
+// lockOfflineSession patches OfflineSessions for a non-local user, setting
+// LockedUntil and the deckhouse.io/locked-by-administrator annotation that the
+// UI uses to distinguish admin-initiated locks from automatic ones.
+//
+// We use an explicit JSON merge patch (PatchWithMerge) instead of
+// PatchWithMutatingFunc: the mutating-func variant computes a merge patch from
+// the diff of mutated vs. source object, and on top-level CR fields like
+// `lockedUntil` it produced a body in which neither `lockedUntil` nor
+// `incorrectPasswordLoginAttempts` actually reached the apiserver — only the
+// annotation slot did. Sending the desired values explicitly is the only
+// reliable way to set top-level fields on a CR with
+// x-kubernetes-preserve-unknown-fields. This mirrors unlockOfflineSession.
+func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockFor time.Duration) error {
+	sess, err := findOfflineSessionByTarget(input, operation.Spec.Target)
+	if err != nil {
+		return err
+	}
+
+	input.Logger.Info("Locking external user via OfflineSessions",
+		"connector", operation.Spec.Target.ConnectorID,
+		"email", operation.Spec.Target.Email,
+		"offlinesession", sess.Name,
+		"duration", lockFor,
+	)
+
+	until := time.Now().Add(lockFor).UTC().Format(time.RFC3339)
+	patch := map[string]any{
+		"lockedUntil":                    until,
+		"incorrectPasswordLoginAttempts": int64(0),
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				// "true" matches what the Console UI writes for direct PATCHes
+				// and what hasAdminLockAnnotation in the frontend treats as the
+				// admin-lock marker; presence of the key is what actually
+				// matters, but a stable value keeps both paths uniform.
+				PasswordAnnotationLockedByAdministrator: "true",
+			},
+		},
+	}
+
+	input.PatchCollector.PatchWithMerge(patch, "dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
+
+	return nil
+}
+
+// unlockOfflineSession clears LockedUntil and the locked-by-administrator
+// annotation, allowing the user to authenticate again immediately.
+//
+// We use an explicit JSON merge patch with nulls because PatchWithMutatingFunc
+// computes a merge patch from the diff of mutated vs. source object: a removed
+// field there becomes "absent" rather than null, which JSON merge patch
+// semantics interpret as "leave unchanged" instead of "delete". Sending null
+// values explicitly is the only reliable way to delete fields and annotation
+// keys via merge patch.
+func unlockOfflineSession(input *go_hook.HookInput, operation UserOperation) error {
+	sess, err := findOfflineSessionByTarget(input, operation.Spec.Target)
+	if err != nil {
+		return err
+	}
+
+	input.Logger.Info("Unlocking external user via OfflineSessions",
+		"connector", operation.Spec.Target.ConnectorID,
+		"email", operation.Spec.Target.Email,
+		"offlinesession", sess.Name,
+	)
+
+	patch := map[string]any{
+		"lockedUntil":                    nil,
+		"incorrectPasswordLoginAttempts": int64(0),
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				PasswordAnnotationLockedByAdministrator: nil,
+			},
+		},
+	}
+
+	input.PatchCollector.PatchWithMerge(patch, "dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
 
 	return nil
 }

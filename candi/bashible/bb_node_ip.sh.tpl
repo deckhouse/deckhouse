@@ -23,7 +23,7 @@ function discover_internal_network_cidrs() {
     discovered_internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
     echo "$discovered_internal_network_cidrs"
   else
-    bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set."
+    echo "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set." >&2
     return 1
   fi
 }
@@ -89,7 +89,7 @@ function is_ip_in_cidr() {
   test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
 }
 
-if bb-is-ubuntu-version? 24.04 || bb-is-ubuntu-version? 22.04 || bb-is-ubuntu-version? 20.04 || bb-is-ubuntu-version? 18.04; then
+if grep -q 'Ubuntu' /etc/os-release 2>/dev/null; then
   ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | select(.ifname != "lo") | .addr_info[] | .local')
 else
   ip_in_system=$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}' | cut -d/ -f1)

@@ -377,7 +377,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
    Change the cloud provider settings:
 
    * Set `masterNodeGroup.replicas` to `2`.
-   * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+   * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node.deckhouse.io/etcd-arbiter: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
 
      ```yaml
      nodeGroups:
@@ -429,7 +429,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 To configure HA mode with two master nodes and an arbiter node in a static cluster, follow these steps:
 
-1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node.deckhouse.io/etcd-arbiter: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
 
    ```yaml
    apiVersion: deckhouse.io/v1

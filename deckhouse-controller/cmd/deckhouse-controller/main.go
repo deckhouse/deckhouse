@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
-	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -118,22 +118,23 @@ func main() {
 	// deckhouse-controller registry
 	registry.DefineRegistryCommand(kpApp, logger)
 
-	// dhctlcli command builders read these globals from dhctl/pkg/app at run
-	// time. The corresponding kingpin Envar bindings in dhctl/pkg/app are
-	// gated by flag-registration (DefineGlobalFlags / DefineKubeFlags) which
-	// we do not invoke, so they never fire. Read the env directly and assign
-	// the globals here; deployer-set values win over hardcoded defaults.
+	// dhctlcli command builders previously relied on dhctl/pkg/app package-level
+	// globals. They now read configuration from a dedicated *options.Options;
+	// the kingpin Envar bindings in dhctl/pkg/app are gated by flag registration
+	// (DefineGlobalFlags / DefineKubeFlags) which we do not invoke, so we seed
+	// the options struct directly from deployer-controlled env vars here.
 	{
-		dhctl_app.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
-		dhctl_app.Editor = envOr("DECKHOUSE_EDITOR", "vim")
-		dhctl_app.KubeConfigInCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
-		dhctl_app.TmpDirName = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
+		dhctlOpts := options.New()
+		dhctlOpts.Global.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
+		dhctlOpts.Render.Editor = envOr("DECKHOUSE_EDITOR", "vim")
+		dhctlOpts.Kube.InCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
+		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
 
 		editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
-		dhctlcli.DefineEditCommands(editCmd /* wConnFlags */, false)
+		dhctlcli.DefineEditCommands(editCmd, dhctlOpts /* wConnFlags */, false)
 
-		dhctlcli.DefineCommandParseClusterConfiguration(kpApp.Command("cluster-configuration", "Parse configuration and print it."))
-		dhctlcli.DefineCommandParseCloudDiscoveryData(kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."))
+		dhctlcli.DefineCommandParseClusterConfiguration(kpApp.Command("cluster-configuration", "Parse configuration and print it."), dhctlOpts)
+		dhctlcli.DefineCommandParseCloudDiscoveryData(kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."), dhctlOpts)
 	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))

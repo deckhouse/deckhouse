@@ -16,27 +16,19 @@ package app
 
 import (
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var (
-	KubeConfig        = ""
-	KubeConfigContext = ""
-
-	KubeConfigInCluster = false
-)
-
-func DefineKubeFlags(cmd *kingpin.CmdClause) {
+// DefineKubeFlags registers Kubernetes-API flags, writing into o.
+func DefineKubeFlags(cmd *kingpin.CmdClause, o *options.KubeOptions) {
 	cmd.Flag("kubeconfig", "Path to kubernetes config file.").
 		Envar(configEnvName("KUBE_CONFIG")).
-		StringVar(&KubeConfig)
+		StringVar(&o.Config)
 	cmd.Flag("kubeconfig-context", "Context from kubernetes config to connect to Kubernetes API.").
 		Envar(configEnvName("KUBE_CONFIG_CONTEXT")).
-		StringVar(&KubeConfigContext)
+		StringVar(&o.ConfigContext)
 	cmd.Flag("kube-client-from-cluster", "Use in-cluster Kubernetes API access.").
 		Envar(configEnvName("KUBE_CLIENT_FROM_CLUSTER")).
-		BoolVar(&KubeConfigInCluster)
-}
-
-func KubeFlagsDefined() bool {
-	return len(KubeConfig) > 0 || len(KubeConfigContext) > 0 || KubeConfigInCluster
+		BoolVar(&o.InCluster)
 }

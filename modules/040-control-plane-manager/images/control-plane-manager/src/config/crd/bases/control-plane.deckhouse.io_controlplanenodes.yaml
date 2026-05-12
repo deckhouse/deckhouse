@@ -220,8 +220,8 @@ spec:
                               of the component (certSANs, encryption-algorithm).
                             type: string
                         type: object
-                      lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
+                      lastCertObserveTime:
+                        description: LastCertObserveTime is the time of the last successful
                           CertObserve step for the component.
                         format: date-time
                         type: string
@@ -256,8 +256,8 @@ spec:
                               of the component (certSANs, encryption-algorithm).
                             type: string
                         type: object
-                      lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
+                      lastCertObserveTime:
+                        description: LastCertObserveTime is the time of the last successful
                           CertObserve step for the component.
                         format: date-time
                         type: string
@@ -292,8 +292,8 @@ spec:
                               of the component (certSANs, encryption-algorithm).
                             type: string
                         type: object
-                      lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
+                      lastCertObserveTime:
+                        description: LastCertObserveTime is the time of the last successful
                           CertObserve step for the component.
                         format: date-time
                         type: string
@@ -328,8 +328,8 @@ spec:
                               of the component (certSANs, encryption-algorithm).
                             type: string
                         type: object
-                      lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
+                      lastCertObserveTime:
+                        description: LastCertObserveTime is the time of the last successful
                           CertObserve step for the component.
                         format: date-time
                         type: string

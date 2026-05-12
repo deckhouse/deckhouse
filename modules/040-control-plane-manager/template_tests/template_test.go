@@ -112,6 +112,10 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     kubernetesVersion: 1.15.4
 `
 	const moduleValues = `
+  apiserver:
+    publishAPI:
+      ingress: {}
+      loadBalancer: {}
   internal:
     effectiveKubernetesVersion: "1.32"
     etcdServers:
@@ -122,6 +126,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     rolloutEpoch: 1857
     nodesCount: 0
     kubeSchedulerExtenders: []
+    authn: {}
+    selfSignedCA: {}
 `
 
 	const defaultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -133,9 +139,14 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
   serviceAccount:
     issuer: https://api.example.com
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
@@ -144,12 +155,17 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIAudiences:
       - https://api.example.com
       - https://bob.com
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 	const moduleValuesAdditionalIssuerOnly = `
@@ -159,7 +175,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIIssuers:
@@ -173,7 +194,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     additionalAPIIssuers:
       - https://api.example.com
@@ -189,7 +215,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIIssuers:
@@ -207,7 +238,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://kubernetes.default.svc.cluster.local
     additionalAPIIssuers:
@@ -224,7 +260,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     additionalAPIIssuers:
       - https://kubernetes.default.svc.cluster.local
@@ -241,6 +282,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 	const apiServerWithOidcFull = `
@@ -250,8 +297,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn:
     oidcIssuerURL: https://dex.example.com
     oidcCA: |
@@ -266,8 +318,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn:
     oidcIssuerURL: https://dex.example.com
 `
@@ -279,8 +336,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn: {}
 `
 	const (
@@ -1037,10 +1099,15 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit:
     webhookURL: "https://audit.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
@@ -1059,7 +1126,12 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
 `
@@ -1137,6 +1209,12 @@ internal:
   rolloutEpoch: 1857
   nodesCount: %d
   kubeSchedulerExtenders: []
+  authn: {}
+  selfSignedCA: {}
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 					testValues := fmt.Sprintf(testValuesTemplate, nodesCount)
@@ -1256,27 +1334,60 @@ internal:
 		})
 	})
 
+	// The decision (target ClusterRole + whether to render supplement) is made by the
+	// reconcile_kubeadm_cluster_admins_binding hook and published into Helm values. The template
+	// reads .Values.controlPlaneManager.internal.{kubeadmClusterAdminsTargetRoleName,kubeadmClusterAdminsSupplementEnabled}
+	// verbatim, so these tests drive the template directly via those internal values.
 	Context("kubeadm ClusterRoleBinding for admin.conf", func() {
-		Context("when user-authz module is disabled", func() {
+		Context("hook decision: target=cluster-admin, supplement=false (user-authz off)", func() {
 			BeforeEach(func() {
+				// schema defaults: target=cluster-admin, supplementEnabled=false; render with no overrides.
 				f.HelmRender()
 			})
 
-			It("should bind kubeadm:cluster-admins to cluster-admin", func() {
+			It("should bind kubeadm:cluster-admins to cluster-admin and not render the supplement", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(crb.Exists()).To(BeTrue())
 				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+
+				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
+				Expect(sup.Exists()).To(BeFalse())
+				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
+				Expect(supCR.Exists()).To(BeFalse())
 			})
 		})
 
-		Context("when user-authz module is enabled", func() {
+		Context("hook decision: target=cluster-admin, supplement=true (user-authz on, but at least one of bootstrap/CR-presence gates is false)", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "cluster-admin")
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
 				f.HelmRender()
 			})
 
-			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add supplement binding", func() {
+			It("should keep cluster-admin on main binding but render the supplement (purely additive on the same group)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
+				Expect(main.Exists()).To(BeTrue())
+				Expect(main.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+
+				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
+				Expect(sup.Exists()).To(BeTrue())
+				Expect(sup.Field("roleRef.name").String()).To(Equal("d8:control-plane-manager:admin-kubeconfig-supplement"))
+
+				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
+				Expect(supCR.Exists()).To(BeTrue())
+			})
+		})
+
+		Context("hook decision: target=user-authz:cluster-admin, supplement=true (all three gates satisfied)", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "user-authz:cluster-admin")
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
+				f.HelmRender()
+			})
+
+			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add the supplement binding", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(main.Exists()).To(BeTrue())

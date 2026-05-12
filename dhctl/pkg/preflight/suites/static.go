@@ -27,6 +27,9 @@ import (
 type StaticDeps struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 	MetaConfig             *config.MetaConfig
+	// LegacyMode reflects whether the SSH client uses the legacy clissh
+	// backend. Threaded into RegistryProxy for the SSH tunnel direction.
+	LegacyMode bool
 }
 
 func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, error) {
@@ -41,7 +44,7 @@ func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, erro
 		checks.DeckhouseUser(nodeInterface),
 		checks.StaticSystemRequirements(deps.SSHProviderInitializer),
 		checks.Python(nodeInterface),
-		checks.RegistryProxy(deps.MetaConfig, deps.SSHProviderInitializer),
+		checks.RegistryProxy(deps.MetaConfig, deps.SSHProviderInitializer, deps.LegacyMode),
 		checks.Ports(deps.SSHProviderInitializer),
 		checks.LocalhostDomain(nodeInterface),
 		checks.SudoAllowed(nodeInterface),

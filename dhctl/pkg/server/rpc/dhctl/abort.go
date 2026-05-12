@@ -24,11 +24,9 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/ptr"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -172,12 +170,12 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -252,13 +250,10 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		}
 	}
 
+	opts.Global.ConfigPaths = configPaths
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-		ConfigPaths:            configPaths,
 		InitialState:           initialState,
-		UseTfCache:             ptr.To(true),
-		AutoApprove:            ptr.To(true),
-		ResourcesTimeout:       p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:       p.request.Options.DeckhouseTimeout.AsDuration(),
 		ResetInitialState:      true,
 		OnPhaseFunc:            p.switchPhase,
 		OnProgressFunc:         p.sendProgress,
@@ -270,6 +265,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 		SSHProviderInitializer: sshProviderInitializer,
 		KubeProvider:           kubeProvider,
 		DirectoryConfig:        s.params.DownloadDirConfig,
+		Options:                opts,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

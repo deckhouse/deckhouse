@@ -127,7 +127,7 @@ spec:
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
                             Заполняется на этапе `CertObserve`.
-                        lastObservedAt:
+                        lastCertObserveTime:
                           description: |
                             Время последнего успешного выполнения этапа `CertObserve` для компонента.
                     kube-apiserver:
@@ -152,7 +152,7 @@ spec:
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
                             Заполняется на этапе `CertObserve`.
-                        lastObservedAt:
+                        lastCertObserveTime:
                           description: |
                             Время последнего успешного выполнения этапа `CertObserve` для компонента.
                     kube-controller-manager:
@@ -177,7 +177,7 @@ spec:
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
                             Заполняется на этапе `CertObserve`.
-                        lastObservedAt:
+                        lastCertObserveTime:
                           description: |
                             Время последнего успешного выполнения этапа `CertObserve` для компонента.
                     kube-scheduler:
@@ -202,7 +202,7 @@ spec:
                             Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 
                             Заполняется на этапе `CertObserve`.
-                        lastObservedAt:
+                        lastCertObserveTime:
                           description: |
                             Время последнего успешного выполнения этапа `CertObserve` для компонента.
                 conditions:

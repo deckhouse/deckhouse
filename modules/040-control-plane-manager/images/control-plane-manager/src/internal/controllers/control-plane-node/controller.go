@@ -783,8 +783,8 @@ func (r *Reconciler) ensureObserveOperations(ctx context.Context, cpn *controlpl
 			continue
 		}
 
-		lastObservedAt := compStatus.LastObservedAt
-		if !lastObservedAt.IsZero() && time.Since(lastObservedAt.Time) <= constants.CertObserveInterval {
+		lastCertObserveTime := compStatus.LastCertObserveTime
+		if !lastCertObserveTime.IsZero() && time.Since(lastCertObserveTime.Time) <= constants.CertObserveInterval {
 			continue
 		}
 
@@ -811,7 +811,7 @@ func (r *Reconciler) ensureObserveOperations(ctx context.Context, cpn *controlpl
 	return nil
 }
 
-// applyCertDatesAndTimestamp copies certificate expiration dates from ObservedState into CPN status and updates per-component LastObservedAt.
+// applyCertDatesAndTimestamp copies certificate expiration dates from ObservedState into CPN status and updates per-component LastCertObserveTime.
 func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, observed controlplanev1alpha1.ObservedComponentState, observedAt metav1.Time) {
 	compStatus := cpn.Status.Components.Component(component)
 	if compStatus == nil {
@@ -820,8 +820,8 @@ func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, comp
 	if len(observed.CertificatesExpirationDate) > 0 {
 		compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
 	}
-	if compStatus.LastObservedAt.IsZero() || observedAt.Time.After(compStatus.LastObservedAt.Time) {
-		compStatus.LastObservedAt = observedAt
+	if compStatus.LastCertObserveTime.IsZero() || observedAt.Time.After(compStatus.LastCertObserveTime.Time) {
+		compStatus.LastCertObserveTime = observedAt
 	}
 }
 

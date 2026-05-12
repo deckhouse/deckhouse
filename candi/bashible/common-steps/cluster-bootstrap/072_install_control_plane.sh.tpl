@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
+{{ $manifestsDir := "/var/lib/bashible/control-plane" }}
+{{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
 check_container_running() {
   local container_name=$1
@@ -64,6 +64,7 @@ cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kub
 check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
+kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
 
 kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
 kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""

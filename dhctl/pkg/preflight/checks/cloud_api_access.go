@@ -40,6 +40,10 @@ const ProxyTunnelPort = "22323"
 type CloudAPICheck struct {
 	MetaConfig  *config.MetaConfig
 	SSHProvider libcon.SSHProvider
+	// LegacyMode reflects whether the supplied SSHProvider is using the
+	// legacy clissh backend (true) or modern gossh (false). Set at suite
+	// construction from sshclient.Config.IsLegacyMode().
+	LegacyMode bool
 }
 
 const CloudAPICheckName preflight.CheckName = "cloud-api-accessibility"
@@ -85,7 +89,7 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 		proxyURL = nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, sshClient, targetURL)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, sshClient, targetURL, c.LegacyMode)
 	if err != nil {
 		return wrapTunnelErr(err)
 	}
@@ -195,10 +199,11 @@ func wrapTunnelErr(err error) error {
 Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
 }
 
-func CloudAPIAccess(meta *config.MetaConfig, sshProvider libcon.SSHProvider) preflight.Check {
+func CloudAPIAccess(meta *config.MetaConfig, sshProvider libcon.SSHProvider, legacyMode bool) preflight.Check {
 	check := CloudAPICheck{
 		MetaConfig:  meta,
 		SSHProvider: sshProvider,
+		LegacyMode:  legacyMode,
 	}
 	return preflight.Check{
 		Name:        CloudAPICheckName,

@@ -88,7 +88,7 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	r.enforceNodePolicy(r.log)
 
 	// todo reconcile normal way not in start controller
-	// todo refact to use controller runtime client 
+	// todo refact to use controller runtime client
 	// instead of client-go
 	if err := r.renewSignatureKeysIfNeed(mgr.GetConfig()); err != nil {
 		return err

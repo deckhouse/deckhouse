@@ -31,6 +31,7 @@ type RunExecutorParams struct {
 	TofuBinPath string
 	RootDir     string
 	ExecutorID  string
+	IsDebug     bool
 }
 
 func (p *RunExecutorParams) validateRunParams() error {
