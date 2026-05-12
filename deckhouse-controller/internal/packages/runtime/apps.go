@@ -107,7 +107,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.status.ClearRuntimeConditions(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewAppTask(name, packageName, version, repo, r.deployer, r.status, r.logger),
+		taskdeploy.NewAppTask(name, packageName, version, repo, r.appDeployer, r.status, r.logger),
 		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
 	}
 
@@ -194,5 +194,5 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskundeploy.NewAppTask(name, r.deployer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewAppTask(name, r.appDeployer, r.logger), cleanup)
 }

@@ -49,7 +49,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -345,7 +345,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	packageOperator, err := packageoperator.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
+	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -353,19 +353,19 @@ func NewDeckhouseController(
 	// package should not run before converge done
 	operator.ConvergeState.SetOnConvergeStart(func() {
 		logger.Debug("start converge")
-		packageOperator.Scheduler().Pause()
+		pkgRuntime.PauseScheduler()
 	})
 
 	operator.ConvergeState.SetOnConvergeFinish(func() {
 		logger.Debug("finish converge")
-		packageOperator.Scheduler().Resume()
+		pkgRuntime.ResumeScheduler()
 	})
 
 	// Package system controllers (feature flag)
 	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
 
-		packageOperator.Run()
+		pkgRuntime.Run()
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
@@ -382,7 +382,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = application.RegisterController(runtimeManager, packageOperator, operator.ModuleManager, dc, logger.Named("application-controller"))
+		err = application.RegisterController(runtimeManager, pkgRuntime, operator.ModuleManager, dc, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
@@ -412,7 +412,7 @@ func NewDeckhouseController(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
 		operator.ModuleManager,
-		packageOperator,
+		pkgRuntime,
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,

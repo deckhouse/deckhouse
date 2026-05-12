@@ -34,11 +34,15 @@ const (
 )
 
 var (
-	embeddedDeployedDir  = "modules"
-	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
-	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
-	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
-	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
+	embeddedDeployedDir = "modules"
+
+	downloadedDir = d8env.GetDownloadedModulesDir()
+
+	modulesDownloadedDir = filepath.Join(downloadedDir, "modules")
+	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "deployed")
+
+	appsDownloadedDir = filepath.Join(downloadedDir, "apps")
+	appsDeployedDir   = filepath.Join(appsDownloadedDir, "deployed")
 )
 
 type loader func(ctx context.Context, repo registry.Remote, path string) (string, error)

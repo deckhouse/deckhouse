@@ -118,7 +118,7 @@ func NewHandler(conf Config, logger *log.Logger) *Handler {
 //   - One of the event channels closes (abnormal termination)
 //
 // To stop the handler, call Stop() which waits for goroutine completion.
-func (h *Handler) Start() *Handler {
+func (h *Handler) Start() {
 	h.once.Do(func() {
 		h.logger.Info("start loop")
 
@@ -162,8 +162,6 @@ func (h *Handler) Start() *Handler {
 			}
 		}()
 	})
-
-	return h
 }
 
 // Stop gracefully shuts down the event handler.

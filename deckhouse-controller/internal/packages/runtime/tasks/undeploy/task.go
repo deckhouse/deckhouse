@@ -17,10 +17,8 @@ package undeploy
 import (
 	"context"
 	"log/slog"
-	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -28,22 +26,13 @@ const (
 	taskTracer = "package-undeploy"
 )
 
-var (
-	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
-	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
-	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
-	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
-)
-
 type deployerI interface {
-	Undeploy(ctx context.Context, downloaded, deployed, name string, keep bool) error
+	Undeploy(ctx context.Context, deployedName string, keep bool) error
 }
 
 type task struct {
-	name       string
-	downloaded string
-	deployed   string
-	keep       bool
+	name string
+	keep bool
 
 	deployer deployerI
 
@@ -55,7 +44,6 @@ type task struct {
 func NewAppTask(name string, deployer deployerI, logger *log.Logger) queue.Task {
 	return &task{
 		name:     name,
-		deployed: filepath.Join(appsDeployedDir, name),
 		keep:     true,
 		deployer: deployer,
 		logger:   logger.Named(taskTracer),
@@ -66,12 +54,10 @@ func NewAppTask(name string, deployer deployerI, logger *log.Logger) queue.Task 
 // Sets keep=false to remove both deployed and downloaded directories.
 func NewModuleTask(name string, deployer deployerI, logger *log.Logger) queue.Task {
 	return &task{
-		name:       name,
-		downloaded: filepath.Join(modulesDownloadedDir, name),
-		deployed:   filepath.Join(modulesDeployedDir, name),
-		keep:       false,
-		deployer:   deployer,
-		logger:     logger.Named(taskTracer),
+		name:     name,
+		keep:     false,
+		deployer: deployer,
+		logger:   logger.Named(taskTracer),
 	}
 }
 
@@ -82,5 +68,5 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("undeploy package", slog.String("name", t.name))
 
-	return t.deployer.Undeploy(ctx, t.downloaded, t.deployed, t.name, t.keep)
+	return t.deployer.Undeploy(ctx, t.name, t.keep)
 }
