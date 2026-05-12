@@ -279,6 +279,7 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 MODULE_PATH ?=
 CHANNEL ?= alpha
 MODULE_VERSION ?= v0.1.0
+DOC_VERSION ?=
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
@@ -287,6 +288,15 @@ docs: bin/werf ## Run containers with the documentation.
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+
+.PHONY: docs-generate-pdf
+docs-generate-pdf: ## Generate PDF documentation.
+  ##~ Options: DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
+  ##~ Options: BUILD_LANG=ru|en - build a single language only. If not set, both languages are built.
+  ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
+	DOC_VERSION="$(strip $(DOC_VERSION))" \
+	BUILD_LANG="$(strip $(BUILD_LANG))" \
+	bash tools/docs/pdf/generate-pdf.sh
 
 .PHONY: docs-external-module
 docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.
