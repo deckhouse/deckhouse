@@ -220,6 +220,9 @@ func testAPIServerConfiguration(t *testing.T) {
 					if !strings.Contains(manifest, "--authorization-config") {
 						t.Errorf("Expected authorization-config not found in %s", name)
 					}
+					if strings.Contains(manifest, "--authorization-mode") {
+						t.Errorf("Unexpected authorization-mode found in %s", name)
+					}
 				}
 			})
 

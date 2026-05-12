@@ -911,15 +911,14 @@ apiserver:
 					"--authentication-token-webhook-cache-ttl=5m",
 					"--audit-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml",
 				}
-				unexpectedCommands := []string{
-					"authorization-mode",
-					"authorization-webhook-config-file",
-				}
 				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
-				Expect(pod.Spec.Containers[0].Command).ToNot(ContainElements(unexpectedCommands))
+				for _, command := range pod.Spec.Containers[0].Command {
+					Expect(command).ToNot(ContainSubstring("authorization-mode"))
+					Expect(command).ToNot(ContainSubstring("authorization-webhook-config-file"))
+				}
 
 			})
 		})

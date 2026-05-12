@@ -154,7 +154,9 @@ spec:
     - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
     - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
     - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
+{{- if not .apiserver.webhookURL }}
     - --authorization-mode=Node,RBAC
+{{- end }}
     - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
     - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
     - --requestheader-allowed-names=front-proxy-client
