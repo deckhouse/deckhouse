@@ -4,6 +4,7 @@ go 1.25.6
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
+	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
 	go.etcd.io/etcd/api/v3 v3.5.16
@@ -20,7 +21,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
