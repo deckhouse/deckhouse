@@ -5,9 +5,9 @@ search: web interface, web, console, deckhouse-tools, documentation
 description: Architecture of the Deckhouse Kubernetes Platform modules that provide the system web interface.
 ---
 
-## Web interface
+## Console module
 
-The [`console`](/modules/console/) module implements the web interface of Deckhouse Kubernetes Platform (DKP), simplifying platform management and making the system state easier to understand.
+The [`console`](/modules/console/) module implements the web interface of Deckhouse Kubernetes Platform (DKP), simplifying platform management and enabling the system state monitoring.
 
 ### Module architecture
 
@@ -23,39 +23,39 @@ The Level 2 C4 architecture of the [`console`](/modules/console/) module and its
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Console module architecture](../../../images/architecture/deckhouse/c4-l2-deckhouse-console.png)
 
-The numbers in the diagram indicate the order in which the module components are accessed: access to `frontend`, `backend`, and `nginx` goes through the Ingress Controller, with mandatory user authentication in Dex.
+The numbers in the diagram indicate the order in which the module components are accessed: access to `frontend`, `backend`, and `nginx` goes through the Ingress NGINX Controller, with mandatory user authentication in Dex.
 
 ### Module components
 
 The module consists of the following components:
 
-1. **Frontend**: Consists of a single **frontend** container and provides the web interface for DKP users and platform administrators.
+1. **Frontend**: Consists of a single **frontend** container and provides the web interface for DKP users and administrators.
 
 1. **Backend**: Consists of a single **backend** container and implements an API interface that provides the following capabilities:
 
-   * retrieving, creating, deleting, and modifying DKP resources according to the user's permissions;
-   * generating a kubeconfig with the user's profile;
-   * determining the environment in which the DKP cluster is deployed;
-   * detecting Deckhouse and Kubernetes versions;
-   * loading metrics and logs;
-   * loading platform availability information;
-   * downloading VM disks (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
+   * Retrieving, creating, deleting, and modifying DKP resources according to the user's permissions.
+   * Generating a kubeconfig with the user's profile.
+   * Determining the environment in which the DKP cluster is deployed.
+   * Detecting DKP and Kubernetes versions.
+   * Loading metrics and logs.
+   * Loading platform availability information.
+   * Downloading VM disks (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
 
-1. **Observability-gw**: Consists of a single **nginx** container and proxies requests to Grafana to embed dashboards into the platform's main UI, as well as to work with metrics and logs for the selected project.
+1. **Observability-gw**: Consists of a single **nginx** container and proxies requests to Grafana to embed dashboards into the platform's main web UI, as well as to work with metrics and logs for the selected project.
 
-1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/authn) module. For more information about the `user-authn` module architecture, refer to [the corresponding documentation section](../iam/user-authn.html).
+1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to the [corresponding documentation section](../iam/user-authn.html).
 
 ### Module interactions
 
 The module interacts with the following components:
 
 1. **Kube-apiserver**:
-   - organizing VM connections via console and VNC;
-   - creating, deleting, modifying, and tracking DKP resources.
+   - Establishing VM connections via console and VNC.
+   - Creating, deleting, modifying, and tracking DKP resources.
 
-1. [**Upmeter**](/modules/upmeter/): Retrieves DKP platform availability information.
+1. [**Upmeter**](/modules/upmeter/): Retrieves DKP availability information.
 
-1. [**Deckhouse-tools**](/modules/deckhouse-tools/): Forwards requests to download the [Deckhouse CLI](/cli/d8/) utility.
+1. [**Deckhouse-tools**](/modules/deckhouse-tools/): Forwards requests to download the [Deckhouse CLI](../../cli/d8/) utility.
 
 1. [**Prometheus**](/modules/prometheus/): Retrieves system metrics for the platform, such as CPU and RAM usage.
 
@@ -65,11 +65,11 @@ The module interacts with the following components:
 
 The following external component interacts with the module:
 
-* **Nginx Controller**: Forwards external user requests to the module web interface.
+* **Controller nginx**: Forwards external user requests to the module web interface.
 
 ## Documentation module
 
-The [`documentation`](/modules/documentation/) module provides a web interface for documentation corresponding to the running version of Deckhouse Kubernetes Platform.
+The [`documentation`](/modules/documentation/) module provides a web interface for documentation corresponding to the running version of DKP.
 
 ### Module architecture
 
@@ -99,29 +99,29 @@ The module consists of the following components:
 
     * **builder**: Sidecar container that dynamically extends the documentation when new DKP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
 
-    The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for interaction in it. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates, ensuring that changes are displayed promptly when modules are updated or installed.
+      The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for documentation updates. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates when modules are updated or installed. This ensures that changes are promptly rendered in the web interface.
 
-1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/authn) module. For more information about the `user-authn` module architecture, refer to [the corresponding documentation section](../iam/user-authn.html).
+1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to the [corresponding documentation section](../iam/user-authn.html).
 
 ### Module interactions
 
 The module interacts with the following components:
 
 * **Kube-apiserver**:
-  - creates and updates the Lease resource;
-  - authorizes requests to the documentation web interface.
+  - Creates and updates the Lease resource.
+  - Authorizes requests to the documentation web interface.
 
 The following external components interact with the module:
 
 1. [**Deckhouse**](/modules/deckhouse/): Sends requests to update the documentation when the set of modules changes.
 
-1. **Prometheus**: Collects module metrics.
+1. [**Prometheus**](/modules/prometheus/): Collects module metrics.
 
-1. **Nginx Controller**: Forwards external user requests to the module web interface.
+1. **Controller nginx**: Forwards external user requests to the module web interface.
 
 ## Deckhouse-tools module
 
-The [`deckhouse-tools`](/modules/deckhouse-tools/) module provides a web interface with links to download the [Deckhouse CLI](/cli/d8/) utility for various operating systems.
+The [`deckhouse-tools`](/modules/deckhouse-tools/) module provides a web interface with links to download the [Deckhouse CLI](../../cli/d8/) utility for various operating systems.
 
 ### Module architecture
 
@@ -143,10 +143,10 @@ The module consists of the following components:
 
 1. **Deckhouse-tools**: Consists of a single **web** container and provides a web interface with links to download the Deckhouse CLI utility.
 
-1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/authn) module. For more information about the `user-authn` module architecture, refer to [the corresponding documentation section](../iam/user-authn.html).
+1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to the [corresponding documentation section](../iam/user-authn.html).
 
 ### Module interactions
 
 The following external component interacts with the module:
 
-* **Nginx Controller**: Forwards external user requests to the module web interface.
+* **Controller nginx**: Forwards external user requests to the module web interface.
