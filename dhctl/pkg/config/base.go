@@ -478,6 +478,8 @@ func checkDirs() error {
 }
 
 func FetchDocuments(paths []string) ([]string, error) {
+	paths = fs.RevealWildcardPaths(paths)
+
 	content := ""
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
