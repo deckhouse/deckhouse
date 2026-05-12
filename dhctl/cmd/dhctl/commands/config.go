@@ -47,10 +47,11 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		loggerProvider := log.ExternalLoggerProvider(logger)
 
 		// Registry shoud run before LoadConfigFromFile
-		registryStop, err := registry.InitWithCLIOptions(
+		registryStop, err := registry.InitFromConfig(
 			ctx,
 			loggerProvider(),
-			opts,
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
 		)
 		if err != nil {
 			return err
@@ -104,10 +105,11 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		loggerProvider := log.ExternalLoggerProvider(logger)
 
 		// Registry shoud run before LoadConfigFromFile
-		registryStop, err := registry.InitWithCLIOptions(
+		registryStop, err := registry.InitFromConfig(
 			ctx,
 			loggerProvider(),
-			opts,
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
 		)
 		if err != nil {
 			return err

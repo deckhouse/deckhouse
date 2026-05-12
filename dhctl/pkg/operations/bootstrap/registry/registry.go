@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/serve"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
@@ -92,25 +91,23 @@ func Init(ctx context.Context, params Params) (Stop, error) {
 	}, nil
 }
 
-func InitWithCLIOptions(ctx context.Context, logger log.Logger, opts *options.Options) (Stop, error) {
+// InitFromConfig starts a local bundle registry based on cluster config documents.
+func InitFromConfig(
+	ctx context.Context,
+	logger log.Logger,
+	configPaths []string,
+	imgBundlePath string,
+) (Stop, error) {
 	nop := func() {}
 
-	if logger == nil {
-		return nop, errors.New("internal error: logger is required")
-	}
-	if opts == nil {
-		return nop, errors.New("internal error: options are required")
-	}
-
 	configProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(opts.Global.ConfigPaths)
+		return config.FetchDocuments(configPaths)
 	})
 	if err != nil {
 		return nop, err
 	}
 
 	bundlePathProvider := func() (string, error) {
-		imgBundlePath := opts.Registry.ImgBundlePath
 		if imgBundlePath == "" {
 			return "", errors.New("--img-bundle-path is required in Local registry mode, please specify the flag")
 		}

@@ -30,10 +30,11 @@ import (
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	// Registry shoud run before LoadConfigFromFile
-	registryStop, err := registry.InitWithCLIOptions(
+	registryStop, err := registry.InitFromConfig(
 		ctx,
 		b.loggerProvider(),
-		b.Options,
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
 	)
 	if err != nil {
 		return err
