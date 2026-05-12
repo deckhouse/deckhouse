@@ -54,7 +54,6 @@ flowchart LR
   style E fill:none,stroke:#4a148c,stroke-dasharray: 3 3
   style F fill:none,stroke:#4a148c,stroke-dasharray: 3 3
 
-  %% --- НАСТРОЙКА СТРЕЛОК (БОЛЕЕ ТЕМНЫЕ) ---
   linkStyle default stroke:#1a1a1a,stroke-width:2px;
   linkStyle 0,2,4,6,8,9,10 stroke:#000000,stroke-width:3px;
 

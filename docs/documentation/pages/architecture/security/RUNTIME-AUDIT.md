@@ -134,7 +134,7 @@ The architecture separates three stages of the pipeline: **collection**, **proce
 
 ### Processing pipeline
 
-![Processing pipeline](../../images/architecture/security/runtime-audit-security-events-en.png)
+![Processing pipeline](../../images/architecture/security/runtime-audit-security-events.png)
 
 ### Log collection
 

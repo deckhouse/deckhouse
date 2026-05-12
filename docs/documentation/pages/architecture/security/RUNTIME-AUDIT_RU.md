@@ -141,7 +141,7 @@ DKP запускает объединённые в DaemonSet агенты Falco 
 
 ### Пайплайн обработки
 
-![Processing pipeline](../../images/architecture/security/runtime-audit-security-events-ru.png)
+![Processing pipeline](../../images/architecture/security/runtime-audit-security-events.ru.png)
 
 ### Сбор логов
 
