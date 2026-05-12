@@ -146,11 +146,6 @@
     "storage",
     "ssdlc"
   ],
-  "log-shipper": [
-    "observability",
-    "logging",
-    "ssdlc"
-  ],
   "loki": [
     "observability",
     "logging",

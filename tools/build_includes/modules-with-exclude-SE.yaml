@@ -623,22 +623,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /modules/460-log-shipper
-  to: /deckhouse/modules/460-log-shipper
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
 - add: /modules/462-loki
   to: /deckhouse/modules/462-loki
   excludePaths:
