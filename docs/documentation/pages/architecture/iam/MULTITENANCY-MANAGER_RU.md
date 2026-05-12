@@ -37,6 +37,8 @@ description: Архитектура модуля multitenancy-manager в Deckhou
   - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано `.spec.settings.allowNamespacesWithoutProjects=false`;
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
 
+   > **Внимание.** Multitenancy-manager имеет права `cluster-admin`, что позволяет создавать любые объекты, описанные в ресурсе ProjectTemplate.
+
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
