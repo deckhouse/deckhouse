@@ -34,7 +34,6 @@ type GlobalOptions struct {
 	DownloadCacheDir       string
 	ConfigPaths            []string
 	SanityCheck            bool
-	ImgBundlePath          string
 }
 
 // NewGlobalOptions returns GlobalOptions with defaults applied.

@@ -110,7 +110,7 @@ func InitWithCLIOptions(ctx context.Context, logger log.Logger, opts *options.Op
 	}
 
 	bundlePathProvider := func() (string, error) {
-		imgBundlePath := opts.Global.ImgBundlePath
+		imgBundlePath := opts.Registry.ImgBundlePath
 		if imgBundlePath == "" {
 			return "", errors.New("--img-bundle-path is required in Local registry mode, please specify the flag")
 		}

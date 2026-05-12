@@ -54,6 +54,7 @@ type Options struct {
 	Render       RenderOptions
 	ControlPlane ControlPlaneOptions
 	Destroy      DestroyOptions
+	Registry     RegistryOptions
 }
 
 // DirConfig returns the directory configuration consumed by pkg/config and

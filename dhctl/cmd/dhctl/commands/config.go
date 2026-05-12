@@ -40,7 +40,7 @@ var (
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
-	app.DefineImgBundleFlags(cmd, &opts.Global)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
@@ -97,7 +97,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
-	app.DefineImgBundleFlags(cmd, &opts.Global)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
