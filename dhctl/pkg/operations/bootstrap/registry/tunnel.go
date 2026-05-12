@@ -60,9 +60,11 @@ func (params TunnelParams) Validate() error {
 	return nil
 }
 
-// StartTunnel opens an SSH reverse tunnel so the bootstrap target can reach the
-// local OCI bundle registry. Returns nil when skipped (non-local mode or standalone install).
-func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
+// InitTunnel starts an SSH reverse tunnel so the bootstrap target can reach the
+// local OCI bundle registry when the registry mode is Local and not a standalone install.
+// Returns a Close function to gracefully shut down the tunnel,
+// or a no-op function if the tunnel was not started.
+func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	nop := func() {}
 
 	if err := params.Validate(); err != nil {
@@ -123,7 +125,7 @@ func (t *Tunnel) start(ctx context.Context) error {
 		net.JoinHostPort(t.address, t.port),
 	)
 
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.dc)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.dc)
 	if err != nil {
 		return fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
@@ -133,7 +135,7 @@ func (t *Tunnel) start(ctx context.Context) error {
 		return fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}
 
-	checker := utils.NewRunScriptReverseTunnelChecker(t.sshCl, checkingScript)
+	checker := utils.NewRunScriptReverseTunnelChecker(t.sshCl, checkScript)
 	killer := utils.NewRunScriptReverseTunnelKiller(t.sshCl, killScript)
 
 	// remoteBindAddress:remotePort:localHost:localPort — binds on the same host/port on both

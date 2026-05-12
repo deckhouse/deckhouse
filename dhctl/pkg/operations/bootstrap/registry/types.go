@@ -17,8 +17,13 @@ package registry
 type (
 	// Stop gracefully shuts down the bundle registry server.
 	Stop func()
+
 	// StopTunnel closes the SSH reverse tunnel to the bundle registry.
 	StopTunnel func()
+
+	// BundlePathProvider returns the path to the directory with tar or chunk.tar
+	// image bundles. Returns an error if the path is not set or invalid.
+	BundlePathProvider func() (string, error)
 )
 
 // ConfigProvider abstracts registry configuration, allowing callers to query

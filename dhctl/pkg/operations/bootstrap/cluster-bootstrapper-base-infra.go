@@ -29,20 +29,11 @@ import (
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
-	registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(b.Options.Global.ConfigPaths)
-	})
-	if err != nil {
-		return err
-	}
-
-	// Bundle registry shoud run before LoadConfigFromFile
-	registryStop, err := registry.Start(ctx,
-		registry.Params{
-			Logger:         b.loggerProvider(),
-			ConfigProvider: registryConfigProvider,
-			BundlePath:     b.Options.Global.ImgBundlePath,
-		},
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromOptions(
+		ctx,
+		b.loggerProvider(),
+		b.Options,
 	)
 	if err != nil {
 		return err

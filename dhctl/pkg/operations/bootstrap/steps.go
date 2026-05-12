@@ -144,7 +144,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	// Bundle registry tunnel
-	bundleRegistryTunnelStop, err := registry.StartTunnel(ctx, registry.TunnelParams{
+	bundleRegistryTunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
 		MetaConfig: cfg,
 		Node:       params.Node,
 		Logger:     params.LoggerProvider(),

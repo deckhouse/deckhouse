@@ -47,20 +47,11 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		logger := log.GetDefaultLogger()
 		loggerProvider := log.ExternalLoggerProvider(logger)
 
-		registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-			return config.FetchDocuments(opts.Global.ConfigPaths)
-		})
-		if err != nil {
-			return err
-		}
-
-		// Bundle registry shoud run before LoadConfigFromFile
-		registryStop, err := registry.Start(ctx,
-			registry.Params{
-				Logger:         loggerProvider(),
-				ConfigProvider: registryConfigProvider,
-				BundlePath:     opts.Global.ImgBundlePath,
-			},
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromOptions(
+			ctx,
+			loggerProvider(),
+			opts,
 		)
 		if err != nil {
 			return err
@@ -113,20 +104,11 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		logger := log.GetDefaultLogger()
 		loggerProvider := log.ExternalLoggerProvider(logger)
 
-		registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-			return config.FetchDocuments(opts.Global.ConfigPaths)
-		})
-		if err != nil {
-			return err
-		}
-
-		// Bundle registry shoud run before LoadConfigFromFile
-		registryStop, err := registry.Start(ctx,
-			registry.Params{
-				Logger:         loggerProvider(),
-				ConfigProvider: registryConfigProvider,
-				BundlePath:     opts.Global.ImgBundlePath,
-			},
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromOptions(
+			ctx,
+			loggerProvider(),
+			opts,
 		)
 		if err != nil {
 			return err

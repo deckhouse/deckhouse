@@ -46,20 +46,11 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(b.Options.Global.ConfigPaths)
-	})
-	if err != nil {
-		return err
-	}
-
-	// Bundle registry shoud run before LoadConfigFromFile
-	registryStop, err := registry.Start(ctx,
-		registry.Params{
-			Logger:         b.loggerProvider(),
-			ConfigProvider: registryConfigProvider,
-			BundlePath:     b.Options.Global.ImgBundlePath,
-		},
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromOptions(
+		ctx,
+		b.loggerProvider(),
+		b.Options,
 	)
 	if err != nil {
 		return err

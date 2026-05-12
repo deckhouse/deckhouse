@@ -24,13 +24,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/bundle"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/serve"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 // Params holds dependencies required to start the bundle registry.
 type Params struct {
-	Logger         log.Logger
-	ConfigProvider ConfigProvider
-	BundlePath     string
+	Logger             log.Logger
+	ConfigProvider     ConfigProvider
+	BundlePathProvider BundlePathProvider
 }
 
 func (params Params) Validate() error {
@@ -41,12 +44,17 @@ func (params Params) Validate() error {
 	if params.ConfigProvider == nil {
 		return fmt.Errorf("internal error: registry config provider is required")
 	}
+
+	if params.BundlePathProvider == nil {
+		return fmt.Errorf("internal error: registry bundle path provider is required")
+	}
 	return nil
 }
 
-// Start starts a local OCI bundle registry if the registry mode is Local.
-// Returns a StopRegistry function to gracefully shut down the registry, or nil if skipped.
-func Start(ctx context.Context, params Params) (Stop, error) {
+// Init starts a local registry when the registry mode is Local.
+// Returns a Stop function to gracefully shut down the registry,
+// or a no-op function if the registry was not started.
+func Init(ctx context.Context, params Params) (Stop, error) {
 	nop := func() {}
 
 	if err := params.Validate(); err != nil {
@@ -61,14 +69,15 @@ func Start(ctx context.Context, params Params) (Stop, error) {
 		return nop, nil
 	}
 
-	if params.BundlePath == "" {
-		return nop, fmt.Errorf("cluster bootstrap requires --img-bundle-path option when registry mode is Local. Please use --img-bundle-path option to bootstrap the cluster")
+	bundlePath, err := params.BundlePathProvider()
+	if err != nil {
+		return nop, err
 	}
 
 	logger := params.Logger
 	logger.DebugF("Up bundle registry...")
 
-	reg := newRegistry(params.BundlePath)
+	reg := newRegistry(bundlePath)
 	if err = reg.start(ctx, logger); err != nil {
 		return nop, fmt.Errorf("start bundle registry: %w", err)
 	}
@@ -81,6 +90,38 @@ func Start(ctx context.Context, params Params) (Stop, error) {
 			logger.DebugF("Bundle registry: stopped")
 		}
 	}, nil
+}
+
+func InitFromOptions(ctx context.Context, logger log.Logger, opts *options.Options) (Stop, error) {
+	nop := func() {}
+
+	if logger == nil {
+		return nop, errors.New("internal error: logger is required")
+	}
+	if opts == nil {
+		return nop, errors.New("internal error: options are required")
+	}
+
+	configProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
+		return config.FetchDocuments(opts.Global.ConfigPaths)
+	})
+	if err != nil {
+		return nop, err
+	}
+
+	bundlePathProvider := func() (string, error) {
+		imgBundlePath := opts.Global.ImgBundlePath
+		if imgBundlePath == "" {
+			return "", errors.New("--img-bundle-path is required in Local registry mode, please specify the flag")
+		}
+		return imgBundlePath, nil
+	}
+
+	return Init(ctx, Params{
+		Logger:             logger,
+		ConfigProvider:     configProvider,
+		BundlePathProvider: bundlePathProvider,
+	})
 }
 
 // newRegistry creates a Registry pre-configured with the bundle-specific address and repo path.
