@@ -25,7 +25,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.4.2
-	github.com/mdlayher/arp v0.0.0-20220221190821-c37aaafac7f9
+	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/mdlayher/ethernet v0.0.0-20220221185849-529eae5b6118
 	github.com/mdlayher/ndp v0.0.0-20200602162440-17ab9e3e5567
 	github.com/prometheus/client_golang v1.19.0
