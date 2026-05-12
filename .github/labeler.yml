@@ -63,7 +63,6 @@ area/kubernetes:
 
 area/logs:
   - modules/460-log-shipper/**
-  - modules/462-loki/**
 
 area/monitoring:
   - modules/200-operator-prometheus/**

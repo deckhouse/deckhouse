@@ -340,17 +340,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/470-chrony
   to: /deckhouse/modules/470-chrony
   excludePaths:
@@ -925,46 +914,6 @@
         - '**/*'
 - add: /ee/cse/modules/150-user-authn/openapi/values.yaml
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/templates/audit-logs.yaml
-  to: /deckhouse/modules/462-loki/templates/audit-logs.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/templates/security-events.yaml
-  to: /deckhouse/modules/462-loki/templates/security-events.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/monitoring/grafana-dashboards/security/kube-audit.json
-  to: /deckhouse/modules/462-loki/monitoring/grafana-dashboards/security/kube-audit.json
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/monitoring/grafana-dashboards/security/runtime-audit-engine.json
-  to: /deckhouse/modules/462-loki/monitoring/grafana-dashboards/security/runtime-audit-engine.json
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/monitoring/grafana-dashboards/security/security-events.json
-  to: /deckhouse/modules/462-loki/monitoring/grafana-dashboards/security/security-events.json
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/monitoring/grafana-dashboards/security/virt-audit.json
-  to: /deckhouse/modules/462-loki/monitoring/grafana-dashboards/security/virt-audit.json
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/monitoring/prometheus-rules/security-events/security-events-sync.yaml
-  to: /deckhouse/modules/462-loki/monitoring/prometheus-rules/security-events/security-events-sync.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/cse/modules/462-loki/openapi/config-values.yaml
-  to: /deckhouse/modules/462-loki/openapi/config-values.yaml
   stageDependencies:
     install:
         - '**/*'

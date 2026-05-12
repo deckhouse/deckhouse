@@ -5297,32 +5297,6 @@ alerts:
         A LoadBalancer has not been created.
       severity: "4"
       markupFormat: default
-    - name: LokiDiscardedSamplesWarning
-      sourceFile: modules/462-loki/monitoring/prometheus-rules/discards.yaml
-      moduleUrl: 462-loki
-      module: loki
-      edition: ce
-      description: |-
-        Loki is discarding samples during ingestion because they fail validation.
-        Samples are being discarded because of `{{ $labels.reason }}` at a rate of {{ .Value | humanize }} samples per second.
-        For more information, refer to the [`loki` FAQ](/modules/loki/faq.html).
-      summary: |
-        Loki is discarding samples during ingestion.
-      severity: "4"
-      markupFormat: markdown
-    - name: LokiInsufficientDiskForRetention
-      sourceFile: modules/462-loki/monitoring/prometheus-rules/alerts.tpl
-      moduleUrl: 462-loki
-      module: loki
-      edition: ce
-      description: |-
-        Not enough disk space to retain logs for 168 hours. Current effective retention period is {{ $value }} hours.
-
-        You need either decrease expected `retentionPeriodHours` or increase resize Loki PersistentVolumeClaim
-      summary: |
-        Not enough disk space to retain logs for 168 hours
-      severity: "4"
-      markupFormat: markdown
     - name: ModuleAtConflict
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -7202,7 +7176,6 @@ modules-having-alerts:
     - istio
     - kube-dns
     - log-shipper
-    - loki
     - metallb
     - monitoring-applications
     - monitoring-custom
