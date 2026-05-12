@@ -976,6 +976,7 @@ APIToken
 apiVersion
 APIVersion
 app
+apk
 apparmor
 AppArmor
 apps
@@ -1160,6 +1161,7 @@ clusterauthorizationrule
 ClusterAuthorizationRule
 ClusterAuthorizationRules
 ClusterBootstrap
+ClusterRoleBinding
 clusterconfiguration
 ClusterConfiguration
 clusterDomain
@@ -1209,6 +1211,7 @@ configOverrides
 configs
 configurator
 configVersion
+configauditreports
 conntrack
 Conntrack
 Container
@@ -1334,6 +1337,7 @@ DKP
 DN
 DNAT
 dns
+dnf
 DNS
 dnsEE
 Dnsmasq
@@ -1371,6 +1375,7 @@ dynDNS
 Меньшеe
 дeплой
 EarlyAccess
+EphemeralContainers
 earlyOOM
 eBPF
 EBS
@@ -2007,6 +2012,8 @@ overprovisioning
 overprovisioningRate
 overriden
 overutilized
+overlayfs
+overlay
 OVF
 ovh
 OVH
@@ -2253,8 +2260,10 @@ Serviсes
 SHA
 shapshot
 shouldn
+sha
 Sidekiq
 SIGTERM
+SIEM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
@@ -2441,6 +2450,7 @@ ValidationWebhook
 validator
 vApp
 vApps
+vulnerabilityreports
 VCD
 VCDClusterConfiguration
 VCDInstanceClass
