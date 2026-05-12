@@ -69,29 +69,28 @@ func NewDeployer(reg registryService, workingDir string, logger *log.Logger) *De
 
 // Deploy fetches a package image from the registry and exposes it at the deployed path.
 func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error {
-	// one package can be downloaded by different apps in the same time
-	// so lock it to prevent downloading same package
+	// the same package may be deployed by multiple apps concurrently; serialize to avoid duplicate work
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	downloaded := d.downloadedPath(repo.Name, packageName)
-	if err := d.download(ctx, repo, downloaded, packageName, version); err != nil {
+	packageDir := filepath.Join(d.workingDir, repo.Name, packageName)
+	if err := d.download(ctx, repo, packageDir, packageName, version); err != nil {
 		return err
 	}
 
-	return d.symlink(ctx, downloaded, d.deployedPath(deployedName), deployedName, version)
+	return d.symlink(ctx, packageDir, d.deployedPath(deployedName), deployedName, version)
 }
 
-// Cleanup removes deployed symlinks and downloaded package versions not listed in preserve.
+// Cleanup removes deployed symlinks and package versions not listed in preserve.
 func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Cleanup")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("downloaded", d.workingDir))
+	span.SetAttributes(attribute.String("workingDir", d.workingDir))
 	span.SetAttributes(attribute.String("deployed", d.deployedRoot()))
 
 	logger := d.logger.With(
-		slog.String("downloaded", d.workingDir),
+		slog.String("workingDir", d.workingDir),
 		slog.String("deployed", d.deployedRoot()))
 
 	logger.Debug("cleanup packages")
@@ -105,17 +104,12 @@ func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePack
 		return fmt.Errorf("cleanup deployed: %w", err)
 	}
 
-	if err := cleanupDownloaded(ctx, d.workingDir, keep, logger); err != nil {
+	if err := cleanupPackageDirs(ctx, d.workingDir, keep, logger); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("cleanup downloaded: %w", err)
+		return fmt.Errorf("cleanup package dirs: %w", err)
 	}
 
 	return nil
-}
-
-// downloadedPath returns a package download directory under the deployer root.
-func (d *Deployer) downloadedPath(repository, packageName string) string {
-	return filepath.Join(d.workingDir, repository, packageName)
 }
 
 // deployedRoot returns the directory containing deployed package symlinks.
@@ -143,7 +137,7 @@ func (d *Deployer) buildCleanupKeep(preserve []deployer.PreservePackage) cleanup
 	}
 
 	for _, item := range preserve {
-		packageDir := d.cleanupPackageDir(item)
+		packageDir := filepath.Join(d.workingDir, item.Repository, item.Name)
 		versionDir := filepath.Join(packageDir, item.Version)
 
 		keep.versions[normalizePath(versionDir)] = struct{}{}
@@ -154,12 +148,7 @@ func (d *Deployer) buildCleanupKeep(preserve []deployer.PreservePackage) cleanup
 	return keep
 }
 
-// cleanupPackageDir returns the workingDir package directory for a preserved package.
-func (d *Deployer) cleanupPackageDir(item deployer.PreservePackage) string {
-	return filepath.Join(d.workingDir, item.Repository, item.Name)
-}
-
-// cleanupDeployed removes symlinks whose targets are not preserved downloaded versions.
+// cleanupDeployed removes symlinks whose targets are not preserved package versions.
 func cleanupDeployed(ctx context.Context, deployed string, keepVersions map[string]struct{}, logger *log.Logger) error {
 	entries, err := os.ReadDir(deployed)
 	if err != nil {
@@ -211,10 +200,10 @@ func cleanupDeployed(ctx context.Context, deployed string, keepVersions map[stri
 	return nil
 }
 
-// cleanupDownloaded removes package versions and empty parent directories not preserved.
+// cleanupPackageDirs removes package versions and empty parent directories not preserved.
 // The deployed subdirectory is skipped here — it is handled by cleanupDeployed.
-func cleanupDownloaded(ctx context.Context, downloaded string, keep cleanupKeep, logger *log.Logger) error {
-	entries, err := os.ReadDir(downloaded)
+func cleanupPackageDirs(ctx context.Context, packageDir string, keep cleanupKeep, logger *log.Logger) error {
+	entries, err := os.ReadDir(packageDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -232,7 +221,7 @@ func cleanupDownloaded(ctx context.Context, downloaded string, keep cleanupKeep,
 			continue
 		}
 
-		path := filepath.Join(downloaded, entry.Name())
+		path := filepath.Join(packageDir, entry.Name())
 
 		if _, ok := keep.repos[normalizePath(path)]; ok {
 			if err = cleanupRepoDir(ctx, path, keep, logger); err != nil {
@@ -242,7 +231,7 @@ func cleanupDownloaded(ctx context.Context, downloaded string, keep cleanupKeep,
 			continue
 		}
 
-		logger.Info("delete downloaded dir", slog.String("path", path))
+		logger.Info("delete package dir", slog.String("path", path))
 		if err = os.RemoveAll(path); err != nil {
 			return err
 		}
@@ -276,7 +265,7 @@ func cleanupRepoDir(ctx context.Context, repo string, keep cleanupKeep, logger *
 			continue
 		}
 
-		logger.Info("delete downloaded package dir", slog.String("path", path))
+		logger.Info("delete package dir", slog.String("path", path))
 		if err = os.RemoveAll(path); err != nil {
 			return err
 		}
@@ -285,7 +274,7 @@ func cleanupRepoDir(ctx context.Context, repo string, keep cleanupKeep, logger *
 	return removeEmptyDir(repo)
 }
 
-// cleanupPackageVersions removes downloaded versions not listed in keepVersions.
+// cleanupPackageVersions removes package versions not listed in keepVersions.
 func cleanupPackageVersions(ctx context.Context, packageDir string, keepVersions map[string]struct{}, logger *log.Logger) error {
 	entries, err := os.ReadDir(packageDir)
 	if err != nil {
@@ -306,7 +295,7 @@ func cleanupPackageVersions(ctx context.Context, packageDir string, keepVersions
 			continue
 		}
 
-		logger.Info("delete downloaded version dir", slog.String("path", path))
+		logger.Info("delete package version dir", slog.String("path", path))
 		if err = os.RemoveAll(path); err != nil {
 			return err
 		}
@@ -339,20 +328,20 @@ func normalizePath(path string) string {
 }
 
 // download fetches a package image into a versioned directory via an atomic temporary directory rename.
-func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error {
+func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDir, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "download")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
-	span.SetAttributes(attribute.String("downloaded", downloaded))
+	span.SetAttributes(attribute.String("packageDir", packageDir))
 	span.SetAttributes(attribute.String("repository", repo.Name))
 	span.SetAttributes(attribute.String("registry", repo.Repository))
 
 	logger := d.logger.With(
 		slog.String("name", name),
 		slog.String("version", version),
-		slog.String("downloaded", downloaded),
+		slog.String("packageDir", packageDir),
 		slog.String("repository", repo.Name),
 		slog.String("registry", repo.Repository))
 
@@ -365,23 +354,23 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 	default:
 	}
 
-	versionPath := filepath.Join(downloaded, version)
+	versionPath := filepath.Join(packageDir, version)
 	if _, err := os.Stat(versionPath); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
 		return newCheckVersionErr(err)
 	}
 
-	if err := os.MkdirAll(downloaded, 0755); err != nil {
+	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreatePackageDirErr(err)
 	}
 
-	if err := cleanupTempDownloadDirs(downloaded, version); err != nil {
+	if err := cleanupTempDownloadDirs(packageDir, version); err != nil {
 		return newDownloadErr(err)
 	}
 
-	tempDir, err := os.MkdirTemp(downloaded, tempDownloadPrefix(version))
+	tempDir, err := os.MkdirTemp(packageDir, tempDownloadPrefix(version))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreatePackageDirErr(err)
@@ -394,7 +383,7 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 		}
 	}()
 
-	// download/extract into a temporary directory, then atomically publish it as <downloaded>/<version>
+	// download/extract into a temporary directory, then atomically publish it as <packageDir>/<version>
 	if err = d.registry.Download(ctx, repo, tempDir, name, version); err != nil {
 		return newDownloadErr(err)
 	}
@@ -408,8 +397,8 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 }
 
 // cleanupTempDownloadDirs removes stale temporary download directories for a package version.
-func cleanupTempDownloadDirs(downloaded, version string) error {
-	entries, err := os.ReadDir(downloaded)
+func cleanupTempDownloadDirs(packageDir, version string) error {
+	entries, err := os.ReadDir(packageDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -424,7 +413,7 @@ func cleanupTempDownloadDirs(downloaded, version string) error {
 			continue
 		}
 
-		if err = os.RemoveAll(filepath.Join(downloaded, entry.Name())); err != nil {
+		if err = os.RemoveAll(filepath.Join(packageDir, entry.Name())); err != nil {
 			return err
 		}
 	}
@@ -439,17 +428,17 @@ func tempDownloadPrefix(version string) string {
 
 // symlink creates a symlink from deployed path to the workingDir version directory.
 // Removes any existing symlink for atomic version switching.
-func (d *Deployer) symlink(ctx context.Context, downloaded, deployed, name, version string) error {
+func (d *Deployer) symlink(ctx context.Context, packageDir, deployed, name, version string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "symlink")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("downloaded", downloaded))
+	span.SetAttributes(attribute.String("packageDir", packageDir))
 	span.SetAttributes(attribute.String("deployed", deployed))
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
 
 	logger := d.logger.With(
-		slog.String("downloaded", downloaded),
+		slog.String("packageDir", packageDir),
 		slog.String("deployed", deployed),
 		slog.String("name", name),
 		slog.String("version", version))
@@ -477,8 +466,8 @@ func (d *Deployer) symlink(ctx context.Context, downloaded, deployed, name, vers
 		return newCreatePackageDirErr(err)
 	}
 
-	// <downloaded>/<version>
-	versionPath := filepath.Join(downloaded, version)
+	// <packageDir>/<version>
+	versionPath := filepath.Join(packageDir, version)
 	if _, err := os.Stat(versionPath); err != nil {
 		return newCheckVersionErr(err)
 	}
@@ -492,7 +481,7 @@ func (d *Deployer) symlink(ctx context.Context, downloaded, deployed, name, vers
 	return nil
 }
 
-// Undeploy removes the symlink. If keep=false, also deletes downloaded files.
+// Undeploy removes the symlink. If keep=false, also deletes the package directory.
 func (d *Deployer) Undeploy(ctx context.Context, deployedName string, keep bool) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Undeploy")
 	defer span.End()
@@ -527,10 +516,10 @@ func (d *Deployer) Undeploy(ctx context.Context, deployedName string, keep bool)
 			target = filepath.Join(filepath.Dir(deployed), target)
 		}
 
-		downloaded := filepath.Dir(target)
-		logger.Info("delete package dir", slog.String("path", downloaded))
-		if err := os.RemoveAll(downloaded); err != nil {
-			logger.Warn("failed to remove downloaded images", slog.String("path", downloaded))
+		packageDir := filepath.Dir(target)
+		logger.Info("delete package dir", slog.String("path", packageDir))
+		if err := os.RemoveAll(packageDir); err != nil {
+			logger.Warn("failed to remove package dir", slog.String("path", packageDir))
 		}
 	}()
 
