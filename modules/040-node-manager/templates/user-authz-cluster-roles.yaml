@@ -1,16 +1,163 @@
 ---
+# Access level: SuperAdmin.
+# Full access to all node-manager resources:
+# - public node-manager resources (instances, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
+# - Node Feature Discovery resources
+# - Machine Controller Manager resources
+# - Cluster API resources
+# - node-manager infrastructure resources
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: User
-  name: d8:user-authz:node-manager:user
+    user-authz.deckhouse.io/access-level: SuperAdmin
+  name: d8:user-authz:node-manager:super-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - instances
   - nodegroups
+  - nodegroupconfigurations
+  - nodeusers
+  - sshcredentials
+  - staticinstances
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - nfd.k8s-sigs.io
+  resources:
+  - nodefeatures
+  - nodefeaturegroups
+  - nodefeaturerules
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - openstackmachineclasses
+  - awsmachineclasses
+  - azuremachineclasses
+  - vspheremachineclasses
+  - gcpmachineclasses
+  - yandexmachineclasses
+  - machines
+  - machinesets
+  - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - clusters
+  - machinedeployments
+  - machinedrainrules
+  - machinehealthchecks
+  - machinepools
+  - machines
+  - machinesets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhousecontrolplanes
+  - staticclusters
+  - staticmachines
+  - staticmachinetemplates
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - runtime.cluster.x-k8s.io
+  resources:
+  - extensionconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+---
+# Access level: ClusterAdmin.
+# Includes User, PrivilegedUser, Editor, Admin, and ClusterEditor permissions.
+# Full access:
+# - public node-manager resources (instances, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
+# Read access:
+# - Node Feature Discovery resources
+# - Machine Controller Manager resources
+# - Cluster API resources
+# - static node infrastructure resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8:user-authz:node-manager:cluster-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  - nodegroups
+  - nodegroupconfigurations
+  - nodeusers
+  - sshcredentials
+  - staticinstances
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - nfd.k8s-sigs.io
+  resources:
+  - nodefeatures
+  - nodefeaturegroups
+  - nodefeaturerules
   verbs:
   - get
   - list
@@ -23,9 +170,7 @@ rules:
   - azuremachineclasses
   - vspheremachineclasses
   - gcpmachineclasses
-  - alicloudmachineclasses
   - yandexmachineclasses
-  - packetmachineclasses
   - machines
   - machinesets
   - machinedeployments
@@ -36,14 +181,31 @@ rules:
 - apiGroups:
   - cluster.x-k8s.io
   resources:
+  - clusters
+  - machinedeployments
+  - machinedrainrules
+  - machinehealthchecks
+  - machinepools
   - machines
   - machinesets
-  - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - staticmachines
+  - staticmachinetemplates
   verbs:
   - get
   - list
   - watch
 ---
+# Access level: ClusterEditor.
+# Includes User, PrivilegedUser, Editor, and Admin permissions.
+# Adds write access to public node-manager resources (instances, nodegroups, nodegroupconfigurations, staticinstances).
+# Allowed verbs: create, update, patch, delete, deletecollection.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -55,43 +217,72 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - instances
   - nodegroups
+  - nodegroupconfigurations
+  - staticinstances
   verbs:
-  - get
-  - list
-  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 ---
+# Access level: Admin.
+# Includes User, PrivilegedUser, and Editor permissions.
+# Uses node-manager read access from User.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: ClusterAdmin
-  name: d8:user-authz:node-manager:cluster-admin
+    user-authz.deckhouse.io/access-level: Admin
+  name: d8:user-authz:node-manager:admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules: []
+---
+# Access level: Editor.
+# Includes User and PrivilegedUser permissions.
+# Uses node-manager read access from User.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+  name: d8:user-authz:node-manager:editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules: []
+---
+# Access level: PrivilegedUser.
+# Includes User permissions.
+# Uses node-manager read access from User.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: PrivilegedUser
+  name: d8:user-authz:node-manager:privileged-user
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules: []
+---
+# Access level: User.
+# Read access:
+# - public node-manager resources (instances, nodegroups, nodegroupconfigurations, staticinstances)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+  name: d8:user-authz:node-manager:user
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
-  - machine.sapcloud.io
+  - deckhouse.io
   resources:
-  - openstackmachineclasses
-  - awsmachineclasses
-  - azuremachineclasses
-  - vspheremachineclasses
-  - gcpmachineclasses
-  - alicloudmachineclasses
-  - yandexmachineclasses
-  - packetmachineclasses
-  - machines
-  - machinesets
-  - machinedeployments
+  - instances
+  - nodegroups
+  - nodegroupconfigurations
+  - staticinstances
   verbs:
-  - patch
-  - update
-- apiGroups:
-  - cluster.x-k8s.io
-  resources:
-  - machines
-  - machinesets
-  - machinedeployments
-  verbs:
-  - patch
-  - update
+  - get
+  - list
+  - watch
