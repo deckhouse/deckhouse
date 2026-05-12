@@ -1,11 +1,9 @@
 ```mermaid
 flowchart LR
-  %% --- СТИЛИ УЗЛОВ ---
   classDef step fill:#ffffff,stroke:#000000,color:#000000,stroke-width:2px;
   classDef source fill:#f1f5f9,stroke:#000000,color:#000000,stroke-width:2px;
   classDef storage fill:#ffffff,stroke:#000000,color:#000000,stroke-width:2px;
 
-  %% --- ПОТОК ---
   A(["fa:fa-server Log Source <br/>(service)"]):::source ==> LS
 
   subgraph LS [<b><font color='black'>log-shipper</font></b>]
@@ -38,7 +36,6 @@ flowchart LR
     end
   end
 
-  %% --- БЛОК 3: ХРАНИЛИЩА ---
   SES ==> ST
 
   subgraph ST [<b><font color='black'>Target Storage</font></b>]
@@ -49,7 +46,6 @@ flowchart LR
     S1 ~~~ S2 ~~~ S3
   end
 
-  %% --- ЦВЕТОВАЯ ГРУППИРОВКА ---
   style LS fill:#e0e7ff,stroke:#1a237e,stroke-width:2px,color:#000000
   style SES fill:#f5f3ff,stroke:#4a148c,stroke-width:2px,color:#000000
   style ST fill:#f0fdfa,stroke:#004d40,stroke-dasharray: 5 5,stroke-width:2px,color:#000000

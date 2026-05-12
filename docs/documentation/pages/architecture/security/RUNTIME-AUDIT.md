@@ -135,6 +135,7 @@ The architecture separates three stages of the pipeline: **collection**, **proce
 ### Processing pipeline
 
 ![Processing pipeline](../../images/architecture/security/runtime-audit-security-events-en.png)
+
 ### Log collection
 
 Collection is performed via the auxiliary `log-shipper` module:
