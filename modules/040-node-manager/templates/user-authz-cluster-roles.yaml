@@ -122,7 +122,7 @@ rules:
 # Access level: ClusterAdmin.
 # Includes User, PrivilegedUser, Editor, Admin, and ClusterEditor permissions.
 # Full access:
-# - node-manager deckhouse.io resources (instances, instancetypescatalogs, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
+# - node-manager deckhouse.io resources (instances, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
 # Read access:
 # - Node Feature Discovery resources
 # - Machine Controller Manager resources
@@ -141,7 +141,6 @@ rules:
   - deckhouse.io
   resources:
   - instances
-  - instancetypescatalogs
   - nodegroups
   - nodegroupconfigurations
   - nodeusers
@@ -211,6 +210,7 @@ rules:
 # Access level: ClusterEditor.
 # Includes User, PrivilegedUser, Editor, and Admin permissions.
 # Adds write access to public node-manager resources (instances, nodegroups, nodegroupconfigurations, staticinstances).
+# Adds read access to nodegroupconfigurations and staticinstances.
 # Allowed verbs: create, update, patch, delete, deletecollection.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -220,6 +220,15 @@ metadata:
   name: d8:user-authz:node-manager:cluster-editor
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroupconfigurations
+  - staticinstances
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - deckhouse.io
   resources:
@@ -272,7 +281,7 @@ rules: []
 ---
 # Access level: User.
 # Read access:
-# - public node-manager resources (instances, instancetypescatalogs, nodegroups, nodegroupconfigurations, staticinstances)
+# - public node-manager resources (instances, nodegroups)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -285,10 +294,7 @@ rules:
   - deckhouse.io
   resources:
   - instances
-  - instancetypescatalogs
   - nodegroups
-  - nodegroupconfigurations
-  - staticinstances
   verbs:
   - get
   - list
