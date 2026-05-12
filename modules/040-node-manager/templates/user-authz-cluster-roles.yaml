@@ -1,11 +1,13 @@
 ---
 # Access level: SuperAdmin.
-# Full access to all node-manager resources:
+# Full access to all node-manager resources.
+# Adds write access to Kubernetes Node resources.
 # - node-manager deckhouse.io resources (instances, instancetypescatalogs, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
 # - Node Feature Discovery resources
 # - Machine Controller Manager resources
 # - Cluster API resources
 # - CAPS infrastructure resources owned by node-manager
+# - Kubernetes Node resources
 # Provider-specific Cluster API infrastructure resources must be covered by cloud-provider modules.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -29,6 +31,16 @@ rules:
   - get
   - list
   - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
   - create
   - update
   - patch
@@ -128,6 +140,8 @@ rules:
 # - Machine Controller Manager resources
 # - Cluster API resources
 # - CAPS infrastructure resources owned by node-manager
+# Node write access:
+# - Kubernetes Node resources (update, patch)
 # Provider-specific Cluster API infrastructure resources must be covered by cloud-provider modules.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -211,7 +225,8 @@ rules:
 # Includes User, PrivilegedUser, Editor, and Admin permissions.
 # Adds write access to public node-manager resources (instances, nodegroups, nodegroupconfigurations, staticinstances).
 # Adds read access to nodegroupconfigurations and staticinstances.
-# Allowed verbs: create, update, patch, delete, deletecollection.
+# Adds update and patch access to Kubernetes Node resources.
+# Allowed public resource verbs: create, update, patch, delete, deletecollection.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -229,6 +244,13 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - update
+  - patch
 - apiGroups:
   - deckhouse.io
   resources:
