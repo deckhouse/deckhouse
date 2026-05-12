@@ -17,13 +17,21 @@ image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025.04.29.1"
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
   - git clone --depth 1 --branch {{ $mcmVersion }}-flant.24 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
-  - rm -rf /src/.git
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
