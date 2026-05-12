@@ -139,18 +139,18 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	reg := registry.NewService(dc, logger)
 	downloadedDir := d8env.GetDownloadedModulesDir()
 
-	downloadedAppsDir := filepath.Join(downloadedDir, "apps")
-	downloadedModulesDir := filepath.Join(downloadedDir, "modules")
+	appsDir := filepath.Join(downloadedDir, "apps")
+	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.appDeployer = symlinkdeploy.NewDeployer(reg, downloadedAppsDir, logger)
-	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, downloadedModulesDir, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.appDeployer = erofsdeploy.NewDeployer(reg, downloadedAppsDir, logger)
-		r.moduleDeployer = erofsdeploy.NewDeployer(reg, downloadedModulesDir, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks

@@ -49,7 +49,7 @@ const (
 // Simpler alternative for environments where dm-verity is unavailable.
 type Deployer struct {
 	mu         sync.Mutex
-	downloaded string
+	workingDir string
 	registry   registryService
 	logger     *log.Logger
 }
@@ -59,10 +59,10 @@ type registryService interface {
 }
 
 // NewDeployer creates a Deployer for packages.
-func NewDeployer(reg registryService, downloaded string, logger *log.Logger) *Deployer {
+func NewDeployer(reg registryService, workingDir string, logger *log.Logger) *Deployer {
 	return &Deployer{
 		registry:   reg,
-		downloaded: downloaded,
+		workingDir: workingDir,
 		logger:     logger.Named(loggerName),
 	}
 }
@@ -87,11 +87,11 @@ func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePack
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Cleanup")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("downloaded", d.downloaded))
+	span.SetAttributes(attribute.String("downloaded", d.workingDir))
 	span.SetAttributes(attribute.String("deployed", d.deployedRoot()))
 
 	logger := d.logger.With(
-		slog.String("downloaded", d.downloaded),
+		slog.String("downloaded", d.workingDir),
 		slog.String("deployed", d.deployedRoot()))
 
 	logger.Debug("cleanup packages")
@@ -105,7 +105,7 @@ func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePack
 		return fmt.Errorf("cleanup deployed: %w", err)
 	}
 
-	if err := cleanupDownloaded(ctx, d.downloaded, keep, logger); err != nil {
+	if err := cleanupDownloaded(ctx, d.workingDir, keep, logger); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("cleanup downloaded: %w", err)
 	}
@@ -115,12 +115,12 @@ func (d *Deployer) Cleanup(ctx context.Context, preserve []deployer.PreservePack
 
 // downloadedPath returns a package download directory under the deployer root.
 func (d *Deployer) downloadedPath(repository, packageName string) string {
-	return filepath.Join(d.downloaded, repository, packageName)
+	return filepath.Join(d.workingDir, repository, packageName)
 }
 
 // deployedRoot returns the directory containing deployed package symlinks.
 func (d *Deployer) deployedRoot() string {
-	return filepath.Join(d.downloaded, deployedDir)
+	return filepath.Join(d.workingDir, deployedDir)
 }
 
 // deployedPath returns a package deployed path under the deployer root.
@@ -148,15 +148,15 @@ func (d *Deployer) buildCleanupKeep(preserve []deployer.PreservePackage) cleanup
 
 		keep.versions[normalizePath(versionDir)] = struct{}{}
 		keep.packages[normalizePath(packageDir)] = struct{}{}
-		keep.repos[normalizePath(filepath.Join(d.downloaded, item.Repository))] = struct{}{}
+		keep.repos[normalizePath(filepath.Join(d.workingDir, item.Repository))] = struct{}{}
 	}
 
 	return keep
 }
 
-// cleanupPackageDir returns the downloaded package directory for a preserved package.
+// cleanupPackageDir returns the workingDir package directory for a preserved package.
 func (d *Deployer) cleanupPackageDir(item deployer.PreservePackage) string {
-	return filepath.Join(d.downloaded, item.Repository, item.Name)
+	return filepath.Join(d.workingDir, item.Repository, item.Name)
 }
 
 // cleanupDeployed removes symlinks whose targets are not preserved downloaded versions.
@@ -437,7 +437,7 @@ func tempDownloadPrefix(version string) string {
 	return "." + strings.NewReplacer("/", "_", string(os.PathSeparator), "_").Replace(version) + ".tmp-"
 }
 
-// symlink creates a symlink from deployed path to the downloaded version directory.
+// symlink creates a symlink from deployed path to the workingDir version directory.
 // Removes any existing symlink for atomic version switching.
 func (d *Deployer) symlink(ctx context.Context, downloaded, deployed, name, version string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "symlink")
