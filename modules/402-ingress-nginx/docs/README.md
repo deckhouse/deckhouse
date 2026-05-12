@@ -7,6 +7,8 @@ Installs and manages the [Ingress NGINX Controller](https://github.com/kubernete
 
 The module supports running and configuring several Ingress NGINX Controllers simultaneously (one of the controllers is the **primary** one; you can create any number of **additional** controllers). This approach allows you to separate extranet and intranet Ingress resources of applications.
 
+Current NGINX version is 1.29.5.
+
 ## Traffic routing
 
 Traffic to `ingress-nginx` can be routed in several ways:
@@ -21,12 +23,25 @@ Traffic to `ingress-nginx` can be routed in several ways:
   - Yandex LB
   - OpenStack LB
 
-## Terminating HTTPS
+## Supported Protocols
+
+The module allows the following protocols to be used for receiving and further routing traffic:
+
+- HTTP/HTTPS: The primary traffic routing protocol. You can select between HTTP/1.1, HTTP/2, and HTTP/3 versions;
+- WebSocket: Supported natively by NGINX without additional user configuration;
+- gRPC: Supported; requires applying [the annotation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol);
+- FCGI: Supported; requires applying [the annotation](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol);
+- Proxy Protocol: Support for receiving Proxy Protocol traffic is provided through the use of [the corresponding inlets](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet);
+- SSL Passthrough: End-to-end SSL traffic routing is supported via [the corresponding inlets](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet).
+
+Currently, our `ingress-nginx` implementation does not support TCP/UDP traffic routing (`tcp-services/udp-services` functionality). To route TCP/UDP traffic, we recommend using the native Kubernetes solution: NodePort Service.
+
+## Using HTTPS
 
 The module allows you to manage HTTPS security policies for each Ingress NGINX Controller, including:
 
-- HSTS parameters
-- Available SSL/TLS versions and encryption protocols
+- HSTS parameters;
+- Available SSL/TLS versions and encryption protocols. By default TLSv1.2 and TLSv1.3, and strong cipher suites are used, with [the option to configure legacy versions](https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-legacyssl).
 
 The `ingress-nginx` module is integrated with with the [`cert-manager`](/modules/cert-manager/) module. Thus, it can request SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
 

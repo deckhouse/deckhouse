@@ -7,26 +7,41 @@ description: "Балансировка и терминация трафика HT
 
 Поддерживает запуск и раздельное конфигурирование одновременно нескольких Ingress-контроллеров — один **основной** и неограниченное количество **дополнительных**. Например, это позволяет отделять внешние и intranet Ingress-ресурсы приложений.
 
-## Варианты терминирования трафика
+Текущая используемя версия NGINX - 1.29.5.
+
+## Маршрутизация трафика
 
 Трафик к `ingress-nginx` может быть отправлен несколькими способами:
 
 - напрямую без внешнего балансировщика;
 - через внешний LoadBalancer, в том числе поддерживаются:
-  - Qrator,
-  - Cloudflare,
-  - AWS LB,
-  - GCE LB,
-  - ACS LB,
-  - Yandex LB,
+  - Qrator;
+  - Cloudflare;
+  - AWS LB;
+  - GCE LB;
+  - ACS LB;
+  - Yandex LB;
   - OpenStack LB.
 
-## Терминация HTTPS
+## Поддерживаемые протоколы
+
+Модуль позволяет использовать следующие протоколы для приема и дальнейшей маршрутизации трафика:
+
+- HTTP/HTTPS: основной протокол маршрутизация трафика, допускается выбор используемых версий между HTTP/1.1, HTTP/2 и HTTP/3;
+- WebSocket: поддерживается NGINX нативно, без дополнительной настройки со стороны пользователя;
+- gRPC: поддерживается, для использования необходимо указать [соответствующую аннотацию](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol);
+- FCGI: поддерживается, для использования необходимо указать [соответствующую аннотацию](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#backend-protocol);
+- Proxy Protocol: поддерживается организация приема Proxy Protocol-трафика засчет использования [соответствующих инлетов](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet);
+- SSL Passthrough: поддерживается сквозная маршрутизация SSL-трафика засчет использования [соответствующих инлетов](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet).
+
+На данный момент в нашей реализации `ingress-nginx` не поддерживается маршрутизация TCP/UDP трафика (функционал `tcp-services/udp-services`). Для маршрутизации TCP/UDP трафика предлагается ипсользовать нативное решение Kubernetes - [NodePort Service](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport).
+
+## Использование HTTPS
 
 Модуль позволяет управлять политиками безопасности HTTPS каждого Ingress NGINX Controller, в том числе:
 
 - параметрами HSTS;
-- набором доступных версий SSL/TLS и протоколов шифрования.
+- набором доступных версий SSL/TLS и протоколов шифрования. По умолчанию используется TLSv1.2 и TLSv1.3, и актуальные протоколы шифрования, с [возможностью ручной настройки устаревших версий](https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-legacyssl).
 
 Также модуль `ingress-nginx` интегрирован с [модулем `cert-manager`](/modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и дальнейшее использование сертификатов Ingress NGINX Controller.
 
