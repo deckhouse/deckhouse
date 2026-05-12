@@ -249,17 +249,21 @@ properties:
 
       When `enabled` is `true`, the module turns off the legacy `telemetry`/`telemetry.v2` section in the Istio Operator / `Istio` resource so that mesh-wide metrics, access logging, and tracing policies are expected to be driven by **Telemetry** custom resources (deployed by the module or by you).
 
-      When `false` (default), the legacy control-plane telemetry stack remains enabled (see `telemetry` in the rendered Istio Operator / `Istio` manifest).
+      In that mode the module renders mesh-wide Telemetry resources:
 
-      This is separate from [`dataPlane.accessLog`](#parameters-dataplane-accesslog): `accessLog` only defines the Envoy access log format in `meshConfig.extensionProviders`.
+      - `main-access-log-format` — wires access logs to the mesh extension provider configured from [`dataPlane.accessLog`](#parameters-dataplane-accesslog).
+
+      - `main-prometheus-metrics` — activates the Istio builtin `prometheus` metrics provider (`spec.metrics[].providers[].name: prometheus`), close to enabling `telemetry.v2.prometheus` in the Sail / Istio Operator path.
+
+      When `false` (default), the legacy telemetry stack stays enabled **and** those `Telemetry` objects are **not** created (mesh `extensionProviders` for access logging may still be present for optional custom Telemetry resources).
+
+      Separate from Telemetry API routing: [`dataPlane.accessLog`](#parameters-dataplane-accesslog) only defines the Envoy log template wired into `meshConfig.extensionProviders`; it does not install a Telemetry CR unless this option is enabled.
     default: {}
     properties:
       enabled:
         type: boolean
         description: |
-          Use the Telemetry API path: disable embedded `telemetry`/`v2` in the Istio Operator / `Istio` resource.
-
-          Keep `false` (default) until Telemetry resources provide the policies you need.
+          Disables embedded `telemetry`/`v2` in the Istio Operator / `Istio` resource and deploys `main-access-log-format` plus `main-prometheus-metrics` Telemetry objects; customize further via additional Telemetry CRs.
         default: false
         x-examples: [true]
   sidecar:

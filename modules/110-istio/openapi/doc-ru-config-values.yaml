@@ -109,15 +109,21 @@ properties:
 
       Если `enabled` — `true`, модуль отключает в Istio Operator / ресурсе `Istio` legacy-секцию `telemetry` / `telemetry.v2`, чтобы политики observability (метрики, access log, трассировка) задавались через ресурсы **Telemetry** (модулем или вручную).
 
-      Если `false` (по умолчанию), остаётся прежняя встроенная телеметрия control plane (см. `telemetry` в сгенерированном манифесте Istio Operator / `Istio`).
+      В этом режиме модуль создаёт Telemetry:
 
-      Это **не то же самое**, что [`dataPlane.accessLog`](#parameters-dataplane-accesslog): `accessLog` задаёт только шаблон access-логов Envoy в `meshConfig.extensionProviders`.
+      - `main-access-log-format` — включает access logs через провайдер `meshConfig.extensionProviders` с именем `main-access-log-format`; формат задаётся в [`dataPlane.accessLog`](#parameters-dataplane-accesslog).
+
+      - `main-prometheus-metrics` — включает встроенный в Istio провайдер метрик `prometheus` по спецификации Telemetry API (эквивалент активного `telemetry.v2.prometheus` в манифесте Sail / Istio Operator).
+
+      Если `false` (по умолчанию), остаётся legacy-телеметрия в control plane, а перечисленные объекты Telemetry **не** создаются (описание провайдера access log в `meshConfig` может оставаться для собственных ресурсов Telemetry).
+
+      Отдельно от маршрута Telemetry API: [`dataPlane.accessLog`](#parameters-dataplane-accesslog) только задаёт шаблон лога Envoy в `meshConfig.extensionProviders` и не создаёт CR Telemetry без включения этого параметра.
     properties:
       enabled:
         description: |
-          Использовать сценарий Telemetry API: отключить встроенные `telemetry` / `v2` в Istio Operator / ресурсе `Istio`.
+          Отключить встроенные `telemetry` / `v2` в Istio Operator / ресурсе `Istio` и установить Telemetry `main-access-log-format` и `main-prometheus-metrics`; остальные политики — дополнительными ресурсами Telemetry.
 
-          Оставьте `false` (значение по умолчанию), пока через ресурсы Telemetry не заданы нужные вам политики.
+          Держите `false` (по умолчанию), пока не готов полный набор Telemetry-политик.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:

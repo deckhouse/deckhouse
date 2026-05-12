@@ -228,6 +228,34 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("Telemetry API default CRs toggling", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+		})
+
+		It("does not create bundled Telemetry manifests when Telemetry API mode is disabled", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Telemetry", "d8-istio", "main-prometheus-metrics").Exists()).To(BeFalse())
+		})
+
+		It("creates bundled access log and Prometheus metrics Telemetry when Telemetry API mode is enabled", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			al := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
+			Expect(al.Exists()).To(BeTrue())
+
+			mt := f.KubernetesResource("Telemetry", "d8-istio", "main-prometheus-metrics")
+			Expect(mt.Exists()).To(BeTrue())
+			Expect(mt.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+	})
+
 	Context("There are revisions to install, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
