@@ -127,6 +127,7 @@
 ## Fixes
 
 
+ - **[candi]** retry kube API errors in rpp-get during registry packages discovery [#19673](https://github.com/deckhouse/deckhouse/pull/19673)
  - **[candi]** Added deletion of webhook configurations before destroying a Deckhouse deployment. [#19041](https://github.com/deckhouse/deckhouse/pull/19041)
  - **[candi]** Fixed internal node IP discovery for static nodes in DVP clusters. [#18441](https://github.com/deckhouse/deckhouse/pull/18441)
  - **[candi]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
@@ -156,14 +157,17 @@
     Etcd will restart.
  - **[control-plane-manager]** Excluded learner etcd members from the kube-apiserver etcd member list. [#19164](https://github.com/deckhouse/deckhouse/pull/19164)
  - **[control-plane-manager]** Fixed incorrect UpdateObserver progress calculation during cluster upgrades. [#19160](https://github.com/deckhouse/deckhouse/pull/19160)
+ - **[deckhouse]** Revoke permission to use moduleconfig to user. [#19672](https://github.com/deckhouse/deckhouse/pull/19672)
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
  - **[deckhouse]** Fixed module updates skipping patch releases when updating to a new minor version. [#19328](https://github.com/deckhouse/deckhouse/pull/19328)
  - **[deckhouse]** Bumped `shell-operator` to v1.15.3 and webhook-operator dependencies. [#19030](https://github.com/deckhouse/deckhouse/pull/19030)
  - **[deckhouse]** Bumped Hugo and `x/image` to fix CVE-2026-33809, CVE-2026-35166. [#18985](https://github.com/deckhouse/deckhouse/pull/18985)
  - **[deckhouse]** Bumped `nelm` to fix a deadlock. [#18585](https://github.com/deckhouse/deckhouse/pull/18585)
  - **[deckhouse]** Fixed a race condition in ModuleConfig processing during startup. [#18280](https://github.com/deckhouse/deckhouse/pull/18280)
+ - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[deckhouse-controller]** Fixed error logging for MPO validation. [#18698](https://github.com/deckhouse/deckhouse/pull/18698)
- - **[deckhouse-controller]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
+ - **[dhctl]** fix panic dereference in dhctl destroy command. [#19716](https://github.com/deckhouse/deckhouse/pull/19716)
+ - **[dhctl]** Replace app package references with options package in multiple files [#19702](https://github.com/deckhouse/deckhouse/pull/19702)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
  - **[dhctl]** Fix CVEs in `dhctl`. [#19344](https://github.com/deckhouse/deckhouse/pull/19344)
  - **[dhctl]** Fixed `LogInfoLn` behavior for external loggers. [#19234](https://github.com/deckhouse/deckhouse/pull/19234)
@@ -283,3 +287,5 @@
  - **[openvpn]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
  - **[registry]** Update dependencies to fix CVEs [#18600](https://github.com/deckhouse/deckhouse/pull/18600)
  - **[upmeter]** fix go lint warning [#17909](https://github.com/deckhouse/deckhouse/pull/17909)
+    upmeter
+
