@@ -1,0 +1,34 @@
+- name: d8.user-authz.permission-browser-apiserver.availability
+  rules:
+  - alert: D8UserAuthzPermissionBrowserUnavailable
+    expr: |
+      (
+        kube_deployment_spec_replicas{
+          namespace="d8-user-authz",
+          deployment="permission-browser-apiserver"
+        }
+        -
+        kube_deployment_status_replicas_available{
+          namespace="d8-user-authz",
+          deployment="permission-browser-apiserver"
+        }
+      ) > 0
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: permission-browser-apiserver
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Permission Browser API server has unavailable replicas.
+      description: |-
+        Deckhouse has detected unavailable replicas in the `permission-browser-apiserver` Deployment in the `d8-user-authz` namespace.
+        Permission Browser requests can fail while this alert is active.
+
+        Check Deployment and Pod states:
+        ```bash
+        d8 k -n d8-user-authz get deploy permission-browser-apiserver
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
+        ```
