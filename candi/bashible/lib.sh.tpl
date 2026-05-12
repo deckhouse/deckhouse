@@ -236,38 +236,33 @@ bb-d8-node-ip() {
 
 {{- define "bb-discover-node-name" -}}
 bb-discover-node-name() {
-  local discovered_name_file="/var/lib/bashible/discovered-node-name"
+  local node_name="/var/lib/bashible/discovered-node-name"
   local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
-
-  if [ ! -s "$discovered_name_file" ]; then
+  if [ ! -s "$node_name" ]; then
     if [[ -s "$kubelet_crt" ]]; then
       openssl x509 -in "$kubelet_crt" \
         -noout -subject -nameopt multiline |
-      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$node_name"
     else
     {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
       if [[ "$(hostname)" != "$(hostname -s)" ]]; then
         hostnamectl set-hostname "$(hostname -s)"
       fi
     {{- end }}
-      hostname > "$discovered_name_file"
+      hostname > "$node_name"
     fi
   fi
 }
 {{- end }}
-
-
 {{- define "bb-minget" -}}
 {{- $images := .images | default (dict) -}}
 {{- $registryPackages := get $images "registrypackages" | default (dict) -}}
 {{- if and (ne .runType "Normal") .mingetB64 }}
 bb-minget-install() {
   local path="/opt/deckhouse/bin/minget"
-
   if [[ -s "$path" && -x "$path" ]]; then
     return 0
   fi
-
   mkdir -p "${path%/*}"
   if ! echo -n '{{ .mingetB64 }}' | base64 -d > "$path"; then
     rm -f "$path"
@@ -280,59 +275,44 @@ bb-minget-install() {
   chmod +x "$path"
 }
 {{- end }}
-
-bb-rpp-get-binary-ready() {
-  local version
-
-  version="$("$1" version 2>/dev/null)" && [[ -n $version ]]
-}
-
+bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
 bb-rpp-get-fetch() {
   if command -v d8-curl >/dev/null 2>&1; then
     d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
     return
   fi
-
   /opt/deckhouse/bin/minget "$1"
 }
-
 bb-rpp-get-install() {
   local bin="/opt/deckhouse/bin/rpp-get"
   local digest="{{ get $registryPackages "rppGet" }}"
   local digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/rpp-get/digest"
   local tmp="${bin}.tmp"
   local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
-  local max_attempts=30 attempt address
-
+  local attempt address
   if [[ -f "$digest_file" &&
         "$(<"$digest_file")" == "$digest" ]] &&
      bb-rpp-get-binary-ready "$bin"; then
     return 0
   fi
-
   if [[ -z "${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES:-}" ]]; then
     >&2 echo "rpp-get bootstrap source is not configured"
     return 1
   fi
-
   mkdir -p "${bin%/*}" "${digest_file%/*}"
-
-  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+  for ((attempt = 1; attempt <= 30; attempt++)); do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
       bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" || continue
       chmod +x "$tmp"
       bb-rpp-get-binary-ready "$tmp" || continue
-
       mv -f "$tmp" "$bin"
       echo "$digest" > "$digest_file"
       return 0
     done
-
-    >&2 echo "rpp-get-install failed (${attempt}/${max_attempts}), retrying in 5 seconds"
+    >&2 echo "rpp-get-install failed (${attempt}/30), retrying in 5 seconds"
     sleep 5
   done
-
-  >&2 echo "rpp-get-install failed after ${max_attempts} attempts"
+  >&2 echo "rpp-get-install failed after 30 attempts"
   rm -f "$tmp"
   return 1
 }
@@ -425,13 +405,9 @@ bb-package-remove() {
 }
 {{- end }}
 
-
-
-
 {{- define "get-phase2" -}}
 fetch_bootstrap() {
   local url="$1" token="$2" out="$3" code
-
   code=$(/opt/deckhouse/bin/d8-curl -sSx "" \
     --connect-timeout 10 \
     "$url" \
@@ -441,7 +417,6 @@ fetch_bootstrap() {
       >&2 echo "Error fetching bootstrap from ${url}"
       return 3
   }
-
   case "$code" in
     200)
       jq -er '.bootstrap' "$out"
@@ -456,14 +431,12 @@ fetch_bootstrap() {
       ;;
   esac
 }
-
 get_phase2() {
   local token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   local out="${TMPDIR}/phase2-response.json"
   local path="/apis/bashible.deckhouse.io/v1alpha1/bootstrap/{{ .nodeGroup.name }}"
   local count_401=0
   local rc server url
-
   while :; do
     for server in {{ .Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
       url="https://${server}${path}"
@@ -473,9 +446,7 @@ get_phase2() {
       else
         rc=$?
       fi
-
       rm -f "$out"
-
       if (( rc == 2 )); then
         ((count_401++))
         if (( count_401 >= 6 )); then
@@ -485,7 +456,6 @@ get_phase2() {
         >&2 echo "failed to get bootstrap from ${url} (exit code $rc)"
       fi
     done
-
     sleep 10
   done
 }

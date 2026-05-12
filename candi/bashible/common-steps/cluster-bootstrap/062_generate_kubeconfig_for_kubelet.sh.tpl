@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
+{{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
-kubeadm init phase kubeconfig kubelet --config {{ $kubeadmDir }}/config.yaml
+cp {{ $kubeconfigDir }}/kubelet.conf /etc/kubernetes/kubelet.conf
