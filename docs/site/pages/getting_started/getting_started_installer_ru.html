@@ -1,6 +1,6 @@
 ---
 title: "Быстрый старт — выбор инфраструктуры"
-permalink: ru/gs/
+permalink: ru/gs/installer/
 description: Пошаговый процесс установки Deckhouse Kubernetes Platform поверх любой инфраструктуры.
 layout: page-nosidebar
 lang: ru
@@ -12,8 +12,8 @@ toc: false
 
 <div class="main-tabs-container">
   <div class="main-tabs">
-    <a class="main-tab" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
-    <a class="main-tab active" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
+    <a class="main-tab active" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
+    <a class="main-tab" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
   </div>
 </div>
 <p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
@@ -30,7 +30,7 @@ toc: false
     <div>
       <h3>Облачная платформа</h3>
       <div class="button-group">
-        {% include getting_started/buttons-cloud-sorted.liquid %}
+        {% include getting_started/buttons-cloud-sorted.liquid installer_support=true %}
       </div>
       <p>
         <small>
@@ -47,12 +47,13 @@ toc: false
         {%- if provider[1].languages %}
           {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
         {%- endif %}
+        {%- unless provider[1].installer_support == true %}{% continue %}{% endunless %}
         {%- if provider[1].wip == true %}
         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
-          href="/products/kubernetes-platform/gs/{{ provider[0] }}/step2.html">
+          href="/products/kubernetes-platform/gs/installer/{{ provider[0] }}/step2.html">
           {% if provider[1].iconPath %}
             <div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>
           {% endif %}

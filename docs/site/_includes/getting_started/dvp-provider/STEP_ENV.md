@@ -43,7 +43,7 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
    EOF
    ```
 
-1. Enable kubeconfig issuance via API. Open the `user-authn` module settings (create a ModuleConfig resource named `user-authn` if it does not exist):
+1. Enable kubeconfig issuance via API. Open the `user-authn` module settings (create a [ModuleConfig](../../../documentation/v1/reference/api/cr.html#moduleconfig) resource named `user-authn` if it does not exist):
 
    ```shell
    d8 k edit mc user-authn
