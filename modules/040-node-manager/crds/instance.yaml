@@ -14,9 +14,178 @@ spec:
     kind: Instance
   preserveUnknownFields: false
   versions:
-    - name: v1alpha1
+    - name: v1alpha2
       served: true
       storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: MachineStatus
+          type: string
+          description: "Status of the infrastructure machine"
+          jsonPath: .status.machineStatus
+        - name: BashibleStatus
+          type: string
+          description: "Status of the bashible configuration management"
+          jsonPath: .status.bashibleStatus
+        - name: Phase
+          type: string
+          description: "Lifecycle phase of the instance"
+          jsonPath: .status.phase
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+        - name: Message
+          type: string
+          description: "Error message or detailed status description"
+          jsonPath: .status.message
+          priority: 1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Instance describes the full lifecycle of a server in Deckhouse Kubernetes Platform, aggregating status from the Machine object (infrastructure) and Bashible service on the node (configuration).
+          properties:
+            spec:
+              type: object
+              description: Specification of the Instance, including references to related resources.
+              properties:
+                nodeRef:
+                  type: object
+                  description: Reference to the kubernetes node object.
+                  properties:
+                    name:
+                      type: string
+                      description: Node name.
+                machineRef:
+                  type: object
+                  description: Reference to instance in the cloud.
+                  properties:
+                    apiVersion:
+                      type: string
+                      description: APIVersion defines the versioned schema of this representation of an reference object.
+                    kind:
+                      type: string
+                      description: Kind is a string value representing the REST resource referenced object represents.
+                    name:
+                      type: string
+                      description: Name of referenced object.
+                    namespace:
+                      type: string
+                      description: Namespace of referenced object.
+                classReference:
+                  description: |
+                    The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      description: |
+                        The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                    name:
+                      type: string
+                      description: |
+                        The name of the required `InstanceClass` object (e.g., `finland-medium`).
+            status:
+              type: object
+              description: Most recently observed status of the Instance.
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    The high-level lifecycle phase of the Instance.
+
+                    Mapping: Pending -> Provisioning -> Provisioned -> Running -> Terminating.
+                  enum:
+                    - Pending
+                    - Provisioning
+                    - Provisioned
+                    - Running
+                    - Terminating
+                    - Unknown
+                machineStatus:
+                  type: string
+                  description: |
+                    Aggregated status of the infrastructure machine.
+
+                    Derived from `MachineReady` condition.
+                  enum:
+                    - Progressing
+                    - Error
+                    - Ready
+                    - Blocked
+                    - Rebooting
+                bashibleStatus:
+                  type: string
+                  description: |
+                    Aggregated status of the bashible configuration process.
+
+                    Derived from `BashibleReady` condition.
+                  enum:
+                    - Error
+                    - Unknown
+                    - Ready
+                    - WaitingApproval
+                message:
+                  type: string
+                  description: |
+                    A human-readable message indicating details about the current status or error.
+
+                    Displayed in CLI only when using `-o wide` for `d8 k`.
+                bootstrapStatus:
+                  type: object
+                  description: Information about instance bootstrapping process.
+                  properties:
+                    logsEndpoint:
+                      type: string
+                      description: http endpoint for getting bootstrap logs.
+                    description:
+                      type: string
+                      description: Description about getting logs.
+                conditions:
+                  description: Detailed conditions of the instance (`MachineReady`, `BashibleReady`, etc.).
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        description: Type of the condition (e.g., `MachineReady`, `BashibleReady`).
+                        type: string
+                      status:
+                        description: Status of the condition (`True`, `False`, `Unknown`).
+                        type: string
+                      severity:
+                        description: Severity of the condition (`Error`, `Warning`, `Info`).
+                        type: string
+                      lastHeartbeatTime:
+                        description: Last time the condition heartbeat was updated by its source.
+                        type: string
+                        format: date-time
+                      lastTransitionTime:
+                        description: Last time the condition transitioned from one status to another.
+                        type: string
+                        format: date-time
+                      reason:
+                        description: The reason for the condition's last transition.
+                        type: string
+                      message:
+                        description: A human-readable message indicating details about the transition.
+                        type: string
+                      observedGeneration:
+                        description: The generation observed by the controller.
+                        type: integer
+                        format: int64
+                    required:
+                      - type
+                      - status
+                      - reason
+    - name: v1alpha1
+      served: false
+      storage: false
       subresources:
         status: {}
       schema:
@@ -34,7 +203,7 @@ spec:
                   properties:
                     name:
                       type: string
-                      description: Node name
+                      description: Node name.
                 classReference:
                   description: |
                     The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.

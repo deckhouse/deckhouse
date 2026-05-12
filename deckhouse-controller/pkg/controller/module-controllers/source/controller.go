@@ -80,6 +80,7 @@ func RegisterController(
 	dc dependency.Container,
 	metricStorage metricsstorage.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
+	deckhouseSettings *helpers.DeckhouseSettingsContainer,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -92,6 +93,7 @@ func RegisterController(
 		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
+		deckhouseSettings:    deckhouseSettings,
 	}
 
 	r.init.Add(1)
@@ -162,6 +164,7 @@ type reconciler struct {
 	metricStorage metricsstorage.Storage
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
+	deckhouseSettings    *helpers.DeckhouseSettingsContainer
 	moduleManager        moduleManager
 	edition              *d8edition.Edition
 	downloadedModulesDir string

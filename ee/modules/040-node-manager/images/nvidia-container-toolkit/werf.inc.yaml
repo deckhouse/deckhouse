@@ -1,4 +1,5 @@
 {{- $version := "1.17.8" }}
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -34,3 +35,4 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/usr/bin/ cmds
   - chmod 0700 /usr/bin/nvidia-ctk
+{{- end }}

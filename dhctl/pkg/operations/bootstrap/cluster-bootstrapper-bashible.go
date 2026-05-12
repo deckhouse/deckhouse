@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
@@ -26,11 +25,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(app.ConfigPaths)
+		return config.FetchDocuments(b.Options.Global.ConfigPaths)
 	})
 	if err != nil {
 		return err
@@ -41,7 +37,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		registry.Params{
 			Logger:         b.loggerProvider(),
 			ConfigProvider: registryConfigProvider,
-			BundlePath:     app.ImgBundlePath,
+			BundlePath:     b.Options.Global.ImgBundlePath,
 		},
 	)
 	if err != nil {
@@ -51,7 +47,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
@@ -80,10 +76,11 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 
 	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
 		Node:           nodeInterface,
-		NodeIP:         app.InternalNodeIP,
-		DevicePath:     app.DevicePath,
+		NodeIP:         b.Options.Bootstrap.InternalNodeIP,
+		DevicePath:     b.Options.Bootstrap.DevicePath,
 		MetaConfig:     metaConfig,
 		CommanderMode:  b.CommanderMode,
+		IsDebug:        b.IsDebug,
 		DirsConfig:     b.DirectoryConfig,
 		LoggerProvider: b.loggerProvider,
 	})

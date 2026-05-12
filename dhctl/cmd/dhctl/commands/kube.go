@@ -23,6 +23,7 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -32,10 +33,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -48,7 +49,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 		checker := controlplane.NewKubeProxyChecker().
 			WithLogResult(true).
 			WithAskPassword(true).
-			WithInitParams(client.AppKubernetesInitParams())
+			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
 			log.InfoLn("Press Ctrl+C to close proxy connection.")
@@ -75,10 +76,10 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 	})
 }
 
-func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	var Namespace string
 	var Name string
@@ -91,14 +92,14 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
-			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -118,7 +119,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			}
 			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
-			return deckhouse.WaitForReadiness(ctx, kubeCl)
+			return deckhouse.WaitForReadiness(ctx, kubeCl, opts.Bootstrap.DeckhouseTimeout)
 		})
 	})
 }

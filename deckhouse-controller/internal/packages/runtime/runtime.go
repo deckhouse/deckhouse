@@ -38,8 +38,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
-	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
+	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
+	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
@@ -83,7 +83,7 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
-	installer        installerI         // Downloads and mounts package images
+	deployer         deployerI          // Deploys and undeploys package images
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -103,11 +103,10 @@ type Runtime struct {
 	logger *log.Logger
 }
 
-// installerI abstracts package image operations (download, mount, unmount).
-type installerI interface {
-	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
-	Install(ctx context.Context, downloaded, deployed, name, version string) error
-	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
+// deployerI abstracts package image deployment to and removal from the filesystem.
+type deployerI interface {
+	Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error
+	Undeploy(ctx context.Context, downloaded, deployed, name string, keep bool) error
 }
 
 // moduleManagerI provides access to global values for version getters and bootstrap checks.
@@ -135,12 +134,12 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	reg := registry.NewService(dc, logger)
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.installer = symlinkinstaller.NewInstaller(reg, logger)
+	r.deployer = symlinkdeploy.NewDeployer(reg, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.installer = erofsinstaller.NewInstaller(reg, logger)
+		r.deployer = erofsdeploy.NewDeployer(reg, logger)
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks

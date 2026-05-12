@@ -20,11 +20,13 @@ import (
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 var allowedCommands []string
 
-type defineFunc func(cmd *kingpin.CmdClause) *kingpin.CmdClause
+type defineFunc func(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause
 
 type Command struct {
 	Name       string
@@ -106,7 +108,7 @@ func initParent(parrentCmdIndex int, kpApp *kingpin.Application) *kingpin.CmdCla
 	return pcmd
 }
 
-func registerCommands(kpApp *kingpin.Application) error {
+func registerCommands(kpApp *kingpin.Application, opts *options.Options) error {
 	// First, validate that all commands with parents have existing parents
 	for _, command := range commandList {
 		if command.Parent != "" {
@@ -126,7 +128,7 @@ func registerCommands(kpApp *kingpin.Application) error {
 				commandList[i].cmd = cmd
 
 				if command.DefineFunc != nil {
-					command.DefineFunc(cmd)
+					command.DefineFunc(cmd, opts)
 				}
 			}
 		} else {
@@ -144,7 +146,7 @@ func registerCommands(kpApp *kingpin.Application) error {
 				commandList[i].cmd = cmd
 
 				if command.DefineFunc != nil {
-					command.DefineFunc(cmd)
+					command.DefineFunc(cmd, opts)
 				}
 			}
 		}

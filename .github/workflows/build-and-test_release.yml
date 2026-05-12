@@ -419,6 +419,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -744,6 +745,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1069,6 +1071,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1382,6 +1385,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -1695,6 +1699,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
@@ -2008,6 +2013,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}

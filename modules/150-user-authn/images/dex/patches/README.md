@@ -91,3 +91,26 @@ This patch fixes:
 - CVE-2026-33487 
 - CVE-2026-34986
 - CVE-2026-33186
+
+### 015-ratelimit-lock-unlock-users.patch
+
+Adds per-IP rate limiting on Dex password endpoints (`/auth/{conn}/login`, `/token`)
+and extends the existing local-user account-lockout to all password connectors
+(`local`, `ldap`, `atlassian-crowd`).
+
+Key changes:
+
+- Token-bucket per-IP `IPRateLimiter` middleware, configurable via the new `rateLimit`
+  section in Dex config.
+- `OfflineSessions` is extended with `Email`, `IncorrectPasswordLoginAttempts`,
+  `LockedUntil` (across `storage`, `kubernetes`, `etcd`, `sql` migration, `ent`);
+  used as the per-user lockout store for non-local connectors.
+- `passwordPolicy.lockout.applyToConnectors` selects which connector types lockout
+  applies to.
+- LDAP and Atlassian Crowd `Login()` returns a partial `Identity{UserID, Email}` on
+  failed auth when the user exists, so the lockout counter can be indexed by a
+  stable handle.
+
+  ### 016-fix-error-template-buildid.patch
+
+  Fix error template

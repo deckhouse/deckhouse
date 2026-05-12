@@ -187,7 +187,7 @@ func getCurrentKernelVersion() (string, error) {
 }
 
 func checkKernelVersionWGCiliumRequirements(kernelVersion, kernelConstraint string) (bool, error) {
-	kernelVersionSM, err := semver.NewVersion(strings.Split(kernelVersion, "-")[0])
+	kernelVersionSM, err := semver.NewVersion(toSemver(kernelVersion))
 	if err != nil {
 		return false, fmt.Errorf("failed to parse kernel version '%s': %w", kernelVersion, err)
 	}
@@ -202,4 +202,53 @@ func checkKernelVersionWGCiliumRequirements(kernelVersion, kernelConstraint stri
 	}
 
 	return true, nil
+}
+
+func toSemver(version string) string {
+	if version == "" {
+		return "0.0.0"
+	}
+
+	start := -1
+	for i, r := range version {
+		if r >= '0' && r <= '9' {
+			start = i
+			break
+		}
+	}
+	if start == -1 {
+		return "0.0.0"
+	}
+
+	v := version[start:]
+
+	var nums []string
+	cur := ""
+
+	for _, r := range v {
+		if r >= '0' && r <= '9' {
+			cur += string(r)
+		} else {
+			if cur != "" {
+				nums = append(nums, cur)
+				cur = ""
+			}
+			if len(nums) == 3 {
+				break
+			}
+			if r != '.' {
+				break
+			}
+		}
+	}
+
+	if cur != "" {
+		nums = append(nums, cur)
+	}
+
+	for len(nums) < 3 {
+		nums = append(nums, "0")
+	}
+
+	return nums[0] + "." + nums[1] + "." + nums[2]
 }

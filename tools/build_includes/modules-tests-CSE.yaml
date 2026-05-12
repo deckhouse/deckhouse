@@ -428,16 +428,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/be/modules/040-node-manager/openapi/config-values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/be/modules/040-node-manager/openapi/doc-ru-config-values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
@@ -665,17 +655,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-node-manager/templates/nvidia-gpu
-  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/040-node-manager/templates/podmonitor.yaml
   to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
   stageDependencies:
@@ -874,6 +853,59 @@
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   stageDependencies:
     install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
+  to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/gpu_enabled.go
+  to: /deckhouse/modules/040-node-manager/hooks/gpu_enabled.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/mig_custom_config_name.go
+  to: /deckhouse/modules/040-node-manager/hooks/mig_custom_config_name.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/early-oom
+  to: /deckhouse/modules/040-node-manager/templates/early-oom
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
+  to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
         - '**/*'
 - add: /ee/cse/modules/150-user-authn/templates/basic-auth-proxy
   to: /deckhouse/modules/150-user-authn/templates/basic-auth-proxy

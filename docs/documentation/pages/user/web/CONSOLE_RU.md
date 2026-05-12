@@ -17,6 +17,7 @@ lang: ru
    - [Управление узлами](#управление-узлами);
    - [Мультитенантность](#мультитенантность);
    - [Сеть](#сеть);
+   - [Хранилище](#хранилище);
    - [Безопасность](#безопасность);
    - [Мониторинг](#мониторинг);
    - [Журналирование](#журналирование).
@@ -73,6 +74,14 @@ lang: ru
 
 ![Глобальные настройки](../../images/console/global_settings.png)
 
+### Kubernetes
+
+В подразделе «Kubernetes» собрана базовая информация о кластере Kubernetes.
+
+![Модули](../../images/console/system-management-deckhouse-cluster-configuration.png)
+
+![Модули](../../images/console/system-management-deckhouse-cluster-configuration-cloud.png)
+
 ## Управление узлами
 
 ### Подраздел «Группы узлов»
@@ -86,7 +95,7 @@ lang: ru
 
 В нижней части формы находятся дополнительные настройки, включая параметры обновления узлов, шаблон узла, системные параметры, а также параметры Chaos Monkey, которые также можно раскрыть для детальной конфигурации.
 
-![Группы узлов](../../images/console/node_group.png)
+![Группы узлов](../../images/console/system-management-nodes-node-groups-ftname-worker.png)
 
 Карточка группы узлов отображает:
 
@@ -95,15 +104,45 @@ lang: ru
 * Мониторинг нагрузки (CPU, память, диск);
 * Тейнты и лейблы.
 
+![Группы узлов](../../images/console/system-management-nodes-node-groups-worker.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-worker-2.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-worker-3.png)
+
 Дополнительно указываются тейнты и лейблы, которые используются для управления назначением подов и организации работы узлов.
 
 ![Карточка группы узлов](../../images/console/master_card.png)
+
+В правом верхнем углу по нажатию кнопки «Создать» доступно создание новых групп узлов.
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-ftname-worker-2.png)
+
+На экране создания новой группы можно задать все необходимые параметры создаваемой группы.
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-2.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-3.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-4.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-5.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-6.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-7.png)
+
+![Группы узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-8.png)
 
 ### Подраздел «Классы машин»
 
 Предназначен для управления конфигурациями машин, используемых в кластере, с возможностью сортировки списка.
 
-![Классы машин](../../images/console/mashine_class.png)
+![Классы машин](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
+
+![Классы машин](../../images/console/system-management-dvpinstanceclasses-deckhouse-io-worker.png)
 
 В меню «Добавление класса машин» задаются параметры новой конфигурации машин для кластера.
 
@@ -122,7 +161,7 @@ lang: ru
 
 ![Добавление класса машин](../../images/console/add_class.png)
 
-### Подраздел «Узлы всех групп»
+### Подраздел «Узлы»
 
 Предоставляет сводку по всем узлам кластера с возможностью фильтрации и сортировки по различным характеристикам о всех узлах Kubernetes-кластера. В карточке узла отображается:
 - его текущее состояние,
@@ -137,7 +176,7 @@ lang: ru
 
 Также представлены графики загрузки процессора, памяти, диска и сетевого трафика, что позволяет отслеживать производительность узла. Доступны кнопки «Cordon» и «Cordon+Drain» для управления доступностью узла в кластере.
 
-![Узлы всех групп](../../images/console/groups_nodes.png)
+![Узлы всех групп](../../images/console/system-management-nodes-nodes.png)
 
 ### Подраздел «Статические машины»
 
@@ -157,19 +196,6 @@ lang: ru
 
 ## Мультитенантность
 
-### Подраздел «Шаблоны проектов»
-
-Предназначен для создания шаблонов проектов. Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей. Для добавления нового шаблона используется кнопка «Создать шаблон проекта».
-
-![Шаблоны](../../images/console/examples.png)
-
-Форма «Новый шаблон проекта» предназначена для того, чтобы задать имя проекта, а также добавить лейблы и аннотации для его идентификации.
-В разделе представлены две вкладки:
-- «Схема openAPI», предназначенная для описания спецификации значений в формате JSON,
-- «Шаблон ресурсов проекта», где можно определить ресурсы, совместимые с Helm, для управления окружением проекта.
-
-![Новый шаблон](../../images/console/examples_new.png)
-
 ### Подраздел «Проекты»
 
 Предназначен для формирования нового проекта на основе заранее подготовленного шаблона, который определяет создаваемые ресурсы и их параметры. В процессе создания происходит валидация параметров по OpenAPI, рендеринг шаблона через Helm и развертывание всех описанных ресурсов внутри автоматически создаваемого пространства имён. Проект использует механизмы Kubernetes для контроля доступа, ограничения ресурсов и настройки сетевой изоляции, что позволяет управлять безопасностью и нагрузкой в рамках пространства имён.
@@ -184,7 +210,70 @@ lang: ru
 
 В нижнем блоке предусмотрены поля для ввода параметров, требуемых для работы шаблона, а также для отображения его структуры.
 
-![Новый проект](../../images/console/projects_new.png)
+![Новый проект](../../images/console/system-management-multitenancy-projects-new-spec.png)
+
+![Новый проект](../../images/console/system-management-multitenancy-projects-new-spec-2.png)
+
+### Подраздел «Шаблоны проектов»
+
+Предназначен для создания шаблонов проектов. Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей. Для добавления нового шаблона используется кнопка «Создать шаблон проекта».
+
+![Шаблоны](../../images/console/system-management-projecttemplates-deckhouse-io.png)
+
+Форма «Новый шаблон проекта» предназначена для того, чтобы задать имя проекта, а также добавить лейблы и аннотации для его идентификации.
+В разделе представлены две вкладки:
+- «Схема openAPI», предназначенная для описания спецификации значений в формате JSON,
+- «Шаблон ресурсов проекта», где можно определить ресурсы, совместимые с Helm, для управления окружением проекта.
+
+![Новый шаблон](../../images/console/system-management-multitenancy-project-templates-default-spec.png)
+
+![Новый шаблон](../../images/console/system-management-multitenancy-project-templates-default-spec-template.png)
+
+Шаблон можно создать на основе уже существующего.
+
+![Новый шаблон](../../images/console/system-management-multitenancy-project-templates-new-spec-copyfrom-default.png)
+
+### Пользовательские неймспейсы
+
+Предоставляет управления пользовательскими неймспейсами проектов.
+
+На странице «Обзор» предоставлена информация об общем состоянии неймспейса.
+
+![Обзор неймспейсов](../../images/console/projects-user-namespaces-commander-project-1.png)
+
+Здесь можно управлять параметрами Deployment'ов и других сущностей кластера.
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-affinity.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-anti-affinity.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-domains.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-nodes-2.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-nodes-3.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-nodes.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-watchtower-apps-deployments-new-spec-containers-c-new.png)
+
+![Настройка деплоймента](../../images/console/projects-user-namespaces-watchtower-apps-deployments-watchtower-spec-containers-c-0.png)
+
+А также настраивать лимиты и квоты ресурсов.
+
+![Лимиты](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core-new-2.png)
+
+![Лимиты](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core-new.png)
+
+![Лимиты](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
+
+![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-podse.png)
+
+![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
+
+![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
+
+![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core.png)
 
 ## Сеть
 
@@ -210,6 +299,32 @@ lang: ru
 - LoadBalancer с Proxy Protocol.
 
 ![Ingress](../../images/console/ingress.png)
+
+## Хранилище
+
+### Подраздел «Классы хранилищ»
+
+Предназначен для управления классами хранилищ.
+
+![классы хранилищ](../../images/console/system-management-storage-storage-classes.png)
+
+### Подраздел «Persistent volume»
+
+Предназначен для управления Persistent volume.
+
+![классы хранилищ](../../images/console/system-management-persistentvolumes-core.png)
+
+### Подраздел «Локальные тома»
+
+Предназначен для управления локальными томами. Содержит четыре подраздела для управления пулами, группами томов, логическими томами и блочными устройствами.
+
+![пулы](../../images/console/system-management-storage-lvm-replicatedstoragepools.png)
+
+![группы пулов](../../images/console/system-management-storage-lvm-volume-groups.png)
+
+![логические томы](../../images/console/system-management-storage-lvm-logical-volumes.png)
+
+![блочные устройства](../../images/console/system-management-blockdevices-storage-deckhouse-io.png)
 
 ## Безопасность
 

@@ -1,4 +1,4 @@
-This image provides `/usr/bin/sandbox` for isolated `nginx -t` execution in the `validationIsolationMode: IsolatedProcess` mode of ingress-nginx `1.14`.
+This image provides `/usr/bin/sandbox` for isolated `nginx -t` execution in the `validationIsolationMode: IsolatedProcess` mode of ingress-nginx `1.14` and `1.15`.
 
 `/usr/bin/sandbox` uses the ptrace-based `go-sandbox` runner. Full mode requires the host to allow ptrace-based sandboxing, which in practice means `kernel.yama.ptrace_scope=0` or `1`.
 

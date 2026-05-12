@@ -25,6 +25,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -54,6 +55,11 @@ type Params struct {
 	TmpDir                string
 	Logger                log.Logger
 	IsDebug               bool
+
+	// Options carries the per-operation parsed configuration. RPC handlers
+	// must populate this with a fresh *options.Options to avoid sharing global
+	// state between concurrent requests.
+	Options *options.Options
 }
 
 type AttachResources struct {
@@ -92,12 +98,15 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           i.Params.TmpDir,
+		DownloadDir:      i.Params.Options.Global.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           i.Params.Logger,
 		IsDebug:          i.Params.IsDebug,
 	})
 
-	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger)
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger).
+		WithUseTfCache(i.Params.Options.Cache.UseTfCache).
+		WithDebug(i.Params.IsDebug)
 
 	provider, err := i.Params.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
 	if err != nil {
@@ -226,7 +235,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		}
 
 		cachePath := metaConfig.CachePath()
-		if err := cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
+		if err := cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true, Cache: i.Params.Options.Cache}); err != nil {
 			return fmt.Errorf("unable to init cache: %w", err)
 		}
 
@@ -356,7 +365,7 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(ctx, kubeClient, attachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, attachResources, checkers, nil, i.Params.Options.Bootstrap.ResourcesTimeout)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

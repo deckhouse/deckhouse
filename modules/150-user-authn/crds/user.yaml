@@ -100,6 +100,13 @@ spec:
                     Information about user account lock.
                     If present with `state: true`, the user cannot authenticate until the specified time
                     or until the lock is manually lifted by an administrator.
+
+                    Administrative actions on the account (lock, unlock, forced password reset, 2FA reset)
+                    are performed via the [UserOperation](#useroperation) resource. When an administrator
+                    locks the account or initiates a forced password reset, all of the user's active sessions
+                    (Dex `OfflineSessions` and `RefreshToken` objects) are deleted, so the user is forced
+                    to re-authenticate; for a forced password reset they are presented with a password change
+                    form on the next successful login.
                   properties:
                     state:
                       type: boolean
@@ -223,6 +230,13 @@ spec:
                     Information about user account lock.
                     If present, the user cannot authenticate until the specified time
                     or until the lock is manually lifted by an administrator.
+
+                    Administrative actions on the account (lock, unlock, forced password reset, 2FA reset)
+                    are performed via the [UserOperation](#useroperation) resource. When an administrator
+                    locks the account or initiates a forced password reset, all of the user's active sessions
+                    (Dex `OfflineSessions` and `RefreshToken` objects) are deleted, so the user is forced
+                    to re-authenticate; for a forced password reset they are presented with a password change
+                    form on the next successful login.
                   properties:
                     state:
                       type: boolean

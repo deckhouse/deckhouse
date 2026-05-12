@@ -25,11 +25,9 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/ptr"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -173,10 +171,12 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -265,6 +265,9 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		}
 	}
 
+	opts.Global.ConfigPaths = configPaths
+	opts.Bootstrap.PostBootstrapScriptPath = postBootstrapScriptPath
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 		InitialState:               initialState,
 		ResetInitialState:          true,
@@ -273,12 +276,6 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		OnProgressFunc:             p.sendProgress,
 		CommanderMode:              p.request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		ConfigPaths:                configPaths,
-		ResourcesTimeout:           p.request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           p.request.Options.DeckhouseTimeout.AsDuration(),
-		PostBootstrapScriptPath:    postBootstrapScriptPath,
-		UseTfCache:                 ptr.To(true),
-		AutoApprove:                ptr.To(true),
 		KubernetesInitParams:       nil,
 		TmpDir:                     s.params.TmpDir,
 		Logger:                     loggerFor,
@@ -286,6 +283,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		SSHProviderInitializer:     sshProviderInitializer,
 		KubeProvider:               kubeProvider,
 		DirectoryConfig:            s.params.DownloadDirConfig,
+		Options:                    opts,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)

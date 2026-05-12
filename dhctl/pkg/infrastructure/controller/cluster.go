@@ -47,10 +47,11 @@ type ClusterInfra struct {
 	cache                 state.Cache
 	infrastructureContext *infrastructure.Context
 
-	tmpDir  string
-	isDebug bool
-	logger  log.Logger
-	dc      *directoryconfig.DirectoryConfig
+	tmpDir      string
+	downloadDir string
+	isDebug     bool
+	logger      log.Logger
+	dc          *directoryconfig.DirectoryConfig
 
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
@@ -58,6 +59,7 @@ type ClusterInfra struct {
 type ClusterInfraOptions struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	TmpDir                 string
+	DownloadDir            string
 	IsDebug                bool
 	Logger                 log.Logger
 	DirectoryConfig        *directoryconfig.DirectoryConfig
@@ -76,6 +78,7 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infra
 
 		PhasedExecutionContext: opts.PhasedExecutionContext,
 		tmpDir:                 opts.TmpDir,
+		downloadDir:            opts.DownloadDir,
 		isDebug:                opts.IsDebug,
 		logger:                 logger,
 		dc:                     opts.DirectoryConfig,
@@ -91,6 +94,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	if r.infrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           r.tmpDir,
+			DownloadDir:      r.downloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           r.logger,
 			IsDebug:          r.isDebug,

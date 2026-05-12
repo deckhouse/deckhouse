@@ -20,6 +20,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -42,19 +43,19 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 `
 )
 
-func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineCacheFlags(cmd)
-	app.DefineSanityFlags(cmd)
-	app.DefineDestroyResourcesFlags(cmd)
-	app.DefineTFResourceManagementTimeout(cmd)
+func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineCacheFlags(cmd, &opts.Cache)
+	app.DefineSanityFlags(cmd, &opts.Global)
+	app.DefineDestroyResourcesFlags(cmd, &opts.Destroy)
+	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
@@ -63,7 +64,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if !app.SanityCheck {
+		if !opts.Global.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
@@ -80,7 +81,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if err = cache.Init(ctx, sshClient.Check().String()); err != nil {
+		if err = cache.Init(ctx, sshClient.Check().String(), opts.Cache); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
@@ -88,17 +89,17 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			SSHProvider:     sshProvider,
 			KubeProvider:    kubeProvider,
 			StateCache:      cache.Global(),
-			SkipResources:   app.SkipResources,
+			SkipResources:   opts.Destroy.SkipResources,
 			LoggerProvider:  log.SimpleLoggerProvider(logger),
-			IsDebug:         app.IsDebug,
-			TmpDir:          app.TmpDirName,
-			DirectoryConfig: app.GetDirConfig(),
+			IsDebug:         opts.Global.IsDebug,
+			TmpDir:          opts.Global.TmpDir,
+			DirectoryConfig: opts.DirConfig(),
 		})
 		if err != nil {
 			return err
 		}
 
-		err = destroyer.DestroyCluster(ctx, app.SanityCheck)
+		err = destroyer.DestroyCluster(ctx, opts.Global.SanityCheck)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
 			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)

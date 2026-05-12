@@ -22,14 +22,8 @@ import (
 )
 
 var (
-	MCMMachineGVK = schema.GroupVersionKind{
-		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "Machine",
-	}
 	MCMMachineDeploymentGVK = schema.GroupVersionKind{
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "MachineDeployment",
-	}
-	CAPIMachineGVK = schema.GroupVersionKind{
-		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "Machine",
 	}
 	CAPIMachineDeploymentGVK = schema.GroupVersionKind{
 		Group: "cluster.x-k8s.io", Version: "v1beta2", Kind: "MachineDeployment",

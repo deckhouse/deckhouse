@@ -21,7 +21,7 @@ function add_node_annotation() {
   until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}"; do
     failure_count=$((failure_count + 1))
     if [[ $failure_count -eq $failure_limit ]]; then
-      bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
+      bb-log-error "Failed to annotate node $(bb-d8-node-name)"
       exit 1
     fi
     bb-log-error "failed to annotate node $(bb-d8-node-name)"
@@ -38,7 +38,7 @@ function remove_node_annotation() {
   until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}-"; do
     failure_count=$((failure_count + 1))
     if [[ $failure_count -eq $failure_limit ]]; then
-      bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
+      bb-log-error "Failed to annotate node $(bb-d8-node-name)"
       exit 1
     fi
     bb-log-error "failed to annotate node $(bb-d8-node-name)"

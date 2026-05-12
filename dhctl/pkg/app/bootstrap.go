@@ -15,115 +15,104 @@
 package app
 
 import (
-	"time"
-
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var (
-	ImgBundlePath  = ""
-	InternalNodeIP = ""
-	DevicePath     = ""
-
-	ResourcesPath    = ""
-	ResourcesTimeout = 15 * time.Minute
-	DeckhouseTimeout = 15 * time.Minute
-
-	PostBootstrapScriptTimeout = 10 * time.Minute
-	PostBootstrapScriptPath    = ""
-
-	ForceAbortFromCache             = false
-	DontUsePublicControlPlaneImages = false
-
-	KubeadmBootstrap   = false
-	MasterNodeSelector = false
-)
-
-func DefineBashibleBundleFlags(cmd *kingpin.CmdClause) {
+// DefineBashibleBundleFlags registers --internal-node-ip and --device-path.
+func DefineBashibleBundleFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("internal-node-ip", "Address of a node from internal network.").
 		Required().
 		Envar(configEnvName("INTERNAL_NODE_IP")).
-		StringVar(&InternalNodeIP)
+		StringVar(&o.InternalNodeIP)
 	cmd.Flag("device-path", "Path of kubernetes-data device.").
 		Required().
 		Envar(configEnvName("DEVICE_PATH")).
-		StringVar(&DevicePath)
+		StringVar(&o.DevicePath)
 }
 
-func DefineDeckhouseFlags(cmd *kingpin.CmdClause) {
+// DefineDeckhouseFlags registers --deckhouse-timeout.
+func DefineDeckhouseFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("deckhouse-timeout", "Timeout to install deckhouse. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("DECKHOUSE_TIMEOUT")).
-		Default(DeckhouseTimeout.String()).
-		DurationVar(&DeckhouseTimeout)
+		Default(o.DeckhouseTimeout.String()).
+		DurationVar(&o.DeckhouseTimeout)
 }
 
-func DefinePostBootstrapScriptFlags(cmd *kingpin.CmdClause) {
+// DefinePostBootstrapScriptFlags registers post-bootstrap script flags.
+func DefinePostBootstrapScriptFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("post-bootstrap-script-path", `Path to bash (or another interpreted language which installed on master node) script which will execute after bootstrap resources.
 All output of the script will be logged with Info level with prefix 'Post-bootstrap script result:'.
 If you want save to state cache on key 'post-bootstrap-result' you need to out result with prefix 'Result of post-bootstrap script:' in one line.
 Experimental. This feature may be deleted in the future.`).
 		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_PATH")).
-		StringVar(&PostBootstrapScriptPath)
+		StringVar(&o.PostBootstrapScriptPath)
 
 	cmd.Flag("post-bootstrap-script-timeout", "Timeout to execute after bootstrap resources script. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("POST_BOOTSTRAP_SCRIPT_TIMEOUT")).
-		Default(PostBootstrapScriptTimeout.String()).
-		DurationVar(&PostBootstrapScriptTimeout)
+		Default(o.PostBootstrapScriptTimeout.String()).
+		DurationVar(&o.PostBootstrapScriptTimeout)
 }
 
-func DefineResourcesFlags(cmd *kingpin.CmdClause, isRequired bool) {
+// DefineResourcesFlags registers --resources / --resources-timeout.
+func DefineResourcesFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions, isRequired bool) {
 	cmd.Flag("resources", `Path to a file with declared Kubernetes resources in YAML format.
 Deprecated. Please use --config flag multiple repeatedly for logical resources separation.
 `).
 		Envar(configEnvName("RESOURCES")).
-		StringVar(&ResourcesPath)
+		StringVar(&o.ResourcesPath)
 	cmd.Flag("resources-timeout", "Timeout to create resources. Experimental. This feature may be deleted in the future.").
 		Envar(configEnvName("RESOURCES_TIMEOUT")).
-		Default(ResourcesTimeout.String()).
-		DurationVar(&ResourcesTimeout)
+		Default(o.ResourcesTimeout.String()).
+		DurationVar(&o.ResourcesTimeout)
 	if isRequired {
 		cmd.GetFlag("resources").Required()
 	}
 }
 
-func DefineAbortFlags(cmd *kingpin.CmdClause) {
+// DefineAbortFlags registers --force-abort-from-cache.
+func DefineAbortFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	const help = `Skip 'use dhctl destroy command' error. It force bootstrap abortion from cache.
 Experimental. This feature may be deleted in the future.`
 	cmd.Flag("force-abort-from-cache", help).
 		Envar(configEnvName("FORCE_ABORT_FROM_CACHE")).
 		Default("false").
-		BoolVar(&ForceAbortFromCache)
+		BoolVar(&o.ForceAbortFromCache)
 }
 
-func DefineDontUsePublicImagesFlags(cmd *kingpin.CmdClause) {
+// DefineDontUsePublicImagesFlags registers --dont-use-public-control-plane-images.
+func DefineDontUsePublicImagesFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	const help = `DEPRECATED. Don't use public images for control-plane components.`
 	cmd.Flag("dont-use-public-control-plane-images", help).
 		Envar(configEnvName("DONT_USE_PUBLIC_CONTROL_PLANE_IMAGES")).
 		Default("false").
-		BoolVar(&DontUsePublicControlPlaneImages)
+		BoolVar(&o.DontUsePublicControlPlaneImages)
 }
 
-func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause) {
+// DefineDeckhouseInstallFlags registers --kubeadm-bootstrap and --master-node-selector.
+func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause, o *options.BootstrapOptions) {
 	cmd.Flag("kubeadm-bootstrap", "Use default Kubernetes API server host and port for Kubeadm installations to install Deckhouse.").
 		Envar(configEnvName("KUBEADM_BOOTSTRAP")).
 		Default("false").
-		BoolVar(&KubeadmBootstrap)
+		BoolVar(&o.KubeadmBootstrap)
 	cmd.Flag("master-node-selector", "Schedule Deckhouse on master nodes.").
 		Envar(configEnvName("MASTER_NODE_SELECTOR")).
 		Default("false").
-		BoolVar(&MasterNodeSelector)
+		BoolVar(&o.MasterNodeSelector)
 }
 
-func DefineConfigsForResourcesPhaseFlags(cmd *kingpin.CmdClause) {
-	// we need another flag for dhctl bootstrap-phase create-resources for backward compatibility
-	// because in another cases --config flag is required, and we do not want to add another flag in DefineConfigFlags
+// DefineConfigsForResourcesPhaseFlags registers a non-required `--config` for the
+// `bootstrap-phase create-resources` command (kept separate from DefineConfigFlags
+// because that variant marks the flag as required).
+func DefineConfigsForResourcesPhaseFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
 	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.`).
 		Envar(configEnvName("CONFIG")).
-		StringsVar(&ConfigPaths)
+		StringsVar(&o.ConfigPaths)
 }
 
-func DefineImgBundleFlags(cmd *kingpin.CmdClause) {
+func DefineImgBundleFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
 	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by 'd8 mirror pull' command for Local registry mode.`).
 		Envar(configEnvName("IMG_BUNDLE_PATH")).
-		StringVar(&ImgBundlePath)
+		StringVar(&o.ImgBundlePath)
 }

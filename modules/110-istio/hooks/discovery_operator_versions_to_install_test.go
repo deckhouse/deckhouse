@@ -27,6 +27,7 @@ import (
 var _ = Describe("Istio hooks :: discovery_operator_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
+	f.RegisterCRD("sailoperator.io", "v1", "Istio", true)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -97,6 +98,55 @@ spec:
 			f.RunHook()
 		})
 		It("Should count all namespaces and revisions properly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.2"))
+		})
+	})
+
+	Context("There are supported Istio resources in cluster", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.1":
+        revision: "v1x1"
+    "1.8":
+        revision: "v1x8"
+    "1.2":
+        revision: "v1x2"
+    "1.3":
+        revision: "v1x3"
+    "1.4":
+        revision: "v1x4"
+  versionsToInstall: ["1.3", "1.4"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x8
+  namespace: d8-istio
+spec:
+  revision: v1x8
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x2
+  namespace: d8-istio
+spec:
+  revision: v1x2
+`))
+
+			f.RunHook()
+		})
+		It("Should include versions from Istio resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.2", "1.3", "1.4", "1.8"}))
 

@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -87,7 +87,11 @@ If you are confident in your actions, you can use the flag "--yes-i-am-sane-and-
 `
 )
 
-// TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
+// Params carries everything ClusterBootstrapper needs that is not derived from
+// the cluster configuration files themselves. The Options field replaces the
+// previous package-level dhctl/pkg/app globals; callers must populate it with a
+// fresh *options.Options per operation to avoid sharing state between
+// concurrent requests.
 type Params struct {
 	SSHProviderInitializer     *providerinitializer.SSHProviderInitializer
 	KubeProvider               libcon.KubeProvider
@@ -100,17 +104,13 @@ type Params struct {
 	CommanderUUID              uuid.UUID
 	InfrastructureContext      *infrastructure.Context
 
-	ConfigPaths             []string
-	ResourcesTimeout        time.Duration
-	DeckhouseTimeout        time.Duration
-	PostBootstrapScriptPath string
-	UseTfCache              *bool
-	AutoApprove             *bool
-
 	TmpDir string
 	// todo refact to logger provider
 	Logger  log.Logger
 	IsDebug bool
+
+	// Options is the per-operation parsed configuration. Required.
+	Options *options.Options
 
 	DirectoryConfig *directoryconfig.DirectoryConfig
 
@@ -127,8 +127,8 @@ type ClusterBootstrapper struct {
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
-	if app.ProgressFilePath != "" {
-		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
 	}
 
 	logger := params.Logger
@@ -145,58 +145,6 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 		logger:         logger,
 		loggerProvider: log.ExternalLoggerProvider(logger),
 	}
-}
-
-// TODO(remove-global-app): Eliminate usage of app.* global variables,
-// TODO(remove-global-app):  use explicitly passed params everywhere instead,
-// TODO(remove-global-app):  applyParams will not be needed anymore then.
-//
-// applyParams overrides app.* options that are explicitly passed using Params struct
-func (b *ClusterBootstrapper) applyParams() func() {
-	var restoreFuncs []func()
-	restoreFunc := func() {
-		for _, f := range restoreFuncs {
-			f()
-		}
-	}
-
-	if len(b.ConfigPaths) > 0 {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
-	}
-
-	if b.ResourcesTimeout != 0 {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesTimeout, b.ResourcesTimeout))
-	}
-
-	if b.DeckhouseTimeout != 0 {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.DeckhouseTimeout, b.DeckhouseTimeout))
-	}
-
-	if b.PostBootstrapScriptPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.PostBootstrapScriptPath, b.PostBootstrapScriptPath))
-	}
-
-	if b.UseTfCache != nil {
-		var newValue string
-		if *b.UseTfCache {
-			newValue = app.UseStateCacheYes
-		} else {
-			newValue = app.UseStateCacheNo
-		}
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.UseTfCache, newValue))
-	}
-
-	if b.AutoApprove != nil {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.SanityCheck, *b.AutoApprove))
-	}
-
-	if b.KubernetesInitParams != nil {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfigInCluster, b.KubernetesInitParams.KubeConfigInCluster))
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfig, b.KubernetesInitParams.KubeConfig))
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfigContext, b.KubernetesInitParams.KubeConfigContext))
-	}
-
-	return restoreFunc
 }
 
 func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
@@ -221,25 +169,22 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	var preflightRunner *preflight.Preflight
 
-	restore := b.applyParams()
-	defer restore()
-
 	masterAddressesForSSH := make(map[string]string)
 
-	if app.PostBootstrapScriptPath != "" {
-		log.DebugF("Have post bootstrap script: %s\n", app.PostBootstrapScriptPath)
-		if err := ValidateScriptFile(app.PostBootstrapScriptPath); err != nil {
+	if b.Options.Bootstrap.PostBootstrapScriptPath != "" {
+		log.DebugF("Have post bootstrap script: %s\n", b.Options.Bootstrap.PostBootstrapScriptPath)
+		if err := ValidateScriptFile(b.Options.Bootstrap.PostBootstrapScriptPath); err != nil {
 			return err
 		}
 	}
 
-	if app.ResourcesPath != "" {
+	if b.Options.Bootstrap.ResourcesPath != "" {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
-		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
+		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
 
 	registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(app.ConfigPaths)
+		return config.FetchDocuments(b.Options.Global.ConfigPaths)
 	})
 	if err != nil {
 		return err
@@ -250,7 +195,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		registry.Params{
 			Logger:         b.loggerProvider(),
 			ConfigProvider: registryConfigProvider,
-			BundlePath:     app.ImgBundlePath,
+			BundlePath:     b.Options.Global.ImgBundlePath,
 		},
 	)
 	if err != nil {
@@ -266,7 +211,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	})
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		b.DirectoryConfig,
 		config.ValidateOptionValidateExtensions(true),
@@ -294,24 +239,27 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
+		DownloadDir:      b.Options.Global.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+		WithUseTfCache(b.Options.Cache.UseTfCache).
+		WithDebug(b.Options.Global.IsDebug)
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
 
 	stateCache := cache.Global()
-	configHash := state.ConfigHash(app.ConfigPaths)
+	configHash := state.ConfigHash(b.Options.Global.ConfigPaths)
 
-	if app.DropCache {
+	if b.Options.Cache.DropCache {
 		stateCache.Clean(ctx)
 		stateCache.Delete(ctx, state.TombstoneKey)
 		log.DebugLn("Cache was dropped")
@@ -334,7 +282,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 	metaConfig.UUID = clusterUUID
 
-	metaConfig.ResourceManagementTimeout = app.ResourceManagementTimeout
+	metaConfig.ResourceManagementTimeout = b.Options.Cache.ResourceManagementTimeout
 
 	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
@@ -376,6 +324,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	globalPreflightSuite := suites.NewGlobalSuite(suites.GlobalDeps{
 		MetaConfig:    metaConfig,
 		InstallConfig: deckhouseInstallConfig,
+		BuildInfo:     b.Options.BuildInfo,
 	})
 
 	if metaConfig.ClusterType == config.CloudClusterType {
@@ -393,12 +342,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig:  metaConfig,
 			SSHProvider: sshProvider,
+			LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
 		})
 
 		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
-		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
 		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
@@ -484,6 +434,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             metaConfig,
+			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
 		}, ctx)
 		if err != nil {
 			return err
@@ -491,7 +442,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
-		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
 		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
@@ -596,9 +547,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
+			return createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateBeforeDeckhouseBootstrap, nil, true, b.Options.Bootstrap.ResourcesTimeout)
 		},
-		State: bootstrapState,
+		State:            bootstrapState,
+		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
 	}
 
 	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, deckhouseInstallConfig, installParams)
@@ -626,7 +578,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper").
+			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper", b.Options.SSH.User).
 				Run(ctx, action)
 		}
 
@@ -648,7 +600,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
+	err = createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false, b.Options.Bootstrap.ResourcesTimeout)
 	if err != nil {
 		return err
 	}
@@ -659,9 +611,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if b.SSHProviderInitializer.CheckHosts() && app.PostBootstrapScriptPath != "" {
-		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, app.PostBootstrapScriptPath, bootstrapState).
-			WithTimeout(app.PostBootstrapScriptTimeout)
+	if b.SSHProviderInitializer.CheckHosts() && b.Options.Bootstrap.PostBootstrapScriptPath != "" {
+		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
+			WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
 
 		if err := postScriptExecutor.Execute(ctx); err != nil {
 			return err
@@ -819,7 +771,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool, timeout time.Duration) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
@@ -851,14 +803,6 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 			}
 		}
 
-		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks, timeout)
 	})
-}
-
-func setWithRestore[T any](target *T, newValue T) func() {
-	oldValue := *target
-	*target = newValue
-	return func() {
-		*target = oldValue
-	}
 }

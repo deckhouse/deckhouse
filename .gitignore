@@ -78,3 +78,8 @@ testing/cloud_layouts/script-commander_test.sh
 # dhctl dev
 dhctl/pkg/config/digests/images_digests_dev.json
 dhctl/pkg/minget/embed/minget
+
+# gossh tests in testing/ssh_container.go call os.MkdirTemp(".", "sshd") and
+# leave sshd<random>/sshd_config<random> behind in the package working
+# directory if the test is interrupted before its defer os.RemoveAll runs.
+dhctl/pkg/system/node/gossh/sshd*/

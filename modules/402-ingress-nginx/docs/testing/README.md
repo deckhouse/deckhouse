@@ -18,7 +18,7 @@ spec:
       application/x-javascript text/plain application/x-font-truetype application/xml+rss
       image/x-icon font/opentype text/css image/x-win-bitmap
     enable-brotli: "true"
-  controllerVersion: "1.10"
+  controllerVersion: "1.15"
   disableHTTP2: false
   hsts: false
   ingressClass: nginx

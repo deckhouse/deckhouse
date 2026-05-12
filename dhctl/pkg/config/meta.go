@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -71,6 +70,11 @@ type MetaConfig struct {
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
 	DownloadCacheDir          string                  `json:"-"`
+
+	// VersionFilePath is the absolute path to the deckhouse version file
+	// embedded in the installer image. Required by LoadInstallerVersion and
+	// DeckhouseInstaller.GetImageTag.
+	VersionFilePath string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -714,15 +718,14 @@ func (m *MetaConfig) LoadImagesDigests() error {
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {
-	rawFile, err := os.ReadFile(app.VersionFile)
+	rawFile, err := os.ReadFile(m.VersionFilePath)
 	if err != nil {
-		// TODO param instead of hardcode path
-		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
-		rawFile, err = os.ReadFile(versionFilePath)
+		// fallback to the unpacked deckhouse image location
+		fallbackPath := filepath.Join(m.DownloadRootDir, "deckhouse", "version")
+		rawFile, err = os.ReadFile(fallbackPath)
 		if err != nil {
-			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+			return fmt.Errorf("could not read both %s and %s: %w", m.VersionFilePath, fallbackPath, err)
 		}
-
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))
