@@ -125,16 +125,16 @@ func InitWithCLIOptions(ctx context.Context, logger log.Logger, opts *options.Op
 }
 
 // newRegistry creates a Registry pre-configured with the bundle-specific address and repo path.
-func newRegistry(bundlePath string) *Registry {
-	return &Registry{
+func newRegistry(bundlePath string) *registry {
+	return &registry{
 		repoPath:   constant.BundleRepoPath,
 		address:    constant.BundleAddressWithPort,
 		bundlePath: bundlePath,
 	}
 }
 
-// Registry wraps the OCI bundle and its HTTP registry server lifecycle.
-type Registry struct {
+// registry wraps the OCI bundle and its HTTP registry server lifecycle.
+type registry struct {
 	repoPath   string
 	address    string
 	bundlePath string
@@ -143,7 +143,7 @@ type Registry struct {
 	regServe *serve.RegistryServer
 }
 
-func (r *Registry) start(ctx context.Context, logger log.Logger) error {
+func (r *registry) start(ctx context.Context, logger log.Logger) error {
 	withStop := func(err error) error {
 		closeErr := r.stop(ctx)
 		if closeErr != nil {
@@ -191,7 +191,7 @@ func (r *Registry) start(ctx context.Context, logger log.Logger) error {
 	return nil
 }
 
-func (r *Registry) stop(ctx context.Context) error {
+func (r *registry) stop(ctx context.Context) error {
 	if r == nil {
 		return nil
 	}

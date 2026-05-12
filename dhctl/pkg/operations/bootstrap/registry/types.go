@@ -24,10 +24,10 @@ type (
 	// BundlePathProvider returns the path to the directory with tar or chunk.tar
 	// image bundles. Returns an error if the path is not set or invalid.
 	BundlePathProvider func() (string, error)
-)
 
-// ConfigProvider abstracts registry configuration, allowing callers to query
-// whether the cluster uses a local (bundle-based) registry.
-type ConfigProvider interface {
-	IsLocal() (bool, error)
-}
+	// ConfigProvider abstracts registry configuration, allowing callers to query
+	// whether the cluster uses a local (bundle-based) registry.
+	ConfigProvider interface {
+		IsLocal() (bool, error)
+	}
+)

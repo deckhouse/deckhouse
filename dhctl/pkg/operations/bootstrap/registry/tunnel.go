@@ -97,8 +97,8 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 }
 
 // newTunnel creates a Tunnel pre-configured with the bundle-specific scheme, address, and port.
-func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *Tunnel {
-	return &Tunnel{
+func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *tunnel {
+	return &tunnel{
 		dc:      dc,
 		sshCl:   sshCl,
 		scheme:  constant.BundleScheme,
@@ -107,8 +107,8 @@ func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *Tun
 	}
 }
 
-// Tunnel manages the SSH reverse tunnel lifecycle for the bundle registry.
-type Tunnel struct {
+// tunnel manages the SSH reverse tunnel lifecycle for the bundle registry.
+type tunnel struct {
 	dc      *directoryconfig.DirectoryConfig
 	sshCl   libcon.SSHClient
 	scheme  constant.SchemeType
@@ -118,7 +118,7 @@ type Tunnel struct {
 	tunnel libcon.ReverseTunnel
 }
 
-func (t *Tunnel) start(ctx context.Context) error {
+func (t *tunnel) start(ctx context.Context) error {
 	preflightURL := fmt.Sprintf(
 		"%s://%s/v2/",
 		strings.ToLower(string(t.scheme)),
@@ -152,11 +152,13 @@ func (t *Tunnel) start(ctx context.Context) error {
 	return nil
 }
 
-func (t *Tunnel) stop() {
-	if t.tunnel == nil {
+func (t *tunnel) stop() {
+	if t == nil {
 		return
 	}
 
-	t.tunnel.Stop()
-	t.tunnel = nil
+	if t.tunnel != nil {
+		t.tunnel.Stop()
+		t.tunnel = nil
+	}
 }
