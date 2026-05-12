@@ -18,7 +18,7 @@ lang: ru
 
 Подключение узлов из внешней инфраструктуры может выполняться двумя способами:
 
-- **Автоматическое создание узлов**. Используется тип узлов `CloudEphemeral`. Параметры виртуальных машин описываются ресурсом `*InstanceClass` (например, [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass)), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup). После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
+- **Автоматическое создание узлов**. Используется тип узлов `CloudEphemeral` (в Yandex — тип узлов `Cloud`). Параметры виртуальных машин описываются ресурсом `*InstanceClass` (например, [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass)), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup). После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
 - **Подключение вручную созданных узлов**. Используется тип узлов `CloudStatic`. Виртуальные машины создаются пользователем вручную во внешней инфраструктуре, после чего подключаются к кластеру с помощью bootstrap-скрипта DKP как worker-узлы.
 
 В этом разделе описаны общие требования к гибридным кластерам, предварительная подготовка инфраструктуры и добавление узлов через поддерживаемых провайдеров.
@@ -160,7 +160,7 @@ lang: ru
    export NODE_NETWORK_CIDR="<NODE_NETWORK_CIDR>"
    ```
 
-   Узнать CIDR подсети можно командой:
+   `NODE_NETWORK_CIDR` — CIDR, включающий внутренние IP-адреса узлов Yandex Cloud. Для одной зоны обычно совпадает с CIDR выбранной подсети. Например, если worker-узлы создаются в подсети `10.128.0.0/24`, укажите `10.128.0.0/24`. Узнать CIDR подсети можно командой:
 
    ```shell
    yc vpc subnet list --folder-id "$FOLDER_ID"
@@ -168,7 +168,7 @@ lang: ru
 
 1. Создайте файл, например `cloud-provider-cluster-configuration.yaml` с конфигурацией провайдера:
 
-   ```yaml
+   ```shell
    cat > cloud-provider-cluster-configuration.yaml <<EOF
    apiVersion: deckhouse.io/v1
    kind: YandexClusterConfiguration
@@ -336,7 +336,7 @@ lang: ru
    - YandexInstanceClass описывает параметры виртуальной машины, которая будет создана в Yandex Cloud;
    - `mainSubnet` — ID подсети, из которой создаваемые worker-узлы должны иметь доступ к статическим узлам кластера;
    - NodeGroup описывает группу узлов, которую DKP должен поддерживать в кластере;
-   - `nodeType: Cloud` означает, что узлы будут создаваться автоматически через облачного проавйдера;
+   - `nodeType: Cloud` означает, что узлы будут создаваться автоматически через облачного провайдера;
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в `cloud-provider-discovery-data.json`.
 
 1. Примените манифест:
@@ -364,9 +364,10 @@ lang: ru
 1. Для диагностики состояния и поиска возможных проблем проверьте логи machine-controller-manager:
 
    ```shell
-   d8 k -n d8-cloud-provider-yandex get machine
-   d8 k -n d8-cloud-provider-yandex get machineset
-   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager
+   d8 k -n d8-cloud-instance-manager get machinedeployments.machine.sapcloud.io -o wide
+   d8 k -n d8-cloud-instance-manager get machinesets.machine.sapcloud.io -o wide
+   d8 k -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
 ## Гибридный кластер с VCD
