@@ -171,8 +171,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap")
 	defer span.End()
 
-	var preflightRunner *preflight.Preflight
-
 	masterAddressesForSSH := make(map[string]string)
 
 	if b.Options.Bootstrap.PostBootstrapScriptPath != "" {
@@ -208,7 +206,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	log.DebugLn("MetaConfig was loaded")
-	configSpan.End()
 
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
@@ -297,7 +294,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	} else if shouldStop {
 		return nil
 	}
-	ctx, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
+
+	_, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
 	defer baseInfraSpan.End()
 
 	var nodeIP string
@@ -316,9 +314,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		InstallConfig: deckhouseInstallConfig,
 		BuildInfo:     b.Options.BuildInfo,
 	})
-
-	ctx, preflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.Preflight")
-	defer preflightSpan.End()
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		ctx, cloudPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudPreflight")
@@ -341,7 +336,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
 		})
 
-		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
+		preflightRunner := preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
 		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
@@ -349,7 +344,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 
+		cloudPreflightSpan.End()
+
 		err = log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
+			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudInfra")
+			defer span.End()
+
 			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
 			if err != nil {
 				return err
@@ -427,7 +427,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 
-		cloudPreflightSpan.End()
 	} else {
 		ctx, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
 		defer staticPreflightSpan.End()
@@ -440,13 +439,16 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
+
+		preflightRunner := preflight.New(globalPreflightSuite, staticPreflightSuite)
 		preflightRunner.UseCache(bootstrapState)
 		preflightRunner.SetCacheSalt(configHash)
 		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
+
 		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
+
 		if err = preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
@@ -470,8 +472,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 		staticPreflightSpan.End()
 	}
-
-	preflightSpan.End()
 
 	// next parse and check resources
 	// do it after bootstrap cloud because resources can be template
@@ -593,6 +593,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseWait)
 
+	installDeckhouseSpan.End()
+
 	if metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
 			return err
@@ -631,8 +633,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 		additionalNodesSpan.End()
 	}
-
-	installDeckhouseSpan.End()
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.CreateResourcesPhase, false, stateCache, nil); err != nil {
 		return err
