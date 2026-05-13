@@ -1,0 +1,2 @@
+dirs:
+  - /run/kubernetes.io/kubernetes-api-proxy
