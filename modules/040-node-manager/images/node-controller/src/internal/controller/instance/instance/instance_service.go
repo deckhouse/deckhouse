@@ -49,5 +49,5 @@ func (s *InstanceService) ReconcileFinalization(ctx context.Context, instance *d
 	if err := s.finalizeAfterMachineDeletion(ctx, instance, result.MachineGone); err != nil {
 		return FinalizationResult{}, err
 	}
-	return FinalizationResult{MachineGone: result.MachineGone}, nil
+	return FinalizationResult(result), nil
 }
