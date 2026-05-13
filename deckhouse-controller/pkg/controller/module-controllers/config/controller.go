@@ -578,27 +578,25 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 	})
 }
 
+// syncMaintenanceLabel patches only the Module maintenance label used by UI.
 func (r *reconciler) syncMaintenanceLabel(ctx context.Context, module *v1alpha1.Module, maintenance string) error {
-	return utils.Update[*v1alpha1.Module](ctx, r.client, module, func(m *v1alpha1.Module) bool {
-		labels := m.GetLabels()
-		if maintenance != "" {
-			if labels == nil {
-				labels = make(map[string]string)
-			}
-			if labels[v1alpha1.ModuleLabelMaintenance] != maintenance {
-				labels[v1alpha1.ModuleLabelMaintenance] = maintenance
-				m.SetLabels(labels)
-				return true
-			}
-		} else {
-			if labels != nil {
-				if _, ok := labels[v1alpha1.ModuleLabelMaintenance]; ok {
-					delete(labels, v1alpha1.ModuleLabelMaintenance)
-					m.SetLabels(labels)
-					return true
-				}
-			}
-		}
-		return false
-	})
+	labels := module.GetLabels()
+	current, hasLabel := labels[v1alpha1.ModuleLabelMaintenance]
+	if maintenance == "" && !hasLabel || maintenance != "" && current == maintenance {
+		return nil
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+	if labels == nil && maintenance != "" {
+		labels = make(map[string]string)
+	}
+
+	if maintenance != "" {
+		labels[v1alpha1.ModuleLabelMaintenance] = maintenance
+	} else {
+		delete(labels, v1alpha1.ModuleLabelMaintenance)
+	}
+
+	module.SetLabels(labels)
+	return r.client.Patch(ctx, module, patch)
 }
