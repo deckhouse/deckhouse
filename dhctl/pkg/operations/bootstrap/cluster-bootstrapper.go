@@ -185,7 +185,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
 
-	ctx, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
+	_, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
 	defer configSpan.End()
 
 	// first, parse and check cluster config
@@ -316,7 +316,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	})
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		ctx, cloudPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudPreflight")
+		_, cloudPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudPreflight")
 		defer cloudPreflightSpan.End()
 
 		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
@@ -347,7 +347,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		cloudPreflightSpan.End()
 
 		err = log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
-			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudInfra")
+			_, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudInfra")
 			defer span.End()
 
 			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
@@ -428,7 +428,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 	} else {
-		ctx, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
+		_, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
 		defer staticPreflightSpan.End()
 
 		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
@@ -497,7 +497,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	} else if shouldStop {
 		return nil
 	}
-	ctx, registryPackagesProxySpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.RegistryPackagesProxy")
+	_, registryPackagesProxySpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.RegistryPackagesProxy")
 	defer registryPackagesProxySpan.End()
 
 	if b.SSHProviderInitializer.CheckHosts() {
@@ -524,7 +524,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	ctx, bashibleBundleSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BashibleBundle")
+	_, bashibleBundleSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BashibleBundle")
 	defer bashibleBundleSpan.End()
 
 	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
@@ -554,7 +554,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	ctx, installDeckhouseSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.InstallDeckhouse")
+	_, installDeckhouseSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.InstallDeckhouse")
 	defer installDeckhouseSpan.End()
 
 	kubeCl, err := b.KubeProvider.Client(ctx)
@@ -602,7 +602,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return nil
 		}
 
-		ctx, additionalNodesSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodes")
+		_, additionalNodesSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodes")
 		defer additionalNodesSpan.End()
 
 		localBootstraper := func(action func() error) error {
@@ -688,6 +688,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	if !b.DisableBootstrapClearCache {
 		_ = log.ProcessCtx(ctx, "bootstrap", "Clear cache", func(ctx context.Context) error {
+			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.ClearCache")
+			defer span.End()
+
 			cache.Global().CleanWithExceptions(
 				ctx,
 				state.MasterHostsCacheKey,
@@ -704,7 +707,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	log.Success("Deckhouse cluster was created successfully!\n")
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
+		_ = log.ProcessCtx(ctx, "common", "Kubernetes Master Node addresses for SSH", func(ctx context.Context) error {
+			ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.KubernetesMasterNodeAddressesForSSH")
+			defer span.End()
+
 			sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 			if err != nil {
 				return err
@@ -780,6 +786,9 @@ func bootstrapAdditionalNodesForCloudCluster(
 	masterAddressesForSSH map[string]string,
 	infrastructureContext *infrastructure.Context,
 ) error {
+	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
+	defer span.End()
+
 	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global()); err != nil {
 		return err
 	}
@@ -795,6 +804,9 @@ func bootstrapAdditionalNodesForCloudCluster(
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Waiting for Node Groups are ready", func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster.WaitForNodesBecomeReady")
+		defer span.End()
+
 		ngs := map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}
 		for _, ng := range terraNodeGroups {
 			if ng.Replicas > 0 {
