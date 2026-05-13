@@ -119,11 +119,11 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  #- mkdir -p /tmp/bazel-cache
+  - mkdir -p /tmp/bazel-cache
   #- git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
   #- rm -rf /tmp/bazel-cache/.git
-  #- mkdir -p /tmp/bazel-deps
-  #- git lfs install
+  - mkdir -p /tmp/bazel-deps
+  - git lfs install
   #- git clone --depth 1 --branch {{ $istioProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-deps.git /tmp/bazel-deps
   #- rm -rf /tmp/bazel-deps/.git
 
@@ -135,10 +135,10 @@ shell:
   - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
   - cd /src/proxy
   - go mod download
-  #- export BAZEL_OUTPUT_BASE=$(bazel info output_base)
-  #- mkdir -p ${BAZEL_OUTPUT_BASE}/external
-  #- tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  #- rm -rf /tmp/bazel-deps
+  - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
+  - mkdir -p ${BAZEL_OUTPUT_BASE}/external
+  - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+  - rm -rf /tmp/bazel-deps
 
   - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
