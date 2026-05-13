@@ -643,11 +643,9 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// PreserveApp identifies one downloaded package version + its owning
-// Application instance to preserve during Cleanup.
-//
-// Name/Repository/Version address the package artifact on disk; Namespace and
-// Instance identify the Application CR that owns its installed nelm release.
+// PreserveApp identifies one installed Application instance to preserve during
+// CleanupApps. Name/Repository/Version address the package on disk; Namespace
+// and Instance identify the owning Application CR.
 type PreserveApp struct {
 	Name       string
 	Repository string
@@ -656,14 +654,8 @@ type PreserveApp struct {
 	Instance   string
 }
 
-// CleanupApps garbage-collects state left over from previous controller runs
-// for Application instances. Called once during preflight, before the reconcile
-// loop starts:
-//   - removes downloaded application package versions on disk not in preserve;
-//   - removes orphan nelm release secrets cluster-wide whose owning Application
-//     is not in preserve (delegated to the nelm service).
-//
-// Module cleanup is a separate concern — modules have no per-instance identity.
+// CleanupApps removes downloaded application packages on disk and orphan nelm
+// releases in the cluster that are not in preserve. Runs once during preflight.
 func (r *Runtime) CleanupApps(ctx context.Context, preserve []PreserveApp) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

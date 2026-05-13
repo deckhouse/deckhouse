@@ -43,9 +43,7 @@ const (
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
 
-	// managedByAnnotation marks a release as owned by this service. Stamped on
-	// Release.Info so it is visible to action.ReleaseList; used by orphan
-	// cleanup as the ownership marker.
+	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
 	managedByAnnotationValue = "deckhouse"
 )
@@ -299,12 +297,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	return nil
 }
 
-// Cleanup uninstalls nelm releases owned by this service (carrying the
-// managed-by annotation in Release.Info) whose name is not in keep.
-//
-// keep keys are of the form "<namespace>/<release-name>" — the caller decides
-// which releases must remain. Releases without the managed-by annotation are
-// skipped: they are not ours.
+// Cleanup uninstalls releases owned by this service (carrying the managed-by
+// annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
 func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
 		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},

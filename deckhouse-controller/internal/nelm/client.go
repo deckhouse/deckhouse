@@ -41,9 +41,7 @@ const (
 	// logger and telemetry name
 	nelmTracer = "nelm"
 
-	// ReleaseLabelPackageChecksum is stamped on the release storage secret to
-	// store the rendered-manifests checksum (used by shouldRunHelmUpgrade to
-	// skip no-op upgrades).
+	// ReleaseLabelPackageChecksum stores the rendered-manifests checksum on the release storage secret.
 	ReleaseLabelPackageChecksum = "packageChecksum"
 )
 
@@ -63,12 +61,11 @@ type Options struct {
 	// Timeout for Helm operations
 	Timeout time.Duration
 
-	// ResourceLabels are stamped on every Kubernetes resource rendered by the chart.
+	// ResourceLabels are stamped on every chart-rendered resource.
 	ResourceLabels map[string]string
-	// ResourceAnnotations are stamped on every Kubernetes resource rendered by the chart.
+	// ResourceAnnotations are stamped on every chart-rendered resource.
 	ResourceAnnotations map[string]string
-	// ReleaseInfoAnnotations are stamped on the Release.Info — visible to
-	// action.ReleaseList and used as ownership markers by orphan cleanup.
+	// ReleaseInfoAnnotations are stamped on Release.Info (visible via action.ReleaseList).
 	ReleaseInfoAnnotations map[string]string
 }
 
@@ -89,25 +86,21 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithResourceLabels sets labels stamped on every Kubernetes resource
-// rendered by the chart.
+// WithResourceLabels sets labels stamped on every chart-rendered resource.
 func WithResourceLabels(labels map[string]string) Option {
 	return func(o *Options) {
 		maps.Copy(o.ResourceLabels, labels)
 	}
 }
 
-// WithResourceAnnotations sets annotations stamped on every Kubernetes
-// resource rendered by the chart.
+// WithResourceAnnotations sets annotations stamped on every chart-rendered resource.
 func WithResourceAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
 		maps.Copy(o.ResourceAnnotations, annotations)
 	}
 }
 
-// WithReleaseInfoAnnotations sets annotations stamped on the Release.Info.
-// Use it for ownership markers that the orphan-release cleanup pass relies
-// on to find releases managed by this client (visible via action.ReleaseList).
+// WithReleaseInfoAnnotations sets annotations stamped on Release.Info.
 func WithReleaseInfoAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
 		maps.Copy(o.ReleaseInfoAnnotations, annotations)
@@ -164,17 +157,13 @@ type ReleaseRef struct {
 
 // ListOptions contains options for listing Helm releases.
 type ListOptions struct {
-	// Selector filters releases by Release.Info annotations: a release is
-	// included only if every key/value pair in Selector matches its
-	// annotations. Empty selector returns every release.
+	// Selector filters releases by Release.Info annotations; all key/value
+	// pairs must match. Empty selector matches every release.
 	Selector map[string]string
 }
 
-// ListReleases returns nelm releases cluster-wide whose Release.Info matches
-// the given selector.
-//
-// Filter is applied client-side: action.ReleaseList has no server-side
-// selector and returns every helm release in the cluster.
+// ListReleases returns nelm releases cluster-wide matching opts.Selector.
+// The filter is applied client-side — action.ReleaseList has no server-side selector.
 func (c *Client) ListReleases(ctx context.Context, opts ListOptions) ([]ReleaseRef, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListReleases")
 	defer span.End()
