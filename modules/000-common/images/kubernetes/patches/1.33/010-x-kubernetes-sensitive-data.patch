@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 9afeb2f80ce..8456651b5e4 100644
+index 9afeb2f80ce..c0b920fa085 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -2505,7 +2505,7 @@ index 9afeb2f80ce..8456651b5e4 100644
  		return handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
  	case "create":
  		// we want to track recently created CRDs so that in HA environments we don't have server A allow a create and server B
-@@ -390,10 +439,19 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -390,10 +439,23 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  			responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
  			return nil
  		}
@@ -2520,12 +2520,16 @@ index 9afeb2f80ce..8456651b5e4 100644
  		return handlers.UpdateResource(storage, requestScope, r.admission)
  	case "patch":
 +		if len(sensitiveSchemaSlice) > 0 {
-+			return handlers.PatchResource(&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind}, requestScope, r.admission, supportedTypes)
++			inner := handlers.PatchResource(
++				&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind},
++				requestScope, r.admission, supportedTypes,
++			)
++			return sensitiveSSABodyUnmasker(inner, storage, sensitiveSchemaSlice, sensitiveGroupKind)
 +		}
  		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
  	case "delete":
  		allowsOptions := true
-@@ -410,6 +468,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
+@@ -410,6 +472,37 @@ func (r *crdHandler) serveResource(w http.ResponseWriter, req *http.Request, req
  	}
  }
  
@@ -2563,7 +2567,7 @@ index 9afeb2f80ce..8456651b5e4 100644
  func (r *crdHandler) serveStatus(w http.ResponseWriter, req *http.Request, requestInfo *apirequest.RequestInfo, crdInfo *crdInfo, terminating bool, supportedTypes []string) http.HandlerFunc {
  	requestScope := crdInfo.statusRequestScopes[requestInfo.APIVersion]
  	storage := crdInfo.storages[requestInfo.APIVersion].Status
-@@ -514,6 +603,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
+@@ -514,6 +607,15 @@ func (r *crdHandler) updateCustomResourceDefinition(oldObj, newObj interface{})
  func (r *crdHandler) removeStorage_locked(uid types.UID) {
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	if oldInfo, ok := storageMap[uid]; ok {
@@ -2579,7 +2583,7 @@ index 9afeb2f80ce..8456651b5e4 100644
  		// Copy because we cannot write to storageMap without a race
  		// as it is used without locking elsewhere.
  		storageMap2 := storageMap.clone()
-@@ -551,6 +649,14 @@ func (r *crdHandler) removeDeadStorage() {
+@@ -551,6 +653,14 @@ func (r *crdHandler) removeDeadStorage() {
  	for uid, crdInfo := range storageMap {
  		if _, ok := storageMap2[uid]; !ok {
  			klog.V(4).Infof("Removing dead CRD storage for %s/%s", crdInfo.spec.Group, crdInfo.spec.Names.Kind)
@@ -2594,7 +2598,7 @@ index 9afeb2f80ce..8456651b5e4 100644
  			go r.tearDown(crdInfo)
  		}
  	}
-@@ -587,6 +693,14 @@ func (r *crdHandler) destroy() {
+@@ -587,6 +697,14 @@ func (r *crdHandler) destroy() {
  
  	storageMap := r.customStorage.Load().(crdStorageMap)
  	for _, crdInfo := range storageMap {
@@ -2609,7 +2613,7 @@ index 9afeb2f80ce..8456651b5e4 100644
  		for _, storage := range crdInfo.storages {
  			// DestroyFunc have to be implemented in idempotent way,
  			// so the potential race with r.tearDown() (being called
-@@ -679,6 +793,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -679,6 +797,17 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		structuralSchemas[v.Name] = s
  	}
  
@@ -2627,7 +2631,7 @@ index 9afeb2f80ce..8456651b5e4 100644
  	openAPIModels, err := buildOpenAPIModelsForApply(r.staticOpenAPISpec, crd)
  	if err != nil {
  		utilruntime.HandleError(fmt.Errorf("error building openapi models for %s: %v", crd.Name, err))
-@@ -1049,9 +1174,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
+@@ -1049,9 +1178,20 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  		deprecated:          deprecated,
  		warnings:            warnings,
  		storageVersion:      storageVersion,
@@ -2909,12 +2913,678 @@ index 00000000000..beadae0d539
 +func (g staticGetter) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
 +	return g.obj, nil
 +}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
+new file mode 100644
+index 00000000000..9b63a395491
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
+@@ -0,0 +1,142 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"bytes"
++	"fmt"
++	"io"
++	"mime"
++	"net/http"
++	"strconv"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/runtime/serializer/cbor/direct"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/apimachinery/pkg/util/validation/field"
++	"k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/registry/rest"
++	"sigs.k8s.io/yaml"
++)
++
++// sensitiveSSABodyUnmasker wraps an SSA-capable HTTP handler.
++// For application/apply-patch+yaml|+cbor it rewrites <omitted> markers in the request body with values from the current stored object
++// before the body reaches structured-merge-diff parsing inside fieldmanager.Apply. Other content types pass through unchanged.
++func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind) http.HandlerFunc {
++	return func(w http.ResponseWriter, req *http.Request) {
++		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
++		if mediaType != string(types.ApplyYAMLPatchType) && mediaType != string(types.ApplyCBORPatchType) {
++			inner.ServeHTTP(w, req)
++			return
++		}
++
++		body, err := io.ReadAll(req.Body)
++		_ = req.Body.Close()
++		if err != nil {
++			http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
++			return
++		}
++
++		// Fast path: if the body doesn't contain the masked-value literal anywhere, there is nothing to unmask.
++		// Skip the parse/GET/walk/marshal cycle.
++		if !bytes.Contains(body, []byte(sensitive.MaskedValue)) {
++			req.Body = io.NopCloser(bytes.NewReader(body))
++			inner.ServeHTTP(w, req)
++			return
++		}
++
++		patchObj := map[string]interface{}{}
++		if err := unmarshalApplyBody(mediaType, body, &patchObj); err != nil {
++			req.Body = io.NopCloser(bytes.NewReader(body))
++			inner.ServeHTTP(w, req)
++			return
++		}
++
++		info, _ := request.RequestInfoFrom(req.Context())
++		var oldRoot map[string]interface{}
++		var resourceName string
++		if info != nil {
++			resourceName = info.Name
++		}
++		if resourceName != "" && getter != nil {
++			oldObj, getErr := getter.Get(req.Context(), resourceName, &metav1.GetOptions{})
++			switch {
++			case getErr == nil:
++				if u, ok := oldObj.(*unstructured.Unstructured); ok {
++					oldRoot = u.Object
++				}
++			case apierrors.IsNotFound(getErr):
++				oldRoot = nil
++			default:
++				http.Error(w, getErr.Error(), http.StatusInternalServerError)
++				return
++			}
++		}
++
++		for _, s := range schemas {
++			if err := sensitive.UnmaskSensitiveFromOld(patchObj, oldRoot, s, true); err != nil {
++				invalid := apierrors.NewInvalid(groupKind, resourceName, field.ErrorList{
++					field.Invalid(field.NewPath(""), sensitive.MaskedValue, err.Error()),
++				})
++				http.Error(w, invalid.Error(), http.StatusUnprocessableEntity)
++				return
++			}
++		}
++
++		newBody, err := marshalApplyBody(mediaType, patchObj)
++		if err != nil {
++			http.Error(w, "failed to marshal apply body: "+err.Error(), http.StatusInternalServerError)
++			return
++		}
++
++		req.Body = io.NopCloser(bytes.NewReader(newBody))
++		req.ContentLength = int64(len(newBody))
++		req.Header.Set("Content-Length", strconv.Itoa(len(newBody)))
++
++		inner.ServeHTTP(w, req)
++	}
++}
++
++// unmarshalApplyBody decodes an SSA apply-patch body into out.
++// Supports application/apply-patch+yaml and application/apply-patch+cbor.
++func unmarshalApplyBody(mediaType string, data []byte, out *map[string]interface{}) error {
++	switch mediaType {
++	case string(types.ApplyYAMLPatchType):
++		return yaml.Unmarshal(data, out)
++	case string(types.ApplyCBORPatchType):
++		return direct.Unmarshal(data, out)
++	default:
++		return fmt.Errorf("unsupported content type: %s", mediaType)
++	}
++}
++
++// marshalApplyBody encodes an SSA apply-patch body in the given media type.
++func marshalApplyBody(mediaType string, in map[string]interface{}) ([]byte, error) {
++	switch mediaType {
++	case string(types.ApplyYAMLPatchType):
++		return yaml.Marshal(in)
++	case string(types.ApplyCBORPatchType):
++		return direct.Marshal(in)
++	default:
++		return nil, fmt.Errorf("unsupported content type: %s", mediaType)
++	}
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
+new file mode 100644
+index 00000000000..b68ac38e2eb
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
+@@ -0,0 +1,512 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"bytes"
++	"context"
++	"fmt"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"reflect"
++	"strconv"
++	"testing"
++
++	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime"
++	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/apiserver/pkg/endpoints/request"
++	"sigs.k8s.io/yaml"
++)
++
++func newSchemaWithScalarSensitive() *structuralschema.Structural {
++	return &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"password": {
++						Generic:    structuralschema.Generic{Type: "string"},
++						Extensions: structuralschema.Extensions{XSensitiveData: true},
++					},
++				},
++			},
++		},
++	}
++}
++
++type fakeGetter struct {
++	obj runtime.Object
++	err error
++}
++
++func (f *fakeGetter) Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
++	return f.obj, f.err
++}
++
++func makeRequest(t *testing.T, mediaType, body, name string) *http.Request {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodPatch,
++		"/apis/example.com/v1/namespaces/ns/dbconfigs/"+name,
++		bytes.NewReader([]byte(body)))
++	req.Header.Set("Content-Type", mediaType)
++	req = req.WithContext(request.WithRequestInfo(req.Context(), &request.RequestInfo{
++		Name:      name,
++		Namespace: "ns",
++		Verb:      "patch",
++	}))
++	return req
++}
++
++func TestApplyBody_YAMLRoundTrip(t *testing.T) {
++	in := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"password": "real",
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "main", "secret": "s1"},
++			},
++		},
++	}
++
++	bs, err := marshalApplyBody(string(types.ApplyYAMLPatchType), in)
++	if err != nil {
++		t.Fatalf("marshalApplyBody = %v", err)
++	}
++
++	got := map[string]interface{}{}
++	if err := unmarshalApplyBody(string(types.ApplyYAMLPatchType), bs, &got); err != nil {
++		t.Fatalf("unmarshalApplyBody = %v", err)
++	}
++	if !reflect.DeepEqual(in, got) {
++		t.Errorf("round-trip mismatch: got %v, want %v", got, in)
++	}
++}
++
++func TestApplyBody_CBORRoundTrip(t *testing.T) {
++	in := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"password": "real",
++		},
++	}
++
++	bs, err := marshalApplyBody(string(types.ApplyCBORPatchType), in)
++	if err != nil {
++		t.Fatalf("marshalApplyBody = %v", err)
++	}
++
++	got := map[string]interface{}{}
++	if err := unmarshalApplyBody(string(types.ApplyCBORPatchType), bs, &got); err != nil {
++		t.Fatalf("unmarshalApplyBody = %v", err)
++	}
++	if !reflect.DeepEqual(in, got) {
++		t.Errorf("round-trip mismatch: got %v, want %v", got, in)
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_PassthroughForNonSSA(t *testing.T) {
++	var innerCalled bool
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerCalled = true
++		innerBody, _ = io.ReadAll(r.Body)
++		w.WriteHeader(http.StatusOK)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, nil, nil, runtimeschema.GroupKind{})
++
++	body := []byte(`{"spec":{"password":"<omitted>"}}`)
++	req := httptest.NewRequest(http.MethodPatch, "/apis/example.com/v1/dbconfigs/x", bytes.NewReader(body))
++	req.Header.Set("Content-Type", "application/merge-patch+json")
++	mw.ServeHTTP(httptest.NewRecorder(), req)
++
++	if !innerCalled {
++		t.Fatalf("inner not called")
++	}
++	if !bytes.Equal(innerBody, body) {
++		t.Errorf("body modified for non-SSA: got %q, want %q", innerBody, body)
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_ScalarSensitive_YAML(t *testing.T) {
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{"password": "real-pass"},
++	}}
++	getter := &fakeGetter{obj: oldObj}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++		w.WriteHeader(http.StatusOK)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, getter,
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	body := "spec:\n  password: <omitted>\n"
++	mw.ServeHTTP(httptest.NewRecorder(), makeRequest(t, string(types.ApplyYAMLPatchType), body, "primary"))
++
++	got := map[string]interface{}{}
++	if err := yaml.Unmarshal(innerBody, &got); err != nil {
++		t.Fatalf("unmarshal inner body: %v", err)
++	}
++	want := map[string]interface{}{"spec": map[string]interface{}{"password": "real-pass"}}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("inner body = %v, want %v", got, want)
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_ObjectSensitive_YAML(t *testing.T) {
++	schemaSpec := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"credentials": {
++						Generic:    structuralschema.Generic{Type: "object"},
++						Extensions: structuralschema.Extensions{XSensitiveData: true},
++					},
++				},
++			},
++		},
++	}
++
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{
++			"credentials": map[string]interface{}{
++				"token":      "tok",
++				"privateKey": "pk",
++			},
++		},
++	}}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
++		[]*structuralschema.Structural{schemaSpec},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	mw.ServeHTTP(httptest.NewRecorder(),
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  credentials: <omitted>\n", "primary"))
++
++	got := map[string]interface{}{}
++	if err := yaml.Unmarshal(innerBody, &got); err != nil {
++		t.Fatalf("unmarshal inner body: %v", err)
++	}
++	want := map[string]interface{}{"spec": map[string]interface{}{
++		"credentials": map[string]interface{}{"token": "tok", "privateKey": "pk"},
++	}}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("inner body = %v, want %v", got, want)
++	}
++}
++
++func TestSensitiveSSAMiddleware_ArraySensitive_YAML(t *testing.T) {
++	schemaSpec := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"tags": {
++						Generic:    structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{XSensitiveData: true},
++					},
++				},
++			},
++		},
++	}
++
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{
++			"tags": []interface{}{"a", "b"},
++		},
++	}}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
++		[]*structuralschema.Structural{schemaSpec},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	mw.ServeHTTP(httptest.NewRecorder(),
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  tags: <omitted>\n", "primary"))
++
++	got := map[string]interface{}{}
++	if err := yaml.Unmarshal(innerBody, &got); err != nil {
++		t.Fatalf("unmarshal inner body: %v", err)
++	}
++	want := map[string]interface{}{"spec": map[string]interface{}{
++		"tags": []interface{}{"a", "b"},
++	}}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("inner body = %v, want %v", got, want)
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_ScalarSensitive_CBOR(t *testing.T) {
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{"password": "real-pass"},
++	}}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	in := map[string]interface{}{"spec": map[string]interface{}{"password": "<omitted>"}}
++	body, _ := marshalApplyBody(string(types.ApplyCBORPatchType), in)
++	mw.ServeHTTP(httptest.NewRecorder(),
++		makeRequest(t, string(types.ApplyCBORPatchType), string(body), "primary"))
++
++	got := map[string]interface{}{}
++	if err := unmarshalApplyBody(string(types.ApplyCBORPatchType), innerBody, &got); err != nil {
++		t.Fatalf("unmarshal inner body: %v", err)
++	}
++	want := map[string]interface{}{"spec": map[string]interface{}{"password": "real-pass"}}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("inner body = %v, want %v", got, want)
++	}
++}
++
++func TestSensitiveSSAMiddleware_ContentTypeWithCharset(t *testing.T) {
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{"password": "real-pass"},
++	}}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	req := makeRequest(t, string(types.ApplyYAMLPatchType)+"; charset=utf-8",
++		"spec:\n  password: <omitted>\n", "primary")
++	mw.ServeHTTP(httptest.NewRecorder(), req)
++
++	got := map[string]interface{}{}
++	if err := yaml.Unmarshal(innerBody, &got); err != nil {
++		t.Fatalf("unmarshal: %v", err)
++	}
++	want := map[string]interface{}{"spec": map[string]interface{}{"password": "real-pass"}}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("got %v, want %v", got, want)
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_CreateNoOmitted(t *testing.T) {
++	getter := &fakeGetter{err: apierrors.NewNotFound(runtimeschema.GroupResource{}, "primary")}
++
++	var innerCalled bool
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerCalled = true
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, getter,
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	mw.ServeHTTP(httptest.NewRecorder(),
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: real\n", "primary"))
++
++	if !innerCalled {
++		t.Fatalf("inner not called for valid create")
++	}
++}
++
++func TestSensitiveSSAMiddleware_CreateWithOmitted_Fails(t *testing.T) {
++	getter := &fakeGetter{err: apierrors.NewNotFound(runtimeschema.GroupResource{}, "primary")}
++
++	var innerCalled bool
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerCalled = true
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, getter,
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	rec := httptest.NewRecorder()
++	mw.ServeHTTP(rec,
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: <omitted>\n", "primary"))
++
++	if innerCalled {
++		t.Fatalf("inner should not be called when create has <omitted>")
++	}
++	if rec.Code != http.StatusUnprocessableEntity {
++		t.Errorf("expected 422, got %d: %s", rec.Code, rec.Body.String())
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_GetError_NonNotFound(t *testing.T) {
++	getter := &fakeGetter{err: fmt.Errorf("timeout")}
++
++	var innerCalled bool
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { innerCalled = true })
++
++	mw := sensitiveSSABodyUnmasker(inner, getter,
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	rec := httptest.NewRecorder()
++	mw.ServeHTTP(rec,
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: <omitted>\n", "primary"))
++
++	if innerCalled {
++		t.Fatalf("inner should not be called on getter error")
++	}
++	if rec.Code != http.StatusInternalServerError {
++		t.Errorf("expected 500, got %d", rec.Code)
++	}
++}
++
++func TestSensitiveSSAMiddleware_ListMap_Reorder(t *testing.T) {
++	mapType := "map"
++	schemaSpec := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"endpoints": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XListType:    &mapType,
++							XListMapKeys: []string{"name"},
++						},
++						Items: &structuralschema.Structural{
++							Generic: structuralschema.Generic{Type: "object"},
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "main", "secret": "main-s"},
++				map[string]interface{}{"name": "replica", "secret": "replica-s"},
++			},
++		},
++	}}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
++		[]*structuralschema.Structural{schemaSpec},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	yamlBody := "spec:\n  endpoints:\n  - name: replica\n    secret: <omitted>\n  - name: main\n    secret: <omitted>\n"
++	mw.ServeHTTP(httptest.NewRecorder(),
++		makeRequest(t, string(types.ApplyYAMLPatchType), yamlBody, "primary"))
++
++	got := map[string]interface{}{}
++	if err := yaml.Unmarshal(innerBody, &got); err != nil {
++		t.Fatalf("unmarshal: %v", err)
++	}
++	want := map[string]interface{}{"spec": map[string]interface{}{
++		"endpoints": []interface{}{
++			map[string]interface{}{"name": "replica", "secret": "replica-s"},
++			map[string]interface{}{"name": "main", "secret": "main-s"},
++		},
++	}}
++	if !reflect.DeepEqual(got, want) {
++		t.Errorf("got %v, want %v", got, want)
++	}
++}
++
++func TestSensitiveSSAMiddleware_MalformedYAML_Passthrough(t *testing.T) {
++	getter := &fakeGetter{err: apierrors.NewNotFound(runtimeschema.GroupResource{}, "primary")}
++
++	var innerBody []byte
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerBody, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, getter,
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	bad := "spec:\n  password: [unclosed"
++	mw.ServeHTTP(httptest.NewRecorder(),
++		makeRequest(t, string(types.ApplyYAMLPatchType), bad, "primary"))
++
++	if string(innerBody) != bad {
++		t.Errorf("malformed body should pass through unchanged; got %q", innerBody)
++	}
++}
++
++
++func TestSensitiveSSAMiddleware_ContentLengthUpdated(t *testing.T) {
++	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
++		"spec": map[string]interface{}{"password": "a-much-longer-real-password"},
++	}}
++
++	var innerLen int64
++	var innerHeader string
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerLen = r.ContentLength
++		innerHeader = r.Header.Get("Content-Length")
++		_, _ = io.ReadAll(r.Body)
++	})
++
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++
++	req := makeRequest(t, string(types.ApplyYAMLPatchType),
++		"spec:\n  password: <omitted>\n", "primary")
++	origLen := req.ContentLength
++	mw.ServeHTTP(httptest.NewRecorder(), req)
++
++	if innerLen == origLen {
++		t.Errorf("Content-Length not updated: still %d", innerLen)
++	}
++	if innerHeader == "" {
++		t.Errorf("Content-Length header empty")
++	}
++	if strconv.FormatInt(innerLen, 10) != innerHeader {
++		t.Errorf("ContentLength=%d vs header=%q mismatch", innerLen, innerHeader)
++	}
++}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..3babc33757c
+index 00000000000..914d28c2f38
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
-@@ -0,0 +1,126 @@
+@@ -0,0 +1,127 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3035,11 +3705,61 @@ index 00000000000..3babc33757c
 +}
 +
 +func newSensitiveUnmaskInvalidError(groupKind runtimeschema.GroupKind, name string, err error) error {
++	_ = err
 +	return apierrors.NewInvalid(
 +		groupKind,
 +		name,
-+		field.ErrorList{field.Invalid(field.NewPath(""), sensitive.MaskedValue, err.Error())},
++		field.ErrorList{field.Invalid(field.NewPath(""), sensitive.MaskedValue, "not allowed for sensitive fields without a previous value")},
 +	)
++}
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask_test.go
+new file mode 100644
+index 00000000000..89b482d8bd7
+--- /dev/null
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask_test.go
+@@ -0,0 +1,43 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package apiserver
++
++import (
++	"strings"
++	"testing"
++
++	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive"
++	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
++)
++
++func TestNewSensitiveUnmaskInvalidError(t *testing.T) {
++	err := newSensitiveUnmaskInvalidError(
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"},
++		"primary",
++		nil,
++	)
++	if err == nil {
++		t.Fatal("newSensitiveUnmaskInvalidError() returned nil")
++	}
++	msg := err.Error()
++	if !strings.Contains(msg, `Invalid value: "`+sensitive.MaskedValue+`"`) {
++		t.Fatalf("error message %q does not contain invalid masked value", msg)
++	}
++	if !strings.Contains(msg, "not allowed for sensitive fields without a previous value") {
++		t.Fatalf("error message %q does not contain expected detail", msg)
++	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go
 index 78350c135fc..01c1f3bfd3f 100644
@@ -3069,10 +3789,10 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..5444d207b85
+index 00000000000..46bdc797108
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
-@@ -0,0 +1,269 @@
+@@ -0,0 +1,320 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3092,6 +3812,7 @@ index 00000000000..5444d207b85
 +package sensitive
 +
 +import (
++	"encoding/json"
 +	"fmt"
 +	"sort"
 +
@@ -3307,13 +4028,25 @@ index 00000000000..5444d207b85
 +		}
 +
 +		oldItems, _ := oldObj.([]interface{})
++		var lookupOldByKey func(newItem interface{}) interface{}
++		if s.XListType != nil && *s.XListType == "map" && len(s.XListMapKeys) > 0 {
++			lookupOldByKey = makeListMapLookup(oldItems, s.XListMapKeys)
++		}
++
 +		if s.Items.XSensitiveData {
 +			for i := range x {
 +				if !isMaskedValue(x[i]) {
 +					continue
 +				}
-+				if i < len(oldItems) && oldItems[i] != nil {
-+					x[i] = oldItems[i]
++				var oldItem interface{}
++				if lookupOldByKey != nil {
++					oldItem = lookupOldByKey(x[i])
++				}
++				if oldItem == nil && i < len(oldItems) {
++					oldItem = oldItems[i]
++				}
++				if oldItem != nil {
++					x[i] = oldItem
 +					continue
 +				}
 +				*errs = append(*errs, fmt.Errorf("%s[%d]", path, i))
@@ -3323,12 +4056,50 @@ index 00000000000..5444d207b85
 +
 +		for i := range x {
 +			var oldItem interface{}
-+			if i < len(oldItems) {
++			if lookupOldByKey != nil {
++				oldItem = lookupOldByKey(x[i])
++			} else if i < len(oldItems) {
 +				oldItem = oldItems[i]
 +			}
 +			unmaskSensitive(x[i], oldItem, s.Items, fmt.Sprintf("%s[%d]", path, i), errs)
 +		}
 +	}
++}
++
++// makeListMapLookup builds a function that returns the matching element from oldItems for a given newItem
++// using the values of the list-map key fields.
++// Returns nil if newItem is not a map or no match found.
++func makeListMapLookup(oldItems []interface{}, keys []string) func(newItem interface{}) interface{} {
++	index := make(map[string]interface{}, len(oldItems))
++	for _, it := range oldItems {
++		m, ok := it.(map[string]interface{})
++		if !ok {
++			continue
++		}
++		key := listMapKeyString(m, keys)
++		if _, exists := index[key]; exists {
++			continue
++		}
++		index[key] = it
++	}
++	return func(newItem interface{}) interface{} {
++		m, ok := newItem.(map[string]interface{})
++		if !ok {
++			return nil
++		}
++		return index[listMapKeyString(m, keys)]
++	}
++}
++
++// listMapKeyString builds a stable string from the values of the named keys.
++// It uses JSON marshaling to provide stable encoding across scalar types (string, int, bool).
++func listMapKeyString(obj map[string]interface{}, keys []string) string {
++	parts := make([]interface{}, len(keys))
++	for i, k := range keys {
++		parts[i] = obj[k]
++	}
++	bs, _ := json.Marshal(parts)
++	return string(bs)
 +}
 +
 +func isMaskedValue(v interface{}) bool {
@@ -3344,10 +4115,10 @@ index 00000000000..5444d207b85
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
 new file mode 100644
-index 00000000000..c9a1efa7b68
+index 00000000000..c0dce69bcc7
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
-@@ -0,0 +1,975 @@
+@@ -0,0 +1,1665 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -4309,6 +5080,104 @@ index 00000000000..c9a1efa7b68
 +			},
 +			expectErr: true,
 +		},
++		{
++			name: "preserves non-sensitive updates while unmasking nested sensitive object and array fields",
++			schema: &structuralschema.Structural{
++				Properties: map[string]structuralschema.Structural{
++					"spec": {
++						Properties: map[string]structuralschema.Structural{
++							"host": {
++								Generic: structuralschema.Generic{Type: "string"},
++							},
++							"username": {
++								Generic: structuralschema.Generic{Type: "string"},
++							},
++							"credentials": {
++								Extensions: structuralschema.Extensions{XSensitiveData: true},
++							},
++							"endpoints": {
++								Items: &structuralschema.Structural{
++									Properties: map[string]structuralschema.Structural{
++										"name": {
++											Generic: structuralschema.Generic{Type: "string"},
++										},
++										"url": {
++											Generic: structuralschema.Generic{Type: "string"},
++										},
++										"secret": {
++											Extensions: structuralschema.Extensions{XSensitiveData: true},
++										},
++									},
++								},
++							},
++						},
++					},
++				},
++			},
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"host":        "db3.example.com",
++					"username":    "name",
++					"credentials": MaskedValue,
++					"endpoints": []interface{}{
++						map[string]interface{}{
++							"name":   "main",
++							"url":    "https://main2.example.com",
++							"secret": MaskedValue,
++						},
++						map[string]interface{}{
++							"name":   "replica",
++							"url":    "https://replica2.example.com",
++							"secret": MaskedValue,
++						},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"host":     "db.example.com",
++					"username": "admin",
++					"credentials": map[string]interface{}{
++						"privateKey": "real-key",
++						"token":      "real-token",
++					},
++					"endpoints": []interface{}{
++						map[string]interface{}{
++							"name":   "main",
++							"url":    "https://main.example.com",
++							"secret": "main-secret",
++						},
++						map[string]interface{}{
++							"name":   "replica",
++							"url":    "https://replica.example.com",
++							"secret": "replica-secret",
++						},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"host":     "db3.example.com",
++					"username": "name",
++					"credentials": map[string]interface{}{
++						"privateKey": "real-key",
++						"token":      "real-token",
++					},
++					"endpoints": []interface{}{
++						map[string]interface{}{
++							"name":   "main",
++							"url":    "https://main2.example.com",
++							"secret": "main-secret",
++						},
++						map[string]interface{}{
++							"name":   "replica",
++							"url":    "https://replica2.example.com",
++							"secret": "replica-secret",
++						},
++					},
++				},
++			},
++		},
 +	}
 +
 +	for _, tt := range tests {
@@ -4321,6 +5190,598 @@ index 00000000000..c9a1efa7b68
 +				t.Errorf("UnmaskSensitiveFromOld() result = %v, want %v", tt.newObj, tt.expected)
 +			}
 +		})
++	}
++}
++
++func TestUnmaskSensitiveFromOld_ListMap(t *testing.T) {
++	mapType := "map"
++	schema := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"endpoints": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XListType:    &mapType,
++							XListMapKeys: []string{"name"},
++						},
++						Items: &structuralschema.Structural{
++							Generic: structuralschema.Generic{Type: "object"},
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	tests := []struct {
++		name      string
++		newObj    map[string]interface{}
++		oldObj    map[string]interface{}
++		expected  map[string]interface{}
++		expectErr bool
++	}{
++		{
++			name: "key match restores secret across reordered items",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "b", "secret": MaskedValue},
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++						map[string]interface{}{"name": "b", "secret": "s2"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "b", "secret": "s2"},
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++		},
++		{
++			name: "new item with real value is preserved alongside unmask",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++						map[string]interface{}{"name": "c", "secret": "fresh"},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++						map[string]interface{}{"name": "c", "secret": "fresh"},
++					},
++				},
++			},
++		},
++		{
++			name: "omitted in new item without matching old produces error",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "c", "secret": MaskedValue},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "c", "secret": MaskedValue},
++					},
++				},
++			},
++			expectErr: true,
++		},
++		{
++			name: "truncated new array unmasks kept item",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++						map[string]interface{}{"name": "b", "secret": "s2"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++		},
++		{
++			name: "real value in new is preserved (no overwrite from old)",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "plain"},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "plain"},
++					},
++				},
++			},
++		},
++		{
++			name: "duplicate keys in new both unmask from same old",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++		},
++		{
++			name: "missing key field in new item produces error",
++			newObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"secret": MaskedValue},
++					},
++				},
++			},
++			oldObj: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			},
++			expected: map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"secret": MaskedValue},
++					},
++				},
++			},
++			expectErr: true,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			err := UnmaskSensitiveFromOld(tt.newObj, tt.oldObj, schema, true)
++			if (err != nil) != tt.expectErr {
++				t.Fatalf("UnmaskSensitiveFromOld() error = %v, expectErr %v", err, tt.expectErr)
++			}
++			if !reflect.DeepEqual(tt.newObj, tt.expected) {
++				t.Errorf("UnmaskSensitiveFromOld() result = %v, want %v", tt.newObj, tt.expected)
++			}
++		})
++	}
++}
++
++
++func TestUnmaskSensitiveFromOld_ListMap_CompositeKeys(t *testing.T) {
++	mapType := "map"
++	schema := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"endpoints": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XListType:    &mapType,
++							XListMapKeys: []string{"region", "name"},
++						},
++						Items: &structuralschema.Structural{
++							Generic: structuralschema.Generic{Type: "object"},
++							Properties: map[string]structuralschema.Structural{
++								"region": {Generic: structuralschema.Generic{Type: "string"}},
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	newObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"region": "us", "name": "a", "secret": MaskedValue},
++				map[string]interface{}{"region": "eu", "name": "a", "secret": MaskedValue},
++			},
++		},
++	}
++	oldObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"region": "eu", "name": "a", "secret": "eu-s"},
++				map[string]interface{}{"region": "us", "name": "a", "secret": "us-s"},
++			},
++		},
++	}
++	expected := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"region": "us", "name": "a", "secret": "us-s"},
++				map[string]interface{}{"region": "eu", "name": "a", "secret": "eu-s"},
++			},
++		},
++	}
++
++	if err := UnmaskSensitiveFromOld(newObj, oldObj, schema, true); err != nil {
++		t.Fatalf("UnmaskSensitiveFromOld error = %v", err)
++	}
++	if !reflect.DeepEqual(newObj, expected) {
++		t.Errorf("result = %v, want %v", newObj, expected)
++	}
++}
++
++func TestUnmaskSensitiveFromOld_ListMap_Nested(t *testing.T) {
++	mapType := "map"
++	innerEndpoints := structuralschema.Structural{
++		Generic: structuralschema.Generic{Type: "array"},
++		Extensions: structuralschema.Extensions{
++			XListType:    &mapType,
++			XListMapKeys: []string{"name"},
++		},
++		Items: &structuralschema.Structural{
++			Generic: structuralschema.Generic{Type: "object"},
++			Properties: map[string]structuralschema.Structural{
++				"name":   {Generic: structuralschema.Generic{Type: "string"}},
++				"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++			},
++		},
++	}
++
++	schema := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"regions": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XListType:    &mapType,
++							XListMapKeys: []string{"region"},
++						},
++						Items: &structuralschema.Structural{
++							Generic: structuralschema.Generic{Type: "object"},
++							Properties: map[string]structuralschema.Structural{
++								"region":    {Generic: structuralschema.Generic{Type: "string"}},
++								"endpoints": innerEndpoints,
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	newObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"regions": []interface{}{
++				map[string]interface{}{
++					"region": "eu",
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "b", "secret": MaskedValue},
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++					},
++				},
++			},
++		},
++	}
++	oldObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"regions": []interface{}{
++				map[string]interface{}{
++					"region": "eu",
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "eu-a"},
++						map[string]interface{}{"name": "b", "secret": "eu-b"},
++					},
++				},
++			},
++		},
++	}
++	expected := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"regions": []interface{}{
++				map[string]interface{}{
++					"region": "eu",
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "b", "secret": "eu-b"},
++						map[string]interface{}{"name": "a", "secret": "eu-a"},
++					},
++				},
++			},
++		},
++	}
++
++	if err := UnmaskSensitiveFromOld(newObj, oldObj, schema, true); err != nil {
++		t.Fatalf("UnmaskSensitiveFromOld error = %v", err)
++	}
++	if !reflect.DeepEqual(newObj, expected) {
++		t.Errorf("result = %v, want %v", newObj, expected)
++	}
++}
++
++func TestUnmaskSensitiveFromOld_ListMap_FallbackToIndex(t *testing.T) {
++	mapType := "map"
++	atomicType := "atomic"
++	build := func(listType *string, keys []string) *structuralschema.Structural {
++		return &structuralschema.Structural{
++			Properties: map[string]structuralschema.Structural{
++				"spec": {
++					Properties: map[string]structuralschema.Structural{
++						"endpoints": {
++							Generic: structuralschema.Generic{Type: "array"},
++							Extensions: structuralschema.Extensions{
++								XListType:    listType,
++								XListMapKeys: keys,
++							},
++							Items: &structuralschema.Structural{
++								Generic: structuralschema.Generic{Type: "object"},
++								Properties: map[string]structuralschema.Structural{
++									"name":   {Generic: structuralschema.Generic{Type: "string"}},
++									"secret": {Extensions: structuralschema.Extensions{XSensitiveData: true}},
++								},
++							},
++						},
++					},
++				},
++			},
++		}
++	}
++
++	expected := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "a", "secret": "s1"},
++			},
++		},
++	}
++
++	tests := []struct {
++		name   string
++		schema *structuralschema.Structural
++	}{
++		{name: "list-type map with empty keys falls back to index", schema: build(&mapType, nil)},
++		{name: "list-type atomic uses index", schema: build(&atomicType, nil)},
++		{name: "list-type unset uses index", schema: build(nil, nil)},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			newObj := map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": MaskedValue},
++					},
++				},
++			}
++			oldObj := map[string]interface{}{
++				"spec": map[string]interface{}{
++					"endpoints": []interface{}{
++						map[string]interface{}{"name": "a", "secret": "s1"},
++					},
++				},
++			}
++			if err := UnmaskSensitiveFromOld(newObj, oldObj, tt.schema, true); err != nil {
++				t.Fatalf("error = %v", err)
++			}
++			if !reflect.DeepEqual(newObj, expected) {
++				t.Errorf("result = %v, want %v", newObj, expected)
++			}
++		})
++	}
++}
++
++
++func TestUnmaskSensitiveFromOld_ListMap_WholeItemSensitive_IndexFallback(t *testing.T) {
++	mapType := "map"
++	schema := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"endpoints": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XListType:    &mapType,
++							XListMapKeys: []string{"name"},
++						},
++						Items: &structuralschema.Structural{
++							Generic:    structuralschema.Generic{Type: "object"},
++							Extensions: structuralschema.Extensions{XSensitiveData: true},
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Generic: structuralschema.Generic{Type: "string"}},
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	newObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{MaskedValue, MaskedValue},
++		},
++	}
++	oldObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "a", "secret": "s1"},
++				map[string]interface{}{"name": "b", "secret": "s2"},
++			},
++		},
++	}
++	expected := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "a", "secret": "s1"},
++				map[string]interface{}{"name": "b", "secret": "s2"},
++			},
++		},
++	}
++
++	if err := UnmaskSensitiveFromOld(newObj, oldObj, schema, true); err != nil {
++		t.Fatalf("UnmaskSensitiveFromOld error = %v", err)
++	}
++	if !reflect.DeepEqual(newObj, expected) {
++		t.Errorf("result = %v, want %v", newObj, expected)
++	}
++}
++
++
++func TestUnmaskSensitiveFromOld_ListMap_WholeArraySensitive(t *testing.T) {
++	mapType := "map"
++	schema := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"endpoints": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XSensitiveData: true,
++							XListType:      &mapType,
++							XListMapKeys:   []string{"name"},
++						},
++						Items: &structuralschema.Structural{
++							Generic: structuralschema.Generic{Type: "object"},
++							Properties: map[string]structuralschema.Structural{
++								"name":   {Generic: structuralschema.Generic{Type: "string"}},
++								"secret": {Generic: structuralschema.Generic{Type: "string"}},
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	newObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": MaskedValue,
++		},
++	}
++	oldObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "a", "secret": "s1"},
++				map[string]interface{}{"name": "b", "secret": "s2"},
++			},
++		},
++	}
++	expected := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": []interface{}{
++				map[string]interface{}{"name": "a", "secret": "s1"},
++				map[string]interface{}{"name": "b", "secret": "s2"},
++			},
++		},
++	}
++
++	if err := UnmaskSensitiveFromOld(newObj, oldObj, schema, true); err != nil {
++		t.Fatalf("UnmaskSensitiveFromOld error = %v", err)
++	}
++	if !reflect.DeepEqual(newObj, expected) {
++		t.Errorf("result = %v, want %v", newObj, expected)
++	}
++}
++
++func TestUnmaskSensitiveFromOld_ListMap_WholeArraySensitive_NoOld(t *testing.T) {
++	mapType := "map"
++	schema := &structuralschema.Structural{
++		Properties: map[string]structuralschema.Structural{
++			"spec": {
++				Properties: map[string]structuralschema.Structural{
++					"endpoints": {
++						Generic: structuralschema.Generic{Type: "array"},
++						Extensions: structuralschema.Extensions{
++							XSensitiveData: true,
++							XListType:      &mapType,
++							XListMapKeys:   []string{"name"},
++						},
++						Items: &structuralschema.Structural{
++							Generic: structuralschema.Generic{Type: "object"},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	newObj := map[string]interface{}{
++		"spec": map[string]interface{}{
++			"endpoints": MaskedValue,
++		},
++	}
++
++	err := UnmaskSensitiveFromOld(newObj, nil, schema, true)
++	if err == nil {
++		t.Fatalf("expected error, got nil")
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go
@@ -4870,4 +6331,3 @@ index eab90b3fa3b..eff7f068cac 100644
 +
  // DefaultContext is a simple implementation of Context for a slice of bytes.
  type DefaultContext []byte
- 
