@@ -165,6 +165,7 @@ read:
     - gateway.networking.k8s.io/listenersets
     - gateway.networking.k8s.io/referencegrants
     - gateway.networking.k8s.io/tcproutes
+    - gateway.networking.k8s.io/udproutes
     - gateway.networking.k8s.io/tlsroutes
     - limitranges
     - metrics.k8s.io/nodes
@@ -223,6 +224,7 @@ read-write:
     - gateway.networking.k8s.io/listenersets
     - gateway.networking.k8s.io/referencegrants
     - gateway.networking.k8s.io/tcproutes
+    - gateway.networking.k8s.io/udproutes
     - gateway.networking.k8s.io/tlsroutes
     - networking.k8s.io/ingresses
     - persistentvolumeclaims

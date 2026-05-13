@@ -140,6 +140,7 @@
   - listenersets
   - referencegrants
   - tcproutes
+  - udproutes
   - tlsroutes
   verbs:
   {{- include "user_authz_verbs" $mode }}
