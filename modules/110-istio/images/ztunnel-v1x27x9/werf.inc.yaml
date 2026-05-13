@@ -1,0 +1,69 @@
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /src/ztunnel/bin/ztunnel
+    to: /usr/local/bin/ztunnel
+    owner: 64535
+    group: 64535
+    before: install
+  - from: {{ index $.Images "libs/glibc-v2.41" }}
+    add: /lib64/libc.so.6
+    to: /lib64/libc.so.6
+    before: install
+  - from: {{ index $.Images "libs/glibc-v2.41" }}
+    add: /lib64/libm.so.6
+    to: /lib64/libm.so.6
+    before: install
+  - from: {{ index $.Images "libs/glibc-v2.41" }}
+    add: /lib64/ld-linux-x86-64.so.2
+    to: /lib64/ld-linux-x86-64.so.2
+    before: install
+  - from: {{ index $.Images "libs/xz-v5.8.1" }}
+    add: /usr/lib/libc.so
+    to: /lib64/libc.so
+    before: install
+  - from: {{ index $.Images "tools/gcc-gnu-releases/gcc-14.2.0" }}
+    add: /usr/lib/libgcc_s.so.1
+    to: /lib64/libgcc_s.so.1
+    before: install
+imageSpec:
+  config:
+    user: "64535:64535"
+    env:  
+      ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
+    entrypoint: ["/usr/local/bin/ztunnel"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: common/alt-p11-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/ztunnel
+  to: /src/ztunnel
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
+  install:
+  - export CARGO_NET_GIT_FETCH_WITH_CLI=true
+  - cd /src/ztunnel
+  - |
+    cargo build \
+    --release 
+  - strip /src/ztunnel/out/rust/release/ztunnel
+  - mkdir -p /src/ztunnel/bin
+  - mv /src/ztunnel/out/rust/release/ztunnel /src/ztunnel/bin/ztunnel
+#=====================================================================================================
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- url: {{ .SOURCE_REPO }}/istio/ztunnel
+  tag: {{ $istioVersion }}
+  to: /src/ztunnel
+---
