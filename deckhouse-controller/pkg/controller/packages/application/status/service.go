@@ -129,7 +129,7 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	// all other conditions (Downloaded, ReadyOnFilesystem, ReadyInRuntime) are also True.
 	//
 	// And this means we can commit the resulted version.
-	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionReadyInCluster) {
+	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionScaled) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
 
 		if packageStatus.Settings != nil {

@@ -20,6 +20,7 @@ spec:
       served: true
       storage: false
       deprecated: true
+      deprecationWarning: "CustomPrometheusRules is deprecated; use ObservabilityMetricsRulesGroup or ClusterObservabilityMetricsRulesGroup instead."
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -82,4 +83,6 @@ spec:
     - name: v1
       served: true
       storage: true
+      deprecated: true
+      deprecationWarning: "CustomPrometheusRules is deprecated; use ObservabilityMetricsRulesGroup or ClusterObservabilityMetricsRulesGroup instead."
       schema: *schema

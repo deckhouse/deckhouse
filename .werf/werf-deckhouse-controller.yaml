@@ -83,6 +83,9 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
+{{- if eq $.Env "CSE" }}
+  - export DEFAULT_RELEASE_CHANNEL=LTS
+{{- end }}
   - D8_VERSION=${CI_COMMIT_TAG} DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }} ./go-build.sh
   - mv deckhouse-controller /out
   - cp /out/deckhouse-controller /out/caps-deckhouse-controller

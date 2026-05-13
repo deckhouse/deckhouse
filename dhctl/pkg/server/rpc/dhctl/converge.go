@@ -27,7 +27,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -179,12 +178,12 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -223,7 +222,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		err = cache.InitWithOptions(
 			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
@@ -238,12 +237,15 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           tmpDir,
+		DownloadDir:      s.params.DownloadDirConfig.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
-	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor)
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+		WithUseTfCache(opts.Cache.UseTfCache).
+		WithDebug(s.params.IsDebug)
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {
@@ -266,6 +268,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                tmpDir,
 		Logger:                loggerFor,
 		InfrastructureContext: infrastructureContext,
+		Options:               opts,
 	}
 
 	convergeParams := &converge.Params{
@@ -294,6 +297,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                     tmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		Options:                    opts,
 	}
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer

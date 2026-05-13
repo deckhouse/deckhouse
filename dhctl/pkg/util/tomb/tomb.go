@@ -60,6 +60,14 @@ func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	log.DebugF("teardown callback '%s' added, callbacks in queue: %d\n", name, len(c.data))
 }
 
+func (c *teardownCallbacks) prependOnShutdown(name string, cb func()) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.data = append([]*callback{{Name: name, Do: cb}}, c.data...)
+	log.DebugF("teardown callback '%s' prepended, callbacks in queue: %d\n", name, len(c.data))
+}
+
 func (c *teardownCallbacks) replaceOnShutdown(name string, cb func()) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -162,9 +170,16 @@ func (b BeforeInterrupted) Handle(sig os.Signal) {
 	}
 }
 
+// signalNotifyHook is invoked from WaitForProcessInterruption right after
+// signal.Notify has been registered. It is a no-op in production; tests
+// override it to synchronize on Notify registration and avoid sending a
+// signal before the handler is wired up.
+var signalNotifyHook = func() {}
+
 func WaitForProcessInterruption(beforeInterrupted BeforeInterrupted) {
 	interruptCh := make(chan os.Signal, 1)
 	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
+	signalNotifyHook()
 
 	for {
 		s, ok := <-interruptCh
@@ -213,11 +228,8 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	close(callbacks.interruptedCh)
 
 	// Run all registered teardown callbacks and print an explanation at the end.
-	callbacks.data = append([]*callback{{
-		Name: "Shutdown message",
-		Do: func() {
-			log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
-		},
-	}}, callbacks.data...)
+	callbacks.prependOnShutdown("Shutdown message", func() {
+		log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))
+	})
 	Shutdown(exitCode)
 }

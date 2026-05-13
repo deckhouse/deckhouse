@@ -23,6 +23,7 @@ The [console](/modules/console/) module's web UI provides access to cluster mana
    - [Node management](#node-management)
    - [Multitenancy](#multitenancy)
    - [Network](#network)
+   - [Storage](#storage)
    - [Security](#security)
    - [Monitoring](#monitoring)
    - [Logging](#logging)
@@ -58,7 +59,17 @@ The "Overview" subsection provides key information about the cluster and its com
 
 ### Updates
 
-The "Updates" subsection provides information about available releases.
+The "Updates" subsection contains information about releases.
+
+![Releases](../../images/console/releases.png)
+
+You can also view API information in Swagger format.
+
+![Swagger API](../../images/console/swagger-1.png)
+
+![Swagger API](../../images/console/swagger-2.png)
+
+![Swagger API](../../images/console/swagger-3.png)
 
 ### Modules
 
@@ -81,6 +92,14 @@ Be cautious when making changes.
 
 ![Global settings](../../images/console/global_settings.png)
 
+### Kubernetes
+
+The "Kubernetes" subsection collects basic information about the Kubernetes cluster.
+
+![Modules](../../images/console/system-management-deckhouse-cluster-configuration.png)
+
+![Modules](../../images/console/system-management-deckhouse-cluster-configuration-cloud.png)
+
 ## Node management
 
 ### “Node groups” subsection
@@ -96,7 +115,7 @@ The node creation form includes:
 The lower part of the form provides advanced settings, including update policies, node template, system parameters,
 and optional Chaos Monkey settings for advanced configuration.
 
-![Node groups](../../images/console/node_group.png)
+![Node groups](../../images/console/system-management-nodes-node-groups-ftname-worker.png)
 
 A node group card displays:
 
@@ -105,15 +124,45 @@ A node group card displays:
 - Load monitoring (CPU, memory, disk)
 - Taints and labels
 
+![Node groups](../../images/console/system-management-nodes-node-groups-worker.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-worker-2.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-worker-3.png)
+
 Taints and labels are also shown separately, as they help control Pod placement and node behavior.
 
 ![A node group card](../../images/console/master_card.png)
+
+Click **Create** in the upper right corner to add new node groups.
+
+![Node groups](../../images/console/system-management-nodes-node-groups-ftname-worker-2.png)
+
+On the new node group creation screen, you can configure all parameters for the group being created.
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-2.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-3.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-4.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-5.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-6.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-7.png)
+
+![Node groups](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-8.png)
 
 ### “Machine classes” subsection
 
 This subsection lets you manage the configurations of machines used in the cluster, with sorting options for the list.
 
-![Machine classes](../../images/console/mashine_class.png)
+![Machine classes](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
+
+![Machine classes](../../images/console/system-management-dvpinstanceclasses-deckhouse-io-worker.png)
 
 The “Add machine class” menu lets you define parameters for a new machine configuration.
 The configuration section includes the class name, while the resource block allows you to set:
@@ -131,7 +180,7 @@ Additional subnets and labels can also be added for more flexible infrastructure
 
 ![Add machine class](../../images/console/add_class.png)
 
-### “All group nodes” subsection
+### “Nodes” subsection
 
 This subsection provides a summary view of all cluster nodes, with filtering and sorting by various characteristics.
 Each node card displays:
@@ -148,7 +197,7 @@ Each node card displays:
 Graphs for CPU, memory, disk, and network usage are also available to help assess node performance.
 The **Cordon** and **Cordon+Drain** buttons let you manage node availability in the cluster.
 
-![All group nodes](../../images/console/groups_nodes.png)
+![Nodes](../../images/console/system-management-nodes-nodes.png)
 
 ### “Static machines” subsection
 
@@ -173,21 +222,6 @@ Fields are also available for customizing the SSH port and adding extra SSH argu
 
 ## Multitenancy
 
-### “Project templates” subsection
-
-This subsection is used to create project templates.
-Default templates include common usage scenarios and serve as examples of functionality.
-To add a new template, click **Create project template**.
-
-![Templates](../../images/console/examples.png)
-
-The "New project template" form lets you specify the project name, as well as add labels and annotations for identification.
-It has two tabs:
-- "OpenAPI schema" for describing value specifications in JSON format,
-- "Project resource template" for defining Helm-compatible resources to manage the project's environment.
-
-![New project template](../../images/console/examples_new.png)
-
 ### “Projects” subsection
 
 This subsection is used to create a new project based on a preconfigured template
@@ -208,7 +242,90 @@ The middle section lets you select the project template and leave a comment.
 
 The lower section contains input fields for required parameters and a preview of the template structure.
 
-![Create project](../../images/console/projects_new.png)
+![New project](../../images/console/system-management-multitenancy-projects-new-spec.png)
+
+![New project](../../images/console/system-management-multitenancy-projects-new-spec-2.png)
+
+### “Project templates” subsection
+
+This subsection is used to create project templates.
+Default templates include common usage scenarios and serve as examples of functionality.
+To add a new template, click **Create project template**.
+
+![Templates](../../images/console/system-management-projecttemplates-deckhouse-io.png)
+
+The "New project template" form lets you specify the project name, as well as add labels and annotations for identification.
+It has two tabs:
+- "OpenAPI schema" for describing value specifications in JSON format,
+- "Project resource template" for defining Helm-compatible resources to manage the project's environment.
+
+![New project template](../../images/console/system-management-multitenancy-project-templates-default-spec.png)
+
+![New project template](../../images/console/system-management-multitenancy-project-templates-default-spec-template.png)
+
+You can create a template based on an existing one.
+
+![New project template](../../images/console/system-management-multitenancy-project-templates-new-spec-copyfrom-default.png)
+
+### User namespaces
+
+This subsection lets you manage user namespaces of projects.
+
+The "Overview" page shows the overall status of the namespace.
+
+![Namespace overview](../../images/console/projects-user-namespaces-commander-project-1.png)
+
+Here you can manage parameters of Deployments and other cluster objects.
+
+![Deployment settings](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-affinity.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-anti-affinity.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-domains.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-nodes-2.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-nodes-3.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-nodes.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-watchtower-apps-deployments-new-spec-containers-c-new.png)
+
+![Deployment settings](../../images/console/projects-user-namespaces-watchtower-apps-deployments-watchtower-spec-containers-c-0.png)
+
+You can also configure resource limits and quotas.
+
+![Limits](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core-new-2.png)
+
+![Limits](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core-new.png)
+
+![Limits](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
+
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-pods.png)
+
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
+
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
+
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core.png)
+
+## Access
+
+### “User operations” subsection
+
+Provides an interface for managing users.
+
+![User operations](../../images/console/operation-with-users-1.png)
+
+![User operations](../../images/console/operation-with-users-2.png)
+
+![User operations](../../images/console/operation-with-users-3.png)
+
+![User operations](../../images/console/operation-with-users-4.png)
+
+![User operations](../../images/console/operation-with-users-5.png)
+
+![User operations](../../images/console/operation-with-users-6.png)
 
 ## Network
 
@@ -236,6 +353,32 @@ Click **Add** to choose a new inlet type for the controller. Available options:
 - LoadBalancer with Proxy Protocol.
 
 ![Ingress](../../images/console/ingress.png)
+
+## Storage
+
+### “Storage classes” subsection
+
+This subsection is used to manage storage classes.
+
+![Storage classes](../../images/console/system-management-storage-storage-classes.png)
+
+### “Persistent volume” subsection
+
+This subsection is used to manage PersistentVolumes.
+
+![Storage classes](../../images/console/system-management-persistentvolumes-core.png)
+
+### “Local volumes” subsection
+
+This subsection is used to manage local volumes. It includes four nested areas for pools, volume groups, logical volumes, and block devices.
+
+![Pools](../../images/console/system-management-storage-lvm-replicatedstoragepools.png)
+
+![Volume groups](../../images/console/system-management-storage-lvm-volume-groups.png)
+
+![Logical volumes](../../images/console/system-management-storage-lvm-logical-volumes.png)
+
+![Block devices](../../images/console/system-management-blockdevices-storage-deckhouse-io.png)
 
 ## Security
 

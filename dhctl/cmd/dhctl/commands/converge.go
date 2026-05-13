@@ -23,6 +23,7 @@ import (
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -35,16 +36,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		tmpDir := app.TmpDirName
+		tmpDir := opts.Global.TmpDir
 		logger := log.GetDefaultLogger()
-		isDebug := app.IsDebug
+		isDebug := opts.Global.IsDebug
 
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
@@ -52,8 +53,8 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		params := app.GetProviderParams(loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -62,6 +63,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
+			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          isDebug,
@@ -84,12 +86,13 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			TmpDir:          tmpDir,
 			Logger:          logger,
 			IsDebug:         isDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
 
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
 		cacheIdentity := ""
-		if app.KubeConfigInCluster {
+		if opts.Kube.InCluster {
 			cacheIdentity = "in-cluster"
 		}
 		if sshProviderInitializer != nil {
@@ -106,10 +109,10 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		if app.KubeConfig != "" {
+		if opts.Kube.Config != "" {
 			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
-				app.KubeConfig,
-				app.KubeConfigContext,
+				opts.Kube.Config,
+				opts.Kube.ConfigContext,
 			)
 		}
 		converger.CacheID = cacheIdentity
@@ -125,17 +128,17 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	})
 }
 
-func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineAutoConvergeFlags(cmd, &opts.AutoConverge)
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		tmpDir := app.TmpDirName
+		tmpDir := opts.Global.TmpDir
 		logger := log.GetDefaultLogger()
-		isDebug := app.IsDebug
+		isDebug := opts.Global.IsDebug
 
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
@@ -143,8 +146,8 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		params := app.GetProviderParams(loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -153,6 +156,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
+			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          isDebug,
@@ -175,18 +179,19 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			TmpDir:          tmpDir,
 			Logger:          logger,
 			IsDebug:         isDebug,
-			DirectoryConfig: app.GetDirConfig(),
+			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
 		})
 
-		return converger.AutoConverge(ctx, app.AutoConvergeListenAddress, app.ApplyInterval)
+		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
 	})
 }
 
-func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
-	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
+func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd, &opts.Converge)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -198,20 +203,21 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		params := app.GetProviderParams(loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
 			}
 		}
 
-		tmpDir := app.TmpDirName
+		tmpDir := opts.Global.TmpDir
 		loggerFor := log.GetDefaultLogger()
-		isDebug := app.IsDebug
+		isDebug := opts.Global.IsDebug
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
+			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           loggerFor,
 			IsDebug:          isDebug,
@@ -230,15 +236,16 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 				},
 				SkipChangesOnDeny: true,
 			},
-			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
+			CheckHasTerraformStateBeforeMigration: opts.Converge.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
 			TmpDir:                                tmpDir,
 			Logger:                                loggerFor,
 			IsDebug:                               isDebug,
-			DirectoryConfig:                       app.GetDirConfig(),
+			DirectoryConfig:                       opts.DirConfig(),
+			Options:                               opts,
 		})
 		cacheIdentity := ""
-		if app.KubeConfigInCluster {
+		if opts.Kube.InCluster {
 			cacheIdentity = "in-cluster"
 		}
 		if sshProviderInitializer != nil {
@@ -255,10 +262,10 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		if app.KubeConfig != "" {
+		if opts.Kube.Config != "" {
 			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
-				app.KubeConfig,
-				app.KubeConfigContext,
+				opts.Kube.Config,
+				opts.Kube.ConfigContext,
 			)
 		}
 		converger.CacheID = cacheIdentity

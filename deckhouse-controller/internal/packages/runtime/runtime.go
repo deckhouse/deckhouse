@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -38,8 +39,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
-	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
+	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
+	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
@@ -55,6 +57,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -63,7 +66,7 @@ import (
 const (
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	kubernetesVersionValue  = "kubernetesVersion"
-	deckhouseVersionValue   = "version"
+	deckhouseVersionValue   = "deckhouseVersion"
 
 	runtimeTracer = "package-runtime"
 )
@@ -83,7 +86,8 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
-	installer        installerI         // Downloads and mounts package images
+	appDeployer      deployerI          // Deploys and undeploys application package images
+	moduleDeployer   deployerI          // Deploys and undeploys module package images
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -103,11 +107,11 @@ type Runtime struct {
 	logger *log.Logger
 }
 
-// installerI abstracts package image operations (download, mount, unmount).
-type installerI interface {
-	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
-	Install(ctx context.Context, downloaded, deployed, name, version string) error
-	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
+// deployerI abstracts package image deployment to and removal from the filesystem.
+type deployerI interface {
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Undeploy(ctx context.Context, deployedName string, keep bool) error
+	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
 
 // moduleManagerI provides access to global values for version getters and bootstrap checks.
@@ -133,14 +137,20 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.status = status.NewService()
 
 	reg := registry.NewService(dc, logger)
+	downloadedDir := d8env.GetDownloadedModulesDir()
+
+	appsDir := filepath.Join(downloadedDir, "apps")
+	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.installer = symlinkinstaller.NewInstaller(reg, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.installer = erofsinstaller.NewInstaller(reg, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
@@ -166,7 +176,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		ScheduleManager:   r.scheduleManager,
 		TaskBuilder:       r,
 		QueueService:      r.queueService,
-	}, r.logger).Start()
+	}, r.logger)
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
@@ -402,6 +412,10 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 			return nil, fmt.Errorf("invalid deckhouse version")
 		}
 
+		if version == "dev" {
+			version = "v2.0.0"
+		}
+
 		return semver.NewVersion(version)
 	}
 
@@ -478,6 +492,8 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // schedule and disable events from the scheduler and dispatches them to the
 // appropriate handler, driving the enable/disable lifecycle for all packages.
 func (r *Runtime) Run() {
+	r.hookEventHandler.Start()
+
 	go func() {
 		for event := range r.scheduler.Ch() {
 			switch event.Kind {
@@ -550,11 +566,11 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
 	}
 }
 
@@ -587,14 +603,49 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
+// PreservePackage identifies one downloaded package version to preserve during cleanup.
+type PreservePackage struct {
+	// Name is the downloaded package directory name.
+	Name string
+	// Version is the downloaded package version name.
+	Version string
+	// Repository is the downloaded repository directory name.
+	Repository string
+}
+
+// Cleanup removes deployed packages that are not listed in preserve from both app and module deployers.
+func (r *Runtime) Cleanup(ctx context.Context, preserve []PreservePackage) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	converted := make([]deployer.PreservePackage, 0, len(preserve))
+	for _, packageVersion := range preserve {
+		converted = append(converted, deployer.PreservePackage{
+			Name:       packageVersion.Name,
+			Repository: packageVersion.Repository,
+			Version:    packageVersion.Version,
+		})
+	}
+
+	if err := r.appDeployer.Cleanup(ctx, converted); err != nil {
+		r.logger.Warn("cleanup apps failed", log.Err(err))
+		return
+	}
+}
+
 // Status returns package status service for external access
 func (r *Runtime) Status() *status.Service {
 	return r.status
 }
 
-// Scheduler returns package scheduler for external access
-func (r *Runtime) Scheduler() *schedule.Scheduler {
-	return r.scheduler
+// PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.
+func (r *Runtime) PauseScheduler() {
+	r.scheduler.Pause()
+}
+
+// ResumeScheduler resumes the scheduler after a previous pause.
+func (r *Runtime) ResumeScheduler() {
+	r.scheduler.Resume()
 }
 
 // CheckConstraints checks constraints in scheduler

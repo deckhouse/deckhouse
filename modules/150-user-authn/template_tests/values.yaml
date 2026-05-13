@@ -1,5 +1,9 @@
 userAuthn:
   internal:
+    publishAPI:
+      enabled: false
+      https:
+        mode: SelfSigned
     selfSignedCA: {}
     dexClientCRDs: []
     dexUsersCRDs: []

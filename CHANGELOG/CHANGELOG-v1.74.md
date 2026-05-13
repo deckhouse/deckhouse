@@ -205,6 +205,7 @@
  - **[network-gateway]** Fixed werf import syntax for compatibility with older werf versions. [#19276](https://github.com/deckhouse/deckhouse/pull/19276)
  - **[node-local-dns]** Return stale-dns-connections-cleaner [#18707](https://github.com/deckhouse/deckhouse/pull/18707)
     An additional service daemonset will be added.
+ - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19657](https://github.com/deckhouse/deckhouse/pull/19657)
  - **[node-manager]** Fix panic in cluster-autoscaler caused by nil pointer dereference during node removal simulation. [#17924](https://github.com/deckhouse/deckhouse/pull/17924)
  - **[node-manager]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[node-manager]** It fixes issues in the DaemonSet manifest for fencing module. [#17087](https://github.com/deckhouse/deckhouse/pull/17087)

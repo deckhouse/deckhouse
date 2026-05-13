@@ -43,7 +43,7 @@
    EOF
    ```
 
-1. Включите выдачу kubeconfig через API. Откройте настройки модуля `user-authn` (создайте ресурс ModuleConfig `user-authn`, если его нет):
+1. Включите выдачу kubeconfig через API. Откройте настройки модуля `user-authn` (создайте ресурс [ModuleConfig](../../../documentation/v1/reference/api/cr.html#moduleconfig) `user-authn`, если его нет):
 
    ```shell
    d8 k edit mc user-authn

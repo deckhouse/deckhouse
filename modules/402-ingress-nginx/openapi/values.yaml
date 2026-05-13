@@ -76,7 +76,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.10", "1.12", "1.14"]
+                  x-examples: ["1.12", "1.14", "1.15"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -92,7 +92,7 @@ properties:
                   type: string
                   enum: ["NoIsolation", "IsolatedFilesystem", "IsolatedProcess"]
                   description: |
-                    Selects the validation isolation mode for controller version 1.14.
+                    Selects the validation isolation mode for controller versions 1.14 and 1.15.
                 controllerPodsAdditionalAnnotations:
                   type: object
                   additionalProperties:
@@ -376,11 +376,6 @@ properties:
                 controllerLogLevel:
                   type: string
                   description: "Defines the verbosity level for the ingress controller logs."
-                nginxProfilingEnabled:
-                  type: boolean
-                  default: false
-                  description: |
-                    Enables nginx memory profiling.
       externalIngressClasses:
         type: array
         default: []

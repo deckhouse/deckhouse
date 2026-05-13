@@ -1,10 +1,14 @@
 positive:
   configValues:
     - apiserver:
-        loadBalancer:
-          sourceRanges:
-          - 192.168.0.0/24
-          port: 2533
+        publishAPI:
+          loadBalancer:
+            enabled: true
+            sourceRanges:
+            - 192.168.0.0/24
+            port: 2533
+            annotations:
+              service.beta.kubernetes.io/aws-load-balancer-type: nlb
     - etcd:
         backup:
           cronSchedule: "0 0 * * *"

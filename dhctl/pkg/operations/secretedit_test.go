@@ -44,7 +44,7 @@ data:
 `
 )
 
-func EditMock(data []byte, _ *directoryconfig.DirectoryConfig) ([]byte, error) {
+func EditMock(data []byte, _ *directoryconfig.DirectoryConfig, _ EditOptions) ([]byte, error) {
 	newData := string(data) + "test: \"25\"\n"
 	return []byte(newData), nil
 }
@@ -66,6 +66,7 @@ func TestSecretEdit(t *testing.T) {
 			f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml",
 			map[string]string{"name": "test"},
 			nil,
+			EditOptions{},
 		)
 		require.NoError(t, err)
 

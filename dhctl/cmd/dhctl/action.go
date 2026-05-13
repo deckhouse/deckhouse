@@ -25,7 +25,7 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -56,12 +56,13 @@ type actionIniter struct {
 	logFileMutex sync.Mutex
 	logFile      string
 
+	opts               *options.Options
 	params             *actionIniterParams
 	registerOnShutdown registerOnShutdownFunc
 }
 
-func newActionIniter() *actionIniter {
-	return &actionIniter{}
+func newActionIniter(opts *options.Options) *actionIniter {
+	return &actionIniter{opts: opts}
 }
 
 func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
@@ -160,7 +161,7 @@ func (i *actionIniter) prepareStateCacheDirPath(stateCacheDir string, c *kingpin
 		return fmt.Errorf("State cache dir '%s' cannot be a root directory", stateCacheDir)
 	}
 
-	if app.GetDefaultCacheDir() == absPath {
+	if options.DefaultTmpDir() == absPath {
 		absPath = tmpDir
 	}
 
@@ -170,7 +171,7 @@ func (i *actionIniter) prepareStateCacheDirPath(stateCacheDir string, c *kingpin
 		}
 	}
 
-	app.SetCacheDir(absPath)
+	i.opts.Cache.Dir = absPath
 	return nil
 }
 
@@ -220,7 +221,7 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 		}
 	}
 
-	app.SetTmpDir(absPath)
+	i.opts.Global.TmpDir = absPath
 	return absPath, nil
 }
 
@@ -280,10 +281,11 @@ func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir st
 
 func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string) onShutdownFunc {
 	clearTmpParams := cache.ClearTmpParams{
-		IsDebug:        i.params.isDebug,
-		DefaultTmpDir:  app.GetDefaultTmpDir(),
-		TmpDir:         tmpDir,
-		LoggerProvider: log.GetDefaultLoggerProvider(),
+		IsDebug:          i.params.isDebug,
+		DefaultTmpDir:    options.DefaultTmpDir(),
+		DownloadCacheDir: i.opts.Global.DownloadCacheDir,
+		TmpDir:           tmpDir,
+		LoggerProvider:   log.GetDefaultLoggerProvider(),
 	}
 
 	// _server is special command for running action eg bootstrap as standalone process
@@ -322,7 +324,7 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
-	log.SetDebugEnabled(app.IsDebug)
+	log.SetDebugEnabled(i.params.isDebug)
 	log.InitLogger(i.params.loggerType)
 	if i.params.doNotWriteDebugFile {
 		return doNothingOnShutdownFunc, nil

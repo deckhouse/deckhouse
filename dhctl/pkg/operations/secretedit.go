@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -34,7 +33,11 @@ import (
 
 const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
-var abstractEditing = Edit
+// editFunc allows tests to swap the editor with a deterministic mock without
+// reaching for package-level state (see secretedit_test.go).
+type editFunc func([]byte, *directoryconfig.DirectoryConfig, EditOptions) ([]byte, error)
+
+var abstractEditing editFunc = Edit
 
 var emptySecret = &v1.Secret{
 	TypeMeta: metav1.TypeMeta{
@@ -51,6 +54,7 @@ func SecretEdit(
 	kubeCl *client.KubernetesClient, name string, namespace string, secret string, dataKey string,
 	labels map[string]string,
 	dirConfig *directoryconfig.DirectoryConfig,
+	editOpts EditOptions,
 ) error {
 	config, err := kubeCl.CoreV1().Secrets(namespace).Get(ctx, secret, metav1.GetOptions{})
 	switch {
@@ -77,13 +81,13 @@ func SecretEdit(
 	if err != nil {
 		return err
 	}
-	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, dirConfig) })
+	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, dirConfig, editOpts) })
 	if err != nil {
 		return err
 	}
 
 	// This flag is validating by webhooks to allow editing unsafe resource's fields.
-	if app.SanityCheck {
+	if editOpts.SanityCheck {
 		addUnsafeAnnotation(config)
 	}
 
@@ -113,7 +117,7 @@ func SecretEdit(
 						return err
 					}
 
-					if app.SanityCheck {
+					if editOpts.SanityCheck {
 						log.InfoLn("Remove allow-unsafe annotation")
 						removeUnsafeAnnotation(config)
 

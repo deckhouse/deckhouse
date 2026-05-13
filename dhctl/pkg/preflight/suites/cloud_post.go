@@ -25,10 +25,13 @@ import (
 type PostCloudDeps struct {
 	MetaConfig  *config.MetaConfig
 	SSHProvider libcon.SSHProvider
+	// LegacyMode reflects whether the SSH client uses the legacy clissh
+	// backend. Threaded into CloudAPICheck for the SSH tunnel direction.
+	LegacyMode bool
 }
 
 func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 	return preflight.NewSuite(
-		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProvider),
+		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProvider, deps.LegacyMode),
 	)
 }

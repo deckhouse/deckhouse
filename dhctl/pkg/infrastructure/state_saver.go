@@ -22,7 +22,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -135,7 +134,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 	s.debug("State file modified: %s", event.Name)
-	if app.IsDebug {
+	if s.runner != nil && s.runner.isDebug {
 		fs.CreateFileBackup(event.Name)
 	}
 

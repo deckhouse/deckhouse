@@ -381,7 +381,7 @@ registryPullQPS: 10
 registryBurst: 20
 resolvConf: ${resolvConfPath}
 rotateCertificates: true
-runtimeRequestTimeout: 2m0s
+runtimeRequestTimeout: 4m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
 {{- if eq $resourceReservationMode "Auto" }}
