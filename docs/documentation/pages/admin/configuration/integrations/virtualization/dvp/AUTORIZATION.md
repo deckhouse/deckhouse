@@ -67,7 +67,7 @@ clusters:
   name: <CLUSTER-NAME>                     # Replace with the cluster name.
 contexts:
   - context:
-    cluster: <CLUSTER-NAME>.               # Replace with the cluster name.
+    cluster: <CLUSTER-NAME>                # Replace with the cluster name.
     user: sa-demo
     namespace: default
   name: sa-demo-context
@@ -84,5 +84,5 @@ EOF
 Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
 
 ```bash
-base64 kubeconfig | tr -d ‘\n’
+base64 kubeconfig | tr -d '\n'
 ```

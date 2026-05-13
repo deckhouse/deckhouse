@@ -68,7 +68,7 @@ clusters:
   name: <CLUSTER-NAME>                     # Замените на имя кластера.
 contexts:
   - context:
-    cluster: <CLUSTER-NAME>.               # Замените на имя кластера.
+    cluster: <CLUSTER-NAME>                # Замените на имя кластера.
     user: sa-demo
     namespace: default
   name: sa-demo-context
