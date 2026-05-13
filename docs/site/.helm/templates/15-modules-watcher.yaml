@@ -161,9 +161,9 @@ spec:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         summary: |
-          Module `{{ $labels.module }}` has no tags in registry `{{ $labels.registry }}`.
+          Module `{{`{{ $labels.module }}`}}` has no tags in registry `{{`{{ $labels.registry }}`}}`.
         description: |
-          The registry scanner detected that module `{{ $labels.module }}` has no tags in registry `{{ $labels.registry }}`.
+          The registry scanner detected that module `{{`{{ $labels.module }}`}}` has no tags in registry `{{`{{ $labels.registry }}`}}`.
 
     - alert: D8RegistryScannerRegistryUnavailable
       expr: d8_telemetry_registry_scanner_registry_unavailable > 0
@@ -174,7 +174,7 @@ spec:
         plk_protocol_version: "1"
         plk_markup_format: "markdown"
         summary: |
-          Registry `{{ $labels.registry }}` is unavailable.
+          Registry `{{`{{ $labels.registry }}`}}` is unavailable.
         description: |
-          The registry scanner cannot connect to registry `{{ $labels.registry }}`.
+          The registry scanner cannot connect to registry `{{`{{ $labels.registry }}`}}`.
 {{- end }}
