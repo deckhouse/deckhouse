@@ -267,34 +267,67 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		if err != nil {
 			return err
 		}
-
-		rs, rr, rm := checkMulticlusterRemoteAPIServer(dc.GetHTTPClient(httpOption...), privateMetadata.APIHost)
 		tDone := timeNow()
-		apiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, rs, rr, rm, tDone)
 		privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionTrue, "Succeeded", "Private metadata exchange succeeded.", tDone)
+
+		apiClaims := map[string]string{
+			"iss":   "d8-istio",
+			"aud":   publicMetadata.ClusterUUID,
+			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
+			"scope": "api",
+		}
+		apiJWT, err := jwt.GenerateJWT(privKey, apiClaims, time.Hour*24*366)
+		if err != nil {
+			tDone := timeNow()
+			input.Logger.Warn("can't generate API-scope JWT for IstioMulticluster remote API check", slog.String("name", multiclusterInfo.Name), log.Err(err))
+			apiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionFalse, "TokenGenerationFailed", err.Error(), tDone)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, apiCondition}, tDone)
+			continue
+		}
+
+		rs, rr, rm := checkMulticlusterRemoteAPIServer(dc.GetHTTPClient(httpOption...), privateMetadata.APIHost, apiJWT)
+		tDone = timeNow()
+		apiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, rs, rr, rm, tDone)
 		patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, apiCondition}, tDone)
 	}
 	return nil
 }
 
-func checkMulticlusterRemoteAPIServer(client http.Client, apiHost string) (metav1.ConditionStatus, string, string) {
-	host := strings.TrimSpace(apiHost)
-	if host == "" {
-		return metav1.ConditionFalse, "MissingAPIHost", "private metadata has empty apiHost"
+type multiclusterRemoteAPIVersions struct {
+	Kind     string   `json:"kind"`
+	Versions []string `json:"versions"`
+}
+
+func multiclusterRemoteAPIProbeURL(apiHost string) (string, error) {
+	h := strings.TrimSpace(apiHost)
+	if h == "" {
+		return "", fmt.Errorf("private metadata has empty apiHost")
 	}
-	if !strings.Contains(host, "://") {
-		host = "https://" + host
+	if !strings.Contains(h, "://") {
+		h = "https://" + h
 	}
-	host = strings.TrimSuffix(host, "/")
-	url := host + "/"
-	body, code, err := lib.HTTPGet(client, url, "")
+	h = strings.TrimSuffix(h, "/")
+	return h + "/api", nil
+}
+
+func checkMulticlusterRemoteAPIServer(client http.Client, apiHost, bearerToken string) (metav1.ConditionStatus, string, string) {
+	url, err := multiclusterRemoteAPIProbeURL(apiHost)
 	if err != nil {
-		_ = body
+		return metav1.ConditionFalse, "MissingAPIHost", err.Error()
+	}
+	body, code, err := lib.HTTPGet(client, url, bearerToken)
+	if err != nil {
 		return metav1.ConditionFalse, "RemoteAPIUnreachable", fmt.Sprintf("GET %s: %v", url, err)
 	}
-	_ = body
 	if code != 200 {
 		return metav1.ConditionFalse, "RemoteAPIBadResponse", fmt.Sprintf("GET %s returned HTTP %d", url, code)
 	}
-	return metav1.ConditionTrue, "RemoteAPIReachable", fmt.Sprintf("GET %s returned HTTP %d", url, code)
+	var parsed multiclusterRemoteAPIVersions
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return metav1.ConditionFalse, "RemoteAPIInvalidResponse", fmt.Sprintf("GET %s: invalid JSON: %v", url, err)
+	}
+	if parsed.Kind != "APIVersions" {
+		return metav1.ConditionFalse, "RemoteAPIUnexpectedResponse", fmt.Sprintf("GET %s: expected kind APIVersions, got %q", url, parsed.Kind)
+	}
+	return metav1.ConditionTrue, "RemoteAPIReachable", fmt.Sprintf("GET %s returned HTTP %d with kind APIVersions", url, code)
 }

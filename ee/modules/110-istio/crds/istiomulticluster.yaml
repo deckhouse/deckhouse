@@ -97,7 +97,7 @@ spec:
 
                     - `PublicMetadataExchangeReady` — remote `public.json` is reachable and valid.
                     - `PrivateMetadataExchangeReady` — remote private metadata is reachable and valid.
-                    - `RemoteAPIServerReady` — remote multicluster API host (`apiHost`) accepts HTTPS connections.
+                    - `RemoteAPIServerReady` — remote multicluster API host (`apiHost`) serves the authenticated `/api` endpoint.
                   x-kubernetes-list-map-keys:
                     - type
                   x-kubernetes-list-type: map

@@ -125,6 +125,7 @@ status:
 `)
 			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
+			apiVersionsProbeBody := `{"kind":"APIVersions","versions":[]}`
 			respMap := map[string]map[string]HTTPMockResponse{
 				"proper-hostname-0": {
 					"/metadata/public/public.json": {
@@ -188,15 +189,15 @@ status:
 						Code: http.StatusOK,
 					},
 				},
-				// Remote API readiness probe: GET https://<apiHost>/
+				// Remote API readiness probe: GET https://<apiHost>/api (Bearer JWT, scope api).
 				"api-host-0": {
-					"/": {Response: `{}`, Code: http.StatusOK},
+					"/api": {Response: apiVersionsProbeBody, Code: http.StatusOK},
 				},
 				"api-host-1": {
-					"/": {Response: `{}`, Code: http.StatusOK},
+					"/api": {Response: apiVersionsProbeBody, Code: http.StatusOK},
 				},
 				"api-host-2": {
-					"/": {Response: `{}`, Code: http.StatusOK},
+					"/api": {Response: apiVersionsProbeBody, Code: http.StatusOK},
 				},
 			}
 			dependency.TestDC.HTTPClient.DoMock.
