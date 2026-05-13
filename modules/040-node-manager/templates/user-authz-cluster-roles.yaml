@@ -1,14 +1,6 @@
 ---
 # Access level: SuperAdmin.
-# Full access to all node-manager resources.
-# Adds write access to Kubernetes Node resources.
-# - node-manager deckhouse.io resources (instances, instancetypescatalogs, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
-# - Node Feature Discovery resources
-# - Machine Controller Manager resources
-# - Cluster API resources
-# - CAPS infrastructure resources owned by node-manager
-# - Kubernetes Node resources
-# Provider-specific Cluster API infrastructure resources must be covered by cloud-provider modules.
+# Full access to all resources.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -18,118 +10,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
-  - deckhouse.io
+  - '*'
   resources:
-  - instances
-  - instancetypescatalogs
-  - nodegroups
-  - nodegroupconfigurations
-  - nodeusers
-  - sshcredentials
-  - staticinstances
+  - '*'
   verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - nfd.k8s-sigs.io
-  resources:
-  - nodefeatures
-  - nodefeaturegroups
-  - nodefeaturerules
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - machine.sapcloud.io
-  resources:
-  - openstackmachineclasses
-  - awsmachineclasses
-  - azuremachineclasses
-  - vspheremachineclasses
-  - gcpmachineclasses
-  - yandexmachineclasses
-  - machines
-  - machinesets
-  - machinedeployments
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - cluster.x-k8s.io
-  resources:
-  - clusters
-  - machinedeployments
-  - machinedrainrules
-  - machinehealthchecks
-  - machinepools
-  - machines
-  - machinesets
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - infrastructure.cluster.x-k8s.io
-  resources:
-  - deckhousecontrolplanes
-  - staticclusters
-  - staticmachines
-  - staticmachinetemplates
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
-- apiGroups:
-  - runtime.cluster.x-k8s.io
-  resources:
-  - extensionconfigs
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
+  - '*'
 ---
 # Access level: ClusterAdmin.
 # Includes User, PrivilegedUser, Editor, Admin, and ClusterEditor permissions.
