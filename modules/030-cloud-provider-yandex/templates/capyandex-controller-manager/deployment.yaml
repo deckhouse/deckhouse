@@ -1,5 +1,5 @@
 {{- define "capyandex_controller_manager_pod_annotations" -}}
-checksum/config: {{ include (print $.Template.BasePath "/capyandex-controller-manager/secret.yaml") . | sha256sum }}
+checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/capyandex-controller-manager/secret.yaml") . | toString) (include (print $.Template.BasePath "/capyandex-controller-manager/secret-tls.yaml") . | toString) | sha256sum }}
 {{- end -}}
 
 {{- define "capyandex_controller_manager_pod_labels" -}}
@@ -16,6 +16,19 @@ security.deckhouse.io/security-policy-exception: capyandex-controller-manager
       key: key
 {{- end -}}
 
+{{- define "capyandex_controller_manager_volume_mounts" -}}
+- name: cert
+  mountPath: /tmp/k8s-webhook-server/serving-certs
+  readOnly: true
+{{- end -}}
+
+{{- define "capyandex_controller_manager_volumes" -}}
+- name: cert
+  secret:
+    secretName: capyandex-controller-manager-webhook-tls
+    defaultMode: 420
+{{- end -}}
+
 {{- $capiConfig := dict -}}
 {{- $_ := set $capiConfig "fullname" "capyandex-controller-manager" -}}
 {{- $_ := set $capiConfig "namespace" "d8-cloud-provider-yandex" -}}
@@ -26,6 +39,8 @@ security.deckhouse.io/security-policy-exception: capyandex-controller-manager
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
 {{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capyandex_controller_manager_envs" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumeMounts" (include "capyandex_controller_manager_volume_mounts" . | fromYamlArray) -}}
+{{- $_ := set $capiConfig "additionalVolumes" (include "capyandex_controller_manager_volumes" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capyandex_controller_manager_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $capiConfig "additionalPodLabels" (include "capyandex_controller_manager_pod_labels" . | fromYaml) -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
