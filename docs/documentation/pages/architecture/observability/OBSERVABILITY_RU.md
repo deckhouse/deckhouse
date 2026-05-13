@@ -37,9 +37,9 @@ description: Архитектура модуля observability в Deckhouse Kube
 
 1. **Observability-controller** — состоит из одного контейнера, управляет жизненным циклом большинства кастомных ресурсов модуля, таких как: ObservabilityMetricsAlertingRules, ObservabilityNotificationChannels, ObservabilityNotificationSilence и т.д. Полный список ресурсов, которыми управляет модуль, приведён [в документации модуля](/modules/observability/cr.html).
 
-2. **Observability-webhook** — состоит из одного контейнера, реализующего вебхук-сервер для проверки и изменения кастомных ресурсов через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
+1. **Observability-webhook** — состоит из одного контейнера, реализующего вебхук-сервер для проверки и изменения кастомных ресурсов через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 
-3. **Alert-kube-api** — состоит из одного контейнера, реализует [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который расширяет Kubernetes API кастомными ресурсами ObservabilityAlerts и ClusterObservabilityAlerts. Alert-kube-api позволяет запрашивать алерты как кастомные реурсы, используя в качестве бэкенда alertmanager, и кэширует их в памяти для быстрого доступа.
+2. **Alert-kube-api** — состоит из одного контейнера, реализует [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который расширяет Kubernetes API кастомными ресурсами ObservabilityAlerts и ClusterObservabilityAlerts. Alert-kube-api позволяет запрашивать алерты как кастомные реурсы, используя в качестве бэкенда alertmanager, и кэширует их в памяти для быстрого доступа.
 
 4. **Alertmanager** — принимает алерты от Prometheus сервера, обрабатывает и отправляет их конечным получателям. DKP поддерживает отправку алертов с помощью Alertmanager:
 
@@ -73,6 +73,17 @@ description: Архитектура модуля observability в Deckhouse Kube
 
    **enforcer**.
 
+7. **Opagent** (DaemonSet) — агент, предназначенный для сбора метрик как с операционной системы, так и с прикладного программного обеспечения, установленного на серверы. Разработан компанией «Флант» для [Deckhouse Observability Platform (DOP)](/products/observability-platform/) на основе [Okagent (агента Okmeter)](https://okmeter.ru/docs/features/), также входящего в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/). В модуле [`observability`](/modules/observability/) opAgent используется для интеграции с:
+
+   - managed-сервисами, например [`managed-postgres`](/modules/managed-postgres/), [managed-memcached](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и т.д. (cписок поддерживаемых сервисов постоянно расширяется). opAgent собирает метрики с установленных в DKP managed-сервисов, соответствующий модуль managed-сервиса должен быть включен;
+   - [Deckhouse Observability Platform](/products/observability-platform/). opAgent собирает метрики с узлов, модуль [`observability-platform`](/modules/observability-platform/) должен быть включен.
+
+   opAgent отправляет собранные метрики по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) в Prometheus через label-enforcer (метрики managed-сервисами) и в [Deckhouse Observability Platform](/products/observability-platform/) (метрики с узлов).
+
+   Состоит из одного контейнера:
+
+   **opagent**.
+
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
@@ -82,9 +93,10 @@ description: Архитектура модуля observability в Deckhouse Kube
    - для авторизации запросов к данным мониторинга;
    - для управления кастомными ресурсами модуля;
 
-1. **Prometheus** — использует в качестве источника данных.
+1. **Prometheus** — использует в качестве источника и приемника данных.
 1. **Loki** — использует в качестве источника данных.
 1. **Получатели алертов** — отправляет алерты.
+1. [Deckhouse Observability Platform](/products/observability-platform/) — использует в качестве приемника данных (метрики узлов).
 
 С модулем взаимодействуют следующие внешние компоненты:
 
