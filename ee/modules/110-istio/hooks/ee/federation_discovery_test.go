@@ -42,7 +42,8 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -59,7 +60,8 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 	Context("Empty cluster, minimal settings and federation is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.federation.enabled", true)
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -78,7 +80,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -127,7 +129,8 @@ status:
       - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}]} # port should be changed to 222
       - {"hostname": "some-actual.host-4", "ports": [{"name": "https-ppp", "port": 111}]} # port should be changed to 222
       - {"hostname": "some-actual.host-5", "ports": [{"name": "grps-ppp", "port": 222}]} # port should be changed to 222
-`))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
 			respMap := map[string]map[string]HTTPMockResponse{
 				"proper-hostname-0": {
@@ -477,7 +480,7 @@ status:
 	Context("Improper federation", func() {
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -541,7 +544,8 @@ spec:
  trustDomain: "privwf"
  metadataEndpoint: "https://private-wrong-format/metadata/"
 status: {}
-`))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
 			//             host       url    response
 			respMap := map[string]map[string]HTTPMockResponse{

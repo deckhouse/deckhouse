@@ -42,7 +42,8 @@ var _ = Describe("Istio hooks :: multicluster_discovery ::", func() {
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -59,7 +60,8 @@ var _ = Describe("Istio hooks :: multicluster_discovery ::", func() {
 	Context("Empty cluster, minimal settings and multicluster is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.multicluster.enabled", true)
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -78,7 +80,7 @@ var _ = Describe("Istio hooks :: multicluster_discovery ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSet(`istio.multicluster.enabled`, true)
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -120,7 +122,8 @@ status:
     ingressGateways:
     - {"address": "some-actual.host-1", "port": 111} # should be saved
     - {"address": "some-outdatad.host-2", "port": 111} # should be deleted
-`))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
 			respMap := map[string]map[string]HTTPMockResponse{
 				"proper-hostname-0": {
@@ -471,7 +474,7 @@ status:
 	Context("Improper multicluster", func() {
 		BeforeEach(func() {
 			f.ValuesSet(`istio.multicluster.enabled`, true)
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -526,7 +529,8 @@ spec:
   enableIngressGateway: true
   metadataEndpoint: "https://private-wrong-format/metadata/"
 status: {}
-`))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
 			//             host       url    response
 			respMap := map[string]map[string]HTTPMockResponse{
