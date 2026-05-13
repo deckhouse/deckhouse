@@ -314,6 +314,7 @@ steps:
       WERF_ENV: "development"
       WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 {!{- end }!}
+      WERF_FINAL_IMAGES_ONLY: "false"
       DOC_VERSION: "${{ env.DOC_VERSION }}"
     run: |
       make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
