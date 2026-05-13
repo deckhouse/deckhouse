@@ -176,7 +176,6 @@ spec:
         values:
         - ""
         - "true"
-{{- end }}
 ---
 {{- $policyName := "deny-heritage-label-update.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
@@ -197,6 +196,8 @@ spec:
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-system-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass", "DeckhouseRelease", "ModuleRelease"].exists(e, (e == request.kind.kind)))'
   validations:
@@ -230,6 +231,7 @@ spec:
       matchExpressions:
         - key: "heritage"
           operator: Exists
+{{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
