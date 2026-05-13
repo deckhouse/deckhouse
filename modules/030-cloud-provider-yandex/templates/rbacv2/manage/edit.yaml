@@ -29,6 +29,7 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - yandexclusters
+  - yandexidentities
   - yandexmachines
   - yandexmachinetemplates
   verbs:

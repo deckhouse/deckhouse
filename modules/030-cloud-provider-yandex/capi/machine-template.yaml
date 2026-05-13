@@ -10,49 +10,20 @@ metadata:
 spec:
   template:
     spec:
-      region: {{ .Values.nodeManager.internal.cloudProvider.yandex.region | quote }}
-      zone: {{ .zoneName | quote }}
-      folderID: {{ .Values.nodeManager.internal.cloudProvider.yandex.folderID | quote }}
+      zoneID: {{ .zoneName | quote }}
       platformID: {{ .nodeGroup.instanceClass.platformID | default "standard-v3" | quote }}
       resources:
         cores: {{ .nodeGroup.instanceClass.cores }}
         coreFraction: {{ .nodeGroup.instanceClass.coreFraction | default 100 }}
-        memoryMiB: {{ .nodeGroup.instanceClass.memory }}
+        memory: {{ printf "%dMi" (.nodeGroup.instanceClass.memory | int) | quote }}
         gpus: {{ .nodeGroup.instanceClass.gpus | default 0 }}
       bootDisk:
-        type: {{ .nodeGroup.instanceClass.diskType | default "network-hdd" | quote }}
-        sizeGiB: {{ .nodeGroup.instanceClass.diskSizeGB | default 50 }}
+        typeID: {{ .nodeGroup.instanceClass.diskType | default "network-hdd" | quote }}
+        size: {{ printf "%dGi" (.nodeGroup.instanceClass.diskSizeGB | default 50 | int) | quote }}
         imageID: {{ .nodeGroup.instanceClass.imageID | default .Values.nodeManager.internal.cloudProvider.yandex.instanceClassDefaults.imageID | quote }}
       networkInterfaces:
         - subnetID: {{ .nodeGroup.instanceClass.mainSubnet | default (index .Values.nodeManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName) | quote }}
-          assignPublicIPAddress: {{- if hasKey .nodeGroup.instanceClass "assignPublicIPAddress" }} {{ .nodeGroup.instanceClass.assignPublicIPAddress }}{{- else }} {{ .Values.nodeManager.internal.cloudProvider.yandex.shouldAssignPublicIPAddress }}{{- end }}
+          hasPublicIP: {{- if hasKey .nodeGroup.instanceClass "assignPublicIPAddress" }} {{ .nodeGroup.instanceClass.assignPublicIPAddress }}{{- else }} {{ .Values.nodeManager.internal.cloudProvider.yandex.shouldAssignPublicIPAddress }}{{- end }}
 {{- range .nodeGroup.instanceClass.additionalSubnets }}
         - subnetID: {{ . | quote }}
-{{- end }}
-{{- if .nodeGroup.instanceClass.preemptible }}
-      schedulingPolicy:
-        preemptible: true
-{{- end }}
-      labels:
-        kubernetes-io-cluster-deckhouse-{{ .Values.global.discovery.clusterUUID | sha256sum | trunc 30 }}: "1"
-{{- if le (len .nodeGroup.name) 19 }}
-        kubernetes-io-role-deckhouse-{{ .nodeGroup.name }}-{{ .zoneName }}: "1"
-{{- else }}
-        kubernetes-io-role-deckhouse-{{ .nodeGroup.name | sha256sum | trunc 19 }}-{{ .zoneName }}: "1"
-{{- end }}
-{{- $effectiveLabels := dict  }}
-{{- if .Values.nodeManager.internal.cloudProvider.yandex.labels }}
-  {{- $effectiveLabels = merge $effectiveLabels .Values.nodeManager.internal.cloudProvider.yandex.labels }}
-{{- end }}
-{{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
-  {{- $effectiveLabels = mergeOverwrite $effectiveLabels .nodeGroup.instanceClass.additionalLabels  }}
-{{- end }}
-{{- range $k, $v := $effectiveLabels }}
-        {{ $k | trunc 63 }}: {{ $v | trunc 63 }}
-{{- end }}
-      metadata:
-        ssh-keys: {{ printf "user:%s" .Values.nodeManager.internal.cloudProvider.sshPublicKey | quote }}
-        node-network-cidr: {{ .Values.nodeManager.internal.cloudProvider.yandex.nodeNetworkCIDR | quote }}
-{{- if hasKey .nodeGroup.instanceClass "networkType" }}
-      networkType: {{ .nodeGroup.instanceClass.networkType | quote }}
 {{- end }}
