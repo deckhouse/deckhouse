@@ -258,13 +258,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	interactive := input.IsTerminal()
 	if interactive {
-		intLogger, ok := b.logger.(*log.InteractiveLogger)
-		if !ok {
-			return fmt.Errorf("logger is not interactive")
+		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger)
+		if err != nil {
+			return err
 		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Base Infra", labelChan, phasesChan)
 
 		onUpdateFunc := func(progress phases.Progress) error {
 			phasesChan <- progress
@@ -272,9 +269,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 
 		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
-			return err
-		}
 	}
 
 	clusterUUID, err := generateClusterUUID(ctx, stateCache)

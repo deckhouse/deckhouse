@@ -63,7 +63,10 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
 
 		return template.PrepareBashibleBundle(
 			ctx,
@@ -110,7 +113,10 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
 
 		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
 	}
@@ -155,7 +161,11 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
+
 		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
 			return err
 		}

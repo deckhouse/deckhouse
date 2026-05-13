@@ -48,7 +48,8 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			<-doneCh
 		})
 
-		if input.IsTerminal() {
+		interactive := input.IsTerminal()
+		if interactive {
 			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("test Kubernetes API connection", log.GetDefaultLogger())
 			if err != nil {
 				return err
@@ -62,7 +63,10 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
-			log.InteractiveInfoLn("Press Ctrl+C to close proxy connection.")
+			log.InfoLn("Press Ctrl+C to close proxy connection.")
+			if interactive {
+				progressbar.InfoF("%s\n", "Press Ctrl+C to close proxy connection.")
+			}
 			ch := make(chan struct{})
 			<-ch
 		}

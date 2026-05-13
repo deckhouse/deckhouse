@@ -189,6 +189,11 @@ func InfoF(format string, a ...any) {
 	pterm.Info.WithWriter(writer).Printf(format, a...)
 }
 
+func WarnF(format string, a ...any) {
+	writer := defaultpb.MultiPrinter.NewWriter()
+	pterm.Warning.WithWriter(writer).Printf(format, a...)
+}
+
 func phaseToString(p phases.Progress, completed bool) string {
 	// Butify bootstrap: phases with subphases
 	phasesMap := make(map[phases.OperationPhase]string)

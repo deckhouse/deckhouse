@@ -45,7 +45,8 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
-		if input.IsTerminal() {
+		interactive := input.IsTerminal()
+		if interactive {
 			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test control plane manager is Ready", logger)
 			if err != nil {
 				return err
@@ -81,9 +82,15 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		}
 
 		if ready {
-			log.InteractiveInfoF("Control plane manager is ready")
+			log.InfoLn("Control plane manager is ready")
+			if interactive {
+				progressbar.InfoF("%s\n", "Control plane manager is ready")
+			}
 		} else {
-			log.InteractiveWarnLn("Control plane manager is not ready")
+			log.WarnLn("Control plane manager is not ready")
+			if interactive {
+				progressbar.WarnF("%s\n", "Control plane manager is not ready")
+			}
 		}
 
 		return nil
@@ -103,7 +110,8 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
-		if input.IsTerminal() {
+		interactive := input.IsTerminal()
+		if interactive {
 			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test control plane node is Ready", logger)
 			if err != nil {
 				return err
@@ -149,7 +157,10 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return fmt.Errorf("control plane node is not ready: %v", err)
 		}
 
-		log.InteractiveInfoLn("Control plane manager node is ready")
+		log.InfoLn("Control plane manager node is ready")
+		if interactive {
+			progressbar.InfoF("%s\n", "Control plane manager node is ready")
+		}
 
 		return nil
 	})

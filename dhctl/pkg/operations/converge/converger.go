@@ -228,13 +228,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	interactive := input.IsTerminal()
 	if interactive {
-		intLogger, ok := log.GetDefaultLogger().(*log.InteractiveLogger)
-		if !ok {
-			return nil, fmt.Errorf("logger is not interactive")
+		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Converge", c.Logger)
+		if err != nil {
+			return nil, err
 		}
-		labelChan := intLogger.GetPhaseChan()
-		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Base Infra", labelChan, phasesChan)
 
 		onUpdateFunc := func(progress phases.Progress) error {
 			phasesChan <- progress
@@ -246,9 +243,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 
 		c.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationConverge, c.OnPhaseFunc, onUpdateFunc)
-		if err := progressbar.InitProgressBar(pbParam); err != nil {
-			return nil, err
-		}
 	}
 
 	stateCache := cache.Global()

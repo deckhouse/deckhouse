@@ -59,11 +59,10 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 
 		interactive := input.IsTerminal()
 		if interactive {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Edit", logger)
+			_, _, err := progressbar.InitProgressBarWithDeferredFunc("Edit", logger)
 			if err != nil {
 				return err
 			}
-			defer onComplete()
 		}
 
 		if kubeProvider == nil {
@@ -79,6 +78,12 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
+
+		//nolint: errcheck
+		if interactive {
+			progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
+			progressbar.GetDefaultPb().MultiPrinter.Stop()
+		}
 
 		return operations.SecretEdit(
 			ctx,

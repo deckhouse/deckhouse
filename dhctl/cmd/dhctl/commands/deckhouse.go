@@ -29,7 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
@@ -57,22 +56,9 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		}
 
 		if input.IsTerminal() {
-			intLogger, ok := logger.(*log.InteractiveLogger)
-			if !ok {
-				return fmt.Errorf("logger is not interactive")
-			}
-			labelChan := intLogger.GetPhaseChan()
-			phasesChan := make(chan phases.Progress, 5)
-			pbParam := progressbar.NewPbParams(100, "Remove Deckhouse deployment", labelChan, phasesChan)
-
-			if err := progressbar.InitProgressBar(pbParam); err != nil {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Remove Deckhouse deployment", logger)
+			if err != nil {
 				return err
-			}
-
-			onComplete := func() {
-				pb := progressbar.GetDefaultPb()
-				pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-				pb.MultiPrinter.Stop()
 			}
 			defer onComplete()
 		}
@@ -129,22 +115,9 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		}
 
 		if input.IsTerminal() {
-			intLogger, ok := logger.(*log.InteractiveLogger)
-			if !ok {
-				return fmt.Errorf("logger is not interactive")
-			}
-			labelChan := intLogger.GetPhaseChan()
-			phasesChan := make(chan phases.Progress, 5)
-			pbParam := progressbar.NewPbParams(100, "Create Deckhouse deployment", labelChan, phasesChan)
-
-			if err := progressbar.InitProgressBar(pbParam); err != nil {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Create Deckhouse deployment", logger)
+			if err != nil {
 				return err
-			}
-
-			onComplete := func() {
-				pb := progressbar.GetDefaultPb()
-				pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-				pb.MultiPrinter.Stop()
 			}
 			defer onComplete()
 		}
