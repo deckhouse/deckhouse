@@ -86,12 +86,10 @@ shell:
 {{- if eq $.Env "CSE" }}
   - export DEFAULT_RELEASE_CHANNEL=LTS
 {{- end }}
-  - D8_VERSION=${CI_COMMIT_TAG} DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }} ./go-build.sh
   - export D8_VERSION=${CI_COMMIT_TAG}
   - export DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }}
   - export EE_EDITIONS={{ include "ee_editions_list_string" . | trim }}
   - export ALL_EDITIONS_IN_ORDER={{ include "all_editions_list_string_in_order" . | trim }}
-  - echo "EE_EDITIONS=${EE_EDITIONS}"
   - ./go-build.sh
   - mv deckhouse-controller /out
   - cp /out/deckhouse-controller /out/caps-deckhouse-controller
