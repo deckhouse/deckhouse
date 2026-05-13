@@ -6,11 +6,11 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
+# - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+#   to: /patches
+#   stageDependencies:
+#     install:
+#     - '**/*'
 - url: {{ .SOURCE_REPO }}/istio/istio.git
   tag: {{ $istioVersion }}
   add: /
