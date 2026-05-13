@@ -156,8 +156,8 @@ read:
     - gateway.networking.k8s.io/listenersets
     - gateway.networking.k8s.io/referencegrants
     - gateway.networking.k8s.io/tcproutes
-    - gateway.networking.k8s.io/udproutes
     - gateway.networking.k8s.io/tlsroutes
+    - gateway.networking.k8s.io/udproutes
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
@@ -215,8 +215,8 @@ read-write:
     - gateway.networking.k8s.io/listenersets
     - gateway.networking.k8s.io/referencegrants
     - gateway.networking.k8s.io/tcproutes
-    - gateway.networking.k8s.io/udproutes
     - gateway.networking.k8s.io/tlsroutes
+    - gateway.networking.k8s.io/udproutes
     - networking.k8s.io/ingresses
     - persistentvolumeclaims
     - policy/poddisruptionbudgets
