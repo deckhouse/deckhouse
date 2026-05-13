@@ -62,11 +62,11 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
    cat <<EOF > kubeconfig
    apiVersion: v1
    clusters:
-     - cluster:
+   - cluster:
        server: https://<KUBE-APISERVER-URL>   # Replace this with the actual API server address for the cluster.
      name: <CLUSTER-NAME>                     # Replace with the cluster name.
    contexts:
-     - context:
+   - context:
        cluster: <CLUSTER-NAME>                # Replace with the cluster name.
        user: sa-demo
        namespace: default
@@ -75,7 +75,7 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
    kind: Config
    preferences: {}
    users:
-     - name: sa-demo
+   - name: sa-demo
      user:
        token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
    EOF

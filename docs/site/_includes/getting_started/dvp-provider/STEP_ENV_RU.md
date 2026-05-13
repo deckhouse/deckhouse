@@ -62,11 +62,11 @@
    cat <<EOF > kubeconfig
    apiVersion: v1
    clusters:
-     - cluster:
+   - cluster:
        server: https://<KUBE-APISERVER-URL>   # Замените на реальный адрес API-сервера кластера.
      name: <CLUSTER-NAME>                     # Замените на имя кластера.
    contexts:
-     - context:
+   - context:
        cluster: <CLUSTER-NAME>                # Замените на имя кластера.
        user: sa-demo
        namespace: default
@@ -75,7 +75,7 @@
    kind: Config
    preferences: {}
    users:
-     - name: sa-demo
+   - name: sa-demo
      user:
        token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
    EOF
