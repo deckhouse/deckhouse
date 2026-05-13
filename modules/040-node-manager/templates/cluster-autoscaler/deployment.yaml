@@ -85,6 +85,7 @@ spec:
         args:
         - --namespace=d8-cloud-instance-manager
         - --cloud-provider={{ $provider }}
+        - --leader-elect-resource-name={{ $name }}
         {{- if gt (len $nodes) 0 }}
         {{- range $arg := $nodes }}
         - {{ $arg }}
