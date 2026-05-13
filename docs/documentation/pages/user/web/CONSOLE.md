@@ -63,14 +63,6 @@ The "Updates" subsection contains information about releases.
 
 ![Releases](../../images/console/releases.png)
 
-You can also view API information in Swagger format.
-
-![Swagger API](../../images/console/swagger-1.png)
-
-![Swagger API](../../images/console/swagger-2.png)
-
-![Swagger API](../../images/console/swagger-3.png)
-
 ### Modules
 
 The "Modules" subsection lists both enabled and disabled modules.
@@ -527,3 +519,15 @@ To configure log sources, follow these steps:
    - (Optional) Label and filter rules to retain only specific logs.
 
 ![Log collection](../../images/console/log_rule.png)
+
+## Viewing API information
+
+You can view API information in Swagger format by clicking the question mark button in the bottom left corner of the screen in the user dropdown menu.
+
+![API](../../images/console/releases.png)
+
+![API](../../images/console/swagger-1.png)
+
+![API](../../images/console/swagger-2.png)
+
+![API](../../images/console/swagger-3.png)
