@@ -229,7 +229,6 @@ func runIsolatedProcessHelper(argv []string) int {
 		// The child must be able to bring loopback up, chroot into /validation-chroot
 		// and keep low-port bind capability for the final nginx exec in the private netns.
 		AmbientCaps: []uintptr{
-			unix.CAP_NET_ADMIN,
 			unix.CAP_NET_BIND_SERVICE,
 			unix.CAP_SYS_CHROOT,
 		},

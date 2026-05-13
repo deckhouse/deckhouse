@@ -28,9 +28,11 @@ const (
 )
 
 func setupIsolatedProcessChild() error {
-	if err := bringLoopbackUp(); err != nil {
-		return err
-	}
+	// Temporarily disabled for runtime verification. Restore if loopback-dependent
+	// validation paths fail inside the private network namespace.
+	// if err := bringLoopbackUp(); err != nil {
+	// 	return err
+	// }
 
 	if err := enterValidationChroot(); err != nil {
 		return err
