@@ -149,8 +149,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
 			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "FetchFailed", err.Error(), t)
 			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingAPICondition}, t)
 			continue
 		}
 		if statusCode != 200 {
@@ -160,8 +160,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			msg := fmt.Sprintf("HTTP status %d when fetching public metadata", statusCode)
 			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "NonOKResponse", msg, t)
 			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingAPICondition}, t)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &publicMetadata)
@@ -171,8 +171,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
 			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidJSON", err.Error(), t)
 			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingAPICondition}, t)
 			continue
 		}
 		if publicMetadata.ClusterUUID == "" || publicMetadata.AuthnKeyPub == "" || publicMetadata.RootCA == "" {
@@ -181,8 +181,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
 			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPublicMetadata", "clusterUUID, authnKeyPub, and rootCA must be non-empty", t)
 			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingAPICondition}, t)
 			continue
 		}
 
@@ -209,8 +209,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			input.Logger.Warn("can't generate auth token for endpoint of IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), log.Err(err))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "TokenGenerationFailed", err.Error(), t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingAPICondition}, t)
 			continue
 		}
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
@@ -219,8 +219,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), log.Err(err))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "FetchFailed", err.Error(), t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingAPICondition}, t)
 			continue
 		}
 		if statusCode != 200 {
@@ -229,8 +229,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			msg := fmt.Sprintf("HTTP status %d when fetching private metadata", statusCode)
 			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "NonOKResponse", msg, t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingAPICondition}, t)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &privateMetadata)
@@ -239,8 +239,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			input.Logger.Warn("cannot unmarshal private metadata endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), log.Err(err))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidJSON", err.Error(), t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingAPICondition}, t)
 			continue
 		}
 		if privateMetadata.NetworkName == "" || privateMetadata.APIHost == "" || privateMetadata.IngressGateways == nil {
@@ -248,8 +248,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			input.Logger.Warn("bad private metadata format in endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPrivateMetadata", "networkName, apiHost must be non-empty and ingressGateways must be set", t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingAPICondition}, t)
 			continue
 		}
 		if multiclusterInfo.EnableIngressGateway && len(*privateMetadata.IngressGateways) == 0 {
@@ -257,8 +257,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			input.Logger.Warn("ingressGateways for IstioMulticluster weren't fetched yet", slog.String("name", multiclusterInfo.Name))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "MissingIngressGateways", "enableIngressGateway is true but ingressGateways list is empty", t)
-			pendingApiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingApiCondition}, t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, pendingAPICondition}, t)
 			continue
 		}
 
@@ -273,7 +273,6 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		apiCondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, rs, rr, rm, tDone)
 		privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionTrue, "Succeeded", "Private metadata exchange succeeded.", tDone)
 		patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, []metav1.Condition{publicCondition, privateCondition, apiCondition}, tDone)
-
 	}
 	return nil
 }
