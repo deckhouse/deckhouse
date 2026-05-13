@@ -166,9 +166,9 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			t := timeNow()
 			input.Logger.Warn("cannot fetch public metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
-			pub := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "FetchFailed", err.Error(), t)
-			priv := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pub, priv}, t)
+			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "FetchFailed", err.Error(), t)
+			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition}, t)
 			continue
 		}
 		if statusCode != 200 {
@@ -176,9 +176,9 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			input.Logger.Warn("cannot fetch public metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), slog.Int("http_code", statusCode))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			msg := fmt.Sprintf("HTTP status %d when fetching public metadata", statusCode)
-			pub := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "NonOKResponse", msg, t)
-			priv := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pub, priv}, t)
+			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "NonOKResponse", msg, t)
+			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition}, t)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &publicMetadata)
@@ -186,29 +186,29 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			t := timeNow()
 			input.Logger.Warn("cannot unmarshal public metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
-			pub := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidJSON", err.Error(), t)
-			priv := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pub, priv}, t)
+			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidJSON", err.Error(), t)
+			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition}, t)
 			continue
 		}
 		if publicMetadata.ClusterUUID == "" || publicMetadata.AuthnKeyPub == "" || publicMetadata.RootCA == "" {
 			t := timeNow()
 			input.Logger.Warn("bad public metadata format in endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
-			pub := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPublicMetadata", "clusterUUID, authnKeyPub, and rootCA must be non-empty", t)
-			priv := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pub, priv}, t)
+			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPublicMetadata", "clusterUUID, authnKeyPub, and rootCA must be non-empty", t)
+			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, pendingPrivateCondition}, t)
 			continue
 		}
+
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 0)
-		tPub := timeNow()
-		pubOK := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, "Succeeded", "Public metadata exchange succeeded.", tPub)
-		privPending := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange not evaluated yet.", tPub)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
 		if err != nil {
 			return err
 		}
-		patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pubOK, privPending}, tPub)
+
+		t := timeNow()
+		publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, "Succeeded", "Public metadata exchange succeeded.", t)
 
 		// TODO Make independent public and private fetch?
 		privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
@@ -223,8 +223,8 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			t := timeNow()
 			input.Logger.Warn("can't generate auth token for endpoint of IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-			privFail := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "TokenGenerationFailed", err.Error(), t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pubOK, privFail}, t)
+			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "TokenGenerationFailed", err.Error(), t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, privateCondition}, t)
 			continue
 		}
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PrivateMetadataEndpoint, bearerToken)
@@ -232,8 +232,8 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			t := timeNow()
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-			privFail := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "FetchFailed", err.Error(), t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, pubOK.Reason, pubOK.Message, t), privFail}, t)
+			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "FetchFailed", err.Error(), t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, privateCondition}, t)
 			continue
 		}
 		if statusCode != 200 {
@@ -241,8 +241,8 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), slog.Int("http_code", statusCode))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			msg := fmt.Sprintf("HTTP status %d when fetching private metadata", statusCode)
-			privFail := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "NonOKResponse", msg, t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, pubOK.Reason, pubOK.Message, t), privFail}, t)
+			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "NonOKResponse", msg, t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, privateCondition}, t)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &privateMetadata)
@@ -250,28 +250,30 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			t := timeNow()
 			input.Logger.Warn("cannot unmarshal private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-			privFail := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidJSON", err.Error(), t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, pubOK.Reason, pubOK.Message, t), privFail}, t)
+			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidJSON", err.Error(), t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, privateCondition}, t)
 			continue
 		}
 		if privateMetadata.IngressGateways == nil || privateMetadata.PublicServices == nil {
 			t := timeNow()
 			input.Logger.Warn("bad private metadata format in endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-			privFail := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPrivateMetadata", "ingressGateways and publicServices must be set", t)
-			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, pubOK.Reason, pubOK.Message, t), privFail}, t)
+			privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPrivateMetadata", "ingressGateways and publicServices must be set", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, privateCondition}, t)
 			continue
 		}
-		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
+
 		updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
-		tDone := timeNow()
-		privOK := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionTrue, "Succeeded", "Private metadata exchange succeeded.", tDone)
-		pubCondDone := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionTrue, pubOK.Reason, pubOK.Message, tDone)
+		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
 		}
-		patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{pubCondDone, privOK}, tDone)
+
+		tDone := timeNow()
+		privateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionTrue, "Succeeded", "Private metadata exchange succeeded.", tDone)
+		patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, []metav1.Condition{publicCondition, privateCondition}, tDone)
+
 		var countServices = 0
 		if privateMetadata.PublicServices != nil {
 			countServices = len(*privateMetadata.PublicServices)
