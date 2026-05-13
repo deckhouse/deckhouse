@@ -57,4 +57,33 @@ EOF
 
 ## Generating a kubeconfig
 
-To generate a kubeconfig, follow the [instruction](/modules/user-authn/faq.html#how-to-generate-a-kubeconfig-and-access-kubernetes-api).
+Generate a kubeconfig to be used in the cluster initial configuration file:
+
+```bash
+cat <<EOF > kubeconfig
+apiVersion: v1
+clusters:
+- cluster:
+    server: https://<KUBE-APISERVER-URL>   # Replace this with the actual API server address for the cluster.
+  name: <CLUSTER-NAME>                     # Replace with the cluster name.
+contexts:
+- context:
+    cluster: <CLUSTER-NAME>                # Replace with the cluster name.
+    user: sa-demo
+    namespace: default
+  name: sa-demo-context
+current-context: sa-demo-context
+kind: Config
+preferences: {}
+users:
+- name: sa-demo
+  user:
+    token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
+EOF
+```
+
+Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
+
+```bash
+base64 kubeconfig | tr -d '\n'
+```
