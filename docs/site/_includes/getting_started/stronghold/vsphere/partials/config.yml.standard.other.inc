@@ -33,7 +33,7 @@ defaultCRI: "ContainerdV2"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  imagesRepo: registry.deckhouse.ru/deckhouse/<REVISION>
+  imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
   # [<en>] A special string with your token to access Docker registry (generated automatically for your license token).
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа).
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
