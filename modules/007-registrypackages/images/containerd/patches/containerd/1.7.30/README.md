@@ -1,6 +1,6 @@
 # Patches
 
-## 001-gomod.patch
+## 000-gomod.patch
 Fixed [CVE-2026-35469](https://github.com/deckhouse/deckhouse/pull/19791)
 
 ## 002-hosts-rewrite.patch
