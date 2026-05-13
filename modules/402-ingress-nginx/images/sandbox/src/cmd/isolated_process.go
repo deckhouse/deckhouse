@@ -22,46 +22,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
-	loopbackInterfaceName = "lo"
-	validationChrootDir   = "/validation-chroot"
-)
+const validationChrootDir = "/validation-chroot"
 
 func setupIsolatedProcessChild() error {
-	// Temporarily disabled for runtime verification. Restore if loopback-dependent
-	// validation paths fail inside the private network namespace.
-	// if err := bringLoopbackUp(); err != nil {
-	// 	return err
-	// }
-
 	if err := enterValidationChroot(); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func bringLoopbackUp() error {
-	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
-	if err != nil {
-		return fmt.Errorf("open control socket: %w", err)
-	}
-	defer unix.Close(fd)
-
-	req, err := unix.NewIfreq(loopbackInterfaceName)
-	if err != nil {
-		return fmt.Errorf("build ifreq for %s: %w", loopbackInterfaceName, err)
-	}
-	if err := unix.IoctlIfreq(fd, unix.SIOCGIFFLAGS, req); err != nil {
-		return fmt.Errorf("get %s flags: %w", loopbackInterfaceName, err)
-	}
-	if req.Uint16()&unix.IFF_UP != 0 {
-		return nil
-	}
-
-	req.SetUint16(req.Uint16() | unix.IFF_UP)
-	if err := unix.IoctlIfreq(fd, unix.SIOCSIFFLAGS, req); err != nil {
-		return fmt.Errorf("set %s flags: %w", loopbackInterfaceName, err)
 	}
 
 	return nil

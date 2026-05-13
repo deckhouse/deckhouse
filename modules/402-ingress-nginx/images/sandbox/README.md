@@ -11,10 +11,9 @@ For `IsolatedProcess`, the controller runs:
 In this mode, `sandbox` first creates an exec boundary and starts itself again in `--isolated-process-child` mode with:
 - private `user` and `network` namespaces;
 - uid/gid mappings for the current non-root user;
-- ambient `CAP_NET_ADMIN`, `CAP_NET_BIND_SERVICE`, and `CAP_SYS_CHROOT`.
+- ambient `CAP_NET_BIND_SERVICE` and `CAP_SYS_CHROOT`.
 
 The child mode then:
-- brings `lo` up inside the private network namespace;
 - enters `/validation-chroot`;
 - launches the usual ptrace/seccomp sandbox path for `nginx -t`.
 
