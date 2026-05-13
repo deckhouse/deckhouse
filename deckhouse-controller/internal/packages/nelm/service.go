@@ -25,6 +25,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/google/uuid"
+	"github.com/werf/nelm/pkg/action"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -42,6 +43,12 @@ const (
 
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
+
+	// managedByAnnotation marks a release as owned by this service. Stamped on
+	// Release.Info so it is visible to action.ReleaseList; used by orphan
+	// cleanup as the ownership marker.
+	managedByAnnotation      = "packages.deckhouse.io/managed-by"
+	managedByAnnotationValue = "deckhouse"
 )
 
 const (
@@ -77,9 +84,14 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
-	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
-		"heritage": "deckhouse",
-	}))
+	nelmClient := nelm.New(logger,
+		nelm.WithResourceLabels(map[string]string{
+			"heritage": "deckhouse",
+		}),
+		nelm.WithReleaseInfoAnnotations(map[string]string{
+			managedByAnnotation: managedByAnnotationValue,
+		}),
+	)
 
 	return &Service{
 		tmpDir:         os.TempDir(),
@@ -272,7 +284,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
-			nelm.LabelPackageChecksum: checksum,
+			nelm.ReleaseLabelPackageChecksum: checksum,
 		},
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
@@ -286,6 +298,52 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)
 
 	return nil
+}
+
+// CleanupOrphans uninstalls nelm releases owned by this service (carrying the
+// managed-by annotation in Release.Info) whose name is not in keep.
+//
+// keep keys are of the form "<namespace>/<release-name>" — the caller decides
+// which releases must remain. Releases without the managed-by annotation are
+// skipped: they are not ours.
+func (s *Service) CleanupOrphans(ctx context.Context, keep map[string]struct{}) {
+	result, err := action.ReleaseList(ctx, action.ReleaseListOptions{
+		OutputNoPrint:    true,
+		ReleaseNamespace: "", // cluster-wide
+	})
+	if err != nil {
+		s.logger.Warn("failed to list releases", log.Err(err))
+		return
+	}
+
+	var deleted, failed int
+	for _, r := range result.Releases {
+		if r.Annotations[managedByAnnotation] != managedByAnnotationValue {
+			continue
+		}
+		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
+			continue
+		}
+
+		if err := s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
+			s.logger.Warn("failed to delete orphan release",
+				slog.String("namespace", r.Namespace),
+				slog.String("release", r.Name),
+				log.Err(err))
+			failed++
+			continue
+		}
+		s.logger.Info("deleted orphan release",
+			slog.String("namespace", r.Namespace),
+			slog.String("release", r.Name))
+		deleted++
+	}
+
+	if deleted > 0 || failed > 0 {
+		s.logger.Info("orphan release cleanup complete",
+			slog.Int("deleted", deleted),
+			slog.Int("failed", failed))
+	}
 }
 
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.

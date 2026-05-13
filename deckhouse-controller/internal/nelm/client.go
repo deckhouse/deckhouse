@@ -41,8 +41,10 @@ const (
 	// logger and telemetry name
 	nelmTracer = "nelm"
 
-	// LabelPackageChecksum release label for storing checksum
-	LabelPackageChecksum = "packageChecksum"
+	// ReleaseLabelPackageChecksum is stamped on the release storage secret to
+	// store the rendered-manifests checksum (used by shouldRunHelmUpgrade to
+	// skip no-op upgrades).
+	ReleaseLabelPackageChecksum = "packageChecksum"
 )
 
 var (
@@ -61,10 +63,13 @@ type Options struct {
 	// Timeout for Helm operations
 	Timeout time.Duration
 
-	// Labels to apply to Kubernetes resources
-	Labels map[string]string
-	// Annotations to apply to Kubernetes resources
-	Annotations map[string]string
+	// ResourceLabels are stamped on every Kubernetes resource rendered by the chart.
+	ResourceLabels map[string]string
+	// ResourceAnnotations are stamped on every Kubernetes resource rendered by the chart.
+	ResourceAnnotations map[string]string
+	// ReleaseInfoAnnotations are stamped on the Release.Info — visible to
+	// action.ReleaseList and used as ownership markers by orphan cleanup.
+	ReleaseInfoAnnotations map[string]string
 }
 
 // Option is a functional option for configuring the nelm client
@@ -84,17 +89,28 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithLabels sets labels to be applied to all releases
-func WithLabels(labels map[string]string) Option {
+// WithResourceLabels sets labels stamped on every Kubernetes resource
+// rendered by the chart.
+func WithResourceLabels(labels map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.Labels, labels)
+		maps.Copy(o.ResourceLabels, labels)
 	}
 }
 
-// WithAnnotations sets annotations to be applied to all releases
-func WithAnnotations(annotations map[string]string) Option {
+// WithResourceAnnotations sets annotations stamped on every Kubernetes
+// resource rendered by the chart.
+func WithResourceAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.Annotations, annotations)
+		maps.Copy(o.ResourceAnnotations, annotations)
+	}
+}
+
+// WithReleaseInfoAnnotations sets annotations stamped on the Release.Info.
+// Use it for ownership markers that the orphan-release cleanup pass relies
+// on to find releases managed by this client (visible via action.ReleaseList).
+func WithReleaseInfoAnnotations(annotations map[string]string) Option {
+	return func(o *Options) {
+		maps.Copy(o.ReleaseInfoAnnotations, annotations)
 	}
 }
 
@@ -108,8 +124,8 @@ type Client struct {
 	logger *log.Logger
 }
 
-// New creates a new nelm client for the specified namespace
-// It initializes the nelm logger and applies any provided options
+// New creates a new nelm client.
+// It initializes the nelm logger and applies any provided options.
 func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
 	one.Do(func() {
@@ -118,10 +134,11 @@ func New(logger *log.Logger, opts ...Option) *Client {
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
-		HistoryMax:  10,
-		Annotations: make(map[string]string),
-		Labels:      make(map[string]string),
-		Timeout:     2 * time.Minute,
+		HistoryMax:             10,
+		ResourceAnnotations:    make(map[string]string),
+		ResourceLabels:         make(map[string]string),
+		ReleaseInfoAnnotations: make(map[string]string),
+		Timeout:                2 * time.Minute,
 	}
 
 	// Apply any provided options
@@ -176,7 +193,7 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 
 	// Try to get checksum from storage labels first
 	if res.Release != nil {
-		if checksum, ok := res.Release.StorageLabels[LabelPackageChecksum]; ok {
+		if checksum, ok := res.Release.StorageLabels[ReleaseLabelPackageChecksum]; ok {
 			return checksum, nil
 		}
 	}
@@ -214,7 +231,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
-	labels := maps.Clone(c.opts.Labels)
+	labels := maps.Clone(c.opts.ResourceLabels)
 	if len(opts.ResourcesLabels) > 0 {
 		if labels == nil {
 			labels = make(map[string]string, len(opts.ResourcesLabels))
@@ -255,10 +272,11 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		DefaultChartAPIVersion: "v2",
 		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
 			ExtraLabels:             labels,
-			ExtraAnnotations:        c.opts.Annotations,
+			ExtraAnnotations:        c.opts.ResourceAnnotations,
 			NoInstallStandaloneCRDs: true,
 			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
 			ReleaseLabels:           opts.ReleaseLabels,
+			ReleaseInfoAnnotations:  c.opts.ReleaseInfoAnnotations,
 			ReleaseStorageDriver:    c.driver,
 			ForceAdoption:           true,
 		},
@@ -287,7 +305,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
-	labels := maps.Clone(c.opts.Labels)
+	labels := maps.Clone(c.opts.ResourceLabels)
 	if len(opts.ResourcesLabels) > 0 {
 		if labels == nil {
 			labels = make(map[string]string, len(opts.ResourcesLabels))
@@ -309,7 +327,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            labels,
-		ExtraAnnotations:       c.opts.Annotations,
+		ExtraAnnotations:       c.opts.ResourceAnnotations,
 		ReleaseName:            releaseName,
 		ReleaseNamespace:       namespace,
 		ReleaseStorageDriver:   c.driver,

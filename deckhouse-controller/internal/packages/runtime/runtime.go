@@ -643,34 +643,45 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// PreservePackage identifies one downloaded package version to preserve during cleanup.
+// PreservePackage identifies one downloaded package version + its owning
+// Application instance to preserve during Cleanup.
+//
+// Name/Repository/Version address the package artifact on disk; Namespace and
+// Instance identify the Application CR that owns its installed nelm release.
 type PreservePackage struct {
-	// Name is the downloaded package directory name.
-	Name string
-	// Version is the downloaded package version name.
-	Version string
-	// Repository is the downloaded repository directory name.
+	Name       string
 	Repository string
+	Version    string
+	Namespace  string
+	Instance   string
 }
 
-// Cleanup removes deployed packages that are not listed in preserve from both app and module deployers.
+// Cleanup garbage-collects state left over from previous controller runs.
+// Called once during preflight, before the reconcile loop starts:
+//   - removes downloaded package versions on disk not listed in preserve;
+//   - removes orphan nelm release secrets cluster-wide whose owning Application
+//     is not listed in preserve (delegated to the nelm service).
 func (r *Runtime) Cleanup(ctx context.Context, preserve []PreservePackage) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	converted := make([]deployer.PreservePackage, 0, len(preserve))
-	for _, packageVersion := range preserve {
-		converted = append(converted, deployer.PreservePackage{
-			Name:       packageVersion.Name,
-			Repository: packageVersion.Repository,
-			Version:    packageVersion.Version,
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserve))
+	keepReleases := make(map[string]struct{}, len(preserve))
+	for _, p := range preserve {
+		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+			Name:       p.Name,
+			Repository: p.Repository,
+			Version:    p.Version,
 		})
+		keepReleases[p.Namespace+"/"+apps.BuildName(p.Namespace, p.Instance)] = struct{}{}
 	}
 
-	if err := r.appDeployer.Cleanup(ctx, converted); err != nil {
+	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
 		r.logger.Warn("cleanup apps failed", log.Err(err))
 		return
 	}
+
+	r.nelmService.CleanupOrphans(ctx, keepReleases)
 }
 
 // Status returns package status service for external access
