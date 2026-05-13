@@ -2915,10 +2915,10 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..e4f21fe76fd
+index 00000000000..378876c417f
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,150 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2980,12 +2980,17 @@ index 00000000000..e4f21fe76fd
 +		}
 +
 +		// Fast path: if the body doesn't contain the masked-value literal anywhere, there is nothing to unmask.
-+		// Skip the parse/GET/walk/marshal cycle.
-+		if !bytes.Contains(body, []byte(sensitive.MaskedValue)) {
++		// Skip the parse/GET/walk/marshal cycle. Check both the plain form ("<omitted>") used in YAML/CBOR
++		// bodies, and the JSON-HTML-escaped form (<omitted>) emitted by kubectl when it serializes
++		// apply-patch+yaml body to JSON-with-HTML-escape.
++		if !bytes.Contains(body, []byte(sensitive.MaskedValue)) &&
++			!bytes.Contains(body, []byte("\\u003comitted\\u003e")) {
++			klog.Infof("[sensitive-ssa-mw] fast-path: no masked-value literal in body, skipping unmask")
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
 +		}
++		klog.Infof("[sensitive-ssa-mw] full-path: masked-value literal found in body, running unmask")
 +
 +		patchObj := map[string]interface{}{}
 +		if err := unmarshalApplyBody(mediaType, body, &patchObj); err != nil {
