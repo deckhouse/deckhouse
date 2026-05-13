@@ -24,6 +24,10 @@ on:
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   doc_pdf_build:
     name: Doc PDF build
