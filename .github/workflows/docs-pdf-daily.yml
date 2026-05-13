@@ -174,11 +174,15 @@ jobs:
       - name: Install awscli
         if: ${{ success() }}
         run: |
-          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-          unzip -q /tmp/awscliv2.zip -d /tmp/awscliv2
-          /tmp/awscliv2/aws/install -i "${HOME}/.local/aws-cli" -b "${HOME}/.local/bin"
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-          rm -rf /tmp/awscliv2.zip /tmp/awscliv2
+          if command -v aws &>/dev/null; then
+            echo "AWS CLI already available: $(aws --version)"
+          else
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp/awscliv2
+            /tmp/awscliv2/aws/install -i "${HOME}/.local/aws-cli" -b "${HOME}/.local/bin"
+            echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+            rm -rf /tmp/awscliv2.zip /tmp/awscliv2
+          fi
 
       - name: Upload PDF files to S3
         if: ${{ success() }}
