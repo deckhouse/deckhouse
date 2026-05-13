@@ -61,12 +61,13 @@ type Options struct {
 	// Timeout for Helm operations
 	Timeout time.Duration
 
-	// ResourceLabels are stamped on every chart-rendered resource.
-	ResourceLabels map[string]string
+	// ResourcesLabels are stamped on every chart-rendered resource.
+	ResourcesLabels map[string]string
 	// ResourceAnnotations are stamped on every chart-rendered resource.
-	ResourceAnnotations map[string]string
-	// ReleaseInfoAnnotations are stamped on Release.Info (visible via action.ReleaseList).
-	ReleaseInfoAnnotations map[string]string
+	ResourcesAnnotations map[string]string
+
+	// ReleaseAnnotations are stamped on Release.Info (visible via action.ReleaseList).
+	ReleaseAnnotations map[string]string
 }
 
 // Option is a functional option for configuring the nelm client
@@ -86,24 +87,24 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-// WithResourceLabels sets labels stamped on every chart-rendered resource.
-func WithResourceLabels(labels map[string]string) Option {
+// WithResourcesLabels sets labels stamped on every chart-rendered resource.
+func WithResourcesLabels(labels map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.ResourceLabels, labels)
+		maps.Copy(o.ResourcesLabels, labels)
 	}
 }
 
-// WithResourceAnnotations sets annotations stamped on every chart-rendered resource.
-func WithResourceAnnotations(annotations map[string]string) Option {
+// WithResourcesAnnotations sets annotations stamped on every chart-rendered resource.
+func WithResourcesAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.ResourceAnnotations, annotations)
+		maps.Copy(o.ResourcesAnnotations, annotations)
 	}
 }
 
-// WithReleaseInfoAnnotations sets annotations stamped on Release.Info.
-func WithReleaseInfoAnnotations(annotations map[string]string) Option {
+// WithReleaseAnnotations sets annotations stamped on Release.Info.
+func WithReleaseAnnotations(annotations map[string]string) Option {
 	return func(o *Options) {
-		maps.Copy(o.ReleaseInfoAnnotations, annotations)
+		maps.Copy(o.ReleaseAnnotations, annotations)
 	}
 }
 
@@ -127,11 +128,11 @@ func New(logger *log.Logger, opts ...Option) *Client {
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
-		HistoryMax:             10,
-		ResourceAnnotations:    make(map[string]string),
-		ResourceLabels:         make(map[string]string),
-		ReleaseInfoAnnotations: make(map[string]string),
-		Timeout:                2 * time.Minute,
+		HistoryMax:           10,
+		ResourcesAnnotations: make(map[string]string),
+		ResourcesLabels:      make(map[string]string),
+		ReleaseAnnotations:   make(map[string]string),
+		Timeout:              3 * time.Minute,
 	}
 
 	// Apply any provided options
@@ -276,11 +277,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
-	labels := maps.Clone(c.opts.ResourceLabels)
+	labels := maps.Clone(c.opts.ResourcesLabels)
 	if len(opts.ResourcesLabels) > 0 {
-		if labels == nil {
-			labels = make(map[string]string, len(opts.ResourcesLabels))
-		}
 		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
@@ -317,11 +315,11 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		DefaultChartAPIVersion: "v2",
 		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
 			ExtraLabels:             labels,
-			ExtraAnnotations:        c.opts.ResourceAnnotations,
+			ExtraAnnotations:        c.opts.ResourcesAnnotations,
 			NoInstallStandaloneCRDs: true,
 			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
 			ReleaseLabels:           opts.ReleaseLabels,
-			ReleaseInfoAnnotations:  c.opts.ReleaseInfoAnnotations,
+			ReleaseInfoAnnotations:  c.opts.ReleaseAnnotations,
 			ReleaseStorageDriver:    c.driver,
 			ForceAdoption:           true,
 		},
@@ -350,11 +348,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
-	labels := maps.Clone(c.opts.ResourceLabels)
+	labels := maps.Clone(c.opts.ResourcesLabels)
 	if len(opts.ResourcesLabels) > 0 {
-		if labels == nil {
-			labels = make(map[string]string, len(opts.ResourcesLabels))
-		}
 		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
@@ -372,7 +367,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ExtraLabels:            labels,
-		ExtraAnnotations:       c.opts.ResourceAnnotations,
+		ExtraAnnotations:       c.opts.ResourcesAnnotations,
 		ReleaseName:            releaseName,
 		ReleaseNamespace:       namespace,
 		ReleaseStorageDriver:   c.driver,

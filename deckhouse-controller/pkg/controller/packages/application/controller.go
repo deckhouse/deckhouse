@@ -72,7 +72,7 @@ type packageRuntime interface {
 	UpdateApp(repo registry.Remote, inst packageruntime.App)
 	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
-	CleanupApps(ctx context.Context, preserve []packageruntime.PreserveApp)
+	Cleanup(ctx context.Context, preserve []packageruntime.Preserve)
 }
 
 func RegisterController(
@@ -131,18 +131,19 @@ func (r *reconciler) preflight(ctx context.Context) error {
 		return fmt.Errorf("list applications: %w", err)
 	}
 
-	preserve := make([]packageruntime.PreserveApp, 0, len(appsList.Items))
+	preserve := make([]packageruntime.Preserve, 0, len(appsList.Items))
 	for _, app := range appsList.Items {
-		preserve = append(preserve, packageruntime.PreserveApp{
-			Name:       app.Spec.PackageName,
-			Repository: app.Spec.PackageRepositoryName,
-			Version:    app.Spec.PackageVersion,
-			Namespace:  app.Namespace,
-			Instance:   app.Name,
+		preserve = append(preserve, packageruntime.Preserve{
+			PackageName: app.Spec.PackageName,
+			Repository:  app.Spec.PackageRepositoryName,
+			Version:     app.Spec.PackageVersion,
+
+			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
+			ReleaseNamespace: app.Namespace,
 		})
 	}
 
-	r.runtime.CleanupApps(ctx, preserve)
+	r.runtime.Cleanup(ctx, preserve)
 
 	r.logger.Debug("controller is ready")
 

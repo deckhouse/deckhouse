@@ -643,32 +643,32 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// PreserveApp identifies one installed Application instance to preserve during
-// CleanupApps. Name/Repository/Version address the package on disk; Namespace
-// and Instance identify the owning Application CR.
-type PreserveApp struct {
-	Name       string
-	Repository string
-	Version    string
-	Namespace  string
-	Instance   string
+// Preserve identifies one installed Package instance to preserve during Cleanup.
+type Preserve struct {
+	PackageName string
+	Repository  string
+	Version     string
+
+	ReleaseName      string
+	ReleaseNamespace string
 }
 
-// CleanupApps removes downloaded application packages on disk and orphan nelm
+// Cleanup removes downloaded application packages on disk and orphan nelm
 // releases in the cluster that are not in preserve. Runs once during preflight.
-func (r *Runtime) CleanupApps(ctx context.Context, preserve []PreserveApp) {
+func (r *Runtime) Cleanup(ctx context.Context, preserves []Preserve) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	fsPreserve := make([]deployer.PreservePackage, 0, len(preserve))
-	keepReleases := make(map[string]struct{}, len(preserve))
-	for _, p := range preserve {
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
+	keepReleases := make(map[string]struct{}, len(preserves))
+	for _, preserve := range preserves {
 		fsPreserve = append(fsPreserve, deployer.PreservePackage{
-			Name:       p.Name,
-			Repository: p.Repository,
-			Version:    p.Version,
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
 		})
-		keepReleases[p.Namespace+"/"+apps.BuildName(p.Namespace, p.Instance)] = struct{}{}
+
+		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
 	}
 
 	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
@@ -676,7 +676,8 @@ func (r *Runtime) CleanupApps(ctx context.Context, preserve []PreserveApp) {
 		return
 	}
 
-	r.nelmService.Cleanup(ctx, keepReleases)
+	// do not cleanup modules namespace
+	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
 }
 
 // Status returns package status service for external access

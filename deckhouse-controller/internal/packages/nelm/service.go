@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -82,10 +83,10 @@ type Service struct {
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger,
-		nelm.WithResourceLabels(map[string]string{
+		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
 		}),
-		nelm.WithReleaseInfoAnnotations(map[string]string{
+		nelm.WithReleaseAnnotations(map[string]string{
 			managedByAnnotation: managedByAnnotationValue,
 		}),
 	)
@@ -299,7 +300,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 
 // Cleanup uninstalls releases owned by this service (carrying the managed-by
 // annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
-func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) {
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
 		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
 	})
@@ -312,7 +313,12 @@ func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) {
 		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
 			continue
 		}
-		if err := s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
+
+		if slices.Contains(ignoreNamespaces, r.Namespace) {
+			continue
+		}
+
+		if err = s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
 			s.logger.Warn("failed to delete orphan release",
 				slog.String("namespace", r.Namespace),
 				slog.String("release", r.Name),
