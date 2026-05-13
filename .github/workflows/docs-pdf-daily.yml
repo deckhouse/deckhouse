@@ -45,6 +45,10 @@ env:
   GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   doc_pdf_build:
     name: Doc PDF build
