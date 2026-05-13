@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Copied from [1] to control timeseries timestamps manually
+// Originally copied from [1] to control timeseries timestamps manually.
+// The Config struct below is also inlined from the same package because the
+// upstream module is unmaintained and incompatible with current dependencies.
 //      [1] go.opentelemetry.io/contrib/exporters/metric/cortex@v0.17.0/
 
 package remotewrite
@@ -30,6 +32,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -37,12 +40,28 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 )
+
+// Config contains properties the exporter uses to push metrics to a Prometheus
+// remote_write storage. Inlined from
+// go.opentelemetry.io/contrib/exporters/metric/cortex@v0.17.0 to drop the
+// dependency on an unmaintained upstream module.
+type Config struct {
+	Endpoint        string
+	RemoteTimeout   time.Duration
+	Name            string
+	BasicAuth       map[string]string
+	BearerToken     string
+	BearerTokenFile string
+	TLSConfig       map[string]string
+	ProxyURL        *url.URL
+	Headers         map[string]string
+	Client          *http.Client
+}
 
 // exporter forwards metrics to a remote_write storage
 type exporter struct {
-	config cortex.Config
+	config Config
 }
 
 // Export sends metrics via HTTP
