@@ -1,0 +1,31 @@
+- name: d8.istio.alliance.dataplane.health
+  rules:
+    - alert: D8IstioAllianceDataPlaneNotConnected
+      expr: max by (alliance_kind, name, remote_cluster_uuid) (d8_istio_alliance_dataplane_health_check) == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_alliance_dataplane_connection_has_failed: D8IstioAllianceDataPlaneConnectionHasFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_alliance_dataplane_connection_has_failed: D8IstioAllianceDataPlaneConnectionHasFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Data-plane connectivity check failed for {{$labels.alliance_kind}} `{{$labels.name}}`.
+        description: |
+          The data-plane health check of {{$labels.alliance_kind}} `{{$labels.name}}` with uuid `{{$labels.remote_cluster_uuid}}` has been failing for more than 5 minutes.
+
+          This means that actual service mesh traffic between clusters is not flowing properly, even though the control plane metadata exchange may be working.
+
+          Possible causes:
+
+          - The remote cluster's `alliance-healthcheck` pod is not running.
+          - Istio sidecar injection is not working properly on the healthcheck pods.
+          - The ingress gateway between clusters is misconfigured or unreachable.
+          - mTLS or trust domain configuration issues between clusters.
+
+          To check the status:
+
+          ```bash
+          d8 k get {{$labels.alliance_kind}} {{$labels.name}} -o jsonpath='{.status.dataPlaneHealth}'
+          ```
