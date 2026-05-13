@@ -3,19 +3,19 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: capyandex-controller-manager
+  name: capy-controller-manager
   namespace: d8-cloud-provider-yandex
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capyandex-controller-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: capyandex-controller-manager
+    name: capy-controller-manager
   updatePolicy:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
-    - containerName: "capyandex-controller-manager"
+    - containerName: "capy-controller-manager"
       minAllowed:
         cpu: 25m
         memory: 64Mi
@@ -27,33 +27,33 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: capyandex-controller-manager
+  name: capy-controller-manager
   namespace: d8-cloud-provider-yandex
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capyandex-controller-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: capyandex-controller-manager
+      app: capy-controller-manager
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: capyandex-controller-manager
+  name: capy-controller-manager
   namespace: d8-cloud-provider-yandex
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capyandex-controller-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capy-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: capyandex-controller-manager
+      app: capy-controller-manager
       cluster.x-k8s.io/provider: infrastructure-yandex
       control-plane: controller-manager
   template:
     metadata:
       labels:
-        app: capyandex-controller-manager
+        app: capy-controller-manager
         cluster.x-k8s.io/provider: infrastructure-yandex
         control-plane: controller-manager
     spec:
@@ -61,34 +61,26 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capyandex-controller-manager")) | nindent 6 }}
-      serviceAccountName: capyandex-controller-manager
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capy-controller-manager")) | nindent 6 }}
+      serviceAccountName: capy-controller-manager
       imagePullSecrets:
         - name: deckhouse-registry
       terminationGracePeriodSeconds: 10
       containers:
-      - name: capyandex-controller-manager
+      - name: capy-controller-manager
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "capyandexControllerManager") }}
+        image: ghcr.io/yandex-cloud/cluster-api-provider-yandex/capy-controller:v0.1.4
         imagePullPolicy: IfNotPresent
+        command:
+          - manager
         args:
           - "--leader-elect"
         env:
-          - name: YC_FOLDER_ID
+          - name: YC_SA_KEY
             valueFrom:
               secretKeyRef:
-                name: yandex-credentials-capyandex
-                key: folderID
-          - name: YC_SA_KEY_JSON
-            valueFrom:
-              secretKeyRef:
-                name: yandex-credentials-capyandex
-                key: serviceAccountJSON
-          - name: CLUSTER_UUID
-            valueFrom:
-              secretKeyRef:
-                name: yandex-credentials-capyandex
-                key: clusterUUID
+                name: yandex-credentials-capy
+                key: key
         livenessProbe:
           httpGet:
             path: /healthz
