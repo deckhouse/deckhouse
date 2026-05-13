@@ -917,6 +917,48 @@ deckhouse:
 	})
 }
 
+func TestRegistryConfigProvider(t *testing.T) {
+	t.Run("Parse wildcard config paths", func(t *testing.T) {
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		})
+		require.NoError(t, err)
+
+		t.Run("Registry config", func(t *testing.T) {
+			remote, err := provider.RemoteData()
+			require.NoError(t, err)
+
+			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", remote.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, remote.Scheme)
+			require.Equal(t, "", remote.Username)
+			require.Equal(t, "", remote.Password)
+			require.Equal(t, "", remote.CA)
+
+			isLocal, err := provider.IsLocal()
+			require.NoError(t, err)
+
+			require.Equal(t, false, isLocal)
+		})
+	})
+}
+
+func TestFetchDocuments(t *testing.T) {
+	initConfig := `---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce`
+
+	t.Run("Parse wildcard config paths", func(t *testing.T) {
+		docs, err := FetchDocuments([]string{"./mocks/1-Init*.yml"})
+		require.NoError(t, err)
+		require.Len(t, docs, 2)
+
+		require.Equal(t, "", docs[0])
+		require.Equal(t, initConfig, docs[1])
+	})
+}
+
 func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name string, data map[string][]byte) {
 	t.Helper()
 
