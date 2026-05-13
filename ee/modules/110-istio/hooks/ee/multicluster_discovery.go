@@ -294,7 +294,7 @@ func checkMulticlusterRemoteAPIServer(client http.Client, apiHost string) (metav
 		return metav1.ConditionFalse, "RemoteAPIUnreachable", fmt.Sprintf("GET %s: %v", url, err)
 	}
 	_ = body
-	if code >= 500 {
+	if code != 200 {
 		return metav1.ConditionFalse, "RemoteAPIBadResponse", fmt.Sprintf("GET %s returned HTTP %d", url, code)
 	}
 	return metav1.ConditionTrue, "RemoteAPIReachable", fmt.Sprintf("GET %s returned HTTP %d", url, code)
