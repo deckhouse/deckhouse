@@ -23,12 +23,14 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type DeckhouseUserCheck struct {
 	NodeInterface libcon.Interface
+	dc            *directoryconfig.DirectoryConfig
 }
 
 const DeckhouseUserCheckName preflight.CheckName = "deckhouse-user"
@@ -46,7 +48,7 @@ func (DeckhouseUserCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c DeckhouseUserCheck) Run(ctx context.Context) error {
-	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript(nil)
+	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript(c.dc)
 	if err != nil {
 		return err
 	}
@@ -65,8 +67,8 @@ func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func DeckhouseUser(nodeInterface libcon.Interface) preflight.Check {
-	check := DeckhouseUserCheck{NodeInterface: nodeInterface}
+func DeckhouseUser(nodeInterface libcon.Interface, dc *directoryconfig.DirectoryConfig) preflight.Check {
+	check := DeckhouseUserCheck{NodeInterface: nodeInterface, dc: dc}
 	return preflight.Check{
 		Name:        DeckhouseUserCheckName,
 		Description: check.Description(),
