@@ -2915,10 +2915,10 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..378876c417f
+index 00000000000..0405f7e4049
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
-@@ -0,0 +1,150 @@
+@@ -0,0 +1,157 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3002,11 +3002,17 @@ index 00000000000..378876c417f
 +		info, _ := request.RequestInfoFrom(req.Context())
 +		var oldRoot map[string]interface{}
 +		var resourceName string
++		ctx := req.Context()
 +		if info != nil {
 +			resourceName = info.Name
++			if info.Namespace != "" {
++				// storage.Get reads namespace from ctx via request.NamespaceFrom; the request-info
++				// filter doesn't set it as a separate ctx key yet at this point in the chain.
++				ctx = request.WithNamespace(ctx, info.Namespace)
++			}
 +		}
 +		if resourceName != "" && getter != nil {
-+			oldObj, getErr := getter.Get(req.Context(), resourceName, &metav1.GetOptions{})
++			oldObj, getErr := getter.Get(ctx, resourceName, &metav1.GetOptions{})
 +			switch {
 +			case getErr == nil:
 +				if u, ok := oldObj.(*unstructured.Unstructured); ok {
@@ -3015,6 +3021,7 @@ index 00000000000..378876c417f
 +			case apierrors.IsNotFound(getErr):
 +				oldRoot = nil
 +			default:
++				klog.Errorf("[sensitive-ssa-mw] getter.Get failed: name=%s ns=%s err=%v", resourceName, info.Namespace, getErr)
 +				http.Error(w, getErr.Error(), http.StatusInternalServerError)
 +				return
 +			}
