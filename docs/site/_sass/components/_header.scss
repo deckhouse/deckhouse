@@ -185,6 +185,10 @@ html {
                 @include breakpoints.min-w(xxxl) {
                     font-size: 16px;
                 }
+
+                &:hover {
+                    color: #004df2;
+                }
             }
         }
 
@@ -684,7 +688,7 @@ html {
             font-size: 16px;
 
             @include breakpoints.min-w(xxl) {
-                font-size: 1.1rem;
+                font-size: 1.125rem;
             }
 
             @include breakpoints.max-w(xs) {
@@ -704,6 +708,12 @@ html {
 
         ul {
             flex-wrap: wrap;
+
+            li {
+                @include breakpoints.min-w(l) {
+                   margin: 0 .125rem; 
+                }
+            }
 
             &.nav {
 
