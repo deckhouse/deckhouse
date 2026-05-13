@@ -21,6 +21,8 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 )
 
 const (
@@ -249,6 +251,41 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 
 	status.Settings = settings
 	status.setCondition(Condition{Type: ConditionConfigured, Status: metav1.ConditionTrue})
+}
+
+// UpdateHealth applies a workload-health transition to ConditionScaled.
+// State mapping to K8s condition status:
+//
+//	StateScaled                          → True,    Reason="Scaled"
+//	StateReconciling, StateDegraded      → False,   Reason=State, Message=workload detail
+//	StateUnknown                         → Unknown, Reason="" (no workloads to observe)
+//
+// If the package is not tracked by the service, the update is silently ignored.
+func (s *Service) UpdateHealth(name string, event health.Event) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	cond := Condition{Type: ConditionScaled}
+	switch event.Health.State {
+	case health.StateScaled:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = ConditionReason(health.StateScaled)
+	case health.StateUnknown:
+		cond.Status = metav1.ConditionUnknown
+	default:
+		cond.Status = metav1.ConditionFalse
+		cond.Reason = ConditionReason(event.Health.State)
+		cond.Message = event.Health.Message
+	}
+
+	if status.setCondition(cond) {
+		s.ch <- name
+	}
 }
 
 // HandleError processes an error and extracts status conditions from it

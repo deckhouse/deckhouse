@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
@@ -86,6 +87,7 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
+	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
 
@@ -159,6 +161,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build Health service with its own client
+	if err := r.buildHealthService(); err != nil {
+		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations
@@ -381,6 +388,35 @@ func (r *Runtime) buildNelmService() error {
 	return nil
 }
 
+// buildHealthService creates the workload-health service that drives ConditionScaled.
+//
+// The service watches workloads tagged with the health.LabelKey package label and
+// reduces their per-workload statuses into a single State per package — Scaled,
+// Reconciling, Degraded, or Unknown. Transitions are pushed back into the status
+// service via r.status.UpdateHealth, which encodes them on ConditionScaled.
+//
+// Construction is I/O-free apart from client.Init; informers and the reconcile
+// goroutine start later via r.healthService.Start, paired with Stop on shutdown.
+func (r *Runtime) buildHealthService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
+	client.WithContextName(shapp.KubeContext)
+	client.WithConfigPath(shapp.KubeConfig)
+	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize health service client: %w", err)
+	}
+
+	healthService, err := health.NewService(client, r.status.UpdateHealth, r.logger)
+	if err != nil {
+		return fmt.Errorf("create health service failed: %w", err)
+	}
+
+	r.healthService = healthService
+
+	return nil
+}
+
 // buildScheduler creates the package scheduler with version checks and lifecycle callbacks.
 //
 // The scheduler controls package enable/disable based on:
@@ -493,6 +529,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // appropriate handler, driving the enable/disable lifecycle for all packages.
 func (r *Runtime) Run() {
 	r.hookEventHandler.Start()
+	r.healthService.Start()
 
 	go func() {
 		for event := range r.scheduler.Ch() {
@@ -590,6 +627,9 @@ func (r *Runtime) Stop() {
 
 	// Clean up resource monitors
 	r.nelmService.StopMonitors()
+
+	// Stop health monitoring
+	r.healthService.Stop()
 
 	// Stop generating new events
 	r.scheduleManager.Stop()
