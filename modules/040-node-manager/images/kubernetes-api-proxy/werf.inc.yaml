@@ -36,6 +36,7 @@ import:
   add: /src/kubernetes-api-proxy
   to: /kubernetes-api-proxy
   before: setup
+git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
