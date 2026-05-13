@@ -499,7 +499,7 @@ func FetchDocuments(paths []string) ([]string, error) {
 
 	for _, doc := range docs {
 		if err := detectMergedDocuments(doc); err != nil {
-			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(content)))
+			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
 		}
 	}
 	return docs, nil
