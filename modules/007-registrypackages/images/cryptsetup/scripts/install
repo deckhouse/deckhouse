@@ -17,3 +17,4 @@ set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
 cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
 cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib
+chown 0:0 /opt/deckhouse/bin/cryptsetup /opt/deckhouse/bin/integritysetup /opt/deckhouse/bin/veritysetup
