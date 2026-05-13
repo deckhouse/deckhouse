@@ -166,6 +166,7 @@ jobs:
           WERF_ENV: "EE"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path || steps.check_dev_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+          WERF_FINAL_IMAGES_ONLY: "false"
           DOC_VERSION: "${{ env.DOC_VERSION }}"
         run: |
           make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
