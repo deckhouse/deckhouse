@@ -582,21 +582,27 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 func (r *reconciler) syncMaintenanceLabel(ctx context.Context, module *v1alpha1.Module, maintenance string) error {
 	labels := module.GetLabels()
 	current, hasLabel := labels[v1alpha1.ModuleLabelMaintenance]
-	if maintenance == "" && !hasLabel || maintenance != "" && current == maintenance {
+
+	if maintenance == "" {
+		if !hasLabel {
+			return nil
+		}
+
+		patch := client.MergeFrom(module.DeepCopy())
+		delete(labels, v1alpha1.ModuleLabelMaintenance)
+		module.SetLabels(labels)
+		return r.client.Patch(ctx, module, patch)
+	}
+
+	if current == maintenance {
 		return nil
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
-	if labels == nil && maintenance != "" {
+	if labels == nil {
 		labels = make(map[string]string)
 	}
-
-	if maintenance != "" {
-		labels[v1alpha1.ModuleLabelMaintenance] = maintenance
-	} else {
-		delete(labels, v1alpha1.ModuleLabelMaintenance)
-	}
-
+	labels[v1alpha1.ModuleLabelMaintenance] = maintenance
 	module.SetLabels(labels)
 	return r.client.Patch(ctx, module, patch)
 }
