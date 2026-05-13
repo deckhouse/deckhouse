@@ -146,6 +146,19 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
