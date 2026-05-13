@@ -188,6 +188,16 @@ status:
 						Code: http.StatusOK,
 					},
 				},
+				// Remote API readiness probe: GET https://<apiHost>/
+				"api-host-0": {
+					"/": {Response: `{}`, Code: http.StatusOK},
+				},
+				"api-host-1": {
+					"/": {Response: `{}`, Code: http.StatusOK},
+				},
+				"api-host-2": {
+					"/": {Response: `{}`, Code: http.StatusOK},
+				},
 			}
 			dependency.TestDC.HTTPClient.DoMock.
 				Set(func(req *http.Request) (*http.Response, error) {
