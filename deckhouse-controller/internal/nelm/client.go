@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -200,9 +202,25 @@ type InstallOptions struct {
 }
 
 // Install installs a Helm chart as a release
-func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) error {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Install")
 	defer span.End()
+
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Error("panic in Install",
+				slog.Any("panic", r),
+				slog.String("release", releaseName),
+				slog.String("namespace", namespace),
+				slog.String("path", opts.Path),
+				slog.String("stack", string(debug.Stack())),
+			)
+			err = fmt.Errorf("panic in Install: %v", r)
+			span.SetStatus(codes.Error, err.Error())
+		}
+	}()
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -273,9 +291,25 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 
 // Render renders a nelm chart to YAML manifests without installing it
 // Returns the rendered manifests as a YAML string
-func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (string, error) {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out string, err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
 	defer span.End()
+
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Error("panic in Render",
+				slog.Any("panic", r),
+				slog.String("release", releaseName),
+				slog.String("namespace", namespace),
+				slog.String("path", opts.Path),
+				slog.String("stack", string(debug.Stack())),
+			)
+			err = fmt.Errorf("panic in Render: %v", r)
+			span.SetStatus(codes.Error, err.Error())
+		}
+	}()
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -342,9 +376,24 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 
 // Delete uninstalls a nelm release
 // Returns nil if the release doesn't exist (idempotent)
-func (c *Client) Delete(ctx context.Context, namespace, releaseName string) error {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Delete")
 	defer span.End()
+
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Error("panic in Delete",
+				slog.Any("panic", r),
+				slog.String("release", releaseName),
+				slog.String("namespace", namespace),
+				slog.String("stack", string(debug.Stack())),
+			)
+			err = fmt.Errorf("panic in Delete: %v", r)
+			span.SetStatus(codes.Error, err.Error())
+		}
+	}()
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -376,7 +425,21 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) erro
 
 // getRelease is a helper method to retrieve a release by name
 // Converts nelm's ReleaseNotFoundError to ErrReleaseNotFound for consistent error handling
-func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (*action.ReleaseGetResultV1, error) {
+//
+//nolint:nonamedreturns // named returns required for defer/recover to modify return values
+func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (result *action.ReleaseGetResultV1, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Error("panic in getRelease",
+				slog.Any("panic", r),
+				slog.String("release", releaseName),
+				slog.String("namespace", namespace),
+				slog.String("stack", string(debug.Stack())),
+			)
+			err = fmt.Errorf("panic in getRelease: %v", r)
+		}
+	}()
+
 	res, err := action.ReleaseGet(ctx, releaseName, namespace, action.ReleaseGetOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
