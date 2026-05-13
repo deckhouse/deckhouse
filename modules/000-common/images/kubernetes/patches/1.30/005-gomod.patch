@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 424a3fdc..434c64ef 100644
+index 424a3fdce57..e123e2385de 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -6,7 +6,7 @@
@@ -126,11 +126,13 @@ index 424a3fdc..434c64ef 100644
  	github.com/google/btree v1.0.1 // indirect
  	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
  	github.com/google/s2a-go v0.1.7 // indirect
-@@ -185,7 +183,8 @@ require (
+@@ -184,8 +182,9 @@ require (
+ 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
  	github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible // indirect
  	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
- 	github.com/moby/spdystream v0.2.0 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
 -	github.com/moby/sys/mountinfo v0.6.2 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
 +	github.com/moby/sys/mountinfo v0.7.1 // indirect
 +	github.com/moby/sys/user v0.1.0 // indirect
  	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
@@ -177,7 +179,7 @@ index 424a3fdc..434c64ef 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/go.sum b/go.sum
-index bd8ff144..f7de581c 100644
+index bd8ff14408d..d169a35bd52 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -28,142 +28,25 @@ cloud.google.com/go v0.90.0/go.mod h1:kRX0mNRHe0e2rC6oNakvwQqzyDmg57xJ+SZU1eT2aD
@@ -492,12 +494,16 @@ index bd8ff144..f7de581c 100644
  github.com/karrick/godirwalk v1.17.0 h1:b4kY7nqDdioR/6qnbHQyDvmA17u5G1cZ6J+CZXwSWoI=
  github.com/karrick/godirwalk v1.17.0/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
  github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
-@@ -556,8 +423,10 @@ github.com/moby/ipvs v1.1.0 h1:ONN4pGaZQgAx+1Scz5RvWV4Q7Gb+mvfRh3NsPS+1XQQ=
+@@ -554,10 +421,12 @@ github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTS
+ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
+ github.com/moby/ipvs v1.1.0 h1:ONN4pGaZQgAx+1Scz5RvWV4Q7Gb+mvfRh3NsPS+1XQQ=
  github.com/moby/ipvs v1.1.0/go.mod h1:4VJMWuf098bsUMmZEiD4Tjk/O7mOn3l1PTD3s4OoYAs=
- github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
- github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 -github.com/moby/sys/mountinfo v0.6.2 h1:BzJjoreD5BMFNmD9Rus6gdd1pLuecOFPt8wC+Vygl78=
 -github.com/moby/sys/mountinfo v0.6.2/go.mod h1:IJb6JQeOklcdMU9F5xQ8ZALD+CUr5VlGpwtX+VE0rpI=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
 +github.com/moby/sys/mountinfo v0.7.1 h1:/tTvQaSJRr2FshkhXiIpux6fQ2Zvc4j7tAhMTStAG2g=
 +github.com/moby/sys/mountinfo v0.7.1/go.mod h1:IJb6JQeOklcdMU9F5xQ8ZALD+CUr5VlGpwtX+VE0rpI=
 +github.com/moby/sys/user v0.1.0 h1:WmZ93f5Ux6het5iituh9x2zAG7NFY9Aqi49jjE1PaQg=
@@ -833,7 +839,7 @@ index bd8ff144..f7de581c 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.0.4-0.20230601165947-6ce0bf390ce3/go.mod h1:/d88dHCvoy7d0AKFT0yytezSGZKjsZBVs9YTkBHSGFk=
  sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 h1:W6cLQc5pnqM7vh3b7HvGNfXrJ/xL6BDMS0v1V/HHg5U=
 diff --git a/go.work b/go.work
-index 15a04ac2..519ce421 100644
+index 15a04ac26e8..519ce421ee0 100644
 --- a/go.work
 +++ b/go.work
 @@ -1,6 +1,6 @@
@@ -845,7 +851,7 @@ index 15a04ac2..519ce421 100644
  use (
  	.
 diff --git a/hack/tools/go.mod b/hack/tools/go.mod
-index 57a0f647..855c9427 100644
+index 57a0f6471d5..855c9427544 100644
 --- a/hack/tools/go.mod
 +++ b/hack/tools/go.mod
 @@ -1,6 +1,8 @@
@@ -891,7 +897,7 @@ index 57a0f647..855c9427 100644
  	gopkg.in/ini.v1 v1.67.0 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/hack/tools/go.sum b/hack/tools/go.sum
-index 2c56eb23..41a29690 100644
+index 2c56eb2313f..41a29690529 100644
 --- a/hack/tools/go.sum
 +++ b/hack/tools/go.sum
 @@ -192,8 +192,8 @@ github.com/go-toolsmith/strparse v1.1.0 h1:GAioeZUK9TGxnLS+qfdqNbA4z0SSm5zVNtCQi
@@ -971,7 +977,7 @@ index 2c56eb23..41a29690 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 diff --git a/hack/tools/go.work b/hack/tools/go.work
-index 41c0499e..28bd08bd 100644
+index 41c0499e9ba..28bd08bdf24 100644
 --- a/hack/tools/go.work
 +++ b/hack/tools/go.work
 @@ -1,6 +1,8 @@
@@ -985,7 +991,7 @@ index 41c0499e..28bd08bd 100644
  
  use .
 diff --git a/staging/src/k8s.io/api/go.mod b/staging/src/k8s.io/api/go.mod
-index c58ca8f2..57b59e6e 100644
+index c58ca8f22f8..57b59e6ede6 100644
 --- a/staging/src/k8s.io/api/go.mod
 +++ b/staging/src/k8s.io/api/go.mod
 @@ -2,7 +2,9 @@
@@ -1011,7 +1017,7 @@ index c58ca8f2..57b59e6e 100644
  	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/staging/src/k8s.io/api/go.sum b/staging/src/k8s.io/api/go.sum
-index ba19787c..dd6b99ea 100644
+index ba19787cb86..dd6b99eae3e 100644
 --- a/staging/src/k8s.io/api/go.sum
 +++ b/staging/src/k8s.io/api/go.sum
 @@ -1,30 +1,19 @@
@@ -1121,7 +1127,7 @@ index ba19787c..dd6b99ea 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/go.mod b/staging/src/k8s.io/apiextensions-apiserver/go.mod
-index 7c580fc2..0a263370 100644
+index 7c580fc2b0f..bfd00d3db5a 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/go.mod
 +++ b/staging/src/k8s.io/apiextensions-apiserver/go.mod
 @@ -2,7 +2,9 @@
@@ -1172,6 +1178,15 @@ index 7c580fc2..0a263370 100644
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
  	github.com/google/btree v1.0.1 // indirect
+@@ -73,7 +75,7 @@ require (
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+ 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 @@ -95,28 +97,27 @@ require (
  	go.etcd.io/etcd/pkg/v3 v3.5.10 // indirect
  	go.etcd.io/etcd/raft/v3 v3.5.10 // indirect
@@ -1214,7 +1229,7 @@ index 7c580fc2..0a263370 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/go.sum b/staging/src/k8s.io/apiextensions-apiserver/go.sum
-index 92cf0456..79e2f040 100644
+index 92cf0456f75..1f10dccd034 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/go.sum
 +++ b/staging/src/k8s.io/apiextensions-apiserver/go.sum
 @@ -1,131 +1,12 @@
@@ -1445,11 +1460,15 @@ index 92cf0456..79e2f040 100644
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
  github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
-@@ -277,7 +146,6 @@ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zk
+@@ -275,9 +144,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
  github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
- github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
- github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 -github.com/moby/term v0.0.0-20221205130635-1aeaba878587/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
  github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
@@ -1657,7 +1676,7 @@ index 92cf0456..79e2f040 100644
  gopkg.in/yaml.v2 v2.2.3/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 diff --git a/staging/src/k8s.io/apimachinery/go.mod b/staging/src/k8s.io/apimachinery/go.mod
-index 6eab11ae..df2a02f8 100644
+index 6eab11aebf1..89bc2a18a00 100644
 --- a/staging/src/k8s.io/apimachinery/go.mod
 +++ b/staging/src/k8s.io/apimachinery/go.mod
 @@ -2,7 +2,9 @@
@@ -1671,7 +1690,13 @@ index 6eab11ae..df2a02f8 100644
  
  require (
  	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
-@@ -20,7 +22,7 @@ require (
+@@ -15,12 +17,12 @@ require (
+ 	github.com/google/go-cmp v0.6.0
+ 	github.com/google/gofuzz v1.2.0
+ 	github.com/google/uuid v1.3.0
+-	github.com/moby/spdystream v0.2.0
++	github.com/moby/spdystream v0.5.1
+ 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
  	github.com/onsi/ginkgo/v2 v2.15.0
  	github.com/spf13/pflag v1.0.5
  	github.com/stretchr/testify v1.8.4
@@ -1694,7 +1719,7 @@ index 6eab11ae..df2a02f8 100644
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
 diff --git a/staging/src/k8s.io/apimachinery/go.sum b/staging/src/k8s.io/apimachinery/go.sum
-index 833cf056..d4bc63fb 100644
+index 833cf056717..3e90c9ea91e 100644
 --- a/staging/src/k8s.io/apimachinery/go.sum
 +++ b/staging/src/k8s.io/apimachinery/go.sum
 @@ -1,7 +1,5 @@
@@ -1713,7 +1738,16 @@ index 833cf056..d4bc63fb 100644
  github.com/evanphx/json-patch v4.12.0+incompatible h1:4onqiflcdA9EOZ4RxV643DvftH5pOlLGNtQ5lPWQu84=
  github.com/evanphx/json-patch v4.12.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
  github.com/fxamacker/cbor/v2 v2.6.0 h1:sU6J2usfADwWlYDAFhZBQ6TnLFBHxgesMrQfQgk1tWA=
-@@ -64,7 +61,6 @@ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w
+@@ -57,14 +54,13 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
+ github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
+ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
+ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
+ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
  github.com/modern-go/reflect2 v1.0.2 h1:xBagoLtFs94CBntxluKeaWgTMpvLxC4ur3nMaC9Gz0M=
  github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjYzDa0/r8luk=
@@ -1788,7 +1822,7 @@ index 833cf056..d4bc63fb 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/apiserver/go.mod b/staging/src/k8s.io/apiserver/go.mod
-index b7be2f83..bf41ea41 100644
+index b7be2f839a8..81ba5519564 100644
 --- a/staging/src/k8s.io/apiserver/go.mod
 +++ b/staging/src/k8s.io/apiserver/go.mod
 @@ -2,7 +2,9 @@
@@ -1860,6 +1894,15 @@ index b7be2f83..bf41ea41 100644
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
  	github.com/google/btree v1.0.1 // indirect
+@@ -89,7 +91,7 @@ require (
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+ 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/pkg/errors v0.9.1 // indirect
 @@ -113,11 +115,10 @@ require (
  	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
@@ -1877,7 +1920,7 @@ index b7be2f83..bf41ea41 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/apiserver/go.sum b/staging/src/k8s.io/apiserver/go.sum
-index 43b4091b..56d24919 100644
+index 43b4091b1ac..2a66a106af6 100644
 --- a/staging/src/k8s.io/apiserver/go.sum
 +++ b/staging/src/k8s.io/apiserver/go.sum
 @@ -1,131 +1,12 @@
@@ -2104,11 +2147,15 @@ index 43b4091b..56d24919 100644
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
  github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
-@@ -278,7 +148,6 @@ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zk
+@@ -276,9 +146,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
  github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
- github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
- github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 -github.com/moby/term v0.0.0-20221205130635-1aeaba878587/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
  github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
@@ -2301,7 +2348,7 @@ index 43b4091b..56d24919 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/cli-runtime/go.mod b/staging/src/k8s.io/cli-runtime/go.mod
-index 6dafce14..ee505636 100644
+index 6dafce14999..ee50563627a 100644
 --- a/staging/src/k8s.io/cli-runtime/go.mod
 +++ b/staging/src/k8s.io/cli-runtime/go.mod
 @@ -2,7 +2,9 @@
@@ -2344,7 +2391,7 @@ index 6dafce14..ee505636 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
 diff --git a/staging/src/k8s.io/cli-runtime/go.sum b/staging/src/k8s.io/cli-runtime/go.sum
-index 76c0623c..43335957 100644
+index 76c0623c6a5..433359576e2 100644
 --- a/staging/src/k8s.io/cli-runtime/go.sum
 +++ b/staging/src/k8s.io/cli-runtime/go.sum
 @@ -1,12 +1,7 @@
@@ -2505,7 +2552,7 @@ index 76c0623c..43335957 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/client-go/go.mod b/staging/src/k8s.io/client-go/go.mod
-index 4b66c301..d84806b1 100644
+index 4b66c301ece..118aacf1a7d 100644
 --- a/staging/src/k8s.io/client-go/go.mod
 +++ b/staging/src/k8s.io/client-go/go.mod
 @@ -2,7 +2,9 @@
@@ -2532,6 +2579,15 @@ index 4b66c301..d84806b1 100644
  	golang.org/x/time v0.3.0
  	google.golang.org/protobuf v1.33.0
  	k8s.io/api v0.0.0
+@@ -47,7 +49,7 @@ require (
+ 	github.com/josharian/intern v1.0.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 @@ -55,10 +57,9 @@ require (
  	github.com/onsi/ginkgo/v2 v2.15.0 // indirect
  	github.com/pkg/errors v0.9.1 // indirect
@@ -2547,7 +2603,7 @@ index 4b66c301..d84806b1 100644
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
 diff --git a/staging/src/k8s.io/client-go/go.sum b/staging/src/k8s.io/client-go/go.sum
-index 47461c04..4d30e89f 100644
+index 47461c04dd4..2b1efce7ead 100644
 --- a/staging/src/k8s.io/client-go/go.sum
 +++ b/staging/src/k8s.io/client-go/go.sum
 @@ -1,9 +1,5 @@
@@ -2576,6 +2632,17 @@ index 47461c04..4d30e89f 100644
  github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
  github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
  github.com/google/btree v1.0.1 h1:gK4Kx5IaGY9CD5sPJ36FHiBJ6ZXl0kilRiiCj+jdYp4=
+@@ -70,8 +64,8 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
+ github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
+ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
+ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
+ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
+ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 @@ -105,59 +99,48 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
  github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
  github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
@@ -2657,7 +2724,7 @@ index 47461c04..4d30e89f 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/cloud-provider/go.mod b/staging/src/k8s.io/cloud-provider/go.mod
-index 01d01b96..7322ed17 100644
+index 01d01b96d98..7322ed17096 100644
 --- a/staging/src/k8s.io/cloud-provider/go.mod
 +++ b/staging/src/k8s.io/cloud-provider/go.mod
 @@ -2,7 +2,9 @@
@@ -2738,7 +2805,7 @@ index 01d01b96..7322ed17 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/cloud-provider/go.sum b/staging/src/k8s.io/cloud-provider/go.sum
-index 704cb4a2..cc8d5ee9 100644
+index 704cb4a22f7..cc8d5ee91cc 100644
 --- a/staging/src/k8s.io/cloud-provider/go.sum
 +++ b/staging/src/k8s.io/cloud-provider/go.sum
 @@ -1,133 +1,13 @@
@@ -3136,7 +3203,7 @@ index 704cb4a2..cc8d5ee9 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/cluster-bootstrap/go.mod b/staging/src/k8s.io/cluster-bootstrap/go.mod
-index f530a620..9c9ff0b4 100644
+index f530a620187..9c9ff0b4574 100644
 --- a/staging/src/k8s.io/cluster-bootstrap/go.mod
 +++ b/staging/src/k8s.io/cluster-bootstrap/go.mod
 @@ -2,12 +2,14 @@
@@ -3170,7 +3237,7 @@ index f530a620..9c9ff0b4 100644
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
 diff --git a/staging/src/k8s.io/cluster-bootstrap/go.sum b/staging/src/k8s.io/cluster-bootstrap/go.sum
-index ccc6ebdb..b5b305a5 100644
+index ccc6ebdbd7e..b5b305a5656 100644
 --- a/staging/src/k8s.io/cluster-bootstrap/go.sum
 +++ b/staging/src/k8s.io/cluster-bootstrap/go.sum
 @@ -1,28 +1,16 @@
@@ -3286,7 +3353,7 @@ index ccc6ebdb..b5b305a5 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/code-generator/examples/go.mod b/staging/src/k8s.io/code-generator/examples/go.mod
-index b2a8724d..64c11d42 100644
+index b2a8724d87b..64c11d42e00 100644
 --- a/staging/src/k8s.io/code-generator/examples/go.mod
 +++ b/staging/src/k8s.io/code-generator/examples/go.mod
 @@ -2,7 +2,9 @@
@@ -3320,7 +3387,7 @@ index b2a8724d..64c11d42 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/code-generator/examples/go.sum b/staging/src/k8s.io/code-generator/examples/go.sum
-index 94908fb8..16b71122 100644
+index 94908fb8f36..16b7112241e 100644
 --- a/staging/src/k8s.io/code-generator/examples/go.sum
 +++ b/staging/src/k8s.io/code-generator/examples/go.sum
 @@ -18,7 +18,6 @@ github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 h1:tfuBGBXKqDEe
@@ -3388,7 +3455,7 @@ index 94908fb8..16b71122 100644
  google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 diff --git a/staging/src/k8s.io/code-generator/examples/go.work b/staging/src/k8s.io/code-generator/examples/go.work
-index c6e5470a..28bd08bd 100644
+index c6e5470a593..28bd08bdf24 100644
 --- a/staging/src/k8s.io/code-generator/examples/go.work
 +++ b/staging/src/k8s.io/code-generator/examples/go.work
 @@ -1,6 +1,8 @@
@@ -3402,7 +3469,7 @@ index c6e5470a..28bd08bd 100644
  
  use .
 diff --git a/staging/src/k8s.io/code-generator/go.mod b/staging/src/k8s.io/code-generator/go.mod
-index e50fcd4d..42ac2f3d 100644
+index e50fcd4d97c..42ac2f3dec4 100644
 --- a/staging/src/k8s.io/code-generator/go.mod
 +++ b/staging/src/k8s.io/code-generator/go.mod
 @@ -2,7 +2,9 @@
@@ -3429,7 +3496,7 @@ index e50fcd4d..42ac2f3d 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 diff --git a/staging/src/k8s.io/code-generator/go.sum b/staging/src/k8s.io/code-generator/go.sum
-index 097cccb7..2f2f128b 100644
+index 097cccb779b..2f2f128bf21 100644
 --- a/staging/src/k8s.io/code-generator/go.sum
 +++ b/staging/src/k8s.io/code-generator/go.sum
 @@ -1,14 +1,9 @@
@@ -3539,7 +3606,7 @@ index 097cccb7..2f2f128b 100644
  google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 diff --git a/staging/src/k8s.io/component-base/go.mod b/staging/src/k8s.io/component-base/go.mod
-index de88b9d7..c4a88eb9 100644
+index de88b9d75be..c4a88eb92ff 100644
 --- a/staging/src/k8s.io/component-base/go.mod
 +++ b/staging/src/k8s.io/component-base/go.mod
 @@ -2,7 +2,9 @@
@@ -3580,7 +3647,7 @@ index de88b9d7..c4a88eb9 100644
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
  	google.golang.org/grpc v1.58.3 // indirect
 diff --git a/staging/src/k8s.io/component-base/go.sum b/staging/src/k8s.io/component-base/go.sum
-index 65896c27..ee8d705d 100644
+index 65896c27fce..ee8d705de48 100644
 --- a/staging/src/k8s.io/component-base/go.sum
 +++ b/staging/src/k8s.io/component-base/go.sum
 @@ -1,24 +1,13 @@
@@ -3768,7 +3835,7 @@ index 65896c27..ee8d705d 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/component-helpers/go.mod b/staging/src/k8s.io/component-helpers/go.mod
-index d83a5130..604b4f42 100644
+index d83a5130f83..604b4f42789 100644
 --- a/staging/src/k8s.io/component-helpers/go.mod
 +++ b/staging/src/k8s.io/component-helpers/go.mod
 @@ -2,7 +2,9 @@
@@ -3802,7 +3869,7 @@ index d83a5130..604b4f42 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/component-helpers/go.sum b/staging/src/k8s.io/component-helpers/go.sum
-index 001fb594..16b71122 100644
+index 001fb594859..16b7112241e 100644
 --- a/staging/src/k8s.io/component-helpers/go.sum
 +++ b/staging/src/k8s.io/component-helpers/go.sum
 @@ -1,8 +1,3 @@
@@ -3942,7 +4009,7 @@ index 001fb594..16b71122 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/controller-manager/go.mod b/staging/src/k8s.io/controller-manager/go.mod
-index c400af40..380b5c0e 100644
+index c400af40326..380b5c0ed3c 100644
 --- a/staging/src/k8s.io/controller-manager/go.mod
 +++ b/staging/src/k8s.io/controller-manager/go.mod
 @@ -2,17 +2,19 @@
@@ -4023,7 +4090,7 @@ index c400af40..380b5c0e 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/controller-manager/go.sum b/staging/src/k8s.io/controller-manager/go.sum
-index 086579ac..838a5cff 100644
+index 086579ac002..838a5cff8c4 100644
 --- a/staging/src/k8s.io/controller-manager/go.sum
 +++ b/staging/src/k8s.io/controller-manager/go.sum
 @@ -1,132 +1,11 @@
@@ -4420,7 +4487,7 @@ index 086579ac..838a5cff 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/cri-api/go.mod b/staging/src/k8s.io/cri-api/go.mod
-index be903e97..d1353db5 100644
+index be903e97781..d1353db5912 100644
 --- a/staging/src/k8s.io/cri-api/go.mod
 +++ b/staging/src/k8s.io/cri-api/go.mod
 @@ -2,7 +2,9 @@
@@ -4448,7 +4515,7 @@ index be903e97..d1353db5 100644
  	google.golang.org/protobuf v1.33.0 // indirect
  	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 diff --git a/staging/src/k8s.io/cri-api/go.sum b/staging/src/k8s.io/cri-api/go.sum
-index 21eb3235..e500518a 100644
+index 21eb32359ae..e500518a03c 100644
 --- a/staging/src/k8s.io/cri-api/go.sum
 +++ b/staging/src/k8s.io/cri-api/go.sum
 @@ -1,22 +1,12 @@
@@ -4533,7 +4600,7 @@ index 21eb3235..e500518a 100644
  google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d/go.mod h1:+Bk1OCOj40wS2hwAMA+aCW9ypzm63QTBBHp6lQ3p+9M=
  google.golang.org/grpc v1.58.3 h1:BjnpXut1btbtgN/6sp+brB2Kbm2LjNXnidYujAVbSoQ=
 diff --git a/staging/src/k8s.io/csi-translation-lib/go.mod b/staging/src/k8s.io/csi-translation-lib/go.mod
-index 6972ec97..642eb7a6 100644
+index 6972ec97b63..642eb7a6cad 100644
 --- a/staging/src/k8s.io/csi-translation-lib/go.mod
 +++ b/staging/src/k8s.io/csi-translation-lib/go.mod
 @@ -2,7 +2,9 @@
@@ -4559,7 +4626,7 @@ index 6972ec97..642eb7a6 100644
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
 diff --git a/staging/src/k8s.io/csi-translation-lib/go.sum b/staging/src/k8s.io/csi-translation-lib/go.sum
-index 0bd0a82f..de2e8e73 100644
+index 0bd0a82fb5d..de2e8e73ba4 100644
 --- a/staging/src/k8s.io/csi-translation-lib/go.sum
 +++ b/staging/src/k8s.io/csi-translation-lib/go.sum
 @@ -1,29 +1,18 @@
@@ -4673,7 +4740,7 @@ index 0bd0a82f..de2e8e73 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/dynamic-resource-allocation/go.mod b/staging/src/k8s.io/dynamic-resource-allocation/go.mod
-index 45ba4109..ae9e7365 100644
+index 45ba410900c..ae9e73655c7 100644
 --- a/staging/src/k8s.io/dynamic-resource-allocation/go.mod
 +++ b/staging/src/k8s.io/dynamic-resource-allocation/go.mod
 @@ -2,7 +2,9 @@
@@ -4729,7 +4796,7 @@ index 45ba4109..ae9e7365 100644
  	google.golang.org/protobuf v1.33.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/staging/src/k8s.io/dynamic-resource-allocation/go.sum b/staging/src/k8s.io/dynamic-resource-allocation/go.sum
-index 42d1c9f7..84d16793 100644
+index 42d1c9f75b0..84d16793522 100644
 --- a/staging/src/k8s.io/dynamic-resource-allocation/go.sum
 +++ b/staging/src/k8s.io/dynamic-resource-allocation/go.sum
 @@ -1,38 +1,17 @@
@@ -4973,7 +5040,7 @@ index 42d1c9f7..84d16793 100644
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
 diff --git a/staging/src/k8s.io/endpointslice/go.mod b/staging/src/k8s.io/endpointslice/go.mod
-index 79e5e1dd..bc316312 100644
+index 79e5e1dd2e4..bc316312756 100644
 --- a/staging/src/k8s.io/endpointslice/go.mod
 +++ b/staging/src/k8s.io/endpointslice/go.mod
 @@ -2,7 +2,9 @@
@@ -5007,7 +5074,7 @@ index 79e5e1dd..bc316312 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/endpointslice/go.sum b/staging/src/k8s.io/endpointslice/go.sum
-index 356fb0d6..96004047 100644
+index 356fb0d6fe8..960040473f2 100644
 --- a/staging/src/k8s.io/endpointslice/go.sum
 +++ b/staging/src/k8s.io/endpointslice/go.sum
 @@ -1,16 +1,7 @@
@@ -5196,7 +5263,7 @@ index 356fb0d6..96004047 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/kms/go.mod b/staging/src/k8s.io/kms/go.mod
-index 4e468ece..5a442cd8 100644
+index 4e468eceb2d..5a442cd8d77 100644
 --- a/staging/src/k8s.io/kms/go.mod
 +++ b/staging/src/k8s.io/kms/go.mod
 @@ -2,7 +2,9 @@
@@ -5224,7 +5291,7 @@ index 4e468ece..5a442cd8 100644
  	google.golang.org/protobuf v1.33.0 // indirect
  )
 diff --git a/staging/src/k8s.io/kms/go.sum b/staging/src/k8s.io/kms/go.sum
-index 16a055d3..c2ed04a0 100644
+index 16a055d3cb6..c2ed04a0008 100644
 --- a/staging/src/k8s.io/kms/go.sum
 +++ b/staging/src/k8s.io/kms/go.sum
 @@ -1,19 +1,9 @@
@@ -5298,7 +5365,7 @@ index 16a055d3..c2ed04a0 100644
  google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d/go.mod h1:+Bk1OCOj40wS2hwAMA+aCW9ypzm63QTBBHp6lQ3p+9M=
  google.golang.org/grpc v1.58.3 h1:BjnpXut1btbtgN/6sp+brB2Kbm2LjNXnidYujAVbSoQ=
 diff --git a/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod b/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod
-index ada9e19d..91871df3 100644
+index ada9e19d8a9..91871df3a75 100644
 --- a/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod
 +++ b/staging/src/k8s.io/kms/internal/plugins/_mock/go.mod
 @@ -1,6 +1,8 @@
@@ -5325,7 +5392,7 @@ index ada9e19d..91871df3 100644
  	google.golang.org/grpc v1.58.3 // indirect
  	google.golang.org/protobuf v1.33.0 // indirect
 diff --git a/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum b/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum
-index 54b75bf8..0297000c 100644
+index 54b75bf8165..0297000cb0a 100644
 --- a/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum
 +++ b/staging/src/k8s.io/kms/internal/plugins/_mock/go.sum
 @@ -33,20 +33,20 @@ golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn
@@ -5356,7 +5423,7 @@ index 54b75bf8..0297000c 100644
  golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
  golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 diff --git a/staging/src/k8s.io/kms/internal/plugins/_mock/go.work b/staging/src/k8s.io/kms/internal/plugins/_mock/go.work
-index c6e5470a..28bd08bd 100644
+index c6e5470a593..28bd08bdf24 100644
 --- a/staging/src/k8s.io/kms/internal/plugins/_mock/go.work
 +++ b/staging/src/k8s.io/kms/internal/plugins/_mock/go.work
 @@ -1,6 +1,8 @@
@@ -5370,7 +5437,7 @@ index c6e5470a..28bd08bd 100644
  
  use .
 diff --git a/staging/src/k8s.io/kube-aggregator/go.mod b/staging/src/k8s.io/kube-aggregator/go.mod
-index 3438dcb0..7ca4514a 100644
+index 3438dcb012f..05177923652 100644
 --- a/staging/src/k8s.io/kube-aggregator/go.mod
 +++ b/staging/src/k8s.io/kube-aggregator/go.mod
 @@ -2,7 +2,9 @@
@@ -5411,6 +5478,15 @@ index 3438dcb0..7ca4514a 100644
  	github.com/gorilla/websocket v1.5.0 // indirect
  	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
  	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+@@ -58,7 +60,7 @@ require (
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+ 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 @@ -73,32 +75,31 @@ require (
  	go.etcd.io/etcd/api/v3 v3.5.10 // indirect
  	go.etcd.io/etcd/client/pkg/v3 v3.5.10 // indirect
@@ -5460,7 +5536,7 @@ index 3438dcb0..7ca4514a 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/kube-aggregator/go.sum b/staging/src/k8s.io/kube-aggregator/go.sum
-index 3eb8809e..f1c17c0c 100644
+index 3eb8809e114..51734e5bb6a 100644
 --- a/staging/src/k8s.io/kube-aggregator/go.sum
 +++ b/staging/src/k8s.io/kube-aggregator/go.sum
 @@ -1,129 +1,9 @@
@@ -5673,11 +5749,15 @@ index 3eb8809e..f1c17c0c 100644
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
  github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
-@@ -251,7 +120,6 @@ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zk
+@@ -249,9 +118,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
  github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
- github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
- github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 -github.com/moby/term v0.0.0-20221205130635-1aeaba878587/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
  github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
@@ -5856,7 +5936,7 @@ index 3eb8809e..f1c17c0c 100644
  gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
 diff --git a/staging/src/k8s.io/kube-controller-manager/go.mod b/staging/src/k8s.io/kube-controller-manager/go.mod
-index 532a4b93..ddb6530e 100644
+index 532a4b93fb9..ddb6530eee0 100644
 --- a/staging/src/k8s.io/kube-controller-manager/go.mod
 +++ b/staging/src/k8s.io/kube-controller-manager/go.mod
 @@ -2,7 +2,9 @@
@@ -5882,7 +5962,7 @@ index 532a4b93..ddb6530e 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/kube-controller-manager/go.sum b/staging/src/k8s.io/kube-controller-manager/go.sum
-index 286caa9c..642d6730 100644
+index 286caa9c1cd..642d6730410 100644
 --- a/staging/src/k8s.io/kube-controller-manager/go.sum
 +++ b/staging/src/k8s.io/kube-controller-manager/go.sum
 @@ -1,50 +1,17 @@
@@ -6057,7 +6137,7 @@ index 286caa9c..642d6730 100644
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
 diff --git a/staging/src/k8s.io/kube-proxy/go.mod b/staging/src/k8s.io/kube-proxy/go.mod
-index 9cc274e9..7c9a1516 100644
+index 9cc274e974c..7c9a1516989 100644
 --- a/staging/src/k8s.io/kube-proxy/go.mod
 +++ b/staging/src/k8s.io/kube-proxy/go.mod
 @@ -2,7 +2,7 @@
@@ -6083,7 +6163,7 @@ index 9cc274e9..7c9a1516 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/kube-proxy/go.sum b/staging/src/k8s.io/kube-proxy/go.sum
-index a11ac120..64da2413 100644
+index a11ac120086..64da2413ae7 100644
 --- a/staging/src/k8s.io/kube-proxy/go.sum
 +++ b/staging/src/k8s.io/kube-proxy/go.sum
 @@ -1,12 +1,7 @@
@@ -6244,7 +6324,7 @@ index a11ac120..64da2413 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/kube-scheduler/go.mod b/staging/src/k8s.io/kube-scheduler/go.mod
-index bddc1c2a..f3cf7594 100644
+index bddc1c2a3d1..f3cf75940a9 100644
 --- a/staging/src/k8s.io/kube-scheduler/go.mod
 +++ b/staging/src/k8s.io/kube-scheduler/go.mod
 @@ -2,7 +2,9 @@
@@ -6270,7 +6350,7 @@ index bddc1c2a..f3cf7594 100644
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  	k8s.io/klog/v2 v2.120.1 // indirect
 diff --git a/staging/src/k8s.io/kube-scheduler/go.sum b/staging/src/k8s.io/kube-scheduler/go.sum
-index 9c48a548..4b48c690 100644
+index 9c48a5489b4..4b48c690372 100644
 --- a/staging/src/k8s.io/kube-scheduler/go.sum
 +++ b/staging/src/k8s.io/kube-scheduler/go.sum
 @@ -1,39 +1,16 @@
@@ -6417,7 +6497,7 @@ index 9c48a548..4b48c690 100644
  k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 diff --git a/staging/src/k8s.io/kubectl/go.mod b/staging/src/k8s.io/kubectl/go.mod
-index 13306dd0..0d652540 100644
+index 13306dd0d5e..4eaf7bab55b 100644
 --- a/staging/src/k8s.io/kubectl/go.mod
 +++ b/staging/src/k8s.io/kubectl/go.mod
 @@ -2,7 +2,9 @@
@@ -6440,6 +6520,15 @@ index 13306dd0..0d652540 100644
  	gopkg.in/yaml.v2 v2.4.0
  	k8s.io/api v0.0.0
  	k8s.io/apimachinery v0.0.0
+@@ -70,7 +72,7 @@ require (
+ 	github.com/josharian/intern v1.0.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 @@ -81,14 +83,13 @@ require (
  	github.com/pmezard/go-difflib v1.0.0 // indirect
  	github.com/xlab/treeprint v1.2.0 // indirect
@@ -6462,7 +6551,7 @@ index 13306dd0..0d652540 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v3 v3.0.1 // indirect
 diff --git a/staging/src/k8s.io/kubectl/go.sum b/staging/src/k8s.io/kubectl/go.sum
-index 84ba3ec4..b7008c84 100644
+index 84ba3ec4c5a..39b894315f8 100644
 --- a/staging/src/k8s.io/kubectl/go.sum
 +++ b/staging/src/k8s.io/kubectl/go.sum
 @@ -1,20 +1,12 @@
@@ -6522,14 +6611,20 @@ index 84ba3ec4..b7008c84 100644
  github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
  github.com/imdario/mergo v0.3.6 h1:xTNEAn+kxVO7dTZGu0CegyqKZmoWFI0rF8UxjlB2d28=
  github.com/imdario/mergo v0.3.6/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
-@@ -135,7 +120,6 @@ github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffkt
+@@ -135,11 +120,10 @@ github.com/lithammer/dedent v1.1.0 h1:VNzHMVCBNG1j0fh3OrsFRkVUwStdDArbgBWoPAffkt
  github.com/lithammer/dedent v1.1.0/go.mod h1:jrXYCQtgg0nJiN+StA2KgR7w6CiQNv9Fd/Z9BP0jIOc=
  github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
  github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 -github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
  github.com/mitchellh/go-wordwrap v1.0.1 h1:TLuKupo69TCn6TQSyGxwI1EblZZEsQ0vMlAFQflz0v0=
  github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTSsCt+hzestvNj0=
- github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
+ github.com/moby/term v0.0.0-20221205130635-1aeaba878587 h1:HfkjXDfhgVaN5rmueG8cL8KKeFNecRCXFhaJ2qZ5SKA=
+ github.com/moby/term v0.0.0-20221205130635-1aeaba878587/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
+ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 @@ -165,11 +149,7 @@ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
  github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
  github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
@@ -6676,7 +6771,7 @@ index 84ba3ec4..b7008c84 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.0.4-0.20230601165947-6ce0bf390ce3/go.mod h1:/d88dHCvoy7d0AKFT0yytezSGZKjsZBVs9YTkBHSGFk=
  sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 h1:W6cLQc5pnqM7vh3b7HvGNfXrJ/xL6BDMS0v1V/HHg5U=
 diff --git a/staging/src/k8s.io/kubelet/go.mod b/staging/src/k8s.io/kubelet/go.mod
-index b8ef95bc..6c1edbef 100644
+index b8ef95bc90d..e2858a82116 100644
 --- a/staging/src/k8s.io/kubelet/go.mod
 +++ b/staging/src/k8s.io/kubelet/go.mod
 @@ -2,13 +2,15 @@
@@ -6697,6 +6792,15 @@ index b8ef95bc..6c1edbef 100644
  	k8s.io/api v0.0.0
  	k8s.io/apimachinery v0.0.0
  	k8s.io/apiserver v0.0.0
+@@ -32,7 +34,7 @@ require (
+ 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+ 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
+-	github.com/moby/spdystream v0.2.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 @@ -43,13 +45,12 @@ require (
  	github.com/prometheus/procfs v0.10.1 // indirect
  	github.com/spf13/cobra v1.7.0 // indirect
@@ -6717,7 +6821,7 @@ index b8ef95bc..6c1edbef 100644
  	google.golang.org/protobuf v1.33.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/staging/src/k8s.io/kubelet/go.sum b/staging/src/k8s.io/kubelet/go.sum
-index 9da48399..cbd6be0e 100644
+index 9da48399d10..1a571f83078 100644
 --- a/staging/src/k8s.io/kubelet/go.sum
 +++ b/staging/src/k8s.io/kubelet/go.sum
 @@ -1,45 +1,19 @@
@@ -6811,11 +6915,15 @@ index 9da48399..cbd6be0e 100644
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
  github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
-@@ -101,7 +60,6 @@ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zk
+@@ -99,9 +58,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
+ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
+ github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
  github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
- github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
- github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
+-github.com/moby/spdystream v0.2.0 h1:cjW1zVyyoiM0T7b6UoySUFqzXMoqRckQtXwGPiBhOM8=
+-github.com/moby/spdystream v0.2.0/go.mod h1:f7i0iNDQJ059oMTcWxx8MA/zKFIuD/lY+0GqbN2Wy8c=
 -github.com/moby/term v0.0.0-20221205130635-1aeaba878587/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
  github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
  github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
@@ -6968,7 +7076,7 @@ index 9da48399..cbd6be0e 100644
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
 diff --git a/staging/src/k8s.io/legacy-cloud-providers/go.mod b/staging/src/k8s.io/legacy-cloud-providers/go.mod
-index 2b96894d..b55d0671 100644
+index 2b96894d61a..b55d0671d6a 100644
 --- a/staging/src/k8s.io/legacy-cloud-providers/go.mod
 +++ b/staging/src/k8s.io/legacy-cloud-providers/go.mod
 @@ -2,27 +2,28 @@
@@ -7037,7 +7145,7 @@ index 2b96894d..b55d0671 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/warnings.v0 v0.1.2 // indirect
 diff --git a/staging/src/k8s.io/legacy-cloud-providers/go.sum b/staging/src/k8s.io/legacy-cloud-providers/go.sum
-index 1d8f03e8..b5a21b11 100644
+index 1d8f03e8e9f..b5a21b11978 100644
 --- a/staging/src/k8s.io/legacy-cloud-providers/go.sum
 +++ b/staging/src/k8s.io/legacy-cloud-providers/go.sum
 @@ -25,17 +25,14 @@ cloud.google.com/go v0.90.0/go.mod h1:kRX0mNRHe0e2rC6oNakvwQqzyDmg57xJ+SZU1eT2aD
@@ -7403,7 +7511,7 @@ index 1d8f03e8..b5a21b11 100644
  sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
  sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
 diff --git a/staging/src/k8s.io/metrics/go.mod b/staging/src/k8s.io/metrics/go.mod
-index 4deff0b0..4e0c39d2 100644
+index 4deff0b07d2..4e0c39d2dea 100644
 --- a/staging/src/k8s.io/metrics/go.mod
 +++ b/staging/src/k8s.io/metrics/go.mod
 @@ -2,7 +2,9 @@
@@ -7442,7 +7550,7 @@ index 4deff0b0..4e0c39d2 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/metrics/go.sum b/staging/src/k8s.io/metrics/go.sum
-index af7b7950..1d9e5e66 100644
+index af7b7950da0..1d9e5e661ec 100644
 --- a/staging/src/k8s.io/metrics/go.sum
 +++ b/staging/src/k8s.io/metrics/go.sum
 @@ -1,8 +1,3 @@
@@ -7583,7 +7691,7 @@ index af7b7950..1d9e5e66 100644
  google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 diff --git a/staging/src/k8s.io/mount-utils/go.sum b/staging/src/k8s.io/mount-utils/go.sum
-index 17077481..eded5b77 100644
+index 170774814e1..eded5b774fc 100644
 --- a/staging/src/k8s.io/mount-utils/go.sum
 +++ b/staging/src/k8s.io/mount-utils/go.sum
 @@ -18,7 +18,6 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
@@ -7595,7 +7703,7 @@ index 17077481..eded5b77 100644
  github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
  golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 diff --git a/staging/src/k8s.io/pod-security-admission/go.mod b/staging/src/k8s.io/pod-security-admission/go.mod
-index a957ed0d..ddb79350 100644
+index a957ed0d77c..ddb7935092c 100644
 --- a/staging/src/k8s.io/pod-security-admission/go.mod
 +++ b/staging/src/k8s.io/pod-security-admission/go.mod
 @@ -2,7 +2,9 @@
@@ -7677,7 +7785,7 @@ index a957ed0d..ddb79350 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/pod-security-admission/go.sum b/staging/src/k8s.io/pod-security-admission/go.sum
-index 086579ac..838a5cff 100644
+index 086579ac002..838a5cff8c4 100644
 --- a/staging/src/k8s.io/pod-security-admission/go.sum
 +++ b/staging/src/k8s.io/pod-security-admission/go.sum
 @@ -1,132 +1,11 @@
@@ -8074,7 +8182,7 @@ index 086579ac..838a5cff 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/sample-apiserver/go.mod b/staging/src/k8s.io/sample-apiserver/go.mod
-index 4a45f97f..419fbd16 100644
+index 4a45f97f37c..419fbd16fcc 100644
 --- a/staging/src/k8s.io/sample-apiserver/go.mod
 +++ b/staging/src/k8s.io/sample-apiserver/go.mod
 @@ -2,16 +2,18 @@
@@ -8160,7 +8268,7 @@ index 4a45f97f..419fbd16 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/staging/src/k8s.io/sample-apiserver/go.sum b/staging/src/k8s.io/sample-apiserver/go.sum
-index 77c20f3b..b7952327 100644
+index 77c20f3bcba..b79523278b8 100644
 --- a/staging/src/k8s.io/sample-apiserver/go.sum
 +++ b/staging/src/k8s.io/sample-apiserver/go.sum
 @@ -1,132 +1,11 @@
@@ -8558,7 +8666,7 @@ index 77c20f3b..b7952327 100644
  gopkg.in/yaml.v2 v2.2.8/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
 diff --git a/staging/src/k8s.io/sample-cli-plugin/go.mod b/staging/src/k8s.io/sample-cli-plugin/go.mod
-index 6816ed3d..2076307d 100644
+index 6816ed3d487..2076307d783 100644
 --- a/staging/src/k8s.io/sample-cli-plugin/go.mod
 +++ b/staging/src/k8s.io/sample-cli-plugin/go.mod
 @@ -2,7 +2,9 @@
@@ -8594,7 +8702,7 @@ index 6816ed3d..2076307d 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/sample-cli-plugin/go.sum b/staging/src/k8s.io/sample-cli-plugin/go.sum
-index 76c0623c..43335957 100644
+index 76c0623c6a5..433359576e2 100644
 --- a/staging/src/k8s.io/sample-cli-plugin/go.sum
 +++ b/staging/src/k8s.io/sample-cli-plugin/go.sum
 @@ -1,12 +1,7 @@
@@ -8755,7 +8863,7 @@ index 76c0623c..43335957 100644
  k8s.io/klog/v2 v2.120.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
  k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 h1:BZqlfIlq5YbRMFko6/PM7FjZpUb45WallggurYhKGag=
 diff --git a/staging/src/k8s.io/sample-controller/go.mod b/staging/src/k8s.io/sample-controller/go.mod
-index 37cdcfcd..5005e824 100644
+index 37cdcfcd37b..5005e8245c0 100644
 --- a/staging/src/k8s.io/sample-controller/go.mod
 +++ b/staging/src/k8s.io/sample-controller/go.mod
 @@ -2,7 +2,9 @@
@@ -8793,7 +8901,7 @@ index 37cdcfcd..5005e824 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/staging/src/k8s.io/sample-controller/go.sum b/staging/src/k8s.io/sample-controller/go.sum
-index 3dad65a2..c867c062 100644
+index 3dad65a2dfb..c867c062db0 100644
 --- a/staging/src/k8s.io/sample-controller/go.sum
 +++ b/staging/src/k8s.io/sample-controller/go.sum
 @@ -1,8 +1,3 @@
