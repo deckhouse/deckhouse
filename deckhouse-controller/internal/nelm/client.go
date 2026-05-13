@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -207,20 +208,11 @@ type InstallOptions struct {
 func (c *Client) Install(ctx context.Context, namespace, releaseName string, opts InstallOptions) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Install")
 	defer span.End()
-
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Error("panic in Install",
-				slog.Any("panic", r),
-				slog.String("release", releaseName),
-				slog.String("namespace", namespace),
-				slog.String("path", opts.Path),
-				slog.String("stack", string(debug.Stack())),
-			)
-			err = fmt.Errorf("panic in Install: %v", r)
-			span.SetStatus(codes.Error, err.Error())
-		}
-	}()
+	defer c.recoverPanic("Install", span, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+		slog.String("path", opts.Path),
+	)
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -296,20 +288,11 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out string, err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
 	defer span.End()
-
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Error("panic in Render",
-				slog.Any("panic", r),
-				slog.String("release", releaseName),
-				slog.String("namespace", namespace),
-				slog.String("path", opts.Path),
-				slog.String("stack", string(debug.Stack())),
-			)
-			err = fmt.Errorf("panic in Render: %v", r)
-			span.SetStatus(codes.Error, err.Error())
-		}
-	}()
+	defer c.recoverPanic("Render", span, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+		slog.String("path", opts.Path),
+	)
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -381,19 +364,10 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Delete")
 	defer span.End()
-
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Error("panic in Delete",
-				slog.Any("panic", r),
-				slog.String("release", releaseName),
-				slog.String("namespace", namespace),
-				slog.String("stack", string(debug.Stack())),
-			)
-			err = fmt.Errorf("panic in Delete: %v", r)
-			span.SetStatus(codes.Error, err.Error())
-		}
-	}()
+	defer c.recoverPanic("Delete", span, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+	)
 
 	span.SetAttributes(attribute.String("release", releaseName))
 	span.SetAttributes(attribute.String("namespace", namespace))
@@ -428,17 +402,10 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err
 //
 //nolint:nonamedreturns // named returns required for defer/recover to modify return values
 func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (result *action.ReleaseGetResultV1, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			c.logger.Error("panic in getRelease",
-				slog.Any("panic", r),
-				slog.String("release", releaseName),
-				slog.String("namespace", namespace),
-				slog.String("stack", string(debug.Stack())),
-			)
-			err = fmt.Errorf("panic in getRelease: %v", r)
-		}
-	}()
+	defer c.recoverPanic("getRelease", nil, &err,
+		slog.String("release", releaseName),
+		slog.String("namespace", namespace),
+	)
 
 	res, err := action.ReleaseGet(ctx, releaseName, namespace, action.ReleaseGetOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
@@ -458,4 +425,27 @@ func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) 
 	}
 
 	return res, nil
+}
+
+// recoverPanic converts a panic recovered from a deferred call into err,
+// logs it with stack trace and the supplied context fields, and marks span
+// (when non-nil) as failed. Must be deferred directly so recover() works.
+func (c *Client) recoverPanic(op string, span trace.Span, err *error, fields ...slog.Attr) {
+	r := recover()
+	if r == nil {
+		return
+	}
+
+	args := make([]any, 0, len(fields)+2)
+	args = append(args, slog.Any("panic", r))
+	for _, f := range fields {
+		args = append(args, f)
+	}
+	args = append(args, slog.String("stack", string(debug.Stack())))
+	c.logger.Error("panic in "+op, args...)
+
+	*err = fmt.Errorf("panic in %s: %v", op, r)
+	if span != nil {
+		span.SetStatus(codes.Error, (*err).Error())
+	}
 }
