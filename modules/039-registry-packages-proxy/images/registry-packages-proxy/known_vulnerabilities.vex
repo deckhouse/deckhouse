@@ -6,6 +6,19 @@
   "statements": [
     {
       "vulnerability": {
+        "name": "CVE-2026-34986"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.1.3"},
+        {"@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.0.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/go-jose/go-jose/v4 является транзитивной зависимостью, поступающей через delivery-kit-sdk (werf). Функционал JWE-дешифрования с использованием уязвимого кода не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента registry-packages-proxy.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2025-15558"
       },
       "products": [
@@ -20,7 +33,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Docker CLI Windows plugin search path vulnerability - Уязвимость CWE-427 (Uncontrolled Search Path Element) в Docker CLI затрагивает исключительно среду Microsoft Windows: поиск бинарных плагинов в каталоге C:\\ProgramData\\Docker\\cli-plugins может позволить подмену исполняемых файлов. Компонент deckhouse-controller эксплуатируется в среде Kubernetes на базе Linux; официальное описание CVE указывает, что уязвимость не затрагивает бинарные файлы под платформы, отличные от Windows (non-Windows binaries). Таким образом, в рамках текущей эксплуатационной модели уязвимый код не входит в исполняемый путь и возможность эксплуатации исключена.",
+      "impact_statement": "Docker CLI Windows plugin search path vulnerability - Уязвимость CWE-427 (Uncontrolled Search Path Element) в Docker CLI затрагивает исключительно среду Microsoft Windows: поиск бинарных плагинов в каталоге C:\\ProgramData\\Docker\\cli-plugins может позволить подмену исполняемых файлов. Компонент registry-packages-proxy эксплуатируется в среде Kubernetes на базе Linux; официальное описание CVE указывает, что уязвимость не затрагивает бинарные файлы под платформы, отличные от Windows (non-Windows binaries). Таким образом, в рамках текущей эксплуатационной модели уязвимый код не входит в исполняемый путь и возможность эксплуатации исключена.",
       "timestamp": "2026-04-01T12:00:00Z"
     },
     {
