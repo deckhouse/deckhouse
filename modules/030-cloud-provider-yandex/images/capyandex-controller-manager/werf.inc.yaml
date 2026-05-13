@@ -1,4 +1,9 @@
 {{- $version := include "get_oss_version_by_id" (list "capy-yandex" $) }}
+{{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+{{- $patch := false }}
+{{- range $path, $_ := $.Files.Glob (printf "%s/patches/*.patch" $patches) }}
+  {{- $patch = true }}
+{{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -14,13 +19,24 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+{{- if $patch }}
+git:
+  - add: {{ $patches }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+{{- end }}
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/cluster-api-provider-yandex.git /src
+  - git clone --depth 1 --branch {{ $version }} https://github.com/yandex-cloud/cluster-api-provider-yandex.git /src
   - cd /src
+  {{- if $patch }}
+  - git apply /patches/*.patch --verbose
+  {{- end }}
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
