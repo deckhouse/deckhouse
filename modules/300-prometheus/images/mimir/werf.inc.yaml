@@ -16,7 +16,8 @@ shell:
   install:
     - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - git apply /patches/001-go-mod.patch --verbose
+    - git apply /patches/002-fix-cves-bump.patch --verbose
     - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -26,6 +27,10 @@ final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /patches
+    to: /patches
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -38,6 +43,7 @@ shell:
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
+    - patch -d /src/vendor/github.com/grafana/dskit -p1 < /patches/003-grpc-health-list.patch
     - |
       {{- include "image-build.build" (set $ "BuildCommand" `go build -o mimir ./cmd/mimir`) | indent 6 }}
     - chown -R 64535:64535 /src/mimir
