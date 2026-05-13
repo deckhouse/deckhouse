@@ -27,5 +27,5 @@
           To check the status:
 
           ```bash
-          d8 k get {{$labels.alliance_kind}} {{$labels.name}} -o jsonpath='{.status.dataPlaneHealth}'
+          d8 k get {{$labels.alliance_kind}} {{$labels.name}} -o json | jq '.status.conditions[] | select(.type=="DataplaneConnectionReady")'
           ```

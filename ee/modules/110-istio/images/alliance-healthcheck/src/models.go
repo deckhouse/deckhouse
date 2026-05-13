@@ -5,13 +5,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package main
 
-type DataPlaneHealthStatus struct {
-	IsConnected               bool   `json:"isConnected"`
-	LastProbeTimestamp        string `json:"lastProbeTimestamp"`
-	LastSuccessProbeTimestamp string `json:"lastSuccessProbeTimestamp,omitempty"`
-	Message                   string `json:"message,omitempty"`
-}
-
 type FederationPrivateMetadata struct {
 	IngressGateways *[]FederationIngressGateway `json:"ingressGateways"`
 	PublicServices  *[]FederationPublicService  `json:"publicServices"`

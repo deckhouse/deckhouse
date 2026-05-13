@@ -124,7 +124,7 @@ func (c *Checker) checkFederations(ctx context.Context) {
 		if err != nil {
 			logger.Printf("Federation cluster '%s' check: cannot determine remote UUID: %v", name, err)
 			c.metric.WithLabelValues(AllianceKindFederation, name, "unknown").Set(0)
-			c.patchDataPlaneHealth(ctx, federationGVR, name, false, err.Error())
+			c.patchDataplaneConnectionCondition(ctx, federationGVR, name, metav1.ConditionFalse, "MetadataUnavailable", err.Error())
 			continue
 		}
 
@@ -132,7 +132,7 @@ func (c *Checker) checkFederations(ctx context.Context) {
 		if err != nil {
 			logger.Printf("Federation cluster '%s' check: cannot determine healthcheck target: %v", name, err)
 			c.metric.WithLabelValues(AllianceKindFederation, name, remoteUUID).Set(0)
-			c.patchDataPlaneHealth(ctx, federationGVR, name, false, err.Error())
+			c.patchDataplaneConnectionCondition(ctx, federationGVR, name, metav1.ConditionFalse, "ConfigurationError", err.Error())
 			continue
 		}
 
@@ -140,7 +140,7 @@ func (c *Checker) checkFederations(ctx context.Context) {
 		healthy, msg := c.curlHealthz(ctx, url)
 
 		c.metric.WithLabelValues(AllianceKindFederation, name, remoteUUID).Set(boolToFloat(healthy))
-		c.patchDataPlaneHealth(ctx, federationGVR, name, healthy, msg)
+		c.patchDataplaneConnectionCondition(ctx, federationGVR, name, healthToConditionStatus(healthy), healthToReason(healthy), msg)
 
 		logger.Printf("Federation cluster '%s' check: target=%s remoteUUID=%s healthy=%v msg=%s", name, target, remoteUUID, healthy, msg)
 	}
@@ -160,7 +160,7 @@ func (c *Checker) checkMulticlusters(ctx context.Context) {
 		if err != nil {
 			logger.Printf("Multicluster '%s' check: cannot determine remote UUID: %v", name, err)
 			c.metric.WithLabelValues(AllianceKindMulticluster, name, "unknown").Set(0)
-			c.patchDataPlaneHealth(ctx, multiclusterGVR, name, false, err.Error())
+			c.patchDataplaneConnectionCondition(ctx, multiclusterGVR, name, metav1.ConditionFalse, "MetadataUnavailable", err.Error())
 			continue
 		}
 
@@ -169,7 +169,7 @@ func (c *Checker) checkMulticlusters(ctx context.Context) {
 		healthy, msg := c.curlHealthz(ctx, url)
 
 		c.metric.WithLabelValues(AllianceKindMulticluster, name, remoteUUID).Set(boolToFloat(healthy))
-		c.patchDataPlaneHealth(ctx, multiclusterGVR, name, healthy, msg)
+		c.patchDataplaneConnectionCondition(ctx, multiclusterGVR, name, healthToConditionStatus(healthy), healthToReason(healthy), msg)
 
 		logger.Printf("Multicluster '%s' check: target=%s healthy=%v msg=%s", name, target, healthy, msg)
 	}
@@ -259,21 +259,103 @@ func (c *Checker) curlHealthzWithBody(ctx context.Context, url string) (bool, st
 	return true, strings.TrimSpace(string(bodyBytes)), "ok"
 }
 
-func (c *Checker) patchDataPlaneHealth(ctx context.Context, gvr schema.GroupVersionResource, name string, isConnected bool, message string) {
-	now := time.Now().UTC().Format(time.RFC3339)
+const conditionTypeDataplaneConnectionReady = "DataplaneConnectionReady"
 
-	status := DataPlaneHealthStatus{
-		IsConnected:        isConnected,
-		LastProbeTimestamp: now,
-		Message:            message,
+func healthToConditionStatus(healthy bool) metav1.ConditionStatus {
+	if healthy {
+		return metav1.ConditionTrue
 	}
-	if isConnected {
-		status.LastSuccessProbeTimestamp = now
+	return metav1.ConditionFalse
+}
+
+func healthToReason(healthy bool) string {
+	if healthy {
+		return "Succeeded"
 	}
+	return "ProbeFailed"
+}
+
+func priorDataplaneConditionMap(conds []interface{}) map[string]interface{} {
+	for _, c := range conds {
+		m, ok := c.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if t, _ := m["type"].(string); t == conditionTypeDataplaneConnectionReady {
+			return m
+		}
+	}
+	return nil
+}
+
+func buildDataplaneConditionRow(prior map[string]interface{}, status, reason, message string, probe time.Time) map[string]interface{} {
+	if reason == "" {
+		reason = "Unknown"
+	}
+	probeStr := probe.UTC().Format(time.RFC3339)
+	transition := probeStr
+	if prior != nil {
+		if ps, ok := prior["status"].(string); ok && ps == status {
+			if pr, ok := prior["reason"].(string); ok && pr == reason {
+				if pm, ok := prior["message"].(string); ok && pm == message {
+					if ts, ok := prior["lastTransitionTime"].(string); ok && ts != "" {
+						transition = ts
+					}
+				}
+			}
+		}
+	}
+	return map[string]interface{}{
+		"type":               conditionTypeDataplaneConnectionReady,
+		"status":             status,
+		"reason":             reason,
+		"message":            message,
+		"lastTransitionTime": transition,
+		"lastProbeTime":      probeStr,
+	}
+}
+
+func mergeDataplaneConditionIntoConditions(conds []interface{}, newRow map[string]interface{}) []interface{} {
+	out := make([]interface{}, 0, len(conds)+1)
+	replaced := false
+	for _, c := range conds {
+		m, ok := c.(map[string]interface{})
+		if ok {
+			if t, _ := m["type"].(string); t == conditionTypeDataplaneConnectionReady {
+				out = append(out, newRow)
+				replaced = true
+				continue
+			}
+		}
+		out = append(out, c)
+	}
+	if !replaced {
+		out = append(out, newRow)
+	}
+	return out
+}
+
+func (c *Checker) patchDataplaneConnectionCondition(ctx context.Context, gvr schema.GroupVersionResource, name string, status metav1.ConditionStatus, reason, message string) {
+	probe := time.Now().UTC()
+
+	obj, err := c.dynClient.Resource(gvr).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		logger.Printf("Failed to get %s/%s for DataplaneConnectionReady patch: %v", gvr.Resource, name, err)
+		return
+	}
+
+	var condsSlice []interface{}
+	if conditions, found, err := unstructured.NestedSlice(obj.Object, "status", "conditions"); err == nil && found {
+		condsSlice = conditions
+	}
+
+	prior := priorDataplaneConditionMap(condsSlice)
+	newRow := buildDataplaneConditionRow(prior, string(status), reason, message, probe)
+	newConds := mergeDataplaneConditionIntoConditions(condsSlice, newRow)
 
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
-			"dataPlaneHealth": status,
+			"conditions": newConds,
 		},
 	}
 
