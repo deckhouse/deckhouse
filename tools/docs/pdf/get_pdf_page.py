@@ -1152,7 +1152,6 @@ if __name__ == "__main__":
         in_ci = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
         wkhtmltopdf_cmd = [
             "wkhtmltopdf",
-            *(["--quiet"] if in_ci else []),
             "--page-size", "A4",
             "--margin-left", "2cm",
             "--margin-right", "2cm",
@@ -1189,6 +1188,7 @@ if __name__ == "__main__":
                 wkhtmltopdf_cmd,
                 check=False,
                 timeout=600,
+                stderr=subprocess.PIPE if in_ci else None,
             )
         except subprocess.TimeoutExpired:
             print("Error: wkhtmltopdf timed out after 10 minutes.")
@@ -1197,13 +1197,18 @@ if __name__ == "__main__":
             print("Error: wkhtmltopdf not found. Please install wkhtmltopdf.")
             sys.exit(1)
 
+        wk_stderr = getattr(proc, "stderr", None)
         if not os.path.isfile(pdf_out):
+            if wk_stderr:
+                sys.stderr.buffer.write(wk_stderr)
             print(
                 f"Error: PDF was not created at {pdf_out!r} "
                 f"(wkhtmltopdf exit code {getattr(proc, 'returncode', 'n/a')})."
             )
             sys.exit(1)
         if proc.returncode != 0:
+            if wk_stderr:
+                sys.stderr.buffer.write(wk_stderr)
             print(
                 f"Warning: wkhtmltopdf exited with code {proc.returncode}; \n"
                 f"PDF saved to {pdf_out}."
