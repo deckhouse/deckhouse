@@ -643,8 +643,8 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// Preserve identifies one installed Package instance to preserve during Cleanup.
-type Preserve struct {
+// PreservePackage identifies one installed Package instance to preserve during Cleanup.
+type PreservePackage struct {
 	PackageName string
 	Repository  string
 	Version     string
@@ -655,7 +655,7 @@ type Preserve struct {
 
 // Cleanup removes downloaded application packages on disk and orphan nelm
 // releases in the cluster that are not in preserve. Runs once during preflight.
-func (r *Runtime) Cleanup(ctx context.Context, preserves []Preserve) {
+func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
