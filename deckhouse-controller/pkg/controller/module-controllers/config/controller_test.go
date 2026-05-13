@@ -277,6 +277,18 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("set maintenance label", func() {
+		suite.setupTestController(string(suite.parseTestdata("set-maintenance-label.yaml")))
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("clear maintenance label", func() {
+		suite.setupTestController(string(suite.parseTestdata("clear-maintenance-label.yaml")))
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
@@ -298,6 +310,16 @@ spec:
 		assert.NotNil(suite.T(), config.DeletionTimestamp)
 		assert.Len(suite.T(), config.Finalizers, 1)
 	})
+
+	suite.Run("delete clears maintenance label", func() {
+		suite.setupTestController(string(suite.parseTestdata("delete-maintenance-label.yaml")))
+
+		_, err := suite.r.deleteModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+
+		module := suite.module("test-module")
+		assert.NotContains(suite.T(), module.Labels, v1alpha1.ModuleLabelMaintenance)
+	})
 }
 
 func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
@@ -316,6 +338,14 @@ func (suite *ControllerTestSuite) moduleConfig(name string) *v1alpha1.ModuleConf
 	require.NoError(suite.T(), err)
 
 	return config
+}
+
+func (suite *ControllerTestSuite) module(name string) *v1alpha1.Module {
+	module := new(v1alpha1.Module)
+	err := suite.client.Get(context.TODO(), types.NamespacedName{Name: name}, module)
+	require.NoError(suite.T(), err)
+
+	return module
 }
 
 // Mock implementations

@@ -251,14 +251,20 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
-	// clear conflict metrics
-	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
-	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
-
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
+
+	// sync maintenance label from ModuleConfig to Module
+	if err := r.syncMaintenanceLabel(ctx, module, moduleConfig.Spec.Maintenance); err != nil {
+		r.logger.Error("failed to sync maintenance label", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	// clear conflict metrics
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if !moduleConfig.IsEnabled() {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
@@ -439,6 +445,12 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{}, err
 	}
 
+	// clear the maintenance label when ModuleConfig is deleted
+	if err := r.syncMaintenanceLabel(ctx, module, ""); err != nil {
+		r.logger.Error("failed to clear maintenance label", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.logger.Debug("skip system module", slog.String("name", module.Name))
@@ -564,4 +576,33 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 
 		return true
 	})
+}
+
+// syncMaintenanceLabel patches only the Module maintenance label used by UI.
+func (r *reconciler) syncMaintenanceLabel(ctx context.Context, module *v1alpha1.Module, maintenance string) error {
+	labels := module.GetLabels()
+	current, hasLabel := labels[v1alpha1.ModuleLabelMaintenance]
+
+	if maintenance == "" {
+		if !hasLabel {
+			return nil
+		}
+
+		patch := client.MergeFrom(module.DeepCopy())
+		delete(labels, v1alpha1.ModuleLabelMaintenance)
+		module.SetLabels(labels)
+		return r.client.Patch(ctx, module, patch)
+	}
+
+	if current == maintenance {
+		return nil
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[v1alpha1.ModuleLabelMaintenance] = maintenance
+	module.SetLabels(labels)
+	return r.client.Patch(ctx, module, patch)
 }

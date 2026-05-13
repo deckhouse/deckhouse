@@ -93,6 +93,10 @@ const (
 
 	ExperimentalModuleStage = "Experimental"
 	DeprecatedModuleStage   = "Deprecated"
+
+	// ModuleLabelMaintenance is set on a Module when the corresponding
+	// ModuleConfig has spec.maintenance set to a non-empty value.
+	ModuleLabelMaintenance = "module.deckhouse.io/maintenance"
 )
 
 var (
