@@ -271,7 +271,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 	return nil
 }
 
-func checkMulticlusterRemoteAPIServer(client http.Client, apiHost string) (status metav1.ConditionStatus, reason, message string) {
+func checkMulticlusterRemoteAPIServer(client http.Client, apiHost string) (metav1.ConditionStatus, string, string) {
 	host := strings.TrimSpace(apiHost)
 	if host == "" {
 		return metav1.ConditionFalse, "MissingAPIHost", "private metadata has empty apiHost"
