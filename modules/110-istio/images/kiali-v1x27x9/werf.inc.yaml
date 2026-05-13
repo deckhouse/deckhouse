@@ -12,13 +12,13 @@ import:
   to: /opt/kiali/kiali
   owner: 64535
   group: 64535
-  before: install
+  #before: install
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali-frontend-assets/static
   to: /opt/kiali/console
   owner: 64535
   group: 64535
-  before: install
+  #before: install
 git:
 {{- include "image mount points" . }}
 imageSpec:
