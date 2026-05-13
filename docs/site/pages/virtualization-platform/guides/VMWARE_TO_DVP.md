@@ -6,62 +6,87 @@ lang: en
 layout: sidebar-guides
 ---
 
-This guide describes how to migrate an existing virtual machine from VMware to Deckhouse Virtualization Platform (DVP). Sources are commonly an `OVA` export or standalone `VMDK` files.
+This guide describes how to migrate an existing virtual machine from VMware to Deckhouse Virtualization Platform (DVP).
 
-The procedure can be broken down into three steps:
+The migration source can be:
 
-1. On a separate workstation, prepare a disk image in `qcow2` format.
-1. Upload the disk image to the cluster as a `VirtualDisk` resource.
-1. Create a `VirtualMachine` that boots from that disk.
+- a virtual machine distribution (an `OVA` file — an archive containing disk files in `vmdk` format, VM metadata in `ovf` format, and checksums in `mf` format);
+- standalone `VMDK` disk files.
 
-Linux guests typically only need packages from the distribution repositories. Windows guests also require a `virtio-win` ISO so that drivers match KVM virtio devices after migration.
+## Migration stages
 
-Before you start, make sure you have:
+Migrating a VM from VMware to DVP includes the following stages:
 
-- access to the DVP cluster with the Deckhouse CLI (`d8`) and permissions to create virtualization resources in the target namespace;
-- a Linux machine (or equivalent) where `virt-v2v` and `libguestfs` can be installed, with enough disk space to unpack an `OVA` and store the converted image;
+1. [Install the required tools](#install-tools).
+1. [Prepare a disk image in `qcow2` format](#convert-the-disk) (convert from `VMDK` to `qcow2`).
+1. [Upload the disk image to the cluster](#upload-the-disk-image) as a [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource.
+1. [Create a virtual machine](#create-the-virtual-machine) ([VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource) that boots from this disk.
+
+## What you need for conversion
+
+Before you start the migration, make sure you have:
+
+- access to the DVP cluster with the Deckhouse CLI utility (`d8`) installed and permissions to create virtualization resources in the target namespace;
+- a Linux machine (or equivalent) where `virt-v2v` and `libguestfs` can be installed, with enough disk space to unpack the virtual machine `OVA` distribution (or the standalone disk files) and to store the conversion output directory;
 - the VMware export files (`OVA` or `VMDK`).
 
 For more information about disks and ways to upload images, see [Disks](/products/virtualization-platform/documentation/user/resource-management/disks.html).
 
 ## Install tools
 
-This step prepares a conversion workstation. You do not need to run it on a DVP cluster node; any Linux host with internet access or a local package repository is sufficient.
+The list of required tools and resources depends on the type of system installed in the VM (the guest OS) being migrated from VMware to DVP:
 
-Use the commands that match your Linux distribution.
+- for Linux, packages from the distribution repository are sufficient;
+- for Windows, you will additionally need a `virtio-win` ISO so that the guest OS works correctly with KVM virtual devices after migration.
 
-Ubuntu/Debian:
+This step prepares a conversion workstation. It does not need to be a DVP cluster node; any Linux host with internet access or a local package repository is sufficient.
+
+Install the tools on the conversion workstation:
+
+{% tabs os %}
+{% tab "Ubuntu/Debian workstation" %}
+
+Run the following command:
 
 ```bash
 sudo apt update
 sudo apt install -y virt-v2v libguestfs-tools
 ```
 
-RHEL/AlmaLinux:
+If the VM being migrated runs Windows:
+
+1. [Download the VirtIO drivers](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/) from the `virtio-win` distribution.
+
+1. Specify the path to the VirtIO drivers via an environment variable:
+
+   ```bash
+   export VIRTIO_WIN=/path/to/virtio-win.iso
+   ```
+
+{% alert level="warning" %}
+Without a valid `virtio-win` ISO for a Windows guest, conversion may fail, or the guest OS may not see disks or networking after the VM starts on DVP.
+{% endalert %}
+
+{% endtab %}
+{% tab "RHEL/AlmaLinux workstation" %}
+Run the following command:
 
 ```bash
 sudo dnf install -y virt-v2v libguestfs-tools-c virtio-win
 ```
 
-Windows guests need VirtIO drivers from `virtio-win`. On RHEL/AlmaLinux the `virtio-win` package supplies them; on `Debian/Ubuntu` you usually download the ISO separately (for example from the [Fedora virtio-win stable builds](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/)) and export:
+{% endtab %}
+{% endtabs %}
 
-```bash
-export VIRTIO_WIN=/path/to/virtio-win.iso
-```
-
-{% alert level="warning" %}
-Without a valid `virtio-win` ISO, Windows conversion may fail, or the guest may boot without functional disks or networking on DVP.
-{% endalert %}
-
-Continue with extracting and converting the disk.
+Then proceed to converting the disk.
 
 ## Convert the disk
 
-Here you turn VMware disk data into one or more `qcow2` files that DVP can use as virtual machine disk volumes. If you already have a `VMDK` path, skip ahead to the `virt-v2v` subsection; if you only have an `OVA`, unpack it first.
+At this stage you turn VMware disk data into one or more `qcow2` files that DVP can use as virtual machine disk volumes. If you already have a `VMDK` path, skip ahead to the [Convert VMDK to qcow2 via virt-v2v](#convert-vmdk-to-qcow2-via-virt-v2v) subsection. If you are using a virtual machine `OVA` distribution, unpack it first.
 
 ### Extract an OVA
 
-An `OVA` file is a tar archive that bundles an OVF descriptor, a manifest, and one or more `VMDK` images. Unpacking exposes the disk files `virt-v2v` expects.
+An `OVA` file is a tar archive that bundles an OVF descriptor, a manifest, and one or more `VMDK` images. Unpacking exposes the disk files the `virt-v2v` utility expects.
 
 Extract everything if you want to verify checksums or inspect the OVF:
 
@@ -85,34 +110,49 @@ tar -xvf machine.ova machine-disk1.vmdk
 ```
 
 {% alert level="info" %}
-Virtual machines with multiple disks contain several `*.vmdk` files. Convert each disk with `virt-v2v`, create a matching `VirtualDisk` in DVP, then reference them from `VirtualMachine` in the desired boot order.
+Virtual machines with multiple disks contain several `*.vmdk` files. Convert each disk with the `virt-v2v` utility, create a matching `VirtualDisk` in DVP, then reference them from `VirtualMachine` in the desired boot order.
 {% endalert %}
 
-### Convert VMDK to qcow2 with virt-v2v
+### Convert VMDK to qcow2 via virt-v2v
 
-With `-i disk`, `virt-v2v` processes a local `VMDK` and saves the result into the directory you specify. For Windows guests, drivers from `virtio-win` are added to the image when `VIRTIO_WIN` points at the ISO.
+With `-i disk`, the `virt-v2v` utility processes a local `VMDK` and saves the result into the directory you specify. To perform the conversion, run:
 
-Linux guest conversion (no extra ISO required when the guest is not Windows):
+{% tabs os_convert %}
+{% tab "For a Linux guest OS" %}
 
 ```bash
 virt-v2v -i disk ./machine-disk1.vmdk \
     -o local -os ./out -of qcow2
 ```
 
-Windows guests:
+{% endtab %}
+{% tab "For a Windows guest OS" %}
+
+To convert a `VMDK` for a Windows guest, specify the path to `virtio-win.iso` in the command:
 
 ```bash
 VIRTIO_WIN=/path/to/virtio-win.iso virt-v2v -i disk ./machine-disk1.vmdk \
     -o local -os ./out -of qcow2
 ```
 
-You should see a file such as `./out/machine.qcow2` under `./out` (the basename often matches the original VM name). That file is what you upload next.
+{% endtab %}
+{% endtabs %}
 
-The following section explains how to transfer the `qcow2` image into the cluster through the Kubernetes API.
+After the conversion, a file such as `./out/machine.qcow2` will appear under `./out` (the basename often matches the original VM name from the metadata). That file is what you upload to the cluster next.
 
 ## Upload the disk image
 
+This subsection explains how to transfer the `qcow2` image into DVP through the Kubernetes API.
+
 At this stage the `qcow2` image becomes a persistent volume in the cluster. In DVP this is done with a `VirtualDisk` whose data source is `Upload`.
+
+Uploading the disk image to the cluster includes the following steps:
+
+1. Choose a StorageClass.
+1. Create a VirtualDisk for upload.
+1. Get upload URLs.
+1. Upload the image.
+1. Check the status of the uploaded image.
 
 ### Choose a StorageClass
 
@@ -128,8 +168,8 @@ Example:
 
 ```console
 NAME                 PROVISIONER                             VOLUMEBINDINGMODE   AGE
-rv-thin-r1 (default) replicated.csi.storage.deckhouse.io    Immediate           48d
-rv-thin-r2           replicated.csi.storage.deckhouse.io    Immediate           48d
+rv-thin-r1 (default) replicated.csi.storage.deckhouse.io     Immediate           48d
+rv-thin-r2           replicated.csi.storage.deckhouse.io     Immediate           48d
 ```
 
 Select the class name that fits your storage requirements for VM disks.
@@ -177,11 +217,13 @@ Both fields together (requires `jq`):
 d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}" | jq
 ```
 
-Treat the URL as sensitive—it embeds a secret path segment.
+{% alert level="warning" %}
+The URL string contains a secret path segment. Do not publish it in public channels.
+{% endalert %}
 
 ### Upload the image
 
-Send the `qcow2` image with an HTTP `PUT` request to the chosen URL. Replace the host and path using the values from the `VirtualDisk` status.
+Send the `qcow2` image with an HTTP `PUT` request to the URL obtained in the previous step. The example below uses an external URL. Replace it with the address from your `VirtualDisk` status and the path to the converted file.
 
 ```bash
 curl https://virtualization.example.com/upload/<secret-url> \
@@ -205,39 +247,39 @@ NAMESPACE   NAME             PHASE   CAPACITY   AGE
 default     uploaded-disk    Ready   10Gi       1m
 ```
 
-If the phase stays on `WaitForUserUpload` for a long time or the resource enters `Failed`, check messages with `kubectl describe vd uploaded-disk` and events in the namespace.
+If the phase stays on `WaitForUserUpload` for a long time or the resource enters `Failed`, check messages with `kubectl describe vd uploaded-disk` and events in the corresponding namespace.
 
 Continue when the disk reaches `Ready`.
 
 ## Create the virtual machine
 
-The final step is to describe the VM you want to run: CPU and memory, networks, and which disk is bootable. VMware configuration (`OVF`/`VMX`) is not imported automatically; parameters are carried over manually using the mapping table below and the YAML example.
+The final step is to describe the VM you want to run: CPU and memory, networks, and which disk is bootable. VMware configuration (`OVF`/`VMX`) is not imported automatically. Carry over the parameters manually using the mapping table below and the example VirtualMachine YAML manifest (VirtualMachine resource).
 
 ### VMware vs DVP terminology
 
 If you know vSphere, the following table maps familiar VMware objects to Kubernetes and DVP virtualization resources.
 
-| VMware                  | DVP                                          | Description                      |
-|-------------------------|----------------------------------------------|----------------------------------|
-| Datastore               | StorageClass                                 | Disk backing storage             |
-| VM hardware version     | VirtualMachineClass                          | VM class (CPU, memory, policies) |
-| VMX                     | VirtualMachine.spec                          | VM specification                 |
-| Virtual disk (VMDK)     | VirtualDisk                                  | VM disk                          |
-| ISO image               | VirtualImage (`cdrom: true`)                 | Installation or driver ISO       |
-| Template                | VirtualImage                                 | Template for provisioning disks  |
-| Port group / VLAN       | VirtualMachine (`networks`)                  | Networking                       |
-| Resource pool           | Project and quotas                           | Resource limits per project      |
-| Snapshot                | VirtualDiskSnapshot / VirtualMachineSnapshot | Disk and VM snapshots            |
-| Folder                  | Namespace                                    | Namespace                        |
-| Cluster / resource pool | Project                                      | Namespace grouping               |
-| ESXi host               | Node                                         | Physical server                  |
-| vCenter                 | Kubernetes API                               | Cluster management               |
+| VMware                  | DVP                                                                                                                                                           | Description                      |
+|-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------|
+| Datastore               | StorageClass                                                                                                                                                  | Disk backing storage             |
+| VM hardware version     | [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass)                                                                                    | VM class (CPU, memory, policies) |
+| VMX                     | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).spec                                                                                         | VM specification                 |
+| Virtual disk (VMDK)     | [VirtualDisk](/modules/virtualization/cr.html#virtualdisk)                                                                                                    | VM disk                          |
+| ISO image               | [VirtualImage](/modules/virtualization/cr.html#virtualimage) (`cdrom: true`)                                                                                  | Installation or driver ISO       |
+| Template                | [VirtualImage](/modules/virtualization/cr.html#virtualimage)                                                                                                  | Template for provisioning disks  |
+| Port group / VLAN       | [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) (`networks`)                                                                                 | Networking                       |
+| Resource pool           | Project and quotas                                                                                                                                            | Resource limits per project      |
+| Snapshot                | [VirtualDiskSnapshot](/modules/virtualization/cr.html#virtualdisksnapshot) / [VirtualMachineSnapshot](/modules/virtualization/cr.html#virtualmachinesnapshot) | Disk and VM snapshots            |
+| Folder                  | Namespace                                                                                                                                                     | Namespace                        |
+| Cluster / resource pool | Project                                                                                                                                                       | Namespace grouping               |
+| ESXi host               | Node                                                                                                                                                          | Physical server                  |
+| vCenter                 | Kubernetes API                                                                                                                                                | Cluster management               |
 
-More networking detail: [Virtual machine networks](/products/virtualization-platform/documentation/admin/platform-management/network/vm-network.html).
+For more details on connecting VMs to networks, see [Virtual machine networks](/products/virtualization-platform/documentation/admin/platform-management/network/vm-network.html).
 
 ### VirtualMachine example
 
-The `VirtualMachine` references the uploaded disk through `blockDeviceRefs`. Order in `blockDeviceRefs` determines boot order: the boot disk must be listed first.
+The VirtualMachine resource references the uploaded disk through `blockDeviceRefs`. Order in `blockDeviceRefs` determines boot order: the boot disk must be listed first.
 
 Minimal Linux example after disk migration:
 
@@ -275,7 +317,7 @@ If additional networks and the SDN module are configured in the cluster, you can
 
 Additional capabilities (cloud-init, multiple disks, VM classes for production environments) are described in [Virtual machines](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).
 
-### Common spec fields
+#### Common spec fields
 
 The following table lists fields you most often need to verify after migrating from VMware.
 
@@ -285,8 +327,8 @@ The following table lists fields you most often need to verify after migrating f
 | `osType`                      | `Generic` (Linux and others) or `Windows`                 |
 | `cpu.cores`                   | Number of vCPUs                                           |
 | `memory.size`                 | RAM                                                       |
-| `blockDeviceRefs`             | Disks and images; list order is boot order              |
-| `provisioning.type: UserData` | cloud-init user data for first boot                       |
+| `blockDeviceRefs`             | Disks and images; list order is boot order                |
+| `provisioning.type: UserData` | cloud-init user data for first boot of the guest OS       |
 
 ### Check VM status
 
