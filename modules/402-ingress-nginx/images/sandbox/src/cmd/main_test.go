@@ -18,7 +18,10 @@ package main
 
 import (
 	"reflect"
+	"syscall"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestNormalizeSandboxArgs(t *testing.T) {
@@ -86,5 +89,70 @@ func TestParseSandboxMode(t *testing.T) {
 				t.Fatalf("unexpected argv, got %v want %v", gotArgv, tt.wantArgv)
 			}
 		})
+	}
+}
+
+func TestNewIsolatedProcessChildCmd(t *testing.T) {
+	cmd := newIsolatedProcessChildCmd("/usr/bin/sandbox", []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"}, 64535, 64535)
+
+	if cmd.Path != "/usr/bin/sandbox" {
+		t.Fatalf("unexpected path, got %q", cmd.Path)
+	}
+
+	wantArgs := []string{
+		"/usr/bin/sandbox",
+		"--isolated-process-child",
+		"--",
+		"/usr/local/nginx/sbin/nginx",
+		"-c",
+		"/tmp/nginx/nginx-cfg123",
+	}
+	if !reflect.DeepEqual(cmd.Args, wantArgs) {
+		t.Fatalf("unexpected args, got %v want %v", cmd.Args, wantArgs)
+	}
+
+	wantSys := &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNET,
+		UidMappings: []syscall.SysProcIDMap{{
+			ContainerID: 64535,
+			HostID:      64535,
+			Size:        1,
+		}},
+		GidMappings: []syscall.SysProcIDMap{{
+			ContainerID: 64535,
+			HostID:      64535,
+			Size:        1,
+		}},
+		GidMappingsEnableSetgroups: false,
+		AmbientCaps: []uintptr{
+			unix.CAP_NET_BIND_SERVICE,
+			unix.CAP_SYS_CHROOT,
+		},
+	}
+
+	assertExecCmdSysProcAttrEqual(t, cmd.SysProcAttr, wantSys)
+}
+
+func assertExecCmdSysProcAttrEqual(t *testing.T, got, want *syscall.SysProcAttr) {
+	t.Helper()
+
+	if got == nil {
+		t.Fatal("expected SysProcAttr to be set")
+	}
+
+	if got.Cloneflags != want.Cloneflags {
+		t.Fatalf("unexpected Cloneflags, got %x want %x", got.Cloneflags, want.Cloneflags)
+	}
+	if !reflect.DeepEqual(got.UidMappings, want.UidMappings) {
+		t.Fatalf("unexpected UidMappings, got %+v want %+v", got.UidMappings, want.UidMappings)
+	}
+	if !reflect.DeepEqual(got.GidMappings, want.GidMappings) {
+		t.Fatalf("unexpected GidMappings, got %+v want %+v", got.GidMappings, want.GidMappings)
+	}
+	if got.GidMappingsEnableSetgroups != want.GidMappingsEnableSetgroups {
+		t.Fatalf("unexpected GidMappingsEnableSetgroups, got %v want %v", got.GidMappingsEnableSetgroups, want.GidMappingsEnableSetgroups)
+	}
+	if !reflect.DeepEqual(got.AmbientCaps, want.AmbientCaps) {
+		t.Fatalf("unexpected AmbientCaps, got %v want %v", got.AmbientCaps, want.AmbientCaps)
 	}
 }

@@ -204,36 +204,11 @@ func runIsolatedProcessHelper(argv []string) int {
 		return 1
 	}
 
-	// The helper mode creates an exec boundary before entering user/net namespaces.
-	// Unsharing CLONE_NEWUSER from the already running Go sandbox process is unreliable
-	// because the runtime may already have multiple OS threads.
-	childArgs := append([]string{"--isolated-process-child", "--"}, argv...)
-	cmd := exec.Command(exe, childArgs...)
+	cmd := newIsolatedProcessChildCmd(exe, argv, os.Getuid(), os.Getgid())
 	cmd.Env = os.Environ()
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNET,
-		UidMappings: []syscall.SysProcIDMap{{
-			ContainerID: os.Getuid(),
-			HostID:      os.Getuid(),
-			Size:        1,
-		}},
-		GidMappings: []syscall.SysProcIDMap{{
-			ContainerID: os.Getgid(),
-			HostID:      os.Getgid(),
-			Size:        1,
-		}},
-		GidMappingsEnableSetgroups: false,
-		// The child must be able to bring loopback up, chroot into /validation-chroot
-		// and keep low-port bind capability for the final nginx exec in the private netns.
-		AmbientCaps: []uintptr{
-			unix.CAP_NET_BIND_SERVICE,
-			unix.CAP_SYS_CHROOT,
-		},
-	}
-
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return exitErr.ExitCode()
@@ -243,6 +218,36 @@ func runIsolatedProcessHelper(argv []string) int {
 	}
 
 	return 0
+}
+
+func newIsolatedProcessChildCmd(exe string, argv []string, uid, gid int) *exec.Cmd {
+	// The helper mode creates an exec boundary before entering user/net namespaces.
+	// Unsharing CLONE_NEWUSER from the already running Go sandbox process is unreliable
+	// because the runtime may already have multiple OS threads.
+	childArgs := append([]string{"--isolated-process-child", "--"}, argv...)
+	cmd := exec.Command(exe, childArgs...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNET,
+		UidMappings: []syscall.SysProcIDMap{{
+			ContainerID: uid,
+			HostID:      uid,
+			Size:        1,
+		}},
+		GidMappings: []syscall.SysProcIDMap{{
+			ContainerID: gid,
+			HostID:      gid,
+			Size:        1,
+		}},
+		GidMappingsEnableSetgroups: false,
+		// The child needs to enter /validation-chroot and keep low-port bind
+		// capability for the final nginx exec in the private network namespace.
+		AmbientCaps: []uintptr{
+			unix.CAP_NET_BIND_SERVICE,
+			unix.CAP_SYS_CHROOT,
+		},
+	}
+
+	return cmd
 }
 
 // getNginxConfByArg return parametr args of nginx, as sample for `-c` flag return path config
