@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	otcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -41,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -169,6 +171,9 @@ func (s *Service) destroySafe(ctx context.Context, p *destroyParams) (result *pb
 }
 
 func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.destroy")
+	defer span.End()
+
 	var err error
 
 	cleanuper := callback.NewCallback()
@@ -265,6 +270,8 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		}
 	}
 
+	span.SetAttributes(opts.ToSpanAttributes()...)
+
 	destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
 		StateCache:     cache.Global(),
 		OnPhaseFunc:    p.switchPhase,
@@ -291,6 +298,12 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(destroyErr, stateErr)
+
+	if err != nil {
+		span.SetStatus(otcodes.Error, err.Error())
+	} else {
+		span.SetStatus(otcodes.Ok, "")
+	}
 
 	return &pb.DestroyResult{State: string(state), Err: util.ErrToString(err)}
 }

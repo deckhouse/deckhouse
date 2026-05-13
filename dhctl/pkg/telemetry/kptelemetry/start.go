@@ -26,6 +26,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -72,6 +73,8 @@ func EndCommand(err error, errorCode int) {
 			commandSpan.SetStatus(codes.Ok, "")
 		}
 		commandSpan.End()
+
+		log.DebugF("TraceID: %s\n", commandSpan.SpanContext().TraceID().String())
 	}
 	commandMu.Unlock()
 }

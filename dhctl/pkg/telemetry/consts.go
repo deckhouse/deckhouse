@@ -15,5 +15,5 @@
 package telemetry
 
 const (
-	traceApplicationName = "deckhouse/dhctl"
+	traceApplicationName = "dhctl"
 )

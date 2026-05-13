@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	otcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -37,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type bootstrapParams struct {
@@ -164,6 +166,9 @@ func (s *Service) bootstrapSafe(ctx context.Context, p *bootstrapParams) (result
 }
 
 func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.BootstrapResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.bootstrap")
+	defer span.End()
+
 	var err error
 
 	cleanuper := callback.NewCallback()
@@ -268,6 +273,8 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	opts.Global.ConfigPaths = configPaths
 	opts.Bootstrap.PostBootstrapScriptPath = postBootstrapScriptPath
 
+	span.SetAttributes(opts.ToSpanAttributes()...)
+
 	bootstrapper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 		InitialState:               initialState,
 		ResetInitialState:          true,
@@ -288,7 +295,14 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
 	state, stateErr := extractLastState(ctx)
+
 	err = errors.Join(bootstrapErr, stateErr)
+
+	if err != nil {
+		span.SetStatus(otcodes.Error, err.Error())
+	} else {
+		span.SetStatus(otcodes.Ok, "")
+	}
 
 	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}
 }

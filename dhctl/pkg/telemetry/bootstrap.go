@@ -18,9 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/090809/oteljsonl"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log/global"
@@ -41,30 +39,51 @@ func Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	traceFileDir, ok := os.LookupEnv("DHCTL_TRACE_DIR")
-	if !ok || traceFileDir != "" {
-		traceFileDir, _ = os.Getwd()
+	var (
+		tracesExporter  sdktrace.SpanExporter
+		metricsExporter sdkmetric.Exporter
+		logsExporter    sdklog.Exporter
+		err             error
+	)
+
+	if _, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT"); ok {
+		tracesExporter, metricsExporter, logsExporter, err = configureRemoteExporter(ctx)
+	} else {
+		tracesExporter, metricsExporter, logsExporter, err = configureLocalExporter()
 	}
 
-	traceFileName := fmt.Sprintf("%s/trace-%s.jsonl", traceFileDir, time.Now().Format("20060102150405"))
+	if err != nil {
+		return err
+	}
 
-	cfg, err := oteljsonl.NewConfig(
-		oteljsonl.WithPath(traceFileName),
-		oteljsonl.WithCreateDirs(true),
-		oteljsonl.WithFileMode(0o600),
+	otelResource, err := resource.New(
+		ctx,
+		resource.WithSchemaURL(semconv.SchemaURL),
+
+		resource.WithTelemetrySDK(),
+		resource.WithFromEnv(),
+
+		resource.WithHostID(),
+		resource.WithOS(),
+		resource.WithContainer(),
+
+		resource.WithProcessPID(),
+		resource.WithProcessOwner(),
+		resource.WithProcessExecutablePath(),
+		resource.WithProcessCommandArgs(),
+
+		resource.WithAttributes(
+			semconv.ServiceName(traceApplicationName),
+		),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to configure trace output file %q: %w", traceFileName, err)
+		// probably, we need to log this.
+		// resource.New always returns *resource.Resource, but some data may be missed
 	}
 
-	exporters, err := oteljsonl.NewExporters(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to initialize trace exporter for %q: %w", traceFileName, err)
-	}
-
-	tracesShutdown, _ := initTraces(exporters.Trace)
-	metricsShutdown, _ := initMetrics(exporters.Metric)
-	logsShutdown, _ := initLogs(exporters.Log)
+	tracesShutdown, _ := initTraces(tracesExporter, otelResource)
+	metricsShutdown, _ := initMetrics(metricsExporter, otelResource)
+	logsShutdown, _ := initLogs(logsExporter, otelResource)
 
 	tomb.RegisterOnShutdown("OTel: traces", func() { tracesShutdown(ctx) })
 	tomb.RegisterOnShutdown("OTel: metrics", func() { metricsShutdown(ctx) })
@@ -73,15 +92,7 @@ func Bootstrap(ctx context.Context) error {
 	return nil
 }
 
-func initTraces(exporter sdktrace.SpanExporter) (ShutdownFunc, error) {
-	r, _ := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(traceApplicationName),
-		),
-	)
-
+func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) (ShutdownFunc, error) {
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(r),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -90,18 +101,18 @@ func initTraces(exporter sdktrace.SpanExporter) (ShutdownFunc, error) {
 
 	otel.SetTracerProvider(provider)
 
-	return provider.Shutdown, nil
+	return func(ctx context.Context) error {
+		if err := provider.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to flush traces: %v", err)
+		}
+		if err := provider.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown traces: %v", err)
+		}
+		return nil
+	}, nil
 }
 
-func initMetrics(exporter sdkmetric.Exporter) (ShutdownFunc, error) {
-	r, _ := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(traceApplicationName),
-		),
-	)
-
+func initMetrics(exporter sdkmetric.Exporter, r *resource.Resource) (ShutdownFunc, error) {
 	provider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(r),
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
@@ -113,18 +124,18 @@ func initMetrics(exporter sdkmetric.Exporter) (ShutdownFunc, error) {
 		return nil, fmt.Errorf("failed to start runtime metrics: %v", err)
 	}
 
-	return provider.Shutdown, nil
+	return func(ctx context.Context) error {
+		if err := provider.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to flush traces: %v", err)
+		}
+		if err := provider.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown traces: %v", err)
+		}
+		return nil
+	}, nil
 }
 
-func initLogs(exporter sdklog.Exporter) (ShutdownFunc, error) {
-	r, _ := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(traceApplicationName),
-		),
-	)
-
+func initLogs(exporter sdklog.Exporter, r *resource.Resource) (ShutdownFunc, error) {
 	provider := sdklog.NewLoggerProvider(
 		sdklog.WithResource(r),
 		sdklog.WithProcessor(
@@ -149,5 +160,13 @@ func initLogs(exporter sdklog.Exporter) (ShutdownFunc, error) {
 	//	),
 	//)
 
-	return provider.Shutdown, nil
+	return func(ctx context.Context) error {
+		if err := provider.ForceFlush(ctx); err != nil {
+			return fmt.Errorf("failed to flush traces: %v", err)
+		}
+		if err := provider.Shutdown(ctx); err != nil {
+			return fmt.Errorf("failed to shutdown traces: %v", err)
+		}
+		return nil
+	}, nil
 }

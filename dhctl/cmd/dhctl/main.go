@@ -300,9 +300,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	appContext, applicationSpan := telemetry.StartApplication(appContext)
-	tomb.RegisterOnShutdown("End telemetry application span", func() { applicationSpan.End() })
-
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
 	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
