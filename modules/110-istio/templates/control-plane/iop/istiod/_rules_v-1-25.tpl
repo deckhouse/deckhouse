@@ -231,7 +231,15 @@
   - list
 - apiGroups:
   - gateway.networking.k8s.io
-  resources: ["*"]
+  resources:
+  - gatewayclasses
+  - gateways
+  - grpcroutes
+  - httproutes
+  - referencegrants
+  - tcproutes
+  - tlsroutes
+  - updroutes
   verbs:
   - get
   - watch
