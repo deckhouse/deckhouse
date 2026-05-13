@@ -21,8 +21,8 @@ In addition to Gateway API infrastructure configuration, the `alb` module valida
 
 Before enabling and configuring ALB in a DKP cluster:
 
-- Ensure that the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) is specified. **This check applies if you need to [publish service domains](#publishing-service-domains): [web interfaces for DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules**. If the `publicDomainTemplate` parameter is not specified, HTTPRoute/Gateway/ListenerSet system objects will be created incorrectly, and the web interfaces of DKP service components and other modules will not be published.
-- [Check compatibility](#using-third-party-gateway-api-solutions) between the API versions used for third-party Gateway API objects and the versions required by the `alb` module controller. **This check applies if third-party Gateway API solutions are used in the cluster**.
+- If you need to [publish service domains](#publishing-service-domains) ([web interfaces for DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules), ensure that the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) is specified. If the `publicDomainTemplate` parameter is not specified, HTTPRoute/Gateway/ListenerSet system objects will be created incorrectly, and the web interfaces of DKP service components and other modules will not be published.
+- If third-party Gateway API solutions are used in the cluster, [check compatibility](#using-third-party-gateway-api-solutions) between the API versions used for third-party Gateway API objects and the versions required by the `alb` module controller.
 
 ## Using with other modules and third-party solutions
 
