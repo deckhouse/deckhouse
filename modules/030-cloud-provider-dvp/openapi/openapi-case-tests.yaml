@@ -3,13 +3,60 @@ positive:
   - storage:
       parameters: {}
     nodes:
-      parameters: {}
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
     provider:
-      parameters: {}
+      parameters:
+        namespace: default
+  - storage:
+      parameters:
+        excludedStorageClasses:
+          - slow-hdd
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
+        region: ru-central1
+        zones:
+          - zone-a
+          - zone-b
+    provider:
+      parameters:
+        namespace: my-ns
+        networkPolicy: Isolated
   values:
-  - { internal: {} }
+  - internal: {}
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
+    provider:
+      parameters:
+        namespace: default
 negative:
   configValues:
   - { somethingInConfig: yes }
+  - storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Unknown
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@host"
+    provider:
+      parameters:
+        namespace: default
+  - storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@host"
+    provider:
+      parameters:
+        namespace: default
+        networkPolicy: Restricted
   values:
   - { somethingInConfig: yes }
