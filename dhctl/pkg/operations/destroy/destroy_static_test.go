@@ -626,8 +626,10 @@ func TestStaticDestroy(t *testing.T) {
 				nodeUserShouldCreated:      true,
 				resourcesShouldDeleted:     false,
 				nodeUserShouldSavedInCache: true,
-				kubeProviderShouldCleaned:  false,
-				metaConfigSavedInCache:     true,
+				// deleteResourcesPhase always closes k8s access via defer
+				// once it starts, including on internal failure.
+				kubeProviderShouldCleaned: true,
+				metaConfigSavedInCache:    true,
 
 				destroyClusterShouldReturnsError: true,
 
@@ -1699,18 +1701,6 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	phaseActionProvider := phases.NewPhaseActionProviderFromPipeline(pipeline)
 	d8State := deckhouse.NewState(stateCache)
 
-	d8Destroyer := deckhouse.NewDestroyer(deckhouse.DestroyerParams{
-		CommanderMode: commanderMode,
-		CommanderUUID: uuid.Nil,
-		SkipResources: params.skipResources,
-
-		State: d8State,
-
-		LoggerProvider:       loggerProvider,
-		KubeProvider:         kubeClProvider,
-		PhasedActionProvider: phaseActionProvider,
-	})
-
 	sshProvider := testCreateDefaultTestSSHProvider(params.destroyOverHost, params.overBastion)
 
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -1750,13 +1740,32 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	}
 
 	destroyer := &ClusterDestroyer{
-		stateCache:       stateCache,
-		configPreparator: loader,
-
-		pipeline: pipeline,
-
-		d8Destroyer:   d8Destroyer,
-		infraProvider: infraProvider,
+		pipeline:       pipeline,
+		stateCache:     stateCache,
+		tmpDir:         tmpDir,
+		loggerProvider: loggerProvider,
+		prepare: &prepareDestroyPhase{
+			configPreparator:     loader,
+			directoryConfig:      nil,
+			infraProvider:        infraProvider,
+			kubeProvider:         kubeClProvider,
+			deckhouseState:       d8State,
+			phasedActionProvider: phaseActionProvider,
+			loggerProvider:       loggerProvider,
+			commanderMode:        commanderMode,
+			commanderUUID:        uuid.Nil,
+			skipResources:        params.skipResources,
+		},
+		deleteResources: &deleteResourcesPhase{
+			deckhouseState:       d8State,
+			kubeProvider:         kubeClProvider,
+			phasedActionProvider: phaseActionProvider,
+			loggerProvider:       loggerProvider,
+			commanderMode:        commanderMode,
+			commanderUUID:        uuid.Nil,
+			skipResources:        params.skipResources,
+		},
+		destroyInfra: destroyInfraPhase{},
 	}
 
 	tst := &testStaticDestroyTest{

@@ -142,15 +142,24 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }
 
+// ClusterDestroyer orchestrates a three-phase destroy:
+//  1. prepare           — load meta config, validate, pick the infra destroyer.
+//  2. deleteResources   — drain deckhouse k8s resources; release k8s access at end.
+//  3. destroyInfra      — tear down the underlying infrastructure.
+//
+// alwaysCleanup runs deferred on every exit (success or failure) and is
+// where process-wide cleanup belongs (tmp dir removal). stateCache.Clean
+// runs only on the success path so a failed destroy leaves the cache for
+// the operator to inspect or resume.
 type ClusterDestroyer struct {
-	stateCache       dhctlstate.Cache
-	configPreparator metaConfigPopulator
+	pipeline       phases.DefaultPipeline
+	stateCache     dhctlstate.Cache
+	tmpDir         string
+	loggerProvider log.LoggerProvider
 
-	pipeline phases.DefaultPipeline
-
-	d8Destroyer     *deckhouse.Destroyer
-	infraProvider   *infraDestroyerProvider
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	prepare         *prepareDestroyPhase
+	deleteResources *deleteResourcesPhase
+	destroyInfra    destroyInfraPhase
 }
 
 // NewClusterDestroyer
@@ -184,17 +193,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		return nil, err
 	}
 
-	d8Destroyer := deckhouse.NewDestroyer(deckhouse.DestroyerParams{
-		CommanderUUID: params.CommanderUUID,
-		CommanderMode: params.CommanderMode,
-
-		SkipResources: params.SkipResources,
-		State:         deckhouse.NewState(params.StateCache),
-
-		LoggerProvider:       params.LoggerProvider,
-		KubeProvider:         kubeProvider,
-		PhasedActionProvider: phaseActionProvider,
-	})
+	deckhouseState := deckhouse.NewState(params.StateCache)
 
 	infraProvider := &infraDestroyerProvider{
 		stateCache:           params.StateCache,
@@ -225,71 +224,67 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	}
 
 	return &ClusterDestroyer{
-		stateCache:       params.StateCache,
-		configPreparator: terraStateLoader,
+		pipeline:       pipeline,
+		stateCache:     params.StateCache,
+		tmpDir:         params.TmpDir,
+		loggerProvider: params.LoggerProvider,
 
-		pipeline: pipeline,
-
-		d8Destroyer:     d8Destroyer,
-		infraProvider:   infraProvider,
-		DirectoryConfig: params.DirectoryConfig,
+		prepare: &prepareDestroyPhase{
+			configPreparator:     terraStateLoader,
+			directoryConfig:      params.DirectoryConfig,
+			infraProvider:        infraProvider,
+			kubeProvider:         kubeProvider,
+			deckhouseState:       deckhouseState,
+			phasedActionProvider: phaseActionProvider,
+			loggerProvider:       params.LoggerProvider,
+			commanderMode:        params.CommanderMode,
+			commanderUUID:        params.CommanderUUID,
+			skipResources:        params.SkipResources,
+		},
+		deleteResources: &deleteResourcesPhase{
+			deckhouseState:       deckhouseState,
+			kubeProvider:         kubeProvider,
+			phasedActionProvider: phaseActionProvider,
+			loggerProvider:       params.LoggerProvider,
+			commanderMode:        params.CommanderMode,
+			commanderUUID:        params.CommanderUUID,
+			skipResources:        params.SkipResources,
+		},
+		destroyInfra: destroyInfraPhase{},
 	}, nil
 }
 
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	return d.pipeline.Run(ctx, func(switcher phases.DefaultPipelinePhaseSwitcher) error {
-		return d.destroy(ctx, autoApprove)
+	return d.pipeline.Run(ctx, func(_ phases.DefaultPipelinePhaseSwitcher) error {
+		// Process-wide always-cleanup hook. The deleteResourcesPhase already
+		// closes its own kube/SSH access via its internal defer, so on the
+		// happy path there is nothing left to do here. The tmp dir is left
+		// in place on purpose: cloud destroy keeps tofu state in it and the
+		// operator may want to resume after a partial failure.
+		defer d.alwaysCleanup(ctx)
+
+		prep, err := d.prepare.run(ctx)
+		if err != nil {
+			return err
+		}
+
+		d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: prep.clusterType})
+
+		if err := d.deleteResources.run(ctx, prep); err != nil {
+			return err
+		}
+
+		if err := d.destroyInfra.run(ctx, prep, autoApprove); err != nil {
+			return err
+		}
+
+		d.stateCache.Clean(ctx)
+		return nil
 	})
 }
 
-func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
-	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
-		return err
-	}
-
-	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
-	if err != nil {
-		return err
-	}
-
-	destroyer, err := config.DoByClusterType(ctx, metaConfig, d.infraProvider)
-	if err != nil {
-		return err
-	}
-
-	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
-
-	err = destroyer.Prepare(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := d.d8Destroyer.CheckAndDeleteResources(ctx); err != nil {
-		return err
-	}
-
-	if err := destroyer.AfterResourcesDelete(ctx); err != nil {
-		return err
-	}
-
-	// only after load and save all states into cache
-	// set resources as deleted
-	if err := d.d8Destroyer.Finalize(ctx); err != nil {
-		return err
-	}
-
-	// Stop proxy because we have already got all info from kubernetes-api
-	// also stop ssh client for cloud clusters
-	if err := destroyer.CleanupBeforeDestroy(ctx); err != nil {
-		return err
-	}
-
-	if err := destroyer.DestroyCluster(ctx, autoApprove); err != nil {
-		return err
-	}
-
-	d.stateCache.Clean(ctx)
-
-	return nil
-}
+// alwaysCleanup is the home for process-wide cleanup that runs whether
+// destroy succeeded or failed. Currently empty: the only resource that
+// needs unconditional release (k8s API access) is owned by
+// deleteResourcesPhase and freed via its own defer.
+func (d *ClusterDestroyer) alwaysCleanup(_ context.Context) {}
