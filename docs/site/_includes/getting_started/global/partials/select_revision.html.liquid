@@ -114,10 +114,6 @@ The {{ page.title_main }} installation is not available in the Community Edition
 </div>
 {%- endfor %}
 
-
-
-
-
 {%- for revision in revisions %}
 {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
