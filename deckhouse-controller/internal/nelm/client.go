@@ -156,6 +156,44 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	}
 }
 
+// ReleaseRef identifies a nelm release (a logical install, not a specific revision).
+type ReleaseRef struct {
+	Namespace string
+	Name      string
+}
+
+// ListReleases returns nelm releases cluster-wide whose Release.Info carries
+// an annotation key=value matching the given marker.
+//
+// Client-side filter: action.ReleaseList has no server-side selector and
+// returns every helm release in the cluster.
+func (c *Client) ListReleases(ctx context.Context, annotationKey, annotationValue string) ([]ReleaseRef, error) {
+	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListReleases")
+	defer span.End()
+
+	result, err := action.ReleaseList(ctx, action.ReleaseListOptions{
+		KubeConnectionOptions: common.KubeConnectionOptions{
+			KubeContextCurrent: c.kubeContext,
+		},
+		ReleaseStorageDriver: c.driver,
+		OutputNoPrint:        true,
+		ReleaseNamespace:     "", // cluster-wide
+	})
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("list nelm releases: %w", err)
+	}
+
+	refs := make([]ReleaseRef, 0, len(result.Releases))
+	for _, r := range result.Releases {
+		if r.Annotations[annotationKey] != annotationValue {
+			continue
+		}
+		refs = append(refs, ReleaseRef{Namespace: r.Namespace, Name: r.Name})
+	}
+	return refs, nil
+}
+
 // LastStatus returns the revision number and status of the latest release
 // Returns ("0", "", nil) if the release doesn't exist
 func (c *Client) LastStatus(ctx context.Context, namespace, releaseName string) (string, string, error) {

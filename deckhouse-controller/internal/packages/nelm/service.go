@@ -25,7 +25,6 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/google/uuid"
-	"github.com/werf/nelm/pkg/action"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -307,42 +306,22 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 // which releases must remain. Releases without the managed-by annotation are
 // skipped: they are not ours.
 func (s *Service) CleanupOrphans(ctx context.Context, keep map[string]struct{}) {
-	result, err := action.ReleaseList(ctx, action.ReleaseListOptions{
-		OutputNoPrint:    true,
-		ReleaseNamespace: "", // cluster-wide
-	})
+	releases, err := s.client.ListReleases(ctx, managedByAnnotation, managedByAnnotationValue)
 	if err != nil {
 		s.logger.Warn("failed to list releases", log.Err(err))
 		return
 	}
 
-	var deleted, failed int
-	for _, r := range result.Releases {
-		if r.Annotations[managedByAnnotation] != managedByAnnotationValue {
-			continue
-		}
+	for _, r := range releases {
 		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
 			continue
 		}
-
 		if err := s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
 			s.logger.Warn("failed to delete orphan release",
 				slog.String("namespace", r.Namespace),
 				slog.String("release", r.Name),
 				log.Err(err))
-			failed++
-			continue
 		}
-		s.logger.Info("deleted orphan release",
-			slog.String("namespace", r.Namespace),
-			slog.String("release", r.Name))
-		deleted++
-	}
-
-	if deleted > 0 || failed > 0 {
-		s.logger.Info("orphan release cleanup complete",
-			slog.Int("deleted", deleted),
-			slog.Int("failed", failed))
 	}
 }
 
