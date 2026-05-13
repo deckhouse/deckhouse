@@ -1,0 +1,155 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stable-identity-etcd-witness
+  namespace: kube-system
+  labels:
+    app: stable-identity-etcd-witness
+    component: etcd
+    tier: control-plane
+spec:
+  serviceName: stable-identity-etcd-witness
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: stable-identity-etcd-witness
+  template:
+    metadata:
+      annotations:
+        kubeadm.kubernetes.io/etcd.advertise-client-urls: https://stable-identity-etcd-witness-0.stable-identity-etcd-witness.kube-system.svc:2379
+      labels:
+        app: stable-identity-etcd-witness
+        component: etcd
+        tier: control-plane
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - name: etcd
+          image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:663bf21eb86b9b5c19662c7123cb3d281b1ec7c0247546633bd3ae57ac5cb7e3
+          imagePullPolicy: IfNotPresent
+          command:
+            - etcd
+          args:
+            - --name=stable-identity-etcd-witness-0
+            - --data-dir=/var/lib/etcd
+            - --feature-gates=InitialCorruptCheck=true
+
+            - --initial-cluster-state=existing
+            - --initial-cluster=mmazin-master-0=https://10.12.2.93:2380,stable-identity-etcd-witness-0=https://stable-identity-etcd-witness-0.stable-identity-etcd-witness.kube-system.svc:2380,mmazin-master-1=https://10.12.0.202:2380
+
+            - --initial-advertise-peer-urls=https://stable-identity-etcd-witness-0.stable-identity-etcd-witness.kube-system.svc:2380
+            - --listen-peer-urls=https://0.0.0.0:2380
+
+            - --advertise-client-urls=https://stable-identity-etcd-witness-0.stable-identity-etcd-witness.kube-system.svc:2379
+            - --listen-client-urls=https://0.0.0.0:2379
+
+            - --cert-file=/etc/kubernetes/pki/etcd/server.crt
+            - --key-file=/etc/kubernetes/pki/etcd/server.key
+            - --client-cert-auth=true
+            - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+
+            - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
+            - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
+            - --peer-client-cert-auth=true
+            - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+
+            - --listen-metrics-urls=http://127.0.0.1:2381
+            - --metrics=extensive
+            - --quota-backend-bytes=2147483648
+            - --snapshot-count=10000
+            - --watch-progress-notify-interval=5s
+
+            - --unsafe-witness-commit
+            - --role=witness
+            - --max-wals=1
+          ports:
+            - name: client
+              containerPort: 2379
+              protocol: TCP
+            - name: peer
+              containerPort: 2380
+              protocol: TCP
+            - name: probe-port
+              containerPort: 2381
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 8
+            httpGet:
+              host: 127.0.0.1
+              path: /livez
+              port: probe-port
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 15
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              host: 127.0.0.1
+              path: /readyz
+              port: 2381
+              scheme: HTTP
+            periodSeconds: 1
+            successThreshold: 1
+            timeoutSeconds: 15
+          startupProbe:
+            failureThreshold: 24
+            httpGet:
+              host: 127.0.0.1
+              path: /readyz?exclude=non_learner
+              port: 2381
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 15
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: etcd-data
+              mountPath: /var/lib/etcd
+            - name: etcd-certs
+              mountPath: /etc/kubernetes/pki/etcd
+              readOnly: true
+      volumes:
+        - name: etcd-data
+          emptyDir: {}
+        - name: etcd-certs
+          secret:
+            secretName: stable-identity-etcd-witness-secret
+            defaultMode: 0400
+            items:
+              - key: ca.crt
+                path: ca.crt
+              - key: peer.crt
+                path: peer.crt
+              - key: peer.key
+                path: peer.key
+              - key: server.crt
+                path: server.crt
+              - key: server.key
+                path: server.key
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: stable-identity-etcd-witness
+  namespace: kube-system
+  labels:
+    app: stable-identity-etcd-witness
+    component: etcd
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: stable-identity-etcd-witness
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+      protocol: TCP
+    - name: peer
+      port: 2380
+      targetPort: 2380
+      protocol: TCP
+    - name: probe-port
+      port: 2381
+      targetPort: 2381
+      protocol: TCP

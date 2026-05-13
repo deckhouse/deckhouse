@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -167,6 +168,10 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
 		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
+			if strings.Contains(mem.Name, "witness") {
+				input.Logger.Warn("witness etcd member, will be skipped", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
+				continue
+			}
 			removeListIDs = append(removeListIDs, mem.ID)
 			input.Logger.Warn("added etcd member to remove list", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
 		}

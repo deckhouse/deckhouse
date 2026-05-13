@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: self-delete-pod
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: self-delete-pod
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: self-delete-pod
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: self-delete-pod
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: self-delete-pod
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: churn-1000
+  namespace: default
+spec:
+  replicas: 50
+  selector:
+    matchLabels:
+      app: churn-1000
+  template:
+    metadata:
+      labels:
+        app: churn-1000
+    spec:
+      serviceAccountName: self-delete-pod
+      terminationGracePeriodSeconds: 0
+      nodeName: mmazin-worker-847c27b5-679c7-4gx7x
+      containers:
+        - name: churn
+          image: curlimages/curl:8.7.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - sh
+            - -ec
+            - |
+              # Джиттер: жизнь pod'а от 20 до 40 секунд
+              SLEEP_FOR=$((20 + RANDOM % 21))
+              echo "Pod ${POD_NAME} will live for ${SLEEP_FOR}s"
+              sleep "${SLEEP_FOR}"
+
+              TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+              CACERT="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+              API="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT_HTTPS}"
+
+              curl --silent --show-error --fail \
+                --cacert "${CACERT}" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                -X DELETE \
+                "${API}/api/v1/namespaces/${POD_NAMESPACE}/pods/${POD_NAME}"
+
+              exit 0
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
