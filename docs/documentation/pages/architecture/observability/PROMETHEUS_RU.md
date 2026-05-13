@@ -46,14 +46,14 @@ Prometheus-main обрабатывает настроенные правила, 
 
      Config-reloader является [утилитой](https://github.com/coreos/prometheus-operator/tree/master/cmd/prometheus-config-reloader) из Open Source-проекта [Prometheus Operator](https://github.com/coreos/prometheus-operator/).
 
-   * **prometheus** — 
+   * **prometheus** — основной контейнер;
    
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к серверу Prometheus. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 2. **Prometheus-longterm** (StatefulSet) — дополнительный Prometheus, хранящий выборку разреженных метрик из основного prometheus-main. Это позволяет пользователям просматривать и анализировать исторические тренды за длительный период времени. Prometheus-longterm получает данные благодаря настроенной федерации с основным Prometheus. Состав контейнеров у prometheus-longterm такой же, как и у prometheus-main. 
 
 {% alert level="info" %}
-Для отображения дашбордов мониторинга в веб-интерфейсе DKP используется Grafana, входящая в модуль [observability](/modules/observability/).
+Для отображения дашбордов мониторинга в веб-интерфейсе DKP используется другая инсталляция Grafana, входящая в модуль [observability](/modules/observability/).
 {% endalert %}
 
 3. **Grafana-v10** — необязательный компонент Grafana, предоставляющий веб-интерфейс для визуализации данных мониторинга. Grafana включает подготовленные дашборды для всех модулей DKP и некоторых популярных приложений. Grafana умеет работать в режиме высокой доступности, не хранит состояние и настраивается с помощью [кастомных ресурсов](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana по умолчанию включена, но ее можно удалить из модуля при помощи [следующего параметра модуля](/modules/prometheus/configuration.html#parameters-grafana-enabled).
