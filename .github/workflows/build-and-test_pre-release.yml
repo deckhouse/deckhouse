@@ -3407,7 +3407,8 @@ jobs:
                 "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
                 "s3://${S3_BUCKET}/deckhouse-web-production/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
                 --endpoint-url "https://${S3_EP}" \
-                --region "${S3_REGION}"
+                --region "${S3_REGION}" \
+                --no-verify-ssl
             done
           done
     # </template: doc_pdf_build_template>
