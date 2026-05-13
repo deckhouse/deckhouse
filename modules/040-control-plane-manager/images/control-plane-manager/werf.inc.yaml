@@ -42,9 +42,9 @@ shell:
   install:
     - cd /src/cmd/control-plane-manager
     {{ if $.isEE}}
-    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-node.SignatureEnabled=true"
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=true"
     {{ else }}
-    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-node.SignatureEnabled=false"
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=false"
     {{ end }}
     - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $BUILD_TAGS -ldflags="-s -w $ETCD_SIGN_ENABLED" -o /control-plane-manager .
 ---
