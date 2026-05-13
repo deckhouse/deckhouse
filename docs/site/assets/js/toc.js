@@ -58,14 +58,7 @@
     var level = get_level(headers[0]),
       this_level,
       html = settings.title + " <" +settings.listType + " class=\"" + settings.classes.list +"\">";
-    headers.on('click', function(event) {
-      if ($(this).closest('.docs.faq__container').length > 0) {
-        const anchorLink = event.target.closest('.anchorjs-link');
-        if (!anchorLink) {
-          return;
-        }
-      }
-
+    headers.on('click', function() {
       if (!settings.noBackToTopLinks) {
         window.location.hash = this.id;
       }
