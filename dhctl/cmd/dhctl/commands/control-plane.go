@@ -28,6 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -38,10 +40,17 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test control plane manager is Ready", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
 		}
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
@@ -72,9 +81,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		}
 
 		if ready {
-			log.InfoLn("Control plane manager is ready")
+			log.InteractiveInfoF("Control plane manager is ready")
 		} else {
-			log.WarnLn("Control plane manager is not ready")
+			log.InteractiveWarnLn("Control plane manager is not ready")
 		}
 
 		return nil
@@ -89,11 +98,19 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test control plane node is Ready", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
 		}
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
@@ -132,7 +149,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return fmt.Errorf("control plane node is not ready: %v", err)
 		}
 
-		log.InfoLn("Control plane manager node is ready")
+		log.InteractiveInfoLn("Control plane manager node is ready")
 
 		return nil
 	})

@@ -35,6 +35,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
@@ -224,6 +226,31 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := log.GetDefaultLogger().(*log.InteractiveLogger)
+		if !ok {
+			return nil, fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Base Infra", labelChan, phasesChan)
+
+		onUpdateFunc := func(progress phases.Progress) error {
+			phasesChan <- progress
+			if c.OnProgressFunc != nil {
+				return c.OnProgressFunc(progress)
+			}
+
+			return nil
+		}
+
+		c.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationConverge, c.OnPhaseFunc, onUpdateFunc)
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return nil, err
+		}
+	}
+
 	stateCache := cache.Global()
 
 	if err := c.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
@@ -394,6 +421,12 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	if err := c.PhasedExecutionContext.CompletePipeline(ctx, stateCache); err != nil {
 		return nil, err
+	}
+
+	if interactive {
+		pb := progressbar.GetDefaultPb()
+		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+		pb.MultiPrinter.Stop()
 	}
 
 	return &ConvergeResult{

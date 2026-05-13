@@ -53,6 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -254,6 +255,27 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}()
 
 	printBanner()
+
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Base Infra", labelChan, phasesChan)
+
+		onUpdateFunc := func(progress phases.Progress) error {
+			phasesChan <- progress
+			return nil
+		}
+
+		b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, b.OnPhaseFunc, onUpdateFunc)
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+	}
 
 	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
@@ -624,6 +646,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	log.Success("Deckhouse cluster was created successfully!\n")
+	if interactive {
+		progressbar.InfoF("%s\n", "Deckhouse cluster was created successfully! Kubernetes Master Node addresses for SSH:")
+	}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
@@ -640,6 +665,15 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				fakeSession := sshClient.Session().Copy()
 				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
+				if interactive {
+					progressbar.InfoF("%s | %s\n", nodeName, fakeSession.String())
+				}
+			}
+
+			// MultiPrinter must render InfoF before exit and ProgressBar must be completed
+			if interactive {
+				progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
+				progressbar.GetDefaultPb().MultiPrinter.Stop()
 			}
 
 			return nil
@@ -659,7 +693,8 @@ func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
 }
 
 func printBanner() {
-	log.InfoLn(banner)
+	log.InteractiveInfoLn(banner)
+	log.InteractiveInfoLn("")
 }
 
 func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {

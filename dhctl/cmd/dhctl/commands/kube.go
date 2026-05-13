@@ -30,6 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -46,13 +48,21 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 			<-doneCh
 		})
 
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("test Kubernetes API connection", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
 		checker := controlplane.NewKubeProxyChecker().
 			WithLogResult(true).
 			WithAskPassword(true).
 			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
-			log.InfoLn("Press Ctrl+C to close proxy connection.")
+			log.InteractiveInfoLn("Press Ctrl+C to close proxy connection.")
 			ch := make(chan struct{})
 			<-ch
 		}
@@ -91,11 +101,10 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
@@ -105,6 +114,15 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		if err != nil {
 			return err
 		}
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Wait for deployment is Ready", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}

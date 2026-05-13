@@ -50,7 +50,7 @@ func EditMock(data []byte, _ *directoryconfig.DirectoryConfig, _ EditOptions) ([
 }
 
 func TestSecretEdit(t *testing.T) {
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 
 	f := client.NewFakeKubernetesClient()
 	retry.InTestEnvironment = true

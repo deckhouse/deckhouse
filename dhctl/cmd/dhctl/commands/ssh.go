@@ -29,7 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -51,6 +54,27 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 			return fmt.Errorf("SSH credentials not provided")
 		}
 		defer sshProviderInitializer.Cleanup(ctx)
+
+		if input.IsTerminal() {
+			intLogger, ok := log.GetDefaultLogger().(*log.InteractiveLogger)
+			if !ok {
+				return fmt.Errorf("logger is not interactive")
+			}
+			labelChan := intLogger.GetPhaseChan()
+			phasesChan := make(chan phases.Progress, 5)
+			pbParam := progressbar.NewPbParams(100, "Test SSH connection", labelChan, phasesChan)
+
+			if err := progressbar.InitProgressBar(pbParam); err != nil {
+				return err
+			}
+
+			onComplete := func() {
+				pb := progressbar.GetDefaultPb()
+				pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+				pb.MultiPrinter.Stop()
+			}
+			defer onComplete()
+		}
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
