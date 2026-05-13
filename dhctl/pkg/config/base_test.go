@@ -924,38 +924,81 @@ func TestRegistryConfigProvider(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		t.Run("Registry config", func(t *testing.T) {
-			remote, err := provider.RemoteData()
-			require.NoError(t, err)
+		remote, err := provider.RemoteData()
+		require.NoError(t, err)
+		require.Equal(t, "registry.deckhouse.io/deckhouse/ce", remote.ImagesRepo)
+		require.Equal(t, registry_const.SchemeHTTPS, remote.Scheme)
+		require.Equal(t, "", remote.Username)
+		require.Equal(t, "", remote.Password)
+		require.Equal(t, "", remote.CA)
 
-			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", remote.ImagesRepo)
-			require.Equal(t, registry_const.SchemeHTTPS, remote.Scheme)
-			require.Equal(t, "", remote.Username)
-			require.Equal(t, "", remote.Password)
-			require.Equal(t, "", remote.CA)
+		isLocal, err := provider.IsLocal()
+		require.NoError(t, err)
+		require.Equal(t, false, isLocal)
+	})
 
-			isLocal, err := provider.IsLocal()
-			require.NoError(t, err)
+	t.Run("Parse raw configs", func(t *testing.T) {
+		mcDeckhouse := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`
 
-			require.Equal(t, false, isLocal)
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return []string{mcDeckhouse}, nil
 		})
+		require.NoError(t, err)
+
+		remote, err := provider.RemoteData()
+		require.NoError(t, err)
+		require.Equal(t, "r.example.com/test", remote.ImagesRepo)
+		require.Equal(t, registry_const.SchemeHTTPS, remote.Scheme)
+		require.Equal(t, "test-user", remote.Username)
+		require.Equal(t, "test-password", remote.Password)
+		require.Equal(t, "-----BEGIN CERTIFICATE-----", remote.CA)
+
+		isLocal, err := provider.IsLocal()
+		require.NoError(t, err)
+		require.Equal(t, false, isLocal)
 	})
 }
 
 func TestFetchDocuments(t *testing.T) {
-	initConfig := `---
+
+	t.Run("Parse init config path", func(t *testing.T) {
+		initConfig := `---
 apiVersion: deckhouse.io/v1alpha1
 kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.deckhouse.io/deckhouse/ce`
 
-	t.Run("Parse wildcard config paths", func(t *testing.T) {
 		docs, err := FetchDocuments([]string{"./mocks/1-Init*.yml"})
 		require.NoError(t, err)
 		require.Len(t, docs, 2)
 
 		require.Equal(t, "", docs[0])
 		require.Equal(t, initConfig, docs[1])
+	})
+
+	t.Run("Parse all yml config paths", func(t *testing.T) {
+		docs, err := FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		require.NoError(t, err)
+		require.Len(t, docs, 6)
+		require.Equal(t, "", docs[0])
 	})
 }
 
