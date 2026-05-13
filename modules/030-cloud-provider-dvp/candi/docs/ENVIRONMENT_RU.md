@@ -56,4 +56,27 @@ EOF
 
 ## Генерация kubeconfig
 
-Чтобы сгенерировать kubeconfig, следуйте указаниям из [инструкции](/modules/user-authn/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api).
+Сгенерируйте kubeconfig, который будет использоваться в файле первичной конфигурации кластера:
+
+```bash
+cat <<EOF > kubeconfig
+apiVersion: v1
+clusters:
+  - cluster:
+    server: https://<KUBE-APISERVER-URL>   # Замените на реальный адрес API-сервера кластера.
+  name: <CLUSTER-NAME>                     # Замените на имя кластера.
+contexts:
+  - context:
+    cluster: <CLUSTER-NAME>.               # Замените на имя кластера.
+    user: sa-demo
+    namespace: default
+  name: sa-demo-context
+current-context: sa-demo-context
+kind: Config
+preferences: {}
+users:
+  - name: sa-demo
+  user:
+    token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
+EOF
+```
