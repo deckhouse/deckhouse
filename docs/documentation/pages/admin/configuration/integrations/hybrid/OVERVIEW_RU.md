@@ -19,7 +19,7 @@ lang: ru
 Подключение узлов из внешней инфраструктуры может выполняться двумя способами:
 
 - **Автоматическое создание узлов**. Используется тип узлов `CloudEphemeral` (в Yandex — тип узлов `Cloud`). Параметры виртуальных машин описываются ресурсом `*InstanceClass` (например, [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass)), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup). После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
-- **Подключение вручную созданных узлов**. Используется тип узлов `CloudStatic`. Виртуальные машины создаются пользователем вручную во внешней инфраструктуре, после чего подключаются к кластеру с помощью bootstrap-скрипта DKP как worker-узлы.
+- **Подключение вручную созданных узлов**. Используется тип узлов `CloudStatic`. Виртуальные машины создаются пользователем вручную во внешней инфраструктуре, после чего подключаются к кластеру с помощью bootstrap-скрипта DKP или через Cluster API Provider Static (CAPS) как worker-узлы.
 
 В этом разделе описаны общие требования к гибридным кластерам, предварительная подготовка инфраструктуры и добавление узлов через поддерживаемых провайдеров.
 
@@ -370,7 +370,7 @@ lang: ru
    d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
-### Добавление вручную созданных узлов в Yandex Cloud
+### Добавление вручную созданных узлов в Yandex Cloud через bootstrap-скрипт
 
 Перед началом убедитесь, что выполнены следующие условия:
 
@@ -528,6 +528,217 @@ lang: ru
    d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
+### Добавление вручную созданных узлов в Yandex Cloud через CAPS
+
+Перед началом убедитесь, что выполнены следующие условия:
+
+- Модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) включён и настроен.
+- Компоненты модуля `cloud-provider-yandex` находятся в состоянии `Running`:
+
+  ```shell
+  d8 k -n d8-cloud-provider-yandex get pods -o wide
+  ```
+
+- В Yandex Cloud создана виртуальная машина, которая будет подключена к кластеру.
+- Виртуальная машина подключена к сети и подсети Yandex Cloud, используемым для гибридной интеграции с кластером.
+- Внутренний IP-адрес виртуальной машины входит в диапазон адресов, используемый для облачных узлов Yandex Cloud.
+- Имя виртуальной машины в Yandex Cloud совпадает с hostname внутри операционной системы.
+- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
+
+1. На master-узле задайте переменные для создаваемой NodeGroup и подключаемой виртуальной машины:
+
+   ```shell
+   export NODE_GROUP="yc-caps"
+   export NODE_NAME="yandex-worker-hybrid-caps"
+   export NODE_SSH_IP="<NODE_PUBLIC_OR_INTERNAL_IP>"
+   export CAPS_USER="caps"
+   ```
+
+   Где:
+
+   - `NODE_GROUP` — имя NodeGroup, в которую будет добавлен узел;
+   - `NODE_NAME` — имя подключаемого узла;
+   - `NODE_SSH_IP` — IP-адрес виртуальной машины, доступный по SSH;
+   - `CAPS_USER` — пользователь, под которым CAPS будет подключаться к виртуальной машине.
+
+1. На master-узле создайте NodeGroup:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: ${NODE_GROUP}
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: ${NODE_GROUP}
+   EOF
+   ```
+
+   В этом сценарии используется `nodeType: Static`, потому что узел уже создан вручную, а CAPS будет только подключать и настраивать его по SSH.
+
+1. Убедитесь, что NodeGroup создана и синхронизирована:
+
+   ```shell
+   d8 k get nodegroup ${NODE_GROUP}
+   d8 k describe nodegroup ${NODE_GROUP}
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME      TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
+   yc-caps   Static   0       0       0                                                               1m    True
+   ```
+
+1. На master-узле сгенерируйте SSH-ключ, который CAPS будет использовать для подключения к виртуальной машине:
+
+   ```shell
+   ssh-keygen -t ed25519 \
+     -f /dev/shm/${NODE_GROUP}-id \
+     -C "" \
+     -N ""
+   ```
+
+   {% alert level="info" %}
+   Ключ создаётся с пустой парольной фразой, так как CAPS должен использовать его автоматически.
+   {% endalert %}
+
+1. На master-узле создайте ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials):
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha2
+   kind: SSHCredentials
+   metadata:
+     name: ${NODE_GROUP}
+   spec:
+     user: ${CAPS_USER}
+     privateSSHKey: "$(base64 -w0 /dev/shm/${NODE_GROUP}-id)"
+   EOF
+   ```
+
+   Ресурс SSHCredentials хранит имя пользователя и приватный SSH-ключ, с помощью которых CAPS будет подключаться к виртуальной машине.
+
+1. Убедитесь, что ресурс SSHCredentials создан:
+
+   ```shell
+   d8 k get sshcredentials
+   d8 k describe sshcredentials ${NODE_GROUP}
+   ```
+
+1. На master-узле выведите публичную часть SSH-ключа:
+
+   ```shell
+   cat /dev/shm/${NODE_GROUP}-id.pub
+   ```
+
+   Этот ключ понадобится на следующем шаге для настройки пользователя на подключаемой виртуальной машине.
+
+1. На подключаемой виртуальной машине создайте пользователя, под которым CAPS будет выполнять настройку узла. Выполните команды на подключаемой виртуальной машине, указав публичный SSH-ключ, полученный на предыдущем шаге:
+
+   ```shell
+   export CAPS_USER="caps"
+   export KEY='<SSH_PUBLIC_KEY>'
+
+   useradd -m -s /bin/bash ${CAPS_USER}
+   usermod -aG sudo ${CAPS_USER}
+
+   echo "${CAPS_USER} ALL=(ALL) NOPASSWD: ALL" | EDITOR='tee -a' visudo
+
+   mkdir -p /home/${CAPS_USER}/.ssh
+   echo "${KEY}" > /home/${CAPS_USER}/.ssh/authorized_keys
+
+   chown -R ${CAPS_USER}:${CAPS_USER} /home/${CAPS_USER}
+   chmod 700 /home/${CAPS_USER}/.ssh
+   chmod 600 /home/${CAPS_USER}/.ssh/authorized_keys
+   ```
+
+   {% alert level="info" %}
+   Значение KEY необходимо указывать в кавычках, так как публичный SSH-ключ содержит пробелы.
+   {% endalert %}
+
+   {% alert level="info" %}
+   Для операционных систем семейства Astra Linux при использовании модуля мандатного контроля целостности Parsec дополнительно задайте максимальный уровень целостности для пользователя:
+
+   ```shell
+   pdpl-user -i 63 ${CAPS_USER}
+   ```
+
+   {% endalert %}
+
+1. На master-узле проверьте, что CAPS-пользователь может подключиться к виртуальной машине по SSH и выполнять команды через `sudo` без пароля:
+
+   ```shell
+   ssh -i /dev/shm/${NODE_GROUP}-id ${CAPS_USER}@${NODE_SSH_IP} \
+     'hostname; sudo -n true; echo OK'
+   ```
+
+   В выводе должно быть имя узла и строка OK.
+
+1. На master-узле создайте ресурс [StaticInstance](/modules/node-manager/cr.html#staticinstance) для подключаемой виртуальной машины:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha2
+   kind: StaticInstance
+   metadata:
+     name: ${NODE_NAME}
+     labels:
+       role: ${NODE_GROUP}
+   spec:
+     address: "${NODE_SSH_IP}"
+     credentialsRef:
+       kind: SSHCredentials
+       name: ${NODE_GROUP}
+   EOF
+   ```
+
+   Где:
+
+   - `metadata.name` — имя подключаемого узла;
+   - `metadata.labels.role` — лейбл, по которому NodeGroup выбирает этот StaticInstance;
+   - `spec.address` — IP-адрес виртуальной машины, доступный по SSH;
+   - `spec.credentialsRef.name` — имя созданного ранее ресурса SSHCredentials.
+
+1. Проверьте состояние StaticInstance:
+
+   ```shell
+   d8 k get staticinstances
+   d8 k describe staticinstance ${NODE_NAME}
+   ```
+
+1. Дождитесь подключения узла и проверьте его состояние:
+
+   ```shell
+   d8 k get nodes -o wide
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME                         STATUS   ROLES     AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
+   static-master-0              Ready    master    1h    v1.33.10   10.128.0.15   <none>
+   yandex-worker-hybrid-caps    Ready    yc-caps   5m    v1.33.10   10.128.0.29   <none>
+   ```
+
+1. При сбоях подключения проверьте состояние NodeGroup, StaticInstance, Machine и события в кластере:
+
+   ```shell
+   d8 k get nodegroup ${NODE_GROUP}
+   d8 k describe nodegroup ${NODE_GROUP}
+
+   d8 k get staticinstances
+   d8 k describe staticinstance ${NODE_NAME}
+
+   d8 k -n d8-cloud-instance-manager get machines,machinesets,machinedeployments -o wide
+   d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
+   ```
+
 ## Гибридный кластер с VCD
 
 Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в VMware vCloud Director (VCD) с использованием Deckhouse Kubernetes Platform (DKP).
@@ -664,7 +875,7 @@ lang: ru
    d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
-### Добавление вручную созданных узлов в VCD
+### Добавление вручную созданных узлов в VCD через bootstrap-скрипт
 
 Перед началом убедитесь, что выполнены следующие условия:
 
@@ -926,7 +1137,7 @@ lang: ru
    d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
    ```
 
-### Добавление вручную созданных узлов в vSphere
+### Добавление вручную созданных узлов в vSphere через bootstrap-скрипт
 
 Перед началом убедитесь, что выполнены следующие условия:
 
