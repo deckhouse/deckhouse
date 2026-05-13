@@ -299,14 +299,16 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	return nil
 }
 
-// CleanupOrphans uninstalls nelm releases owned by this service (carrying the
+// Cleanup uninstalls nelm releases owned by this service (carrying the
 // managed-by annotation in Release.Info) whose name is not in keep.
 //
 // keep keys are of the form "<namespace>/<release-name>" — the caller decides
 // which releases must remain. Releases without the managed-by annotation are
 // skipped: they are not ours.
-func (s *Service) CleanupOrphans(ctx context.Context, keep map[string]struct{}) {
-	releases, err := s.client.ListReleases(ctx, managedByAnnotation, managedByAnnotationValue)
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}) {
+	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
+		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
+	})
 	if err != nil {
 		s.logger.Warn("failed to list releases", log.Err(err))
 		return

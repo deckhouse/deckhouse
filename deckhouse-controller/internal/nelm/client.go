@@ -162,12 +162,20 @@ type ReleaseRef struct {
 	Name      string
 }
 
-// ListReleases returns nelm releases cluster-wide whose Release.Info carries
-// an annotation key=value matching the given marker.
+// ListOptions contains options for listing Helm releases.
+type ListOptions struct {
+	// Selector filters releases by Release.Info annotations: a release is
+	// included only if every key/value pair in Selector matches its
+	// annotations. Empty selector returns every release.
+	Selector map[string]string
+}
+
+// ListReleases returns nelm releases cluster-wide whose Release.Info matches
+// the given selector.
 //
-// Client-side filter: action.ReleaseList has no server-side selector and
-// returns every helm release in the cluster.
-func (c *Client) ListReleases(ctx context.Context, annotationKey, annotationValue string) ([]ReleaseRef, error) {
+// Filter is applied client-side: action.ReleaseList has no server-side
+// selector and returns every helm release in the cluster.
+func (c *Client) ListReleases(ctx context.Context, opts ListOptions) ([]ReleaseRef, error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListReleases")
 	defer span.End()
 
@@ -186,12 +194,22 @@ func (c *Client) ListReleases(ctx context.Context, annotationKey, annotationValu
 
 	refs := make([]ReleaseRef, 0, len(result.Releases))
 	for _, r := range result.Releases {
-		if r.Annotations[annotationKey] != annotationValue {
+		if !matchAll(r.Annotations, opts.Selector) {
 			continue
 		}
 		refs = append(refs, ReleaseRef{Namespace: r.Namespace, Name: r.Name})
 	}
 	return refs, nil
+}
+
+// matchAll reports whether all key/value pairs from selector are present in target.
+func matchAll(target, selector map[string]string) bool {
+	for k, v := range selector {
+		if target[k] != v {
+			return false
+		}
+	}
+	return true
 }
 
 // LastStatus returns the revision number and status of the latest release
