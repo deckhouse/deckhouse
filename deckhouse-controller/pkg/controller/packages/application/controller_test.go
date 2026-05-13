@@ -449,4 +449,4 @@ func (o *operatorStub) Status() *packagestatus.Service {
 	return packagestatus.NewService()
 }
 
-func (o *operatorStub) Cleanup(_ context.Context, _ []packageoperator.PreserveApp) {}
+func (o *operatorStub) CleanupApps(_ context.Context, _ []packageoperator.PreserveApp) {}

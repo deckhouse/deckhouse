@@ -142,7 +142,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 		})
 	}
 
-	r.runtime.Cleanup(ctx, preserve)
+	r.runtime.CleanupApps(ctx, preserve)
 
 	r.logger.Debug("controller is ready")
 
