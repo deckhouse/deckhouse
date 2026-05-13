@@ -80,3 +80,9 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
        token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
    EOF
    ```
+
+   Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
+
+   ```bash
+   base64 kubeconfig | tr -d ‘\n’
+   ```

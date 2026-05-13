@@ -80,3 +80,9 @@
        token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
    EOF
    ```
+
+   Закодируйте сгенерированный kubeconfig в кодировке Base64 (он указывается в файле первичной конфигурации в таком виде):
+
+   ```bash
+   base64 kubeconfig | tr -d '\n'
+   ```
