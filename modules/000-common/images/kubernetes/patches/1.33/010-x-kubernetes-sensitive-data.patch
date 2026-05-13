@@ -2915,10 +2915,10 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..9b63a395491
+index 00000000000..e4f21fe76fd
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
-@@ -0,0 +1,142 @@
+@@ -0,0 +1,145 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2956,6 +2956,7 @@ index 00000000000..9b63a395491
 +	"k8s.io/apimachinery/pkg/util/validation/field"
 +	"k8s.io/apiserver/pkg/endpoints/request"
 +	"k8s.io/apiserver/pkg/registry/rest"
++	"k8s.io/klog/v2"
 +	"sigs.k8s.io/yaml"
 +)
 +
@@ -2965,6 +2966,7 @@ index 00000000000..9b63a395491
 +func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind) http.HandlerFunc {
 +	return func(w http.ResponseWriter, req *http.Request) {
 +		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
++		klog.Infof("[sensitive-ssa-mw] entered: kind=%s mediaType=%q", groupKind, mediaType)
 +		if mediaType != string(types.ApplyYAMLPatchType) && mediaType != string(types.ApplyCBORPatchType) {
 +			inner.ServeHTTP(w, req)
 +			return
@@ -3029,6 +3031,7 @@ index 00000000000..9b63a395491
 +			return
 +		}
 +
++		klog.Infof("[sensitive-ssa-mw] body rewritten: name=%s oldLen=%d newLen=%d", resourceName, len(body), len(newBody))
 +		req.Body = io.NopCloser(bytes.NewReader(newBody))
 +		req.ContentLength = int64(len(newBody))
 +		req.Header.Set("Content-Length", strconv.Itoa(len(newBody)))
@@ -3789,10 +3792,10 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..46bdc797108
+index 00000000000..2af942b707c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
-@@ -0,0 +1,320 @@
+@@ -0,0 +1,322 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3817,6 +3820,7 @@ index 00000000000..46bdc797108
 +	"sort"
 +
 +	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
++	"k8s.io/klog/v2"
 +)
 +
 +// MaskedValue is the replacement string used by MaskSensitiveFields.
@@ -4030,6 +4034,7 @@ index 00000000000..46bdc797108
 +		oldItems, _ := oldObj.([]interface{})
 +		var lookupOldByKey func(newItem interface{}) interface{}
 +		if s.XListType != nil && *s.XListType == "map" && len(s.XListMapKeys) > 0 {
++			klog.Infof("[sensitive-listmap] key-matching: path=%s keys=%v newLen=%d oldLen=%d", path, s.XListMapKeys, len(x), len(oldItems))
 +			lookupOldByKey = makeListMapLookup(oldItems, s.XListMapKeys)
 +		}
 +
@@ -6331,4 +6336,4 @@ index eab90b3fa3b..eff7f068cac 100644
 +
  // DefaultContext is a simple implementation of Context for a slice of bytes.
  type DefaultContext []byte
-
+ 
