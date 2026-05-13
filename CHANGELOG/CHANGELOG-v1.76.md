@@ -48,6 +48,7 @@
  - **[cloud-provider-yandex]** Switched the default CNI to Cilium with VXLAN networking mode for new clusters to unify the configuration. [#19074](https://github.com/deckhouse/deckhouse/pull/19074)
  - **[cloud-provider-yandex]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
  - **[cloud-provider-zvirt]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
+ - **[cni-cilium]** Reduced the CPU load in cilium-agent with hubble enabled. [#19669](https://github.com/deckhouse/deckhouse/pull/19669)
  - **[cni-cilium]** Added conntrack import/export HTTP endpoints. [#17429](https://github.com/deckhouse/deckhouse/pull/17429)
  - **[cni-cilium]** Added support for ICMP replies for ExternalIP load balancers. [#17266](https://github.com/deckhouse/deckhouse/pull/17266)
  - **[cni-cilium]** Added a mechanism to migrate between CNI plugins (e.g., Flannel to Cilium) in a running cluster. [#16499](https://github.com/deckhouse/deckhouse/pull/16499)
@@ -81,6 +82,7 @@
  - **[descheduler]** Added automatic enabling of Kubernetes Metrics API in `descheduler` policy when `metrics.k8s.io` is available in the cluster. [#19064](https://github.com/deckhouse/deckhouse/pull/19064)
     If the cluster serves the `metrics.k8s.io` API (e.g. metrics-server is installed), the `descheduler` policy now includes `metricsProviders` with source KubernetesMetrics, so utilization-related strategies can use Metrics API data. The `descheduler` Pod may restart when this flag or descheduler CR-driven policy changes due to ConfigMap/checksum updates.
  - **[descheduler]** Added configurable descheduling interval presets in ModuleConfig. [#19029](https://github.com/deckhouse/deckhouse/pull/19029)
+ - **[descheduler]** Updated descheduler to the 0.35.1 version. [#18781](https://github.com/deckhouse/deckhouse/pull/18781)
  - **[descheduler]** Migrated conversion webhook from bash to ConversionWebhook CR-based mechanism. [#18499](https://github.com/deckhouse/deckhouse/pull/18499)
  - **[descheduler]** Updated `descheduler` to 0.35, with native support for filtering pods by namespace label selector and pod protection based on storage classes. [#18135](https://github.com/deckhouse/deckhouse/pull/18135)
  - **[dhctl]** Added support for standalone binary with on-demand dependency download. [#18482](https://github.com/deckhouse/deckhouse/pull/18482)
@@ -133,6 +135,7 @@
  - **[cloud-provider-aws]** Added a new Bashible step to install `linux-modules-extra` on Ubuntu nodes. [#19415](https://github.com/deckhouse/deckhouse/pull/19415)
  - **[cloud-provider-aws]** Fixed detection of regional limitations versus IAM issues. [#19054](https://github.com/deckhouse/deckhouse/pull/19054)
  - **[cloud-provider-azure]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
+ - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19696](https://github.com/deckhouse/deckhouse/pull/19696)
  - **[cloud-provider-dvp]** fix LoadBalancer stuck in pending state — retry on conflict when updating ServiceWithHealthchecks and propagate IP to child cluster service status [#19609](https://github.com/deckhouse/deckhouse/pull/19609)
  - **[cloud-provider-dvp]** Fixed CVEs. [#19362](https://github.com/deckhouse/deckhouse/pull/19362)
  - **[cloud-provider-dvp]** Fixed missing SSH public keys for ephemeral nodes. [#19357](https://github.com/deckhouse/deckhouse/pull/19357)
@@ -145,6 +148,7 @@
  - **[cloud-provider-openstack]** Fixed CVEs in `cloud-provider-openstack`. [#18099](https://github.com/deckhouse/deckhouse/pull/18099)
  - **[cloud-provider-vcd]** Fixed SecurityPolicyException for VCD components. [#19021](https://github.com/deckhouse/deckhouse/pull/19021)
  - **[cloud-provider-vcd]** Fixed CVEs in `cloud-provider-vcd`. [#18113](https://github.com/deckhouse/deckhouse/pull/18113)
+ - **[cloud-provider-vsphere]** normalizes new paths and makes bashible resolve existing paths case-insensitively [#19653](https://github.com/deckhouse/deckhouse/pull/19653)
  - **[cloud-provider-vsphere]** Added filtering discovered zones and datastores by `zones` from provider configurations. [#18378](https://github.com/deckhouse/deckhouse/pull/18378)
  - **[cloud-provider-vsphere]** Enabled the vSphere CSI snapshotter. [#18263](https://github.com/deckhouse/deckhouse/pull/18263)
  - **[cloud-provider-yandex]** Fixed removing public IP addresses from nodes by deleting `externalIPAddresses`. [#18364](https://github.com/deckhouse/deckhouse/pull/18364)
@@ -152,18 +156,20 @@
  - **[cni-cilium]** Fixed constant `invalid sysctl parameter: "net.ipv4.conf..rp_filter"` errors in cilium-agent logs when using Egress Gateway with a Virtual IP. [#18952](https://github.com/deckhouse/deckhouse/pull/18952)
  - **[common]** fix for replace kubectl binary with d8 k alias. [#18514](https://github.com/deckhouse/deckhouse/pull/18514)
  - **[common]** Fixed replacing the `kubectl` binary with the `d8 k` alias. [#18467](https://github.com/deckhouse/deckhouse/pull/18467)
+ - **[control-plane-manager]** Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh clusters. [#19667](https://github.com/deckhouse/deckhouse/pull/19667)
  - **[control-plane-manager]** Upgraded etcd to 3.6.10. [#19273](https://github.com/deckhouse/deckhouse/pull/19273)
     Etcd will restart.
  - **[control-plane-manager]** Excluded learner etcd members from the kube-apiserver etcd member list. [#19164](https://github.com/deckhouse/deckhouse/pull/19164)
  - **[control-plane-manager]** Fixed incorrect UpdateObserver progress calculation during cluster upgrades. [#19160](https://github.com/deckhouse/deckhouse/pull/19160)
+ - **[deckhouse]** Revoke permission to use moduleconfig to user. [#19672](https://github.com/deckhouse/deckhouse/pull/19672)
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
  - **[deckhouse]** Fixed module updates skipping patch releases when updating to a new minor version. [#19328](https://github.com/deckhouse/deckhouse/pull/19328)
  - **[deckhouse]** Bumped `shell-operator` to v1.15.3 and webhook-operator dependencies. [#19030](https://github.com/deckhouse/deckhouse/pull/19030)
  - **[deckhouse]** Bumped Hugo and `x/image` to fix CVE-2026-33809, CVE-2026-35166. [#18985](https://github.com/deckhouse/deckhouse/pull/18985)
  - **[deckhouse]** Bumped `nelm` to fix a deadlock. [#18585](https://github.com/deckhouse/deckhouse/pull/18585)
  - **[deckhouse]** Fixed a race condition in ModuleConfig processing during startup. [#18280](https://github.com/deckhouse/deckhouse/pull/18280)
+ - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[deckhouse-controller]** Fixed error logging for MPO validation. [#18698](https://github.com/deckhouse/deckhouse/pull/18698)
- - **[deckhouse-controller]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
  - **[dhctl]** Fix CVEs in `dhctl`. [#19344](https://github.com/deckhouse/deckhouse/pull/19344)
  - **[dhctl]** Fixed `LogInfoLn` behavior for external loggers. [#19234](https://github.com/deckhouse/deckhouse/pull/19234)
@@ -218,6 +224,8 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images. [#19778](https://github.com/deckhouse/deckhouse/pull/19778)
+    Kubernetes control-plane components will restart, kubelet will restart
  - **[candi]** Make flag encryption-provider-config-automatic-reload auto enabled when secretEncryptionKey is true [#19287](https://github.com/deckhouse/deckhouse/pull/19287)
     Apiserver will restart if secretEncryptionKey is true
  - **[candi]** Bump patch versions of Kubernetes images, now available 1.33.11, 1.34.7, 1.35.4 [#19271](https://github.com/deckhouse/deckhouse/pull/19271)
@@ -283,3 +291,5 @@
  - **[openvpn]** open source components versions migrated from werf.inc.yaml to oss.yaml [#18117](https://github.com/deckhouse/deckhouse/pull/18117)
  - **[registry]** Update dependencies to fix CVEs [#18600](https://github.com/deckhouse/deckhouse/pull/18600)
  - **[upmeter]** fix go lint warning [#17909](https://github.com/deckhouse/deckhouse/pull/17909)
+    upmeter
+
