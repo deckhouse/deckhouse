@@ -78,7 +78,7 @@ description: Архитектура модуля observability в Deckhouse Kube
    - managed-сервисами, например [`managed-postgres`](/modules/managed-postgres/), [managed-memcached](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и т.д. (cписок поддерживаемых сервисов постоянно расширяется). opAgent собирает метрики с установленных в DKP managed-сервисов, соответствующий модуль managed-сервиса должен быть включен;
    - [Deckhouse Observability Platform](/products/observability-platform/). opAgent собирает метрики с узлов, модуль [`observability-platform`](/modules/observability-platform/) должен быть включен.
 
-   opAgent отправляет собранные метрики по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) в Prometheus через label-enforcer (метрики managed-сервисами) и в [Deckhouse Observability Platform](/products/observability-platform/) (метрики с узлов).
+   opAgent отправляет собранные метрики по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) в Prometheus через label-enforcer (метрики managed-сервисов) и в [Deckhouse Observability Platform](/products/observability-platform/) (метрики с узлов).
 
    Состоит из одного контейнера:
 
