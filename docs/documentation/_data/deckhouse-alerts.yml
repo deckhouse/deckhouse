@@ -1705,9 +1705,9 @@ alerts:
       module: istio
       edition: ee
       description: |
-        Remote {{$labels.alliance_kind}} `{{$labels.name}}` (UUID: `{{$labels.remote_uuid}}`) requests private metadata from `{{$labels.requested_to_hostname}}`, which uses the deprecated `istio` subdomain.
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}`, (UUID: `{{$labels.remote_uuid}}`) requests private metadata from hostname `{{$labels.requested_to_hostname}}`, that hostname uses the deprecated `istio` subdomain.
 
-        The remote cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+        Update the remote cluster {{$labels.alliance_kind}} resource: set `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
 
         Migration steps on the remote cluster:
 
