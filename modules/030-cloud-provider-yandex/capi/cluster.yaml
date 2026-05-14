@@ -8,6 +8,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   folderID: {{ .Values.nodeManager.internal.cloudProvider.yandex.folderID | quote }}
+  {{- with .Values.cloudProviderYandex.internal.controlPlaneEndpoint }}
+  controlPlaneEndpoint:
+    host: {{ .host | quote }}
+    port: {{ .port }}
+  {{- end }}
   loadBalancer:
     type: "ALB"
     listener:
