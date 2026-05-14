@@ -289,7 +289,7 @@ properties:
                   External LoadBalancer TCP port.
       auditPolicyEnabled:
         type: boolean
-        default: true
+        default: false
         description: |
           Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `kube-system/audit-policy` Secret.
       basicAuditPolicyEnabled:
@@ -411,3 +411,35 @@ properties:
       type: string
       pattern: '^[a-zA-Z]+$'
     default: []
+  encryptionAlgorithm:
+    type: string
+    description: |
+      The algorithm and key size to use for control plane certificates and keys.
+
+      This setting takes precedence over the `encryptionAlgorithm` field in `ClusterConfiguration`.
+    enum:
+      - "RSA-2048"
+      - "RSA-3072"
+      - "RSA-4096"
+      - "ECDSA-P256"
+  resourcesRequests:
+    type: object
+    description: |
+      Resource requests for control plane static pods (`kube-apiserver`, `kube-controller-manager`, `kube-scheduler`, `etcd`).
+
+      This setting takes precedence over the defaults.
+    properties:
+      cpu:
+        type: string
+        description: CPU request (e.g. `"500m"`, `"1"`).
+        pattern: '^[0-9]+m?$'
+        x-examples:
+          - "500m"
+          - "1"
+      memory:
+        type: string
+        description: Memory request (e.g. `"512Mi"`, `"1Gi"`).
+        pattern: '^[0-9]+([KMGTPE]i?)?$'
+        x-examples:
+          - "512Mi"
+          - "1Gi"

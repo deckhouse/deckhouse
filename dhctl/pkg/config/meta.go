@@ -104,9 +104,32 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	return m, nil
 }
 
+var deprecatedClusterConfigFields = []struct {
+	field   string
+	message string
+}{
+	{
+		field:   "encryptionAlgorithm",
+		message: "Move it to control-plane-manager ModuleConfig spec.settings.encryptionAlgorithm.",
+	},
+}
+
+func (m *MetaConfig) warnDeprecatedClusterConfigFields() {
+	for _, d := range deprecatedClusterConfigFields {
+		if _, ok := m.ClusterConfig[d.field]; ok {
+			log.WarnLn("=================================================================")
+			log.WarnF("DEPRECATED: %q in ClusterConfiguration is deprecated.\n", d.field)
+			log.WarnLn(d.message)
+			log.WarnLn("Support for this field in ClusterConfiguration will be removed in a future release.")
+			log.WarnLn("=================================================================")
+		}
+	}
+}
+
 // Prepare extracts all necessary information from raw json messages to the root structure
 func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
+		m.warnDeprecatedClusterConfigFields()
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}
@@ -391,49 +414,57 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
-func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (map[string]interface{}, error) {
-	data := make(map[string]interface{}, len(m.ClusterConfig))
+func resolveKubernetesVersion(v string) string {
+	if v == "Automatic" {
+		return DefaultKubernetesVersion
+	}
+	return v
+}
 
-	for key, value := range m.ClusterConfig {
-		var t interface{}
-		err := json.Unmarshal(value, &t)
-		if err != nil {
-			return nil, fmt.Errorf("cluster config unmarshal: %v", err)
+func clusterConfigToStringMap(raw map[string]json.RawMessage) (map[string]string, error) {
+	out := make(map[string]string, len(raw))
+	for k, v := range raw {
+		var s string
+		if err := json.Unmarshal(v, &s); err != nil {
+			return nil, fmt.Errorf("ClusterConfiguration field %q is not a string: %w", k, err)
 		}
-		data[key] = t
+		out[k] = s
+	}
+	out["kubernetesVersion"] = resolveKubernetesVersion(out["kubernetesVersion"])
+	return out, nil
+}
+
+func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (*ControlPlaneTemplateConfig, error) {
+	clusterConfiguration, err := clusterConfigToStringMap(m.ClusterConfig)
+	if err != nil {
+		return nil, err
 	}
 
-	if data["kubernetesVersion"] == "Automatic" {
-		data["kubernetesVersion"] = DefaultKubernetesVersion
+	cfg := &ControlPlaneTemplateConfig{
+		RunType:              "ClusterBootstrap",
+		NodeIP:               "$MY_IP", // bashible placeholder, replaced by envsubst
+		NodeName:             "$MY_NODENAME",
+		Registry:             m.Registry.Manifest().KubeadmContext().ToMap(),
+		Images:               m.Images.ConvertToMap(),
+		VersionMap:           m.VersionMap,
+		ClusterConfiguration: clusterConfiguration,
 	}
-
-	result := make(map[string]interface{})
-	for key, value := range m.VersionMap {
-		result[key] = value
-	}
-
-	result["runType"] = "ClusterBootstrap"
-	result["extraArgs"] = make(map[string]interface{})
-	result["clusterConfiguration"] = data
-	// bashible will use this as a placeholder on envsubst call, address will be discovered in one of bashible steps
-	result["nodeIP"] = "$MY_IP"
 
 	if nodeIP != "" {
-		result["nodeIP"] = nodeIP
+		cfg.NodeIP = nodeIP
 	}
 
-	result["nodeName"] = "$MY_NODENAME"
+	mcSettings, err := m.controlPlaneManagerSettings()
+	if err != nil {
+		return nil, fmt.Errorf("read control-plane-manager moduleConfig: %w", err)
+	}
+	if mcSettings != nil {
+		cfg.Settings = mcSettings
+	} else {
+		cfg.Settings = make(map[string]interface{})
+	}
 
-	// Registry
-	result["registry"] = m.Registry.
-		Manifest().
-		KubeadmContext().
-		ToMap()
-
-	images := m.Images
-
-	result["images"] = images.ConvertToMap()
-	return result, nil
+	return cfg, nil
 }
 
 func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]interface{}, error) {
@@ -763,7 +794,6 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 
 func (m *MetaConfig) LoadImagesDigests() error {
 	imagesDigests, err := digests.GetAllDigests()
-
 	if err != nil {
 		return fmt.Errorf("Cannot get images digests: %w", err)
 	}
