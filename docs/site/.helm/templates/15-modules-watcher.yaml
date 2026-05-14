@@ -155,7 +155,7 @@ spec:
     - alert: D8RegistryScannerModuleWithoutTags
       expr: d8_telemetry_registry_scanner_module_without_tags > 0
       labels:
-        severity_level: "7"
+        severity_level: "9"
         d8_component: registry-modules-watcher
       annotations:
         plk_protocol_version: "1"
@@ -168,7 +168,7 @@ spec:
     - alert: D8RegistryScannerRegistryUnavailable
       expr: d8_telemetry_registry_scanner_registry_unavailable > 0
       labels:
-        severity_level: "7"
+        severity_level: "9"
         d8_component: registry-modules-watcher
       annotations:
         plk_protocol_version: "1"
