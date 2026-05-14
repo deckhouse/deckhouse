@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/090809/oteljsonl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -93,6 +94,8 @@ func configureLocalExporter() (sdktrace.SpanExporter, sdkmetric.Exporter, sdklog
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to initialize trace exporter for %q: %w", traceFileName, err)
 	}
+
+	log.InfoF("Trace file: %s\n", traceFileName)
 
 	return exporters.Trace, exporters.Metric, exporters.Log, nil
 }
