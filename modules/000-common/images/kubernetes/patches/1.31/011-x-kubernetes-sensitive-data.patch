@@ -5854,7 +5854,13 @@ index 8ceab525415..3f2af5affd1 100644
  	generatedopenapi "k8s.io/apiextensions-apiserver/pkg/generated/openapi"
  	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
  	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-@@ -114,13 +115,20 @@ func (o CustomResourceDefinitionsServerOptions) Config() (*apiserver.Config, err
+@@ -38,4 +39,5 @@ import (
+ 	storagevalue "k8s.io/apiserver/pkg/storage/value"
++	utilfeature "k8s.io/apiserver/pkg/util/feature"
+ 	flowcontrolrequest "k8s.io/apiserver/pkg/util/flowcontrol/request"
+ 	"k8s.io/apiserver/pkg/util/openapi"
+ 	"k8s.io/apiserver/pkg/util/proxy"
+@@ -114,13 +116,20 @@ func (o CustomResourceDefinitionsServerOptions) Config() (*apiserver.Config, err
  	}
  
  	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(openapi.GetOpenAPIDefinitionsWithoutDisabledFeatures(generatedopenapi.GetOpenAPIDefinitions), openapinamer.NewDefinitionNamer(apiserver.Scheme, scheme.Scheme))
