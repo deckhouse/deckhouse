@@ -4113,10 +4113,10 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace, controller, persistentvolumeclaim) (\n  max by (namespace, controller, persistentvolumeclaim)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n      label_replace(\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__rate_interval]),\n        \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n      + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0)\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__rate_interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"}) by(pod)\n  )\n)",
+          "expr": "sum by (namespace, controller, persistentvolumeclaim, pod) (\n  max by (namespace, controller, persistentvolumeclaim, pod)\n  (\n    sum by (namespace, persistentvolumeclaim) (\n        max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval])\n    ) \n\n    * max by (namespace, persistentvolumeclaim) (\n      label_replace(\n        max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__rate_interval]),\n        \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n      + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0)\n    )\n\n        * on (namespace, persistentvolumeclaim) group_left(pod) \n    max by (namespace, persistentvolumeclaim, pod) (\n         max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__rate_interval])\n    ) \n\n       * on (namespace, pod) group_left(controller)\n      max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\", pod=~\"$pod\"}) by(pod)\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Provisioned {{ persistentvolumeclaim }}",
+          "legendFormat": "Provisioned {{ pod }} / {{ persistentvolumeclaim }}",
           "range": true,
           "refId": "B"
         }
@@ -4250,7 +4250,7 @@
           "expr": "sum by (pod, persistentvolumeclaim)\n(\n  max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod)\n  * on (pod)  group_right(persistentvolumeclaim)\n  (\n    (avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]) - avg_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__rate_interval])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__rate_interval]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__rate_interval])\n    )\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Usage {{ persistentvolumeclaim }}",
+          "legendFormat": "Usage {{ pod }} / {{ persistentvolumeclaim }}",
           "range": true,
           "refId": "A"
         }
@@ -4386,7 +4386,7 @@
           "expr": "sum by (pod, persistentvolumeclaim)\n(\n  max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\", pod=~\"$pod\"}) by(pod)\n  * on (pod)  group_right(persistentvolumeclaim) (\n  (\n    avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]) - avg_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval])\n    ) * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__rate_interval])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__rate_interval]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__rate_interval])\n    )\n  )\n)\n/\n(\nsum by (pod, persistentvolumeclaim)\n(\n  max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=\"$controller\"}) by(pod)\n  * on (pod)  group_right(persistentvolumeclaim)\n  (\n    avg_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval])\n    * \n    on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__rate_interval])\n      *     on (namespace, persistentvolumeclaim) group_left (pod) \n    (\n      max by (namespace, persistentvolumeclaim, pod) (\n        avg_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__rate_interval])) \n        * on (namespace, persistentvolumeclaim) group_right(pod) \n        max by (namespace, persistentvolumeclaim) (\n          label_replace(\n            max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\"}[$__rate_interval]),\n            \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n          + on (persistentvolume) group_left() max by (persistentvolume) (kube_persistentvolume_is_local == 0))\n      * on (namespace, persistentvolumeclaim) group_right (pod)\n      avg_over_time(kube_persistentvolumeclaim_status_phase{namespace=\"$namespace\", phase=\"Bound\"}[$__rate_interval])\n    )\n  )\n)))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Usage {{ persistentvolumeclaim }}",
+          "legendFormat": "Usage {{ pod }} / {{ persistentvolumeclaim }}",
           "range": true,
           "refId": "A"
         }
@@ -4909,11 +4909,11 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  label_replace(\n    kube_persistentvolumeclaim_info{namespace=\"$namespace\"},\n    \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\") \n  * on (persistentvolume) group_left() \n  avg_over_time(kube_persistentvolume_capacity_bytes[$__rate_interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n)",
+          "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  label_replace(\n    kube_persistentvolumeclaim_info{namespace=\"$namespace\"},\n    \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\") \n  * on (persistentvolume) group_left() \n  avg_over_time(kube_persistentvolume_capacity_bytes[$__rate_interval])\n) \n* on (namespace, persistentvolumeclaim) group_right(storageclass) \nmax by (namespace, persistentvolumeclaim, pod) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "Provisioned",
+          "legendFormat": "Provisioned ({{ pod }})",
           "range": true,
           "refId": "B"
         },
@@ -4923,11 +4923,11 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__rate_interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n)",
+          "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__rate_interval])\n) \n* on (namespace, persistentvolumeclaim) group_right(storageclass) \nmax by (namespace, persistentvolumeclaim, pod) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "Capacity",
+          "legendFormat": "Capacity ({{ pod }})",
           "range": true,
           "refId": "A"
         },
@@ -4937,10 +4937,10 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__rate_interval]) - avg_over_time(kubelet_volume_stats_available_bytes{namespace=\"$namespace\"}[$__rate_interval])\n) \nand on (namespace, persistentvolumeclaim) \nmax by (namespace, persistentvolumeclaim) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n)",
+          "expr": "max by (namespace, persistentvolumeclaim, storageclass) (\n  avg_over_time(kubelet_volume_stats_capacity_bytes{namespace=\"$namespace\"}[$__rate_interval]) - avg_over_time(kubelet_volume_stats_available_bytes{namespace=\"$namespace\"}[$__rate_interval])\n) \n* on (namespace, persistentvolumeclaim) group_right(storageclass) \nmax by (namespace, persistentvolumeclaim, pod) (\n  kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\", pod=~\"$pod\"}\n  * on (namespace, pod) group_left(controller)\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Used bytes",
+          "legendFormat": "Used bytes ({{ pod }})",
           "range": true,
           "refId": "C"
         }
@@ -5121,7 +5121,7 @@
           "uid": "$ds_prometheus"
         },
         "definition": "query_result((kube_controller_pod{namespace=\"$namespace\",controller=\"$controller\"}) * on(pod)  group_right(controller_name,persistentvolumeclaims) max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__range]))",
-        "hide": 2,
+        "hide": 0,
         "includeAll": true,
         "label": "PersistentVolumeClaim",
         "multi": true,
