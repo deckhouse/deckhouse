@@ -49,3 +49,15 @@ New Go source files adding custom PromQL op-functions (`op_defined`, `op_replace
 `op_smoothie`, `op_zero_if_none`) and the `op_top` aggregate operator to the vendored
 Prometheus engine. These are adapted for the older Prometheus API used by the
 `jacksontj/prometheus` fork (uses `Point.V` instead of `FPoint.F`, etc.).
+
+### 004-utf8-label-parsing.patch
+
+Applied after `go mod vendor` to the vendored prometheus parser.
+
+Add support for quoted label names in PromQL selectors (e.g.,
+`{"storage.deckhouse.io/mount-options"!=""}`). The upstream
+`jacksontj/prometheus` fork used by promxy predates Prometheus UTF-8
+label name support. This patch adds the `string_identifier` grammar
+rule, `newMetricNameMatcher` helper, and `shouldQuoteName` logic to
+`Matcher.String()` so that quoted label names are preserved when
+promxy serializes the AST back to string for forwarding to Prometheus.
