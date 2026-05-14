@@ -31,6 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -41,13 +43,13 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
-
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
@@ -57,6 +59,14 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		)
 		if err != nil {
 			return err
+		}
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Remove Deckhouse deployment", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
 		}
 
 		if kubeProvider == nil {
@@ -97,11 +107,8 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 
 		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
-
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
@@ -118,6 +125,14 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Create Deckhouse deployment", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
 		}
 
 		metaConfig, err := config.ParseConfig(

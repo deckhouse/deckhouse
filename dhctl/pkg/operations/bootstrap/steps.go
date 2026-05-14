@@ -53,6 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -152,6 +153,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		LoggerProvider: params.LoggerProvider,
 		SignCheck:      config.GetRPPSignCheck(),
 		DirsConfig:     dc,
+		Interactive:    input.IsTerminal(),
 	})
 
 	if err != nil {
@@ -240,7 +242,14 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			name := fmt.Sprintf("Execute %s", bootstrapScript)
-			err := retry.NewLoop(name, 30, 5*time.Second).RunContext(ctx, func() error {
+			extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+			p := retry.NewEmptyParams(
+				retry.WithName("%s", name),
+				retry.WithAttempts(30),
+				retry.WithWait(5*time.Second),
+				retry.WithLogger(extLogger()),
+			)
+			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
 

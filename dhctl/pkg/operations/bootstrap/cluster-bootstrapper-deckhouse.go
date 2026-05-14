@@ -16,11 +16,16 @@ package bootstrap
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
@@ -34,6 +39,28 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Install Deckhouse", labelChan, phasesChan)
+
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+
+		onComplete := func() {
+			pb := progressbar.GetDefaultPb()
+			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+			pb.MultiPrinter.Stop()
+		}
+		defer onComplete()
 	}
 
 	if err := metaConfig.LoadInstallerVersion(); err != nil {

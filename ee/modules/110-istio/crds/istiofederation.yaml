@@ -93,6 +93,44 @@ spec:
             status:
               type: object
               properties:
+                conditions:
+                  type: array
+                  description: |
+                    Readiness of metadata exchange with the remote cluster.
+
+                    - `PublicMetadataExchangeReady` — remote `public.json` is reachable and valid.
+                    - `PrivateMetadataExchangeReady` — remote private metadata is reachable and valid.
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - reason
+                      - message
+                      - lastTransitionTime
+                      - lastProbeTime
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      lastProbeTime:
+                        type: string
+                        format: date-time
                 metadataCache:
                   type: object
                   properties:
@@ -105,9 +143,6 @@ spec:
                           type: string
                         clusterUUID:
                           type: string
-                    publicLastFetchTimestamp:
-                      type: string
-                      format: date-time
                     private:
                       type: object
                       properties:
@@ -138,6 +173,3 @@ spec:
                                       type: integer
                                     protocol:
                                       type: string
-                    privateLastFetchTimestamp:
-                      format: date-time
-                      type: string

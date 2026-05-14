@@ -49,6 +49,10 @@ ci:
     - summary: Added the ability to use a .trivyignore file when checking DKP components.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17793
   fixes:
+    - summary: >-
+        Add shared deckhouse/common WERF cache to avoid per-edition rebuilds and whitelist dev/candi
+        and common/candi images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19719
     - summary: fix indent for promote image
       pull_request: https://github.com/deckhouse/deckhouse/pull/19387
     - summary: Change release build with new rules
@@ -143,6 +147,10 @@ cloud-provider-dvp:
       pull_request: https://github.com/deckhouse/deckhouse/pull/17861
   fixes:
     - summary: >-
+        Add skip storage class annotation handling to skip discovery of some storage classes from
+        parent clusters, e.g., local disks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19696
+    - summary: >-
         fix LoadBalancer stuck in pending state — retry on conflict when updating
         ServiceWithHealthchecks and propagate IP to child cluster service status
       pull_request: https://github.com/deckhouse/deckhouse/pull/19609
@@ -219,6 +227,8 @@ cloud-provider-vsphere:
     - summary: Added secrets with `node-manager` dependencies.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18112
   fixes:
+    - summary: normalizes new paths and makes bashible resolve existing paths case-insensitively
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19653
     - summary: Added filtering discovered zones and datastores by `zones` from provider configurations.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18378
     - summary: Enabled the vSphere CSI snapshotter.
@@ -243,6 +253,8 @@ cloud-provider-zvirt:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18115
 cni-cilium:
   features:
+    - summary: Reduced the CPU load in cilium-agent with hubble enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19669
     - summary: Added conntrack import/export HTTP endpoints.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17429
     - summary: Added support for ICMP replies for ExternalIP load balancers.
@@ -253,6 +265,8 @@ cni-cilium:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16499
       impact: All cilium agents will restart.
   fixes:
+    - summary: Fixed CVE-2026-35469
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19724
     - summary: >-
         Fixed constant `invalid sysctl parameter: "net.ipv4.conf..rp_filter"` errors in cilium-agent
         logs when using Egress Gateway with a Virtual IP.
@@ -303,6 +317,11 @@ control-plane-manager:
     - summary: Add alert about etcd high requests latency
       pull_request: https://github.com/deckhouse/deckhouse/pull/18714
   fixes:
+    - summary: >-
+        Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully
+        bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh
+        clusters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19667
     - summary: Fix documentation link in D8KubernetesVersionIsDeprecated alert description.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19605
     - summary: Fix broken links in the documentation.
@@ -343,6 +362,8 @@ deckhouse:
     - summary: Improved webhook-handler with webhook-operator and CRDs for more complex user flow.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15160
   fixes:
+    - summary: Revoke permission to use moduleconfig to user.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19672
     - summary: Preserve PackageRepository.status.packages on incremental rescan.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19516
     - summary: >-
@@ -369,6 +390,8 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18280
     - summary: Remove json parsing from batchhook error.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18277
+    - summary: Fixed global configuration generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18161
 deckhouse-controller:
   features:
     - summary: >-
@@ -396,8 +419,6 @@ deckhouse-controller:
         Cascade-delete manually created PackageRepositoryOperations when PackageRepository is
         removed
       pull_request: https://github.com/deckhouse/deckhouse/pull/18672
-    - summary: Fixed global configuration generation.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/18161
 deckhouse-tools:
   features:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
@@ -422,6 +443,8 @@ descheduler:
         when this flag or descheduler CR-driven policy changes due to ConfigMap/checksum updates.
     - summary: Added configurable descheduling interval presets in ModuleConfig.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19029
+    - summary: Updated descheduler to the 0.35.1 version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18781
     - summary: Migrated conversion webhook from bash to ConversionWebhook CR-based mechanism.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18499
     - summary: >-
@@ -475,8 +498,12 @@ dhctl:
       pull_request: https://github.com/deckhouse/deckhouse/pull/17564
 docs:
   features:
+    - summary: Add cert-manager module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19452
     - summary: Add admission-policy-engine module architecture section.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19333
+    - summary: Add Deckhouse web modules architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19175
     - summary: Added docs about creating a local account when LDAP synchronization is enabled.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18916
     - summary: Added an alert for failed documentation renderings.
@@ -494,6 +521,12 @@ docs:
     - summary: Add section for Ldap manual synchronization
       pull_request: https://github.com/deckhouse/deckhouse/pull/18160
   fixes:
+    - summary: Refactored web UI page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19792
+    - summary: New screenshots have been added to the Console documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19735
+    - summary: Fix broken links.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19642
     - summary: Fix Jekyll plugins to improve rendering.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19620
     - summary: Fix metadata for modules library.
@@ -534,6 +567,9 @@ documentation:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
 ingress-nginx:
   fixes:
+    - summary: The CVE-2026-35469 is mitigated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19723
+      impact: The kruise controller will be restarted.
     - summary: Added validating x-forwarded-port and x-forwarded-proto headers when redirecting from www.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19081
       impact: All Ingress-NGINX controller pods of 1.12 and 1.14 will be restarted.
@@ -758,8 +794,6 @@ tools:
     - summary: add pkg registry fake client
       pull_request: https://github.com/deckhouse/deckhouse/pull/19115
   fixes:
-    - summary: Added HTTP client proxy support
-      pull_request: https://github.com/deckhouse/deckhouse/pull/18563
     - summary: remove deprecated logger methods
       pull_request: https://github.com/deckhouse/deckhouse/pull/17495
 upmeter:
@@ -808,6 +842,8 @@ user-authz:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18689
 vertical-pod-autoscaler:
   features:
+    - summary: Add scoped daemonset handling based on node label
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19577
     - summary: >-
         Replaced deprecated `--humanize-memory` flag with `--round-memory-bytes=67108864` (64Mi) for
         human-readable memory recommendations.

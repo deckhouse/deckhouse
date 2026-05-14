@@ -50,12 +50,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 
 		logger := log.GetDefaultLogger()
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
-
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {

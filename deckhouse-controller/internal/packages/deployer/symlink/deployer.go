@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -43,6 +44,15 @@ const (
 	deployedDir = "deployed"
 	// loggerName is the logger scope for symlink deployment.
 	loggerName = "symlink-deployer"
+)
+
+const (
+	conditionReasonDownloadFailed         status.ConditionReason = "DownloadFailed"
+	conditionReasonCreatePackageDirFailed status.ConditionReason = "CreatePackageDirFailed"
+	conditionReasonRemoveOldVersionFailed status.ConditionReason = "RemoveOldVersionFailed"
+	conditionReasonCreateSymlinkFailed    status.ConditionReason = "CreateSymlinkFailed"
+	conditionReasonCheckMountFailed       status.ConditionReason = "CheckMountFailed"
+	conditionReasonCheckVersionFailed     status.ConditionReason = "CheckVersionFailed"
 )
 
 // Deployer handles package lifecycle using symlinks instead of dm-verity mounts.
@@ -358,22 +368,22 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 	if _, err := os.Stat(versionPath); err == nil {
 		return nil
 	} else if !os.IsNotExist(err) {
-		return newCheckVersionErr(err)
+		return status.NewError(conditionReasonCheckVersionFailed, err)
 	}
 
 	if err := os.MkdirAll(packageDir, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(conditionReasonCreatePackageDirFailed, err)
 	}
 
 	if err := cleanupTempDownloadDirs(packageDir, version); err != nil {
-		return newDownloadErr(err)
+		return status.NewError(conditionReasonDownloadFailed, err)
 	}
 
 	tempDir, err := os.MkdirTemp(packageDir, tempDownloadPrefix(version))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(conditionReasonCreatePackageDirFailed, err)
 	}
 
 	cleanupTemp := true
@@ -385,11 +395,11 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, packageDi
 
 	// download/extract into a temporary directory, then atomically publish it as <packageDir>/<version>
 	if err = d.registry.Download(ctx, repo, tempDir, name, version); err != nil {
-		return newDownloadErr(err)
+		return status.NewError(conditionReasonDownloadFailed, err)
 	}
 
 	if err = os.Rename(tempDir, versionPath); err != nil {
-		return newDownloadErr(err)
+		return status.NewError(conditionReasonDownloadFailed, err)
 	}
 	cleanupTemp = false
 
@@ -456,26 +466,26 @@ func (d *Deployer) symlink(ctx context.Context, packageDir, deployed, name, vers
 	// Use Lstat to avoid following the symlink
 	if _, err := os.Lstat(deployed); err == nil {
 		if err = os.Remove(deployed); err != nil {
-			return newRemoveOldVersionErr(err)
+			return status.NewError(conditionReasonRemoveOldVersionFailed, err)
 		}
 	}
 
 	// Create parent directory if it does not exist (for new clusters).
 	if err := os.MkdirAll(filepath.Dir(deployed), 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(conditionReasonCreatePackageDirFailed, err)
 	}
 
 	// <packageDir>/<version>
 	versionPath := filepath.Join(packageDir, version)
 	if _, err := os.Stat(versionPath); err != nil {
-		return newCheckVersionErr(err)
+		return status.NewError(conditionReasonCheckVersionFailed, err)
 	}
 
 	// Create new symlink pointing to permanent location
 	if err := os.Symlink(versionPath, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateSymlinkErr(err)
+		return status.NewError(conditionReasonCreateSymlinkFailed, err)
 	}
 
 	return nil
@@ -500,7 +510,7 @@ func (d *Deployer) Undeploy(ctx context.Context, deployedName string, keep bool)
 		}
 
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckMountErr(err)
+		return status.NewError(conditionReasonCheckMountFailed, err)
 	}
 
 	d.mu.Lock()

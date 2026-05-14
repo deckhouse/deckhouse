@@ -26,9 +26,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 const autoConvergerErrorFmt = `Error: converge locked by auto-converger.
@@ -65,6 +67,15 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		if err != nil {
 			return err
 		}
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Converge lock release", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}

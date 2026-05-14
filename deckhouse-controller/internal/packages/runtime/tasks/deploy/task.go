@@ -33,11 +33,6 @@ type deployerI interface {
 	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
 }
 
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 type task struct {
 	name        string
 	packageName string
@@ -46,13 +41,13 @@ type task struct {
 	repository registry.Remote
 
 	deployer deployerI
-	status   statusService
+	status   *status.Service
 
 	logger *log.Logger
 }
 
 // NewModuleTask creates a Deploy task for a Module package.
-func NewModuleTask(name, version string, repo registry.Remote, deployer deployerI, status statusService, logger *log.Logger) queue.Task {
+func NewModuleTask(name, version string, repo registry.Remote, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:        name,
 		packageName: name,
@@ -65,7 +60,7 @@ func NewModuleTask(name, version string, repo registry.Remote, deployer deployer
 }
 
 // NewAppTask creates a Deploy task for an Application package.
-func NewAppTask(instance, name, version string, repo registry.Remote, deployer deployerI, status statusService, logger *log.Logger) queue.Task {
+func NewAppTask(instance, name, version string, repo registry.Remote, deployer deployerI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		name:        instance,
 		packageName: name,
@@ -91,7 +86,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// Cache package content locally and expose it at the path consumed by the load task.
 	logger.Debug("deploy package")
 	if err := t.deployer.Deploy(ctx, t.repository, t.packageName, t.name, t.version); err != nil {
-		t.status.HandleError(t.name, err)
+		t.status.HandleError(t.name, status.ConditionReadyOnFilesystem, err)
 		return fmt.Errorf("deploy package: %w", err)
 	}
 

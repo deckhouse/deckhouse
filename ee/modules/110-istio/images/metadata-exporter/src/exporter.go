@@ -14,12 +14,14 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/go-jose/go-jose/v3"
+	"github.com/prometheus/client_golang/prometheus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -587,67 +589,68 @@ func (exp *Exporter) ExtractRootCaCert() (string, error) {
 }
 
 // CheckAuthn check JWT token authentication
-func (exp *Exporter) CheckAuthn(header http.Header, scope string) error {
+func (exp *Exporter) CheckAuthn(header http.Header, scope string) (string, error) {
 	reqTokenString := header.Get("Authorization")
 	if !strings.HasPrefix(reqTokenString, "Bearer ") {
-		return fmt.Errorf("Bearer authorization required")
+		return "", fmt.Errorf("Bearer authorization required")
 	}
 	reqTokenString = strings.TrimPrefix(reqTokenString, "Bearer ")
 
 	reqToken, err := jose.ParseSigned(reqTokenString)
 	if err != nil {
-		return err
+		return "", err
 	}
 	payloadBytes := reqToken.UnsafePayloadWithoutVerification()
 
 	var payload JwtPayload
 	err = json.Unmarshal(payloadBytes, &payload)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Load remote-public-metadata.json
 	remotePublicMetadataMap, err := exp.ExtractRemotePublicMetadata()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Check JWT
 	expectedUUID := exp.clusterUUID
 	if payload.Aud != expectedUUID {
-		return fmt.Errorf("JWT is signed for wrong destination cluster. Expected: %s, Got: %s", expectedUUID, payload.Aud)
+		return "", fmt.Errorf("JWT is signed for wrong destination cluster. Expected: %s, Got: %s", expectedUUID, payload.Aud)
 	}
 
 	if payload.Scope != scope {
-		return fmt.Errorf("JWT is signed for wrong scope")
+		return "", fmt.Errorf("JWT is signed for wrong scope")
 	}
 
 	if payload.Exp < time.Now().UTC().Unix() {
-		return fmt.Errorf("JWT token expired")
+		return "", fmt.Errorf("JWT token expired")
 	}
 
 	// Checking if the source cluster is known
 	_, ok := remotePublicMetadataMap[payload.Sub]
 	if !ok {
-		return fmt.Errorf("JWT is signed for unknown source cluster")
+		return "", fmt.Errorf("JWT is signed for unknown source cluster")
 	}
+	uuid := payload.Sub
 
 	// check sign JWT
 	remoteAuthnKeyPubBlock, _ := pem.Decode([]byte(remotePublicMetadataMap[payload.Sub].AuthnKeyPub))
 	if remoteAuthnKeyPubBlock == nil {
-		return fmt.Errorf("failed to decode public key PEM")
+		return "", fmt.Errorf("failed to decode public key PEM")
 	}
 
 	remoteAuthnKeyPub, err := x509.ParsePKIXPublicKey(remoteAuthnKeyPubBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("failed to parse public key: %w", err)
+		return "", fmt.Errorf("failed to parse public key: %w", err)
 	}
 
 	if _, err := reqToken.Verify(remoteAuthnKeyPub); err != nil {
-		return fmt.Errorf("cannot verify JWT token with known public key")
+		return "", fmt.Errorf("cannot verify JWT token with known public key")
 	}
 
-	return nil
+	return uuid, nil
 }
 
 func (exp *Exporter) RenderMulticlusterPrivateMetadataJSON() string {
@@ -727,4 +730,58 @@ func (exp *Exporter) RenderPublicMetadataJSON() string {
 	}
 
 	return string(jsonbuf)
+}
+
+func (exp *Exporter) checkIfAccessedViaDeprecatedSubdomain(r *http.Request, accessedWithUUID string) {
+	dontWant := strings.TrimSpace(os.Getenv("ISTIO_METADATA_OLD_PUBLIC_HOST"))
+
+	if dontWant == "" {
+		return
+	}
+	hostname, err := prepareEndpointString(r.Host)
+	if err != nil {
+		return
+	}
+	if hostname == "" || hostname != dontWant {
+		return
+	}
+	// Load remote-public-metadata.json
+	remotePublicMetadataMap, err := exp.ExtractRemotePublicMetadata()
+	if err != nil {
+		return
+	}
+	// Checking if the source cluster is known
+	PublicMetadata, ok := remotePublicMetadataMap[accessedWithUUID]
+	if !ok {
+		logger.Printf("Request with JWT is signed for unknown source cluster with uuid %s", accessedWithUUID)
+		return
+	}
+
+	privateAllianceDeprecatedSubdomainRequests.With(prometheus.Labels{
+		"remote_uuid":           PublicMetadata.ClusterUUID,
+		"alliance_kind":         PublicMetadata.AllianceRef.Kind,
+		"name":                  PublicMetadata.AllianceRef.Name,
+		"requested_to_hostname": hostname,
+	}).Inc()
+
+	logger.Printf("Request via deprecated subdomain: kind=%s, name=%s, cluster_uuid=%s dontWant=%s haveGot=%s", PublicMetadata.AllianceRef.Kind, PublicMetadata.AllianceRef.Name, PublicMetadata.ClusterUUID, dontWant, hostname)
+}
+
+func prepareEndpointString(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("empty metadataEndpoint")
+	}
+	if !strings.Contains(raw, "://") {
+		raw = "https://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	host := u.Hostname()
+	if host == "" {
+		return "", fmt.Errorf("no host in metadataEndpoint")
+	}
+	return strings.ToLower(host), nil
 }
