@@ -75,6 +75,10 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 }
 
 func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHProvider, error) {
+	if i == nil {
+		return nil, nil
+	}
+
 	i.mut.Lock()
 	defer i.mut.Unlock()
 
@@ -102,6 +106,10 @@ func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
 }
 
 func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.KubeProvider {
+	if i == nil {
+		return nil
+	}
+
 	cfg := &kube.Config{}
 	runnerInterface, err := provider.GetRunnerInterface(ctx, cfg, i.baseProviderSettings, i)
 	if err != nil {
@@ -119,6 +127,10 @@ func (i *SSHProviderInitializer) GetConfig() *sshconfig.ConnectionConfig {
 }
 
 func (i *SSHProviderInitializer) CheckHosts() bool {
+	if i == nil {
+		return false
+	}
+
 	if i.config != nil {
 		if len(i.config.Hosts) > 0 {
 			return true
