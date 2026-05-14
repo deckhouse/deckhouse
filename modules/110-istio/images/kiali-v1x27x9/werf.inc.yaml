@@ -27,6 +27,9 @@ from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  before: setup
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali
   to: /src/kiali
@@ -35,10 +38,13 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  setup:
+  - cd /src/kiali/
+  - git apply --verbose /patches/001-go-mod.patch
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache bash git binutils
-  setup:
+  install:
   - cd /src/kiali/
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - echo {{ $kialiVersion }} > version
