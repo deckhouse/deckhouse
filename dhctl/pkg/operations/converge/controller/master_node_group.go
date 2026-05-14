@@ -64,6 +64,10 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return nil
 	}
 
+	if ctx.SSHProviderInitializer == nil {
+		return nil
+	}
+
 	var userPassedHosts []session.Host
 	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
 	if err != nil {
