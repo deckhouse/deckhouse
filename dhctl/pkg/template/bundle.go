@@ -197,12 +197,12 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	}
 
 	// TODO: read from cfg.Settings once serviceSubnetCIDR is migrated to ModuleConfig.
-	serviceSubnetCIDR := cfg.ClusterConfiguration["serviceSubnetCIDR"]
+	serviceSubnetCIDR, _ := cfg.ClusterConfiguration["serviceSubnetCIDR"].(string)
 	if serviceSubnetCIDR == "" {
 		return fmt.Errorf("serviceSubnetCIDR is missing or empty in clusterConfiguration")
 	}
 	// TODO: read from cfg.Settings once clusterDomain is migrated to ModuleConfig.
-	clusterDomain := cfg.ClusterConfiguration["clusterDomain"]
+	clusterDomain, _ := cfg.ClusterConfiguration["clusterDomain"].(string)
 	if clusterDomain == "" {
 		return fmt.Errorf("clusterDomain is missing or empty in clusterConfiguration")
 	}
@@ -210,7 +210,7 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	encryptionAlgorithm, _ := cfg.Settings["encryptionAlgorithm"].(string)
 	if encryptionAlgorithm == "" {
 		// TODO: remove fallback once encryptionAlgorithm is fully migrated to ModuleConfig.
-		encryptionAlgorithm = cfg.ClusterConfiguration["encryptionAlgorithm"]
+		encryptionAlgorithm, _ = cfg.ClusterConfiguration["encryptionAlgorithm"].(string)
 	}
 
 	pkiDir := filepath.Join(artifactsDir, "pki")

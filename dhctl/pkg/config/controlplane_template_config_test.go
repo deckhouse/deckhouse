@@ -70,8 +70,8 @@ func TestConfigForControlPlaneTemplates_NoModuleConfig(t *testing.T) {
 	cfg, err := m.ConfigForControlPlaneTemplates("")
 	require.NoError(t, err)
 
-	require.Equal(t, "RSA-4096", cfg.ClusterConfiguration["encryptionAlgorithm"])
-	require.Equal(t, "1.31", cfg.ClusterConfiguration["kubernetesVersion"])
+	require.Equal(t, "RSA-4096", cfg.ClusterConfiguration["encryptionAlgorithm"].(string))
+	require.Equal(t, "1.31", cfg.ClusterConfiguration["kubernetesVersion"].(string))
 	require.Empty(t, cfg.Settings)
 }
 
@@ -94,7 +94,7 @@ func TestConfigForControlPlaneTemplates_ModuleConfigWins(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, int64(500), rr["milliCPU"])
 	require.Equal(t, int64(512*1024*1024), rr["memoryBytes"])
-	require.Equal(t, "RSA-4096", cfg.ClusterConfiguration["encryptionAlgorithm"])
+	require.Equal(t, "RSA-4096", cfg.ClusterConfiguration["encryptionAlgorithm"].(string))
 }
 
 func TestConfigForControlPlaneTemplates_KubernetesVersionAutomatic(t *testing.T) {
@@ -105,7 +105,26 @@ func TestConfigForControlPlaneTemplates_KubernetesVersionAutomatic(t *testing.T)
 	cfg, err := m.ConfigForControlPlaneTemplates("")
 	require.NoError(t, err)
 
-	require.Equal(t, DefaultKubernetesVersion, cfg.ClusterConfiguration["kubernetesVersion"])
+	require.Equal(t, DefaultKubernetesVersion, cfg.ClusterConfiguration["kubernetesVersion"].(string))
+}
+
+func TestConfigForControlPlaneTemplates_PartialResourcesRequests(t *testing.T) {
+	m := newMetaConfig(t, baseClusterConfig(), []*ModuleConfig{
+		newModuleConfig("control-plane-manager", SettingsValues{
+			"resourcesRequests": map[string]interface{}{
+				"cpu": "500m",
+				// memory not set
+			},
+		}),
+	})
+
+	cfg, err := m.ConfigForControlPlaneTemplates("")
+	require.NoError(t, err)
+
+	rr, ok := cfg.Settings["resourcesRequests"].(map[string]interface{})
+	require.True(t, ok)
+	require.Contains(t, rr, "milliCPU")
+	require.NotContains(t, rr, "memoryBytes")
 }
 
 func TestConfigForControlPlaneTemplates_ToMap(t *testing.T) {

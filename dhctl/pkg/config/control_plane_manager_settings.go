@@ -50,10 +50,14 @@ func (m *MetaConfig) controlPlaneManagerSettings() (map[string]interface{}, erro
 		if err != nil {
 			return nil, fmt.Errorf("parse resourcesRequests: %w", err)
 		}
-		out["resourcesRequests"] = map[string]interface{}{
-			"milliCPU":    milliCPU,
-			"memoryBytes": memoryBytes,
+		parsed := map[string]interface{}{}
+		if milliCPU != 0 {
+			parsed["milliCPU"] = milliCPU
 		}
+		if memoryBytes != 0 {
+			parsed["memoryBytes"] = memoryBytes
+		}
+		out["resourcesRequests"] = parsed
 	}
 
 	return out, nil
