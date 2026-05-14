@@ -918,7 +918,7 @@ deckhouse:
 }
 
 func TestRegistryConfigProvider(t *testing.T) {
-	t.Run("Parse wildcard config paths", func(t *testing.T) {
+	t.Run("Parse mocks config paths with wildcard", func(t *testing.T) {
 		provider, err := RegistryConfigProvider(func() ([]string, error) {
 			return FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
 		})
@@ -937,7 +937,7 @@ func TestRegistryConfigProvider(t *testing.T) {
 		require.Equal(t, false, isLocal)
 	})
 
-	t.Run("Parse raw configs", func(t *testing.T) {
+	t.Run("Parse raw Deckhouse ModuleConfig", func(t *testing.T) {
 		mcDeckhouse := `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -969,6 +969,35 @@ spec:
 		require.Equal(t, registry_const.SchemeHTTPS, remote.Scheme)
 		require.Equal(t, "test-user", remote.Username)
 		require.Equal(t, "test-password", remote.Password)
+		require.Equal(t, "-----BEGIN CERTIFICATE-----", remote.CA)
+
+		isLocal, err := provider.IsLocal()
+		require.NoError(t, err)
+		require.Equal(t, false, isLocal)
+	})
+
+	t.Run("Parse raw InitConfig", func(t *testing.T) {
+		initConfig := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: r.example.com/test
+  registryScheme: HTTPS
+  registryCA: "-----BEGIN CERTIFICATE-----"
+`
+
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return []string{initConfig}, nil
+		})
+		require.NoError(t, err)
+
+		remote, err := provider.RemoteData()
+		require.NoError(t, err)
+		require.Equal(t, "r.example.com/test", remote.ImagesRepo)
+		require.Equal(t, registry_const.SchemeHTTPS, remote.Scheme)
+		require.Equal(t, "", remote.Username)
+		require.Equal(t, "", remote.Password)
 		require.Equal(t, "-----BEGIN CERTIFICATE-----", remote.CA)
 
 		isLocal, err := provider.IsLocal()

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
@@ -517,17 +518,12 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 	)
 
 	for _, doc := range docs {
-		var parsed map[string]interface{}
-		if err := yaml.Unmarshal([]byte(doc), &parsed); err != nil {
+		var obj unstructured.Unstructured
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
 			return nil, err
 		}
 
-		kind, ok := getNestedKeyValue[string](parsed, []string{"kind"})
-		if !ok || kind == "" {
-			continue
-		}
-
-		switch kind {
+		switch obj.GetKind() {
 		case InitConfigurationKind:
 			ret, err := registry.ParseYAMLInitConfig([]byte(doc))
 
@@ -538,8 +534,7 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 			initConfig = ret
 
 		case ModuleConfigKind:
-			name, ok := getNestedKeyValue[string](parsed, []string{"metadata", "name"})
-			if !ok || name != "deckhouse" {
+			if obj.GetName() != "deckhouse" {
 				continue
 			}
 
@@ -591,33 +586,4 @@ func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logge
 
 func GetRPPSignCheck() bool {
 	return RppSignCheck == "true"
-}
-
-func getNestedKeyValue[T any](data map[string]interface{}, keys []string) (T, bool) {
-	var zero T
-
-	if len(keys) == 0 {
-		return zero, false
-	}
-
-	current := interface{}(data)
-
-	for _, key := range keys {
-		switch v := current.(type) {
-		case map[string]interface{}:
-			val, exists := v[key]
-			if !exists {
-				return zero, false
-			}
-			current = val
-		default:
-			return zero, false
-		}
-	}
-
-	ret, ok := current.(T)
-	if !ok {
-		return zero, false
-	}
-	return ret, true
 }
