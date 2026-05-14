@@ -8,7 +8,6 @@ spec:
   displayName: OpenLDAP Demo
   ldap:
     host: ldap-service.openldap-demo:389
-    insecureSkipVerify: true
     insecureNoSSL: true
 
     bindDN: cn=admin,dc=example,dc=org

@@ -355,6 +355,13 @@ spec:
                   required: ['host', 'userSearch']
                   description: |
                     Parameters of the LDAP.
+                  x-kubernetes-validations:
+                    - rule: "!(self.insecureNoSSL && self.startTLS)"
+                      message: "spec.ldap.insecureNoSSL and spec.ldap.startTLS are mutually exclusive: insecureNoSSL disables TLS entirely (ldap://, port 389), while startTLS upgrades a plain connection to TLS."
+                    - rule: "!(self.insecureNoSSL && self.insecureSkipVerify)"
+                      message: "spec.ldap.insecureSkipVerify has no effect when spec.ldap.insecureNoSSL is true: TLS is disabled and there is no certificate to verify."
+                    - rule: "!(self.insecureNoSSL && has(self.rootCAData) && self.rootCAData != '')"
+                      message: "spec.ldap.rootCAData is ignored when spec.ldap.insecureNoSSL is true: TLS is disabled. Remove rootCAData or set insecureNoSSL to false."
                   properties:
                     host:
                       type: string
@@ -371,12 +378,16 @@ spec:
                         Following field is required if the LDAP host is not using TLS (port 389).
                         This option inherently leaks passwords to anyone on the same network as Dex.
                         Equals to false by default.
+
+                        Mutually exclusive with `startTLS`, `insecureSkipVerify`, and `rootCAData`: when `insecureNoSSL` is true, TLS is disabled and those settings have no effect.
                     startTLS:
                       type: boolean
                       default: false
                       description: |
                         When connecting to the server, connect using the ldap:// protocol then issue
-                        a [StartTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) command. If unspecified, connections will use the ldaps:// protocol
+                        a [StartTLS](https://www.digitalocean.com/community/tutorials/how-to-encrypt-openldap-connections-using-starttls) command. If unspecified, connections will use the ldaps:// protocol.
+
+                        Mutually exclusive with `insecureNoSSL`.
                     usernamePrompt:
                       type: string
                       default: 'LDAP username'
@@ -387,6 +398,8 @@ spec:
                       type: string
                       description: |
                         A CA chain to validate the provider in PEM format.
+
+                        Has no effect when `insecureNoSSL` is true.
                       x-doc-examples:
                       - |
                         ```yaml
@@ -402,6 +415,8 @@ spec:
                         If a custom certificate isn't provided, this option can be used to turn off
                         TLS certificate checks. As noted, it is insecure and shouldn't be used outside
                         of explorative phases.
+
+                        Has no effect when `insecureNoSSL` is true.
                     bindDN:
                       type: string
                       x-doc-examples: ['uid=serviceaccount,cn=users,dc=example,dc=com']

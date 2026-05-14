@@ -1331,6 +1331,36 @@ alerts:
         Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
       severity: "4"
       markupFormat: markdown
+    - name: D8DexProviderLDAPTLSConflict
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        DexProvider `{{ $labels.name }}` combines mutually exclusive LDAP TLS settings: `{{ $labels.conflict }}`. Dex silently ignores the redundant flag, which masks misconfiguration:
+
+        * `insecureNoSSL + startTLS` — TLS is disabled (ldap://, port 389), so `startTLS` is ignored.
+        * `insecureNoSSL + insecureSkipVerify` — TLS is disabled, there is no certificate to verify.
+        * `insecureNoSSL + rootCAData` — TLS is disabled, the CA chain is ignored.
+
+        The CRD schema rejects this combination on create/update; this DexProvider was created before the validation was added and remains active.
+
+        Update the DexProvider to remove the conflict:
+
+        * Plaintext LDAP (port 389): keep `spec.ldap.insecureNoSSL: true`, remove `startTLS`, `insecureSkipVerify`, and `rootCAData`.
+        * STARTTLS on port 389: set `spec.ldap.insecureNoSSL: false`, `spec.ldap.startTLS: true`. Use `insecureSkipVerify` or `rootCAData` as needed.
+        * `ldaps://` on port 636: leave `insecureNoSSL` and `startTLS` at `false`. Use `insecureSkipVerify` or `rootCAData` as appropriate.
+
+        Audit all LDAP DexProvider objects:
+
+        ```bash
+        kubectl get dexproviders.deckhouse.io -o yaml \
+          | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
+        ```
+      summary: |
+        DexProvider {{ $labels.name }} has a conflicting LDAP TLS configuration.
+      severity: "8"
+      markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager

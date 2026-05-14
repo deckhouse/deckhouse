@@ -1,0 +1,36 @@
+- name: d8.user-authn.deprecation
+  rules:
+  - alert: D8DexProviderLDAPTLSConflict
+    expr: d8_dex_provider_ldap_tls_conflict == 1
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dex
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: DexProvider `{{ $labels.name }}` has a conflicting LDAP TLS configuration.
+      description: |
+        DexProvider `{{ $labels.name }}` combines mutually exclusive LDAP TLS settings: `{{ $labels.conflict }}`. Dex silently ignores the redundant flag, which masks misconfiguration:
+
+        * `insecureNoSSL + startTLS` — TLS is disabled (ldap://, port 389), so `startTLS` is ignored.
+        * `insecureNoSSL + insecureSkipVerify` — TLS is disabled, there is no certificate to verify.
+        * `insecureNoSSL + rootCAData` — TLS is disabled, the CA chain is ignored.
+
+        The CRD schema rejects this combination on create/update; this DexProvider was created before the validation was added and remains active.
+
+        Update the DexProvider to remove the conflict:
+
+        * Plaintext LDAP (port 389): keep `spec.ldap.insecureNoSSL: true`, remove `startTLS`, `insecureSkipVerify`, and `rootCAData`.
+        * STARTTLS on port 389: set `spec.ldap.insecureNoSSL: false`, `spec.ldap.startTLS: true`. Use `insecureSkipVerify` or `rootCAData` as needed.
+        * `ldaps://` on port 636: leave `insecureNoSSL` and `startTLS` at `false`. Use `insecureSkipVerify` or `rootCAData` as appropriate.
+
+        Audit all LDAP DexProvider objects:
+
+        ```bash
+        kubectl get dexproviders.deckhouse.io -o yaml \
+          | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
+        ```
