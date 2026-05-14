@@ -64,7 +64,6 @@ type ImageMetadata struct {
 func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
-	s.ms.Grouped().ExpireGroupMetrics(metrics.RegistryScannerTelemetryGroup)
 	s.ms.Grouped().GaugeSet(
 		metrics.RegistryScannerTelemetryGroup,
 		metrics.RegistryScannerRegistryUnavailable,
