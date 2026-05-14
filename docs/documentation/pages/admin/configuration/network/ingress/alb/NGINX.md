@@ -7,7 +7,7 @@ description: "Configure Application Load Balancer with Ingress NGINX Controller 
 The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
 
 {% alert level="info" %}
-In 2025, ingress-nginx was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
+In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
 This does not apply to the module as part of Deckhouse Kubernetes Platform: the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
 {% endalert %}
