@@ -32,7 +32,7 @@ version = 3
 EOF
 
 cp -f containerd containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
-rm -f /opt/deckhouse/bin/containerd-shim-runc-v1
+rm -f /opt/deckhouse/bin/containerd-shim-runc-v1 /opt/deckhouse/bin/containerd-shim
 
 if test -f pidumount; then
     cp -f pidumount /opt/deckhouse/bin
