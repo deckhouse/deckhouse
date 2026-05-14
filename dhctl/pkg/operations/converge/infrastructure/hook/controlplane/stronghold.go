@@ -31,10 +31,10 @@ const (
 )
 
 type StrongholdReadinessChecker struct {
-	getter kubernetes.KubeClientProviderWithCtx
+	getter kubernetes.KubeClientProvider
 }
 
-func NewStrongholdReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) *StrongholdReadinessChecker {
+func NewStrongholdReadinessChecker(getter kubernetes.KubeClientProvider) *StrongholdReadinessChecker {
 	return &StrongholdReadinessChecker{
 		getter: getter,
 	}
@@ -44,12 +44,9 @@ func NewStrongholdReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) 
 // The nodeName parameter is ignored because the check is cluster-wide.
 // Returns true (skip) when the d8-stronghold namespace or the StatefulSet does not exist.
 func (c *StrongholdReadinessChecker) IsReady(ctx context.Context, _ string) (bool, error) {
-	kubeClient, err := c.getter.KubeClientCtx(ctx)
-	if err != nil {
-		return false, fmt.Errorf("could not get kube client: %w", err)
-	}
+	kubeClient := c.getter.KubeClient()
 
-	_, err = kubeClient.CoreV1().Namespaces().Get(ctx, strongholdNamespace, metav1.GetOptions{})
+	_, err := kubeClient.CoreV1().Namespaces().Get(ctx, strongholdNamespace, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.DebugLn("Namespace d8-stronghold not found, skipping Stronghold readiness check")
