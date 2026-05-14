@@ -43,11 +43,13 @@ server_url="${LOOP_SERVICE_NOTIFICATIONS}"
 job_name="${JOB_NAME}"
 workflow_name="${WORKFLOW_NAME}"
 workflow_url="${WORKFLOW_URL}"
-
+branch="${BRANCH}"
 if [[ -z "$webhook_type" ]]; then
   webhook_type="ci_fail"
 fi
-if [[ -z "$message" ]]; then
+if [[ -n "$branch" ]] && [[ "$branch" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+  message="🛑 Branch: **${branch}** Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
+else
   message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
 fi
 
