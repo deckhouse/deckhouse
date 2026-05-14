@@ -93,6 +93,7 @@ discovery:
 const certManager = `
 enableCAInjector: true
 internal:
+  enableCAInjector: true
   selfSignedCA:
     cert: string
     key: string

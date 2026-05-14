@@ -43,3 +43,7 @@ properties:
         format: email
         x-examples: ["example@example.com"]
 
+      enableCAInjector:
+        type: boolean
+        default: false
+
