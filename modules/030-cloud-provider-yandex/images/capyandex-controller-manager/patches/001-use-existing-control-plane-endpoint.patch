@@ -1,0 +1,162 @@
+diff --git a/controllers/yandexcluster_controller.go b/controllers/yandexcluster_controller.go
+index d45185a..d1b27b4 100644
+--- a/controllers/yandexcluster_controller.go
++++ b/controllers/yandexcluster_controller.go
+@@ -19,13 +19,15 @@ package controllers
+ import (
+ 	"context"
+ 	"fmt"
++	"net/url"
++	"strconv"
+ 
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/client-go/rest"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/util"
+ 	"sigs.k8s.io/cluster-api/util/annotations"
+-	"sigs.k8s.io/cluster-api/util/conditions"
+ 	"sigs.k8s.io/cluster-api/util/predicates"
+ 	ctrl "sigs.k8s.io/controller-runtime"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+@@ -37,7 +39,6 @@ import (
+ 	infrav1 "github.com/yandex-cloud/cluster-api-provider-yandex/api/v1alpha1"
+ 	yandex "github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/client"
+ 	"github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/cloud/scope"
+-	loadbalancer "github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/cloud/services/loadbalancers"
+ 	"github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/options"
+ )
+ 
+@@ -46,6 +47,7 @@ type YandexClusterReconciler struct {
+ 	client.Client
+ 	Scheme             *runtime.Scheme
+ 	YandexClientGetter yandex.YandexClientGetter
++	RESTConfig         *rest.Config
+ 	Config             options.Config
+ }
+ 
+@@ -121,63 +123,27 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 		return ctrl.Result{Requeue: true}, nil
+ 	}
+ 
+-	// Get loadbalancer service and reconcile load balancer.
+-	lb := loadbalancer.New(clusterScope)
+-	if err := lb.Reconcile(ctx); err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			"load balancer reconcile error", clusterv1.ConditionSeverityError, "%s", err.Error())
+-		return ctrl.Result{}, fmt.Errorf("error reconciling load balancer: %w", err)
++	if r.RESTConfig == nil {
++		return ctrl.Result{}, fmt.Errorf("rest config is not configured")
+ 	}
+ 
+-	active, err := lb.IsActive(ctx)
++	controlPlaneEndpointURL, err := url.Parse(r.RESTConfig.Host)
+ 	if err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			"load balancer reconcile error", clusterv1.ConditionSeverityError, "%s", err.Error())
+-		return ctrl.Result{}, fmt.Errorf("error reconciling load balancer: %w", err)
+-	}
+-	if !active {
+-		logger.Info("load balancer instance not active, requeueing")
+-		return ctrl.Result{RequeueAfter: RequeueDuration}, nil
++		return ctrl.Result{}, fmt.Errorf("failed to parse api server host: %w", err)
+ 	}
+ 
+-	// When load balancer is active, fetch his status from YandexCloud, then set API address
+-	// and YandexCluster status.
+-	state, err := lb.Describe(ctx)
++	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
+ 	if err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			"load balancer reconcile error", clusterv1.ConditionSeverityError, "%s", err.Error())
+-		return ctrl.Result{}, fmt.Errorf("error reconciling load balancer: %w", err)
++		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
+ 	}
+ 
+-	switch {
+-	// The load balancer has been created.
+-	case clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Host == "" && clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Port == 0:
+-		clusterScope.YandexCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+-			Host: state.ListenerAddress,
+-			Port: state.ListenerPort,
+-		}
+-		clusterScope.YandexCluster.Status.LoadBalancer = infrav1.LoadBalancerStatus{
+-			ListenerAddress: state.ListenerAddress,
+-			ListenerPort:    state.ListenerPort,
+-		}
+-		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
+-		clusterScope.SetReady()
+-		return ctrl.Result{}, nil
+-
+-	// The load balancer has been recreated.
+-	case clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Host == state.ListenerAddress && clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Port == state.ListenerPort:
+-		clusterScope.YandexCluster.Status.LoadBalancer = infrav1.LoadBalancerStatus{
+-			ListenerAddress: state.ListenerAddress,
+-			ListenerPort:    state.ListenerPort,
+-		}
+-		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
+-		clusterScope.SetReady()
+-		return ctrl.Result{}, nil
+-
+-	default:
+-		return ctrl.Result{},
+-			fmt.Errorf("YandexCluster controlPlaneEndpoint differs from the load balancer listener values. The cluster has become unrecoverable and should be manually deleted")
++	clusterScope.YandexCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
++		Host: controlPlaneEndpointURL.Hostname(),
++		Port: int32(port),
+ 	}
++	clusterScope.SetReady()
++
++	return ctrl.Result{}, nil
+ }
+ 
+ // reconcileDelete it is a part of reconciliation loop in case of YandexCluster delete.
+@@ -189,25 +155,8 @@ func (r *YandexClusterReconciler) reconcileDelete(ctx context.Context, clusterSc
+ 		return ctrl.Result{}, nil
+ 	}
+ 
+-	// Delete load balancer and remove finalizer from YandexCluster.
+-	lb := loadbalancer.New(clusterScope)
+-	deleted, err := lb.Delete(ctx)
+-	if err != nil {
+-		conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-			clusterv1.DeletionFailedReason, clusterv1.ConditionSeverityWarning, "")
+-		return ctrl.Result{}, fmt.Errorf("error deleting load balancer  %w", err)
+-	}
+-
+-	if deleted {
+-		logger.Info("load balancer has been deleted")
+-		controllerutil.RemoveFinalizer(clusterScope.YandexCluster, infrav1.ClusterFinalizer)
+-		return ctrl.Result{}, nil
+-	}
+-
+-	logger.V(1).Info("load balancer is being deleted, requeueing")
+-	conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
+-		clusterv1.DeletingReason, clusterv1.ConditionSeverityInfo, "")
+-	return ctrl.Result{RequeueAfter: RequeueDuration}, nil
++	controllerutil.RemoveFinalizer(clusterScope.YandexCluster, infrav1.ClusterFinalizer)
++	return ctrl.Result{}, nil
+ }
+ 
+ // SetupWithManager sets up the controller with the Manager.
+diff --git a/main.go b/main.go
+index 6dbdee5..af93561 100644
+--- a/main.go
++++ b/main.go
+@@ -89,6 +89,8 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ 
++	restConfig := ctrl.GetConfigOrDie()
++
+ 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+ 		Scheme: scheme,
+ 		Metrics: metricsserver.Options{
+@@ -126,6 +128,7 @@ func main() {
+ 		Client:             mgr.GetClient(),
+ 		Scheme:             mgr.GetScheme(),
+ 		YandexClientGetter: yandexClientProvider,
++		RESTConfig:         restConfig,
+ 		Config:             cfg,
+ 	}).SetupWithManager(ctx, mgr); err != nil {
+ 		setupLog.Error(err, "unable to create controller", "controller", "YandexCluster")
