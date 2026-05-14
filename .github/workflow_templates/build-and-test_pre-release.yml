@@ -49,7 +49,7 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release" "FE") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
-{!{- range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
   build_{!{$werfEnv}!}:
     name: Build {!{$werfEnv}!}
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
@@ -254,9 +254,8 @@ jobs:
     name: Compare internal modules
     needs:
       - build_fe
-{!{- range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
-      - build_{!{$werfEnv}!}
-{!{- end }!}
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
     if: ${{ always() && needs.build_fe.result == 'success' }}
     runs-on: regular
     steps:

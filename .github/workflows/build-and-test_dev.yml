@@ -72,6 +72,7 @@ jobs:
       security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
       build_BE: ${{ steps.pr_props.outputs.build_BE }}
@@ -664,6 +665,8 @@ jobs:
         run: rm images_tags_werf.json
 
     # </template: build_template>
+
+
 
   build_CE:
     name: Build CE
@@ -3556,6 +3559,7 @@ jobs:
       - git_info
       - pull_request_info
       - build_fe
+
       - build_CE
       - build_EE
       - build_BE

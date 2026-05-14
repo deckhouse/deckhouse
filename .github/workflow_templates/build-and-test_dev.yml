@@ -52,7 +52,7 @@ jobs:
       SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev" "FE") | strings.Indent 4 }!}
 
-{!{- range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
   build_{!{$werfEnv}!}:
     name: Build {!{$werfEnv}!}
     if: ${{ needs.pull_request_info.outputs.build_{!{$werfEnv}!} == 'true' }}
@@ -197,9 +197,8 @@ jobs:
       - git_info
       - pull_request_info
       - build_fe
-{!{- range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
-      - build_{!{$werfEnv}!}
-{!{- end }!}
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
       - validators
       - openapi_test_cases
       - golangci_lint

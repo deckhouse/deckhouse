@@ -453,6 +453,8 @@ jobs:
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+
+
   build_CE:
     name: Build CE
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
@@ -3856,6 +3858,7 @@ jobs:
     name: Compare internal modules
     needs:
       - build_fe
+
       - build_CE
       - build_EE
       - build_BE

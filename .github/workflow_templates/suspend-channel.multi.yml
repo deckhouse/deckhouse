@@ -134,7 +134,7 @@ Images:
 Destination registries:
 - DECKHOUSE_REGISTRY_HOST
 */}!}
-{!{- range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
       - name: Publish suspend images for {!{ $werfEnv }!}
         if: ${{ needs.detect_editions.outputs.DEPLOY_{!{ $werfEnv }!} == 'true' }}
         env:

@@ -127,7 +127,7 @@ jobs:
 {!{/*
 Jobs for visual control allowed editions when approving deploy to environments.
 */}!}
-{!{- range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
   enable_{!{$werfEnv}!}:
     if: ${{ needs.detect_editions.outputs.DEPLOY_{!{$werfEnv}!} == 'true' }}
     name: Enable {!{$werfEnv}!}
@@ -189,7 +189,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
             exit 1
           fi
 
-      {!{- range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+      {!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
       - name: Set cooldown for release ({!{ $werfEnv }!})
         if: ${{ github.event.inputs.cooldown }}
         env:
@@ -229,7 +229,7 @@ Registries:
 Job supports running from forked or copied repo: 'ghcr.io/owner/repo'
 is used if DECKHOUSE_REGISTRY_HOST is not set.
 */}!}
-{!{- range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+{!{ range $werfEnv := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
       - name: Publish release images for {!{ $werfEnv }!}
         if: ${{ needs.detect_editions.outputs.DEPLOY_{!{ $werfEnv }!} == 'true' }}
         env:
