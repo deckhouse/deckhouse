@@ -7,7 +7,7 @@ Installs and manages the [Ingress NGINX Controller](https://github.com/kubernete
 
 The module supports running and configuring several Ingress NGINX Controllers simultaneously (one of the controllers is the **primary** one; you can create any number of **additional** controllers). This approach allows you to separate extranet and intranet Ingress resources of applications.
 
-Current nginx version is 1.29.5.
+Current nginx version is 1.30.1.
 
 ## Traffic routing
 
