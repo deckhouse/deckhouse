@@ -1,57 +1,53 @@
-{{- $mcmVersion := include "get_oss_version_by_id" (list "mcm" $ )  -}}
-{{- if ne $.Env "CSE" }}
-
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
-fromCacheVersion: "2025.04.29.4"
-imageSpec:
-  config:
-    env: { "WORKDIR": "/" }
-    entrypoint: ["/machine-controller-manager"]
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /src/machine-controller-manager
-  to: /machine-controller-manager
-  before: setup
----
-image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromCacheVersion: "2025.04.29.1"
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --depth 1 --branch {{ $mcmVersion }}-flant.24 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
-  - cd /src
-  - git apply /patches/*.patch --verbose
-  - rm -rf .git vendor
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
-final: false
-import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
-mount:
-{{ include "mount points for golang builds" . }}
-secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
-shell:
-  install:
-  - cd /src
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
-  - chown 64535:64535 machine-controller-manager
+image: {{ .ModuleName }}/{{ .ImageName }}                                                                                                                                                    
+fromImage: common/distroless                                                                                                                                                                   
+fromCacheVersion: "2025.04.29.4"                                                                                                                                                               
+imageSpec:                                                                                                                                                                                     
+  config:                                                                                                                                                                                          
+    env: { "WORKDIR": "/" }                                                                                                                                                                    
+    entrypoint: ["/machine-controller-manager"]                                                                                                                                                
+import:                                                                                                                                                                                        
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact                                                                                                                                           
+  add: /src/machine-controller-manager                                                                                                                                                         
+  to: /machine-controller-manager                                                                                                                                                              
+  before: setup                                                                                                                                                                                
+---                                                                                                                                                                                            
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact                                                                                                                                        
+fromCacheVersion: "2025.04.29.1"                                                                                                                                                               
+fromImage: common/src-artifact                                                                                                                                                                 
+final: false                                                                                                                                                                                   
+git:                                                                                                                                                                                           
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches                                                                                                      
+  to: /patches                                                                                                                                                                                 
+  stageDependencies:                                                                                                                                                                           
+    install:                                                                                                                                                                                   
+    - '**/*'                                                                                                                                                                                   
+secrets:                                                                                                                                                                                       
+- id: SOURCE_REPO                                                                                                                                                                              
+  value: {{ .SOURCE_REPO }}                                                                                                                                                                    
+shell:                                                                                                                                                                                         
+  install:                                                                                                                                                                                     
+  - git clone --depth 1 --branch v0.36.0-flant.24 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src                                                                                       
+  - cd /src                                                                                                                                                                                    
+  - git apply /patches/*.patch --verbose                                                                                                                                                       
+  - rm -rf .git vendor                                                                                                                                                                         
+---                                                                                                                                                                                            
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact                                                                                                                                             
+fromImage: builder/golang-alpine                                                                                                                                                               
+final: false                                                                                                                                                                                   
+import:                                                                                                                                                                                        
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact                                                                                                                                      
+  add: /src                                                                                                                                                                                    
+  to: /src                                                                                                                                                                                     
+  before: install                                                                                                                                                                              
+mount:                                                                                                                                                                                         
+{{ include "mount points for golang builds" . }}                                                                                                                                               
+secrets:                                                                                                                                                                                       
+- id: GOPROXY                                                                                                                                                                                  
+  value: {{ .GOPROXY }}                                                                                                                                                                        
+shell:                                                                                                                                                                                         
+  install:                                                                                                                                                                                     
+  - cd /src                                                                                                                                                                                    
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64                                                                                                           
+  - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go                                                                                                
+  - chown 64535:64535 machine-controller-manager                                                                                                                                               
   - chmod 0700 machine-controller-manager
-{{- end }}
