@@ -58,4 +58,3 @@ shell:
   - cd /opt/deckhouse/lib
   - find . -type f -name "*.la" -exec rm -f \{} \;
   - find . -type f -name "*.a" -exec rm -f \{} \;
-  - chown -R 64535:64535 /opt/deckhouse
