@@ -249,12 +249,6 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error {
 	const action = "Switch clients when decrease control-plane nodes"
 
-	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
-		return err
-	} else if skip {
-		return nil
-	}
-
 	logSkip := func(f string, args ...any) {
 		s.debug(fmt.Sprintf("Skip %s: ", action)+f, args...)
 	}
@@ -266,6 +260,12 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 
 	if len(nodesToDeleteInfo) == 0 {
 		logSkip("no nodes to delete")
+		return nil
+	}
+
+	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+		return err
+	} else if skip {
 		return nil
 	}
 
