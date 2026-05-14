@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.29.29",
+  "version": "v0.30.2",
   "aliases": null,
   "flags": {
     "help": {
@@ -178,6 +178,470 @@
               "description": "disable completion descriptions",
               "shorthand": "",
               "global": false
+            }
+          },
+          "subcommands": null
+        }
+      ]
+    },
+    {
+      "name": "cr",
+      "description": "Work with container registries",
+      "aliases": null,
+      "flags": {
+        "allow-nondistributable-artifacts": {
+          "description": "Include non-distributable (foreign) layers when pushing",
+          "shorthand": "",
+          "global": false
+        },
+        "insecure": {
+          "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+          "shorthand": "",
+          "global": false
+        },
+        "platform": {
+          "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+          "shorthand": "",
+          "global": false
+        },
+        "verbose": {
+          "description": "Enable debug logs on stderr",
+          "shorthand": "v",
+          "global": false
+        }
+      },
+      "subcommands": [
+        {
+          "name": "catalog REGISTRY",
+          "description": "List the repositories in a registry",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "full-ref": {
+              "description": "Print the full repository reference (registry/repo)",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "config IMAGE",
+          "description": "Print the config of an image",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "digest [IMAGE]",
+          "description": "Print the digest of an image",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "full-ref": {
+              "description": "Print the full image reference with digest (registry/repo@sha256:...); incompatible with --tarball",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "tarball": {
+              "description": "Read the digest from a local tarball instead of the registry",
+              "shorthand": "",
+              "global": false
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "export IMAGE [TARBALL]",
+          "description": "Export the filesystem of an image as a tarball",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "fs",
+          "description": "Inspect or extract files inside a container image",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "cat IMAGE PATH",
+              "description": "Print a file from a container image",
+              "aliases": null,
+              "flags": {
+                "allow-nondistributable-artifacts": {
+                  "description": "Include non-distributable (foreign) layers when pushing",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "platform": {
+                  "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "verbose": {
+                  "description": "Enable debug logs on stderr",
+                  "shorthand": "v",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "extract IMAGE",
+              "description": "Extract a container image filesystem to a local directory",
+              "aliases": null,
+              "flags": {
+                "allow-nondistributable-artifacts": {
+                  "description": "Include non-distributable (foreign) layers when pushing",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "output": {
+                  "description": "Write the filesystem into this directory",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "platform": {
+                  "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "verbose": {
+                  "description": "Enable debug logs on stderr",
+                  "shorthand": "v",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "ls IMAGE [PATH]",
+              "description": "List files inside a container image",
+              "aliases": null,
+              "flags": {
+                "allow-nondistributable-artifacts": {
+                  "description": "Include non-distributable (foreign) layers when pushing",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "long": {
+                  "description": "Long format with mode and size",
+                  "shorthand": "l",
+                  "global": false
+                },
+                "platform": {
+                  "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "verbose": {
+                  "description": "Enable debug logs on stderr",
+                  "shorthand": "v",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "tree IMAGE [PATH]",
+              "description": "Show the filesystem of a container image as a tree",
+              "aliases": null,
+              "flags": {
+                "allow-nondistributable-artifacts": {
+                  "description": "Include non-distributable (foreign) layers when pushing",
+                  "shorthand": "",
+                  "global": true
+                },
+                "depth": {
+                  "description": "Max depth to descend (0 = unlimited)",
+                  "shorthand": "L",
+                  "global": false
+                },
+                "dirsfirst": {
+                  "description": "List directories before files",
+                  "shorthand": "",
+                  "global": false
+                },
+                "insecure": {
+                  "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "platform": {
+                  "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "size": {
+                  "description": "Show file sizes (human-readable: B / KB / MB)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "verbose": {
+                  "description": "Enable debug logs on stderr",
+                  "shorthand": "v",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "ls REPO",
+          "description": "List the tags in a repository",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "full-ref": {
+              "description": "Print the full image reference (registry/repo:tag)",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "omit-digest-tags": {
+              "description": "Skip digest-based tags (sha256-*) created by signing tools",
+              "shorthand": "O",
+              "global": false
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "manifest IMAGE",
+          "description": "Print the manifest of an image",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "pull IMAGE... PATH",
+          "description": "Pull one or more remote images to a local path",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "cache-path": {
+              "description": "Cache image layers under this directory (reused between pulls)",
+              "shorthand": "c",
+              "global": false
+            },
+            "format": {
+              "description": "Output format (one of: tarball, legacy, oci)",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "push PATH IMAGE",
+          "description": "Push a local image to a registry",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "image-refs": {
+              "description": "Persist the pushed reference (with digest) to this file",
+              "shorthand": "",
+              "global": false
+            },
+            "index": {
+              "description": "Push a multi-manifest OCI layout as an index (OCI layout dirs only)",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
             }
           },
           "subcommands": null
@@ -1010,6 +1474,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "deno-binary-path": {
+                  "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "deploy-graph-path": {
                   "description": "Save deploy graph path to the specified file (by default $WERF_DEPLOY_GRAPH_PATH). Extension must be .dot or not specified. If extension not specified, then .dot is used",
                   "shorthand": "",
@@ -1052,6 +1521,11 @@
                 },
                 "hooks-status-progress-period": {
                   "description": "No-op",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ignore-bundle-js": {
+                  "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
                   "shorthand": "",
                   "global": false
                 },
@@ -1666,6 +2140,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "deno-binary-path": {
+                  "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "deploy-graph-path": {
                   "description": "Save deploy graph path to the specified file (by default $WERF_DEPLOY_GRAPH_PATH). Extension must be .dot or not specified. If extension not specified, then .dot is used",
                   "shorthand": "",
@@ -1708,6 +2187,11 @@
                 },
                 "home-dir": {
                   "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ignore-bundle-js": {
+                  "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
                   "shorthand": "",
                   "global": false
                 },
@@ -2254,6 +2738,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "deno-binary-path": {
+                  "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "dev": {
                   "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
                   "shorthand": "",
@@ -2752,6 +3241,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "deno-binary-path": {
+                  "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "disable-default-secret-values": {
                   "description": "Do not use secret values from the default .helm/secret-values.yaml file (default $WERF_DISABLE_DEFAULT_SECRET_VALUES or false)",
                   "shorthand": "",
@@ -2784,6 +3278,11 @@
                 },
                 "home-dir": {
                   "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ignore-bundle-js": {
+                  "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
                   "shorthand": "",
                   "global": false
                 },
@@ -3188,6 +3687,283 @@
           ]
         },
         {
+          "name": "chart",
+          "description": "Work with charts",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "ts",
+              "description": "Work with TypeScript charts",
+              "aliases": null,
+              "flags": {},
+              "subcommands": [
+                {
+                  "name": "build [PATH]",
+                  "description": "Build TypeScript chart.",
+                  "aliases": null,
+                  "flags": {
+                    "config": {
+                      "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "config-render-path": {
+                      "description": "Custom path for storing rendered configuration file",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "config-templates-dir": {
+                      "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "debug": {
+                      "description": "Enable debug (default $WERF_DEBUG).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "deno-binary-path": {
+                      "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dev": {
+                      "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dev-branch": {
+                      "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dev-ignore": {
+                      "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dir": {
+                      "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "env": {
+                      "description": "Use specified environment (default $WERF_ENV)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "git-work-tree": {
+                      "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "giterminism-config": {
+                      "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "home-dir": {
+                      "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-color-mode": {
+                      "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-debug": {
+                      "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-pretty": {
+                      "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-quiet": {
+                      "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-terminal-width": {
+                      "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-time": {
+                      "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-time-format": {
+                      "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-verbose": {
+                      "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "loose-giterminism": {
+                      "description": "Loose werf giterminism mode restrictions",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "quiet": {
+                      "description": "Disable explanatory output (default $WERF_QUIET).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "tmp-dir": {
+                      "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "verbose": {
+                      "description": "Enable verbose output (default $WERF_VERBOSE).",
+                      "shorthand": "",
+                      "global": false
+                    }
+                  },
+                  "subcommands": null
+                },
+                {
+                  "name": "init [PATH]",
+                  "description": "Initialize the files needed to render manifests using TypeScript.",
+                  "aliases": null,
+                  "flags": {
+                    "config": {
+                      "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "config-render-path": {
+                      "description": "Custom path for storing rendered configuration file",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "config-templates-dir": {
+                      "description": "Custom configuration templates directory (default $WERF_CONFIG_TEMPLATES_DIR or .werf in working directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "debug": {
+                      "description": "Enable debug (default $WERF_DEBUG).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dev": {
+                      "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dev-branch": {
+                      "description": "Set dev git branch name (default $WERF_DEV_BRANCH or \"_werf-dev\")",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dev-ignore": {
+                      "description": "Add rules to ignore tracked and untracked changes in development mode (can specify multiple).\nAlso, can be specified with $WERF_DEV_IGNORE_* (e.g. $WERF_DEV_IGNORE_TESTS=*_test.go, $WERF_DEV_IGNORE_DOCS=path/to/docs)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "dir": {
+                      "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "env": {
+                      "description": "Use specified environment (default $WERF_ENV)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "git-work-tree": {
+                      "description": "Use specified git work tree dir (default $WERF_WORK_TREE or lookup for directory that contains .git in the current or parent directories)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "giterminism-config": {
+                      "description": "Custom path to the giterminism configuration file relative to working directory (default $WERF_GITERMINISM_CONFIG or werf-giterminism.yaml in working directory)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "home-dir": {
+                      "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-color-mode": {
+                      "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-debug": {
+                      "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-pretty": {
+                      "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-quiet": {
+                      "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-terminal-width": {
+                      "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-time": {
+                      "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-time-format": {
+                      "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-verbose": {
+                      "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "loose-giterminism": {
+                      "description": "Loose werf giterminism mode restrictions",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "quiet": {
+                      "description": "Disable explanatory output (default $WERF_QUIET).",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "tmp-dir": {
+                      "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "verbose": {
+                      "description": "Enable verbose output (default $WERF_VERBOSE).",
+                      "shorthand": "",
+                      "global": false
+                    }
+                  },
+                  "subcommands": null
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "ci-env CI_SYSTEM",
           "description": "Generate werf environment variables for specified CI system",
           "aliases": null,
@@ -3354,6 +4130,11 @@
             },
             "tmp-dir": {
               "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+              "shorthand": "",
+              "global": false
+            },
+            "use-docker-auth-config": {
+              "description": "Generate Docker config from DOCKER_AUTH_CONFIG environment variable instead of copying current Docker config (default $WERF_USE_DOCKER_AUTH_CONFIG).",
               "shorthand": "",
               "global": false
             },
@@ -6218,6 +6999,11 @@
               "shorthand": "",
               "global": false
             },
+            "deno-binary-path": {
+              "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+              "shorthand": "",
+              "global": false
+            },
             "deploy-graph-path": {
               "description": "Save deploy graph path to the specified file (by default $WERF_DEPLOY_GRAPH_PATH). Extension must be .dot or not specified. If extension not specified, then .dot is used",
               "shorthand": "",
@@ -6370,6 +7156,11 @@
             },
             "hooks-status-progress-period": {
               "description": "No-op",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-bundle-js": {
+              "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
               "shorthand": "",
               "global": false
             },
@@ -18331,6 +19122,11 @@
               "shorthand": "",
               "global": false
             },
+            "deno-binary-path": {
+              "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+              "shorthand": "",
+              "global": false
+            },
             "dev": {
               "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
               "shorthand": "",
@@ -18443,6 +19239,11 @@
             },
             "home-dir": {
               "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-bundle-js": {
+              "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
               "shorthand": "",
               "global": false
             },
@@ -19956,6 +20757,11 @@
               "shorthand": "",
               "global": false
             },
+            "deno-binary-path": {
+              "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+              "shorthand": "",
+              "global": false
+            },
             "deploy-graph-path": {
               "description": "Save deploy graph path to the specified file (by default $WERF_DEPLOY_GRAPH_PATH). Extension must be .dot or not specified. If extension not specified, then .dot is used",
               "shorthand": "",
@@ -20113,6 +20919,11 @@
             },
             "hooks-status-progress-period": {
               "description": "No-op",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-bundle-js": {
+              "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
               "shorthand": "",
               "global": false
             },
@@ -21112,6 +21923,11 @@
               "shorthand": "",
               "global": false
             },
+            "deno-binary-path": {
+              "description": "Path to the Deno binary to use instead of auto-downloading (default $WERF_DENO_BINARY_PATH)",
+              "shorthand": "",
+              "global": false
+            },
             "dev": {
               "description": "Enable development mode (default $WERF_DEV).\nThe mode allows working with project files without doing redundant commits during debugging and development",
               "shorthand": "",
@@ -21244,6 +22060,11 @@
             },
             "hooks-status-progress-period": {
               "description": "No-op",
+              "shorthand": "",
+              "global": false
+            },
+            "ignore-bundle-js": {
+              "description": "Do not use the existing bundle.js file. Requires TypeScript source files and Deno to rebuild (default $WERF_IGNORE_BUNDLE_JS)",
               "shorthand": "",
               "global": false
             },
@@ -22657,6 +23478,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "digest": {
+                  "description": "Digest of the image to get SBOM for (mutually exclusive with --tag)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "dir": {
                   "description": "Use specified project directory where project’s werf.yaml and other configuration files should reside (default $WERF_DIR or current working directory)",
                   "shorthand": "",
@@ -23042,6 +23868,11 @@
                   "shorthand": "S",
                   "global": false
                 },
+                "tag": {
+                  "description": "Content-based tag of the image to get SBOM for (mutually exclusive with --digest)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "tmp-dir": {
                   "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
                   "shorthand": "",
@@ -23054,6 +23885,292 @@
                 },
                 "virtual-merge": {
                   "description": "Enable virtual/ephemeral merge commit mode when building current application state ($WERF_VIRTUAL_MERGE by default)",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "merge",
+              "description": "Merge per-image SBOMs into a product-level SBOM",
+              "aliases": null,
+              "flags": {
+                "app-name": {
+                  "description": "Application/product name for the merged SBOM metadata",
+                  "shorthand": "",
+                  "global": false
+                },
+                "app-version": {
+                  "description": "Application/product version for the merged SBOM metadata",
+                  "shorthand": "",
+                  "global": false
+                },
+                "container-registry-mirror": {
+                  "description": "(Buildah-only) Use specified mirrors for docker.io",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "docker-config": {
+                  "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to pull SBOM images from the specified repo",
+                  "shorthand": "",
+                  "global": false
+                },
+                "home-dir": {
+                  "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "input": {
+                  "description": "Path to JSON mapping file (image name -\u003e sha256:digest)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "insecure-registry": {
+                  "description": "Use plain HTTP requests when accessing a registry (default $WERF_INSECURE_REGISTRY)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ispras-format": {
+                  "description": "ISPRAS SBOM format: \"oss\" or \"container\"",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "manufacturer": {
+                  "description": "Manufacturer name for the merged SBOM metadata",
+                  "shorthand": "",
+                  "global": false
+                },
+                "output": {
+                  "description": "Output file path (defaults to stdout)",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "parallel": {
+                  "description": "Run in parallel (default $WERF_PARALLEL or true)",
+                  "shorthand": "p",
+                  "global": false
+                },
+                "parallel-tasks-limit": {
+                  "description": "Parallel tasks limit, set -1 to remove the limitation (default $WERF_PARALLEL_TASKS_LIMIT or 5)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo": {
+                  "description": "Container registry storage address (default $WERF_REPO)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-container-registry": {
+                  "description": "Choose repo container registry implementation.\nThe following container registries are supported: ecr, acr, default, dockerhub, gcr, github, gitlab, harbor, quay.\nDefault $WERF_REPO_CONTAINER_REGISTRY or auto mode (detect container registry by repo address).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-docker-hub-password": {
+                  "description": "repo Docker Hub password (default $WERF_REPO_DOCKER_HUB_PASSWORD)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-docker-hub-token": {
+                  "description": "repo Docker Hub token (default $WERF_REPO_DOCKER_HUB_TOKEN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-docker-hub-username": {
+                  "description": "repo Docker Hub username (default $WERF_REPO_DOCKER_HUB_USERNAME)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-github-token": {
+                  "description": "repo GitHub token (default $WERF_REPO_GITHUB_TOKEN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-harbor-password": {
+                  "description": "repo Harbor password (default $WERF_REPO_HARBOR_PASSWORD)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-harbor-username": {
+                  "description": "repo Harbor username (default $WERF_REPO_HARBOR_USERNAME)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "repo-quay-token": {
+                  "description": "repo quay.io token (default $WERF_REPO_QUAY_TOKEN)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-tls-verify-registry": {
+                  "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "tmp-dir": {
+                  "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "validate",
+              "description": "Validate SBOM file against ISPRAS schemas",
+              "aliases": null,
+              "flags": {
+                "check-vcs": {
+                  "description": "Enable VCS URL validation",
+                  "shorthand": "",
+                  "global": false
+                },
+                "container-registry-mirror": {
+                  "description": "(Buildah-only) Use specified mirrors for docker.io",
+                  "shorthand": "",
+                  "global": false
+                },
+                "debug": {
+                  "description": "Enable debug (default $WERF_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "docker-config": {
+                  "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to pull the ISPRAS SBOM checker image",
+                  "shorthand": "",
+                  "global": false
+                },
+                "home-dir": {
+                  "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "insecure-registry": {
+                  "description": "Use plain HTTP requests when accessing a registry (default $WERF_INSECURE_REGISTRY)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ispras-format": {
+                  "description": "ISPRAS SBOM format: oss or container",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-color-mode": {
+                  "description": "Set log color mode.\nSupported on, off and auto (based on the stdout’s file descriptor referring to a terminal) modes.\nDefault $WERF_LOG_COLOR_MODE or auto mode.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-debug": {
+                  "description": "Enable debug (default $WERF_LOG_DEBUG).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-pretty": {
+                  "description": "Enable emojis, auto line wrapping and log process border (default $WERF_LOG_PRETTY or true).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-quiet": {
+                  "description": "Disable explanatory output (default $WERF_LOG_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-terminal-width": {
+                  "description": "Set log terminal width.\nDefaults to:\n* $WERF_LOG_TERMINAL_WIDTH\n* interactive terminal width or 140",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time": {
+                  "description": "Add time to log entries for precise event time tracking (default $WERF_LOG_TIME or false).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-time-format": {
+                  "description": "Specify custom log time format (default $WERF_LOG_TIME_FORMAT or RFC3339 format).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "log-verbose": {
+                  "description": "Enable verbose output (default $WERF_LOG_VERBOSE).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "path": {
+                  "description": "Path to CycloneDX JSON SBOM file (repeatable)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "quiet": {
+                  "description": "Disable explanatory output (default $WERF_QUIET).",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-tls-verify-registry": {
+                  "description": "Skip TLS certificate validation when accessing a registry (default $WERF_SKIP_TLS_VERIFY_REGISTRY)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "tmp-dir": {
+                  "description": "Use specified dir to store tmp files and dirs (default $WERF_TMP_DIR or system tmp dir)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "verbose": {
+                  "description": "Enable verbose output (default $WERF_VERBOSE).",
                   "shorthand": "",
                   "global": false
                 }
@@ -23654,6 +24771,11 @@
               "shorthand": "",
               "global": false
             },
+            "docker-config": {
+              "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to read, pull and push images into the specified repo, to pull base images",
+              "shorthand": "",
+              "global": false
+            },
             "home-dir": {
               "description": "Use specified dir to store werf cache files and dirs (default $WERF_HOME or ~/.werf)",
               "shorthand": "",
@@ -23782,6 +24904,701 @@
       "aliases": null,
       "flags": {},
       "subcommands": null
+    },
+    {
+      "name": "iam",
+      "description": "Manage Deckhouse users, groups, and access grants",
+      "aliases": null,
+      "flags": {},
+      "subcommands": [
+        {
+          "name": "access",
+          "description": "Grant or revoke access (current authz model)",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "grant (user|group) NAME --access-level LEVEL [scope]",
+              "description": "Grant access to a user or group (current authz model)",
+              "aliases": null,
+              "flags": {
+                "access-level": {
+                  "description": "Access level: User, PrivilegedUser, Editor, Admin, ClusterEditor, ClusterAdmin, SuperAdmin",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allow-scale": {
+                  "description": "Allow scaling workloads",
+                  "shorthand": "",
+                  "global": false
+                },
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "dry-run": {
+                  "description": "Print the resource(s) that would be created without applying",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "namespace": {
+                  "description": "Target namespace(s) for namespaced grants (repeatable). Mutually exclusive with --scope",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "output": {
+                  "description": "Output format: name|yaml|json",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "port-forwarding": {
+                  "description": "Allow port-forwarding",
+                  "shorthand": "",
+                  "global": false
+                },
+                "scope": {
+                  "description": "Cluster-wide scope: cluster | all-namespaces | labels=K=V[,K2=V2,...]. Mutually exclusive with -n/--namespace",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "revoke (user|group) NAME --access-level LEVEL [scope]",
+              "description": "Revoke a d8-managed access grant",
+              "aliases": null,
+              "flags": {
+                "access-level": {
+                  "description": "Access level to revoke",
+                  "shorthand": "",
+                  "global": false
+                },
+                "allow-scale": {
+                  "description": "Match grants with allow-scale enabled",
+                  "shorthand": "",
+                  "global": false
+                },
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "dry-run": {
+                  "description": "Resolve and print the object(s) that would be deleted without touching the cluster",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "namespace": {
+                  "description": "Target namespace(s). Mutually exclusive with --scope",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "output": {
+                  "description": "Output format: name|yaml|json",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "port-forwarding": {
+                  "description": "Match grants with port-forwarding enabled",
+                  "shorthand": "",
+                  "global": false
+                },
+                "scope": {
+                  "description": "Cluster-wide scope: cluster | all-namespaces | labels=K=V[,K2=V2,...]. Mutually exclusive with -n/--namespace",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "get (user|group|rule) NAME",
+          "description": "Show a single Deckhouse IAM object",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "group \u003cname\u003e",
+              "description": "Show detailed access for a specific group",
+              "aliases": [
+                "groups"
+              ],
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: table|json|yaml",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "rule REF",
+              "description": "Show a single CAR or AR with subjects, scope and reverse CR lookup",
+              "aliases": [
+                "rules"
+              ],
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: text|json|yaml",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "user \u003cname\u003e",
+              "description": "Show detailed access for a specific user",
+              "aliases": [
+                "users"
+              ],
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: table|json|yaml",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "group",
+          "description": "Manage Deckhouse local groups (user-authn)",
+          "aliases": [
+            "groups"
+          ],
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "add-member GROUP [user|group] MEMBER",
+              "description": "Add a member (user or group) to a local group",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "create-group": {
+                  "description": "Create the target group if it does not exist",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "create \u003cname\u003e",
+              "description": "Create a local group in Deckhouse",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "dry-run": {
+                  "description": "Print the resource that would be created without applying",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: name|yaml|json",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "delete \u003cname\u003e",
+              "description": "Delete a local group",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "remove-member GROUP [user|group] MEMBER",
+              "description": "Remove a member (user or group) from a local group",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "list (users|groups|rules)",
+          "description": "List Deckhouse IAM objects",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "groups",
+              "description": "List all groups with their effective access",
+              "aliases": [
+                "group"
+              ],
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: table|json",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "rules",
+              "description": "List ClusterAuthorizationRules and AuthorizationRules",
+              "aliases": [
+                "rule"
+              ],
+              "flags": {
+                "cluster": {
+                  "description": "Only ClusterAuthorizationRules",
+                  "shorthand": "",
+                  "global": false
+                },
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "managed-only": {
+                  "description": "Only rules managed by d8-cli (label app.kubernetes.io/managed-by=d8-cli)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "manual-only": {
+                  "description": "Only rules NOT managed by d8-cli",
+                  "shorthand": "",
+                  "global": false
+                },
+                "namespace": {
+                  "description": "Restrict to AuthorizationRules in these namespaces (repeatable). Implicitly disables CARs unless --cluster is also set.",
+                  "shorthand": "n",
+                  "global": false
+                },
+                "output": {
+                  "description": "Output format: table|json|yaml",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "users",
+              "description": "List all users with their effective access",
+              "aliases": [
+                "user"
+              ],
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: table|json",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "user",
+          "description": "Manage Deckhouse users (user-authn)",
+          "aliases": [
+            "userop"
+          ],
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "create \u003cname\u003e --email \u003cemail\u003e [flags]",
+              "description": "Create a local static user in Deckhouse",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "create-groups": {
+                  "description": "Create groups specified by --member-of if they do not exist",
+                  "shorthand": "",
+                  "global": false
+                },
+                "dry-run": {
+                  "description": "Print the resource that would be created without applying",
+                  "shorthand": "",
+                  "global": false
+                },
+                "email": {
+                  "description": "User email address (required, must be lowercase)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "generate-password": {
+                  "description": "Auto-generate a strong password (shown once on stderr)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "member-of": {
+                  "description": "Add user to these groups (repeatable)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "output": {
+                  "description": "Output format: name|yaml|json",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "password-hash": {
+                  "description": "Use a pre-computed bcrypt hash directly (must start with $2 and be a valid bcrypt cost)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "password-prompt": {
+                  "description": "Read password interactively with hidden input",
+                  "shorthand": "",
+                  "global": false
+                },
+                "password-stdin": {
+                  "description": "Read password from stdin (for CI/pipelines)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "ttl": {
+                  "description": "User time-to-live (e.g. 24h, 30m). Can only be set once; expireAt will not update on change.",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "delete \u003cname\u003e",
+              "description": "Delete a local static user",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "keep-memberships": {
+                  "description": "Do not remove the user from local Group spec.members; only delete the User CR",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "lock \u003cusername\u003e \u003clockDuration\u003e",
+              "description": "Lock local user in Dex for a period of time",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "timeout": {
+                  "description": "How long to wait for completion when --wait is enabled.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "wait": {
+                  "description": "Wait for UserOperation completion and print result.",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "reset-password \u003cusername\u003e",
+              "description": "Reset local user's password in Dex",
+              "aliases": [
+                "resetpass"
+              ],
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "generate-password": {
+                  "description": "Auto-generate a strong password (shown once on stderr)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "password-hash": {
+                  "description": "Use a pre-computed bcrypt hash directly (must start with $2 and be a valid bcrypt cost)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "password-prompt": {
+                  "description": "Read password interactively with hidden input",
+                  "shorthand": "",
+                  "global": false
+                },
+                "password-stdin": {
+                  "description": "Read password from stdin (for CI/pipelines)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "timeout": {
+                  "description": "How long to wait for completion when --wait is enabled.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "wait": {
+                  "description": "Wait for UserOperation completion and print result.",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "reset2fa \u003cusername\u003e",
+              "description": "Reset local user's 2FA (TOTP) in Dex",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "timeout": {
+                  "description": "How long to wait for completion when --wait is enabled.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "wait": {
+                  "description": "Wait for UserOperation completion and print result.",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "unlock \u003cusername\u003e",
+              "description": "Unlock local user in Dex",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "timeout": {
+                  "description": "How long to wait for completion when --wait is enabled.",
+                  "shorthand": "",
+                  "global": false
+                },
+                "wait": {
+                  "description": "Wait for UserOperation completion and print result.",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "k",
@@ -45528,147 +47345,12 @@
               "global": false
             },
             "object": {
-              "description": "Scan only a specific object in format \u003cnamespace\u003e/\u003cname\u003e/\u003ckind\u003e. Use 'clusterwide' namespace for cluster-scoped resources.",
+              "description": "Scan only a specific object in format \u003cnamespace\u003e/\u003cname\u003e/\u003cresource_name\u003e. Use 'clusterwide' namespace for cluster-scoped resources. To get the resource name, use the 'kubectl api-resources' command.",
               "shorthand": "",
               "global": false
             },
             "retry": {
               "description": "Retry annotation for previously failed objects.",
-              "shorthand": "",
-              "global": false
-            }
-          },
-          "subcommands": null
-        }
-      ]
-    },
-    {
-      "name": "user",
-      "description": "Manage Deckhouse users (user-authn)",
-      "aliases": [
-        "userop"
-      ],
-      "flags": {
-        "context": {
-          "description": "The name of the kubeconfig context to use",
-          "shorthand": "",
-          "global": false
-        },
-        "kubeconfig": {
-          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-          "shorthand": "k",
-          "global": false
-        }
-      },
-      "subcommands": [
-        {
-          "name": "lock \u003cusername\u003e \u003clockDuration\u003e",
-          "description": "Lock local user in Dex for a period of time",
-          "aliases": null,
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-              "shorthand": "k",
-              "global": true
-            },
-            "timeout": {
-              "description": "How long to wait for completion when --wait is enabled.",
-              "shorthand": "",
-              "global": false
-            },
-            "wait": {
-              "description": "Wait for UserOperation completion and print result.",
-              "shorthand": "",
-              "global": false
-            }
-          },
-          "subcommands": null
-        },
-        {
-          "name": "reset-password \u003cusername\u003e \u003cbcryptHash\u003e",
-          "description": "Reset local user's password in Dex (requires bcrypt hash)",
-          "aliases": [
-            "resetpass"
-          ],
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-              "shorthand": "k",
-              "global": true
-            },
-            "timeout": {
-              "description": "How long to wait for completion when --wait is enabled.",
-              "shorthand": "",
-              "global": false
-            },
-            "wait": {
-              "description": "Wait for UserOperation completion and print result.",
-              "shorthand": "",
-              "global": false
-            }
-          },
-          "subcommands": null
-        },
-        {
-          "name": "reset2fa \u003cusername\u003e",
-          "description": "Reset local user's 2FA (TOTP) in Dex",
-          "aliases": null,
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-              "shorthand": "k",
-              "global": true
-            },
-            "timeout": {
-              "description": "How long to wait for completion when --wait is enabled.",
-              "shorthand": "",
-              "global": false
-            },
-            "wait": {
-              "description": "Wait for UserOperation completion and print result.",
-              "shorthand": "",
-              "global": false
-            }
-          },
-          "subcommands": null
-        },
-        {
-          "name": "unlock \u003cusername\u003e",
-          "description": "Unlock local user in Dex",
-          "aliases": null,
-          "flags": {
-            "context": {
-              "description": "The name of the kubeconfig context to use",
-              "shorthand": "",
-              "global": true
-            },
-            "kubeconfig": {
-              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
-              "shorthand": "k",
-              "global": true
-            },
-            "timeout": {
-              "description": "How long to wait for completion when --wait is enabled.",
-              "shorthand": "",
-              "global": false
-            },
-            "wait": {
-              "description": "Wait for UserOperation completion and print result.",
               "shorthand": "",
               "global": false
             }
