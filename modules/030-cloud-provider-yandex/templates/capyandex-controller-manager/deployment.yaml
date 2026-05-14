@@ -14,6 +14,8 @@ security.deckhouse.io/security-policy-exception: capyandex-controller-manager
     secretKeyRef:
       name: yandex-credentials-capyandex
       key: key
+- name: CAPY_CONTROL_PLANE_ENDPOINT_MANAGEMENT_MODE
+  value: External
 {{- end -}}
 
 {{- define "capyandex_controller_manager_volume_mounts" -}}
