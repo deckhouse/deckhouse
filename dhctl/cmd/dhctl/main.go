@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -301,7 +300,6 @@ func main() {
 	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
-	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
 		disableCleanupOnInterrupted,

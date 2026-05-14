@@ -22,7 +22,7 @@ import (
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 )
 
 // DefaultSSHAgentPrivateKeys is the default value used when --ssh-agent-private-keys
