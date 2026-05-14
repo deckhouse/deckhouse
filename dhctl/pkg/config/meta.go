@@ -117,11 +117,11 @@ var deprecatedClusterConfigFields = []struct {
 func (m *MetaConfig) warnDeprecatedClusterConfigFields() {
 	for _, d := range deprecatedClusterConfigFields {
 		if _, ok := m.ClusterConfig[d.field]; ok {
-			log.WarnLn("=================================================================")
-			log.WarnF("DEPRECATED: %q in ClusterConfiguration is deprecated.\n", d.field)
-			log.WarnLn(d.message)
-			log.WarnLn("Support for this field in ClusterConfiguration will be removed in a future release.")
-			log.WarnLn("=================================================================")
+			log.InteractiveWarnLn("=================================================================")
+			log.InteractiveWarnLn(fmt.Sprintf("DEPRECATED: %q in ClusterConfiguration is deprecated.", d.field))
+			log.InteractiveWarnLn(d.message)
+			log.InteractiveWarnLn("Support for this field in ClusterConfiguration will be removed in a future release.")
+			log.InteractiveWarnLn("=================================================================")
 		}
 	}
 }
