@@ -132,10 +132,14 @@ runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics" "url" "DMT_METRICS_URL" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics" "token" "DMT_METRICS_TOKEN" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   - name: DMT lint
     env:
-      DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
-      DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+      DMT_METRICS_URL: "${{ steps.secrets.outputs.DMT_METRICS_URL }}"
+      DMT_METRICS_TOKEN: "${{ steps.secrets.outputs.DMT_METRICS_TOKEN }}"
     run: |
       make dmt-lint
 # </template: tests_dmt_lint>

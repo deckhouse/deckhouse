@@ -2937,10 +2937,35 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics url | DMT_METRICS_URL ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics token | DMT_METRICS_TOKEN ;
+
+      # </template: import_secrets>
       - name: DMT lint
         env:
-          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
-          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+          DMT_METRICS_URL: "${{ steps.secrets.outputs.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ steps.secrets.outputs.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>
