@@ -6,6 +6,11 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 - url: {{ .SOURCE_REPO }}/istio/istio.git
   tag: {{ $istioVersion }}
   add: /
@@ -20,3 +25,7 @@ git:
   tag: {{ $kialiVersion }}
   add: /static
   to: /src/kiali/frontend/build
+shell:
+  install:
+  - cd /src/istio/
+  - git apply --verbose /patches/001-go-mod.patch
