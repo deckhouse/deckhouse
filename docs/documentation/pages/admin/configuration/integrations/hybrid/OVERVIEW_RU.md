@@ -370,164 +370,6 @@ lang: ru
    d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
-### Добавление вручную созданных узлов в Yandex Cloud через bootstrap-скрипт
-
-Перед началом убедитесь, что выполнены следующие условия:
-
-- Модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) включён и настроен.
-- Компоненты модуля `cloud-provider-yandex` находятся в состоянии `Running`:
-
-  ```shell
-  d8 k -n d8-cloud-provider-yandex get pods -o wide
-  ```
-
-- В Yandex Cloud создана виртуальная машина, которая будет подключена к кластеру.
-- Виртуальная машина подключена к сети и подсети Yandex Cloud, используемым для гибридной интеграции с кластером.
-- Внутренний IP-адрес виртуальной машины входит в диапазон адресов, используемый для облачных узлов Yandex Cloud.
-- Имя виртуальной машины в Yandex Cloud совпадает с hostname внутри операционной системы.
-- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
-
-1. Проверьте метаданные виртуальной машины в Yandex Cloud.
-
-   В метаданных ВМ должен быть настроен `cloud-init` с пользователем, через которого будет выполняться подключение по SSH.
-
-   Пример метаданных:
-
-   ```yaml
-   #cloud-config
-   datasource:
-     Ec2:
-       strict_id: false
-   ssh_pwauth: no
-   users:
-     - name: <USER>
-       sudo: ALL=(ALL) NOPASSWD:ALL
-       shell: /bin/bash
-       ssh_authorized_keys:
-         - <SSH_PUBLIC_KEY>
-   ```
-
-   Где:
-
-   - `<USER>` — имя пользователя для SSH-доступа к виртуальной машине;
-   - `<SSH_PUBLIC_KEY>` — публичный SSH-ключ администратора.
-
-1. На master-узле создайте файл, например `yandex-manual-nodegroup.yaml`, с ресурсом NodeGroup:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: yc-manual
-   spec:
-     nodeType: Hybrid
-   ```
-
-   {% alert level="info" %}
-   Для вручную создаваемых узлов Yandex Cloud используется значение `nodeType: Hybrid`. В статусе NodeGroup такая группа может отображаться как `CloudStatic`.
-   {% endalert %}
-
-1. Примените манифест:
-
-   ```shell
-   d8 k apply -f yandex-manual-nodegroup.yaml
-   ```
-
-1. Убедитесь, что NodeGroup создана и синхронизирована:
-
-   ```shell
-   d8 k get nodegroup yc-manual
-   d8 k describe nodegroup yc-manual
-   ```
-
-   Пример ожидаемого результата:
-
-   ```console
-   NAME        TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
-   yc-manual   CloudStatic   0       0       0                                                               1m    True
-   ```
-
-1. На master-узле получите bootstrap-скрипт для созданной NodeGroup:
-
-   ```shell
-   NODE_GROUP=yc-manual
-
-   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} \
-     -o jsonpath='{.data.bootstrap\.sh}' > ${NODE_GROUP}-bootstrap.b64
-   ```
-
-1. На master-узле проверьте, что файл содержит Base64-данные bootstrap-скрипта:
-
-   ```shell
-   head -c 80 ${NODE_GROUP}-bootstrap.b64
-   echo
-   base64 -d ${NODE_GROUP}-bootstrap.b64 | head -n 5
-   ```
-
-   В начале декодированного содержимого должен быть bash-скрипт:
-
-   ```shell
-   #!/bin/bash
-   ```
-
-   {% alert level="info" %}
-   Для копирования и запуска bootstrap-скрипта используйте пользователя, указанного в метаданных ВМ.
-   {% endalert %}
-
-1. Скопируйте bootstrap-скрипт на подключаемую ВМ. Если SSH-доступ к ВМ есть с master-узла, выполните на master-узле:
-
-   ```shell
-   scp ${NODE_GROUP}-bootstrap.b64 <USER>@<NODE_PUBLIC_OR_INTERNAL_IP>:/tmp/bootstrap.b64
-   ```
-
-   Если SSH-доступ к ВМ есть только с рабочей машины администратора, сначала скопируйте файл с master-узла на рабочую машину, а затем с рабочей машины на ВМ:
-
-   ```shell
-   scp <MASTER_USER>@<MASTER_IP>:/root/${NODE_GROUP}-bootstrap.b64 ./bootstrap.b64
-   scp ./bootstrap.b64 <USER>@<NODE_PUBLIC_OR_INTERNAL_IP>:/tmp/bootstrap.b64
-   ```
-
-   Где:
-
-   - `<MASTER_USER>` — пользователь для SSH-доступа к master-узлу;
-   - `<MASTER_IP>` — IP-адрес master-узла;
-   - `<USER>` — пользователь на подключаемой ВМ;
-   - `<NODE_PUBLIC_OR_INTERNAL_IP>` — публичный или внутренний IP-адрес подключаемой ВМ.
-
-1. На подключаемой ВМ декодируйте bootstrap-скрипт, назначьте права и запустите его:
-
-   ```shell
-   base64 -d /tmp/bootstrap.b64 > /tmp/bootstrap.sh
-   chmod +x /tmp/bootstrap.sh
-
-   sudo bash /tmp/bootstrap.sh
-   ```
-
-   После запуска bootstrap-скрипт установит необходимые компоненты, настроит container runtime, kubelet и подключит узел к кластеру.
-
-1. На master-узле проверьте появление нового узла:
-
-   ```shell
-   d8 k get nodes -o wide
-   ```
-
-   Пример ожидаемого результата:
-
-   ```console
-   NAME                    STATUS   ROLES       AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
-   static-master-0         Ready    master      1h    v1.33.10   10.128.0.15   <none>
-   yandex-worker-hybrid    Ready    yc-manual   5m    v1.33.10   10.128.0.17   <PUBLIC_IP>
-   ```
-
-1. При сбоях подключения проверьте состояние NodeGroup, события и логи компонентов:
-
-   ```shell
-   d8 k get nodegroup yc-manual
-   d8 k describe nodegroup yc-manual
-   d8 k describe node yandex-worker-hybrid
-   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
-   ```
-
 ### Добавление вручную созданных узлов в Yandex Cloud через CAPS
 
 Перед началом убедитесь, что выполнены следующие условия:
@@ -737,6 +579,164 @@ lang: ru
 
    d8 k -n d8-cloud-instance-manager get machines,machinesets,machinedeployments -o wide
    d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
+   ```
+
+### Добавление вручную созданных узлов в Yandex Cloud через bootstrap-скрипт
+
+Перед началом убедитесь, что выполнены следующие условия:
+
+- Модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) включён и настроен.
+- Компоненты модуля `cloud-provider-yandex` находятся в состоянии `Running`:
+
+  ```shell
+  d8 k -n d8-cloud-provider-yandex get pods -o wide
+  ```
+
+- В Yandex Cloud создана виртуальная машина, которая будет подключена к кластеру.
+- Виртуальная машина подключена к сети и подсети Yandex Cloud, используемым для гибридной интеграции с кластером.
+- Внутренний IP-адрес виртуальной машины входит в диапазон адресов, используемый для облачных узлов Yandex Cloud.
+- Имя виртуальной машины в Yandex Cloud совпадает с hostname внутри операционной системы.
+- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
+
+1. Проверьте метаданные виртуальной машины в Yandex Cloud.
+
+   В метаданных ВМ должен быть настроен `cloud-init` с пользователем, через которого будет выполняться подключение по SSH.
+
+   Пример метаданных:
+
+   ```yaml
+   #cloud-config
+   datasource:
+     Ec2:
+       strict_id: false
+   ssh_pwauth: no
+   users:
+     - name: <USER>
+       sudo: ALL=(ALL) NOPASSWD:ALL
+       shell: /bin/bash
+       ssh_authorized_keys:
+         - <SSH_PUBLIC_KEY>
+   ```
+
+   Где:
+
+   - `<USER>` — имя пользователя для SSH-доступа к виртуальной машине;
+   - `<SSH_PUBLIC_KEY>` — публичный SSH-ключ администратора.
+
+1. На master-узле создайте файл, например `yandex-manual-nodegroup.yaml`, с ресурсом NodeGroup:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: yc-manual
+   spec:
+     nodeType: Hybrid
+   ```
+
+   {% alert level="info" %}
+   Для вручную создаваемых узлов Yandex Cloud используется значение `nodeType: Hybrid`. В статусе NodeGroup такая группа может отображаться как `CloudStatic`.
+   {% endalert %}
+
+1. Примените манифест:
+
+   ```shell
+   d8 k apply -f yandex-manual-nodegroup.yaml
+   ```
+
+1. Убедитесь, что NodeGroup создана и синхронизирована:
+
+   ```shell
+   d8 k get nodegroup yc-manual
+   d8 k describe nodegroup yc-manual
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME        TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
+   yc-manual   CloudStatic   0       0       0                                                               1m    True
+   ```
+
+1. На master-узле получите bootstrap-скрипт для созданной NodeGroup:
+
+   ```shell
+   NODE_GROUP=yc-manual
+
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} \
+     -o jsonpath='{.data.bootstrap\.sh}' > ${NODE_GROUP}-bootstrap.b64
+   ```
+
+1. На master-узле проверьте, что файл содержит Base64-данные bootstrap-скрипта:
+
+   ```shell
+   head -c 80 ${NODE_GROUP}-bootstrap.b64
+   echo
+   base64 -d ${NODE_GROUP}-bootstrap.b64 | head -n 5
+   ```
+
+   В начале декодированного содержимого должен быть bash-скрипт:
+
+   ```shell
+   #!/bin/bash
+   ```
+
+   {% alert level="info" %}
+   Для копирования и запуска bootstrap-скрипта используйте пользователя, указанного в метаданных ВМ.
+   {% endalert %}
+
+1. Скопируйте bootstrap-скрипт на подключаемую ВМ. Если SSH-доступ к ВМ есть с master-узла, выполните на master-узле:
+
+   ```shell
+   scp ${NODE_GROUP}-bootstrap.b64 <USER>@<NODE_PUBLIC_OR_INTERNAL_IP>:/tmp/bootstrap.b64
+   ```
+
+   Если SSH-доступ к ВМ есть только с рабочей машины администратора, сначала скопируйте файл с master-узла на рабочую машину, а затем с рабочей машины на ВМ:
+
+   ```shell
+   scp <MASTER_USER>@<MASTER_IP>:/root/${NODE_GROUP}-bootstrap.b64 ./bootstrap.b64
+   scp ./bootstrap.b64 <USER>@<NODE_PUBLIC_OR_INTERNAL_IP>:/tmp/bootstrap.b64
+   ```
+
+   Где:
+
+   - `<MASTER_USER>` — пользователь для SSH-доступа к master-узлу;
+   - `<MASTER_IP>` — IP-адрес master-узла;
+   - `<USER>` — пользователь на подключаемой ВМ;
+   - `<NODE_PUBLIC_OR_INTERNAL_IP>` — публичный или внутренний IP-адрес подключаемой ВМ.
+
+1. На подключаемой ВМ декодируйте bootstrap-скрипт, назначьте права и запустите его:
+
+   ```shell
+   base64 -d /tmp/bootstrap.b64 > /tmp/bootstrap.sh
+   chmod +x /tmp/bootstrap.sh
+
+   sudo bash /tmp/bootstrap.sh
+   ```
+
+   После запуска bootstrap-скрипт установит необходимые компоненты, настроит container runtime, kubelet и подключит узел к кластеру.
+
+1. На master-узле проверьте появление нового узла:
+
+   ```shell
+   d8 k get nodes -o wide
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME                    STATUS   ROLES       AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
+   static-master-0         Ready    master      1h    v1.33.10   10.128.0.15   <none>
+   yandex-worker-hybrid    Ready    yc-manual   5m    v1.33.10   10.128.0.17   <PUBLIC_IP>
+   ```
+
+1. При сбоях подключения проверьте состояние NodeGroup, события и логи компонентов:
+
+   ```shell
+   d8 k get nodegroup yc-manual
+   d8 k describe nodegroup yc-manual
+   d8 k describe node yandex-worker-hybrid
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
 ## Гибридный кластер с VCD
@@ -1134,6 +1134,274 @@ lang: ru
    Также проверьте события в кластере:
 
    ```shell
+   d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
+   ```
+
+### Добавление вручную созданных узлов в vSphere через CAPS
+
+Перед началом убедитесь, что выполнены следующие условия:
+
+- Модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) включён и настроен.
+- Компоненты модуля `cloud-provider-vsphere` находятся в состоянии `Running`:
+
+  ```shell
+  d8 k -n d8-cloud-provider-vsphere get pods -o wide
+  ```
+
+- В кластере созданы StorageClass для vSphere:
+  
+  ```shell
+  d8 k get sc
+  ```
+
+- В vSphere создана виртуальная машина, которая будет подключена к кластеру.
+- Имя виртуальной машины в vSphere, значение local-hostname в метаданных и hostname внутри операционной системы совпадают.
+- В дополнительных параметрах ВМ в vSphere заданы параметры:
+
+  ```text
+  disk.EnableUUID = TRUE
+  guestinfo.metadata = <BASE64_ENCODED_METADATA>
+  guestinfo.metadata.encoding = base64
+  ```
+
+- Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
+- На виртуальной машине настроен SSH-доступ для пользователя, под которым CAPS будет подключаться к узлу.
+- Пользователь для подключения по SSH может выполнять команды через `sudo` без ввода пароля.
+- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
+
+{% offtopic title="Передача метаданных в ВМ через vSphere..." %}
+Для предварительной настройки виртуальной машины можно использовать cloud-init через метаданные vSphere. Например, метаданные можно использовать для настройки hostname, сети и SSH-ключей.
+
+В этом случае задайте в дополнительных параметрах ВМ:
+
+```text
+guestinfo.metadata = <BASE64_ENCODED_METADATA>
+guestinfo.metadata.encoding = base64
+```
+
+Пример файла `metadata.json`:
+
+```json
+{
+  "instance-id": "vsphere-worker-caps",
+  "local-hostname": "vsphere-worker-caps",
+  "public-keys-data": "<SSH_PUBLIC_KEY>",
+  "network": {
+    "version": 2,
+    "ethernets": {
+      "id0": {
+        "match": {
+          "driver": "vmxnet3"
+        },
+        "set-name": "ens192",
+        "dhcp4": true
+      }
+    }
+  }
+}
+```
+
+Чтобы получить значение для параметра `guestinfo.metadata`, выполните:
+
+```shell
+METADATA_B64="$(base64 -w0 metadata.json)"
+echo "$METADATA_B64"
+```
+
+Использование `guestinfo.metadata` не является обязательным требованием CAPS. Главное, чтобы к моменту создания ресурса StaticInstance виртуальная машина была доступна по SSH, имела корректный hostname и пользователь для подключения мог выполнять команды через `sudo` без пароля.
+{% endofftopic %}
+
+1. На master-узле задайте переменные для создаваемой NodeGroup и подключаемой виртуальной машины:
+
+   ```shell
+   export NODE_GROUP="vsphere-caps"
+   export NODE_NAME="vsphere-worker-caps"
+   export NODE_SSH_IP="<NODE_IP>"
+   export CAPS_USER="caps"
+   ```
+
+   Где:
+
+   - `NODE_GROUP` — имя NodeGroup, в которую будет добавлен узел;
+   - `NODE_NAME` — имя подключаемого узла. Оно должно совпадать с hostname внутри операционной системы и именем ВМ в vSphere;
+   - `NODE_SSH_IP` — IP-адрес виртуальной машины, доступный по SSH;
+   - `CAPS_USER` — пользователь, под которым CAPS будет подключаться к виртуальной машине.
+
+1. На master-узле создайте NodeGroup:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: ${NODE_GROUP}
+   spec:
+     nodeType: Static
+     staticInstances:
+       count: 1
+       labelSelector:
+         matchLabels:
+           role: ${NODE_GROUP}
+   EOF
+   ```
+
+   В этом сценарии используется `nodeType: Static`, потому что виртуальная машина уже создана вручную, а CAPS будет только подключать и настраивать её по SSH.
+
+1. Убедитесь, что NodeGroup создана и синхронизирована:
+
+   ```shell
+   d8 k get nodegroup ${NODE_GROUP}
+   d8 k describe nodegroup ${NODE_GROUP}
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME           TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
+   vsphere-caps   Static   0       0       0                                                               1m    True
+   ```
+
+1. На master-узле сгенерируйте SSH-ключ, который CAPS будет использовать для подключения к виртуальной машине:
+
+   ```shell
+   ssh-keygen -t ed25519 \
+     -f /dev/shm/${NODE_GROUP}-id \
+     -C "" \
+     -N ""
+   ```
+
+   {% alert level="info" %}
+   Ключ создаётся с пустой парольной фразой, так как CAPS должен использовать его автоматически.
+   {% endalert %}
+
+1. На master-узле создайте ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials):
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha2
+   kind: SSHCredentials
+   metadata:
+     name: ${NODE_GROUP}
+   spec:
+     user: ${CAPS_USER}
+     privateSSHKey: "$(base64 -w0 /dev/shm/${NODE_GROUP}-id)"
+   EOF
+   ```
+
+   Ресурс SSHCredentials хранит имя пользователя и приватный SSH-ключ, с помощью которых CAPS будет подключаться к виртуальной машине.
+
+1. Убедитесь, что ресурс SSHCredentials создан:
+
+   ```shell
+   d8 k get sshcredentials
+   d8 k describe sshcredentials ${NODE_GROUP}
+   ```
+
+1. На master-узле выведите публичную часть SSH-ключа:
+
+   ```shell
+   cat /dev/shm/${NODE_GROUP}-id.pub
+   ```
+
+   Этот ключ понадобится на следующем шаге для настройки пользователя на подключаемой виртуальной машине.
+
+1. На подключаемой виртуальной машине создайте пользователя, под которым CAPS будет выполнять настройку узла. Выполните команды на подключаемой виртуальной машине, указав публичный SSH-ключ, полученный на предыдущем шаге:
+
+   ```shell
+   export CAPS_USER="caps"
+   export KEY='<SSH_PUBLIC_KEY>'
+
+   useradd -m -s /bin/bash ${CAPS_USER}
+   usermod -aG sudo ${CAPS_USER}
+
+   echo "${CAPS_USER} ALL=(ALL) NOPASSWD: ALL" | EDITOR='tee -a' visudo
+
+   mkdir -p /home/${CAPS_USER}/.ssh
+   echo "${KEY}" > /home/${CAPS_USER}/.ssh/authorized_keys
+
+   chown -R ${CAPS_USER}:${CAPS_USER} /home/${CAPS_USER}
+   chmod 700 /home/${CAPS_USER}/.ssh
+   chmod 600 /home/${CAPS_USER}/.ssh/authorized_keys
+   ```
+
+   {% alert level="info" %}
+   Значение `KEY` необходимо указывать в кавычках, так как публичный SSH-ключ содержит пробелы.
+   {% endalert %}
+
+  {% alert level="info" %}
+  Для операционных систем семейства Astra Linux при использовании модуля мандатного контроля целостности Parsec дополнительно задайте максимальный уровень целостности для пользователя:
+
+   ```shell
+   pdpl-user -i 63 ${CAPS_USER}
+   ```
+
+   {% endalert %}
+
+1. На master-узле проверьте, что CAPS-пользователь может подключиться к виртуальной машине по SSH и выполнять команды через `sudo` без пароля:
+
+   ```shell
+   ssh -i /dev/shm/${NODE_GROUP}-id ${CAPS_USER}@${NODE_SSH_IP} \
+     'hostname; sudo -n true; echo OK'
+   ```
+
+   В выводе должно быть имя узла и строка `OK`.
+
+1. На master-узле создайте ресурс [StaticInstance](/modules/node-manager/cr.html#staticinstance) для подключаемой виртуальной машины:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha2
+   kind: StaticInstance
+   metadata:
+     name: ${NODE_NAME}
+     labels:
+       role: ${NODE_GROUP}
+   spec:
+     address: "${NODE_SSH_IP}"
+     credentialsRef:
+       kind: SSHCredentials
+       name: ${NODE_GROUP}
+   EOF
+   ```
+
+   Где:
+
+   - `metadata.name` — имя подключаемого узла;
+   - `metadata.labels.role` — лейбл, по которому NodeGroup выбирает этот StaticInstance;
+   - `spec.address` — IP-адрес виртуальной машины, доступный по SSH;
+   - `spec.credentialsRef.name` — имя созданного ранее ресурса SSHCredentials.
+
+1. Проверьте состояние StaticInstance:
+
+   ```shell
+   d8 k get staticinstances
+   d8 k describe staticinstance ${NODE_NAME}
+   ```
+
+1. Дождитесь подключения узла и проверьте его состояние:
+
+   ```shell
+   d8 k get nodes -o wide
+   ```
+
+   Пример ожидаемого результата:
+
+   ```shell
+   NAME                    STATUS   ROLES          AGE   VERSION    INTERNAL-IP      EXTERNAL-IP
+   static-master-0         Ready    master         1h    v1.33.10   192.168.240.135  <none>
+   vsphere-worker-caps     Ready    vsphere-caps   5m    v1.33.10   192.168.240.152  <none>
+   ```
+
+1. При сбоях подключения проверьте состояние NodeGroup, StaticInstance, Machine и события в кластере:
+
+   ```shell
+   d8 k get nodegroup ${NODE_GROUP}
+   d8 k describe nodegroup ${NODE_GROUP}
+
+   d8 k get staticinstances
+   d8 k describe staticinstance ${NODE_NAME}
+
+   d8 k -n d8-cloud-instance-manager get machines,machinesets,machinedeployments -o wide
    d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
    ```
 
