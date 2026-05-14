@@ -13,7 +13,7 @@ In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingres
 This does not apply to the module as part of Deckhouse Kubernetes Platform: the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
 {% endalert %}
 
-Current nginx version is 1.29.5.
+Current nginx version is 1.30.1.
 
 ## Traffic routing
 
