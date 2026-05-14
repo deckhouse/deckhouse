@@ -43,7 +43,7 @@ server_url="${LOOP_SERVICE_NOTIFICATIONS}"
 job_name="${JOB_NAME}"
 workflow_name="${WORKFLOW_NAME}"
 workflow_url="${WORKFLOW_URL}"
-branch="${BRANCH}"
+branch="${GITHUB_REF_NAME}"
 if [[ -z "$webhook_type" ]]; then
   webhook_type="ci_fail"
 fi
