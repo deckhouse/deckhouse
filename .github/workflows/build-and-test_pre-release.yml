@@ -145,7 +145,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -450,7 +449,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -758,7 +756,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -1065,7 +1062,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -1372,7 +1368,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -1679,7 +1674,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -1986,7 +1980,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -2293,7 +2286,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
@@ -3852,7 +3844,6 @@ jobs:
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-          BRANCH: ${{ github.ref_name }}
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
