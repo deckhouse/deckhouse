@@ -424,11 +424,11 @@ func resolveKubernetesVersion(v string) string {
 func clusterConfigToStringMap(raw map[string]json.RawMessage) (map[string]string, error) {
 	out := make(map[string]string, len(raw))
 	for k, v := range raw {
-		var s string
-		if err := json.Unmarshal(v, &s); err != nil {
-			return nil, fmt.Errorf("ClusterConfiguration field %q is not a string: %w", k, err)
+		var a interface{}
+		if err := json.Unmarshal(v, &a); err != nil {
+			return nil, fmt.Errorf("unmarshal ClusterConfiguration field %q: %w", k, err)
 		}
-		out[k] = s
+		out[k] = fmt.Sprintf("%v", a)
 	}
 	out["kubernetesVersion"] = resolveKubernetesVersion(out["kubernetesVersion"])
 	return out, nil
@@ -436,6 +436,7 @@ func clusterConfigToStringMap(raw map[string]json.RawMessage) (map[string]string
 
 func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (*ControlPlaneTemplateConfig, error) {
 	clusterConfiguration, err := clusterConfigToStringMap(m.ClusterConfig)
+	fmt.Printf("clusterConfiguration: %v\n", clusterConfiguration)
 	if err != nil {
 		return nil, err
 	}
