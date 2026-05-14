@@ -29,28 +29,23 @@ mount:
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
-  stageDependencies:
-    setup:
-    - '**/*'
+  before: install
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali
   to: /src/kiali
-  stageDependencies:
-    setup:
-    - '**/*'
+  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
-shell:
-  setup:
-  - cd /src/kiali/
-  - git apply --verbose /patches/001-go-mod.patch
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache bash git binutils
   install:
   - cd /src/kiali/
+  # patches
+  - git apply --verbose /patches/001-go-mod.patch
+  # build
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - echo {{ $kialiVersion }} > version
   - export LDFLAGS='-extldflags -static -s -w -X main.version=${kialiVersion}'
