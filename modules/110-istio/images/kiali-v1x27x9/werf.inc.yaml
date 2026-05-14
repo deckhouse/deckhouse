@@ -36,7 +36,9 @@ import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali
   to: /src/kiali
-  before: setup
+  stageDependencies:
+    setup:
+    - '**/*'
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
