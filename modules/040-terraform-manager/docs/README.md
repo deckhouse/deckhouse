@@ -3,7 +3,8 @@ title: "The terraform-manager module"
 description: Description of the Deckhouse terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.
 ---
 
-The module provide tools for working with Terraform in the Kubernetes cluster.
+The module is responsible for monitoring and synchronizing the state of the underlying infrastructure and persistent nodes in the cloud environment.
+The implementation is based on Terraform and is used in the Deckhouse Kubernetes Platform for interaction with supported cloud providers.
 
 * The module consists of 2 parts:
   * `terraform-auto-converger` — checks the Terraform state and applies non-destructive changes;
