@@ -11,7 +11,7 @@ relatedLinks:
    url: ./vpa.html
 ---
 
-Модуль [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) обеспечивает работу сервиса [Vertical Pod Autoscaler (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) в Deckhouse Kubernetes Platform (DKP).
+Модуль [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) обеспечивает работу [Vertical Pod Autoscaler (VPA)](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) в Deckhouse Kubernetes Platform (DKP).
 
 Подробнее о настройках модуля и примерах его использования можно узнать [в соответствующем разделе документации](/modules/vertical-pod-autoscaler/configuration.html).
 
@@ -35,7 +35,7 @@ relatedLinks:
 
 1. **Vpa-admission-controller** (Deployment) — контроллер [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), обслуживающий работу с кастомным ресурсом [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler).
 
-   Компонент **vpa-admission-controller** выполняет следующие действия:
+   Компонент vpa-admission-controller выполняет следующие действия:
 
    - валидирует кастомные ресурсы VerticalPodAutoscaler;
    - при создании Pod (если режим VPA не [Off](./vpa.html#режимы-работы-vpa)), контроллер автоматически задает или меняет значения `requests` и `limits` в контейнерах, оптимизируя их по текущим рекомендациям. Значения `limits` изменяются контроллером только в том случае, если в политике управления ресурсами указан параметр [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues).
@@ -43,23 +43,23 @@ relatedLinks:
    Состоит из следующих контейнеров:
 
    * **admission-controller** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **admission-controller**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам admission-controller. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Vpa-updater** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), проверяющий, что у подов с VPA выставлены корректные ресурсы. **Vpa-updater** выполняет in-place обновление ресурсов через `pods/resize`, а если это невозможно или не подходит по политике управления ресурсами, вытесняет Pod.
+1. **Vpa-updater** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), проверяющий, что у подов с VPA выставлены корректные ресурсы. Vpa-updater выполняет in-place обновление ресурсов через `pods/resize`, а если это невозможно или не подходит по политике управления ресурсами, вытесняет Pod.
 
    Состоит из следующих контейнеров:
 
    * **updater** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **updater**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам updater. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 1. **Vpa-recommender** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), определяющий рекомендации для `requests` на основе информации о прошлом и текущем потреблении ресурсов подами.
 
-    **Vpa-admission-controller** и **vpa-updater** пересчитывают значения `limits` пропорционально `requests`в том случае, если в политике управления ресурсами указан параметр [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues).
+    Vpa-admission-controller и vpa-updater пересчитывают значения `limits` пропорционально `requests` в том случае, если в политике управления ресурсами указан параметр [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues).
 
    Состоит из следующих контейнеров:
 
    * **recommender** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **recommender**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам recommender. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 ## Взаимодействия модуля
 
@@ -67,12 +67,12 @@ relatedLinks:
 
 1. **Kube-apiserver**:
 
-* наблюдение за стандартными ресурсами ConfigMap, Node, LimitRange, Pod, а так же за кастомными ресурсами VerticalPodAutoscaler и VerticalPodAutoscalerCheckpoint;
-* получение текущего потребления ресурсов через Metrics API;
-* вытеснение работающих подов при несоответствии спецификации ресурсов и рекомендуемых значений;
-* авторизация запросов на получение метрик.
+   * наблюдение за стандартными ресурсами ConfigMap, Node, LimitRange, Pod, а также за кастомными ресурсами VerticalPodAutoscaler и VerticalPodAutoscalerCheckpoint;
+   * получение текущего потребления ресурсов через Metrics API;
+   * вытеснение работающих подов при несоответствии спецификации ресурсов и рекомендуемых значений;
+   * авторизация запросов на получение метрик.
 
-1. **Prometheus** — получение истории метрик потребления ресурсов подом (aggregating-proxy.d8-monitoring.svc.<clusterDomain>).
+1. **Prometheus** — получение истории метрик потребления ресурсов подом (`aggregating-proxy.d8-monitoring.svc.<clusterDomain>`).
 
 С модулем взаимодействуют следующие внешние компоненты:
 
