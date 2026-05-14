@@ -29,7 +29,7 @@ data:
       uwsgi_temp_path       /tmp/uwsgi_temp;
       scgi_temp_path        /tmp/scgi_temp;
 
-      proxy_cache_path /tmp/cache keys_zone=dcache:10m max_size=200m inactive=30d;
+      proxy_cache_path /tmp/cache keys_zone=dcache:10m max_size=200m inactive=1d;
 
       access_log off;
 
@@ -271,6 +271,7 @@ data:
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
+            proxy_cache_valid       200 30m;
             proxy_cache_key         $uri;
             proxy_intercept_errors  on;
             proxy_buffering         on;
@@ -300,6 +301,7 @@ data:
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
+            proxy_cache_valid       200 60m;
             proxy_cache_key         $uri;
             proxy_intercept_errors  on;
             proxy_buffering         on;
@@ -333,6 +335,7 @@ data:
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
+            proxy_cache_valid       200 30m;
             proxy_cache_key         $uri;
             proxy_intercept_errors  on;
             proxy_buffering         on;
@@ -364,6 +367,7 @@ data:
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
+            proxy_cache_valid       200 30m;
             proxy_cache_key         $uri;
             proxy_intercept_errors  on;
             proxy_buffering         on;
