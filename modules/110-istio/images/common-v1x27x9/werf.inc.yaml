@@ -28,4 +28,4 @@ git:
 shell:
   install:
   - cd /src/istio/
-  - git apply --verbose /patches/001-go-mod.patch
+  - git apply --verbose /patches/001-gomod_gosum.patch

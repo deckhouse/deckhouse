@@ -47,7 +47,7 @@ shell:
   install:
   - cd /src/kiali/
   # patches
-  - git apply --verbose /patches/001-go-mod.patch
+  - git apply --verbose /patches/001-gomod_gosum.patch
   # build
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - echo {{ $kialiVersion }} > version
