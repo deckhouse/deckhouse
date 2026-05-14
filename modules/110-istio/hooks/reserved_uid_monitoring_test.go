@@ -50,9 +50,29 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			Expect(m).To(HaveLen(2))
 			Expect(m[1].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
 			Expect(m[1].Labels).To(BeEquivalentTo(map[string]string{
-				"namespace": "default",
-				"pod":       "app-pod",
-				"container": "app",
+				"namespace":      "default",
+				"pod":            "app-pod",
+				"container":      "app",
+				"reserved_uid":   "1337",
+			}))
+		})
+	})
+
+	Context("Pod with app container running as UID 64535 and istio-proxy present", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(podAppUser64535WithProxy))
+			f.RunHook()
+		})
+
+		It("Should emit metric with reserved_uid 64535", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1].Labels).To(BeEquivalentTo(map[string]string{
+				"namespace":      "default",
+				"pod":            "app-pod-deckhouse-uid",
+				"container":      "app",
+				"reserved_uid":   "64535",
 			}))
 		})
 	})
@@ -95,9 +115,10 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			Expect(m).To(HaveLen(2))
 			Expect(m[1].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
 			Expect(m[1].Labels).To(BeEquivalentTo(map[string]string{
-				"namespace": "default",
-				"pod":       "pod-level-uid",
-				"container": "app",
+				"namespace":      "default",
+				"pod":            "pod-level-uid",
+				"container":      "app",
+				"reserved_uid":   "1337",
 			}))
 		})
 	})
@@ -115,18 +136,20 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 		})
 	})
 
-	Context("Multiple app containers with UID 1337 in one pod with istio-proxy", func() {
+	Context("Multiple app containers with reserved UIDs in one pod with istio-proxy", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(podMultipleContainers1337))
+			f.BindingContexts.Set(f.KubeStateSet(podMultipleContainersMixedReserved))
 			f.RunHook()
 		})
 
-		It("Should emit metrics for each non-istio-proxy container", func() {
+		It("Should emit metrics for each non-istio-proxy container with correct reserved_uid", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(3))
 			Expect(m[1].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
 			Expect(m[2].Name).To(Equal("d8_istio_pod_container_reserved_uid"))
+			Expect(m[1].Labels["reserved_uid"]).NotTo(Equal(m[2].Labels["reserved_uid"]))
+			Expect([]string{m[1].Labels["reserved_uid"], m[2].Labels["reserved_uid"]}).To(ConsistOf("1337", "64535"))
 		})
 	})
 
@@ -152,6 +175,27 @@ spec:
     image: istio/proxyv2:latest
     securityContext:
       runAsUser: 1337
+`
+
+	podAppUser64535WithProxy = `
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-pod-deckhouse-uid
+  namespace: default
+  labels:
+    service.istio.io/canonical-name: app-deckhouse
+spec:
+  containers:
+  - name: app
+    image: app:latest
+    securityContext:
+      runAsUser: 64535
+  - name: istio-proxy
+    image: istio/proxyv2:latest
+    securityContext:
+      runAsUser: 64535
 `
 
 	podOnlyProxyUser1337 = `
@@ -230,7 +274,7 @@ spec:
     image: istio/proxyv2:latest
 `
 
-	podMultipleContainers1337 = `
+	podMultipleContainersMixedReserved = `
 ---
 apiVersion: v1
 kind: Pod
@@ -248,11 +292,11 @@ spec:
   - name: sidecar
     image: sidecar:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
   - name: istio-proxy
     image: istio/proxyv2:latest
     securityContext:
-      runAsUser: 1337
+      runAsUser: 64535
 `
 
 )

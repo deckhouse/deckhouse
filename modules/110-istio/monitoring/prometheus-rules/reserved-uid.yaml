@@ -1,7 +1,7 @@
 - name: d8.istio.reserved-uid
   rules:
   - alert: D8IstioReservedUIDConflict
-    expr: max by (namespace, pod, container) (d8_istio_pod_container_reserved_uid == 1)
+    expr: max by (namespace, pod, container, reserved_uid) (d8_istio_pod_container_reserved_uid == 1)
     for: 10m
     labels:
       severity_level: "4"
@@ -9,12 +9,12 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_create_group_if_not_exists__istio_applications_using_reserved_uid: IstioApplicationsUsingReservedUID,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      plk_grouped_by__istio_applications_using_reserved_uid: IstioApplicationsUsingReservedUID,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-      summary: Application container is running as UID 1337 (reserved by Istio).
+      plk_create_group_if_not_exists__istio_applications_using_reserved_uid: IstioApplicationsUsingReservedUID,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes,reserved_uid=~reserved_uid
+      plk_grouped_by__istio_applications_using_reserved_uid: IstioApplicationsUsingReservedUID,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes,reserved_uid=~reserved_uid
+      summary: Application container runs as Istio bypass UID {{$labels.reserved_uid}}.
       description: |
-        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` runs as UID `{{$labels.reserved_uid}}`.
 
-        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+        UID `{{$labels.reserved_uid}}` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
 
         To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
