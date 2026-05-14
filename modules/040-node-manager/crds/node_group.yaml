@@ -2272,6 +2272,11 @@ spec:
                           default: false
                           description: |
                             Enables Topology Management on a node.
+
+                            If the topology manager is enabled, strict resource allocation modes are activated for containers in Guaranteed pods. The following parameter values are set in the kubelet configuration:
+
+                            - `cpuManagerPolicy: static`: The kubelet exclusively assigns whole physical cores to a container with an integer CPU request.
+                            - `memoryManagerPolicy: Static`: The kubelet assigns the container’s memory to a minimum number of NUMA nodes (preferably one).
                         scope:
                           type: string
                           default: Container
