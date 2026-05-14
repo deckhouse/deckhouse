@@ -1,7 +1,5 @@
-# version=v1.0.17
-# REGISTRY_PATH is a special key which is concatenated with other base images
+# version=v1.0.20
 REGISTRY_PATH: registry.deckhouse.io/container-factory
-builder/golang: "sha256:d001db9dce89bfb37d53a1d7fc8c95ff01d4495c1372fbcad096936c082582fc" # from: base/distroless
-builder/golang-1.26: "sha256:d001db9dce89bfb37d53a1d7fc8c95ff01d4495c1372fbcad096936c082582fc" # from: base/distroless
-minget-0.1: "sha256:71467545ce0c913df0341abb09e2e762f3ad3b96e36147b65e1c3065f3db028a" # from: builder/scratch
+base/distroless: "sha256:86d87712dec2781115bea04a3a269d2c61ba9c5e9c75d20db467b0aa066f3a6c" # from: builder/scratch
+builder/golang: "sha256:dd8cc64d1b082a996a89279514a620b12c6928b6824cec68e59cd438d333263e" # from: base/distroless
 minget: "sha256:71467545ce0c913df0341abb09e2e762f3ad3b96e36147b65e1c3065f3db028a" # from: builder/scratch

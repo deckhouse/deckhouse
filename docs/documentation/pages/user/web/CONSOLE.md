@@ -63,14 +63,6 @@ The "Updates" subsection contains information about releases.
 
 ![Releases](../../images/console/releases.png)
 
-You can also view API information in Swagger format.
-
-![Swagger API](../../images/console/swagger-1.png)
-
-![Swagger API](../../images/console/swagger-2.png)
-
-![Swagger API](../../images/console/swagger-3.png)
-
 ### Modules
 
 The "Modules" subsection lists both enabled and disabled modules.
@@ -301,7 +293,7 @@ You can also configure resource limits and quotas.
 
 ![Limits](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
 
-![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-podse.png)
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-pods.png)
 
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
 
@@ -527,3 +519,15 @@ To configure log sources, follow these steps:
    - (Optional) Label and filter rules to retain only specific logs.
 
 ![Log collection](../../images/console/log_rule.png)
+
+## Viewing API information
+
+You can view API information in Swagger format by clicking the question mark button in the bottom left corner of the screen in the user dropdown menu.
+
+![API](../../images/console/releases.png)
+
+![API](../../images/console/swagger-1.png)
+
+![API](../../images/console/swagger-2.png)
+
+![API](../../images/console/swagger-3.png)

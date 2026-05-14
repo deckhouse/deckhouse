@@ -25,10 +25,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 const (
@@ -55,10 +57,9 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			return err
@@ -85,7 +86,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
+		destroyerParams := &destroy.Params{
 			SSHProvider:     sshProvider,
 			KubeProvider:    kubeProvider,
 			StateCache:      cache.Global(),
@@ -95,7 +96,24 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			TmpDir:          opts.Global.TmpDir,
 			DirectoryConfig: opts.DirConfig(),
 			Options:         opts,
-		})
+		}
+		interactive := input.IsTerminal()
+		if interactive {
+			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
+			if err != nil {
+				return err
+			}
+
+			onUpdateFunc := func(progress phases.Progress) error {
+				phasesChan <- progress
+				return nil
+			}
+			destroyerParams.OnProgressFunc = onUpdateFunc
+
+			defer onComplete()
+		}
+
+		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)
 		if err != nil {
 			return err
 		}

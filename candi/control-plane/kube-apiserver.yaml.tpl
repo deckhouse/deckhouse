@@ -90,6 +90,9 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   priority: 2000001000
   priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
 {{- if .apiserver.oidcIssuerAddress }}
 {{- if .apiserver.oidcIssuerURL }}
   hostAliases:
@@ -154,7 +157,9 @@ spec:
     - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
     - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
     - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
+{{- if not .apiserver.webhookURL }}
     - --authorization-mode=Node,RBAC
+{{- end }}
     - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
     - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
     - --requestheader-allowed-names=front-proxy-client
@@ -282,6 +287,7 @@ spec:
     - name: GOGC
       value: "50"
     readinessProbe:
+      failureThreshold: 3
       httpGet:
 {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
@@ -289,7 +295,10 @@ spec:
         path: /healthz
         port: 6443
         scheme: HTTPS
+      periodSeconds: 1
+      timeoutSeconds: 15
     livenessProbe:
+      failureThreshold: 8
       httpGet:
 {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
@@ -297,7 +306,11 @@ spec:
         path: /livez
         port: 6443
         scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
     startupProbe:
+      failureThreshold: 24
       httpGet:
 {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
@@ -305,3 +318,6 @@ spec:
         path: /livez
         port: 6443
         scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15

@@ -45,6 +45,7 @@
 Преднастройка
 Пререквизиты
 Пробросьте
+Пайплайн
 Р
 Ревью
 Реквесты
@@ -347,6 +348,7 @@
 коммиту
 коммиты
 компонента
+компрометационные
 конвержа
 консистентного
 консистентное
@@ -448,11 +450,13 @@
 мультимастерный
 мультиплатформенной
 мультитенантности
+мультитенантность
 мусорку
 мэтчем
 наблюдаемости
 наблюдаемость
 неавторизованный
+неавторизованного
 невалидным
 недеструктивные
 недеструктивных
@@ -487,11 +491,13 @@
 неразмеченным
 неразмеченным
 нереляционные
+нерелевантного
 несекретной
 несекретную
 несекретных
 несистемных
 неуспешные
+неунифицированных
 нешифрованные
 ноде
 нуть
@@ -529,6 +535,7 @@
 парсит
 парсится
 парсить
+парсятся
 паттерн
 паттерна
 паттернов
@@ -656,6 +663,8 @@
 псевдоселектор
 пуллинга
 раннера
+рантайма
+рантайме
 раскомментировать
 раскопировано
 распарсены
@@ -841,6 +850,7 @@
 туториала
 увереным
 уязвимостей
+уязвимостям
 файл
 фейловер
 фич
@@ -976,6 +986,7 @@ APIToken
 apiVersion
 APIVersion
 app
+apk
 apparmor
 AppArmor
 apps
@@ -1160,6 +1171,7 @@ clusterauthorizationrule
 ClusterAuthorizationRule
 ClusterAuthorizationRules
 ClusterBootstrap
+ClusterRoleBinding
 clusterconfiguration
 ClusterConfiguration
 clusterDomain
@@ -1209,6 +1221,7 @@ configOverrides
 configs
 configurator
 configVersion
+configauditreports
 conntrack
 Conntrack
 Container
@@ -1323,6 +1336,7 @@ dhcpOptions
 dhctl
 Diff
 dir
+dirs
 disjoining
 diskType
 DisruptionCheck
@@ -1334,6 +1348,7 @@ DKP
 DN
 DNAT
 dns
+dnf
 DNS
 dnsEE
 Dnsmasq
@@ -1371,6 +1386,7 @@ dynDNS
 Меньшеe
 дeплой
 EarlyAccess
+EphemeralContainers
 earlyOOM
 eBPF
 EBS
@@ -1833,6 +1849,7 @@ MinIO
 MinIO’s
 minPerZone
 minReplicas
+misconfigured
 mkfs
 ModifySet
 moduleConfig
@@ -2007,6 +2024,8 @@ overprovisioning
 overprovisioningRate
 overriden
 overutilized
+overlayfs
+overlay
 OVF
 ovh
 OVH
@@ -2253,8 +2272,10 @@ Serviсes
 SHA
 shapshot
 shouldn
+sha
 Sidekiq
 SIGTERM
+SIEM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
@@ -2441,6 +2462,7 @@ ValidationWebhook
 validator
 vApp
 vApps
+vulnerabilityreports
 VCD
 VCDClusterConfiguration
 VCDInstanceClass

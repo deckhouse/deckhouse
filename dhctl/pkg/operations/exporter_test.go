@@ -31,7 +31,7 @@ import (
 )
 
 func TestExporterGetStatistic(t *testing.T) {
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 
 	kubeCl := client.NewFakeKubernetesClient()
 	retry.InTestEnvironment = true

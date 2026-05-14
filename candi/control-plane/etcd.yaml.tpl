@@ -23,6 +23,9 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   priority: 2000001000
   priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
   volumes:
   - name: etcd-data
     hostPath:

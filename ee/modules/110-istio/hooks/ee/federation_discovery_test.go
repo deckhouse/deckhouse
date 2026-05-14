@@ -42,7 +42,8 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -59,7 +60,8 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 	Context("Empty cluster, minimal settings and federation is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSet("istio.federation.enabled", true)
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 			f.RunHook()
 		})
 
@@ -78,7 +80,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -127,7 +129,8 @@ status:
       - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}]} # port should be changed to 222
       - {"hostname": "some-actual.host-4", "ports": [{"name": "https-ppp", "port": 111}]} # port should be changed to 222
       - {"hostname": "some-actual.host-5", "ports": [{"name": "grps-ppp", "port": 222}]} # port should be changed to 222
-`))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
 			respMap := map[string]map[string]HTTPMockResponse{
 				"proper-hostname-0": {
@@ -224,26 +227,62 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Cluster name: my.cluster connected successfully, published services: 2\""))
 
-			tPub0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			tPub1, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.metadataCache.publicLastFetchTimestamp").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			tPub2, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.metadataCache.publicLastFetchTimestamp").String())
-			Expect(err).ShouldNot(HaveOccurred())
+			var fed0Conds []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.conditions").String()), &fed0Conds)).To(Succeed())
+			Expect(fed0Conds).To(HaveLen(2))
+			fed0 := discoveryConditionsByType(fed0Conds)
+			Expect(fed0["PublicMetadataExchangeReady"].Status).To(Equal("True"))
+			Expect(fed0["PrivateMetadataExchangeReady"].Status).To(Equal("True"))
+			tFed0PubProbe, err := time.Parse(time.RFC3339, fed0["PublicMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed0PubTrans, err := time.Parse(time.RFC3339, fed0["PublicMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed0PrivProbe, err := time.Parse(time.RFC3339, fed0["PrivateMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed0PrivTrans, err := time.Parse(time.RFC3339, fed0["PrivateMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tFed0PubProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed0PubTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed0PrivProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed0PrivTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
 
-			tPriv0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.privateLastFetchTimestamp").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			tPriv1, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.metadataCache.privateLastFetchTimestamp").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			tPriv2, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.metadataCache.privateLastFetchTimestamp").String())
-			Expect(err).ShouldNot(HaveOccurred())
+			var fed1Conds []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.conditions").String()), &fed1Conds)).To(Succeed())
+			Expect(fed1Conds).To(HaveLen(2))
+			fed1 := discoveryConditionsByType(fed1Conds)
+			Expect(fed1["PublicMetadataExchangeReady"].Status).To(Equal("True"))
+			Expect(fed1["PrivateMetadataExchangeReady"].Status).To(Equal("True"))
+			tFed1PubProbe, err := time.Parse(time.RFC3339, fed1["PublicMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed1PubTrans, err := time.Parse(time.RFC3339, fed1["PublicMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed1PrivProbe, err := time.Parse(time.RFC3339, fed1["PrivateMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed1PrivTrans, err := time.Parse(time.RFC3339, fed1["PrivateMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tFed1PubProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed1PubTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed1PrivProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed1PrivTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
 
-			Expect(tPub0).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
-			Expect(tPub1).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
-			Expect(tPub2).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
-			Expect(tPriv0).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
-			Expect(tPriv1).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
-			Expect(tPriv2).Should(BeTemporally("~", time.Now().UTC(), time.Minute))
+			var fed2Conds []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.conditions").String()), &fed2Conds)).To(Succeed())
+			Expect(fed2Conds).To(HaveLen(2))
+			fed2 := discoveryConditionsByType(fed2Conds)
+			Expect(fed2["PublicMetadataExchangeReady"].Status).To(Equal("True"))
+			Expect(fed2["PrivateMetadataExchangeReady"].Status).To(Equal("True"))
+			tFed2PubProbe, err := time.Parse(time.RFC3339, fed2["PublicMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed2PubTrans, err := time.Parse(time.RFC3339, fed2["PublicMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed2PrivProbe, err := time.Parse(time.RFC3339, fed2["PrivateMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tFed2PrivTrans, err := time.Parse(time.RFC3339, fed2["PrivateMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tFed2PubProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed2PubTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed2PrivProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tFed2PrivTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.public").String()).To(MatchJSON(`
 				{
@@ -441,7 +480,7 @@ status:
 	Context("Improper federation", func() {
 		BeforeEach(func() {
 			f.ValuesSet(`istio.federation.enabled`, true)
-			f.BindingContexts.Set(f.KubeStateSet(`
+			f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioFederation
@@ -505,7 +544,8 @@ spec:
  trustDomain: "privwf"
  metadataEndpoint: "https://private-wrong-format/metadata/"
 status: {}
-`))
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
 
 			//             host       url    response
 			respMap := map[string]map[string]HTTPMockResponse{
@@ -598,9 +638,68 @@ status: {}
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad private metadata format in endpoint for IstioFederation\",\"endpoint\":\"https://private-wrong-format/metadata/private/federation.json\",\"name\":\"private-wrong-format\""))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "local-federation").Field("status").String()).To(MatchJSON("{}"))
-			Expect(f.KubernetesGlobalResource("IstioFederation", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))
-			Expect(f.KubernetesGlobalResource("IstioFederation", "public-bad-json").Field("status").String()).To(MatchJSON("{}"))
-			Expect(f.KubernetesGlobalResource("IstioFederation", "public-wrong-format").Field("status").String()).To(MatchJSON("{}"))
+
+			var publicInternalErrorConds []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "public-internal-error").Field("status.conditions").String()), &publicInternalErrorConds)).To(Succeed())
+			Expect(publicInternalErrorConds).To(HaveLen(2))
+			pie := discoveryConditionsByType(publicInternalErrorConds)
+			Expect(pie["PublicMetadataExchangeReady"].Status).To(Equal("False"))
+			Expect(pie["PublicMetadataExchangeReady"].Reason).To(Equal("NonOKResponse"))
+			Expect(pie["PublicMetadataExchangeReady"].Message).To(ContainSubstring("HTTP status 500"))
+			Expect(pie["PrivateMetadataExchangeReady"].Status).To(Equal("Unknown"))
+			Expect(pie["PrivateMetadataExchangeReady"].Reason).To(Equal("AwaitingPublic"))
+			tPiePubProbe, err := time.Parse(time.RFC3339, pie["PublicMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPiePubTrans, err := time.Parse(time.RFC3339, pie["PublicMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPiePrivProbe, err := time.Parse(time.RFC3339, pie["PrivateMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPiePrivTrans, err := time.Parse(time.RFC3339, pie["PrivateMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tPiePubProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPiePubTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPiePrivProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPiePrivTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+
+			var publicBadJSONConds []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "public-bad-json").Field("status.conditions").String()), &publicBadJSONConds)).To(Succeed())
+			Expect(publicBadJSONConds).To(HaveLen(2))
+			pbj := discoveryConditionsByType(publicBadJSONConds)
+			Expect(pbj["PublicMetadataExchangeReady"].Status).To(Equal("False"))
+			Expect(pbj["PublicMetadataExchangeReady"].Reason).To(Equal("InvalidJSON"))
+			Expect(pbj["PrivateMetadataExchangeReady"].Status).To(Equal("Unknown"))
+			tPbjPubProbe, err := time.Parse(time.RFC3339, pbj["PublicMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPbjPubTrans, err := time.Parse(time.RFC3339, pbj["PublicMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPbjPrivProbe, err := time.Parse(time.RFC3339, pbj["PrivateMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPbjPrivTrans, err := time.Parse(time.RFC3339, pbj["PrivateMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tPbjPubProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPbjPubTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPbjPrivProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPbjPrivTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+
+			var publicWrongFormatConds []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "public-wrong-format").Field("status.conditions").String()), &publicWrongFormatConds)).To(Succeed())
+			Expect(publicWrongFormatConds).To(HaveLen(2))
+			pwf := discoveryConditionsByType(publicWrongFormatConds)
+			Expect(pwf["PublicMetadataExchangeReady"].Status).To(Equal("False"))
+			Expect(pwf["PublicMetadataExchangeReady"].Reason).To(Equal("InvalidPublicMetadata"))
+			Expect(pwf["PrivateMetadataExchangeReady"].Status).To(Equal("Unknown"))
+			tPwfPubProbe, err := time.Parse(time.RFC3339, pwf["PublicMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPwfPubTrans, err := time.Parse(time.RFC3339, pwf["PublicMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPwfPrivProbe, err := time.Parse(time.RFC3339, pwf["PrivateMetadataExchangeReady"].LastProbeTime)
+			Expect(err).NotTo(HaveOccurred())
+			tPwfPrivTrans, err := time.Parse(time.RFC3339, pwf["PrivateMetadataExchangeReady"].LastTransitionTime)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tPwfPubProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPwfPubTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPwfPrivProbe).To(BeTemporally("~", time.Now().UTC(), time.Minute))
+			Expect(tPwfPrivTrans).To(BeTemporally("~", time.Now().UTC(), time.Minute))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "private-internal-error").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-ie",
@@ -721,3 +820,21 @@ status: {}
 		})
 	})
 })
+
+// discoveryConditionRow mirrors status.conditions[] items.
+type discoveryConditionRow struct {
+	Type               string `json:"type"`
+	Status             string `json:"status"`
+	Reason             string `json:"reason"`
+	Message            string `json:"message"`
+	LastProbeTime      string `json:"lastProbeTime"`
+	LastTransitionTime string `json:"lastTransitionTime"`
+}
+
+func discoveryConditionsByType(rows []discoveryConditionRow) map[string]discoveryConditionRow {
+	out := make(map[string]discoveryConditionRow, len(rows))
+	for _, r := range rows {
+		out[r.Type] = r
+	}
+	return out
+}
