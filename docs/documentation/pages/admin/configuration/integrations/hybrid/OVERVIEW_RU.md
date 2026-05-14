@@ -1156,12 +1156,10 @@ lang: ru
 
 - В vSphere создана виртуальная машина, которая будет подключена к кластеру.
 - Имя виртуальной машины в vSphere, значение local-hostname в метаданных и hostname внутри операционной системы совпадают.
-- В дополнительных параметрах ВМ в vSphere заданы параметры:
+- В дополнительных параметрах ВМ в vSphere задан параметр:
 
   ```text
   disk.EnableUUID = TRUE
-  guestinfo.metadata = <BASE64_ENCODED_METADATA>
-  guestinfo.metadata.encoding = base64
   ```
 
 - Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
@@ -1200,6 +1198,13 @@ guestinfo.metadata.encoding = base64
   }
 }
 ```
+
+Где:
+
+- `instance-id` — идентификатор виртуальной машины;
+- `local-hostname` — hostname узла внутри операционной системы;
+- `public-keys-data` — публичный SSH-ключ для доступа к виртуальной машине;
+- `network` — сетевые настройки, которые будут применены внутри виртуальной машины.
 
 Чтобы получить значение для параметра `guestinfo.metadata`, выполните:
 
@@ -1328,8 +1333,8 @@ echo "$METADATA_B64"
    Значение `KEY` необходимо указывать в кавычках, так как публичный SSH-ключ содержит пробелы.
    {% endalert %}
 
-  {% alert level="info" %}
-  Для операционных систем семейства Astra Linux при использовании модуля мандатного контроля целостности Parsec дополнительно задайте максимальный уровень целостности для пользователя:
+   {% alert level="info" %}
+   Для операционных систем семейства Astra Linux при использовании модуля мандатного контроля целостности Parsec дополнительно задайте максимальный уровень целостности для пользователя:
 
    ```shell
    pdpl-user -i 63 ${CAPS_USER}
