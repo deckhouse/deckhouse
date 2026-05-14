@@ -1,8 +1,6 @@
 module vector
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.25.8
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
