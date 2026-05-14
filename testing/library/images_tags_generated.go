@@ -336,7 +336,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pilotV1x27x9":               "imageHash-istio-pilotV1x27x9",
 		"proxyv2V1x21x6":             "imageHash-istio-proxyv2V1x21x6",
 		"proxyv2V1x25x2":             "imageHash-istio-proxyv2V1x25x2",
-		"proxyv2V1x27x9":             "imageHash-istio-proxyv2V1x27x9",
 		"ztunnelV1x25x2":             "imageHash-istio-ztunnelV1x25x2",
 		"ztunnelV1x27x9":             "imageHash-istio-ztunnelV1x27x9",
 	},
