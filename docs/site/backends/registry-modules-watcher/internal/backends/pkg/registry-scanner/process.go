@@ -28,13 +28,13 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"gopkg.in/yaml.v3"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
+
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/metrics"
-
-	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -64,19 +64,7 @@ type ImageMetadata struct {
 func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
-	s.ms.Grouped().GaugeSet(
-		metrics.RegistryScannerTelemetryGroup,
-		metrics.RegistryScannerRegistryUnavailable,
-		1.0,
-		map[string]string{"registry": "test-alert"},
-	)
-
-	s.ms.Grouped().GaugeSet(
-		metrics.RegistryScannerTelemetryGroup,
-		metrics.RegistryScannerModuleWithoutTags,
-		1.0,
-		map[string]string{"module": "test-module", "registry": "test-registry"},
-	)
+	s.ms.Grouped().ExpireGroupMetrics(metrics.RegistryScannerTelemetryGroup)
 
 	versions := make([]internal.VersionData, 0, len(s.registryClients))
 
