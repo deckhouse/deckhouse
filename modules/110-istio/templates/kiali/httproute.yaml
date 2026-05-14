@@ -45,6 +45,20 @@ spec:
   - allowedRoutes:
       namespaces:
         from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "istio-metadata") }}
+    name: istio-metadata
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "helm_lib_module_https_secret_name" (list . "istio-httproute-tls") }}
+        namespace: d8-{{ $.Chart.Name }}
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
     hostname: {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
     name: api-proxy
     port: 443
