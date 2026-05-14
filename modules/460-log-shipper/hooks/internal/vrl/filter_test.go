@@ -33,7 +33,16 @@ func TestFilterInRule(t *testing.T) {
 			name:   "Single value",
 			values: []string{"test-1"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    arr = array!(.parsed_data.test)
+    in_list_hit = false
+    for_each(["test-1"]) -> |_index, v| {
+        if !in_list_hit && includes(arr, v) {
+            in_list_hit = true
+        }
+    }
+    in_list_hit
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         false;
@@ -51,7 +60,16 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
 			name:   "Two values",
 			values: []string{"test-1", "test-2"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    arr = array!(.parsed_data.test)
+    in_list_hit = false
+    for_each(["test-1","test-2"]) -> |_index, v| {
+        if !in_list_hit && includes(arr, v) {
+            in_list_hit = true
+        }
+    }
+    in_list_hit
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         false;
@@ -86,7 +104,16 @@ func TestFilterNotInRule(t *testing.T) {
 			name:   "Single value",
 			values: []string{"test-1"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    arr = array!(.parsed_data.test)
+    excluded_value_present = false
+    for_each(["test-1"]) -> |_index, v| {
+        if !excluded_value_present && includes(arr, v) {
+            excluded_value_present = true
+        }
+    }
+    !excluded_value_present
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         true;
@@ -104,7 +131,16 @@ if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
 			name:   "Two values",
 			values: []string{"test-1", "test-2"},
 			res: strings.TrimSpace(`
-if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
+if is_array(.parsed_data.test) {
+    arr = array!(.parsed_data.test)
+    excluded_value_present = false
+    for_each(["test-1","test-2"]) -> |_index, v| {
+        if !excluded_value_present && includes(arr, v) {
+            excluded_value_present = true
+        }
+    }
+    !excluded_value_present
+} else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
         true;
