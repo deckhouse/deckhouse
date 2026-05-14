@@ -119,11 +119,19 @@ func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.Kub
 }
 
 func (i *SSHProviderInitializer) GetSettings() *settings.BaseProviders {
-	return i.baseProviderSettings
+	if i != nil {
+		return i.baseProviderSettings
+	}
+
+	return nil
 }
 
 func (i *SSHProviderInitializer) GetConfig() *sshconfig.ConnectionConfig {
-	return i.config
+	if i != nil {
+		return i.config
+	}
+
+	return nil
 }
 
 func (i *SSHProviderInitializer) CheckHosts() bool {
