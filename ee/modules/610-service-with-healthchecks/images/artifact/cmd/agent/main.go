@@ -48,7 +48,6 @@ func main() {
 	var pprofAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
-	var debugging bool
 	var verboseStatus bool
 	var workersCount int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":9874", "The address the metric endpoint binds to.")
@@ -58,7 +57,6 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
-	flag.BoolVar(&debugging, "debugging", false, "If set, enables debugging")
 	flag.BoolVar(&verboseStatus, "verbose-status", false, "If set, lastProbeTime is updated on every probe (causes high API load)")
 	flag.IntVar(&workersCount, "workers-count", 4, "The number of workers to run")
 

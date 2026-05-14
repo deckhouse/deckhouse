@@ -418,9 +418,6 @@ spec:
                   description: |-
                     Сводка результатов проверок (health checks).
                   properties:
-                    activeNodeName:
-                      description: |-
-                        Имя узла, на котором в данный момент работает агент, выполняющий проверки.
                     endpoints:
                       description: |-
                         Общее количество эндпоинтов (подов), для которых выполняются проверки.

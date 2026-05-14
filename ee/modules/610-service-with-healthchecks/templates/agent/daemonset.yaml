@@ -58,9 +58,6 @@ spec:
           {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           args:
             - --verbose-status={{ .Values.serviceWithHealthchecks.verboseStatus }}
-            {{- if .Values.serviceWithHealthchecks.debug }}
-            - --debugging=true
-            {{- end }}
           env:
             - name: NODE_NAME
               valueFrom:

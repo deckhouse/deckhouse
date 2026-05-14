@@ -1,10 +1,5 @@
 type: object
 properties:
-  debug:
-    type: boolean
-    default: false
-    description: |
-      Option to instruct the logger to output stacktraces for warnings and errors.
   verboseStatus:
     type: boolean
     default: false
