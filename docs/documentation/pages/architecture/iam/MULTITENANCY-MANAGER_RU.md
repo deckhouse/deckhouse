@@ -6,7 +6,7 @@ search: multitenancy, project, мультитенантность, ProjectTempla
 description: Архитектура модуля multitenancy-manager в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `multitenancy-manager` реализует мультитенантность и изолированные окружения для запуска приложений в Deckhouse Kubernetes Platform (DKP). Модуль работает с [кастомными ресурсами](https://deckhouse.ru/modules/multitenancy-manager/cr.html) ProjectTemplate и Project.
+Модуль `multitenancy-manager` позволяет создавать изолированные проекты в Deckhouse Kubernetes Platform (DKP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных пространств имён. Модуль работает с кастомными ресурсами [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) и [Project](/modules/multitenancy-manager/cr.html#project).
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/multitenancy-manager/).
 

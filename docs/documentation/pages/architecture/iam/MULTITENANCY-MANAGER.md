@@ -6,7 +6,7 @@ search: multitenancy, project, ProjectTemplate, project isolation
 description: Architecture of the multitenancy-manager module in Deckhouse Kubernetes Platform.
 ---
 
-The `multitenancy-manager` module implements multitenancy and isolated environments for running applications in Deckhouse Kubernetes Platform (DKP). The module works with [the custom resources](/modules/multitenancy-manager/cr.html) ProjectTemplate and Project.
+The `multitenancy-manager` allows you to create isolated projects within the Deckhouse Kubernetes Platform (DKP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces. The module works with the custom resources [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) and [Project](/modules/multitenancy-manager/cr.html#project).
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/multitenancy-manager/).
 
