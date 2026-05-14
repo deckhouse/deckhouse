@@ -2919,7 +2919,7 @@ new file mode 100644
 index 00000000000..0405f7e4049
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,153 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2967,8 +2967,7 @@ index 00000000000..0405f7e4049
 +func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind) http.HandlerFunc {
 +	return func(w http.ResponseWriter, req *http.Request) {
 +		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
-+		klog.Infof("[sensitive-ssa-mw] entered: kind=%s mediaType=%q", groupKind, mediaType)
-+		if mediaType != string(types.ApplyYAMLPatchType) && mediaType != string(types.ApplyCBORPatchType) {
++		if mediaType != string(types.ApplyPatchType) && mediaType != "application/apply-patch+cbor" {
 +			inner.ServeHTTP(w, req)
 +			return
 +		}
@@ -2986,15 +2985,14 @@ index 00000000000..0405f7e4049
 +		// apply-patch+yaml body to JSON-with-HTML-escape.
 +		if !bytes.Contains(body, []byte(sensitive.MaskedValue)) &&
 +			!bytes.Contains(body, []byte("\\u003comitted\\u003e")) {
-+			klog.Infof("[sensitive-ssa-mw] fast-path: no masked-value literal in body, skipping unmask")
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
 +		}
-+		klog.Infof("[sensitive-ssa-mw] full-path: masked-value literal found in body, running unmask")
 +
 +		patchObj := map[string]interface{}{}
 +		if err := unmarshalApplyBody(mediaType, body, &patchObj); err != nil {
++			klog.V(4).Infof("sensitive SSA middleware: unmarshal failed, passthrough to inner (kind=%s mediaType=%q err=%v)", groupKind, mediaType, err)
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
@@ -3022,7 +3020,6 @@ index 00000000000..0405f7e4049
 +			case apierrors.IsNotFound(getErr):
 +				oldRoot = nil
 +			default:
-+				klog.Errorf("[sensitive-ssa-mw] getter.Get failed: name=%s ns=%s err=%v", resourceName, info.Namespace, getErr)
 +				http.Error(w, getErr.Error(), http.StatusInternalServerError)
 +				return
 +			}
@@ -3044,7 +3041,6 @@ index 00000000000..0405f7e4049
 +			return
 +		}
 +
-+		klog.Infof("[sensitive-ssa-mw] body rewritten: name=%s oldLen=%d newLen=%d", resourceName, len(body), len(newBody))
 +		req.Body = io.NopCloser(bytes.NewReader(newBody))
 +		req.ContentLength = int64(len(newBody))
 +		req.Header.Set("Content-Length", strconv.Itoa(len(newBody)))
@@ -3057,9 +3053,9 @@ index 00000000000..0405f7e4049
 +// Supports application/apply-patch+yaml and application/apply-patch+cbor.
 +func unmarshalApplyBody(mediaType string, data []byte, out *map[string]interface{}) error {
 +	switch mediaType {
-+	case string(types.ApplyYAMLPatchType):
++	case string(types.ApplyPatchType):
 +		return yaml.Unmarshal(data, out)
-+	case string(types.ApplyCBORPatchType):
++	case "application/apply-patch+cbor":
 +		return direct.Unmarshal(data, out)
 +	default:
 +		return fmt.Errorf("unsupported content type: %s", mediaType)
@@ -3069,9 +3065,9 @@ index 00000000000..0405f7e4049
 +// marshalApplyBody encodes an SSA apply-patch body in the given media type.
 +func marshalApplyBody(mediaType string, in map[string]interface{}) ([]byte, error) {
 +	switch mediaType {
-+	case string(types.ApplyYAMLPatchType):
++	case string(types.ApplyPatchType):
 +		return yaml.Marshal(in)
-+	case string(types.ApplyCBORPatchType):
++	case "application/apply-patch+cbor":
 +		return direct.Marshal(in)
 +	default:
 +		return nil, fmt.Errorf("unsupported content type: %s", mediaType)
@@ -3721,7 +3717,7 @@ index 00000000000..914d28c2f38
 +}
 +
 +func newSensitiveUnmaskInvalidError(groupKind runtimeschema.GroupKind, name string, err error) error {
-+	_ = err
++	klog.V(4).Infof("sensitive unmask rejected: kind=%s name=%s details=%v", groupKind, name, err)
 +	return apierrors.NewInvalid(
 +		groupKind,
 +		name,

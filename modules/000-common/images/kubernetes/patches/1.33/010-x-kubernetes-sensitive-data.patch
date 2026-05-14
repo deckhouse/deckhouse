@@ -2915,10 +2915,10 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..0405f7e4049
+index 00000000000..4435cfad807
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
-@@ -0,0 +1,157 @@
+@@ -0,0 +1,153 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2966,7 +2966,6 @@ index 00000000000..0405f7e4049
 +func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind) http.HandlerFunc {
 +	return func(w http.ResponseWriter, req *http.Request) {
 +		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
-+		klog.Infof("[sensitive-ssa-mw] entered: kind=%s mediaType=%q", groupKind, mediaType)
 +		if mediaType != string(types.ApplyYAMLPatchType) && mediaType != string(types.ApplyCBORPatchType) {
 +			inner.ServeHTTP(w, req)
 +			return
@@ -2985,15 +2984,14 @@ index 00000000000..0405f7e4049
 +		// apply-patch+yaml body to JSON-with-HTML-escape.
 +		if !bytes.Contains(body, []byte(sensitive.MaskedValue)) &&
 +			!bytes.Contains(body, []byte("\\u003comitted\\u003e")) {
-+			klog.Infof("[sensitive-ssa-mw] fast-path: no masked-value literal in body, skipping unmask")
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
 +		}
-+		klog.Infof("[sensitive-ssa-mw] full-path: masked-value literal found in body, running unmask")
 +
 +		patchObj := map[string]interface{}{}
 +		if err := unmarshalApplyBody(mediaType, body, &patchObj); err != nil {
++			klog.V(4).Infof("sensitive SSA middleware: unmarshal failed, passthrough to inner (kind=%s mediaType=%q err=%v)", groupKind, mediaType, err)
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
@@ -3021,7 +3019,6 @@ index 00000000000..0405f7e4049
 +			case apierrors.IsNotFound(getErr):
 +				oldRoot = nil
 +			default:
-+				klog.Errorf("[sensitive-ssa-mw] getter.Get failed: name=%s ns=%s err=%v", resourceName, info.Namespace, getErr)
 +				http.Error(w, getErr.Error(), http.StatusInternalServerError)
 +				return
 +			}
@@ -3043,7 +3040,6 @@ index 00000000000..0405f7e4049
 +			return
 +		}
 +
-+		klog.Infof("[sensitive-ssa-mw] body rewritten: name=%s oldLen=%d newLen=%d", resourceName, len(body), len(newBody))
 +		req.Body = io.NopCloser(bytes.NewReader(newBody))
 +		req.ContentLength = int64(len(newBody))
 +		req.Header.Set("Content-Length", strconv.Itoa(len(newBody)))
@@ -3596,10 +3592,10 @@ index 00000000000..b68ac38e2eb
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..914d28c2f38
+index 00000000000..953674c1f8d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,128 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3630,6 +3626,7 @@ index 00000000000..914d28c2f38
 +	runtimeschema "k8s.io/apimachinery/pkg/runtime/schema"
 +	"k8s.io/apimachinery/pkg/util/validation/field"
 +	"k8s.io/apiserver/pkg/registry/rest"
++	"k8s.io/klog/v2"
 +)
 +
 +// unmaskingCreater rejects MaskedValue in sensitive fields during create.
@@ -3720,7 +3717,7 @@ index 00000000000..914d28c2f38
 +}
 +
 +func newSensitiveUnmaskInvalidError(groupKind runtimeschema.GroupKind, name string, err error) error {
-+	_ = err
++	klog.V(4).Infof("sensitive unmask rejected: kind=%s name=%s details=%v", groupKind, name, err)
 +	return apierrors.NewInvalid(
 +		groupKind,
 +		name,
@@ -3804,10 +3801,10 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..2af942b707c
+index 00000000000..46bdc797108
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,320 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3832,7 +3829,6 @@ index 00000000000..2af942b707c
 +	"sort"
 +
 +	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
-+	"k8s.io/klog/v2"
 +)
 +
 +// MaskedValue is the replacement string used by MaskSensitiveFields.
@@ -4046,7 +4042,6 @@ index 00000000000..2af942b707c
 +		oldItems, _ := oldObj.([]interface{})
 +		var lookupOldByKey func(newItem interface{}) interface{}
 +		if s.XListType != nil && *s.XListType == "map" && len(s.XListMapKeys) > 0 {
-+			klog.Infof("[sensitive-listmap] key-matching: path=%s keys=%v newLen=%d oldLen=%d", path, s.XListMapKeys, len(x), len(oldItems))
 +			lookupOldByKey = makeListMapLookup(oldItems, s.XListMapKeys)
 +		}
 +
