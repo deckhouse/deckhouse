@@ -2,7 +2,7 @@
 title: Подсистема Virtualization
 permalink: ru/architecture/virtualization/
 lang: ru
-search: virtualization, подсистема виртуализации, dvp
+search: virtualization, virtualization subsystem, подсистема виртуализации, dvp
 description: Архитектура подсистемы Virtualization в Deckhouse Kubernetes Platform.
 ---
 

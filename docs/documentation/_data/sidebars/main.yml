@@ -1430,6 +1430,18 @@ entries:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
+        - title:
+            en: Virtualization subsystem
+            ru: Подсистема Virtualization
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/virtualization/
+            - title:
+                en: Containerized Data Importer (CDI)
+                ru: Containerized Data Importer (CDI)
+              url: /architecture/virtualization/cdi.html
     - title:
         en: Reference
         ru: Справка
