@@ -2991,7 +2991,7 @@ index 00000000000..4435cfad807
 +
 +		patchObj := map[string]interface{}{}
 +		if err := unmarshalApplyBody(mediaType, body, &patchObj); err != nil {
-+			klog.V(4).Infof("sensitive SSA middleware: unmarshal failed, passthrough to inner (kind=%s mediaType=%q err=%v)", groupKind, mediaType, err)
++			klog.V(4).InfoS("sensitive SSA middleware: unmarshal failed, passthrough to inner", "kind", groupKind, "mediaType", mediaType, "err", err)
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
@@ -3717,7 +3717,7 @@ index 00000000000..953674c1f8d
 +}
 +
 +func newSensitiveUnmaskInvalidError(groupKind runtimeschema.GroupKind, name string, err error) error {
-+	klog.V(4).Infof("sensitive unmask rejected: kind=%s name=%s details=%v", groupKind, name, err)
++	klog.V(4).InfoS("sensitive unmask rejected", "kind", groupKind, "name", name, "err", err)
 +	return apierrors.NewInvalid(
 +		groupKind,
 +		name,
