@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-operator-prometheus-prometheus-operator",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-05-14T12:00:00.000000+03:00",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "timestamp": "2026-05-14T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.47.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-40179 представляет собой Stored XSS в веб-интерфейсе Prometheus через имена метрик и значения меток в тултипах графиков и обозревателе метрик. Согласно официальному advisory (GHSA-vffh-x6r8-xx99), уязвимость затрагивает исключительно Prometheus версий >= 3.0 (конкретно: >= 3.0 <= 3.5.1 и >= 3.6.0 <= 3.11.1). Вектор атаки основан на поддержке UTF-8 в именах метрик и меток, которая была введена как поведение по умолчанию в Prometheus v3.x, что позволяет использовать символы '<', '>' и '\"' в именах метрик. Образ prometheus-operator v0.68.0 в Deckhouse использует библиотеку github.com/prometheus/prometheus v0.47.0 (это Prometheus 2.47.x) для интеграции с Prometheus API; данная версия использует строгую валидацию имён метрик по регулярному выражению [a-zA-Z_:][a-zA-Z0-9_:]* и имён меток по [a-zA-Z_][a-zA-Z0-9_]*, что приводит к отклонению HTML/JavaScript символов на этапе приёма данных (ingestion). Кроме того, Prometheus 2.47.x не содержит Mantine UI, который является одним из основных затронутых компонентов. Инъекция XSS через специально сформированные имена метрик невозможна в данной версии. Помимо этого, бинарь /bin/operator не запускает Prometheus Web UI и не рендерит пользовательский контент в HTML; уязвимый код в этом контексте не исполняется."
+    }
+  ]
+}
