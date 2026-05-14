@@ -1,6 +1,6 @@
 ---
 title: Migrating VMs from VMware to DVP
-permalink: en/virtualization-platform/guides/vmware-to-dvp.html
+permalink: en/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html
 description: A short guide for migrating virtual machines from VMware (OVA/VMDK) to Deckhouse Virtualization Platform.
 lang: en
 layout: sidebar-guides
