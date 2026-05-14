@@ -145,40 +145,36 @@ spec:
 {{- end }}
 {{- end }}
 ---
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+{{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservabilityMetricsRulesGroup
 metadata:
   name: registry-modules-watcher
-  namespace: deckhouse-web-stage
-  labels:
-    prometheus: main
-    component: rules
 spec:
-  groups:
-    - name: registry-modules-watcher
-      rules:
-        - alert: D8RegistryScannerModuleWithoutTags
-          expr: d8_telemetry_registry_scanner_module_without_tags > 0
-          labels:
-            severity_level: "9"
-            d8_component: registry-modules-watcher
-          annotations:
-            plk_protocol_version: "1"
-            plk_markup_format: "markdown"
-            summary: |
-              Module `{{`{{ $labels.module }}`}}` has no tags in registry `{{`{{ $labels.registry }}`}}`.
-            description: |
-              The registry scanner detected that module `{{`{{ $labels.module }}`}}` has no tags in registry `{{`{{ $labels.registry }}`}}`.
+  rules:
+    - alert: D8RegistryScannerModuleWithoutTags
+      expr: d8_telemetry_registry_scanner_module_without_tags > 0
+      labels:
+        severity_level: "9"
+        d8_component: registry-modules-watcher
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: |
+          Module `{{`{{ $labels.module }}`}}` has no tags in registry `{{`{{ $labels.registry }}`}}`.
+        description: |
+          The registry scanner detected that module `{{`{{ $labels.module }}`}}` has no tags in registry `{{`{{ $labels.registry }}`}}`.
 
-        - alert: D8RegistryScannerRegistryUnavailable
-          expr: d8_telemetry_registry_scanner_registry_unavailable > 0
-          labels:
-            severity_level: "9"
-            d8_component: registry-modules-watcher
-          annotations:
-            plk_protocol_version: "1"
-            plk_markup_format: "markdown"
-            summary: |
-              Registry `{{`{{ $labels.registry }}`}}` is unavailable.
-            description: |
-              The registry scanner cannot connect to registry `{{`{{ $labels.registry }}`}}`.
+    - alert: D8RegistryScannerRegistryUnavailable
+      expr: d8_telemetry_registry_scanner_registry_unavailable > 0
+      labels:
+        severity_level: "9"
+        d8_component: registry-modules-watcher
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: |
+          Registry `{{`{{ $labels.registry }}`}}` is unavailable.
+        description: |
+          The registry scanner cannot connect to registry `{{`{{ $labels.registry }}`}}`.
+{{- end }}
