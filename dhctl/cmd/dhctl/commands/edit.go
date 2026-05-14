@@ -23,8 +23,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
@@ -40,11 +43,10 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
@@ -54,9 +56,19 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		if err != nil {
 			return err
 		}
+
+		interactive := input.IsTerminal()
+		if interactive {
+			_, _, err := progressbar.InitProgressBarWithDeferredFunc("Edit", logger)
+			if err != nil {
+				return err
+			}
+		}
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
+		//nolint: errcheck
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
 		}
@@ -66,6 +78,12 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
+
+		//nolint: errcheck
+		if interactive {
+			progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
+			progressbar.GetDefaultPb().MultiPrinter.Stop()
+		}
 
 		return operations.SecretEdit(
 			ctx,

@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -185,9 +184,9 @@ var (
 			Parent:     "render",
 		},
 		{
-			Name:       "kubeadm-config",
-			Help:       "Render kubeadm config.",
-			DefineFunc: commands.DefineRenderKubeadmConfig,
+			Name:       "control-plane-manifests",
+			Help:       "Render control-plane manifests and pki.",
+			DefineFunc: commands.DefineRenderControlPlaneAndPKI,
 			Parent:     "render",
 		},
 		{
@@ -301,7 +300,6 @@ func main() {
 
 	registerOnShutdown("Trace", tracesShutdownFn)
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
-	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
 		disableCleanupOnInterrupted,

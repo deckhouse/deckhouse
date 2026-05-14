@@ -14,6 +14,9 @@ rules:
   - virtualservices
   - serviceentries
   - gateways
+  - sidecars
+  - workloadentries
+  - workloadgroups
   verbs:
   - get
   - list
@@ -23,6 +26,23 @@ rules:
   resources:
   - peerauthentications
   - authorizationpolicies
+  - requestauthentications
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: 
+  - telemetry.istio.io
+  resources:
+  - telemetries
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions.istio.io
+  resources:
+  - wasmplugins
   verbs:
   - get
   - list
@@ -43,6 +63,9 @@ rules:
   - virtualservices
   - serviceentries
   - gateways
+  - sidecars
+  - workloadentries
+  - workloadgroups
   verbs:
   - create
   - delete
@@ -54,6 +77,120 @@ rules:
   resources:
   - peerauthentications
   - authorizationpolicies
+  - requestauthentications
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: Admin
+  name: d8:user-authz:{{ .Chart.Name }}:admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: 
+  - telemetry.istio.io
+  resources:
+  - telemetries
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - extensions.istio.io
+  resources:
+  - wasmplugins
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterEditor
+  name: d8:user-authz:{{ .Chart.Name }}:cluster-editor
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - istiofederations
+  - istiomulticlusters
+  - ingressistiocontrollers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: 
+  - install.istio.io
+  resources: 
+  - istiooperators
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: 
+  - sailoperator.io
+  resources: 
+  - istiocnis
+  - ztunnels
+  - istiorevisions
+  - istiorevisiontags
+  - istios
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    user-authz.deckhouse.io/access-level: ClusterAdmin
+  name: d8:user-authz:{{ .Chart.Name }}:cluster-admin
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - istiofederations
+  - istiomulticlusters
+  - ingressistiocontrollers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups: 
+  - install.istio.io
+  resources: 
+  - istiooperators
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups: 
+  - sailoperator.io
+  resources: 
+  - istiocnis
+  - ztunnels
+  - istiorevisions
+  - istiorevisiontags
+  - istios
   verbs:
   - create
   - delete

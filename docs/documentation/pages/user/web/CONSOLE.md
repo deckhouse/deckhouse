@@ -59,7 +59,9 @@ The "Overview" subsection provides key information about the cluster and its com
 
 ### Updates
 
-The "Updates" subsection provides information about available releases.
+The "Updates" subsection contains information about releases.
+
+![Releases](../../images/console/releases.png)
 
 ### Modules
 
@@ -291,13 +293,31 @@ You can also configure resource limits and quotas.
 
 ![Limits](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
 
-![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-podse.png)
+![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-pods.png)
 
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
 
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
 
 ![Quotas](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core.png)
+
+## Access
+
+### “User operations” subsection
+
+Provides an interface for managing users.
+
+![User operations](../../images/console/operation-with-users-1.png)
+
+![User operations](../../images/console/operation-with-users-2.png)
+
+![User operations](../../images/console/operation-with-users-3.png)
+
+![User operations](../../images/console/operation-with-users-4.png)
+
+![User operations](../../images/console/operation-with-users-5.png)
+
+![User operations](../../images/console/operation-with-users-6.png)
 
 ## Network
 
@@ -499,3 +519,15 @@ To configure log sources, follow these steps:
    - (Optional) Label and filter rules to retain only specific logs.
 
 ![Log collection](../../images/console/log_rule.png)
+
+## Viewing API information
+
+You can view API information in Swagger format by clicking the question mark button in the bottom left corner of the screen in the user dropdown menu.
+
+![API](../../images/console/releases.png)
+
+![API](../../images/console/swagger-1.png)
+
+![API](../../images/console/swagger-2.png)
+
+![API](../../images/console/swagger-3.png)

@@ -21,33 +21,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestExecuteTemplate(t *testing.T) {
-	var data map[string]interface{}
-
-	err := yaml.Unmarshal([]byte(`
-nodeIP: "127.0.0.1"
-runType: "ClusterBootstrap"
-clusterConfiguration:
-  kubernetesVersion: "1.31"
-  clusterType: "Cloud"
-  serviceSubnetCIDR: "127.0.0.1/24"
-  podSubnetCIDR: "127.0.0.1/24"
-  clusterDomain: "%s.example.com"
-k8s:
-  '1.31':
-    patch: 1
-extraArgs: {}
-`), &data)
-	if err != nil {
-		t.Errorf("Loading templates error: %v", err)
-	}
-
-	_, err = RenderTemplatesDir("/deckhouse/candi/control-plane-kubeadm/", data, nil)
-	if err != nil {
-		t.Errorf("Rendering templates error: %v", err)
-	}
-}
-
 func TestExecuteTemplate_DefineAndInclude(t *testing.T) {
 	var data map[string]interface{}
 

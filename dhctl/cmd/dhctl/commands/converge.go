@@ -47,12 +47,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		logger := log.GetDefaultLogger()
 		isDebug := opts.Global.IsDebug
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
-
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
@@ -87,6 +82,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			Logger:          logger,
 			IsDebug:         isDebug,
 			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
 
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
@@ -179,6 +175,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 			Logger:          logger,
 			IsDebug:         isDebug,
 			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
 		})
 
 		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
@@ -240,6 +237,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			Logger:                                loggerFor,
 			IsDebug:                               isDebug,
 			DirectoryConfig:                       opts.DirConfig(),
+			Options:                               opts,
 		})
 		cacheIdentity := ""
 		if opts.Kube.InCluster {

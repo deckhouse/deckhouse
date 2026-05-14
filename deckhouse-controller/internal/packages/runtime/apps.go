@@ -33,6 +33,7 @@ import (
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -104,16 +105,16 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	r.status.ClearRuntimeConditions(name)
+	r.status.ClearStatus(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewAppTask(name, packageName, version, repo, r.deployer, r.status, r.logger),
+		taskdeploy.NewAppTask(name, packageName, version, repo, r.appDeployer, r.status, r.logger),
 		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
 	}
 
 	// If there's an existing app, disable it first
 	if pkg := r.apps[name]; pkg != nil {
-		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.logger))
 	}
 
 	for _, task := range tasks {
@@ -133,7 +134,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf, err := loader.LoadAppConf(ctx, packagePath, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
+		return "", status.NewError("LoadFailed", err)
 	}
 
 	conf.Repository = repo
@@ -144,7 +145,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
+		return "", status.NewError("LoadFailed", err)
 	}
 
 	r.mu.Lock()
@@ -178,7 +179,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	}
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {
@@ -188,11 +189,11 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 
 			if r.packages.Delete(name) {
 				r.queueService.Remove(name)
-				r.status.Delete(name)
+				r.status.DeleteStatus(name)
 				delete(r.apps, name)
 			}
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskundeploy.NewAppTask(name, r.deployer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewAppTask(name, r.appDeployer, r.logger), cleanup)
 }

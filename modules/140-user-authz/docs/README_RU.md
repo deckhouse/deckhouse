@@ -157,6 +157,16 @@ read:
     - extensions/ingresses
     - extensions/replicasets
     - extensions/replicationcontrollers
+    - gateway.networking.k8s.io/backendtlspolicies
+    - gateway.networking.k8s.io/gatewayclasses
+    - gateway.networking.k8s.io/gateways
+    - gateway.networking.k8s.io/grpcroutes
+    - gateway.networking.k8s.io/httproutes
+    - gateway.networking.k8s.io/listenersets
+    - gateway.networking.k8s.io/referencegrants
+    - gateway.networking.k8s.io/tcproutes
+    - gateway.networking.k8s.io/tlsroutes
+    - gateway.networking.k8s.io/udproutes
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
@@ -207,6 +217,15 @@ read-write:
     - endpoints
     - extensions/deployments
     - extensions/ingresses
+    - gateway.networking.k8s.io/backendtlspolicies
+    - gateway.networking.k8s.io/gateways
+    - gateway.networking.k8s.io/grpcroutes
+    - gateway.networking.k8s.io/httproutes
+    - gateway.networking.k8s.io/listenersets
+    - gateway.networking.k8s.io/referencegrants
+    - gateway.networking.k8s.io/tcproutes
+    - gateway.networking.k8s.io/tlsroutes
+    - gateway.networking.k8s.io/udproutes
     - networking.k8s.io/ingresses
     - persistentvolumeclaims
     - policy/poddisruptionbudgets
@@ -240,6 +259,7 @@ write:
     - apiextensions.k8s.io/customresourcedefinitions
     - apps/daemonsets
     - extensions/daemonsets
+    - gateway.networking.k8s.io/gatewayclasses
     - storage.k8s.io/storageclasses
 ```
 

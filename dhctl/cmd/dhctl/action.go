@@ -325,7 +325,9 @@ var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
 	log.SetDebugEnabled(i.params.isDebug)
-	log.InitLogger(i.params.loggerType)
+	interactive := input.IsTerminal()
+
+	log.InitLogger(i.params.loggerType, interactive)
 	if i.params.doNotWriteDebugFile {
 		return doNothingOnShutdownFunc, nil
 	}

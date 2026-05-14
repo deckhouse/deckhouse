@@ -900,6 +900,42 @@ alerts:
         Controller pod isn't running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
+    - name: D8ControlPlaneNodeMaintenanceModeEnabled
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane node `{{ $labels.node }}` has maintenance mode enabled with label `control-plane-manager.deckhouse.io/maintenance`.
+        While this label is present, the control plane is not managed by `control-plane-manager`.
+
+        If maintenance is complete, remove the label:
+
+        ```bash
+        d8 k label cpn {{ $labels.node }} control-plane-manager.deckhouse.io/maintenance-
+        ```
+      summary: |
+        Maintenance mode is enabled for control-plane node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ControlPlaneOperationRunningTooLong
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
+
+        Check the corresponding ControlPlaneOperation and logs of the `d8-control-plane-manager` Pod on that node:
+
+        ```bash
+        d8 k get cpo {{ $labels.operation }} -o yaml
+        d8 k -n kube-system logs -l app=d8-control-plane-manager --field-selector spec.nodeName={{ $labels.node }}
+        ```
+      summary: |
+        Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
+      severity: "4"
+      markupFormat: markdown
     - name: D8CustomPrometheusRuleFoundInCluster
       sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
       moduleUrl: 340-monitoring-custom
@@ -1662,6 +1698,25 @@ alerts:
       summary: |
         Additional control plane isn't working.
       severity: "4"
+      markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}`, (UUID: `{{$labels.remote_uuid}}`) requests private metadata from hostname `{{$labels.requested_to_hostname}}`, that hostname uses the deprecated `istio` subdomain.
+
+        Update the remote cluster {{$labels.alliance_kind}} resource: set `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+
+        Migration steps on the remote cluster:
+
+        1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
+        2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
+        3. Verify remote metadata fetch and alliance health after the change.
+      summary: |
+        A peer cluster requests private metadata using a deprecated subdomain.
+      severity: "5"
       markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml

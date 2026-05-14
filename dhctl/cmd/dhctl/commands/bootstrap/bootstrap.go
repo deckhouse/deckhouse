@@ -20,8 +20,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -49,14 +47,10 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
-		extLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("could not get external logger")
-		}
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(extLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err

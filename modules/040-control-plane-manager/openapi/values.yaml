@@ -45,6 +45,28 @@ properties:
         type: boolean
         default: false
         x-examples: [false]
+      kubeadmClusterAdminsTargetRoleName:
+        type: string
+        enum: ["cluster-admin", "user-authz:cluster-admin"]
+        default: "cluster-admin"
+        description: |
+          Target ClusterRole the kubeadm:cluster-admins ClusterRoleBinding must point at. Computed by
+          reconcile_kubeadm_cluster_admins_binding hook from three independent signals (user-authz
+          module enablement, cluster bootstrap state, presence of ClusterRole user-authz:cluster-admin
+          in the API). The Helm template reads this value as-is and does NOT re-evaluate the gates,
+          so the hook is the single source of truth for which role the binding targets.
+        x-examples: ["cluster-admin"]
+      kubeadmClusterAdminsSupplementEnabled:
+        type: boolean
+        default: false
+        description: |
+          Whether to render ClusterRole d8:control-plane-manager:admin-kubeconfig-supplement and the
+          companion ClusterRoleBinding for Group/kubeadm:cluster-admins. Computed by the
+          reconcile_kubeadm_cluster_admins_binding hook (true while the user-authz module is enabled).
+          The supplement is purely additive on the same group, so it is rendered as soon as user-authz
+          is on — independently of the immutable-roleRef switch — to close the transient nodes/proxy
+          window during the main rebind.
+        x-examples: [false]
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'
