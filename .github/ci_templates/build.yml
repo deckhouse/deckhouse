@@ -27,6 +27,7 @@ check_changelog:
 {!{ define "build_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
+{!{- $werfEnv := index . 2 -}!}
 # <template: build_template>
 {!{- if eq $buildType "release" }!}
 runs-on: [self-hosted, stage]
@@ -224,7 +225,9 @@ steps:
         publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
         publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
         publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+        {!{- if ne $werfEnv "CSE" }!}
         publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+        {!{- end }!}
 
         # For release branches, also push release-channel to dev
         if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then

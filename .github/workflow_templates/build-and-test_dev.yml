@@ -50,7 +50,7 @@ jobs:
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
       SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev" "FE") | strings.Indent 4 }!}
 
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
   build_{!{$werfEnv}!}:
@@ -62,7 +62,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "{!{$werfEnv}!}"
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev" $werfEnv) | strings.Indent 4 }!}
 {!{ end }!}
 
   analyze_deckhouse:
