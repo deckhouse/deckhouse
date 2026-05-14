@@ -1,7 +1,7 @@
 class ModuleSearch {
   constructor(options = {}) {
-    this.searchInput = document.getElementById('search-input');
-    this.searchResults = document.getElementById('search-results');
+    this.searchInput = options.searchInput || (options.searchInputId ? document.getElementById(options.searchInputId) : document.getElementById('search-input'));
+    this.searchResults = options.searchResults || (options.searchResultsId ? document.getElementById(options.searchResultsId) : document.getElementById('search-results'));
 
     // Check if required DOM elements exist
     if (!this.searchInput) {
@@ -2144,19 +2144,58 @@ class ModuleSearch {
 
 // Initialize search when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // Check if there's a data attribute on the search input for custom search index path
-  const searchInput = document.getElementById('search-input');
-  const searchIndexPath = searchInput?.dataset.searchIndexPath;
-  const searchContext = searchInput?.dataset.searchContext;
+  const searchInstances = [];
+  const wrappers = Array.from(document.querySelectorAll('.searchV3 .input-wrapper'));
 
-  // Create search instance with custom options if specified
-  const options = {};
-  if (searchIndexPath) {
-    options.searchIndexPath = searchIndexPath;
-  }
-  if (searchContext) {
-    options.searchContext = searchContext;
+  wrappers.forEach((wrapper) => {
+    const searchInput = wrapper.querySelector('input[type="text"]');
+    const searchResults = wrapper.querySelector('.results');
+
+    if (!searchInput || !searchResults) {
+      return;
+    }
+
+    const options = {
+      searchInput,
+      searchResults
+    };
+    const searchIndexPath = searchInput.dataset.searchIndexPath;
+    const searchContext = searchInput.dataset.searchContext;
+
+    if (searchIndexPath) {
+      options.searchIndexPath = searchIndexPath;
+    }
+    if (searchContext) {
+      options.searchContext = searchContext;
+    }
+
+    searchInstances.push(new ModuleSearch(options));
+  });
+
+  // Backward compatibility for pages where search exists outside .searchV3
+  if (searchInstances.length === 0) {
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+
+    if (searchInput && searchResults) {
+      const options = {
+        searchInput,
+        searchResults
+      };
+      const searchIndexPath = searchInput.dataset.searchIndexPath;
+      const searchContext = searchInput.dataset.searchContext;
+
+      if (searchIndexPath) {
+        options.searchIndexPath = searchIndexPath;
+      }
+      if (searchContext) {
+        options.searchContext = searchContext;
+      }
+
+      searchInstances.push(new ModuleSearch(options));
+    }
   }
 
-  window.moduleSearch = new ModuleSearch(options);
+  window.moduleSearchInstances = searchInstances;
+  window.moduleSearch = searchInstances[0] || null;
 });
