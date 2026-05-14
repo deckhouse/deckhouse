@@ -227,3 +227,7 @@ data:
       {{- end }}
     {{- end }}
   {{- end }}
+
+  {{- if .Values.cniCilium.nodePortAddresses }}
+  nodeport-addresses: {{ join "," .Values.cniCilium.nodePortAddresses | quote }}
+  {{- end }}
