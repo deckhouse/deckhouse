@@ -73,11 +73,13 @@
 {{- end -}}
 {{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
-# test: settings from ModuleConfig control-plane-manager
+{{- /* test: settings available in dhctl context (absent in Helm )*/ -}}
+{{- if .settings }}
 # .settings.encryptionAlgorithm = {{ .settings.encryptionAlgorithm }}
 # .clusterConfiguration.encryptionAlgorithm = {{ .clusterConfiguration.encryptionAlgorithm }}
 # .settings.resourcesRequests.milliCPU = {{ if .settings.resourcesRequests }}{{ (.settings.resourcesRequests).milliCPU }}{{ else }}<not set>{{ end }}
 # .settings.resourcesRequests.memoryBytes = {{ if .settings.resourcesRequests }}{{ (.settings.resourcesRequests).memoryBytes }}{{ else }}<not set>{{ end }}
+{{- end }}
 {{- /* kube-apiserver */ -}}
 apiVersion: v1
 kind: Pod
