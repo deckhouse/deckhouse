@@ -1,0 +1,107 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    module: metallb
+    backup.deckhouse.io/cluster-config: "true"
+  name: metalloadbalancerconfigurations.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  names:
+    kind: MetalLoadBalancerConfiguration
+    listKind: MetalLoadBalancerConfigurationList
+    plural: metalloadbalancerconfigurations
+    singular: metalloadbalancerconfiguration
+    shortNames:
+      - mlbconfig
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |-
+            Defines the routing topology: from which nodes, to which BGP peers, and which IP address pools to advertise.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - mode
+              properties:
+                nodeSelector:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |-
+                    Allows limiting the list of nodes from which addresses will be announced.
+
+                    Specified as a set of labels for node filtering.
+                mode:
+                  type: string
+                  enum:
+                    - BGP
+                  description: |-
+                    The routing mode. Only BGP is supported in this configuration.
+                bgp:
+                  type: object
+                  properties:
+                    peerNames:
+                      description: |-
+                        List of MetalLoadBalancerBGPPeer names to associate with this configuration.
+                      type: array
+                      items:
+                        type: string
+                  description: |-
+                    BGP specific configuration.
+                advertisements:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      poolNames:
+                        description: |-
+                          List of MetalLoadBalancerPool names to advertise.
+                        type: array
+                        items:
+                          type: string
+                      bgp:
+                        description: |-
+                          BGP-specific advertisement configuration.
+                        type: object
+                        properties:
+                          communities:
+                            description: |-
+                              BGP communities to associate with the advertisement.
+                            type: array
+                            items:
+                              type: string
+                              pattern: ^([0-9]+:[0-9]+|no-export|no-advertise|local-as|none)$
+                          localPref:
+                            description: |-
+                              BGP LOCAL_PREF attribute.
+                            type: integer
+                            minimum: 0
+                            maximum: 4294967295
+                          aggregationLength:
+                            description: |-
+                              Subnet mask for route aggregation.
+                            type: integer
+                            minimum: 0
+                            maximum: 128
+                    required:
+                      - poolNames
+                  description: |-
+                    List of advertisements and their configurations.
+            status:
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

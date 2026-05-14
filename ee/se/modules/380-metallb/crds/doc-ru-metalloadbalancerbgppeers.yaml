@@ -1,0 +1,78 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает настройки BGP-маршрутизатора (соседа) и параметры установки сессии с ним.
+          properties:
+            spec:
+              properties:
+                peerAddress:
+                  description: |-
+                    IP-адрес BGP-соседа.
+                peerPort:
+                  description: |-
+                    Порт BGP-соседа.
+                peerASN:
+                  description: |-
+                    Номер автономной системы (ASN) BGP-соседа.
+                myASN:
+                  description: |-
+                    Локальный номер автономной системы (ASN), используемый для пиринга.
+                routerID:
+                  description: |-
+                    BGP router ID для анонсирования соседу.
+                holdTime:
+                  description: |-
+                    Запрашиваемое время удержания BGP сессии (hold time).
+                passwordSecretRef:
+                  description: |-
+                    Ссылка на Secret, содержащий пароль для аутентификации BGP-сессии.
+
+                    **Важно:** целевой секрет обязательно должен иметь лейбл `network.deckhouse.io/metallb-bgp-password: "true"`.
+                  properties:
+                    name:
+                      description: |-
+                        Имя секрета.
+                    namespace:
+                      description: |-
+                        Неймспейс, в котором находится секрет.
+                sourceAddresses:
+                  description: |-
+                    Поузловое переопределение локального IP-адреса, используемого для пиринга (например, для loopback).
+                  items:
+                    properties:
+                      nodeName:
+                        description: |-
+                          Имя узла.
+                      address:
+                        description: |-
+                          IP-адрес для пиринга с указанного узла.
+                bfd:
+                  description: |-
+                    Конфигурация BFD (Bidirectional Forwarding Detection) для BGP-соседа.
+                    **Примечание:** BFD на данный момент не поддерживается, так как требует реализации BGP через FRR,
+                    которая пока недоступна в Deckhouse MetalLB. Это поле является заглушкой для использования в будущем.
+                  properties:
+                    receiveInterval:
+                      description: |-
+                        Минимальный интервал (в миллисекундах) между получением контрольных пакетов BFD.
+                    transmitInterval:
+                      description: |-
+                        Минимальный интервал (в миллисекундах) между отправкой контрольных пакетов BFD.
+                    detectMultiplier:
+                      description: |-
+                        Количество пропущенных пакетов, после которого сессия считается разорванной.
+                    echoInterval:
+                      description: |-
+                        Минимальный интервал (в миллисекундах) между отправкой эхо-пакетов.
+                    echoMode:
+                      description: |-
+                        Включает или выключает эхо-режим BFD.
+                    passiveMode:
+                      description: |-
+                        Включает пассивный режим работы BFD (не инициирует установку сессии первым).
+                    minimumTTL:
+                      description: |-
+                        Минимально допустимое значение TTL (Time To Live) для принимаемых пакетов BFD.
