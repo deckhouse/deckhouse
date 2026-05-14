@@ -1,0 +1,15 @@
+- name: zVirt CSI driver
+  link: https://github.com/openshift/ovirt-csi-driver
+  description: CSI driver for zVirt (OpenShift oVirt CSI driver).
+  logo: /images/logos/ovirt.svg
+  license: Apache License 2.0
+  id: csi-ovirt
+  version: release-4.22
+
+- name: zVirt Terraform provider
+  link: https://github.com/oVirt/terraform-provider-ovirt
+  description: Terraform provider for zVirt (oVirt).
+  logo: /images/logos/terraform.svg
+  license: BSD 3-Clause License
+  id: terraform-provider-ovirt
+  version: "2.2.0"

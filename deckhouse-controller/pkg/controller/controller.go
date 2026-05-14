@@ -34,6 +34,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,7 +49,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -121,6 +122,7 @@ func NewDeckhouseController(
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
 		appsv1.AddToScheme,
+		discoveryv1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
@@ -318,7 +320,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, edition, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, edition, dc, operator.MetricStorage, embeddedPolicy, settingsContainer, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
@@ -343,7 +345,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	packageOperator, err := packageoperator.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
+	pkgRuntime, err := packageruntime.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -351,19 +353,19 @@ func NewDeckhouseController(
 	// package should not run before converge done
 	operator.ConvergeState.SetOnConvergeStart(func() {
 		logger.Debug("start converge")
-		packageOperator.Scheduler().Pause()
+		pkgRuntime.PauseScheduler()
 	})
 
 	operator.ConvergeState.SetOnConvergeFinish(func() {
 		logger.Debug("finish converge")
-		packageOperator.Scheduler().Resume()
+		pkgRuntime.ResumeScheduler()
 	})
 
 	// Package system controllers (feature flag)
 	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
 
-		packageOperator.Run()
+		pkgRuntime.Run()
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
@@ -380,7 +382,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = application.RegisterController(runtimeManager, packageOperator, operator.ModuleManager, dc, logger.Named("application-controller"))
+		err = application.RegisterController(runtimeManager, pkgRuntime, operator.ModuleManager, dc, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
@@ -410,7 +412,7 @@ func NewDeckhouseController(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
 		operator.ModuleManager,
-		packageOperator,
+		pkgRuntime,
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,

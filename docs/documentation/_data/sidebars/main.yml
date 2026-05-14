@@ -95,6 +95,10 @@ entries:
                         ru: Экспериментальная модель авторизации
                       url: /admin/configuration/access/authorization/rbac-experimental.html
                     - title:
+                        en: Cluster admin access model
+                        ru: Модель административного доступа к кластеру
+                      url: /admin/configuration/access/authorization/cluster-admin-access-model.html
+                    - title:
                         en: Granting permissions to users and service accounts
                         ru: Выдача прав пользователям и сервисным аккаунтам
                       url: /admin/configuration/access/authorization/granting.html
@@ -549,6 +553,10 @@ entries:
                             en: ALB with Ingress NGINX Controller
                             ru: ALB средствами Ingress NGINX Controller
                           url: /admin/configuration/network/ingress/alb/nginx.html
+                        - title:
+                            en: ALB with Kubernetes Gateway API
+                            ru: ALB средствами Kubernetes Gateway API
+                          url: /admin/configuration/network/ingress/alb/alb-gateway-api.html
                         - title:
                             en: ALB with Istio
                             ru: ALB средствами Istio
@@ -1191,6 +1199,10 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
+                en: Web interface modules
+                ru: Модули веб-интерфейса
+              url: /architecture/deckhouse/web-modules.html
+            - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
@@ -1362,6 +1374,14 @@ entries:
                 en: Security events audit
                 ru: Аудит событий безопасности
               url: /architecture/security/runtime-audit.html
+            - title:
+                en: Admission-policy-engine module
+                ru: Модуль admission-policy-engine
+              url: /architecture/security/admission-policy-engine.html
+            - title:
+                en: Cert-manager module
+                ru: Модуль cert-manager
+              url: /architecture/security/cert-manager.html
         - title:
             en: Network subsystem
             ru: Подсистема Network
@@ -1413,7 +1433,23 @@ entries:
             - title:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
-              url: /architecture/storage/sds-node-configurator.html               
+              url: /architecture/storage/sds-node-configurator.html
+            - title:
+                en: Storage system modules
+                ru: Модули системы хранения
+              folders:
+                - title:
+                    en: Csi-nfs module
+                    ru: Модуль csi-nfs
+                  url: /architecture/storage/external/csi-nfs.html
+            - title:
+                en: CSI drivers
+                ru: CSI-драйверы
+              folders:
+                - title:
+                    en: NFS CSI driver
+                    ru: CSI-драйвер NFS
+                  url: /architecture/storage/csi-drivers/csi-driver-nfs.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability

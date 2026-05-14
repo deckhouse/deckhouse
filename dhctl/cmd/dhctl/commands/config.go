@@ -24,31 +24,34 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 var (
-	deckhouseDir           = "/deckhouse"
-	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
+	deckhouseDir = "/deckhouse"
 )
 
-func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineConfigFlags(cmd)
-	app.DefineRenderConfigFlags(cmd)
+func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConfigFlags(cmd, &opts.Global)
+	app.DefineRenderConfigFlags(cmd, &opts.Render)
 
-	runFunc := func() error {
+	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
 
 		metaConfig, err := config.LoadConfigFromFile(
-			context.TODO(),
-			app.ConfigPaths,
+			ctx,
+			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			app.GetDirConfig(),
+			opts.DirConfig(),
 		)
 		if err != nil {
 			return err
@@ -59,89 +62,151 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
+		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
 
 		return template.PrepareBashibleBundle(
+			ctx,
 			templateController,
 			templateData,
 			metaConfig.ProviderName,
 			"",
-			app.GetDirConfig(),
+			opts.DirConfig(),
 		)
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-	return cmd
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render bashible bundle", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
+	})
 }
 
-func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineConfigFlags(cmd)
-	app.DefineRenderConfigFlags(cmd)
+func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConfigFlags(cmd, &opts.Global)
+	app.DefineRenderConfigFlags(cmd, &opts.Render)
 
-	runFunc := func() error {
+	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
 
 		metaConfig, err := config.LoadConfigFromFile(
-			context.TODO(),
-			app.ConfigPaths,
+			ctx,
+			opts.Global.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			app.GetDirConfig(),
+			opts.DirConfig(),
 		)
 		if err != nil {
 			return err
 		}
 
-		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
+		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig, app.GetDirConfig())
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
+
+		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-	return cmd
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render master bootstrap", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
+	})
 }
 
-func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineConfigFlags(cmd)
-	app.DefineRenderConfigFlags(cmd)
+func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineConfigFlags(cmd, &opts.Global)
+	app.DefineRenderConfigFlags(cmd, &opts.Render)
 
-	runFunc := func() error {
-		templateData := make(map[string]interface{})
-		var err error
-		templateData["clusterConfiguration"], err = config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
+	runFunc := func(ctx context.Context) error {
+		logger := log.GetDefaultLogger()
+
+		metaConfig, err := config.LoadConfigFromFile(
+			ctx,
+			opts.Global.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			),
+			opts.DirConfig(),
+		)
 		if err != nil {
 			return err
 		}
 
-		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		if err != nil {
+			return err
+		}
 
-		return template.PrepareKubeadmConfig(templateController, templateData, app.GetDirConfig())
+		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
+
+		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
+			return err
+		}
+		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
+		// the resulting PKI is not used to start a real cluster.
+		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare Kubeadm Config", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-	return cmd
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render kubeadm config", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
+	})
 }
 
-func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineInputOutputRenderFlags(cmd)
+func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		var err error
 		var metaConfig *config.MetaConfig
 
 		logger := log.GetDefaultLogger()
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster configuration", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
 
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
@@ -150,88 +215,93 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1
 		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
-		if app.ParseInputFile == "" {
+		if opts.Render.ParseInputFile == "" {
 			data, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
 			}
 
 			metaConfig, err = config.ParseConfigFromData(
-				context.TODO(),
+				ctx,
 				string(data),
 				preparatorProvider,
-				app.GetDirConfig(),
+				opts.DirConfig(),
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(context.TODO(), []string{app.ParseInputFile}, preparatorProvider, app.GetDirConfig())
+			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, opts.DirConfig())
 			if err != nil {
 				return err
 			}
 		}
 
 		output := metaConfig.MarshalFullConfig()
-		switch app.ParseOutput {
+		switch opts.Render.ParseOutput {
 		case "yaml":
 			output, _ = yaml.JSONToYAML(output)
 		case "json":
 		default:
-			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
+			return fmt.Errorf("unknown output type: %s", opts.Render.ParseOutput)
 		}
 
 		fmt.Print(string(output))
 		return nil
 	})
-
-	return cmd
 }
 
-func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineInputOutputRenderFlags(cmd)
+func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		_ = kpcontext.ExtractContext(c)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster discovery data", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
 		var err error
 		var data []byte
 
-		if app.ParseInputFile == "" {
+		if opts.Render.ParseInputFile == "" {
 			data, err = io.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("read cloud-discovery-data from stdin: %v", err)
 			}
 		} else {
-			data, err = os.ReadFile(app.ParseInputFile)
+			data, err = os.ReadFile(opts.Render.ParseInputFile)
 			if err != nil {
 				return fmt.Errorf("loading input file: %v", err)
 			}
 		}
 
-		schemaStore := config.NewSchemaStore(app.GetDirConfig())
+		schemaStore := config.NewSchemaStore(opts.DirConfig())
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)
 		}
 
 		var output []byte
-		switch app.ParseOutput {
+		switch opts.Render.ParseOutput {
 		case "yaml":
 			output, _ = yaml.JSONToYAML(data)
 		case "json":
 			output = data
 		default:
-			return fmt.Errorf("unknown output type: %s", app.ParseOutput)
+			return fmt.Errorf("unknown output type: %s", opts.Render.ParseOutput)
 		}
 
 		fmt.Print(string(output))
 		return nil
 	})
-
-	return cmd
 }
 
 func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
-	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 }

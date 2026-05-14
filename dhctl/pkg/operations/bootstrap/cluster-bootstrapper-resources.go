@@ -18,31 +18,28 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	resourcesToCreate := make(template.Resources, 0)
-	if app.ResourcesPath != "" {
+	if b.Options.Bootstrap.ResourcesPath != "" {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
-		parsedResources, err := template.ParseResources(app.ResourcesPath, nil)
+		parsedResources, err := template.ParseResources(b.Options.Bootstrap.ResourcesPath, nil)
 		if err != nil {
 			return err
 		}
 
 		resourcesToCreate = parsedResources
 	} else {
-		paths := fs.RevealWildcardPaths(app.ConfigPaths)
+		paths := fs.RevealWildcardPaths(b.Options.Global.ConfigPaths)
 		for _, cfg := range paths {
 			ress, err := template.ParseResources(cfg, nil)
 			if err != nil {
@@ -60,32 +57,39 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		return nil
 	}
 
-	if err := terminal.AskBecomePassword(); err != nil {
-		return err
-	}
-	if err := terminal.AskBastionPassword(); err != nil {
-		return err
-	}
-
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-		sshClient := wrapper.Client()
-		if sshClient != nil {
-			if err := sshClient.Start(); err != nil {
-				return fmt.Errorf("unable to start ssh-client: %w", err)
-			}
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
 		}
-	}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Create resources", labelChan, phasesChan)
 
-	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
-		if err != nil {
-			return err
-		}
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
-		if err != nil {
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, nil)
+		onComplete := func() {
+			pb := progressbar.GetDefaultPb()
+			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+			pb.MultiPrinter.Stop()
+		}
+		defer onComplete()
+	}
+
+	return log.ProcessCtx(ctx, "bootstrap", "Create resources", func(ctx context.Context) error {
+		kubeCl, err := b.KubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+
+		checkers, err := resources.GetCheckers(&client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, nil)
+		if err != nil {
+			return err
+		}
+
+		return resources.CreateResourcesLoop(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, checkers, nil, b.Options.Bootstrap.ResourcesTimeout)
 	})
 }

@@ -16,7 +16,8 @@ shell:
   install:
     - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - git apply /patches/001-go-mod.patch --verbose
+    - git apply /patches/004-fix-cves-bump.patch --verbose
     - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -26,6 +27,10 @@ final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /patches
+    to: /patches
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -38,6 +43,13 @@ shell:
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
+    - cp /patches/op_parser_init.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_parser_init.go
+    - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/002-op-functions.patch
+    - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/003-printer-op-top-aggregate-string.patch
+    - patch -d /src/vendor/github.com/grafana/dskit -p1 < /patches/005-grpc-health-list.patch
+    - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
+    - cd /src
     - |
       {{- $buildContext := deepCopy $ -}}
       {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
@@ -45,6 +57,7 @@ shell:
       {{- include "image-build.build" $buildContext | indent 6 }}
     - chown -R 64535:64535 /src/mimir
     - chmod 0700 /src/mimir
+    - rm -rf /src/vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

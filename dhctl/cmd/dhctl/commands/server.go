@@ -18,43 +18,51 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
-func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
-	app.DefineServerFlags(cmd)
+func DefineServerCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineServerFlags(cmd, &opts.Server)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return server.Serve(settings.ServerParams{
-			ServerGeneralParams: settings.ServerGeneralParams{
-				Network:           app.ServerNetwork,
-				Address:           app.ServerAddress,
-				TmpDir:            app.TmpDirName,
-				DownloadDirConfig: app.GetDirConfig(),
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
+		return server.Serve(
+			ctx,
+			settings.ServerParams{
+				ServerGeneralParams: settings.ServerGeneralParams{
+					Network:           opts.Server.Network,
+					Address:           opts.Server.Address,
+					TmpDir:            opts.Global.TmpDir,
+					DownloadDirConfig: opts.DirConfig(),
+				},
+				ParallelTasksLimit:         opts.Server.ParallelTasksLimit,
+				RequestsCounterMaxDuration: opts.Server.RequestsCounterMaxDuration,
 			},
-			ParallelTasksLimit:         app.ServerParallelTasksLimit,
-			RequestsCounterMaxDuration: app.ServerRequestsCounterMaxDuration,
-		})
+		)
 	})
-	return cmd
 }
 
-func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
-	app.DefineServerFlags(cmd)
+func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineServerFlags(cmd, &opts.Server)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return singlethreaded.Serve(settings.ServerSingleshotParams{
-			ServerGeneralParams: settings.ServerGeneralParams{
-				Network:           app.ServerNetwork,
-				Address:           app.ServerAddress,
-				TmpDir:            app.TmpDirName,
-				DownloadDirConfig: app.GetDirConfig(),
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
+		return singlethreaded.Serve(
+			ctx,
+			settings.ServerSingleshotParams{
+				ServerGeneralParams: settings.ServerGeneralParams{
+					Network:           opts.Server.Network,
+					Address:           opts.Server.Address,
+					TmpDir:            opts.Global.TmpDir,
+					DownloadDirConfig: opts.DirConfig(),
+				},
 			},
-		})
+		)
 	})
-	return cmd
 }

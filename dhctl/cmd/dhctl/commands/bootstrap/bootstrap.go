@@ -15,41 +15,59 @@
 package bootstrap
 
 import (
-	"context"
 	"fmt"
+	"strings"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineConfigFlags(cmd)
-	app.DefineBecomeFlags(cmd)
-	app.DefineCacheFlags(cmd)
-	app.DefineDropCacheFlags(cmd)
-	app.DefineResourcesFlags(cmd, false)
-	app.DefineTFResourceManagementTimeout(cmd)
-	app.DefineDeckhouseFlags(cmd)
-	app.DefineDontUsePublicImagesFlags(cmd)
-	app.DefinePostBootstrapScriptFlags(cmd)
-	app.DefinePreflight(cmd)
+func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineConfigFlags(cmd, &opts.Global)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineCacheFlags(cmd, &opts.Cache)
+	app.DefineDropCacheFlags(cmd, &opts.Cache)
+	app.DefineResourcesFlags(cmd, &opts.Bootstrap, false)
+	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
+	app.DefineDeckhouseFlags(cmd, &opts.Bootstrap)
+	app.DefineDontUsePublicImagesFlags(cmd, &opts.Bootstrap)
+	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
+	app.DefinePreflight(cmd, &opts.Preflight)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		logger := log.GetDefaultLogger()
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:            app.TmpDirName,
-			Logger:            logger,
-			IsDebug:           app.IsDebug,
-			ResetInitialState: false,
-			DirectoryConfig:   app.GetDirConfig(),
+			TmpDir:                 opts.Global.TmpDir,
+			Logger:                 logger,
+			IsDebug:                opts.Global.IsDebug,
+			ResetInitialState:      false,
+			DirectoryConfig:        opts.DirConfig(),
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
+			Options:                opts,
 		})
-		err := bootstraper.Bootstrap(context.Background())
+		err = bootstraper.Bootstrap(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
@@ -58,6 +76,4 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-
-	return cmd
 }

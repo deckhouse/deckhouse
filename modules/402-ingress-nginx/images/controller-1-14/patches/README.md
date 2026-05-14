@@ -75,9 +75,9 @@ Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. A
 
 <https://github.com/kubernetes/ingress-nginx/pull/8213>
 
-### 011-restore-validation.patch (BWRAP!!!)
+### 011-restore-validation.patch
 
-Re-enables configuration validation with sandboxed (by bwrap) for the ingress-nginx controller, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
+Re-enables configuration validation, which was previously disabled as a mitigation for the security vulnerabilities described in CVE-2025-1097, CVE-2025-1098, CVE-2025-1974, CVE-2025-24513, and CVE-2025-24514.
 
 ### 012-validation-mode.patch
 
@@ -119,9 +119,9 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
 
-### 019-removed-deprecated-patches.patch (Already applied in nginx 1.29.5)
+### 019-removed-deprecated-patches.patch (Already applied in nginx 1.30.1)
 
-This patch is no longer needed because the related changes are already included in nginx `1.29.5`.
+This patch is no longer needed because the related changes are already included in nginx `1.30.1`.
 ### 020-lua_ingress-use-request-host-for-https-redirect.patch
 
 This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
@@ -151,3 +151,17 @@ This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issu
 
 There is a race condition on Ingress-NGINX controller start that may result in controller forming incomplete NGINX configuration (not processing some ingress objects).
 The fix is to use registration when checking if informer has been synced.
+
+### 025-sanitize-xff-headers-when-redirecting-from-www.patch
+
+This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
+
+### 026-isolated-validation.patch
+
+This patch switches `nginx -t` execution according to `spec.validationIsolationMode` for ingress-nginx `1.14`:
+
+- `NoIsolation`: uses the regular `nginx -t` path without isolation.
+- `IsolatedFilesystem`: runs validations on an isolated filesystem.
+- `IsolatedProcess`: runs validations in an isolated sandbox with syscall tracing.
+
+Both `IsolatedProcess` and `IsolatedFilesystem` modes keep the full cluster-wide validation context enabled.

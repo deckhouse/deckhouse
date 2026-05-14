@@ -1,3 +1,52 @@
+module JekyllLiquidBlockUtils
+  CYRILLIC_MAP = {
+    'а' => 'a',  'б' => 'b',  'в' => 'v',  'г' => 'g',  'д' => 'd',
+    'е' => 'e',  'ё' => 'yo', 'ж' => 'zh', 'з' => 'z',  'и' => 'i',
+    'й' => 'j',  'к' => 'k',  'л' => 'l',  'м' => 'm',  'н' => 'n',
+    'о' => 'o',  'п' => 'p',  'р' => 'r',  'с' => 's',  'т' => 't',
+    'у' => 'u',  'ф' => 'f',  'х' => 'kh', 'ц' => 'ts', 'ч' => 'ch',
+    'ш' => 'sh', 'щ' => 'sch','ъ' => '',   'ы' => 'y',  'ь' => '',
+    'э' => 'e',  'ю' => 'yu', 'я' => 'ya',
+  }.freeze
+
+  def slugify(text)
+    s = text.downcase.strip
+    s = s.gsub('+', '-plus-')
+    s = s.chars.map { |c| CYRILLIC_MAP.fetch(c, c) }.join
+    s.gsub(/[^a-z0-9\s_-]/, '').gsub(/[\s-]+/, '_')
+  end
+
+  def dedent(text)
+    lines = text.split("\n")
+    # Exclude HTML lines (already-rendered inner tags) from indent calculation
+    # so their col-0 position doesn't force min_indent to 0.
+    non_empty = lines.select { |l| l =~ /\S/ && !l.lstrip.start_with?('<') }
+    non_empty = lines.select { |l| l =~ /\S/ } if non_empty.empty?
+    return text if non_empty.empty?
+    min_indent = non_empty.map { |l| l.match(/^(\s*)/)[1].length }.min
+    return text if min_indent == 0
+    lines.map { |l| l.length >= min_indent ? l[min_indent..] : l }.join("\n")
+  end
+
+  # Collapse all newlines outside <pre> blocks and replace all newlines inside
+  # <pre> blocks with &#10; entities. Kramdown's block HTML parser breaks the
+  # HTML structure on any bare newline inside div markdown="0", so the output
+  # must be completely newline-free. &#10; is rendered identically by browsers.
+  def collapse_inter_block_newlines(html)
+    parts = html.split(/(<pre\b[^>]*>.*?<\/pre>)/m)
+    parts.map.with_index do |part, i|
+      if i.even?
+        part.strip.gsub(/\n+/, ' ')
+      else
+        # Capture groups from the outer split are stable — no inner gsub here,
+        # so $~ is not clobbered. Replace every newline so the whole plugin
+        # output is a single line and Kramdown cannot break the block.
+        part.gsub("\n", '&#10;')
+      end
+    end.join
+  end
+end
+
 def getTrueRelativeUrl(path)
     if !path.instance_of? String
         return "unexpected argument #{path}"

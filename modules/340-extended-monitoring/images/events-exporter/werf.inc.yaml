@@ -14,12 +14,20 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    setup:
+      - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   setup:
   - git clone --depth 1 --branch v0.0.5 $(cat /run/secrets/SOURCE_REPO)/deckhouse/events_exporter.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -43,6 +51,7 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
+    - go mod tidy
     - make build
     - mv bin/events_exporter /events_exporter
     - chown 64535:64535 /events_exporter

@@ -424,6 +424,7 @@ function prepare_environment() {
 
   "Static")
     cwd=$(pwd)/testing/cloud_layouts/Static
+    export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -437,7 +438,8 @@ function prepare_environment() {
     ;;
 
   "Static-cse")
-    cwd=$(pwd)/../testing/cloud_layouts/Static
+    cwd=$(pwd)/../testing/cloud_layouts/Static-cse
+    export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -455,7 +457,7 @@ function prepare_environment() {
 
 function get_opentofu() {
   rm -rf $cwd/plugins
-  CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
+  CONTAINER_ID=$(docker create --pull always "${INSTALL_IMAGE_NAME}")
   docker cp "${CONTAINER_ID}:/bin/opentofu" $cwd/opentofu
   docker cp "${CONTAINER_ID}:/plugins" $cwd/
   docker rm "$CONTAINER_ID"
@@ -479,12 +481,7 @@ function bootstrap_static() {
 
   get_opentofu
 
-  if [[ ${PROVIDER} == "Static" ]]; then
-    $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  elif [[ ${PROVIDER} == "Static-cse" ]]; then
-    $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  fi
-
+  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 
   if [[ ${PROVIDER} == "Static" ]]; then
@@ -987,6 +984,7 @@ function wait_alerts_resolve() {
   "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   "CertmanagerCertificateChallengePending" # This is normal for e2e tests
+  "D8ObsoletePublishAPIinUserAuthn" # Temporary while publish api is migrated between MCs
   )
 
   # Alerts
@@ -1116,9 +1114,16 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
-  if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
-    HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
-    IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  # To do: remove after full migration to 1.77, new ns will only be kube-system
+  version=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- deckhouse-controller version | cut -d' ' -f2 | grep -oP 'v(\d+\.\d+)' | cut -dv -f2)
+  if [[ $(echo "$version" | cut -d. -f2) -ge 77 ]]; then
+    namespace="kube-system"
+  else
+    namespace="d8-user-authn"
+  fi
+  if kubectl -n $namespace get ing kubernetes-api >/dev/null 2>&1; then
+    HOST=$(kubectl -n $namespace get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+    IP=$(kubectl -n $namespace get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
     "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api")
     if echo "$RESPONSE" | jq -e '.kind' >/dev/null 2>&1; then
@@ -1518,7 +1523,7 @@ function run-test() {
   if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   else
-    testScript="${cwd}/../../../deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+    testScript="${cwd}/../../testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   fi
 
   testRunAttempts=5
@@ -1643,9 +1648,9 @@ function cleanup() {
 
     get_opentofu
 
-    if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
+    if [[ ${PROVIDER} == "VCD" ]]; then
       $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-    elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    elif [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "Static-cse" ]]; then
       $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
     fi
 

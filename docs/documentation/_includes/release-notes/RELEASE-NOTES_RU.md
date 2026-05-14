@@ -1,3 +1,216 @@
+## Версия 1.76
+
+### Обратите внимание
+
+- При включённом модуле `user-authz` изменена модель прав для `admin.conf`:
+  вместо привязки к встроенной роли `cluster-admin` используется [управляемая DKP RBAC-модель](https://deckhouse.ru/modules/control-plane-manager/v1.76/faq.html#административный-доступ-на-основе-rbac) с более точечными правами.
+  Это повышает безопасность доступа к кластеру.
+  При этом сохраняется [аварийный доступ](https://deckhouse.ru/modules/control-plane-manager/v1.76/faq.html#аварийный-доступ-break-glass) через `super-admin.conf`.
+  **Если в кластере используются сторонние Kubernetes-операторы (не из DKP), дополнительно выдайте права на их CRD,
+  иначе доступ к таким ресурсам будет ограничен.**
+
+- [Используемая по умолчанию](https://deckhouse.ru/modules/ingress-nginx/v1.76/configuration.html#parameters-defaultcontrollerversion) версия Ingress NGINX Controller повышена с 1.10 до 1.12.
+  Контроллеры, использующие версию по умолчанию, будут обновлены автоматически.
+
+- [Компонент fencing-agent](https://deckhouse.ru/modules/node-manager/v1.76/cr.html#nodegroup-v1-spec-fencing-mode) модуля `node-manager` переведён на gossip-протокол ([библиотека memberlist](https://github.com/hashicorp/memberlist))
+  для распределённого мониторинга состояния узлов.
+  Это снижает риск ложных перезагрузок worker-узлов при недоступности control plane или высокой нагрузке на API-сервер.
+
+- Исправлена проблема, при которой `cluster-autoscaler` впадал в тупиковое состояние
+  после неудачного создания машины в облаке при ошибках создания машин, отличных от `ResourceExhausted`.
+  Теперь кластер автоматически восстанавливает способность к масштабированию при временных сбоях облачного провайдера.
+
+### Подсистема Deckhouse
+
+- Добавлена возможность развертывания кластера DKP с использованием [режима `Proxy`](https://deckhouse.ru/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) для доступа к хранилищу образов.
+
+- `Kubectl` на узлах кластера заменен на алиас `d8 k` ([утилита Deckhouse CLI](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.76/cli/d8/)).
+
+- Изменения в `dhctl` (CLI-установщик):
+
+  - Добавлена возможность запускать `dhctl` как отдельный бинарный файл
+    без предварительной загрузки полного образа со всеми зависимостями.
+    Необходимые компоненты загружаются из хранилища образов по ходу выполнения операции,
+    сокращая время загрузки и инициализации.
+
+  - Добавлена валидация публичных SSH-ключей.
+    Некорректные ключи теперь выявляются до этапа, на котором они могут привести к ошибкам подключения к созданным узлам.
+
+  - Исправлена обработка TLS-сертификатов для хранилищ образов.
+    Теперь вместе с пользовательским центром сертификации (CA) используется системный пул сертификатов.
+
+  - Добавлена проверка InstanceClass перед установкой на соответствие выбранному облачному провайдеру.
+    Это позволяет заранее обнаруживать некорректную конфигурацию
+    и останавливать установку до создания объектов в облачной инфраструктуре.
+
+  - Исправлена настройка неймспейсов во время бутстрапа.
+    Теперь `dhctl` обновляет настройки даже если неймспейс уже существует.
+
+- Повышена отказоустойчивость мультимастерного режима.
+  Версии Kubernetes теперь корректно определяются при частичной недоступности master-узлов,
+  а kube-apiserver больше не направляет запросы на etcd-узлы в статусе `learner`.
+
+### Подсистема Kubernetes & Scheduling
+
+- [В ConfigMap `d8-cluster-kubernetes`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.76/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html#мониторинг-процесса-обновления-kubernetes) добавлена информация о поддерживаемых версиях Kubernetes (`supportedVersions`),
+  доступных для обновления и понижения версиях (`availableVersions`),
+  а также о текущей автоматически обновляемой версии (`automaticVersion`).
+
+- Изменения [в модуле `descheduler`](https://deckhouse.ru/modules/descheduler/v1.76/):
+
+  - Модуль обновлён до версии 0.35.1.
+    Добавлена поддержка фильтрации неймспейсов с помощью [механизма label selector](https://deckhouse.ru/modules/descheduler/v1.76/cr.html#descheduler-v1alpha2-spec-namespacelabelselector) и дополнительные улучшения.
+    Полный список доработок доступен [в истории изменений модуля](https://github.com/kubernetes-sigs/descheduler/releases/tag/v0.35.1).
+
+  - В настройки модуля добавлен [параметр `deschedulingInterval`](https://deckhouse.ru/modules/descheduler/v1.76/configuration.html#parameters-deschedulinginterval).
+    Он позволяет задать частоту запуска цикла перераспределения подов: `Frequent`, `Moderate` или `Rare`.
+
+  - Добавлена [стратегия `RemovePodsHavingTooManyRestarts`](https://deckhouse.ru/modules/descheduler/v1.76/cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts).
+    Она вытесняет поды, у которых суммарное число перезапусков контейнеров превышает заданный порог,
+    освобождая ресурсы узлов от подов в состоянии `CrashLoopBackOff`.
+
+  - Модуль теперь [автоматически использует Kubernetes Metrics API](https://deckhouse.ru/modules/descheduler/v1.76/#поставщик-метрик), если в кластере доступна API-группа `metrics.k8s.io`.
+    Это позволяет стратегиям учитывать реальные данные потребления ресурсов.
+
+- [Модуль `vertical-pod-autoscaler`](https://deckhouse.ru/modules/vertical-pod-autoscaler/v1.76/) обновлён до версии 1.6.0. Ключевые изменения:
+
+  - [Режим `InPlaceOrRecreate`](https://deckhouse.ru/modules/vertical-pod-autoscaler/v1.76/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode) теперь используется по умолчанию. В этом режиме VPA пытается изменить `requests` и `limits` пода без его перезагрузки (in-place-обновления).
+
+  - Уменьшена вероятность перезапуска пода при невозможности in-place-обновления (флаг `--in-place-skip-disruption-budget` контроллера), а также, при in-place-обновлениях не учитывается [значение `minReplicas`](https://deckhouse.ru/modules/vertical-pod-autoscaler/v1.76/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-minreplicas).
+
+- Рекомендации VPA по памяти теперь округляются до 64 MiB. Это делает значения более читаемыми и снижает число перезапусков подов, вызванных небольшими колебаниями рекомендаций.
+
+- Для Kubernetes 1.34 и выше по умолчанию включён [feature gate `DRAExtendedResource`](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/#DRAExtendedResource), необходимый для работы модулей.
+
+- Добавлен [алерт `D8EtcdHighRequestsLatency`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.76/reference/alerts.html#control-plane-manager-d8etcdhighrequestslatency), который сообщает о задержке запросов к etcd. Подобные задержки могут приводить к таймаутам API-сервера. Также добавлена соответствующая метрика для дашборда «Control Plane Status».
+
+### Подсистема IAM
+
+- Изменения [в модуле `user-authn`](https://deckhouse.ru/modules/user-authn/v1.76/):
+
+  - Отключён небезопасный [OAuth 2.0 Implicit Flow](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-security-topics#name-implicit-grant).
+    В этом потоке access-токен передаётся в URL-фрагменте, что повышает риск его утечки
+    (например, через заголовок `Referer`, историю браузера или логи).
+    Интеграции, использующие Authorization Code Flow, не затрагиваются.
+
+  - Добавлена поддержка стандарта аутентификации SAML 2.0 [через ресурс DexProvider](https://deckhouse.ru/modules/user-authn/v1.76/cr.html#dexprovider-v1-spec-saml).
+    Кластер DKP теперь можно подключать к таким провайдерам, как AD FS, Okta, Keycloak, OneLogin и Shibboleth.
+
+  - Для SAML-провайдера реализована поддержка refresh-токенов на стороне Dex.
+    Это позволяет DexAuthenticator и kubeconfig-generator обновлять токены без повторного входа пользователя вручную.
+
+  - Добавлена поддержка механизма Single Logout (SLO) для SAML.
+    Провайдер может завершить сессию пользователя через `/saml/slo/{connector}`.
+
+  - Исправлена проблема с устаревшим кешем на странице входа.
+    В URL-адрес CSS-файла добавлен параметр `cache` с идентификатором сборки Dex.
+
+- При [включенном режиме мультитенантности](https://deckhouse.ru/modules/user-authz/v1.76/configuration.html#parameters-enablemultitenancy) пользователи без прав доступа, настроенных через ClusterAuthorizationRule,
+  больше не видят все неймспейсы кластера в веб-интерфейсе Deckhouse.
+  Теперь применяется поведение deny-by-default: без явно заданных правил пользователь получает пустой список неймспейсов.
+  Ограничение не касается привилегированных групп (`system:masters`, `kubeadm:cluster-admins`).
+  В документацию модуля `user-authz` добавлен [подраздел с примером конфигурации](https://deckhouse.ru/modules/user-authz/v1.76/usage.html#пример-выдачи-прав-на-все-неймспейсы) для выдачи прав на все неймспейсы.
+
+- В изолированных проектах добавлена поддержка [модуля `service-with-health-checks`](https://deckhouse.ru/modules/service-with-healthchecks/v1.76/).
+  В шаблон проекта добавлено исключение NetworkPolicy для неймспейса `d8-service-with-healthchecks`,
+  что позволяет агентам модуля выполнять проверки доступности сервисов и корректно работать в условиях сетевой изоляции.
+
+### Подсистема Security
+
+- Gatekeeper обновлён до версии 3.22.0, Ratify — до версии 1.4.0.
+  Унифицировано поведение CEL- и Rego-политик, добавлен доступ к неймспейс-контексту в политиках,
+  а также CLI-инструмент для бенчмаркинга политик.
+
+- [Настройка `denyVulnerableImages`](https://deckhouse.ru/modules/operator-trivy/configuration.html#parameters-denyvulnerableimages) перенесена из модуля `admission-policy-engine` в `operator-trivy`.
+  Теперь `operator-trivy` является единым владельцем логики запрета запуска уязвимых образов.
+
+- [Модуль `cert-manager`](https://deckhouse.ru/modules/cert-manager/v1.76/) обновлён до версии 1.20.0.
+  В новой версии добавлена поддержка Azure DNS Private Zones в DNS01 challenge
+  и новая аннотация `acme.cert-manager.io/http01-ingress-ingressclassname` для переопределения IngressClass в HTTP-01 solvers,
+  а также учтены исправления безопасности.
+
+- [В модуле `multitenancy-manager`](https://deckhouse.ru/modules/multitenancy-manager/v1.76/) обновлены уязвимые Go-зависимости `go-jose`, `golang.org/x/crypto`, `golang.org/x/net`, `grpc`, `protobuf` и ряд других.
+
+### Подсистема Cluster & Infrastructure
+
+- Изменения [в модуле `node-manager`](https://deckhouse.ru/modules/node-manager/v1.76/):
+
+  - Исправлена генерация событий draining hook. Исправление улучшает наблюдаемость процесса удаления узлов.
+
+  - Исправлено состояние StaticInstance, из-за которого CAPI мог бесконечно ожидать удаления инфраструктуры.
+    Исправление предотвращает бесконечные циклы очистки и повторной постановки в очередь
+    и позволяет продолжить восстановление или пересоздание машины в обычном режиме.
+
+  - Apiserver-proxy переведён с NGINX на нативную Go-реализацию.
+    Это повышает стабильность распределения трафика и ускоряет переподключение при обрыве соединения.
+
+- Изменения [в модуле `cloud-provider-dvp`](https://deckhouse.ru/modules/cloud-provider-dvp/v1.76/):
+
+  - Добавлена поддержка гибридных кластеров.
+    Статические master-узлы и облачные worker-узлы теперь можно использовать в одном кластере.
+
+  - Повышена надёжность установки и выполнения `converge`.
+    Переработан механизм ожидания готовности ресурсов и добавлен механизм fail-fast для части ошибок при создании инфраструктуры.
+
+  - Для дочерних кластеров, создаваемых через Cluster API,
+    добавлено автоматическое наследование StorageClass по умолчанию из родительского кластера.
+
+  - Исправлена логика обработки жизненного цикла виртуальных машин.
+    Это снижает вероятность возникновения проблем при удалении виртуальных машин и связанных объектов.
+
+  - Добавлена поддержка [параметра `masterNodeGroup.instanceClass.additionalDisks`](https://deckhouse.ru/modules/cloud-provider-dvp/v1.76/cluster_configuration.html#dvpclusterconfiguration-masternodegroup-instanceclass-additionaldisks),
+    позволяющего настраивать дополнительные диски для master-узлов.
+
+- Изменения [в модуле `cloud-provider-aws`](https://deckhouse.ru/modules/cloud-provider-aws/v1.76/):
+
+  - Логика освобождения узла от нагрузок при завершении Spot Instance перенесена в DKP.
+    Это делает обработку spot-узлов более единообразной.
+  - Исправлена обработка регионов, где ещё не поддерживается API DescribeInstanceTopology.
+    Это снижает число ложных ошибок IAM.
+
+- Изменения [в модуле `cloud-provider-openstack`](https://deckhouse.ru/modules/cloud-provider-openstack/v1.76/):
+
+  - Добавлена поддержка режима `ipMode: Proxy` для `LoadBalancer` в Kubernetes версии 1.32 и старше.
+
+  - Добавлен [параметр `csiDriver.fsGroupPolicy`](https://deckhouse.ru/modules/cloud-provider-openstack/v1.76/configuration.html#parameters-csidriver-fsgrouppolicy) для CSI-драйвера, определяющий,
+    поддерживает ли том изменение владельца и прав доступа перед монтированием.
+
+- Изменения [в модуле `cloud-provider-vsphere`](https://deckhouse.ru/modules/cloud-provider-vsphere/v1.76/):
+
+  - В модуле включён CSI snapshotter, который добавляет возможность создания снимков томов.
+
+  - Исправлено обнаружение зон и datastore. Теперь учитываются только зоны, указанные в конфигурации провайдера.
+
+- [В модуле `cloud-provider-azure`](https://deckhouse.ru/modules/cloud-provider-azure/v1.76/) добавлена поддержка NVMe-дисков для виртуальных машин Gen2.
+
+- В ресурс GCPInstanceClass модуля `cloud-provider-gcp` добавлены параметры [`enableNestedVirtualization`](https://deckhouse.ru/modules/cloud-provider-gcp/v1.76/cr.html#gcpinstanceclass-v1-spec-enablenestedvirtualization) и [`additionalDisks`](https://deckhouse.ru/modules/cloud-provider-gcp/v1.76/cr.html#gcpinstanceclass-v1-spec-additionaldisks),
+  позволяющие настраивать узлы для нагрузок, использующих виртуализацию, и сценарии хранения данных.
+
+- [В модуле `cloud-provider-yandex`](https://deckhouse.ru/modules/cloud-provider-yandex/v1.76/) исправлена проблема,
+  из-за которой удаление `externalIPAddresses` могло приводить к ошибке выполнения `converge`.
+
+- Провайдеры DVP, Huawei Cloud и zVirt переведены на контракт Cluster API `v1beta2`.
+
+- Для облачных провайдеров Huawei Cloud и VCD включены проверки политик безопасности
+  и добавлены необходимые ресурсы SecurityPolicyException для инфраструктурных компонентов.
+
+### Подсистема Network
+
+- Добавлена поддержка обработки входящего трафика через Gateway API с помощью [модуля `alb`](https://deckhouse.ru/modules/alb/).
+
+- Изменения в модуле [`cni-cilium`](https://deckhouse.ru/modules/cni-cilium/v1.76/):
+
+  - Добавлена поддержка синхронизации conntrack-таблиц между узлами для обеспечения бесшовной живой миграции виртуальных машин.
+
+  - Добавлена поддержка ответов на ICMP-запросы (`ping`) по ExternalIP для сервисов с `type: LoadBalancer` при использовании MetalLB.
+
+- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](https://deckhouse.ru/products/kubernetes-platform/guides/cni-migration.html) в кластере DKP.
+
+- В модуле `node-local-dns` добавлена возможность отключения резолвинга DNS-запросов по IPv6 с помощью [параметра `disableIPv6`](https://deckhouse.ru/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6).
+
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.76.md) на GitHub.
+
 ## Версия 1.75
 
 ### Обратите внимание
@@ -10,6 +223,17 @@
   если в кластере используется одна из следующих устаревших версий компонентов (их поддержка прекращена):
   - IngressNginxController v1.9;
   - Istio v1.19.
+
+- В DKP 1.75.0–1.75.3 сразу после установки кластера может срабатывать алерт `PodSecurityStandardsViolation`.
+  Это происходит, если у неймспейса `d8-system` отсутствует лейбл `heritage=deckhouse`,
+  из-за чего политики Pod Security Standards могут ошибочно применяться к системным подам DKP.
+  Проблема исправлена в DKP 1.75.4.
+
+  В кластерах, установленных на версиях DKP 1.75.0–1.75.3, добавьте необходимый лейбл вручную с помощью следующей команды:
+
+  ```shell
+  d8 k --as=system:sudouser label namespace d8-system heritage=deckhouse
+  ```
 
 - Изменения в поддержке версий Istio:
   - прекращена поддержка Istio 1.19;

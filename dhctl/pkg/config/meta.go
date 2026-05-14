@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -30,10 +31,11 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
 type MetaConfig struct {
@@ -51,22 +53,42 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
+	ClusterDomain string `json:"-"`
+
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap                map[string]interface{} `json:"-"`
-	Images                    imagesDigests          `json:"-"`
-	Registry                  registry_config.Config `json:"-"`
-	UUID                      string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion          string                 `json:"-"`
-	ResourcesYAML             string                 `json:"-"`
-	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
+	VersionMap                map[string]interface{}  `json:"-"`
+	Images                    imagesDigests           `json:"-"`
+	Registry                  registry_config.Config  `json:"-"`
+	UUID                      string                  `json:"clusterUUID,omitempty"`
+	InstallerVersion          string                  `json:"-"`
+	ResourcesYAML             string                  `json:"-"`
+	ResourceManagementTimeout string                  `json:"resourceManagementTimeout,omitempty"`
+	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
+	DownloadRootDir           string                  `json:"-"`
+	DownloadCacheDir          string                  `json:"-"`
 
-	DownloadRootDir  string `json:"-"`
-	DownloadCacheDir string `json:"-"`
+	// VersionFilePath is the absolute path to the deckhouse version file
+	// embedded in the installer image. Required by LoadInstallerVersion and
+	// DeckhouseInstaller.GetImageTag.
+	VersionFilePath string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
+
+type ClusterMasterEndpoint struct {
+	Address                string `json:"address" yaml:"address"`
+	KubeAPIPort            int    `json:"kubeApiPort,omitempty" yaml:"kubeApiPort,omitempty"`
+	RPPServerPort          int    `json:"rppServerPort,omitempty" yaml:"rppServerPort,omitempty"`
+	RPPBootstrapServerPort int    `json:"rppBootstrapServerPort,omitempty" yaml:"rppBootstrapServerPort,omitempty"`
+}
+
+const (
+	defaultClusterMasterAddress                = "127.0.0.1"
+	defaultClusterMasterRPPServerPort          = 5444
+	defaultClusterMasterRPPBootstrapServerPort = 4282
+)
 
 func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
 	preparator := preparatorProvider(m.ProviderName)
@@ -94,6 +116,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
 		}
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+
+		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
+		}
 	}
 
 	if len(m.InitClusterConfig) > 0 {
@@ -268,6 +294,10 @@ func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
 	return m.TerraNodeGroupSpecs
 }
 
+func (m *MetaConfig) GetClusterDomain() string {
+	return m.ClusterDomain
+}
+
 func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
 	for index, ng := range m.TerraNodeGroupSpecs {
 		if ng.Name == nodeGroupName {
@@ -361,7 +391,7 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
-func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -391,6 +421,8 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	if nodeIP != "" {
 		result["nodeIP"] = nodeIP
 	}
+
+	result["nodeName"] = "$MY_NODENAME"
 
 	// Registry
 	result["registry"] = m.Registry.
@@ -481,8 +513,18 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
+	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
+	configForBashibleBundleTemplate["clusterMasterEndpoints"] = clusterMasterEndpoints
+	configForBashibleBundleTemplate["clusterMasterKubeAPIEndpoints"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "kubeApiPort")
+	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
+	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
-	configForBashibleBundleTemplate["packagesProxy"] = map[string]interface{}{"addresses": []string{"127.0.0.1:5444"}}
+	mingetBytes, err := minget.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("get minget bytes: %w", err)
+	}
+	configForBashibleBundleTemplate["mingetB64"] = base64.StdEncoding.EncodeToString(mingetBytes)
+
 	return configForBashibleBundleTemplate, nil
 }
 
@@ -580,7 +622,75 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.ResourceManagementTimeout = m.ResourceManagementTimeout
 	}
 
+	if m.ClusterDomain != "" {
+		out.ClusterDomain = m.ClusterDomain
+	}
+
+	if m.ClusterMasterEndpoints != nil {
+		out.ClusterMasterEndpoints = make([]ClusterMasterEndpoint, len(m.ClusterMasterEndpoints))
+		copy(out.ClusterMasterEndpoints, m.ClusterMasterEndpoints)
+	}
+
 	return out
+}
+
+func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]interface{} {
+	clusterMasterEndpoints := m.effectiveClusterMasterEndpoints()
+	endpoints := make([]map[string]interface{}, 0, len(clusterMasterEndpoints))
+
+	for _, endpoint := range clusterMasterEndpoints {
+		item := map[string]interface{}{
+			"address": endpoint.Address,
+		}
+
+		if endpoint.KubeAPIPort != 0 {
+			item["kubeApiPort"] = endpoint.KubeAPIPort
+		}
+		if endpoint.RPPServerPort != 0 {
+			item["rppServerPort"] = endpoint.RPPServerPort
+		}
+		if endpoint.RPPBootstrapServerPort != 0 {
+			item["rppBootstrapServerPort"] = endpoint.RPPBootstrapServerPort
+		}
+
+		endpoints = append(endpoints, item)
+	}
+
+	return endpoints
+}
+
+func clusterMasterEndpointAddresses(endpoints []map[string]interface{}, portName string) []string {
+	addresses := make([]string, 0, len(endpoints))
+
+	for _, endpoint := range endpoints {
+		address, ok := endpoint["address"].(string)
+		if !ok || address == "" {
+			continue
+		}
+
+		port, ok := endpoint[portName].(int)
+		if !ok || port == 0 {
+			continue
+		}
+
+		addresses = append(addresses, fmt.Sprintf("%s:%d", address, port))
+	}
+
+	return addresses
+}
+
+func (m *MetaConfig) effectiveClusterMasterEndpoints() []ClusterMasterEndpoint {
+	if len(m.ClusterMasterEndpoints) > 0 {
+		return m.ClusterMasterEndpoints
+	}
+
+	return []ClusterMasterEndpoint{
+		{
+			Address:                defaultClusterMasterAddress,
+			RPPServerPort:          defaultClusterMasterRPPServerPort,
+			RPPBootstrapServerPort: defaultClusterMasterRPPBootstrapServerPort,
+		},
+	}
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {
@@ -651,12 +761,11 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
-	var imagesDigests imagesDigests
+func (m *MetaConfig) LoadImagesDigests() error {
+	imagesDigests, err := digests.GetAllDigests()
 
-	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %v", err)
+		return fmt.Errorf("Cannot get images digests: %w", err)
 	}
 
 	m.Images = imagesDigests
@@ -665,15 +774,14 @@ func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {
-	rawFile, err := os.ReadFile(app.VersionFile)
+	rawFile, err := os.ReadFile(m.VersionFilePath)
 	if err != nil {
-		// TODO param instead of hardcode path
-		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
-		rawFile, err = os.ReadFile(versionFilePath)
+		// fallback to the unpacked deckhouse image location
+		fallbackPath := filepath.Join(m.DownloadRootDir, "deckhouse", "version")
+		rawFile, err = os.ReadFile(fallbackPath)
 		if err != nil {
-			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+			return fmt.Errorf("could not read both %s and %s: %w", m.VersionFilePath, fallbackPath, err)
 		}
-
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

@@ -16,10 +16,7 @@ package checks
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -27,15 +24,17 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cfgregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
 type DhctlEditionCheck struct {
 	MetaConfig *config.MetaConfig
 	Installer  *config.DeckhouseInstaller
+	BuildInfo  options.BuildInfo
 
 	descriptor imageDescriptorProvider
 }
@@ -79,10 +78,10 @@ func (c DhctlEditionCheck) Run(ctx context.Context) error {
 	}
 
 	labels := imageConfig.Config.Labels
-	if labels == nil || labels["io.deckhouse.edition"] != app.AppEdition {
+	if labels == nil || labels["io.deckhouse.edition"] != c.BuildInfo.AppEdition {
 		return fmt.Errorf(
 			"your edition installer image does not match: dhctl edition %s, image edition %s",
-			app.AppEdition,
+			c.BuildInfo.AppEdition,
 			labels["io.deckhouse.edition"],
 		)
 	}
@@ -99,7 +98,7 @@ func (c DhctlEditionCheck) deckhouseImageConfig(ctx context.Context) (*v1.Config
 		return nil, err
 	}
 
-	client, err := tlsClient(registry.CA, string(registry.Scheme))
+	client, err := registryutil.NewRegistryClient(string(registry.Scheme), registry.CA)
 	if err != nil {
 		return nil, err
 	}
@@ -134,25 +133,6 @@ func registryAuth(registry cfgregistry.Data) (authn.Authenticator, error) {
 	return authn.Anonymous, nil
 }
 
-func tlsClient(ca, scheme string) (*http.Client, error) {
-	client := &http.Client{}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-
-	if strings.ToLower(scheme) == "http" || len(ca) == 0 {
-		client.Transport = transport
-		return client, nil
-	}
-
-	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(ca)); !ok {
-		return nil, fmt.Errorf("invalid cert in CA PEM")
-	}
-
-	transport.TLSClientConfig = &tls.Config{RootCAs: certPool}
-	client.Transport = transport
-	return client, nil
-}
-
 func (c DhctlEditionCheck) provider() imageDescriptorProvider {
 	if c.descriptor != nil {
 		return c.descriptor
@@ -160,10 +140,11 @@ func (c DhctlEditionCheck) provider() imageDescriptorProvider {
 	return remoteDescriptorProvider{}
 }
 
-func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
+func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller, buildInfo options.BuildInfo) preflight.Check {
 	check := DhctlEditionCheck{
 		MetaConfig: meta,
 		Installer:  cfg,
+		BuildInfo:  buildInfo,
 	}
 	preflightCheck := preflight.Check{
 		Name:        DhctlEditionCheckName,
@@ -172,7 +153,7 @@ func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) prefl
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
-	if app.AppVersion == "local" || app.AppEdition == "local" {
+	if buildInfo.AppVersion == "local" || buildInfo.AppEdition == "local" {
 		preflightCheck.Disable()
 	}
 	return preflightCheck

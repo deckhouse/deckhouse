@@ -22,13 +22,12 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type SaverDestination interface {
-	SaveState(outputs *PipelineOutputs) error
+	SaveState(ctx context.Context, outputs *PipelineOutputs) error
 }
 
 type StateSaver struct {
@@ -125,6 +124,8 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 	s.saversLock.RLock()
 	defer s.saversLock.RUnlock()
 
+	ctx := context.TODO()
+
 	if s.runner == nil {
 		log.ErrorF("Possible bug!!! The state watcher got fs event while not started!\n")
 	}
@@ -133,7 +134,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 	s.debug("State file modified: %s", event.Name)
-	if app.IsDebug {
+	if s.runner != nil && s.runner.isDebug {
 		fs.CreateFileBackup(event.Name)
 	}
 
@@ -142,7 +143,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 
-	outputs, err := OnlyState(context.Background(), s.runner)
+	outputs, err := OnlyState(ctx, s.runner)
 	if err != nil {
 		log.ErrorF("Parse intermediate state: %v\n", err)
 		return
@@ -157,7 +158,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		go func() {
 			defer wg.Done()
 
-			err = svr.SaveState(outputs)
+			err = svr.SaveState(ctx, outputs)
 			if err != nil {
 				log.ErrorF("Save intermediate state error: %v\n", err)
 				atomic.StoreInt32(&hasError, 1)
@@ -190,14 +191,14 @@ type cacheDestination struct {
 	runner *Runner
 }
 
-func (d *cacheDestination) SaveState(outputs *PipelineOutputs) error {
+func (d *cacheDestination) SaveState(ctx context.Context, outputs *PipelineOutputs) error {
 	if len(outputs.InfrastructureState) == 0 {
 		debugStateSaver("State is empty. Skip")
 		return nil
 	}
 	name := d.runner.stateName()
 	debugStateSaver("Intermediate save state %s in cache...\n", name)
-	err := d.runner.stateCache.Save(name, outputs.InfrastructureState)
+	err := d.runner.stateCache.Save(ctx, name, outputs.InfrastructureState)
 	msg := fmt.Sprintf("Intermediate state %s in cache was saved\n", name)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state %s in cache was not saved: %v\n", name, err)

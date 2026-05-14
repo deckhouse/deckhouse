@@ -36,18 +36,26 @@ import (
 //go:generate go run ./build.go --edition all
 
 const (
-	modulesFileName             = "modules-%s.yaml"
-	modulesWithExcludeFileName  = "modules-with-exclude-%s.yaml"
-	modulesWithDependencies     = "modules-with-dependencies-%s.yaml"
-	candiFileName               = "candi-%s.yaml"
-	candiCloudProviders         = "candi-cloud-providers-%s.yaml"
-	modulesExcluded             = "modules-excluded-%s.yaml"
-	cloudProviderGlob           = "030-cloud-provider-*"
+	modulesTestsName            = "modules-tests-%s.yaml"
+	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
+	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
+	candiFileName              = "candi-%s.yaml"
+	candiCloudProviders        = "candi-cloud-providers-%s.yaml"
+	modulesExcluded            = "modules-excluded-%s.yaml"
+	cloudProviderGlob          = "030-cloud-provider-*"
 )
 
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
 var workDir = cwd()
+
+var testsExcludes = []string{
+	"docs",
+	"README.md",
+	"images",
+	"webhooks",
+	"crds",
+}
 
 var defaultModulesExcludes = []string{
 	"docs",
@@ -55,6 +63,9 @@ var defaultModulesExcludes = []string{
 	"images",
 	"hooks/**/*.go",
 	"hooks/*.go",
+	"hooks/**/testdata",
+	"apis",
+	"requirements",
 	"hack",
 	"template_tests",
 	".namespace",
@@ -63,32 +74,17 @@ var defaultModulesExcludes = []string{
 }
 
 var nothingButGoHooksExcludes = []string{
-	"images",
-	"templates",
-	"charts",
-	"crds",
-	"docs",
-	"monitoring",
-	"openapi",
-	"oss.yaml",
-	"cloud-instance-manager",
-	"values_matrix_test.yaml",
-	"values.yaml",
-	".helmignore",
-	"candi",
-	"Chart.yaml",
-	".namespace",
 	"**/*_test.go",
 	"**/*.sh",
 }
 
-var stageDependencies = map[string][]string{
-	"install": {
-		"**/*.go",
+var stageDependenciesSetup = map[string][]string{
+	"setup": {
+		"**/*",
 	},
 }
 
-var stageDependenciesFile = map[string][]string{
+var stageDependenciesInstall = map[string][]string{
 	"install": {
 		"**/*",
 	},
@@ -102,6 +98,7 @@ type writeSettings struct {
 	ExcludePaths      []string
 	StageDependencies map[string][]string
 	ExcludedModules   map[string]struct{}
+	AvailableModules  map[string]struct{}
 }
 
 func writeExcludedModules(settings writeSettings, modules map[string]string, ed edition) {
@@ -119,7 +116,7 @@ func writeExcludedModules(settings writeSettings, modules map[string]string, ed 
 	for _, name := range ed.ExcludeModules {
 		modulePath, ok := modules[name]
 		if !ok {
-			log.Print(fmt.Sprintf("Not found module path for module %s\n", modulePath))
+			log.Printf("Not found module path for module %s\n", modulePath)
 			continue
 		}
 		resultArr = append(resultArr, fmt.Sprintf("- %s/**", modulePath))
@@ -135,7 +132,7 @@ func writeExcludedModules(settings writeSettings, modules map[string]string, ed 
 func writeSections(settings writeSettings) {
 	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
 
-	if settings.Dir == "" || settings.Prefix == "" {
+	if settings.Dir == "" {
 		if err := writeToFile(saveTo, nil); err != nil {
 			log.Fatal(err)
 		}
@@ -155,6 +152,14 @@ func writeSections(settings writeSettings) {
 		if strings.Contains(file, "ee/modules/000-common") {
 			return
 		}
+		// remove 098_upd_tfadm.sh.tpl in CSE
+		if strings.Contains(file, "/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl") && settings.Edition == "CSE" {
+			return
+		}
+		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
+		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
+			return
+		}
 
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		// we do not want to add hooks to the modules-with-exclude include
@@ -169,7 +174,7 @@ func writeSections(settings writeSettings) {
 				Add:               strings.TrimPrefix(file, workDir),
 				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
 				ExcludePaths:      nil,
-				StageDependencies: stageDependenciesFile,
+				StageDependencies: stageDependenciesInstall,
 			})
 		} else {
 			addEntries = append(addEntries, addEntry{
@@ -195,6 +200,13 @@ func writeSections(settings writeSettings) {
 			moduleName := filepath.Base(file)[4:]
 			// skip excluded modules
 			if _, ok := settings.ExcludedModules[moduleName]; ok {
+				continue
+			}
+		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// include only modules from AvailableModules list
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
 				continue
 			}
 		}
@@ -249,8 +261,8 @@ func writeSections(settings writeSettings) {
 	}
 }
 
-func deleteRevisionFiles(edition string) {
-	files, err := filepath.Glob(includePath(fmt.Sprintf("*-%s.yaml", edition)))
+func deleteRevisionFiles(template string, edition string) {
+	files, err := filepath.Glob(includePath(fmt.Sprintf(template, edition)))
 	if err != nil {
 		log.Fatalf("globbing: %v", err)
 	}
@@ -302,6 +314,12 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		if !info.IsDir() {
 			continue
 		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
+				continue
+			}
+		}
 
 		addNewFileEntry(file)
 	}
@@ -314,6 +332,118 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 		}
 	}
 
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func writeStageDepsSections(settings writeSettings) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+	if settings.Dir == "" {
+		if err := writeToFile(saveTo, nil); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	var addEntries []addEntry
+	prefix := filepath.Join(workDir, settings.Prefix)
+	searchDir := filepath.Join(prefix, settings.Dir, "*")
+	files, err := filepath.Glob(searchDir)
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
+	addNewFileEntry := func(file string) {
+		if !strings.Contains(file, "/hooks") && !strings.Contains(file, "/apis") && !strings.Contains(file, "/requirements") {
+			return
+		}
+		// modules/500-okmeter/hooks empty if FE override one files ee/fe/modules/500-okmeter/hooks/update_agent_image.go
+		if file == prefix+"/modules/500-okmeter/hooks" && settings.Edition == "FE" {
+			return
+		}
+		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
+		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
+			return
+		}
+		info, err := os.Stat(file)
+		if err == nil {
+			if info.IsDir() {
+				addEntries = append(addEntries, addEntry{
+					Add:               strings.TrimPrefix(file, workDir),
+					To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+					ExcludePaths:      settings.ExcludePaths,
+					StageDependencies: settings.StageDependencies,
+				})
+			}
+			if info.Mode().IsRegular() {
+				addEntries = append(addEntries, addEntry{
+					Add:               strings.TrimPrefix(file, workDir),
+					To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+					ExcludePaths:      nil,
+					StageDependencies: stageDependenciesInstall,
+				})
+			}
+		}
+	}
+
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil {
+			continue
+		}
+		if !info.IsDir() {
+			continue
+		}
+		if len(settings.ExcludedModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// skip excluded modules
+			if _, ok := settings.ExcludedModules[moduleName]; ok {
+				continue
+			}
+		}
+		if len(settings.AvailableModules) > 0 {
+			moduleName := filepath.Base(file)[4:]
+			// include only modules from AvailableModules list
+			if _, ok := settings.AvailableModules[moduleName]; !ok {
+				continue
+			}
+		}
+		buildFile := filepath.Join(file, ".build.yaml")
+		ok, err := fileExists(buildFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if ok {
+			content, err := os.ReadFile(buildFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(content) == 0 {
+				continue
+			}
+			scanner := bufio.NewScanner(bytes.NewReader(content))
+			for scanner.Scan() {
+				s := strings.TrimSpace(scanner.Text())
+				additionalFiles, err := filepath.Glob(filepath.Join(file, s))
+				if err != nil {
+					log.Fatalf("globbing: %v", err)
+				}
+				for _, additionalFile := range additionalFiles {
+					addNewFileEntry(additionalFile)
+				}
+			}
+		} else {
+			addNewFileEntry(file + "/hooks")
+			addNewFileEntry(file + "/apis")
+			addNewFileEntry(file + "/requirements")
+		}
+	}
+	var result []byte
+	if len(addEntries) != 0 {
+		result, err = yaml.Marshal(addEntries)
+		if err != nil {
+			log.Fatalf("converting entries to YAML: %v", err)
+		}
+	}
 	if err := writeToFile(saveTo, result); err != nil {
 		log.Fatal(err)
 	}
@@ -353,15 +483,15 @@ func cwd() string {
 }
 
 type buildIncludes struct {
-	SkipCandi   *bool `yaml:"skipCandi,omitempty"`
-	SkipModules *bool `yaml:"skipModules,omitempty"`
+	SkipCandi *bool `yaml:"skipCandi,omitempty"`
 }
 
 type edition struct {
-	Name           string         `yaml:"name,omitempty"`
-	ModulesDir     string         `yaml:"modulesDir,omitempty"`
-	BuildIncludes  *buildIncludes `yaml:"buildIncludes,omitempty"`
-	ExcludeModules []string       `yaml:"excludeModules,omitempty"`
+	Name             string         `yaml:"name,omitempty"`
+	ModulesDir       string         `yaml:"modulesDir,omitempty"`
+	BuildIncludes    *buildIncludes `yaml:"buildIncludes,omitempty"`
+	ExcludeModules   []string       `yaml:"excludeModules,omitempty"`
+	AvailableModules []string       `yaml:"AvailableModules,omitempty"`
 }
 
 type editions struct {
@@ -419,8 +549,20 @@ func main() {
 }
 
 func (e *executor) executeEdition(editionName string) {
-	deleteRevisionFiles(editionName)
+	deleteRevisionFiles("modules*-%s.yaml", editionName)
+	deleteRevisionFiles("candi*-%s.yaml", editionName)
+
 	modulesDict := make(map[string]string)
+	availableModules := make(map[string]struct{})
+	for _, ed := range e.Editions {
+		if ed.Name != editionName {
+			continue
+		}
+		for _, moduleName := range ed.AvailableModules {
+			availableModules[moduleName] = struct{}{}
+		}
+		break
+	}
 
 	for _, ed := range e.Editions {
 		// get moduleName => path dict
@@ -442,12 +584,10 @@ func (e *executor) executeEdition(editionName string) {
 		for _, moduleName := range ed.ExcludeModules {
 			excludeModules[moduleName] = struct{}{}
 		}
-
 		bi := ed.BuildIncludes
 		if bi == nil {
 			bi = &buildIncludes{
-				SkipCandi:   ptr.To(false),
-				SkipModules: ptr.To(false),
+				SkipCandi: ptr.To(false),
 			}
 		}
 
@@ -458,55 +598,58 @@ func (e *executor) executeEdition(editionName string) {
 			SaveTo:            candiCloudProviders,
 			Dir:               "modules",
 			Prefix:            prefix,
-			StageDependencies: stageDependenciesFile,
+			StageDependencies: stageDependenciesInstall,
+			AvailableModules:  availableModules,
 		}
 
 		writeSettingCandi := writeSettings{
 			Edition:           editionName,
 			SaveTo:            candiFileName,
-			StageDependencies: stageDependenciesFile,
+			StageDependencies: stageDependenciesInstall,
 		}
 		if bi.SkipCandi == nil || !*bi.SkipCandi {
 			writeSettingCandi.Prefix = prefix
 			writeSettingCandi.Dir = "candi"
 		}
 
-		writeSettingsModules := writeSettings{
-			Edition:         editionName,
-			SaveTo:          modulesFileName,
-			ExcludedModules: excludeModules,
+		writeSettingsModulesTests := writeSettings{
+			Edition:          editionName,
+			SaveTo:           modulesTestsName,
+			ExcludedModules:  excludeModules,
+			AvailableModules: availableModules,
 		}
 
 		writeSettingsExcludeFileName := writeSettings{
-			Edition:         editionName,
-			SaveTo:          modulesWithExcludeFileName,
-			ExcludedModules: excludeModules,
+			Edition:          editionName,
+			SaveTo:           modulesWithExcludeFileName,
+			ExcludedModules:  excludeModules,
+			AvailableModules: availableModules,
 		}
 
 		writeSettingStageDeps := writeSettings{
-			Edition:         editionName,
-			SaveTo:          modulesWithDependencies,
-			ExcludedModules: excludeModules,
+			Edition:          editionName,
+			SaveTo:           modulesWithDependencies,
+			ExcludedModules:  excludeModules,
+			AvailableModules: availableModules,
 		}
 
-		if bi.SkipModules == nil || !*bi.SkipModules {
-			writeSettingsModules.Prefix = prefix
-			writeSettingsModules.Dir = "modules"
-			writeSettingsModules.StageDependencies = stageDependenciesFile
+		writeSettingsModulesTests.Prefix = prefix
+		writeSettingsModulesTests.Dir = "modules"
+		writeSettingsModulesTests.StageDependencies = stageDependenciesSetup
+		writeSettingsModulesTests.ExcludePaths = testsExcludes
 
-			writeSettingsExcludeFileName.Prefix = prefix
-			writeSettingsExcludeFileName.Dir = "modules"
-			writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
+		writeSettingsExcludeFileName.Prefix = prefix
+		writeSettingsExcludeFileName.Dir = "modules"
+		writeSettingsExcludeFileName.ExcludePaths = defaultModulesExcludes
 
-			writeSettingStageDeps.Prefix = prefix
-			writeSettingStageDeps.Dir = "modules"
-			writeSettingStageDeps.StageDependencies = stageDependencies
-			writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
-		}
+		writeSettingStageDeps.Prefix = prefix
+		writeSettingStageDeps.Dir = "modules"
+		writeSettingStageDeps.StageDependencies = stageDependenciesInstall
+		writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
 
-		writeSections(writeSettingsModules)
+		writeSections(writeSettingsModulesTests)
 		writeSections(writeSettingsExcludeFileName)
-		writeSections(writeSettingStageDeps)
+		writeStageDepsSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)
 		writeCandiCloudProvidersSections(writeSettingCandiCloudProviders)
 

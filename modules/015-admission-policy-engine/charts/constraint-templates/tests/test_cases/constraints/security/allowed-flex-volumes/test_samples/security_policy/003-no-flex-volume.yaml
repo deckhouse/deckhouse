@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-no-flex-volume
+  namespace: testns
+  labels:
+    app: nginx-no-flex-volume
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      volumeMounts:
+        - mountPath: /cache
+          name: demo-vol
+  volumes:
+    - name: demo-vol
+      emptyDir: {}

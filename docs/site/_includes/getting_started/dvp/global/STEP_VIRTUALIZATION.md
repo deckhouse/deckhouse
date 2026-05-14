@@ -1,4 +1,4 @@
-Enable the virtualization module. In the parameter [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) of the module, specify the subnets, IP addresses from which virtual machines will be assigned:
+Enable the virtualization module. In the parameter [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) of the module, specify the subnets, IP addresses from which virtual machines will be assigned. For DVCR image storage, set the PVC size and StorageClass name (the example uses `sds-r1` created in the previous step):
 
 ```shell
 sudo -i d8 k create -f - <<EOF
@@ -13,6 +13,7 @@ spec:
       storage:
         persistentVolumeClaim:
           size: 50G
+          storageClassName: sds-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
     # Specify the subnets from which IP addresses will be assigned to virtual machines.

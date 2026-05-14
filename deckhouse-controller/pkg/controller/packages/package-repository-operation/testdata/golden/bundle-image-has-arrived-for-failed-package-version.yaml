@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "7"
+  resourceVersion: "6"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -24,8 +24,9 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: ScanSucceeded
     status: "True"
     type: Completed
   packages:
@@ -35,7 +36,6 @@ status:
       type: Application
     processedOverall: 1
     total: 1
-  phase: Completed
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -68,13 +68,14 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: Successfully scanned repository, found 1 package(s)
-    reason: ""
+    message: ""
+    reason: ScanSucceeded
     status: "True"
-    type: LastOperationScanFinished
+    type: LastScanSucceeded
   packages:
   - name: test-package
     type: Application
   packagesCount: 1
+  partialScanAvailable: false
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"

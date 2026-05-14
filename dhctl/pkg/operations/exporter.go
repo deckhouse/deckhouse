@@ -24,7 +24,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -33,8 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -69,9 +66,10 @@ type ConvergeExporter struct {
 	GaugeMetrics    map[string]*prometheus.GaugeVec
 	CounterMetrics  map[string]*prometheus.CounterVec
 
-	tmpDir  string
-	logger  log.Logger
-	isDebug bool
+	tmpDir      string
+	downloadDir string
+	logger      log.Logger
+	isDebug     bool
 }
 
 var (
@@ -97,45 +95,41 @@ var (
 )
 
 type ExporterParams struct {
-	Address  string
-	Path     string
-	Interval time.Duration
-	TmpDir   string
-	Logger   log.Logger
-	IsDebug  bool
+	Address     string
+	Path        string
+	Interval    time.Duration
+	TmpDir      string
+	DownloadDir string
+	Logger      log.Logger
+	IsDebug     bool
+
+	// KubeCl is the in-cluster API client. The caller builds it via
+	// providerinitializer.GetProviders / kubeProvider.Client(ctx) just like
+	// every other dhctl command does.
+	KubeCl *client.KubernetesClient
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
-	sshClient, err := sshclient.NewInitClientFromFlags(context.Background(), true)
-	if err != nil {
-		panic(err)
-	}
-
-	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-		panic(err)
-	}
-
 	logger := params.Logger
 	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
+	infraContext := infrastructure.NewContext(logger).WithDebug(params.IsDebug)
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
-		kubeCl:                kubeCl,
-		infrastructureContext: infrastructure.NewContext(logger),
+		kubeCl:                params.KubeCl,
+		infrastructureContext: infraContext,
 		CheckInterval:         params.Interval,
-
-		existedEntities: newPreviouslyExistedEntities(),
-
-		OneGaugeMetrics: make(map[string]prometheus.Gauge),
-		GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
-		CounterMetrics:  make(map[string]*prometheus.CounterVec),
-		tmpDir:          params.TmpDir,
-		logger:          logger,
-		isDebug:         params.IsDebug,
+		existedEntities:       newPreviouslyExistedEntities(),
+		OneGaugeMetrics:       make(map[string]prometheus.Gauge),
+		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
+		CounterMetrics:        make(map[string]*prometheus.CounterVec),
+		tmpDir:                params.TmpDir,
+		downloadDir:           params.DownloadDir,
+		logger:                logger,
+		isDebug:               params.IsDebug,
 	}
 }
 
@@ -221,9 +215,9 @@ func (c *ConvergeExporter) registerMetrics() {
 //nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
 	log.InfoLn("Start exporter")
-	log.InfoLn("Address: ", app.ListenAddress)
-	log.InfoLn("Metrics path: ", app.MetricsPath)
-	log.InfoLn("Checks interval: ", app.CheckInterval)
+	log.InfoLn("Address: ", c.ListenAddress)
+	log.InfoLn("Metrics path: ", c.MetricsPath)
+	log.InfoLn("Checks interval: ", c.CheckInterval)
 	c.registerMetrics()
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -299,6 +293,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           c.tmpDir,
+		DownloadDir:      c.downloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           c.logger,
 		IsDebug:          c.isDebug,

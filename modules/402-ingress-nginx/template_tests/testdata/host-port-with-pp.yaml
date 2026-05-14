@@ -1,15 +1,15 @@
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-next
 spec:
   ingressClass: test
-  controllerVersion: "1.10"
+  controllerVersion: "1.15"
   inlet: "HostPortWithProxyProtocol"
   geoIP2:
     maxmindLicenseKey: abc12345
     maxmindEditionIDs: ["GeoIPTest", "GeoIPTest2"]
-  resourcesRequests:
+  resourcesManagement:
     mode: Static
   hostPortWithProxyProtocol:
     httpPort: 80

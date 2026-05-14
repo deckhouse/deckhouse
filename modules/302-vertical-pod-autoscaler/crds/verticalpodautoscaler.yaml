@@ -82,6 +82,12 @@ spec:
                   - name
                   type: object
                 type: array
+              scope:
+                description: |-
+                  Scope controls additional recommendation partitioning for DaemonSet targets.
+                  
+                  The value must be a node label key (for example: `node.kubernetes.io/instance-type`).
+                type: string
               resourcePolicy:
                 description: |-
                   Controls how the autoscaler computes recommended resources.
@@ -263,7 +269,7 @@ spec:
                       - `Recreate` — this mode allows VPA to modify resource requirements of the running pods (i.e., restart them during operation). This mode might result in temporary unavailability of the service (due to restart) if you have just one replica (replicas: 1). In this mode, VPA does not recreate pods that were not created by a controller.
                       - `Initial` — VPA modifies pod resources only when pods are started (but not when pods are running).
                       - `Off` — VPA does not take any action to update the resource requests for the running containers. Autoscaler calculates recomendations and stores them in the status field of the VPA object. You can browse VPA recommendations using the following command: `d8 k describe vpa <vpa-name>`.
-                      - `InPlaceOrRecreate` - (beta). Working only from kubernetes 1.33. VPA will attempt non-disruptive resizes first, or fall back to recreation if needed.
+                      - `InPlaceOrRecreate` (GA) — supported in Kubernetes 1.33 and later. The VPA attempts to update pod resources without a restart; if that is not possible, it recreates the pod.
                     enum:
                     - "Off"
                     - Initial
@@ -271,7 +277,7 @@ spec:
                     - Auto
                     - InPlaceOrRecreate
                     type: string
-                    x-doc-default: 'Auto'
+                    x-doc-default: 'InPlaceOrRecreate'
                 type: object
             required:
             - targetRef
@@ -319,6 +325,88 @@ spec:
                   - type
                   type: object
                 type: array
+              groups:
+                description: Contains grouped recommendations by scope value when `spec.scope` is used.
+                items:
+                  properties:
+                    containerRecommendations:
+                      description: Resources recommended by autoscaler for each container in this group.
+                      items:
+                        properties:
+                          containerName:
+                            description: Name of the container.
+                            type: string
+                          lowerBound:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Minimum recommended amount of resources. Observes
+                              `ContainerResourcePolicy`. This amount is not guaranteed
+                              to be sufficient for the application to operate in a stable
+                              way, however running with less resources is likely to
+                              have significant impact on performance/availability.
+                            type: object
+                          scope:
+                            description: Scope binds this recommendation to a specific scope value in form "<scopeKey>=<scopeValue>".
+                            type: string
+                          target:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: Recommended amount of resources. Observes `ContainerResourcePolicy`.
+                            type: object
+                          uncappedTarget:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              The most recent recommended resources target
+                              computed by the autoscaler for the controlled pods, based
+                              only on actual resource usage, not taking into account
+                              the `ContainerResourcePolicy`.
+                              
+                              May differ from the Recommendation
+                              if the actual resource usage causes the target to violate
+                              the `ContainerResourcePolicy` (lower than MinAllowed or
+                              higher that MaxAllowed). Used only as status indication,
+                              will not affect actual resource assignment.
+                            type: object
+                          upperBound:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Maximum recommended amount of resources.
+                              
+                              Observes `ContainerResourcePolicy`. Any resources allocated beyond
+                              this value are likely wasted. This value may be larger
+                              than the maximum amount of application is actually capable
+                              of consuming.
+                            type: object
+                        required:
+                        - target
+                        type: object
+                      type: array
+                    scopeValue:
+                      description: Scope value of `spec.scope` label key for this recommendation group.
+                      type: string
+                  required:
+                  - scopeValue
+                  type: object
+                type: array
               recommendation:
                 description: The most recently computed amount of resources recommended
                   by the autoscaler for the controlled pods.
@@ -352,6 +440,9 @@ spec:
                             way, however running with less resources is likely to
                             have significant impact on performance/availability.
                           type: object
+                        scope:
+                          description: Scope binds this recommendation to a specific scope value in form "<scopeKey>=<scopeValue>".
+                          type: string
                         target:
                           additionalProperties:
                             anyOf:

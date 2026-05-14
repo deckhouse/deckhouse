@@ -1,0 +1,111 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: deny-exec
+spec:
+  suiteName: deny-exec
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx:latest
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 001-allowed-absent-command-stdin
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: command[]
+              scenario: absent
+            - path: stdin
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                containers:
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+        - name: 002-allowed-command-ls-stdin-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: command[]
+              scenario: positive
+            - path: stdin
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-command-ls-stdin-false
+              spec:
+                containers:
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+                    stdin: false
+        - name: 003-disallowed-command-not-allowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: command[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-command-not-allowed
+              spec:
+                containers:
+                  - command:
+                      - cat
+                    image: nginx:latest
+                    name: nginx
+        - name: 004-disallowed-stdin-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: stdin
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-stdin-true
+              spec:
+                containers:
+                  - command:
+                      - ls
+                    image: nginx:latest
+                    name: nginx
+                    stdin: true

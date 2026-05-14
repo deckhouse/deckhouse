@@ -27,14 +27,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -153,7 +154,7 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 	stateCache := cache.NewTestCache()
 
 	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil)
-	require.NoError(t, pec.InitPipeline(stateCache))
+	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))
 
 	abortParams := &GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,

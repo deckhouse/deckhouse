@@ -25,7 +25,7 @@ rules:
   verbs: ["get", "watch", "list"]
 - apiGroups: [""]
   resources: ["configmaps"]
-  verbs: ["get", "create", "update"]
+  verbs: ["get", "list", "watch", "create", "update"]
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create"]
@@ -44,7 +44,21 @@ roleRef:
   kind: Role
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
-
+---
+# Required for the in-process metrics auth middleware to call TokenReview/SubjectAccessReview when authorizing /metrics scrapes.
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:control-plane-manager:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: d8-control-plane-manager
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: d8:rbac-proxy
+  apiGroup: rbac.authorization.k8s.io
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -57,6 +71,21 @@ rules:
     verbs: ["get", "list", "watch", "update"]
   - apiGroups: ["deckhouse.io"]
     resources: ["nodegroups"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["control-plane.deckhouse.io"]
+    resources: ["controlplanenodes"]
+    verbs: ["get", "list", "watch", "update", "patch", "create", "delete"]
+  - apiGroups: ["control-plane.deckhouse.io"]
+    resources: ["controlplaneoperations"]
+    verbs: ["get", "list", "watch", "update", "patch", "create", "delete"]
+  - apiGroups: ["control-plane.deckhouse.io"]
+    resources: ["controlplanenodes/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["control-plane.deckhouse.io"]
+    resources: ["controlplaneoperations/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
     verbs: ["get", "list", "watch"]
 ---
 kind: ClusterRoleBinding
@@ -72,3 +101,207 @@ roleRef:
   kind: ClusterRole
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
+{{- /*
+  Single source of truth for the kubeadm:cluster-admins binding lives in the Go hook
+  modules/040-control-plane-manager/hooks/reconcile_kubeadm_cluster_admins_binding.go. The hook
+  evaluates three gates (user-authz enabled, cluster bootstrapped, ClusterRole user-authz:cluster-admin
+  observed in the API) and publishes already-made decisions into Helm values:
+
+    .Values.controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string
+    .Values.controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool
+
+  We read those values verbatim and do NOT re-evaluate the gates here, so hook and template
+  stay aligned by construction. Read via `dig` to keep the early-render path safe (hook runs
+  on OnBeforeHelm before each helm reconcile, but the schema defaults must work too).
+*/}}
+{{- $targetRole := dig "internal" "kubeadmClusterAdminsTargetRoleName" "cluster-admin" .Values.controlPlaneManager }}
+{{- $supplementEnabled := dig "internal" "kubeadmClusterAdminsSupplementEnabled" false .Values.controlPlaneManager }}
+{{- if $supplementEnabled }}
+---
+# Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.
+# No user-authz.deckhouse.io/access-level annotation: that pattern is for optional ClusterRoles merged into
+# ClusterAuthorizationRule bindings; this role must apply only to kubeadm:cluster-admins via explicit bindings below.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["pods/portforward"]
+  verbs: ["create", "get"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: [""]
+  resources: ["nodes/status"]
+  verbs: ["get", "patch", "update"]
+# Required for kube-apiserver-kubelet-client (group kubeadm:cluster-admins per kubeadm 1.29+ defaults):
+# every kubelet API call from apiserver (exec, attach, logs, portforward) is authorized as nodes/proxy.
+# Deliberately kept OUT of user-authz:cluster-admin so that the high-level ClusterAdmin role
+# (granted to users via ClusterAuthorizationRule.accessLevel=ClusterAdmin) does NOT silently turn
+# into a root-on-every-node permission via the kubelet API. nodes/proxy is admin.conf-specific
+# and lives only in this supplement bound to Group/kubeadm:cluster-admins.
+- apiGroups: [""]
+  resources: ["nodes/proxy"]
+  verbs: ["get", "create"]
+- apiGroups: [""]
+  resources: ["users", "groups", "serviceaccounts"]
+  verbs: ["impersonate"]
+# Standard k8s resources not granted by user-authz:cluster-admin.
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: [""]
+  resources: ["persistentvolumes/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: [""]
+  resources: ["replicationcontrollers"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: [""]
+  resources: ["replicationcontrollers/scale"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: [""]
+  resources: ["componentstatuses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["bindings", "pods/binding"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["apps"]
+  resources: ["controllerrevisions"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingressclasses"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["volumeattachments", "csinodes", "csidrivers", "csistoragecapacities"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["node.k8s.io"]
+  resources: ["runtimeclasses"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["flowcontrol.apiserver.k8s.io"]
+  resources: ["flowschemas", "prioritylevelconfigurations"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingadmissionpolicies", "validatingadmissionpolicybindings"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews", "localsubjectaccessreviews", "selfsubjectaccessreviews", "selfsubjectrulesreviews"]
+  verbs: ["create"]
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews", "selfsubjectreviews"]
+  verbs: ["create"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["deckhouse.io"]
+  resources:
+  - moduleconfigs
+  - deckhousereleases
+  - modulesources
+  - moduleupdatepolicies
+  - modulepulloverrides
+  - packagerepositories
+  - packagerepositoryoperations
+  - applicationpackageversions
+  - applicationpackages
+  - applications
+  - nodegroups
+  - nodeusers
+  - staticinstances
+  - sshcredentials
+  - authorizationrules
+  - clusterauthorizationrules
+  - users
+  - useroperations
+  - dexproviders
+  - dexauthenticators
+  - ingressnginxcontrollers
+  - securitypolicies
+  - securitypolicyexceptions
+  - operationpolicies
+  - customprometheusrules
+  - clusterlogdestinations
+  - clusterloggingconfigs
+  - podloggingconfigs
+  - projects
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources:
+  - controlplanenodes
+  - controlplaneoperations
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources:
+  - controlplanenodes/status
+  - controlplaneoperations/status
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests/approval", "certificatesigningrequests/status"]
+  verbs: ["get", "patch", "update"]
+- nonResourceURLs: ["/api", "/api/*", "/apis", "/apis/*", "/healthz", "/healthz/*", "/version", "/openapi/*", "/logs", "/metrics"]
+  verbs: ["get"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["scheduling.k8s.io"]
+  resources: ["priorityclasses"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["apiregistration.k8s.io"]
+  resources: ["apiservices"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["apiregistration.k8s.io"]
+  resources: ["apiservices/status"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["apps", "extensions"]
+  resources: ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
+  verbs: ["get", "patch", "update"]
+---
+# Supplement ClusterRoleBinding renders under the SINGLE gate $userAuthzEnabled (deliberately
+# without waiting for clusterBootstrapped/userAuthzCRAvailable). It is purely additive on the
+# same Group/kubeadm:cluster-admins, so it cannot harm the cluster while the main binding is
+# still on the kubeadm-default cluster-admin wildcard. Rendering it early eliminates the
+# transient 403 window for kubectl exec/logs/port-forward right after the main rebind.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:control-plane-manager:kubeadm-cluster-admins-supplement
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+{{- end }}
+{{- /*
+  Main kubeadm:cluster-admins binding: target ClusterRole comes from the hook (see top of file).
+  Helm SSA cannot mutate roleRef (immutable), so the actual Delete+Create on role flip is done
+  by reconcile_kubeadm_cluster_admins_binding hook before Helm runs; Helm here only adopts.
+*/}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $targetRole }}
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins

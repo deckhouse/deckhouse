@@ -1,10 +1,10 @@
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-without-hpa
 spec:
   inlet: LoadBalancer
   ingressClass: nginx
-  controllerVersion: "1.10"
+  controllerVersion: "1.15"
   maxReplicas: 3
   minReplicas: 3

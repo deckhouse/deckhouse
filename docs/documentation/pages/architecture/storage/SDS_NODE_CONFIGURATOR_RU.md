@@ -60,4 +60,4 @@ description: Архитектура модуля sds-node-configurator в Deckho
 С модулем взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver** — выполняет валидацию кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot).
-1. **Kube-scheduler** — собирает метрики компонента `sds-node-configurator`.
+1. **Prometheus-main** — собирает метрики компонента `sds-node-configurator`.

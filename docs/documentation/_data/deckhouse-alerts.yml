@@ -900,6 +900,42 @@ alerts:
         Controller pod isn't running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
+    - name: D8ControlPlaneNodeMaintenanceModeEnabled
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane node `{{ $labels.node }}` has maintenance mode enabled with label `control-plane-manager.deckhouse.io/maintenance`.
+        While this label is present, the control plane is not managed by `control-plane-manager`.
+
+        If maintenance is complete, remove the label:
+
+        ```bash
+        d8 k label cpn {{ $labels.node }} control-plane-manager.deckhouse.io/maintenance-
+        ```
+      summary: |
+        Maintenance mode is enabled for control-plane node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ControlPlaneOperationRunningTooLong
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
+
+        Check the corresponding ControlPlaneOperation and logs of the `d8-control-plane-manager` Pod on that node:
+
+        ```bash
+        d8 k get cpo {{ $labels.operation }} -o yaml
+        d8 k -n kube-system logs -l app=d8-control-plane-manager --field-selector spec.nodeName={{ $labels.node }}
+        ```
+      summary: |
+        Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
+      severity: "4"
+      markupFormat: markdown
     - name: D8CustomPrometheusRuleFoundInCluster
       sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
       moduleUrl: 340-monitoring-custom
@@ -1663,6 +1699,25 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}`, (UUID: `{{$labels.remote_uuid}}`) requests private metadata from hostname `{{$labels.requested_to_hostname}}`, that hostname uses the deprecated `istio` subdomain.
+
+        Update the remote cluster {{$labels.alliance_kind}} resource: set `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+
+        Migration steps on the remote cluster:
+
+        1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
+        2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
+        3. Verify remote metadata fetch and alliance health after the change.
+      summary: |
+        A peer cluster requests private metadata using a deprecated subdomain.
+      severity: "5"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -1959,6 +2014,7 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
+        Service account `{{ $labels.token_namespace }}/{{ $labels.token_name }}` is using a stale token.
         This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
 
         **Recommended actions:**
@@ -1969,37 +2025,12 @@ alerts:
         Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
 
         **For further investigation:**
-        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
-
+        You can find the problematic pods using the following command:
         ```bash
-        jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
-        ```
-
-        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
-
-        ```yaml
-        - level: Metadata
-          omitStages:
-          - RequestReceived
-          userGroups:
-          - system:serviceaccounts
-        ```
-
-        Example of applying an additional audit policy:
-
-        ```bash
-        d8 k apply -f - <<EOF
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: audit-policy
-          namespace: kube-system
-        data:
-          audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCiAgdXNlckdyb3VwczoKICAtIHN5c3RlbTpzZXJ2aWNlYWNjb3VudHM=
-        EOF
+        d8 k get pods -A -o json | jq -r '.items[] | select(.spec.serviceAccountName=="{{ $labels.token_name }}" and .metadata.namespace=="{{ $labels.token_namespace }}") | .metadata.name'
         ```
       summary: |
-        Stale service account tokens detected.
+        Stale service account tokens detected for {{ $labels.token_namespace }}/{{ $labels.token_name }}.
       severity: "8"
       markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
@@ -2012,7 +2043,7 @@ alerts:
 
         Please migrate to the next kubernetes version (at least 1.32)
 
-        Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
       summary: |
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
@@ -2783,6 +2814,49 @@ alerts:
         Node {{ $labels.node }} cannot obtain disruption approval.
       severity: "8"
       markupFormat: markdown
+    - name: D8ObsoletePublishAPIinUserAuthn
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/migrate-publish-api.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Publish API ingress settings are being migrated from `mc user-authn` to `mc control-plane-manager`.
+
+        **To complete the migration, follow the steps below:**
+
+        1. Review current settings for `publishAPI` in the resource `moduleconfig user-authn` resource.
+
+        2. If the `moduleconfig control-plane-manager` resource exists, update its spec to `spec.version: 3`. If `settings.apiserver.loadBalancer` is set, migrate it to `settings.apiserver.publishAPI.loadBalancer`. If the resource does not exist, proceed to step 3.
+
+        3. If `moduleconfig control-plane-manager` does not exist, create it via `d8`:
+
+           ```
+           d8 s module enable control-plane-manager
+           ```
+
+           And set the settings version:
+
+           ```
+           d8 k patch moduleconfig control-plane-manager --type merge \
+           -p '{"spec":{"version":3}}'
+           ```
+
+        4. Apply the migrated settings into `moduleconfig control-plane-manager` from temporary configMap by executing the following script:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+           {"spec": {"settings": {"apiserver": {"publishAPI": {"ingress": \
+           $(d8 k -n kube-system get cm d8-publishapi-config-migration -ojsonpath='{.data.config}')
+              }}}}}
+           EOF
+           )"
+           ```
+
+        5. Remove obsolete `spec.settings.publishAPI` section from `moduleconfig user-authn`.
+      summary: |
+        Obsolete Publish API settings in user-authn need to be migrated.
+      severity: "6"
+      markupFormat: markdown
     - name: D8OkmeterAgentPodIsNotReady
       sourceFile: modules/500-okmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-okmeter
@@ -3066,6 +3140,8 @@ alerts:
         Deckhouse has detected that node {{ $labels.name }} is using one of the following:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
+
+        This alert may fire if the corresponding module is missing or disabled in the cluster. It can be safely ignored if you are preparing nodes to enable a module that is currently disabled.
 
         For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
@@ -3593,11 +3669,9 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
+        A Pod from the `control-plane/controller-manager` probe was created more than 5 minutes ago.
 
-        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe,
-        and `kube-controller-manager` should remove the associated Pods.
-        There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and the Pods should be deleted within seconds.
+        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe, and `kube-controller-manager` should remove the associated Pods within seconds.
 
         This may indicate:
 
@@ -5751,20 +5825,6 @@ alerts:
            ```
       summary: |
         Ingress NGINX Controller pods report different configuration hashes.
-      severity: "4"
-      markupFormat: markdown
-    - name: NginxIngressProfilingIsEnabled
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        Profiling mode is enabled for the Ingress NGINX Controller **"{{ $labels.controller_name }}"**.
-        This may increase memory consumption, slow down request processing, and the process may run as root.
-        It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
-        To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
-      summary: |
-        Warning: Profiling mode is enabled in the Ingress NGINX Controller &quot;{{ $labels.controller_name }}&quot;.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressProtobufExporterHasErrors

@@ -161,6 +161,7 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 				RootDir:          rootDir,
 				TerraformBinPath: infraUtilDestination,
 				ExecutorID:       executorID,
+				IsDebug:          p.isDebug,
 			},
 		}, logger)
 	}
@@ -172,6 +173,7 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 			RootDir:     rootDir,
 			TofuBinPath: infraUtilDestination,
 			ExecutorID:  executorID,
+			IsDebug:     p.isDebug,
 		},
 	}, logger)
 }
@@ -249,6 +251,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 				RootDir:          infraRootDir,
 				TerraformBinPath: infraUtilDestination,
 				ExecutorID:       executorID,
+				IsDebug:          p.isDebug,
 			},
 			Step:           step,
 			VMChangeTester: p.IsVMChange,
@@ -264,6 +267,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 			RootDir:     infraRootDir,
 			TofuBinPath: infraUtilDestination,
 			ExecutorID:  executorID,
+			IsDebug:     p.isDebug,
 		},
 		Step:           step,
 		VMChangeTester: p.IsVMChange,
@@ -496,7 +500,7 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 		p.String(),
 	)
 
-	err = log.Process("Cloud infrastructure", "Download plugins", func() error {
+	err = log.ProcessCtx(ctx, "Cloud infrastructure", "Download plugins", func(ctx context.Context) error {
 		return p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination, p.metaConfig)
 	})
 	if err != nil {
@@ -524,7 +528,7 @@ func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix str
 
 	var err error
 
-	_ = log.Process("Cloud infrastructure", "Preparing infrastructure util", func() error {
+	_ = log.ProcessCtx(ctx, "Cloud infrastructure", "Preparing infrastructure util", func(ctx context.Context) error {
 		if useTofu {
 			p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
 			err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination, p.metaConfig)

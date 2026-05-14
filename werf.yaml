@@ -70,9 +70,6 @@ build:
 # use example.com as default because we can fail build without env
 {{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
 
-# Source repo with observability private code
-{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
-
 # Stronghold repo access for building d8 cli
 {{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO" "example.com") }}
 
@@ -96,9 +93,9 @@ build:
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---
-{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" true) }}
+{{ include "dhctl_artifact" (dict "Images" .Images "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" true) }}
 ---
-{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" false) }}
+{{ include "dhctl_artifact" (dict "Images" .Images "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env "includeImagesDigests" false) }}
 ---
 # render images and artifact from .werf
 # WARNING! new images and artifacts should be placed in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml

@@ -15,21 +15,22 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 const (
@@ -44,55 +45,80 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 `
 )
 
-func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineCacheFlags(cmd)
-	app.DefineSanityFlags(cmd)
-	app.DefineDestroyResourcesFlags(cmd)
-	app.DefineTFResourceManagementTimeout(cmd)
+func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineCacheFlags(cmd, &opts.Cache)
+	app.DefineSanityFlags(cmd, &opts.Global)
+	app.DefineDestroyResourcesFlags(cmd, &opts.Destroy)
+	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
 
-		if !app.SanityCheck {
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			return err
+		}
+
+		if !opts.Global.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
 			}
 		}
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewClientFromFlags(ctx)
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
 			return err
 		}
 
-		if err = cache.Init(sshClient.Check().String()); err != nil {
+		sshClient, err := sshProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+
+		if err = cache.Init(ctx, sshClient.Check().String(), opts.Cache); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+		destroyerParams := &destroy.Params{
+			SSHProvider:     sshProvider,
+			KubeProvider:    kubeProvider,
 			StateCache:      cache.Global(),
-			SkipResources:   app.SkipResources,
+			SkipResources:   opts.Destroy.SkipResources,
 			LoggerProvider:  log.SimpleLoggerProvider(logger),
-			IsDebug:         app.IsDebug,
-			TmpDir:          app.TmpDirName,
-			DirectoryConfig: app.GetDirConfig(),
-		})
+			IsDebug:         opts.Global.IsDebug,
+			TmpDir:          opts.Global.TmpDir,
+			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
+		}
+		interactive := input.IsTerminal()
+		if interactive {
+			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
+			if err != nil {
+				return err
+			}
+
+			onUpdateFunc := func(progress phases.Progress) error {
+				phasesChan <- progress
+				return nil
+			}
+			destroyerParams.OnProgressFunc = onUpdateFunc
+
+			defer onComplete()
+		}
+
+		destroyer, err := destroy.NewClusterDestroyer(ctx, destroyerParams)
 		if err != nil {
 			return err
 		}
 
-		err = destroyer.DestroyCluster(ctx, app.SanityCheck)
+		err = destroyer.DestroyCluster(ctx, opts.Global.SanityCheck)
 		if err != nil {
 			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
 			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)
@@ -101,6 +127,4 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-
-	return cmd
 }

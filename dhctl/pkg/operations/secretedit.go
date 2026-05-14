@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -34,7 +33,11 @@ import (
 
 const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
-var abstractEditing = Edit
+// editFunc allows tests to swap the editor with a deterministic mock without
+// reaching for package-level state (see secretedit_test.go).
+type editFunc func([]byte, *directoryconfig.DirectoryConfig, EditOptions) ([]byte, error)
+
+var abstractEditing editFunc = Edit
 
 var emptySecret = &v1.Secret{
 	TypeMeta: metav1.TypeMeta{
@@ -47,11 +50,13 @@ var emptySecret = &v1.Secret{
 }
 
 func SecretEdit(
+	ctx context.Context,
 	kubeCl *client.KubernetesClient, name string, namespace string, secret string, dataKey string,
 	labels map[string]string,
 	dirConfig *directoryconfig.DirectoryConfig,
+	editOpts EditOptions,
 ) error {
-	config, err := kubeCl.CoreV1().Secrets(namespace).Get(context.TODO(), secret, metav1.GetOptions{})
+	config, err := kubeCl.CoreV1().Secrets(namespace).Get(ctx, secret, metav1.GetOptions{})
 	switch {
 	case errors.IsNotFound(err):
 		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, namespace)
@@ -72,23 +77,25 @@ func SecretEdit(
 	configData := config.Data[dataKey]
 
 	var modifiedData []byte
-	err = dh_config.PrepareCandiDir(context.Background(), kubeCl, log.GetDefaultLogger(), dirConfig)
+	err = dh_config.PrepareCandiDir(ctx, kubeCl, log.GetDefaultLogger(), dirConfig)
 	if err != nil {
 		return err
 	}
-	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, dirConfig) })
+	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, dirConfig, editOpts) })
 	if err != nil {
 		return err
 	}
 
 	// This flag is validating by webhooks to allow editing unsafe resource's fields.
-	if app.SanityCheck {
+	if editOpts.SanityCheck {
 		addUnsafeAnnotation(config)
 	}
 
-	return log.Process(
+	return log.ProcessCtx(
+		ctx,
 		"common",
-		fmt.Sprintf("Save %s to the Kubernetes cluster", name), func() error {
+		fmt.Sprintf("Save %s to the Kubernetes cluster", name),
+		func(ctx context.Context) error {
 			if string(configData) == string(modifiedData) {
 				log.InfoLn("Configurations are equal. Nothing to update.")
 				return nil
@@ -99,24 +106,24 @@ func SecretEdit(
 			return retry.
 				NewLoop(fmt.Sprintf("Apply %s secret", secret), 5, 5*time.Second).
 				Run(func() error {
-					_, err = kubeCl.CoreV1().Secrets(namespace).Update(context.TODO(), config, metav1.UpdateOptions{})
+					_, err = kubeCl.CoreV1().Secrets(namespace).Update(ctx, config, metav1.UpdateOptions{})
 					switch {
 					case errors.IsNotFound(err):
 						log.DebugF("Creating new Secret %s in namespace %s\n", secret, namespace)
-						if _, err = kubeCl.CoreV1().Secrets(namespace).Create(context.TODO(), config, metav1.CreateOptions{}); err != nil {
+						if _, err = kubeCl.CoreV1().Secrets(namespace).Create(ctx, config, metav1.CreateOptions{}); err != nil {
 							return err
 						}
 					case err != nil:
 						return err
 					}
 
-					if app.SanityCheck {
+					if editOpts.SanityCheck {
 						log.InfoLn("Remove allow-unsafe annotation")
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().
 							Secrets(namespace).
-							Update(context.TODO(), config, metav1.UpdateOptions{})
+							Update(ctx, config, metav1.UpdateOptions{})
 					}
 
 					return err

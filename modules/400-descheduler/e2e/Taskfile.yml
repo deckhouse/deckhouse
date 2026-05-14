@@ -1,0 +1,42 @@
+version: '3'
+
+tasks:
+  run:
+    desc: Run all descheduler e2e tests
+    cmds:
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/ --full-name --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
+
+  run:verbose:
+    desc: Run all descheduler e2e tests with verbose output
+    cmds:
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/ --full-name --full-name --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
+
+  run:low-node-utilization:
+    desc: Run LowNodeUtilization e2e test
+    cmds:
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/low-node-utilization/ --full-name --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
+
+  run:high-node-utilization:
+    desc: Run HighNodeUtilization e2e test
+    cmds:
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/high-node-utilization/ --full-name --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
+
+  run:exclude-namespaces:
+    desc: Run exclude-namespaces-from-processing e2e test
+    cmds:
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/exclude-namespaces-from-processing/ --full-name --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
+
+  dry-run:
+    desc: Validate all test YAML without executing (no cluster required)
+    cmds:
+      - chainsaw test --test-dir ./tests/ --no-cluster
+
+  run:debug:
+    desc: Run all tests and pause on failure for debugging
+    cmds:
+      - chainsaw test --test-dir ./tests/ --pause-on-failure --fail-fast

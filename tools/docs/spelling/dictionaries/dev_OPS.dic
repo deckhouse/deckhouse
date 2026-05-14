@@ -1,4 +1,4 @@
-2574
+2613
 1GB
 2GB
 5XX
@@ -20,6 +20,7 @@ Addon
 addresspools
 addressPools
 admin
+AEAD
 AES
 Affero
 aggregator
@@ -183,6 +184,7 @@ certManager
 certSANs
 cgroup
 cgroups
+ChaCha
 changelog
 Changelog
 cheatsheet
@@ -396,6 +398,7 @@ DexProvider
 DHCP
 dhcpOptions
 dhctl
+DHE
 Diff
 dir
 disjoining
@@ -436,6 +439,7 @@ Dryrun
 DSA
 DSL
 DSR
+DSS
 dst
 DVCR
 dvp
@@ -448,6 +452,8 @@ earlyOOM
 eBPF
 EBS
 ECC
+ECDHE
+ECDSA
 ECMP
 ECR
 ECS
@@ -472,6 +478,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+EnvoyFilter
 EOF
 erlier
 ESXi
@@ -508,6 +515,7 @@ fallback
 FastCGI
 FC
 FCD
+FCGI
 Fibre
 filebeat
 FileManagement
@@ -543,6 +551,7 @@ Gb
 Gbps
 GCE
 gcloud
+GCM
 gcp
 GCP
 GCPClusterConfiguration
@@ -666,6 +675,7 @@ ingressClass
 IngressClass
 IngressClassParameters
 ingressgateway
+IngressGateway
 ingressgateways
 IngressIstioController
 ingressNginxController
@@ -783,6 +793,7 @@ Kubelet
 kubelets
 kubernetes
 Kubernetes
+KubernetesMetrics
 kubernetesPods
 kubernetesVersion
 Kubernets
@@ -835,6 +846,7 @@ LowNodeUtilization
 LRS
 lsblk
 LTS
+Lua
 LUN
 lv
 LV
@@ -900,6 +912,7 @@ MinIO
 MinIO’s
 minPerZone
 minReplicas
+misconfigured
 mkfs
 ModifySet
 moduleConfig
@@ -1084,6 +1097,7 @@ PagerDutyConfig
 parametersSchema
 paravirtualization
 passphrase
+Passthrough
 passwordHash
 passwordless
 pathPrefix
@@ -1123,6 +1137,7 @@ PodLoggingConfig
 PodMonitor
 PodMonitors
 podSubnetCIDR
+Poly
 portForwarding
 POSIX
 postgresql
@@ -1199,6 +1214,7 @@ README
 readOnly
 READYTOUSE
 realised
+rebalancing
 rebase
 recordscontaining
 Reddit
@@ -1451,6 +1467,8 @@ ThinLVM
 Thymeleaf
 TiB
 timeframe
+timelines
+timelines
 TimeSlicing
 timeslot
 timestamp
@@ -1592,6 +1610,7 @@ webhooks
 webinar
 webpack
 webpacker
+WebSocket
 webui
 WeChat
 WeChatConfig
@@ -1743,6 +1762,7 @@ ZvirtInstanceClass
 бэкендами
 бэкендах
 бэкендов
+бэкенду
 бэкенды
 валидатор
 валидацией
@@ -1759,7 +1779,9 @@ ZvirtInstanceClass
 вебхуки
 вебхуков
 вебхуком
+вендора
 вендором
+вендорской
 вендору
 вендоры
 версионирование
@@ -1868,6 +1890,7 @@ ZvirtInstanceClass
 закомментированы
 запустившемся
 запушить
+засчет
 иcпользовать
 ИБ
 иммутабельный
@@ -1947,6 +1970,7 @@ ZvirtInstanceClass
 коммиты
 компонентa
 компонента
+компрометационные
 конвержа
 консистентного
 консистентное
@@ -2058,15 +2082,19 @@ ZvirtInstanceClass
 мультимастерный
 мультиплатформенной
 мультитенантности
+мультитенантность
 МУЛЬТИФАКТОР
 мусорку
 мэтчем
 наблюдаемости
 наблюдаемость
+нативно
+неавторизованного
 неавторизованный
 невалидным
 недеструктивные
 недеструктивных
+недоиспользованных
 незапрошенные
 незапрошенных
 незашифрованном
@@ -2075,6 +2103,7 @@ ZvirtInstanceClass
 неймспейс
 неймспейсах
 неймспейсе
+неймспейсы
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2096,11 +2125,13 @@ ZvirtInstanceClass
 непубличный
 неразмеченным
 неразмеченным
+нерелевантного
 нереляционные
 несекретной
 несекретную
 несекретных
 несистемных
+неунифицированных
 неуспешные
 нешифрованные
 ноде
@@ -2129,6 +2160,7 @@ ZvirtInstanceClass
 отрисовки
 офлайн
 п
+Пайплайн
 пайплайна
 пайплайнами
 пайплайнов
@@ -2143,6 +2175,7 @@ ZvirtInstanceClass
 парсит
 парсится
 парсить
+парсятся
 паттерн
 паттерна
 паттернов
@@ -2154,6 +2187,7 @@ ZvirtInstanceClass
 патчится
 патчить
 Перебалансировке
+перебалансировки
 Перевыкат
 перевыписывает
 перевыпуск
@@ -2282,6 +2316,8 @@ ZvirtInstanceClass
 пуллинга
 Р
 раннера
+рантайма
+рантайме
 раскомментировать
 раскопировано
 распарсены
@@ -2455,6 +2491,7 @@ ZvirtInstanceClass
 тенанта
 тенантами
 тенанте
+терминации
 терминацию
 Терминация
 терминирования
@@ -2485,6 +2522,8 @@ ZvirtInstanceClass
 туториала
 увереным
 уязвимостей
+уязвимостям
+уязвимостями
 файл
 фейловер
 фич

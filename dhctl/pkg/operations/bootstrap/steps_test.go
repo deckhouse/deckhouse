@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -34,47 +34,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func TestNewRegistryClientConfigGetter(t *testing.T) {
-	t.Run("Path with leading slash", func(t *testing.T) {
-		config := registry_config.Data{
-			ImagesRepo: "registry.deckhouse.io/deckhouse/ee",
-			Username:   "",
-			Password:   "",
-		}
-		getter := newRegistryClientConfigGetter(config)
-		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
-	})
-	t.Run("Path without leading slash", func(t *testing.T) {
-		config := registry_config.Data{
-			ImagesRepo: "registry.deckhouse.io/deckhouse/ee",
-			Username:   "",
-			Password:   "",
-		}
-		getter := newRegistryClientConfigGetter(config)
-		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
-	})
-	t.Run("Host with port, path with leading slash", func(t *testing.T) {
-		config := registry_config.Data{
-			ImagesRepo: "registry.deckhouse.io:30000/deckhouse/ee",
-			Username:   "",
-			Password:   "",
-		}
-		getter := newRegistryClientConfigGetter(config)
-		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
-	})
-	t.Run("Host with port, path without leading slash", func(t *testing.T) {
-		config := registry_config.Data{
-			ImagesRepo: "registry.deckhouse.io:30000/deckhouse/ee",
-			Username:   "",
-			Password:   "",
-		}
-		getter := newRegistryClientConfigGetter(config)
-		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
-	})
-}
-
 func TestBootstrapGetNodesFromCache(t *testing.T) {
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 
@@ -98,7 +59,7 @@ func TestBootstrapGetNodesFromCache(t *testing.T) {
 		stateCache, err := cache.NewStateCache(dir)
 		require.NoError(t, err)
 
-		result, err := BootstrapGetNodesFromCache(&config.MetaConfig{ClusterPrefix: "test"}, stateCache)
+		result, err := BootstrapGetNodesFromCache(t.Context(), &config.MetaConfig{ClusterPrefix: "test"}, stateCache)
 		require.NoError(t, err)
 
 		require.Len(t, result["master"], 2)
@@ -212,6 +173,7 @@ func TestInstallDeckhouse(t *testing.T) {
 		return InstallDeckhouseParams{
 			BeforeDeckhouseTask: func() error { return nil },
 			State:               NewBootstrapState(cache.NewTestCache()),
+			DeckhouseTimeout:    15 * time.Minute,
 		}
 	}
 

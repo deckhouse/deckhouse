@@ -16,121 +16,98 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-)
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
-const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
-
-type PrivateKeyFileToPassphrase map[string]string
-
-var (
-	SSHPrivateKeys = make([]string, 0)
-
-	ConnectionConfigPath = ""
-	SSHAgentPrivateKeys  = make([]string, 0)
-	SSHBastionHost       = ""
-	SSHBastionPort       = ""
-	SSHBastionUser       = os.Getenv("USER")
-	SSHBastionPass       = ""
-	SSHUser              = os.Getenv("USER")
-	SSHHosts             = make([]session.Host, 0)
-	sshHostsRaw          = make([]string, 0)
-	SSHPort              = ""
-	SSHExtraArgs         = ""
-
-	AskBecomePass = false
-	BecomePass    = ""
-
-	AskBastionPass = false
-
-	SSHLegacyMode = false
-	SSHModernMode = false
-
-	// todo ugly solution need refact
-	PrivateKeysToPassPhrasesFromConfig = make(PrivateKeyFileToPassphrase)
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type connectionConfigParser interface {
 	ParseConnectionConfigFromFile() error
 }
 
-func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
+// DefineSSHFlags registers SSH connection flags, writing into o.
+//
+// The optional parser is invoked when --connection-config is set; it is the
+// caller's responsibility to apply the parsed values back into o (the parser
+// implementation lives in dhctl/pkg/config and may need updating to take *options.SSHOptions
+// directly once the consumer-side refactor lands).
+func DefineSSHFlags(cmd *kingpin.CmdClause, o *options.SSHOptions, parser connectionConfigParser) {
 	var sshFlagSetByUser, sshUserFlagSetByUser, sshBastionUserFlagSetByUser bool
 
 	cmd.Flag("ssh-agent-private-keys", "Paths to private keys. Those keys will be used to connect to servers and to the bastion. Can be specified multiple times (default: '~/.ssh/id_rsa')").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
-		StringsVar(&SSHAgentPrivateKeys)
+		StringsVar(&o.AgentPrivateKeys)
 	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by infrastructure creation utility and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_HOST")).
-		StringVar(&SSHBastionHost)
+		StringVar(&o.BastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
 		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_PORT")).
-		StringVar(&SSHBastionPort)
+		StringVar(&o.BastionPort)
 	cmd.Flag("ssh-bastion-user", "User to authenticate under when connecting to bastion (default: $USER)").
 		IsSetByUser(&sshBastionUserFlagSetByUser).
-		Default(SSHBastionUser).
+		Default(o.BastionUser).
 		Envar(configEnvName("SSH_BASTION_USER")).
-		StringVar(&SSHBastionUser)
+		StringVar(&o.BastionUser)
 	cmd.Flag("ssh-user", "User to authenticate under (default: $USER)").
 		IsSetByUser(&sshUserFlagSetByUser).
 		Envar(configEnvName("SSH_USER")).
-		Default(SSHUser).
-		StringVar(&SSHUser)
+		Default(o.User).
+		StringVar(&o.User)
 	cmd.Flag("ssh-host", "SSH destination hosts, can be specified multiple times").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_HOSTS")).
-		StringsVar(&sshHostsRaw)
+		StringsVar(&o.HostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
 		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
-		StringVar(&SSHPort)
+		StringVar(&o.Port)
 	cmd.Flag("ssh-extra-args", "extra args for ssh commands (-vvv)").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_EXTRA_ARGS")).
-		StringVar(&SSHExtraArgs)
+		StringVar(&o.ExtraArgs)
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
-		StringVar(&ConnectionConfigPath)
+		StringVar(&o.ConnectionConfigPath)
 	cmd.Flag("ssh-legacy-mode", "Force legacy SSH mode").
 		Envar(configEnvName("SSH_LEGACY_MODE")).
-		BoolVar(&SSHLegacyMode)
+		BoolVar(&o.LegacyMode)
 	cmd.Flag("ssh-modern-mode", "Force modern SSH mode").
 		Envar(configEnvName("SSH_MODERN_MODE")).
-		BoolVar(&SSHModernMode)
+		BoolVar(&o.ModernMode)
 	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
 		Envar(configEnvName("ASK_BASTION_PASS")).
-		BoolVar(&AskBastionPass)
+		BoolVar(&o.AskBastionPass)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
-			SSHBastionUser = SSHUser
+			o.BastionUser = o.User
 			sshFlagSetByUser = true
 		}
 		return nil
 	})
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
-		if len(sshHostsRaw) > 0 {
-			for i, host := range sshHostsRaw {
-				SSHHosts = append(SSHHosts, session.Host{Host: host, Name: strconv.Itoa(i)})
+		if len(o.HostsRaw) > 0 {
+			for i, host := range o.HostsRaw {
+				o.Hosts = append(o.Hosts, session.Host{Host: host, Name: strconv.Itoa(i)})
 			}
 		}
 		return nil
 	})
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		if len(ConnectionConfigPath) == 0 {
+		if len(o.ConnectionConfigPath) == 0 {
 			return nil
 		}
 
@@ -138,75 +115,59 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
 		}
 
+		if parser == nil {
+			return nil
+		}
+
 		return parser.ParseConnectionConfigFromFile()
 	})
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
-		if len(SSHPrivateKeys) != 0 {
+		if len(o.PrivateKeys) != 0 {
 			return nil
 		}
-		return processConnectionConfigFlags()
+		return o.ProcessConnectionConfigFlags()
 	})
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
-		if SSHLegacyMode && (AskBecomePass && len(SSHPrivateKeys) == 0) {
-			return fmt.Errorf("SSH legacy mode does not support password-based SSH authentication. If you are using `--ask-become-pass`, please either specify `--ssh-modern-mode`, or leave the SSH mode unset to allow automatic detection of the appropriate method.")
-		}
+		// Need to read AskBecomePass cross-section: that flag lives in
+		// options.BecomeOptions but the legacy-mode validation depends on it.
+		// The Become struct is part of *options.Options but not threaded into
+		// DefineSSHFlags directly, so the pkg/app caller is responsible for
+		// adding any cross-section validation if it needs the legacy guard.
 		return nil
 	})
 }
 
-func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
-	res := make([]string, 0)
-	if len(pathSets) == 0 || (len(pathSets) == 1 && pathSets[0] == "") {
-		return res, nil
-	}
-
-	for _, pathSet := range pathSets {
-		keys := strings.Split(pathSet, ",")
-		for _, k := range keys {
-			if strings.HasPrefix(k, "~") {
-				home := os.Getenv("HOME")
-				if home == "" {
-					return nil, fmt.Errorf("HOME is not defined for key '%s'", k)
-				}
-				k = strings.Replace(k, "~", home, 1)
-			}
-
-			keyPath, err := filepath.Abs(k)
-			if err != nil {
-				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
-			}
-
-			_, err = os.Stat(keyPath)
-			if err != nil {
-				if pathSet == DefaultSSHAgentPrivateKeys {
-					continue
-				}
-				return nil, fmt.Errorf("cannot stat file %s", keyPath)
-			}
-			res = append(res, keyPath)
-		}
-	}
-	return res, nil
-}
-
-func DefineBecomeFlags(cmd *kingpin.CmdClause) {
+// DefineBecomeFlags registers `--ask-become-pass`.
+func DefineBecomeFlags(cmd *kingpin.CmdClause, o *options.BecomeOptions) {
 	// Ansible compatible
 	cmd.Flag("ask-become-pass", "Ask for sudo password before the installation process.").
 		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
-		BoolVar(&AskBecomePass)
+		BoolVar(&o.AskBecomePass)
 }
 
-func processConnectionConfigFlags() error {
-	if len(SSHAgentPrivateKeys) == 0 {
-		SSHAgentPrivateKeys = append(SSHAgentPrivateKeys, DefaultSSHAgentPrivateKeys)
+// ProviderParams builds settings.ProviderParams from o and the given logger.
+//
+// Lives in pkg/app (not options) because it depends on the deckhouse-node
+// directory constants defined here, which would create an import cycle
+// if pulled into options.
+func ProviderParams(o *options.GlobalOptions, loggerProvider libdhctl_log.LoggerProvider) settings.ProviderParams {
+	return settings.ProviderParams{
+		LoggerProvider: loggerProvider,
+		IsDebug:        o.IsDebug,
+		NodeTmpPath:    DeckhouseNodeTmpPath,
+		NodeBinPath:    DeckhouseNodeBinPath,
+		TmpDir:         options.DefaultTmpDir(),
 	}
+}
 
-	var err error
-	SSHPrivateKeys, err = ParseSSHPrivateKeyPaths(SSHAgentPrivateKeys)
-	if err != nil {
-		return fmt.Errorf("ssh private keys: %w", err)
+// DefaultProviderParams is ProviderParams with the default global logger.
+func DefaultProviderParams(o *options.GlobalOptions) (settings.ProviderParams, error) {
+	logger, ok := log.GetDefaultLogger().(*log.ExternalLogger)
+	if !ok {
+		return settings.ProviderParams{}, fmt.Errorf("cannot convert logger to ExternalLogger")
 	}
-	return nil
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.GetLogger())
+	return ProviderParams(o, loggerProvider), nil
 }

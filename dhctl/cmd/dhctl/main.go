@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,10 +26,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -66,37 +68,37 @@ var (
 			Name:       "execute-bashible-bundle",
 			Help:       "Prepare Master node and install Kubernetes.",
 			DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
-			Parrent:    "bootstrap-phase",
+			Parent:     "bootstrap-phase",
 		},
 		{
 			Name:       "create-resources",
 			Help:       "Create resources in Kubernetes cluster.",
 			DefineFunc: bootstrap.DefineCreateResourcesCommand,
-			Parrent:    "bootstrap-phase",
+			Parent:     "bootstrap-phase",
 		},
 		{
 			Name:       "install-deckhouse",
 			Help:       "Install deckhouse and wait for its readiness.",
 			DefineFunc: bootstrap.DefineBootstrapInstallDeckhouseCommand,
-			Parrent:    "bootstrap-phase",
+			Parent:     "bootstrap-phase",
 		},
 		{
 			Name:       "abort",
 			Help:       "Delete every node, which was created during bootstrap process.",
 			DefineFunc: bootstrap.DefineBootstrapAbortCommand,
-			Parrent:    "bootstrap-phase",
+			Parent:     "bootstrap-phase",
 		},
 		{
 			Name:       "base-infra",
 			Help:       "Create base infrastructure for Cloud Kubernetes cluster.",
 			DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
-			Parrent:    "bootstrap-phase",
+			Parent:     "bootstrap-phase",
 		},
 		{
 			Name:       "exec-post-bootstrap",
 			Help:       "Test scp upload and ssh run uploaded script.",
 			DefineFunc: bootstrap.DefineExecPostBootstrapScript,
-			Parrent:    "bootstrap-phase",
+			Parent:     "bootstrap-phase",
 		},
 		{
 			Name:       "converge",
@@ -121,7 +123,7 @@ var (
 			Name:       "release",
 			Help:       "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful",
 			DefineFunc: commands.DefineReleaseConvergeLockCommand,
-			Parrent:    "lock",
+			Parent:     "lock",
 		},
 		{
 			Name:       "destroy",
@@ -141,64 +143,64 @@ var (
 			Name:       exporterCmd,
 			Help:       "Run infrastructure converge exporter.",
 			DefineFunc: commands.DefineInfrastructureConvergeExporterCommand,
-			Parrent:    "terraform",
+			Parent:     "terraform",
 		},
 		{
 			Name:       "check",
 			Help:       "Check differences between state of Kubernetes cluster and infrastructure state.",
 			DefineFunc: commands.DefineInfrastructureCheckCommand,
-			Parrent:    "terraform",
+			Parent:     "terraform",
 		},
 		{
 			Name: "config",
 			Help: "Load, edit and save various dhctl configurations.",
 		},
 		{
-			Name:    "parse",
-			Help:    "Parse, validate and output configurations.",
-			Parrent: "config",
+			Name:   "parse",
+			Help:   "Parse, validate and output configurations.",
+			Parent: "config",
 		},
 		{
 			Name:       "cluster-configuration",
 			Help:       "Parse configuration and print it.",
 			DefineFunc: commands.DefineCommandParseClusterConfiguration,
-			Parrent:    "parse",
+			Parent:     "parse",
 		},
 		{
 			Name:       "cloud-discovery-data",
 			Help:       "Parse cloud discovery data and print it.",
 			DefineFunc: commands.DefineCommandParseCloudDiscoveryData,
-			Parrent:    "parse",
+			Parent:     "parse",
 		},
 		{
-			Name:    "render",
-			Help:    "Render transitional configurations.",
-			Parrent: "config",
+			Name:   "render",
+			Help:   "Render transitional configurations.",
+			Parent: "config",
 		},
 		{
 			Name:       "bashible-bundle",
 			Help:       "Render bashible bundle.",
 			DefineFunc: commands.DefineRenderBashibleBundle,
-			Parrent:    "render",
+			Parent:     "render",
 		},
 		{
-			Name:       "kubeadm-config",
-			Help:       "Render kubeadm config.",
-			DefineFunc: commands.DefineRenderKubeadmConfig,
-			Parrent:    "render",
+			Name:       "control-plane-manifests",
+			Help:       "Render control-plane manifests and pki.",
+			DefineFunc: commands.DefineRenderControlPlaneAndPKI,
+			Parent:     "render",
 		},
 		{
 			Name:       "master-bootstrap-scripts",
 			Help:       "Render master bootstrap scripts.",
 			DefineFunc: commands.DefineRenderMasterBootstrap,
-			Parrent:    "render",
+			Parent:     "render",
 		},
 		{
-			Name:    "edit",
-			Help:    "Change configuration files in Kubernetes cluster conveniently and safely.",
-			Parrent: "config",
-			DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-				commands.DefineEditCommands(cmd /* wConnFlags */, true)
+			Name:   "edit",
+			Help:   "Change configuration files in Kubernetes cluster conveniently and safely.",
+			Parent: "config",
+			DefineFunc: func(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+				commands.DefineEditCommands(cmd, opts, true)
 				return nil
 			},
 		},
@@ -210,71 +212,71 @@ var (
 			Name:       "ssh-connection",
 			Help:       "Test connection via ssh.",
 			DefineFunc: commands.DefineTestSSHConnectionCommand,
-			Parrent:    "test",
+			Parent:     "test",
 		},
 		{
 			Name:       "kubernetes-api-connection",
 			Help:       "Test connection to kubernetes api via ssh or directly.",
 			DefineFunc: commands.DefineTestKubernetesAPIConnectionCommand,
-			Parrent:    "test",
+			Parent:     "test",
 		},
 		{
 			Name:       "scp",
 			Help:       "Test scp file operations.",
 			DefineFunc: commands.DefineTestSCPCommand,
-			Parrent:    "test",
+			Parent:     "test",
 		},
 		{
 			Name:       "upload-exec",
 			Help:       "Test scp upload and ssh run uploaded script.",
 			DefineFunc: commands.DefineTestUploadExecCommand,
-			Parrent:    "test",
+			Parent:     "test",
 		},
 		{
 			Name:       "bashible-bundle",
 			Help:       "Test upload and execute a bundle.",
 			DefineFunc: commands.DefineTestBundle,
-			Parrent:    "test",
+			Parent:     "test",
 		},
 		{
-			Name:    "control-plane",
-			Help:    "Commands to test control plane nodes.",
-			Parrent: "test",
+			Name:   "control-plane",
+			Help:   "Commands to test control plane nodes.",
+			Parent: "test",
 		},
 		{
 			Name:       "manager",
 			Help:       "Test control plane manager is ready.",
 			DefineFunc: commands.DefineTestControlPlaneManagerReadyCommand,
-			Parrent:    "control-plane",
+			Parent:     "control-plane",
 		},
 		{
 			Name:       "node",
 			Help:       "Test control plane node is ready.",
 			DefineFunc: commands.DefineTestControlPlaneNodeReadyCommand,
-			Parrent:    "control-plane",
+			Parent:     "control-plane",
 		},
 		{
-			Name:    "deckhouse",
-			Help:    "Install and uninstall deckhouse.",
-			Parrent: "test",
+			Name:   "deckhouse",
+			Help:   "Install and uninstall deckhouse.",
+			Parent: "test",
 		},
 		{
 			Name:       "create-deployment",
 			Help:       "Install deckhouse after infrastructure is applied successful.",
 			DefineFunc: commands.DefineDeckhouseCreateDeployment,
-			Parrent:    "deckhouse",
+			Parent:     "deckhouse",
 		},
 		{
 			Name:       "remove-deployment",
 			Help:       "Delete deckhouse deployment.",
 			DefineFunc: commands.DefineDeckhouseRemoveDeployment,
-			Parrent:    "deckhouse",
+			Parent:     "deckhouse",
 		},
 		{
 			Name:       "deployment-ready",
 			Help:       "Wait while deployment is ready.",
 			DefineFunc: commands.DefineWaitDeploymentReadyCommand,
-			Parrent:    "deckhouse",
+			Parent:     "deckhouse",
 		},
 	}
 )
@@ -284,6 +286,10 @@ func registerOnShutdown(title string, action onShutdownFunc) {
 }
 
 func main() {
+	appContext := context.Background()
+
+	opts := options.New()
+
 	initGlobalVars()
 
 	tracesShutdownFn, err := enableTrace()
@@ -294,7 +300,6 @@ func main() {
 
 	registerOnShutdown("Trace", tracesShutdownFn)
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
-	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
 		disableCleanupOnInterrupted,
@@ -302,33 +307,36 @@ func main() {
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
-	app.GlobalFlags(kpApp)
+	app.GlobalFlags(kpApp, &opts.Global)
 
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
-		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
+		fmt.Printf("%s %s\n", app.AppName, opts.BuildInfo.AppVersion)
 		return nil
 	})
 
-	if err := registerCommands(kpApp); err != nil {
+	if err := registerCommands(kpApp, opts); err != nil {
 		panic(err)
 	}
 
-	runApplication(kpApp)
+	runApplication(appContext, kpApp, opts)
 }
 
-func runApplication(kpApp *kingpin.Application) {
-	initer := newActionIniter()
+func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *options.Options) {
+	initer := newActionIniter(opts)
+
+	// inject context.Context to kingpin.ParseContext
+	kpApp.Action(kpcontext.SetContextToAction(ctx))
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		initer.setParams(actionIniterParams{
-			tmpDirName:        app.TmpDirName,
-			stateCacheDirName: app.CacheDir,
+			tmpDirName:        opts.Global.TmpDir,
+			stateCacheDirName: opts.Cache.Dir,
 
-			isDebug: app.IsDebug,
+			isDebug: opts.Global.IsDebug,
 
-			loggerType:          app.LoggerType,
-			doNotWriteDebugFile: app.DoNotWriteDebugLogFile,
-			debugLogFilePath:    app.DebugLogFilePath,
+			loggerType:          opts.Global.LoggerType,
+			doNotWriteDebugFile: opts.Global.DoNotWriteDebugLogFile,
+			debugLogFilePath:    opts.Global.DebugLogFilePath,
 		})
 
 		initer.setRegisterOnShutdown(registerOnShutdown)
@@ -336,7 +344,7 @@ func runApplication(kpApp *kingpin.Application) {
 		return initer.init(c)
 	})
 
-	kpApp.Version(app.AppVersion).Author("Flant")
+	kpApp.Version(opts.BuildInfo.AppVersion).Author("Flant")
 
 	go func() {
 		command, err := kpApp.Parse(os.Args[1:])
@@ -391,7 +399,6 @@ func initGlobalVars() {
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
-	app.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 	infrastructure.InitGlobalVars(dhctlPath)
 }

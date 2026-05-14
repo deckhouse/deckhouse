@@ -15,21 +15,21 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/api/coordination/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 const autoConvergerErrorFmt = `Error: converge locked by auto-converger.
@@ -40,36 +40,52 @@ Lock info:
 %s
 `
 
-func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSanityFlags(cmd)
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
+func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSanityFlags(cmd, &opts.Global)
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
+		params, err := app.DefaultProviderParams(&opts.Global)
+		if err != nil {
 			return err
 		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
 		if err != nil {
 			return err
 		}
 
-		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(
-				ssh.NewNodeInterfaceWrapper(sshClient),
-			)
-		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-			return err
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Converge lock release", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
 		}
 
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
+
 		confirm := func(l *v1.Lease) error {
-			if app.SanityCheck {
+			if opts.Global.SanityCheck {
 				return nil
 			}
 
@@ -80,6 +96,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			}
 
 			c := input.NewConfirmation()
+
 			approve := c.WithMessage(fmt.Sprintf("Do you want to release lock:\n\n%s", info)).Ask()
 			if !approve {
 				return fmt.Errorf("Don't confirm release lock")
@@ -88,8 +105,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return nil
 		}
 
-		cnf := lock.GetLockLeaseConfig("lock-releaser")
+		cnf := lock.GetLockLeaseConfig("lock-releaser", opts.SSH.User)
 		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
-	return cmd
 }

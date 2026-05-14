@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
 
 	klient "github.com/flant/kube-client/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,12 +30,10 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/local"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 type KubeClient interface {
@@ -51,8 +48,8 @@ type KubeClient interface {
 // KubernetesClient connects to kubernetes API server through ssh tunnel and kubectl proxy.
 type KubernetesClient struct {
 	KubeClient
-	NodeInterface node.Interface
-	KubeProxy     node.KubeProxy
+	NodeInterface libcon.Interface
+	KubeProxy     libcon.KubeProxy
 }
 
 type KubernetesInitParams struct {
@@ -75,24 +72,11 @@ func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]stri
 	return &KubernetesClient{KubeClient: klient.NewFake(gvr)}
 }
 
-func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesClient {
+func (k *KubernetesClient) WithNodeInterface(client libcon.Interface) *KubernetesClient {
 	if client != nil && !reflect.ValueOf(client).IsNil() {
 		k.NodeInterface = client
 	}
 	return k
-}
-
-func (k *KubernetesClient) NodeInterfaceAsSSHClient() node.SSHClient {
-	if k.NodeInterface == nil || reflect.ValueOf(k.NodeInterface).IsNil() {
-		return nil
-	}
-
-	cl, ok := k.NodeInterface.(*ssh.NodeInterfaceWrapper)
-	if !ok {
-		return nil
-	}
-
-	return cl.Client()
 }
 
 // Init initializes kubernetes client
@@ -146,49 +130,24 @@ func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesIn
 	return nil
 }
 
-// StartKubernetesProxy initializes kubectl-proxy on remote host and establishes ssh tunnel to it
-func (k *KubernetesClient) StartKubernetesProxy(ctx context.Context) (string, error) {
-	if wrapper, ok := k.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		port, err := k.startRemoteKubeProxy(ctx, wrapper.Client())
-		if err != nil {
-			return "", fmt.Errorf("start kube proxy: %s", err)
-		}
-		return port, nil
-	}
-
+// StartKubernetesProxy returns the local port the in-cluster kube-proxy
+// listens on. The legacy SSH-tunneled remote-proxy fallback was removed
+// together with dhctl's old SSH packages — modern callers build the
+// KubeClient through libcon (providerinitializer.GetProviders) before
+// reaching Init, so the default-port branch is the only path left here.
+func (k *KubernetesClient) StartKubernetesProxy(_ context.Context) (string, error) {
 	return "6445", nil
 }
 
-func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.SSHClient) (string, error) {
-	var port string
-	var err error
-	err = retry.NewLoop("Starting kube proxy", sshCl.Session().CountHosts(), 1*time.Second).
-		RunContext(ctx, func() error {
-			log.InfoF("Using host %s\n", sshCl.Session().Host())
-
-			k.KubeProxy = sshCl.KubeProxy()
-			port, err = k.KubeProxy.Start(-1)
-
-			if err != nil {
-				sshCl.Session().ChoiceNewHost()
-				return fmt.Errorf("start kube proxy: %v", err)
-			}
-
-			return nil
-		})
-
-	if err != nil {
-		return "", err
+// AppKubernetesInitParams builds *KubernetesInitParams from the supplied
+// kube options. Returns zero values when kube is nil.
+func AppKubernetesInitParams(kube *options.KubeOptions) *KubernetesInitParams {
+	if kube == nil {
+		return &KubernetesInitParams{}
 	}
-
-	log.InfoF("Proxy started on port %s\n", port)
-	return port, nil
-}
-
-func AppKubernetesInitParams() *KubernetesInitParams {
 	return &KubernetesInitParams{
-		KubeConfig:          app.KubeConfig,
-		KubeConfigContext:   app.KubeConfigContext,
-		KubeConfigInCluster: app.KubeConfigInCluster,
+		KubeConfig:          kube.Config,
+		KubeConfigContext:   kube.ConfigContext,
+		KubeConfigInCluster: kube.InCluster,
 	}
 }

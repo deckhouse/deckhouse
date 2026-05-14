@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
 
 const (
@@ -177,6 +178,7 @@ internalNetworkCIDRs:
 }
 
 func TestCloudClusterManifestConverge(t *testing.T) {
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	// need for prevent set equal versions during add new k8s version
 	require.NotEqual(t, kubeVersionBefore, kubeVersionAfter)
 
@@ -449,7 +451,7 @@ func (tt *testConvergeManifests) assetAndRun(t *testing.T) {
 		assertContainsOrNotCommanderUUID(t, tasksNames, `ConfigMap "d8-commander-uuid"`)
 
 		for _, task := range tasks {
-			err := task.CreateOrUpdate()
+			err := task.CreateOrUpdate(t.Context())
 			require.NoError(t, err)
 		}
 

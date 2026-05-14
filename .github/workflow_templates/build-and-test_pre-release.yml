@@ -46,7 +46,7 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "pre-release" "FE") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
@@ -58,8 +58,8 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "{!{$werfEnv}!}"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}   
+{!{ tmpl.Exec "build_template" (slice $ctx "pre-release" $werfEnv) | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 {!{ end }!}
 
   doc_web_build:
@@ -132,6 +132,15 @@ jobs:
       - git_info
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
+
+  doc_pdf_build:
+    name: Doc PDF build
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
+    needs:
+      - git_info
+      - doc_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_release_version_template" "release" "production") | strings.Indent 4 }!}
 
 {!{/* Autodeploy documentation to the production on push to release branch */}!}
   deploy_release_doc_prod:

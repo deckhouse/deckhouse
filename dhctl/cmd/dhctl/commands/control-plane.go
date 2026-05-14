@@ -15,105 +15,137 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
-func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
-	app.DefineControlPlaneFlags(cmd, false)
+func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineControlPlaneFlags(cmd, &opts.ControlPlane, false)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		interactive := input.IsTerminal()
+		if interactive {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test control plane manager is Ready", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
 		if err != nil {
 			return err
 		}
-
-		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(
-				ssh.NewNodeInterfaceWrapper(sshClient),
-			)
-		// auto init
-		err = kubeCl.Init(client.AppKubernetesInitParams())
-		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
 		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return fmt.Errorf("open kubernetes connection: %w", err)
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		checker := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))
-		ready, err := checker.IsReady(ctx, app.ControlPlaneHostname)
+		ready, err := checker.IsReady(ctx, opts.ControlPlane.Hostname)
 		if err != nil {
 			return fmt.Errorf("Control plane manager is not ready: %s", err)
 		}
 
 		if ready {
 			log.InfoLn("Control plane manager is ready")
+			if interactive {
+				progressbar.InfoF("%s\n", "Control plane manager is ready")
+			}
 		} else {
 			log.WarnLn("Control plane manager is not ready")
+			if interactive {
+				progressbar.WarnF("%s\n", "Control plane manager is not ready")
+			}
 		}
 
 		return nil
 	})
-	return cmd
 }
 
-func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
-	app.DefineKubeFlags(cmd)
-	app.DefineControlPlaneFlags(cmd, true)
+func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineControlPlaneFlags(cmd, &opts.ControlPlane, true)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		interactive := input.IsTerminal()
+		if interactive {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test control plane node is Ready", logger)
+			if err != nil {
+				return err
+			}
+			defer onComplete()
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
 		if err != nil {
 			return err
 		}
-
-		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(
-				ssh.NewNodeInterfaceWrapper(sshClient),
-			)
-		// auto init
-		err = kubeCl.Init(client.AppKubernetesInitParams())
-		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
 		}
 
-		nodeToHostForChecks := map[string]string{app.ControlPlaneHostname: app.ControlPlaneIP}
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return fmt.Errorf("open kubernetes connection: %w", err)
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
+
+		nodeToHostForChecks := map[string]string{opts.ControlPlane.Hostname: opts.ControlPlane.IP}
 
 		checkers := []hook.NodeChecker{hook.NewKubeNodeReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl))}
 
-		if app.ControlPlaneHostname != "" {
+		if opts.ControlPlane.Hostname != "" {
 			checkers = append(checkers, controlplane.NewKubeProxyChecker().WithExternalIPs(nodeToHostForChecks))
 		}
 
@@ -126,8 +158,10 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 		}
 
 		log.InfoLn("Control plane manager node is ready")
+		if interactive {
+			progressbar.InfoF("%s\n", "Control plane manager node is ready")
+		}
 
 		return nil
 	})
-	return cmd
 }

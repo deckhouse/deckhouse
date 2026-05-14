@@ -70,13 +70,14 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "nodeController") }}
         name: node-controller
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         command:
         - /node-controller
         args:
         - --metrics-bind-address=0.0.0.0:8080
         - --health-probe-bind-address=0.0.0.0:8081
-        - -v=2
+        - --max-concurrent-reconciles=10
+        - -v=4
         livenessProbe:
           httpGet:
             path: /healthz

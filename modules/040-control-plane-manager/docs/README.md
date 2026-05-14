@@ -11,7 +11,7 @@ The control-plane-manager:
 - **Configures components**. The CPM module automatically creates the required configs and manifests of the control plane components.
 - **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.
 - **Manages the configuration of the etcd cluster** and its members. The CPM module scales master nodes and migrates the cluster from single-master to multi-master (and vice versa).
-- **Configures kubeconfig**. The CPM module maintains an up-to-date configuration for smooth kubectl operation. It generates, renews, updates kubeconfig with the cluster-admin rights, and creates a symlink for the root user so that kubeconfig can be used by default.
+- **Configures kubeconfig**. The CPM module maintains up-to-date kubeconfig files on control-plane nodes. It generates, renews, and updates kubeconfigs for control-plane components and the admin kubeconfig (`admin.conf`). By default, it creates a symlink for the root user (`/root/.kube/config` -> `admin.conf`). When the [user-authz](/modules/user-authz/) module is enabled, the symlink can be turned off via the `rootKubeconfigSymlink` parameter in the **control-plane-manager** module (see [FAQ](faq.html#cluster-admin-access-model)). The CPM also hardens file permissions on `admin.conf` and `super-admin.conf`.
 - **Extends scheduler functionality** by integrating external plugins via webhooks. Manages by [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource. Allows more complex logic to be used in workload scheduling tasks within the cluster. For example:
   - placing data storage application pods closer to the data itself,
   - state-based node prioritization (network load, storage subsystem status, etc.),
@@ -95,6 +95,44 @@ If the target version (set with the [kubernetesVersion](/products/kubernetes-pla
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
   - kubelets on the cluster nodes are downgraded first, followed by the control plane components.
 
+## Exposing the Kubernetes API
+
+The kube-apiserver component is only available within the internal cluster network by default. This module solves the problem of providing simple and secure external access to the Kubernetes API from outside the cluster.
+
+### Via Ingress
+
+By configuring the [`apiserver.publishAPI.ingress`](configuration.html#parameters-apiserver-publishapi-ingress) parameters, you can publish the API server on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+During configuration, you can specify:
+
+* The list of network addresses and subnets from which connections are allowed;
+* The Ingress controller on which the publication occurs;
+* Whether to use a manually provided TLS certificate, one obtained via cert-manager, or an automatic self-signed certificate.
+
+By default, a special CA certificate will be generated and a kubeconfig generator will be automatically configured.
+
+### Via a Service of type LoadBalancer
+
+By configuring the [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) parameters, you can create a service of type LoadBalancer named `kube-system/d8-control-plane-apiserver`.
+
+During configuration, you can specify:
+
+* The list of network addresses and subnets from which connections are allowed;
+* The external port of the service;
+* Annotations on the service for load balancer provider settings.
+
+## Exposing the Kubernetes API over Ingress
+
+The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+When configuring, you can:
+
+* list network addresses from which connection is allowed;
+* list groups that are allowed to access the API server;
+* specify Ingress-controller to authenticate on.
+
+By default, a special CA certificate will be generated and the kubeconfig generator will be automatically configured.
+
 ## Auditing
 
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.
@@ -145,3 +183,56 @@ The Kubernetes version update (controlled by the [kubernetesVersion](/products/k
 More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Protecting sensitive fields in custom resources
+
+The `CRDSensitiveData` feature gate provides field-level protection for sensitive data in resources
+marked with the `x-kubernetes-sensitive-data: true` annotation.
+This feature is implemented as a patch to `kube-apiserver` (apiextensions-apiserver)
+and is supported starting from Kubernetes version 1.31.
+
+The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when applying a resource:
+
+- Marker requires the `CRDSensitiveData` feature gate to be enabled, which is enabled automatically when `apiserver.encryptionEnabled` is set to `true`.
+- Marker can't be set on the root of the schema (the `openAPIV3Schema` node).
+  To protect all fields of a resource, add the marker to the `spec` property (or a subtree below it),
+  not to the schema root — the root also includes system fields (`apiVersion`, `kind`, `metadata`), which cannot be encrypted.
+- Field type must be one of the OpenAPI v3 types: `string`, `integer`, `number`, `boolean`, `object`, or `array`.
+  Applying the marker to `object` or `array` makes the entire subtree sensitive.
+- Fields defined with `x-kubernetes-int-or-string: true` are supported.
+- Marker is not allowed inside `anyOf`, `oneOf`, `allOf`, or `not` branches (this is enforced by the structural schema validator).
+
+If at least one field in the resource schema is marked with `x-kubernetes-sensitive-data: true`,
+the following protection mechanisms are applied to all custom resources of this type:
+
+- **Encryption in etcd**: Entire resource is encrypted using the same mechanism as Kubernetes Secrets.
+  Requires enabling the `apiserver.encryptionEnabled` parameter.
+- **RBAC-based field filtering**: For `get`, `list`, and `watch` requests, sensitive fields are removed from API responses
+  if the caller does not have the corresponding permissions on the `<resource>/sensitive` subresource.
+- **Audit log masking**: Values of sensitive fields are replaced with `"******"` in audit logs,
+  regardless of RBAC permissions and audit level.
+
+To enable sensitive data protection, set the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter to `true`.
+The `CRDSensitiveData` feature gate is enabled automatically and it shouldn't be specified manually:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+```
+
+{% alert level="warning" %}
+Enabling `encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
+{% endalert %}
+
+For details, see the following sections:
+
+- [FAQ](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources): Instructions for enabling sensitive data protection.
+- [Examples](examples.html#protecting-resources-with-sensitive-fields): Configuration examples and results.

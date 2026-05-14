@@ -42,12 +42,12 @@ import (
 const SinglethreadedMethodsPrefix = "/dhctl.DHCTL" // full method example: /dhctl.DHCTL/Check
 
 // Serve starts GRPC server
-func Serve(params settings.ServerParams) error {
+func Serve(ctx context.Context, params settings.ServerParams) error {
 	if err := params.Validate(); err != nil {
 		return err
 	}
 
-	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
+	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{}, false)
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
@@ -61,7 +61,7 @@ func Serve(params settings.ServerParams) error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	defer close(done)
 	sem := make(chan struct{}, params.ParallelTasksLimit)

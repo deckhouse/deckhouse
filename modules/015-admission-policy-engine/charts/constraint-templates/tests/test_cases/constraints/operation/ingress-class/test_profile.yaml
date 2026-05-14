@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: ingress-class
+spec:
+  testDirectory: ingress-class
+  suite:
+    expectedTestBlockNames:
+      - d8ingressclass

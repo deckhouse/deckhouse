@@ -76,7 +76,7 @@ properties:
                   x-examples: ["HostWithFailover"]
                 controllerVersion:
                   type: string
-                  x-examples: ["1.10", "1.12", "1.14"]
+                  x-examples: ["1.12", "1.14", "1.15"]
                 enableIstioSidecar:
                   type: boolean
                 waitLoadBalancerOnTerminating:
@@ -88,6 +88,11 @@ properties:
                 annotationValidationEnabled:
                   type: boolean
                   default: false
+                validationIsolationMode:
+                  type: string
+                  enum: ["NoIsolation", "IsolatedFilesystem", "IsolatedProcess"]
+                  description: |
+                    Selects the validation isolation mode for controller versions 1.14 and 1.15.
                 controllerPodsAdditionalAnnotations:
                   type: object
                   additionalProperties:
@@ -278,7 +283,7 @@ properties:
                 additionalLogFields:
                   type: object
                   additionalProperties: true
-                resourcesRequests:
+                resourcesManagement:
                   type: object
                   default: {}
                   properties:
@@ -295,29 +300,52 @@ properties:
                           type: object
                           default: {}
                           properties:
+                            min:
+                              type: string
+                              x-examples: ["100m"]
                             max:
                               type: string
                               x-examples: ["200m"]
-                            min:
-                              type: string
+                            limitRatio:
+                              type: number
+                              x-examples: [1.5]
                         memory:
                           type: object
                           default: {}
                           properties:
-                            max:
-                              type: string
                             min:
                               type: string
                               x-examples: ["100Mi"]
+                            max:
+                              type: string
+                              x-examples: ["200Mi"]
+                            limitRatio:
+                              type: number
+                              x-examples: [1.5]
                     static:
                       type: object
                       default: {}
                       properties:
-                        cpu:
-                          type: string
-                          x-examples: ["100m"]
-                        memory:
-                          type: string
+                        requests:
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: string
+                              x-examples: ["100m"]
+                            memory:
+                              type: string
+                              x-examples: ["100Mi"]
+                        limits:
+                          type: object
+                          default: {}
+                          properties:
+                            cpu:
+                              type: string
+                              x-examples: ["200m"]
+                            memory:
+                              type: string
+                              x-examples: ["200Mi"]
                 customErrors:
                   type: object
                   properties:
@@ -348,11 +376,6 @@ properties:
                 controllerLogLevel:
                   type: string
                   description: "Defines the verbosity level for the ingress controller logs."
-                nginxProfilingEnabled:
-                  type: boolean
-                  default: false
-                  description: |
-                    Enables nginx memory profiling.
       externalIngressClasses:
         type: array
         default: []

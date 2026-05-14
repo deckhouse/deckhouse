@@ -53,16 +53,16 @@ var (
 )
 
 type ClusterStateSaver struct {
-	getter kubernetes.KubeClientProvider
+	getter kubernetes.KubeClientProviderWithCtx
 }
 
-func NewClusterStateSaver(getter kubernetes.KubeClientProvider) *ClusterStateSaver {
+func NewClusterStateSaver(getter kubernetes.KubeClientProviderWithCtx) *ClusterStateSaver {
 	return &ClusterStateSaver{
 		getter: getter,
 	}
 }
 
-func (s *ClusterStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) error {
+func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructure.PipelineOutputs) error {
 	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return nil
 	}
@@ -72,11 +72,16 @@ func (s *ClusterStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) e
 		PatchData: func() interface{} {
 			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
 		},
-		PatchFunc: func(patch []byte) error {
-			ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+		PatchFunc: func(ctx context.Context, patch []byte) error {
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
+
+			kubeClient, err := s.getter.KubeClientCtx(ctx)
+			if err != nil {
+				return fmt.Errorf("Could not get kube client: %w", err)
+			}
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(
+			_, err = kubeClient.CoreV1().Secrets("d8-system").Patch(
 				ctx,
 				manifests.InfrastructureClusterStateName,
 				types.MergePatchType,
@@ -88,7 +93,11 @@ func (s *ClusterStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) e
 	}
 
 	log.DebugF("Intermediate save base infra in cluster...\n")
-	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 15, 3*time.Second).Run(task.Patch)
+	err := retry.NewSilentLoop("Save Cluster intermediate infrastructure state", 15, 3*time.Second).Run(
+		func() error {
+			return task.Patch(ctx)
+		},
+	)
 	msg := "Intermediate base infra was saved in cluster\n"
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate base infra was not saved in cluster: %v\n", err)
@@ -99,13 +108,13 @@ func (s *ClusterStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) e
 }
 
 type NodeStateSaver struct {
-	getter            kubernetes.KubeClientProvider
+	getter            kubernetes.KubeClientProviderWithCtx
 	nodeName          string
 	nodeGroup         string
 	nodeGroupSettings []byte
 }
 
-func NewNodeStateSaver(getter kubernetes.KubeClientProvider, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
+func NewNodeStateSaver(getter kubernetes.KubeClientProviderWithCtx, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
 	return &NodeStateSaver{
 		getter:            getter,
 		nodeName:          nodeName,
@@ -121,9 +130,14 @@ func NewNodeStateSaver(getter kubernetes.KubeClientProvider, nodeName, nodeGroup
 //
 // The difference between master node and static node: master node has
 // no key "node-group-settings.json" with group settings.
-func (s *NodeStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) error {
+func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.PipelineOutputs) error {
 	if outputs == nil || len(outputs.InfrastructureState) == 0 {
 		return nil
+	}
+
+	kubeClient, err := s.getter.KubeClientCtx(context.Background())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	task := actions.ManifestTask{
@@ -131,27 +145,33 @@ func (s *NodeStateSaver) SaveState(outputs *infrastructure.PipelineOutputs) erro
 		Manifest: func() interface{} {
 			return manifests.SecretWithNodeInfrastructureState(s.nodeName, s.nodeGroup, outputs.InfrastructureState, s.nodeGroupSettings)
 		},
-		CreateFunc: func(manifest interface{}) error {
-			ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		PatchData: func() interface{} {
 			return manifests.PatchWithNodeInfrastructureState(outputs.InfrastructureState)
 		},
-		PatchFunc: func(patchData []byte) error {
+		PatchFunc: func(ctx context.Context, patchData []byte) error {
 			secretName := manifests.SecretNameForNodeInfrastructureState(s.nodeName)
-			ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
+
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(ctx, secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Patch(ctx, secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
 		},
 	}
+
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
 	log.DebugF("Intermediate save state for node %s in cluster...\n", s.nodeName)
-	err := retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(task.PatchOrCreate)
+	err = retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(func() error {
+		return task.PatchOrCreate(ctx)
+	})
+
 	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster\n", s.nodeName)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)

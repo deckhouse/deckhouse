@@ -81,6 +81,11 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
+  - ports: "8096"
+    protocol: TCP
+    description:
+      en: "`control-plane-manager` metrics"
+      ru: "Метрики компонента `control-plane-manager`"
 
 - group: NodesToNodes
   description:
@@ -372,11 +377,21 @@ groups:
     description:
       en: "`sds-replicated-volume` CSI controller metrics"
       ru: "Метрики CSI-контроллера модуля `sds-replicated-volume`"
+  - ports: "4135-4199"
+    protocol: TCP
+    description:
+      en: "`virtualization` live migration tunnels between cluster nodes"
+      ru: "Туннели live migration модуля `virtualization` между узлами кластера"
   - ports: "4280"
     protocol: TCP
     description:
       en: "`virtualization` USB over IP (usb/ip) protocol for sharing USB devices between cluster nodes"
       ru: "Протокол USB over IP (usb/ip) модуля `virtualization` для проброса USB-устройств между узлами кластера"
+  - ports: "4282"
+    protocol: TCP
+    description:
+      en: "Bootstrap endpoint for downloading `rpp-get` from `registry-packages-proxy`"
+      ru: "Bootstrap endpoint для скачивания `rpp-get` из `registry-packages-proxy`"
   - ports: "4286"
     protocol: TCP
     description:
@@ -449,6 +464,38 @@ groups:
         **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт:
         - включение модуля `virtualization` на DKP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DKP
         - включение модуля `virtualization` на DKP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DKP
+
+- group: VirtualizationStaticPorts
+  description:
+    en: Static `virtualization` ports on cluster nodes (`4100-4134/TCP` reserved)
+    ru: Статические порты модуля `virtualization` на узлах кластера (зарезервирован диапазон `4100-4134/TCP`)
+  destinations:
+  - ports: "4100"
+    protocol: TCP
+    description:
+      en: "`virtualization` `virt-handler` healthz and metrics"
+      ru: "Healthz и метрики `virt-handler` модуля `virtualization`"
+  - ports: "4101"
+    protocol: TCP
+    description:
+      en: "`virtualization` `virt-handler` console server"
+      ru: "Сервер консоли `virt-handler` модуля `virtualization`"
+  - ports: "4105"
+    protocol: TCP
+    description:
+      en: "`virtualization` `vm-route-forge` liveness and readiness probes"
+      ru: "Порты liveness и readiness проб `vm-route-forge` модуля `virtualization`"
+  - ports: "4106"
+    protocol: TCP
+    description:
+      en: "`virtualization` `vm-route-forge` pprof in debug mode"
+      ru: "Порт pprof компонента `vm-route-forge` модуля `virtualization` в debug-режиме"
+  - ports: "4107"
+    protocol: TCP
+    description:
+      en: "`virtualization` `virtualization-dra` gRPC liveness and readiness probes"
+      ru: "Порты gRPC liveness и readiness проб `virtualization-dra` модуля `virtualization`"
+
 - group: ExternalToMaster
   description:
     en: External traffic to master nodes

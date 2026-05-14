@@ -1,0 +1,178 @@
+{!{ define "promote_image_setup_steps" }!}
+{!{- $ctx := index . 0 -}!}
+# <template: promote_image_setup_steps>
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
+
+    {!{- $secrets := slice -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+{!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
+# </template: promote_image_setup_steps>
+{!{ end }!}
+
+{!{ define "promote_image_edition_steps" }!}
+{!{- $edition := index . 0 -}!}
+- name: Copy attestations ({!{$edition}!})
+  env:
+    WERF_ENV: {!{$edition}!}
+    STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+  run: |
+    set -euo pipefail
+
+    REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+    IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+    STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+    PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+    DIGESTS_JSON="images_digests-att.json"
+
+    if ! regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+      echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest attestations copy"
+      exit 1
+    fi
+
+    while IFS= read -r IMG_DIGEST; do
+      [[ -z "${IMG_DIGEST}" ]] && continue
+      D_HEX="${IMG_DIGEST#sha256:}"
+      SRC_ATT="${STAGE_PATH}:sha256-${D_HEX}.att"
+      DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
+      if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
+        echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+        regctl image copy "${SRC_ATT}" "${DST_ATT}"
+      fi
+    done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+
+    rm -rf ${DIGESTS_JSON}
+
+- name: Promote images from stage to prod ({!{$edition}!})
+  env:
+    WERF_ENV: {!{$edition}!}
+    STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+  run: |
+    set -euo pipefail
+
+    # CE/EE/FE -> ce/ee/fe
+    REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+    IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+    STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+    PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+    promote_with_att() {
+      local SUBPATH="$1"
+      local REPO_SRC REPO_DST SRC DST
+      if [[ -z "${SUBPATH}" ]]; then
+        REPO_SRC="${STAGE_PATH}"
+        REPO_DST="${PROD_PATH}"
+      else
+        REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+        REPO_DST="${PROD_PATH}/${SUBPATH}"
+      fi
+      SRC="${REPO_SRC}:${IMAGE_TAG}"
+      DST="${REPO_DST}:${IMAGE_TAG}"
+      echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+      regctl image copy "${SRC}" "${DST}"
+      local DIGEST
+      DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+      if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+        echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+        regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+      else
+        echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+      fi
+    }
+
+    promote_with_att ""
+    promote_with_att "install"
+    promote_with_att "install-standalone"
+    promote_with_att "release-channel"
+
+    DIGESTS_JSON="images_digests-promote.json"
+
+    # Promote from images_digests.json
+    if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+      echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+      STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+      while IFS= read -r IMG_DIGEST; do
+        [[ -z "${IMG_DIGEST}" ]] && continue
+        SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+        DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+        echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+        regctl image copy "${SRC_REF}" "${DST_REF}"
+      done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+      rm -rf ${DIGESTS_JSON}
+    else
+      echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}'"
+      exit 1
+    fi
+
+- name: Check DKP images manifests in public registry ({!{$edition}!})
+  env:
+    WERF_ENV: {!{$edition}!}
+    DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+  run: |
+    EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+    ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
+
+{!{ end }!}
+
+{!{ define "promote_image" }!}
+{!{- $ctx := . -}!}
+# <template: promote_image>
+detect_editions:
+  name: Detect editions
+  runs-on: "regular"
+  outputs:
+    PROMOTE_CE: ${{ steps.detect_editions.outputs.promote_ce }}
+    PROMOTE_EE: ${{ steps.detect_editions.outputs.promote_ee }}
+    PROMOTE_FE: ${{ steps.detect_editions.outputs.promote_fe }}
+    PROMOTE_BE: ${{ steps.detect_editions.outputs.promote_be }}
+    PROMOTE_SE: ${{ steps.detect_editions.outputs.promote_se }}
+    PROMOTE_SE-plus: ${{ steps.detect_editions.outputs['promote_se-plus'] }}
+  steps:
+    - name: Detect editions
+      id: detect_editions
+      env:
+        EDITIONS: ${{ github.event.inputs.editions || '' }}
+      run: |
+        echo "Promote editions filter: '${EDITIONS}' (empty => all)"
+        RESTRICTED=no
+        for edition in CE EE FE BE SE SE-plus ; do
+          if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+            echo "  - enable promote of ${edition} edition."
+            echo "PROMOTE_${edition}=true" >> $GITHUB_OUTPUT
+            RESTRICTED=yes
+          fi
+        done
+        if [[ $RESTRICTED == "no" ]] ; then
+          echo "No restrictions. Enable promote for all editions."
+          for edition in CE EE FE BE SE SE-plus ; do
+            echo "PROMOTE_${edition}=true" >> $GITHUB_OUTPUT
+          done
+        fi
+
+{!{ range $edition := slice "CE" "EE" "FE" "BE" "SE" "SE-plus" }!}
+{!{- $jobId := $edition | replaceAll "-" "_" -}!}
+promote_{!{$jobId}!}:
+  name: Promote images ({!{$edition}!})
+  needs:
+    - detect_editions
+  if: ${{ needs.detect_editions.outputs['promote_{!{$edition | toLower}!}'] == 'true' && github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+  runs-on: [self-hosted, stage]
+  env:
+    CI_COMMIT_TAG: ${{ github.ref_name }}
+  steps:
+{!{ tmpl.Exec "promote_image_setup_steps" (slice $ctx) | strings.Indent 2 }!}
+{!{ tmpl.Exec "promote_image_edition_steps" (slice $edition) | strings.Indent 4 }!}
+{!{ end }!}
+# </template: promote_image>
+{!{ end }!}
