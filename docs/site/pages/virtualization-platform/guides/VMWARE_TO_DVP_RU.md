@@ -1,6 +1,6 @@
 ---
 title: Перенос ВМ из VMware в DVP
-permalink: ru/virtualization-platform/guides/vmware-to-dvp.html
+permalink: ru/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html
 description: Краткое руководство по переносу виртуальных машин из VMware (OVA/VMDK) на Deckhouse Virtualization Platform.
 lang: ru
 layout: sidebar-guides
