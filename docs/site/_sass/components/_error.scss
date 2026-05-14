@@ -1,0 +1,181 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.layout-sidebar:has(.section) {
+    display: block;
+}
+
+.docs.section {
+    position: relative;
+    margin: 180px 0 180px 50%;
+
+    @include breakpoints.max-w(xl) {
+        margin: 120px 0 120px 50%;
+    }
+
+    @include breakpoints.max-w(m) {
+        margin: 0;
+        padding: 300px 0 160px;
+    }
+
+    @include breakpoints.max-w(s) {
+        padding: 240px 0 100px;
+    }
+
+    @include breakpoints.max-w(xxs) {
+        padding-top: 200px;
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 15px;
+        left: -100%;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        background: url(/images/404.svg) top / contain no-repeat;
+
+        @include breakpoints.max-w(m) {
+            height: 30%;
+            left: 0;
+        }
+    }
+
+    .docs__title {
+        margin-left: 120px;
+        letter-spacing: -0.96px;
+        font-weight: 700;
+        font-size: 48px;
+        color: #222A5D;
+
+        @include breakpoints.max-w(xxl) {
+            margin-left: 70px;
+            font-size: 42px;
+        }
+
+        @include breakpoints.max-w(xl) {
+            font-size: 36px;
+        }
+
+        @include breakpoints.max-w(l) {
+            margin-left: 50px;
+            font-size: 32px;
+        }
+
+        @include breakpoints.max-w(m) {
+            margin-left: 0;
+        }
+
+        @include breakpoints.max-w(xxs) {
+            font-size: 28px;
+        }
+    }
+
+    .post-content {
+        margin-left: 120px;
+
+        @include breakpoints.max-w(xxl) {
+            margin-left: 70px;
+        }
+
+        @include breakpoints.max-w(l) {
+            margin-left: 50px;
+        }
+
+        @include breakpoints.max-w(m) {
+            margin-left: 0;
+        }
+
+        p {
+            color: #5E6697;
+            font-size: 18px;
+            font-weight: 400;
+            line-height: 28px;
+
+            @include breakpoints.max-w(xs) {
+                font-size: 16px;
+            }
+        }
+
+        .searchV3 {
+            .container {
+                padding: 0;
+
+                input {
+                    display: flex;
+                    padding: 10px 20px;
+                    justify-content: space-between;
+                    font-size: 18px;
+                    line-height: 28px;
+                    align-items: center;
+                    align-self: stretch;
+                    border-radius: 8px;
+                    border: 1px solid #BBC5D5;
+                    background-color: #fff;
+                    background-image: url(/images/search-404.svg);
+                    background-repeat: no-repeat;
+
+                    @include breakpoints.max-w(l) {
+                        padding: 10px;
+                        line-height: 20px;
+                    }
+
+                    @include breakpoints.max-w(xs) {
+                        font-size: 16px;
+                    }
+
+                    &:focus, &:active {
+                        border-color: #4075FF;
+                        background: transparent;
+                    }
+                }
+            }
+        }
+
+        ul {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px 64px;
+
+            @include breakpoints.max-w(xxl) {
+                gap: 18px;
+            }
+
+            @include breakpoints.max-w(m) {
+                gap: 24px 64px;
+            }
+
+            @include breakpoints.max-w(m) {
+                gap: 16px;
+            }
+
+            li {
+                margin: 0;
+                padding: 0;
+                font-size: 20px;
+                font-weight: 400;
+                line-height: 30px;
+                text-decoration-line: underline;
+                text-decoration-color: #0064FF;
+
+                @include breakpoints.max-w(xl) {
+                    font-size: 18px;
+                }
+
+                @include breakpoints.max-w(xs) {
+                    font-size: 16px;
+                }
+
+                a {
+                    color: #0064FF;
+                }
+
+                &::before {
+                    content: none;
+                }
+            }
+        }
+    }
+}
