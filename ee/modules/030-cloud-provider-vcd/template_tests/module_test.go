@@ -64,13 +64,10 @@ const moduleValuesA = `
       providerDiscoveryData:
         kind: VCDCloudProviderDiscoveryData
         apiVersion: deckhouse.io/v1
-        zones:
-        - default
-      discoveryData:
-        kind: VCDCloudProviderDiscoveryData
-        apiVersion: deckhouse.io/v1
         vcdInstallationVersion: "10.4.2"
         vcdAPIVersion: "37.2"
+        zones:
+        - default
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration
@@ -126,15 +123,12 @@ const moduleValuesB = `
       providerDiscoveryData:
         kind: VCDCloudProviderDiscoveryData
         apiVersion: deckhouse.io/v1
-        zones:
-        - default
-      discoveryData:
-        kind: VCDCloudProviderDiscoveryData
-        apiVersion: deckhouse.io/v1
         vcdInstallationVersion: "10.4.2"
         vcdAPIVersion: "37.2"
         loadBalancer:
           enabled: false
+        zones:
+        - default
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration
@@ -168,15 +162,12 @@ const moduleValuesC = `
       providerDiscoveryData:
         kind: VCDCloudProviderDiscoveryData
         apiVersion: deckhouse.io/v1
-        zones:
-        - default
-      discoveryData:
-        kind: VCDCloudProviderDiscoveryData
-        apiVersion: deckhouse.io/v1
         vcdInstallationVersion: "10.4.2"
         vcdAPIVersion: "37.2"
         loadBalancer:
           enabled: true
+        zones:
+        - default
       providerClusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: VCDClusterConfiguration

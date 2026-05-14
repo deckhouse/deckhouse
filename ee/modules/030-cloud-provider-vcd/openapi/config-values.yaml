@@ -30,3 +30,52 @@ properties:
           * the first (in lexicographic order) StorageClass created by the module.
 
           > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+  provider:
+    type: object
+    additionalProperties: false
+    description: Parameters for connecting to the VCD API.
+    properties:
+      server:
+        type: string
+        description: VCD server host or IP address.
+      username:
+        type: string
+        description: VCD user name with full permissions for the project.
+      password:
+        type: string
+        description: VCD user password.
+      apiToken:
+        type: string
+        description: |
+          Token for authentication in VCD.
+
+          > When using the `apiToken` parameter, the `username` and `password` parameters must be empty.
+      insecure:
+        type: boolean
+        description: Set to `true` if VCD has a self-signed certificate.
+        x-doc-default: false
+  organization:
+    type: string
+    description: Name of the Organization in VCD.
+  virtualDataCenter:
+    type: string
+    description: Name of the Virtual Data Center in VCD that belongs to the specified Organization.
+  virtualApplicationName:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+    description: Name of the Virtual Application in VCD that belongs to the specified Virtual Data Center.
+  mainNetwork:
+    type: string
+    description: Path to the network to which the primary network interfaces of virtual machines will be connected..
+    example: internal
+  sshPublicKey:
+    type: string
+    description: Public SSH key for accessing the nodes.
+  metadata:
+    type: object
+    description: |
+      Custom metadata entries that will be stored in cluster objects, such as virtual machines, disks, and networks.
+
+      > Changing metadata will cause CloudEphemeral nodes to be recreated.
+    additionalProperties:
+      type: string
