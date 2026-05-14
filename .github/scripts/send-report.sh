@@ -47,9 +47,9 @@ branch="${BRANCH}"
 if [[ -z "$webhook_type" ]]; then
   webhook_type="ci_fail"
 fi
-if [[ -n "$branch" ]] && [[ "$branch" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+if [[ "$branch" =~ ^release-[0-9]+\.[0-9]+$ ]] || [[ "$branch" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   message="🛑 Branch: **${branch}** Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
-else
+elif [[ -z "$message" ]]; then
   message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
 fi
 
