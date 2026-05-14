@@ -1,7 +1,9 @@
 image: {{ .ModuleName }}/{{ .ImageName }}                                                                                                                                                    
 fromImage: common/distroless                                                                                                                                                                   
-fromCacheVersion: "2025.04.29.4"                                                                                                                                                               imageSpec:                                                                                                                                                                                     
-  config:                                                                                                                                                                                          env: { "WORKDIR": "/" }                                                                                                                                                                    
+fromCacheVersion: "2025.04.29.4"                                                                                                                                                               
+imageSpec:                                                                                                                                                                                     
+  config:                                                                                                                                                                                          
+    env: { "WORKDIR": "/" }                                                                                                                                                                    
     entrypoint: ["/machine-controller-manager"]                                                                                                                                                
 import:                                                                                                                                                                                        
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact                                                                                                                                           
@@ -48,4 +50,4 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64                                                                                                           
   - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go                                                                                                
   - chown 64535:64535 machine-controller-manager                                                                                                                                               
-  - chmod 0700 machine-controller-manager
+  - chmod 0700 machine-controller-manager  
