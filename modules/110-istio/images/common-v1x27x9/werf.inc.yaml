@@ -29,6 +29,13 @@ git:
     - '**/*'
 - url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
   tag: {{ $kialiVersion }}
+  add: /static
+  to: /src/kiali/frontend/build
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
+  tag: {{ $kialiVersion }}
   add: /
   to: /src/kiali-frontend-assets
   stageDependencies:

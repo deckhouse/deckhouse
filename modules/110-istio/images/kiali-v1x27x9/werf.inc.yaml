@@ -37,10 +37,10 @@ import:
   add: /src/kiali
   to: /src/kiali
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-  add: /src/kiali/frontend/build
-  to: /src/kiali/frontend/build
-  before: setup
+# - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+#   add: /src/kiali/frontend/build
+#   to: /src/kiali/frontend/build
+#   before: setup
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -57,22 +57,22 @@ shell:
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali
   - chmod 0755 /src/kiali/out/kiali
----
-image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-final: false
-from: {{ index $.Images "builder/node-alpine-23.10" }}
-import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
-  add: /src/kiali
-  to: /src/kiali
-  before: install
-shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache bash git python3 make build-base yarn
-  install:
-  {{- include "node packages proxy" . | nindent 2 }}
-  - cd /src/kiali/frontend
-  - export KIALI_ENV=production
-  - yarn install --frozen-lockfile --ignore-scripts
-  - yarn run build
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+# final: false
+# from: {{ index $.Images "builder/node-alpine-23.10" }}
+# import:
+# - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+#   add: /src/kiali
+#   to: /src/kiali
+#   before: install
+# shell:
+#   beforeInstall:
+#   {{- include "alpine packages proxy" . | nindent 2 }}
+#   - apk add --no-cache bash git python3 make build-base yarn
+#   install:
+#   {{- include "node packages proxy" . | nindent 2 }}
+#   - cd /src/kiali/frontend
+#   - export KIALI_ENV=production
+#   - yarn install --frozen-lockfile --ignore-scripts
+#   - yarn run build
