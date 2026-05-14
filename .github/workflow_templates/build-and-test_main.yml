@@ -46,7 +46,7 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "main" "FE") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   doc_web_build:

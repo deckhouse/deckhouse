@@ -20,9 +20,12 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
@@ -40,15 +43,33 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
-	if err := terminal.AskBecomePassword(&b.Options.Become); err != nil {
-		return err
-	}
-
 	if err := cache.InitWithOptions(ctx, wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		return fmt.Errorf("Can not init cache: %v", err)
 	}
 
 	bootstrapState := NewBootstrapState(cache.Global())
+
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Executing post-bootstrap script", labelChan, phasesChan)
+
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+
+		onComplete := func() {
+			pb := progressbar.GetDefaultPb()
+			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+			pb.MultiPrinter.Stop()
+		}
+		defer onComplete()
+	}
 
 	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
 		WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
@@ -62,7 +83,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Printf("Output from post-bootstrap script:\n%s", string(out))
+	log.InfoF("Output from post-bootstrap script:\n%s", string(out))
 
 	return nil
 }

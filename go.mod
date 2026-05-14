@@ -94,12 +94,16 @@ require k8s.io/klog v1.0.0 // indirect
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
+	atomicgo.dev/cursor v0.2.0 // indirect
+	atomicgo.dev/keyboard v0.2.9 // indirect
+	atomicgo.dev/schedule v0.1.0 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-connection v0.7.0 // indirect
 	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
@@ -120,9 +124,11 @@ require (
 	github.com/gosimple/slug v1.15.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
+	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/name212/govalue v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/pterm/pterm v0.12.83 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.5.3 // indirect
 	github.com/redis/go-redis/v9 v9.10.0 // indirect
 	github.com/samber/lo v1.51.0 // indirect
@@ -216,7 +222,7 @@ require (
 	github.com/google/certificate-transparency-go v1.3.2-0.20250507091337-0eddb39e94f8 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/gookit/color v1.5.4 // indirect
+	github.com/gookit/color v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect

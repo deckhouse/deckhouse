@@ -30,6 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -51,6 +53,14 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 			return fmt.Errorf("SSH credentials not provided")
 		}
 		defer sshProviderInitializer.Cleanup(ctx)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test SSH connection", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {

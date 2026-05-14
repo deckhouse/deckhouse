@@ -20,8 +20,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -47,6 +51,28 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Bashible bundle", labelChan, phasesChan)
+
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+
+		onComplete := func() {
+			pb := progressbar.GetDefaultPb()
+			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+			pb.MultiPrinter.Stop()
+		}
+		defer onComplete()
 	}
 
 	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)

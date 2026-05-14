@@ -31,6 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 var (
@@ -77,6 +79,9 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
 
 		return template.PrepareBashibleBundle(
 			ctx,
@@ -90,6 +95,14 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render bashible bundle", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
 	})
@@ -130,11 +143,23 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
+
 		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render master bootstrap", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
 	})
@@ -180,6 +205,10 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		if input.IsTerminal() {
+			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		}
+
 		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
 			return err
 		}
@@ -191,7 +220,15 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		return log.ProcessCtx(ctx, "bootstrap", "Prepare ControlPlaneManifest and PKI", runFunc)
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render kubeadm config", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
+
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
 	})
 }
 
@@ -205,6 +242,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var metaConfig *config.MetaConfig
 
 		logger := log.GetDefaultLogger()
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster configuration", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
 
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
@@ -255,6 +300,14 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		_ = kpcontext.ExtractContext(c)
+
+		if input.IsTerminal() {
+			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster discovery data", log.GetDefaultLogger())
+			if err != nil {
+				return err
+			}
+			defer onComplete()
+		}
 
 		var err error
 		var data []byte

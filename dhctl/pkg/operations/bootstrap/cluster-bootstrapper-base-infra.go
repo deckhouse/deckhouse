@@ -24,8 +24,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
@@ -94,6 +97,28 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 
 	defer cleanup()
+
+	interactive := input.IsTerminal()
+	if interactive {
+		intLogger, ok := b.logger.(*log.InteractiveLogger)
+		if !ok {
+			return fmt.Errorf("logger is not interactive")
+		}
+		labelChan := intLogger.GetPhaseChan()
+		phasesChan := make(chan phases.Progress, 5)
+		pbParam := progressbar.NewPbParams(100, "Base infrastructure", labelChan, phasesChan)
+
+		if err := progressbar.InitProgressBar(pbParam); err != nil {
+			return err
+		}
+
+		onComplete := func() {
+			pb := progressbar.GetDefaultPb()
+			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+			pb.MultiPrinter.Stop()
+		}
+		defer onComplete()
+	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
 		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)

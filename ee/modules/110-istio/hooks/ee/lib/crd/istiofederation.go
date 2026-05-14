@@ -31,11 +31,10 @@ type IstioFederationSpec struct {
 
 type IstioFederationStatus struct {
 	MetadataCache struct {
-		Public                    *AlliancePublicMetadata    `json:"public"`
-		Private                   *FederationPrivateMetadata `json:"private"`
-		PublicLastFetchTimestamp  string                     `json:"publicLastFetchTimestamp"`
-		PrivateLastFetchTimestamp string                     `json:"privateLastFetchTimestamp"`
+		Public  *AlliancePublicMetadata    `json:"public,omitempty"`
+		Private *FederationPrivateMetadata `json:"private,omitempty"`
 	} `json:"metadataCache,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // Warning! This struct is duplicated in images/metadata-exporter

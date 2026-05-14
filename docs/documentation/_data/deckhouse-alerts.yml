@@ -1699,6 +1699,25 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}`, (UUID: `{{$labels.remote_uuid}}`) requests private metadata from hostname `{{$labels.requested_to_hostname}}`, that hostname uses the deprecated `istio` subdomain.
+
+        Update the remote cluster {{$labels.alliance_kind}} resource: set `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+
+        Migration steps on the remote cluster:
+
+        1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
+        2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
+        3. Verify remote metadata fetch and alliance health after the change.
+      summary: |
+        A peer cluster requests private metadata using a deprecated subdomain.
+      severity: "5"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio

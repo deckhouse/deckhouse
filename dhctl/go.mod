@@ -29,7 +29,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.7
 	github.com/google/uuid v1.6.0
-	github.com/gookit/color v1.5.4
+	github.com/gookit/color v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
@@ -39,12 +39,13 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.1
+	github.com/pterm/pterm v0.12.83
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/vbauerster/mpb/v8 v8.12.0
 	github.com/vmware/go-vcloud-director/v3 v3.0.0-alpha.31
 	github.com/werf/logboek v0.6.1
-	golang.org/x/term v0.39.0
+	golang.org/x/term v0.40.0
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -61,6 +62,9 @@ require (
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
+	atomicgo.dev/cursor v0.2.0 // indirect
+	atomicgo.dev/keyboard v0.2.9 // indirect
+	atomicgo.dev/schedule v0.1.0 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
@@ -84,6 +88,7 @@ require (
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/cfssl v1.6.5 // indirect
+	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckhouse/delivery-kit-sdk v1.1.0 // indirect
@@ -146,6 +151,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
+	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-runewidth v0.0.20 // indirect
 	github.com/mholt/archives v0.1.5 // indirect

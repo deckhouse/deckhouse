@@ -35,6 +35,7 @@ type InitParams struct {
 	LoggerProvider log.LoggerProvider
 	SignCheck      bool
 	DirsConfig     *directoryconfig.DirectoryConfig
+	Interactive    bool
 }
 
 func noCleanup() {}
@@ -44,7 +45,7 @@ func Init(ctx context.Context, params InitParams, opts ...InitOpt) (Cleanup, err
 
 	clusterDomain := params.MetaConfig.GetClusterDomain()
 
-	rpp := NewRegistryPackagesProxy(clusterDomain, configGetter, params.LoggerProvider).
+	rpp := NewRegistryPackagesProxy(clusterDomain, configGetter, params.LoggerProvider, params.Interactive).
 		WithSignCheck(params.SignCheck).
 		WithDirectoryConfig(params.DirsConfig)
 
