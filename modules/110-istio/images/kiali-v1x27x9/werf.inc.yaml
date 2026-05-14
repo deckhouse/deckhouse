@@ -13,12 +13,12 @@ import:
   owner: 64535
   group: 64535
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
-  add: /src/kiali/frontend/build
-  to: /opt/kiali/console
-  owner: 64535
-  group: 64535
-  before: install
+# - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-build-artifact
+#   add: /src/kiali/frontend/build
+#   to: /opt/kiali/console
+#   owner: 64535
+#   group: 64535
+#   before: install
 git:
 {{- include "image mount points" . }}
 imageSpec:
