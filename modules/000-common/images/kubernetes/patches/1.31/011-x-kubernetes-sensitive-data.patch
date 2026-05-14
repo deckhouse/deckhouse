@@ -1,3 +1,52 @@
+diff --git a/apply.err b/apply.err
+new file mode 100644
+index 00000000000..0b57aabae3e
+--- /dev/null
++++ b/apply.err
+@@ -0,0 +1,43 @@
++Applied patch to 'pkg/controlplane/apiserver/apiextensions.go' cleanly.
++Applied patch to 'pkg/generated/openapi/zz_generated.openapi.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/types_jsonschema.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.pb.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/types_jsonschema.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/zz_generated.conversion.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.pb.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/generated.proto' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/types_jsonschema.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1/zz_generated.conversion.go' cleanly.
++Falling back to direct application...
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation/validation.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go' cleanly.
++Falling back to direct application...
++Falling back to direct application...
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go' with conflicts.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler_test.go' cleanly.
++Falling back to direct application...
++Falling back to direct application...
++Falling back to direct application...
++Falling back to direct application...
++Falling back to direct application...
++Falling back to direct application...
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/convert.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/kubeopenapi.go' cleanly.
++Falling back to direct application...
++Falling back to direct application...
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/structural.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/validation.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go' with conflicts.
++Applied patch to 'staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiserver/pkg/audit/context.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiserver/pkg/audit/request.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go' with conflicts.
++Applied patch to 'staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config_test.go' cleanly.
++Applied patch to 'staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go' cleanly.
++U staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
++U staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
++U staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
 diff --git a/pkg/controlplane/apiserver/apiextensions.go b/pkg/controlplane/apiserver/apiextensions.go
 index 1a0b8910c29..77439dc00e1 100644
 --- a/pkg/controlplane/apiserver/apiextensions.go
@@ -2916,7 +2965,7 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..0405f7e4049
+index 00000000000..c2da2367e49
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 @@ -0,0 +1,153 @@
@@ -3075,7 +3124,7 @@ index 00000000000..0405f7e4049
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 new file mode 100644
-index 00000000000..b68ac38e2eb
+index 00000000000..b58a01da39c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 @@ -0,0 +1,512 @@
@@ -3167,13 +3216,13 @@ index 00000000000..b68ac38e2eb
 +		},
 +	}
 +
-+	bs, err := marshalApplyBody(string(types.ApplyYAMLPatchType), in)
++	bs, err := marshalApplyBody(string(types.ApplyPatchType), in)
 +	if err != nil {
 +		t.Fatalf("marshalApplyBody = %v", err)
 +	}
 +
 +	got := map[string]interface{}{}
-+	if err := unmarshalApplyBody(string(types.ApplyYAMLPatchType), bs, &got); err != nil {
++	if err := unmarshalApplyBody(string(types.ApplyPatchType), bs, &got); err != nil {
 +		t.Fatalf("unmarshalApplyBody = %v", err)
 +	}
 +	if !reflect.DeepEqual(in, got) {
@@ -3188,13 +3237,13 @@ index 00000000000..b68ac38e2eb
 +		},
 +	}
 +
-+	bs, err := marshalApplyBody(string(types.ApplyCBORPatchType), in)
++	bs, err := marshalApplyBody("application/apply-patch+cbor", in)
 +	if err != nil {
 +		t.Fatalf("marshalApplyBody = %v", err)
 +	}
 +
 +	got := map[string]interface{}{}
-+	if err := unmarshalApplyBody(string(types.ApplyCBORPatchType), bs, &got); err != nil {
++	if err := unmarshalApplyBody("application/apply-patch+cbor", bs, &got); err != nil {
 +		t.Fatalf("unmarshalApplyBody = %v", err)
 +	}
 +	if !reflect.DeepEqual(in, got) {
@@ -3245,7 +3294,7 @@ index 00000000000..b68ac38e2eb
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	body := "spec:\n  password: <omitted>\n"
-+	mw.ServeHTTP(httptest.NewRecorder(), makeRequest(t, string(types.ApplyYAMLPatchType), body, "primary"))
++	mw.ServeHTTP(httptest.NewRecorder(), makeRequest(t, string(types.ApplyPatchType), body, "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3291,7 +3340,7 @@ index 00000000000..b68ac38e2eb
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  credentials: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyPatchType), "spec:\n  credentials: <omitted>\n", "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3335,7 +3384,7 @@ index 00000000000..b68ac38e2eb
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  tags: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyPatchType), "spec:\n  tags: <omitted>\n", "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3365,12 +3414,12 @@ index 00000000000..b68ac38e2eb
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	in := map[string]interface{}{"spec": map[string]interface{}{"password": "<omitted>"}}
-+	body, _ := marshalApplyBody(string(types.ApplyCBORPatchType), in)
++	body, _ := marshalApplyBody("application/apply-patch+cbor", in)
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyCBORPatchType), string(body), "primary"))
++		makeRequest(t, "application/apply-patch+cbor", string(body), "primary"))
 +
 +	got := map[string]interface{}{}
-+	if err := unmarshalApplyBody(string(types.ApplyCBORPatchType), innerBody, &got); err != nil {
++	if err := unmarshalApplyBody("application/apply-patch+cbor", innerBody, &got); err != nil {
 +		t.Fatalf("unmarshal inner body: %v", err)
 +	}
 +	want := map[string]interface{}{"spec": map[string]interface{}{"password": "real-pass"}}
@@ -3393,7 +3442,7 @@ index 00000000000..b68ac38e2eb
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
-+	req := makeRequest(t, string(types.ApplyYAMLPatchType)+"; charset=utf-8",
++	req := makeRequest(t, string(types.ApplyPatchType)+"; charset=utf-8",
 +		"spec:\n  password: <omitted>\n", "primary")
 +	mw.ServeHTTP(httptest.NewRecorder(), req)
 +
@@ -3421,7 +3470,7 @@ index 00000000000..b68ac38e2eb
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: real\n", "primary"))
++		makeRequest(t, string(types.ApplyPatchType), "spec:\n  password: real\n", "primary"))
 +
 +	if !innerCalled {
 +		t.Fatalf("inner not called for valid create")
@@ -3442,7 +3491,7 @@ index 00000000000..b68ac38e2eb
 +
 +	rec := httptest.NewRecorder()
 +	mw.ServeHTTP(rec,
-+		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyPatchType), "spec:\n  password: <omitted>\n", "primary"))
 +
 +	if innerCalled {
 +		t.Fatalf("inner should not be called when create has <omitted>")
@@ -3465,7 +3514,7 @@ index 00000000000..b68ac38e2eb
 +
 +	rec := httptest.NewRecorder()
 +	mw.ServeHTTP(rec,
-+		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyPatchType), "spec:\n  password: <omitted>\n", "primary"))
 +
 +	if innerCalled {
 +		t.Fatalf("inner should not be called on getter error")
@@ -3520,7 +3569,7 @@ index 00000000000..b68ac38e2eb
 +
 +	yamlBody := "spec:\n  endpoints:\n  - name: replica\n    secret: <omitted>\n  - name: main\n    secret: <omitted>\n"
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyYAMLPatchType), yamlBody, "primary"))
++		makeRequest(t, string(types.ApplyPatchType), yamlBody, "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3551,7 +3600,7 @@ index 00000000000..b68ac38e2eb
 +
 +	bad := "spec:\n  password: [unclosed"
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyYAMLPatchType), bad, "primary"))
++		makeRequest(t, string(types.ApplyPatchType), bad, "primary"))
 +
 +	if string(innerBody) != bad {
 +		t.Errorf("malformed body should pass through unchanged; got %q", innerBody)
@@ -3576,7 +3625,7 @@ index 00000000000..b68ac38e2eb
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
-+	req := makeRequest(t, string(types.ApplyYAMLPatchType),
++	req := makeRequest(t, string(types.ApplyPatchType),
 +		"spec:\n  password: <omitted>\n", "primary")
 +	origLen := req.ContentLength
 +	mw.ServeHTTP(httptest.NewRecorder(), req)
@@ -3593,7 +3642,7 @@ index 00000000000..b68ac38e2eb
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..914d28c2f38
+index 00000000000..1394310e406
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 @@ -0,0 +1,128 @@
@@ -3802,10 +3851,10 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..2af942b707c
+index 00000000000..46bdc797108
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,320 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3830,7 +3879,6 @@ index 00000000000..2af942b707c
 +	"sort"
 +
 +	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
-+	"k8s.io/klog/v2"
 +)
 +
 +// MaskedValue is the replacement string used by MaskSensitiveFields.
@@ -4044,7 +4092,6 @@ index 00000000000..2af942b707c
 +		oldItems, _ := oldObj.([]interface{})
 +		var lookupOldByKey func(newItem interface{}) interface{}
 +		if s.XListType != nil && *s.XListType == "map" && len(s.XListMapKeys) > 0 {
-+			klog.Infof("[sensitive-listmap] key-matching: path=%s keys=%v newLen=%d oldLen=%d", path, s.XListMapKeys, len(x), len(oldItems))
 +			lookupOldByKey = makeListMapLookup(oldItems, s.XListMapKeys)
 +		}
 +
