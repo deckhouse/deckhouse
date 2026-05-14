@@ -123,10 +123,9 @@ type TCPHandler struct {
 }
 
 type HealthcheckCondition struct {
-	ObservedGeneration int64  `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
-	ActiveNodeName     string `json:"activeNodeName,omitempty" protobuf:"bytes,2,opt,name=activeNodeName"`
-	Endpoints          int32  `json:"endpoints,omitempty" protobuf:"varint,3,opt,name=endpoints"`
-	ReadyEndpoints     int32  `json:"readyEndpoints,omitempty" protobuf:"varint,4,opt,name=readyEndpoints"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,1,opt,name=observedGeneration"`
+	Endpoints          int32 `json:"endpoints,omitempty" protobuf:"varint,3,opt,name=endpoints"`
+	ReadyEndpoints     int32 `json:"readyEndpoints,omitempty" protobuf:"varint,4,opt,name=readyEndpoints"`
 }
 
 type EndpointStatus struct {

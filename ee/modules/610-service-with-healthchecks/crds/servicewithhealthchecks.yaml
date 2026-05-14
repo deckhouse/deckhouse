@@ -696,10 +696,6 @@ spec:
                 description: |-
                   Summary of health checks.
                 properties:
-                  activeNodeName:
-                    description: |-
-                      Name of the node where the agent currently running the checks is located.
-                    type: string
                   endpoints:
                     description: |-
                       Total number of endpoints targeted by the health checks.

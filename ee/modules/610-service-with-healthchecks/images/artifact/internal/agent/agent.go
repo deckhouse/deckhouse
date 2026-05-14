@@ -134,7 +134,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	newStatus := r.buildRenewedStatus(updatedServiceWithHC)
 	updatedServiceWithHC.Status.HealthcheckCondition = newStatus.HealthcheckCondition
 	updatedServiceWithHC.Status.EndpointStatuses = newStatus.EndpointStatuses
-	updatedServiceWithHC.Status.Conditions = kubernetes.UpdateStatusWithConditions(serviceWithHC.Status.Conditions, newStatus.Conditions)
+	updatedServiceWithHC.Status.Conditions = kubernetes.UpdateStatusWithConditions(updatedServiceWithHC.Status.Conditions, newStatus.Conditions)
 
 	sortEndpointStatuses(updatedServiceWithHC.Status.EndpointStatuses)
 	sortEndpointStatuses(serviceWithHC.Status.EndpointStatuses)
@@ -184,20 +184,17 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 		}
 	}
 
-	// delete previous statuses for current node from current object
-	n := 0
+	// keep statuses from other nodes (build a new slice instead of mutating the input)
 	for _, endpointStatus := range svc.Status.EndpointStatuses {
 		if endpointStatus.NodeName != r.nodeName {
-			svc.Status.EndpointStatuses[n] = endpointStatus
-			n++
+			endpointStatuses = append(endpointStatuses, endpointStatus)
 		}
 	}
-	endpointStatuses = svc.Status.EndpointStatuses[:n]
 
 	// add new healthchecks probes results
 	for _, result := range r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
 		probesSuccessful := true
-		failedProbes := []string{}
+		var failedProbes []string
 
 		// there are always success if svc options set to PublishNotReadyAddresses, otherwise need to evaluate
 		if !svc.Spec.PublishNotReadyAddresses {
@@ -209,9 +206,13 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 		lastProbeTime := metav1.Time{}
 
 		if oldStatus, ok := oldStatusesMap[result.podName]; ok {
-			// If state didn't change, preserve old transition time
-			if oldStatus.ProbesSuccessful == probesSuccessful &&
-				reflect.DeepEqual(oldStatus.FailedProbes, failedProbes) {
+			// If state didn't change, preserve old transition time.
+			failedProbesEqual := len(oldStatus.FailedProbes) == 0 && len(failedProbes) == 0 ||
+				reflect.DeepEqual(oldStatus.FailedProbes, failedProbes)
+			stateChanged := oldStatus.ProbesSuccessful != probesSuccessful ||
+				!failedProbesEqual ||
+				oldStatus.Ready != result.podReady
+			if !stateChanged {
 				lastTransitionTime = oldStatus.LastTransitionTime
 			}
 
@@ -444,7 +445,7 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 			r.logger.Error(err, "could not delete EndpointSlice", "name", desiredNameForEndpointSlice)
 			return err
 		}
-		return nil // CRITICAL: Exit here after deleting (or if already deleted), do not proceed to Get/Update.
+		return nil // Exit here after deleting (or if already deleted), do not proceed to Get/Update.
 	}
 
 	// Try to get the existing one to see if we need to update it.

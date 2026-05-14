@@ -59,56 +59,69 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	deletedCount := r.clearNotUsedEPS(ctx, req)
 	r.Logger.V(1).Info("deleted orphan EndpointSlices", "namespace", req.Namespace, "count", deletedCount)
 
-	var service corev1.Service
-	err := r.Get(ctx, req.NamespacedName, &service)
-	if err == nil && IsSpecForServiceEqual(service, serviceWithHC) {
-		r.Logger.V(1).Info("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
-		return ctrl.Result{}, nil
-	}
-
-	// create or update child service
+	// create or update child service (skip if spec already matches)
 	var childService corev1.Service
 	childService.Name = req.Name
 	childService.Namespace = req.Namespace
 
-	op, errUpdatingSvc := controllerutil.CreateOrUpdate(ctx, r.Client, &childService, func() error {
-		// Set owner reference if it's a new service
-		if childService.ObjectMeta.UID == "" {
+	var errUpdatingSvc error
+	var service corev1.Service
+	err := r.Get(ctx, req.NamespacedName, &service)
+	if err == nil && IsSpecForServiceEqual(service, serviceWithHC) {
+		r.Logger.V(1).Info("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
+		childService = service
+	} else {
+		var op controllerutil.OperationResult
+		op, errUpdatingSvc = controllerutil.CreateOrUpdate(ctx, r.Client, &childService, func() error {
+			// Ensure owner reference is always set (idempotent — restores it if accidentally removed)
 			if err := controllerutil.SetControllerReference(serviceWithHC, &childService, r.Scheme); err != nil {
 				return err
 			}
-		}
 
-		childService.Spec.Selector = map[string]string{}
-		childService.Spec.Ports = serviceWithHC.Spec.Ports
-		childService.Spec.Type = serviceWithHC.Spec.Type
-		childService.Spec.PublishNotReadyAddresses = serviceWithHC.Spec.PublishNotReadyAddresses
-		childService.Spec.InternalTrafficPolicy = serviceWithHC.Spec.InternalTrafficPolicy
+			childService.Spec.Selector = map[string]string{}
+			childService.Spec.Ports = serviceWithHC.Spec.Ports
+			childService.Spec.Type = serviceWithHC.Spec.Type
+			childService.Spec.PublishNotReadyAddresses = serviceWithHC.Spec.PublishNotReadyAddresses
+			childService.Spec.InternalTrafficPolicy = serviceWithHC.Spec.InternalTrafficPolicy
 
-		// ExternalTrafficPolicy is only valid for LoadBalancer and NodePort.
-		if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer || serviceWithHC.Spec.Type == corev1.ServiceTypeNodePort {
-			childService.Spec.ExternalTrafficPolicy = serviceWithHC.Spec.ExternalTrafficPolicy
-		} else {
-			childService.Spec.ExternalTrafficPolicy = ""
-		}
-		return nil
-	})
+			// ExternalTrafficPolicy is only valid for LoadBalancer and NodePort.
+			if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer || serviceWithHC.Spec.Type == corev1.ServiceTypeNodePort {
+				childService.Spec.ExternalTrafficPolicy = serviceWithHC.Spec.ExternalTrafficPolicy
+			} else {
+				childService.Spec.ExternalTrafficPolicy = ""
+			}
+			return nil
+		})
 
-	if errUpdatingSvc != nil {
-		if errors.IsConflict(errUpdatingSvc) {
-			return ctrl.Result{Requeue: true}, nil
+		if errUpdatingSvc != nil {
+			if errors.IsConflict(errUpdatingSvc) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			// Record the failure in status condition before returning the error,
+			// so the user can see the reason in the resource status.
+			originalServiceWithHC := serviceWithHC.DeepCopy()
+			patch := client.MergeFrom(originalServiceWithHC)
+			failedCondition := createStatusConditionForService(errUpdatingSvc, serviceWithHC.Name)
+			failedCondition.ObservedGeneration = serviceWithHC.Generation
+			serviceWithHC.Status.Conditions = kubernetes.UpdateStatusWithCondition(serviceWithHC.Status.Conditions, failedCondition)
+			if patchErr := r.Status().Patch(ctx, serviceWithHC, patch); patchErr != nil {
+				r.Logger.Error(patchErr, "failed to patch failure condition into status", "name", req.Name, "namespace", req.Namespace)
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to create/update child Service for ServiceWithHealthchecks %s/%s: %w", req.Namespace, req.Name, errUpdatingSvc)
 		}
-		r.Logger.Error(errUpdatingSvc, "failed to create/update child Service for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.V(1).Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
 	}
-	r.Logger.V(1).Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
 
+	// Always update status — even if the child Service spec didn't change,
+	// the status/conditions may need recovery from a previous failed reconciliation.
 	originalServiceWithHC := serviceWithHC.DeepCopy()
 	patch := client.MergeFrom(originalServiceWithHC)
 
-	// update ServiceWithHealthchecks Status
 	if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		r.Logger.V(1).Info("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace, "operation", op)
+		r.Logger.V(1).Info("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 		serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
+	} else {
+		serviceWithHC.Status.LoadBalancer = corev1.LoadBalancerStatus{}
 	}
 	newCondition := createStatusConditionForService(errUpdatingSvc, serviceWithHC.Name)
 	newCondition.ObservedGeneration = serviceWithHC.Generation
