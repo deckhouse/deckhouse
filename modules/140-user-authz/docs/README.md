@@ -257,9 +257,18 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+proxy:
+    - nodes
 read-write:
     - deckhouse.io/clusterauthorizationrules
     - namespaces
+    - nodes/configz
+    - nodes/healthz
+    - nodes/log
+    - nodes/metrics
+    - nodes/pods
+    - nodes/proxy
+    - nodes/stats
 write:
     - limitranges
     - networking.k8s.io/networkpolicies

@@ -486,7 +486,8 @@ jobs:
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
           if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
@@ -811,7 +812,8 @@ jobs:
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
           if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
@@ -1137,7 +1139,8 @@ jobs:
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
           if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
@@ -1451,7 +1454,8 @@ jobs:
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
           if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
@@ -1765,7 +1769,8 @@ jobs:
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
           if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
@@ -2079,7 +2084,8 @@ jobs:
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+          export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
           if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then

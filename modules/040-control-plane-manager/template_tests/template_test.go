@@ -119,8 +119,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       - https://192.168.199.186:2379
     mastersNode:
       - master-0
-    pkiChecksum: checksum
-    rolloutEpoch: 1857
     nodesCount: 0
     kubeSchedulerExtenders: []
     authn: {}
@@ -134,8 +132,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -150,8 +146,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -170,8 +164,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -189,8 +181,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -210,8 +200,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -233,8 +221,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -255,8 +241,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -277,8 +261,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -292,8 +274,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
   audit: {}
@@ -313,8 +293,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
   audit: {}
@@ -331,8 +309,6 @@ internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
   audit: {}
@@ -838,8 +814,6 @@ internal:
     - https://192.168.199.186:2379
   mastersNode:
     - master-0
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
   audit:
@@ -865,8 +839,6 @@ internal:
     - https://192.168.199.186:2379
   mastersNode:
     - master-0
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   authn: {}
   selfSignedCA: {}
 apiserver:
@@ -957,8 +929,6 @@ internal:
     - https://192.168.199.186:2379
   mastersNode:
     - master-0
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
   nodesCount: %d
   kubeSchedulerExtenders: []
   authn: {}
