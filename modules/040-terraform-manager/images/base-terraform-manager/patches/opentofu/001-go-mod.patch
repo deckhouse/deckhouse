@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 0b5c192a9b..5dd888fb24 100644
+index 0b5c192a9b..a5f8d1b4fc 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,8 +1,8 @@
@@ -13,7 +13,7 @@ index 0b5c192a9b..5dd888fb24 100644
  	github.com/Azure/azure-sdk-for-go v59.2.0+incompatible
  	github.com/Azure/go-autorest/autorest v0.11.24
  	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
-@@ -17,39 +17,39 @@ require (
+@@ -17,24 +17,24 @@ require (
  	github.com/apparentlymart/go-userdirs v0.0.0-20200915174352-b0c018a67c13
  	github.com/apparentlymart/go-versions v1.0.2
  	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
@@ -43,12 +43,11 @@ index 0b5c192a9b..5dd888fb24 100644
 +	github.com/google/go-cmp v0.7.0
  	github.com/google/uuid v1.6.0
 -	github.com/googleapis/gax-go/v2 v2.12.0
--	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.43
 +	github.com/googleapis/gax-go/v2 v2.17.0
-+	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.72
+ 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.43
  	github.com/hashicorp/consul/api v1.13.0
  	github.com/hashicorp/consul/sdk v0.8.0
- 	github.com/hashicorp/copywrite v0.16.3
+@@ -42,14 +42,14 @@ require (
  	github.com/hashicorp/errwrap v1.1.0
  	github.com/hashicorp/go-azure-helpers v0.43.0
  	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -337,7 +336,7 @@ index 0b5c192a9b..5dd888fb24 100644
  
  replace github.com/hashicorp/hcl/v2 v2.20.1 => github.com/opentofu/hcl/v2 v2.0.0-20240814143621-8048794c5c52
 diff --git a/go.sum b/go.sum
-index e9aa2916ad..50a58fbd4a 100644
+index e9aa2916ad..34a7a420a4 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,3 +1,5 @@
@@ -1405,7 +1404,7 @@ index e9aa2916ad..50a58fbd4a 100644
  github.com/googleapis/gnostic v0.5.1/go.mod h1:6U4PtQXGIEt/Z3h5MAT7FNofLnw9vXk2cUuW7uA/OeU=
  github.com/googleapis/gnostic v0.5.5 h1:9fHAtK0uDfpveeqqo1hkEZJcFvYXAiCN3UutL8F9xHw=
  github.com/googleapis/gnostic v0.5.5/go.mod h1:7+EbHbldMins07ALC74bsA81Ovc97DwqyJO1AENw9kA=
-@@ -634,12 +1140,14 @@ github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/ad
+@@ -634,8 +1140,10 @@ github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/ad
  github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
  github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
  github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
@@ -1417,13 +1416,7 @@ index e9aa2916ad..50a58fbd4a 100644
 +github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0/go.mod h1:JfhWUomR1baixubs02l85lZYYOm7LV6om4ceouMv45c=
  github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 h1:2VTzZjLZBgl62/EtslCrtky5vbi9dd7HrQPQIx6wqiw=
  github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542/go.mod h1:Ow0tF8D4Kplbc8s8sSb3V2oUCygFHVp8gC3Dn6U4MNI=
--github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.43 h1:IHnW2UNo8CnKJCKN90Osq+ViH/RzfxeRUBRLzZOA4C0=
--github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.43/go.mod h1:vahmnnIdr7LCswcRr+9z5YCTiytyV5qYIYmw7b4QyUE=
-+github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.72 h1:vTCWu1wbdYo7PEZFem/rlr01+Un+wwVmI7wiegFdRLk=
-+github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.72/go.mod h1:Vn+BBgKQHVQYdVQ4NZDICE1Brb+JfaONyDHr3q07oQc=
- github.com/hashicorp/consul/api v1.13.0 h1:2hnLQ0GjQvw7f3O61jMO8gbasZviZTrt9R8WzgiirHc=
- github.com/hashicorp/consul/api v1.13.0/go.mod h1:ZlVrynguJKcYr54zGaDbaL3fOvKC9m72FhPvA8T35KQ=
- github.com/hashicorp/consul/sdk v0.8.0 h1:OJtKBtEjboEZvG6AOUdh4Z1Zbyu0WcxQ0qatRrZHTVU=
+ github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.43 h1:IHnW2UNo8CnKJCKN90Osq+ViH/RzfxeRUBRLzZOA4C0=
 @@ -656,8 +1164,8 @@ github.com/hashicorp/go-cleanhttp v0.5.0/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtng
  github.com/hashicorp/go-cleanhttp v0.5.1/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
  github.com/hashicorp/go-cleanhttp v0.5.2 h1:035FKYIWjmULyFRBKPs8TBQoi0x6d9G4xc9neXJWAZQ=
