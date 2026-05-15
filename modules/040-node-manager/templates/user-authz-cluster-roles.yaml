@@ -39,6 +39,22 @@ rules:
   - machines
   - machinesets
   - machinedeployments
+  - machinepools
+  - machinehealthchecks
+  - clusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vcdmachinetemplates
+  - huaweicloudmachinetemplates
+  - dynamixmachinetemplates
+  - zvirtmachinetemplates
+  - deckhousemachinetemplates
+  - staticmachinetemplates
   verbs:
   - get
   - list
@@ -60,6 +76,11 @@ rules:
   - get
   - list
   - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -69,6 +90,16 @@ metadata:
   name: d8:user-authz:node-manager:cluster-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
 - apiGroups:
   - machine.sapcloud.io
   resources:
@@ -86,12 +117,43 @@ rules:
   verbs:
   - patch
   - update
+  - delete
+  - deletecollection
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machinedeployments/scale
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - cluster.x-k8s.io
   resources:
   - machines
   - machinesets
   - machinedeployments
+  - machinepools
+  - machinehealthchecks
+  - clusters
+  - machinedeployments/scale
   verbs:
-  - patch
+  - create
   - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vcdmachinetemplates
+  - huaweicloudmachinetemplates
+  - dynamixmachinetemplates
+  - zvirtmachinetemplates
+  - deckhousemachinetemplates
+  - staticmachinetemplates
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

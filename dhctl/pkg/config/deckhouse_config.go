@@ -17,12 +17,14 @@ limitations under the License.
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
@@ -119,7 +121,10 @@ func ReadVersionTagFromInstallerContainer(versionFile, downloadDir string) (stri
 	return tag, true
 }
 
-func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller, error) {
+func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig) (*DeckhouseInstaller, error) {
+	_, span := telemetry.StartSpan(ctx, "PrepareDeckhouseInstallConfig")
+	defer span.End()
+
 	if metaConfig == nil {
 		return nil, fmt.Errorf("Internal error. Metaconfig is nil")
 	}

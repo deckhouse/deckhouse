@@ -41,6 +41,8 @@ cert-manager:
       impact: Cert-manager pods will be restarted.
 ci:
   features:
+    - summary: Adding a branch name to a warning message about a workflow failure in the Loop
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19838
     - summary: Switch to DDK
       pull_request: https://github.com/deckhouse/deckhouse/pull/19053
     - summary: Optimize base images loading
@@ -364,6 +366,10 @@ deckhouse:
   fixes:
     - summary: Revoke permission to use moduleconfig to user.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19672
+    - summary: >-
+        Restore ModuleIsInMaintenanceMode alert by bumping addon-operator to v1.20.9, which fixes
+        {PREFIX} replacement in metric names.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19635
     - summary: Preserve PackageRepository.status.packages on incremental rescan.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19516
     - summary: >-
@@ -468,6 +474,8 @@ dhctl:
     - summary: Added ModuleConfig conversions.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17917
   fixes:
+    - summary: fix wrong usage of KubeClientProviderWithCtx instead of KubeClientProvider from main
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19824
     - summary: fix SSH preflight check for StaticInstances with password-only auth.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19560
     - summary: Fix CVEs in `dhctl`.
@@ -521,8 +529,14 @@ docs:
     - summary: Add section for Ldap manual synchronization
       pull_request: https://github.com/deckhouse/deckhouse/pull/18160
   fixes:
+    - summary: Improvements to the processing of OSS info pages in the PDF version of the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19873
+    - summary: Exclude PDF assets from documentation version upload.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19871
     - summary: Refactored web UI page.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19792
+    - summary: Add information about DKP ingress-nginx support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19788
     - summary: New screenshots have been added to the Console documentation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19735
     - summary: Fix broken links.
@@ -531,6 +545,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19620
     - summary: Fix metadata for modules library.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19523
+    - summary: Add info about kernel requirement for containerdv2 migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19505
     - summary: Add alert about disruption approval annotation to migration to containerd v2 docs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19504
     - summary: Update spec version to 2 in control-plane-manager FAQ.
@@ -567,6 +583,9 @@ documentation:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
 ingress-nginx:
   fixes:
+    - summary: Nginx is updated up to 1.30.1.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19846
+      impact: All Ingress-nginx controller pods will be restarted.
     - summary: The CVE-2026-35469 is mitigated.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19723
       impact: The kruise controller will be restarted.
@@ -701,6 +720,8 @@ node-manager:
         the API server may occur. This change exposes a new hostPort `6480` for health checks and
         upstreams statistics.
   fixes:
+    - summary: Added cleanup for oversized MCM MachineSet revision history annotation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19655
     - summary: >-
         Improve fencing-agent health monitor logging — warn on fallback feeding, error on watchdog
         starvation, add diagnostic context to all feeding log messages.
@@ -838,6 +859,8 @@ user-authz:
         ClusterRole d8:user-authz:admin-kubeconfig.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19420
   fixes:
+    - summary: Extend cluster-admin clusterrole  with kubelet-api-admin rights.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19878
     - summary: Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules
       pull_request: https://github.com/deckhouse/deckhouse/pull/18689
 vertical-pod-autoscaler:

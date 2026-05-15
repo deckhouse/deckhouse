@@ -2236,7 +2236,6 @@ jobs:
             publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
             publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
@@ -3385,19 +3384,6 @@ jobs:
         run: |
           make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
 
-      - name: Install awscli
-        if: ${{ success() }}
-        run: |
-          if command -v aws &>/dev/null; then
-            echo "AWS CLI already available: $(aws --version)"
-          else
-            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-            unzip -q /tmp/awscliv2.zip -d /tmp/awscliv2
-            /tmp/awscliv2/aws/install -i "${HOME}/.local/aws-cli" -b "${HOME}/.local/bin"
-            echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-            rm -rf /tmp/awscliv2.zip /tmp/awscliv2
-          fi
-
       - name: Upload PDF files to S3
         if: ${{ success() }}
         env:
@@ -3410,12 +3396,17 @@ jobs:
         run: |
           for lang in en ru; do
             for guide in admin user; do
-              aws s3 cp \
-                "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
-                "s3://${S3_BUCKET}/deckhouse-web-production/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
-                --endpoint-url "https://${S3_EP}" \
-                --region "${S3_REGION}" \
-                --no-verify-ssl
+              docker run --rm \
+                -e AWS_ACCESS_KEY_ID \
+                -e AWS_SECRET_ACCESS_KEY \
+                -v "${GITHUB_WORKSPACE}/pdf:/aws/pdf:ro" \
+                amazon/aws-cli:2.27.22 \
+                s3 cp \
+                  "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
+                  "s3://${S3_BUCKET}/deckhouse-web-production/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+                  --endpoint-url "https://${S3_EP}" \
+                  --region "${S3_REGION}" \
+                  --no-verify-ssl
             done
           done
     # </template: doc_pdf_build_template>

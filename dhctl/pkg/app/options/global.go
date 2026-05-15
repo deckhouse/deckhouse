@@ -20,6 +20,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	otattribute "go.opentelemetry.io/otel/attribute"
 )
 
 // GlobalOptions holds settings shared by every dhctl command.
@@ -35,6 +37,20 @@ type GlobalOptions struct {
 	ConfigPaths            []string
 	SanityCheck            bool
 	ShowProgress           bool
+}
+
+func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("global.tmpDir", o.TmpDir),
+		otattribute.String("global.loggerType", o.LoggerType),
+		otattribute.Bool("global.isDebug", o.IsDebug),
+		otattribute.Bool("global.doNotWriteDebugLogFile", o.DoNotWriteDebugLogFile),
+		otattribute.String("global.debugLogFilePath", o.DebugLogFilePath),
+		otattribute.String("global.progressFilePath", o.ProgressFilePath),
+		otattribute.String("global.downloadDir", o.DownloadDir),
+		otattribute.String("global.downloadCacheDir", o.DownloadCacheDir),
+		otattribute.StringSlice("global.configPaths", o.ConfigPaths),
+	}
 }
 
 // NewGlobalOptions returns GlobalOptions with defaults applied.
@@ -60,6 +76,16 @@ type BuildInfo struct {
 	DeckhouseDir string
 	VersionFile  string
 	EditionFile  string
+}
+
+func (o BuildInfo) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("buildinfo.appVersion", o.AppVersion),
+		otattribute.String("buildinfo.appEdition", o.AppEdition),
+		otattribute.String("buildinfo.deckhouseDir", o.DeckhouseDir),
+		otattribute.String("buildinfo.versionFile", o.VersionFile),
+		otattribute.String("buildinfo.editionFile", o.EditionFile),
+	}
 }
 
 // AppVersion and AppEdition are populated by the linker via "-X" build flags

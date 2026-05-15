@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const bootstrapDir = "/bootstrap"
@@ -34,6 +35,9 @@ func PrepareBootstrap(
 	metaConfig *config.MetaConfig,
 	dc *directoryconfig.DirectoryConfig,
 ) error {
+	ctx, span := telemetry.StartSpan(ctx, "PrepareBootstrap")
+	defer span.End()
+
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err

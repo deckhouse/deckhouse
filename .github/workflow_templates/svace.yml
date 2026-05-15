@@ -46,7 +46,7 @@ jobs:
       SVACE_ENABLED: "true"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-{!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "main" "FE") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 

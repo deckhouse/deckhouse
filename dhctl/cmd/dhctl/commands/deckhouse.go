@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,10 +39,15 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
 
+		logger := log.GetDefaultLogger()
 		loggerProvider := log.ExternalLoggerProvider(logger)
+
 		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
@@ -56,6 +61,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
+
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
 		}
@@ -65,6 +71,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
+
 			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			return deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
@@ -84,6 +91,9 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
 
 		loggerProvider := log.ExternalLoggerProvider(logger)
@@ -97,9 +107,11 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		if err != nil {
 			return err
 		}
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
+
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
 		}
@@ -116,7 +128,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return err
 		}
 
-		installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
 		if err != nil {
 			return err
 		}
@@ -137,6 +149,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
+
 			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			if err := deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig); err != nil {

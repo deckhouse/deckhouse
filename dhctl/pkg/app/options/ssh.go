@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
+
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 )
 
@@ -84,6 +86,23 @@ func (o *SSHOptions) ProcessConnectionConfigFlags() error {
 	return nil
 }
 
+func (o *SSHOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.Int("ssh.privateKeysCount", len(o.PrivateKeys)),
+		otattribute.Int("ssh.agentPrivateKeysCount", len(o.AgentPrivateKeys)),
+		otattribute.StringSlice("ssh.hosts", o.HostsRaw),
+		otattribute.String("ssh.port", o.Port),
+		otattribute.String("ssh.user", o.User),
+		otattribute.String("ssh.bastionHost", o.BastionHost),
+		otattribute.String("ssh.bastionPort", o.BastionPort),
+		otattribute.String("ssh.bastionUser", o.BastionUser),
+		otattribute.String("ssh.extraArgs", o.ExtraArgs),
+		otattribute.Bool("ssh.askBastionPass", o.AskBastionPass),
+		otattribute.Bool("ssh.legacyMode", o.LegacyMode),
+		otattribute.Bool("ssh.modernMode", o.ModernMode),
+	}
+}
+
 // ParseSSHPrivateKeyPaths expands tilde-prefixed paths, makes them absolute and
 // verifies their existence.
 //
@@ -128,4 +147,11 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 type BecomeOptions struct {
 	AskBecomePass bool
 	BecomePass    string
+}
+
+func (o *BecomeOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.Bool("become.askBecomePass", o.AskBecomePass),
+		otattribute.Bool("become.becomePassIsSet", o.BecomePass != ""),
+	}
 }

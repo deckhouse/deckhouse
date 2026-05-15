@@ -17,6 +17,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -43,6 +44,9 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
@@ -58,6 +62,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
+
 		//nolint: errcheck
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
@@ -67,6 +72,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		if err != nil {
 			return err
 		}
+
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		return operations.SecretEdit(

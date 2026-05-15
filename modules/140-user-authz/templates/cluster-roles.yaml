@@ -19,6 +19,8 @@
   - deletecollection
   - patch
   - update
+  {{- else if eq $mode "p" }}
+  - proxy
   {{- end }}
 {{- end -}}
 
@@ -360,6 +362,24 @@
   - rolebindings
   verbs:
 {{- include "user_authz_verbs" "w" }}
+- apiGroups:
+  - ""
+  resources:
+  - nodes/log
+  - nodes/metrics
+  - nodes/proxy
+  - nodes/stats
+  - nodes/configz
+  - nodes/healthz
+  - nodes/pods
+  verbs:
+{{- include "user_authz_verbs" "rw" }}
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+{{- include "user_authz_verbs" "p" }}
 {{- end }}
 
 {{- define "user_authz_super_admin_rules" }}
