@@ -49,7 +49,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		intLogger, ok := b.logger.(*log.InteractiveLogger)
 		if !ok {

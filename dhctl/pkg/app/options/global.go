@@ -34,6 +34,7 @@ type GlobalOptions struct {
 	DownloadCacheDir       string
 	ConfigPaths            []string
 	SanityCheck            bool
+	ShowProgress           bool
 }
 
 // NewGlobalOptions returns GlobalOptions with defaults applied.

@@ -315,13 +315,15 @@ func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path st
 
 // readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
 func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	const (
-		attempts = 5
-		wait     = 3 * time.Second
+	extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+	p := retry.NewEmptyParams(
+		retry.WithName("Read remote file %s", path),
+		retry.WithAttempts(5),
+		retry.WithWait(3*time.Second),
+		retry.WithLogger(extLogger()),
 	)
-
 	var value string
-	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
+	err := retry.NewLoopWithParams(p).
 		RunContext(ctx, func() error {
 			v, err := readRemoteFile(ctx, nodeInterface, path)
 			if err != nil {
@@ -344,9 +346,12 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 			return nil
 		})
 
+		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
 			retry.WithWait(5*time.Second),
 			retry.WithAttempts(50),
+			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
@@ -516,7 +521,14 @@ func applyPostBootstrapModuleConfigs(
 	tasks []actions.ModuleConfigTask,
 ) error {
 	for _, task := range tasks {
-		err := retry.NewLoop(task.Title, 15, 5*time.Second).
+		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+		p := retry.NewEmptyParams(
+			retry.WithName(task.Title),
+			retry.WithAttempts(51),
+			retry.WithWait(5*time.Second),
+			retry.WithLogger(extLogger()),
+		)
+		err := retry.NewLoopWithParams(p).
 			Run(func() error {
 				return task.Do(kubeCl)
 			})

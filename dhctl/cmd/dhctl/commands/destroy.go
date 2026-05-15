@@ -97,7 +97,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			DirectoryConfig: opts.DirConfig(),
 			Options:         opts,
 		}
-		interactive := input.IsTerminal()
+		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
 			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
 			if err != nil {

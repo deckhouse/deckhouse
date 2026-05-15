@@ -41,7 +41,7 @@ func Bytes() ([]byte, error) {
 	stat, err := os.Stat(binaryPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.InfoF("%s not exists. Fallback to embedded minget", binaryPath)
+			log.InfoF("%s not exists. Fallback to embedded minget\n", binaryPath)
 		} else {
 			log.WarnF("Failed to stat %s: %v. Fallback to embedded minget", binaryPath, err)
 		}

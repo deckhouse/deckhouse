@@ -40,7 +40,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		intLogger, ok := b.logger.(*log.InteractiveLogger)
 		if !ok {

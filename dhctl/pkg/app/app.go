@@ -59,6 +59,10 @@ func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
 		Envar(configEnvName("DOWNLOAD_CACHE_DIR")).
 		Default(o.DownloadCacheDir).
 		StringVar(&o.DownloadCacheDir)
+	cmd.Flag("verbose", "Show verbose command output").
+		Default("false").
+		Short('v').
+		BoolVar(&o.ShowProgress)
 }
 
 // DefineConfigFlags registers --config (required).
