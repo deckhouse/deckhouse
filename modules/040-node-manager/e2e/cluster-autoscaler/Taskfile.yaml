@@ -1,0 +1,15 @@
+version: "3"
+
+includes:
+  ca-scale-from-zero-dvp:
+    taskfile: ./tests/ca-scale-from-zero-dvp/Taskfile.yml
+    dir: ./tests/ca-scale-from-zero-dvp
+  ca-scale-from-zero-yandex:
+    taskfile: ./tests/ca-scale-from-zero-yandex/Taskfile.yml
+    dir: ./tests/ca-scale-from-zero-yandex
+  ca-priority-fallback-dvp:
+    taskfile: ./tests/ca-priority-fallback-dvp/Taskfile.yml
+    dir: ./tests/ca-priority-fallback-dvp
+  ca-priority-fallback-yandex:
+    taskfile: ./tests/ca-priority-fallback-yandex/Taskfile.yml
+    dir: ./tests/ca-priority-fallback-yandex

@@ -1,0 +1,218 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ca-scale-from-zero-yandex
+spec:
+  description: |
+    Verifies that cluster-autoscaler scales from zero using the Priority Expander
+    on a Yandex Cloud cluster. Creates two NodeGroups with different priorities,
+    deploys a workload, and asserts that the higher-priority group is selected.
+  concurrent: false
+  steps:
+    - name: assert-cluster-autoscaler-exists
+      try:
+        - description: Check cluster-autoscaler deployment has ready replicas
+          assert:
+            file: asserts/assert-ca-exists.yaml
+
+    - name: assert-ca-uses-mcm-provider
+      try:
+        - description: Check CA container args contain 'mcm'
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
+                -o jsonpath='{.spec.template.spec.containers[0].args}')
+              echo "$CA_ARGS" | grep -q "mcm"
+            check:
+              ($error == null): true
+
+    - name: assert-yandexinstanceclass-worker-exists
+      try:
+        - description: Assert YandexInstanceClass worker resource exists
+          assert:
+            file: asserts/assert-yandex-instanceclass.yaml
+
+    - name: cleanup-leftover-resources
+      try:
+        - description: Delete leftover NodeGroup e2e-worker-100
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-100
+        - description: Delete leftover NodeGroup e2e-worker-50
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-50
+        - description: Delete leftover YandexInstanceClass e2e-worker-small
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: YandexInstanceClass
+              name: e2e-worker-small
+
+    - name: create-e2e-worker-small-instanceclass
+      try:
+        - description: Clone YandexInstanceClass 'worker' as 'e2e-worker-small' with reduced specs
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              kubectl get yandexinstanceclass worker -o json | \
+                jq '{
+                  apiVersion: .apiVersion,
+                  kind: .kind,
+                  metadata: { name: "e2e-worker-small" },
+                  spec: (.spec | .cores = 2 | .memory = 4096 | .diskSizeGB = 30)
+                }' | kubectl apply -f -
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete YandexInstanceClass e2e-worker-small
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: YandexInstanceClass
+              name: e2e-worker-small
+
+    - name: apply-nodegroup-100
+      try:
+        - description: Apply NodeGroup e2e-worker-100 manifest
+          apply:
+            file: manifests/nodegroup-100.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-worker-100
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-100
+
+    - name: apply-nodegroup-50
+      try:
+        - description: Apply NodeGroup e2e-worker-50 manifest
+          apply:
+            file: manifests/nodegroup-50.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-worker-50
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-50
+
+    - name: apply-deployment
+      try:
+        - description: Apply shared Deployment manifest
+          apply:
+            file: ../../common/manifests/deployment.yaml
+      cleanup:
+        - description: Delete e2e-nginx Deployment
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: e2e-nginx
+        - description: Wait for test nodes to be removed from the cluster
+          script:
+            timeout: 600s
+            content: |
+              set -eu
+              for i in $(seq 1 60); do
+                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then
+                  exit 0
+                fi
+                sleep 10
+              done
+              echo "WARNING: Timed out waiting for test nodes removal"
+
+    - name: wait-for-deckhouse-processing
+      try:
+        - description: Sleep 30s for Deckhouse reconciliation
+          sleep:
+            duration: 30s
+
+    - name: assert-ca-selects-priority-100
+      try:
+        - description: Poll CA logs for priority selection of e2e-worker-100
+          script:
+            timeout: 300s
+            content: |
+              set -eu
+              for i in $(seq 1 60); do
+                CA_POD=$(kubectl get pods -n d8-cloud-instance-manager -l app=cluster-autoscaler \
+                  --no-headers -o custom-columns=':metadata.name' \
+                  --field-selector=status.phase=Running 2>/dev/null | head -1)
+                if [ -z "$CA_POD" ]; then
+                  sleep 5
+                  continue
+                fi
+                LOGS=$(kubectl logs -n d8-cloud-instance-manager "$CA_POD" \
+                  --all-containers --since=10m 2>/dev/null || true)
+                if echo "$LOGS" | grep -q "e2e-worker-100.*chosen as the highest available"; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Timed out waiting for priority selection of e2e-worker-100"
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect CA logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=cluster-autoscaler
+
+    - name: assert-pods-running
+      try:
+        - description: Assert Deployment has 3 ready replicas
+          assert:
+            file: asserts/assert-deployment-ready.yaml
+      catch:
+        - description: Collect test namespace events on failure
+          events: {}
+        - description: Collect d8-cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+        - description: Collect CA logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=cluster-autoscaler
+
+    - name: assert-pods-on-worker-100-nodes
+      try:
+        - description: Check each pod's node belongs to e2e-worker-100
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              for NODE in $(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx \
+                -o jsonpath='{.items[*].spec.nodeName}'); do
+                NG=$(kubectl get node "$NODE" \
+                  -o jsonpath='{.metadata.labels.node\.deckhouse\.io/group}')
+                if [ "$NG" != "e2e-worker-100" ]; then
+                  echo "Node $NODE belongs to $NG, expected e2e-worker-100"
+                  exit 1
+                fi
+              done
+            check:
+              ($error == null): true
+
+    - name: assert-worker-50-has-no-nodes
+      try:
+        - description: Assert no nodes exist with label node.deckhouse.io/group=e2e-worker-50
+          error:
+            file: asserts/assert-no-worker-50-nodes.yaml
