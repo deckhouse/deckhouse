@@ -361,7 +361,7 @@
   - roles
   - rolebindings
   verbs:
-{{- include "user_authz_verbs" "rw" }}
+{{- include "user_authz_verbs" "w" }}
 - apiGroups:
   - ""
   resources:
