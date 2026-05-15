@@ -77,7 +77,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: MachineClass checksum calc
   nodeType: CloudEphemeral
   cri:
     type: Containerd
-  kubernetesVersion: "1.31"
+  kubernetesVersion: "1.32"
   manualRolloutID: ""
   updateEpoch: "112714"
   disruptions:
@@ -311,7 +311,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -347,7 +347,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -383,7 +383,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -423,7 +423,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -445,7 +445,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -489,7 +489,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -535,7 +535,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     cri:
       type: "Containerd"
     cloudInstances:

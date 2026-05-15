@@ -1,51 +1,3 @@
-"1.31":
-  forbidden: []
-  deprecated:
-    - AllowDNSOnlyNodeCSR
-    - AllowInsecureKubeletCertificateSigningRequests
-    - DisableNodeKubeProxyVersion
-  kubelet:
-    - ConcurrentWatchObjectDecode
-    - ImageVolume
-    - InPlacePodVerticalScaling
-    - KubeletPodResourcesGet
-    - MemoryQoS
-    - MutatingAdmissionPolicy
-    - ResourceHealthStatus
-    - SELinuxMount
-    - RecoverVolumeExpansionFailure
-  apiserver:
-    - ConcurrentWatchObjectDecode
-    - CrossNamespaceVolumeDataSource
-    - HPAScaleToZero
-    - ImageVolume
-    - InPlacePodVerticalScaling
-    - JobManagedBy
-    - MaxUnavailableStatefulSet
-    - MutatingAdmissionPolicy
-    - ProcMountType
-    - ResourceHealthStatus
-    - SELinuxMount
-    - AuthorizeNodeWithSelectors
-    - AuthorizeWithSelectors
-    - DisableAllocatorDualWrite
-    - OrderedNamespaceDeletion
-    - RecoverVolumeExpansionFailure
-    - RelaxedEnvironmentVariableValidation
-    - StrictCostEnforcementForVAP
-    - StrictCostEnforcementForWebhooks
-  kubeControllerManager:
-    - ConcurrentWatchObjectDecode
-    - CrossNamespaceVolumeDataSource
-    - InPlacePodVerticalScaling
-    - JobManagedBy
-    - MaxUnavailableStatefulSet
-    - SELinuxMount
-    - RecoverVolumeExpansionFailure
-  kubeScheduler:
-    - ConcurrentWatchObjectDecode
-    - InPlacePodVerticalScaling
-    - SchedulerQueueingHints
 "1.32":
   forbidden: []
   deprecated:
@@ -265,4 +217,33 @@
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
     - NodeDeclaredFeatures
+    - TaintTolerationComparisonOperators
+"1.36":
+  forbidden: []
+  deprecated:
+    - DeclarativeValidationTakeover
+  kubelet:
+    - ConcurrentWatchObjectDecode
+    - ContainerStopSignals
+    - MemoryQoS
+    - MutablePVNodeAffinity
+    - PodLogsQuerySplitStreams
+    - SELinuxMount
+  apiserver:
+    - AllowUnsafeMalformedObjectDeletion
+    - ConcurrentWatchObjectDecode
+    - ContainerStopSignals
+    - CRDObservedGenerationTracking
+    - CrossNamespaceVolumeDataSource
+    - HPAScaleToZero
+    - MutablePVNodeAffinity
+    - PodLogsQuerySplitStreams
+    - SELinuxMount
+    - TaintTolerationComparisonOperators
+  kubeControllerManager:
+    - ConcurrentWatchObjectDecode
+    - CrossNamespaceVolumeDataSource
+    - SELinuxMount
+  kubeScheduler:
+    - ConcurrentWatchObjectDecode
     - TaintTolerationComparisonOperators
