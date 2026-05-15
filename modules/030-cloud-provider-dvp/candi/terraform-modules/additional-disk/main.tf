@@ -40,7 +40,8 @@ resource "kubernetes_manifest" "additional_disk" {
 
   lifecycle {
     ignore_changes = [
-      object.spec.persistentVolumeClaim.storageClassName
+      object.spec.persistentVolumeClaim.storageClassName,
+      object.metadata.finalizers,
     ]
   }
 }
