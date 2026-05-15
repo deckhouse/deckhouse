@@ -3835,6 +3835,24 @@ alerts:
         Too many UpmeterHookProbe objects in the cluster.
       severity: "9"
       markupFormat: markdown
+    - name: D8UserAuthzPermissionBrowserUnavailable
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Deckhouse has detected unavailable replicas in the `permission-browser-apiserver` Deployment in the `d8-user-authz` namespace.
+        Permission Browser requests can fail while this alert is active.
+
+        Check Deployment and Pod states:
+        ```bash
+        d8 k -n d8-user-authz get deploy permission-browser-apiserver
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
+        ```
+      summary: |
+        Permission Browser API server has unavailable replicas.
+      severity: "5"
+      markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -7275,3 +7293,4 @@ modules-having-alerts:
     - terraform-manager
     - upmeter
     - user-authn
+    - user-authz
