@@ -181,6 +181,15 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 			Password:   inputs.Params.Password,
 		}
 
+	case registry_const.ModeLocal:
+		bashibleActualParams = &bashible.ModeParams{
+			Local: &bashible.ProxyLocalModeParams{
+				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+				Username: state.Users.RO.UserName,
+				Password: state.Users.RO.Password,
+			},
+		}
+
 	case registry_const.ModeUnmanaged:
 		// Only for configurable unmanaged mode
 		if inputs.Params.ImagesRepo != "" {

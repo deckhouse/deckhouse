@@ -313,6 +313,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/registry-bundle"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/registry-packages-proxy"
   labels:
   - "type/dependencies"
@@ -593,6 +602,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/038-registry/images/registry-proxy/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/038-registry/images/syncer/app"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

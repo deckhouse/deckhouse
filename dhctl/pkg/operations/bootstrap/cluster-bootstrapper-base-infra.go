@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -31,6 +32,18 @@ import (
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
+		ctx,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
+
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.LoadConfigFromFile(

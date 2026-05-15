@@ -106,7 +106,7 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
-	github.com/deckhouse/lib-connection v0.6.0 // indirect
+	github.com/deckhouse/lib-connection v0.7.0 // indirect
 	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -252,7 +252,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
-	github.com/klauspost/compress v1.18.1 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
@@ -300,7 +300,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/spf13/cobra v1.10.1 // indirect
+	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.8.1 // indirect
@@ -340,7 +340,7 @@ require (
 	golang.org/x/sync v0.20.0
 	golang.org/x/sys v0.43.0
 	golang.org/x/term v0.42.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.43.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260420184626-e10c466a9529 // indirect
@@ -375,6 +375,8 @@ replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/d
 replace github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ./go_lib/dependency/vsphere
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry
+
+replace github.com/deckhouse/deckhouse/go_lib/registry-bundle => ./go_lib/registry-bundle
 
 // Pin docker to v28.3.3 for oras.land/oras-go v1.2.x compatibility (AuthConfig type)
 replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatible

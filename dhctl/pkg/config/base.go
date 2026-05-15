@@ -25,14 +25,15 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	init_config "github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
-	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -70,26 +71,38 @@ func LoadConfigFromFile(
 	if err := checkDirs(); err != nil {
 		// download and init schemaStore
 		// get registry setting first
-		regSettings, err := fetchRegistrySettings(paths)
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return FetchDocuments(paths)
+		})
 		if err != nil {
 			return nil, err
 		}
-		if regSettings != nil {
-			conf, err := image.NewRegistryConfig(string(regSettings.Scheme), regSettings.ImagesRepo, regSettings.Username, regSettings.Password, regSettings.CA)
-			if err != nil {
-				return nil, err
-			}
-			if err = prepareCandiDir(ctx, conf, dc); err != nil {
-				return nil, err
-			}
-			// reinitialize vars and continue config parsing
-
-			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
-			candiDir = filepath.Join(deckhouseDir, "candi")
-			modulesDir = filepath.Join(deckhouseDir, "modules")
-			globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
-			versionMap = filepath.Join(candiDir, "version_map.yml")
+		remoteData, err := provider.RemoteData()
+		if err != nil {
+			return nil, err
 		}
+
+		conf, err := image.NewRegistryConfig(
+			string(remoteData.Scheme),
+			remoteData.ImagesRepo,
+			remoteData.Username,
+			remoteData.Password,
+			remoteData.CA,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if err = prepareCandiDir(ctx, conf, dc); err != nil {
+			return nil, err
+		}
+
+		// reinitialize vars and continue config parsing
+		deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
+		candiDir = filepath.Join(deckhouseDir, "candi")
+		modulesDir = filepath.Join(deckhouseDir, "modules")
+		globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
+		versionMap = filepath.Join(candiDir, "version_map.yml")
 	}
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, dc, opts...)
 	if err != nil {
@@ -496,7 +509,9 @@ func checkDirs() error {
 	return nil
 }
 
-func fetchRegistrySettings(paths []string) (*module_config.RegistrySettings, error) {
+func FetchDocuments(paths []string) ([]string, error) {
+	paths = fs.RevealWildcardPaths(paths)
+
 	content := ""
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
@@ -506,7 +521,7 @@ func fetchRegistrySettings(paths []string) (*module_config.RegistrySettings, err
 		log.DebugF("Have config file %s\n", path)
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("loading config file: %v", err)
+			return nil, fmt.Errorf("loading config file: %w", err)
 		}
 		content = content + "\n\n---\n\n" + string(fileContent)
 	}
@@ -516,66 +531,53 @@ func fetchRegistrySettings(paths []string) (*module_config.RegistrySettings, err
 
 	for _, doc := range docs {
 		if err := detectMergedDocuments(doc); err != nil {
-			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(content)))
+			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
 		}
+	}
+	return docs, nil
+}
 
-		var parsed map[string]interface{}
-		if err := yaml.Unmarshal([]byte(doc), &parsed); err != nil {
+func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.ConfigProvider, error) {
+	docs, err := docsFetcher()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		initConfig        *initconfig.Config
+		deckhouseSettings *moduleconfig.DeckhouseSettings
+	)
+
+	for _, doc := range docs {
+		var obj unstructured.Unstructured
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
 			return nil, err
 		}
 
-		if parsed["kind"] == nil {
-			continue
-		}
+		switch obj.GetKind() {
+		case InitConfigurationKind:
+			ret, err := registry.ParseYAMLInitConfig([]byte(doc))
 
-		if parsed["kind"].(string) == InitConfigurationKind {
-			var initConfig init_config.Config
-
-			data, err := yaml.Marshal(parsed["deckhouse"])
 			if err != nil {
 				return nil, err
 			}
 
-			if err := yaml.Unmarshal(data, &initConfig); err != nil {
+			initConfig = ret
+
+		case ModuleConfigKind:
+			if obj.GetName() != "deckhouse" {
+				continue
+			}
+
+			ret, err := registry.ParseYAMLDeckhouseMC([]byte(doc))
+			if err != nil {
 				return nil, err
 			}
 
-			if initConfig.ImagesRepo != "" && initConfig.RegistryDockerCfg != "" {
-				regSetting, err := initConfig.ToRegistrySettings()
-				return &regSetting, err
-			}
-		}
-
-		if parsed["kind"].(string) == ModuleConfigKind {
-			if parsed["name"] != nil {
-				if parsed["name"].(string) == "deckhouse" {
-					settings, ok := parsed["settings"]
-					if !ok {
-						return nil, fmt.Errorf("could not find any of InitConfig or ModuleConfig deckhouse settings")
-					}
-
-					var dhSettings moduleconfig.DeckhouseSettings
-					data, err := yaml.Marshal(settings)
-					if err != nil {
-						return nil, err
-					}
-
-					if err := yaml.Unmarshal(data, &dhSettings); err != nil {
-						return nil, err
-					}
-					if dhSettings.Direct != nil {
-						return dhSettings.Direct, nil
-					} else if dhSettings.Unmanaged != nil {
-						return dhSettings.Unmanaged, nil
-					}
-
-					return nil, fmt.Errorf("ModuleConfig deckhouse doesn't contain any registry settings")
-				}
-			}
+			deckhouseSettings = ret
 		}
 	}
-
-	return nil, nil
+	return registry.NewConfigProvider(initConfig, deckhouseSettings), nil
 }
 
 func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dc *directoryconfig.DirectoryConfig) error {

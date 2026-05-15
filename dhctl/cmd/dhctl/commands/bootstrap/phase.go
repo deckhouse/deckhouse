@@ -42,6 +42,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineDeckhouseFlags(cmd, &opts.Bootstrap)
 	app.DefineDeckhouseInstallFlags(cmd, &opts.Bootstrap)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -79,6 +80,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineBashibleBundleFlags(cmd, &opts.Bootstrap)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -154,6 +156,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineSanityFlags(cmd, &opts.Global)
 	app.DefineAbortFlags(cmd, &opts.Bootstrap)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -212,6 +215,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)

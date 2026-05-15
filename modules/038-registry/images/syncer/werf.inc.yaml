@@ -1,0 +1,55 @@
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /src/scripts
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/app
+    to:  /src/app
+    stageDependencies:
+      install:
+        - '**/*'
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/app
+    to: /app
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  install:
+    - cd /app
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /syncer ./cmd/syncer
+    - chown 64535:64535 /syncer
+    - chmod 0755 /syncer
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/scripts
+    to: /
+    includePaths:
+    - install
+    - uninstall
+    before: setup
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /syncer
+    to: /syncer
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/syncer"]

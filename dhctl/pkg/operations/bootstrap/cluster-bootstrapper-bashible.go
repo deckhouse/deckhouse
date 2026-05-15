@@ -21,6 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -28,6 +29,18 @@ import (
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
+		ctx,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
+
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
