@@ -334,6 +334,7 @@ properties:
       type: string
       format: cidr
     example:
+      - 192.168.1.100/32
       - 10.0.0.0/8
       - 192.168.1.0/24
     description: |
