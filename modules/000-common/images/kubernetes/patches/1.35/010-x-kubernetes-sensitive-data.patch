@@ -2886,7 +2886,7 @@ index 00000000000..d045ca9ad70
 +}
 +
 +func newSensitiveUnmaskInvalidError(groupKind runtimeschema.GroupKind, name string, err error) error {
-+	klog.V(4).InfoS("sensitive unmask rejected", "kind", groupKind, "name", name, "details", err)
++	klog.V(4).InfoS("sensitive unmask rejected", "kind", groupKind, "name", name, "err", err)
 +	return apierrors.NewInvalid(
 +		groupKind,
 +		name,
