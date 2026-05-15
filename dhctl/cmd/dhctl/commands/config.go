@@ -155,7 +155,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err
 		}
@@ -166,12 +166,12 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 		}
 
-		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
+		if err := template.PrepareControlPlaneManifests(templateController, controlPlaneConfig, opts.DirConfig()); err != nil {
 			return err
 		}
 		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
 		// the resulting PKI is not used to start a real cluster.
-		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
+		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", controlPlaneConfig)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {

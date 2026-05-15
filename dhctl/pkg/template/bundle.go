@@ -169,18 +169,18 @@ func PrepareBashibleBundle(
 //
 // controlPlaneEndpoint is the address that will be added to the apiserver
 // certificate SAN list and used in kubeconfigs as the API server URL.
-func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, templateData map[string]interface{}) error {
+func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig) error {
 	if templateController == nil {
 		return fmt.Errorf("templateController is nil")
 	}
 	artifactsDir := filepath.Join(templateController.TmpDir+bashibleDir, "control-plane")
-	return generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint, templateData, artifactsDir)
+	return generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint, cfg, artifactsDir)
 }
 
 // generatePKIArtifacts writes PKI and kubeconfigs for the local
 // control-plane node into artifactsDir. The function is decoupled from the
 // template Controller for testability.
-func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templateData map[string]interface{}, artifactsDir string) error {
+func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig, artifactsDir string) error {
 	if nodeName == "" {
 		return fmt.Errorf("nodeName is empty")
 	}
@@ -196,24 +196,26 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templat
 		return fmt.Errorf("invalid node IP %q", nodeIP)
 	}
 
-	clusterCfg, ok := templateData["clusterConfiguration"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("templateData.clusterConfiguration is missing or has invalid type")
+	// TODO: read from cfg.Settings once serviceSubnetCIDR is migrated to ModuleConfig.
+	serviceSubnetCIDR, _ := cfg.ClusterConfiguration["serviceSubnetCIDR"].(string)
+	if serviceSubnetCIDR == "" {
+		return fmt.Errorf("serviceSubnetCIDR is missing or empty in clusterConfiguration")
 	}
-	serviceCIDR, ok := clusterCfg["serviceSubnetCIDR"].(string)
-	if !ok || serviceCIDR == "" {
-		return fmt.Errorf("clusterConfiguration.serviceSubnetCIDR is missing or empty")
-	}
-	dnsDomain, ok := clusterCfg["clusterDomain"].(string)
-	if !ok || dnsDomain == "" {
-		return fmt.Errorf("clusterConfiguration.clusterDomain is missing or empty")
+	// TODO: read from cfg.Settings once clusterDomain is migrated to ModuleConfig.
+	clusterDomain, _ := cfg.ClusterConfiguration["clusterDomain"].(string)
+	if clusterDomain == "" {
+		return fmt.Errorf("clusterDomain is missing or empty in clusterConfiguration")
 	}
 
-	encryptionAlgorithm, _ := clusterCfg["encryptionAlgorithm"].(string)
+	encryptionAlgorithm, _ := cfg.Settings["encryptionAlgorithm"].(string)
+	if encryptionAlgorithm == "" {
+		// TODO: remove fallback once encryptionAlgorithm is fully migrated to ModuleConfig.
+		encryptionAlgorithm, _ = cfg.ClusterConfiguration["encryptionAlgorithm"].(string)
+	}
 
 	pkiDir := filepath.Join(artifactsDir, "pki")
 
-	if _, err := pki.CreatePKIBundle(nodeName, dnsDomain, ip, serviceCIDR,
+	if _, err := pki.CreatePKIBundle(nodeName, clusterDomain, ip, serviceSubnetCIDR,
 		pki.WithControlPlaneEndpoint(controlPlaneEndpoint),
 		pki.WithPKIDir(pkiDir),
 		pki.WithEncryptionAlgorithmType(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
@@ -242,7 +244,7 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templat
 	return nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}, dc *directoryconfig.DirectoryConfig) error {
+func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, dc *directoryconfig.DirectoryConfig) error {
 	_, err := os.Stat(candiDir)
 	if err != nil {
 		if dc == nil {
@@ -254,7 +256,7 @@ func PrepareControlPlaneManifests(templateController *Controller, templateData m
 	saveInfo := saveFromTo{
 		from: filepath.Join(candiDir, "control-plane"),
 		to:   filepath.Join(bashibleDir, "control-plane"),
-		data: templateData,
+		data: cfg.ToMap(),
 	}
 	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
 	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {

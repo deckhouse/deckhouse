@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 // expectedPKIFiles is the full set of files that CreatePKIBundle must produce.
@@ -47,9 +49,9 @@ var caFiles = []string{
 	"sa.key", "sa.pub",
 }
 
-func newPKITemplateData(clusterDomain, serviceSubnetCIDR string) map[string]interface{} {
-	return map[string]interface{}{
-		"clusterConfiguration": map[string]interface{}{
+func newPKITemplateConfig(clusterDomain, serviceSubnetCIDR string) *config.ControlPlaneTemplateConfig {
+	return &config.ControlPlaneTemplateConfig{
+		ClusterConfiguration: map[string]interface{}{
 			"clusterDomain":     clusterDomain,
 			"serviceSubnetCIDR": serviceSubnetCIDR,
 		},
@@ -58,9 +60,9 @@ func newPKITemplateData(clusterDomain, serviceSubnetCIDR string) map[string]inte
 
 func TestGeneratePKIArtifacts_CreatesAllFiles(t *testing.T) {
 	artifactsDir := t.TempDir()
-	templateData := newPKITemplateData("cluster.local", "10.96.0.0/12")
+	cfg := newPKITemplateConfig("cluster.local", "10.96.0.0/12")
 
-	if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", templateData, artifactsDir); err != nil {
+	if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", cfg, artifactsDir); err != nil {
 		t.Fatalf("generatePKIArtifacts returned an error: %v", err)
 	}
 
@@ -84,14 +86,14 @@ func TestGeneratePKIArtifacts_CreatesAllFiles(t *testing.T) {
 // cluster gets invalidated on every dhctl re-run.
 func TestGeneratePKIArtifacts_Idempotent(t *testing.T) {
 	artifactsDir := t.TempDir()
-	templateData := newPKITemplateData("cluster.local", "10.96.0.0/12")
+	cfg := newPKITemplateConfig("cluster.local", "10.96.0.0/12")
 
-	if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", templateData, artifactsDir); err != nil {
+	if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", cfg, artifactsDir); err != nil {
 		t.Fatalf("first generatePKIArtifacts call: %v", err)
 	}
 	before := readArtifactFiles(t, artifactsDir, caFiles)
 
-	if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", templateData, artifactsDir); err != nil {
+	if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", cfg, artifactsDir); err != nil {
 		t.Fatalf("second generatePKIArtifacts call: %v", err)
 	}
 	after := readArtifactFiles(t, artifactsDir, caFiles)
@@ -117,9 +119,9 @@ func TestGeneratePKIArtifacts_ApiserverSANContainsServiceIP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			artifactsDir := t.TempDir()
-			templateData := newPKITemplateData("cluster.local", tt.serviceCIDR)
+			cfg := newPKITemplateConfig("cluster.local", tt.serviceCIDR)
 
-			if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", templateData, artifactsDir); err != nil {
+			if err := generatePKIArtifacts("master-0", "10.0.0.1", "10.0.0.1", cfg, artifactsDir); err != nil {
 				t.Fatalf("generatePKIArtifacts: %v", err)
 			}
 
@@ -142,14 +144,14 @@ func TestGeneratePKIArtifacts_ApiserverSANContainsServiceIP(t *testing.T) {
 }
 
 func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
-	validData := newPKITemplateData("cluster.local", "10.96.0.0/12")
+	validCfg := newPKITemplateConfig("cluster.local", "10.96.0.0/12")
 
 	tests := []struct {
 		name        string
 		nodeName    string
 		nodeIP      string
 		endpoint    string
-		data        map[string]interface{}
+		cfg         *config.ControlPlaneTemplateConfig
 		artifactDir string
 		wantSubstr  string
 	}{
@@ -158,7 +160,7 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeName:    "",
 			nodeIP:      "10.0.0.1",
 			endpoint:    "10.0.0.1",
-			data:        validData,
+			cfg:         validCfg,
 			artifactDir: t.TempDir(),
 			wantSubstr:  "nodeName is empty",
 		},
@@ -167,7 +169,7 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeName:    "master-0",
 			nodeIP:      "10.0.0.1",
 			endpoint:    "",
-			data:        validData,
+			cfg:         validCfg,
 			artifactDir: t.TempDir(),
 			wantSubstr:  "controlPlaneEndpoint is empty",
 		},
@@ -176,28 +178,17 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeName:    "master-0",
 			nodeIP:      "not-an-ip",
 			endpoint:    "10.0.0.1",
-			data:        validData,
+			cfg:         validCfg,
 			artifactDir: t.TempDir(),
 			wantSubstr:  "invalid node IP",
-		},
-		{
-			name:     "missing clusterConfiguration",
-			nodeName: "master-0",
-			nodeIP:   "10.0.0.1",
-			endpoint: "10.0.0.1",
-			data: map[string]interface{}{
-				"unrelated": "value",
-			},
-			artifactDir: t.TempDir(),
-			wantSubstr:  "clusterConfiguration is missing",
 		},
 		{
 			name:     "missing clusterDomain",
 			nodeName: "master-0",
 			nodeIP:   "10.0.0.1",
 			endpoint: "10.0.0.1",
-			data: map[string]interface{}{
-				"clusterConfiguration": map[string]interface{}{
+			cfg: &config.ControlPlaneTemplateConfig{
+				ClusterConfiguration: map[string]interface{}{
 					"serviceSubnetCIDR": "10.96.0.0/12",
 				},
 			},
@@ -209,8 +200,8 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			nodeName: "master-0",
 			nodeIP:   "10.0.0.1",
 			endpoint: "10.0.0.1",
-			data: map[string]interface{}{
-				"clusterConfiguration": map[string]interface{}{
+			cfg: &config.ControlPlaneTemplateConfig{
+				ClusterConfiguration: map[string]interface{}{
 					"clusterDomain": "cluster.local",
 				},
 			},
@@ -221,7 +212,7 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := generatePKIArtifacts(tt.nodeName, tt.nodeIP, tt.endpoint, tt.data, tt.artifactDir)
+			err := generatePKIArtifacts(tt.nodeName, tt.nodeIP, tt.endpoint, tt.cfg, tt.artifactDir)
 			if err == nil {
 				t.Fatalf("expected an error containing %q, got nil", tt.wantSubstr)
 			}
