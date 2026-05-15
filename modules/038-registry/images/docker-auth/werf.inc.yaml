@@ -9,6 +9,11 @@ git:
     stageDependencies:
       install:
         - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /src/patches
+    stageDependencies:
+      install:
+        - '**/*'
 secrets:
   - id: SOURCE_REPO
     value: "{{ $.SOURCE_REPO }}"
@@ -18,6 +23,7 @@ shell:
     - chmod +x /src/scripts/*
     - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-docker_auth.git /src/docker_auth
+    - cd /src/docker_auth && git apply /src/patches/*.patch --verbose
     - rm -rf /src/docker_auth/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
