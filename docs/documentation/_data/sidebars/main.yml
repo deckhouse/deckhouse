@@ -390,9 +390,29 @@ entries:
                             ru: Интеграция со службами zVirt
                           url: /admin/integrations/virtualization/zvirt/services.html
                 - title:
-                    en: Hybrid cluster
-                    ru: Гибридный кластер
-                  url: /admin/integrations/hybrid/overview.html
+                    en: Hybrid clusters
+                    ru: Гибридные кластеры
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/integrations/hybrid/overview.html
+                    - title:
+                        en: Hybrid cluster with Yandex Cloud
+                        ru: Гибридный кластер с Yandex Cloud
+                      url: /admin/integrations/hybrid/yandex-hybrid.html
+                    - title:
+                        en: Hybrid cluster with VCD
+                        ru: Гибридный кластер с VCD
+                      url: /admin/integrations/hybrid/vcd-hybrid.html
+                    - title:
+                        en: Hybrid cluster with vSphere
+                        ru: Гибридный кластер с vSphere
+                      url: /admin/integrations/hybrid/vsphere-hybrid.html
+                    - title:
+                        en: Hybrid cluster with DVP
+                        ru: Гибридный кластер с DVP
+                      url: /admin/integrations/hybrid/vsphere-hybrid.html  
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
