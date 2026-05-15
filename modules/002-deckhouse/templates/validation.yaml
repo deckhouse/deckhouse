@@ -176,6 +176,61 @@ spec:
         values:
         - ""
         - "true"
+---
+{{- $policyName := "deny-heritage-label-update.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["*"]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    - name: 'exclude-system-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
+    - name: 'exclude-kinds'
+      expression: '!(has(request.kind) && ["StorageClass", "DeckhouseRelease", "ModuleRelease"].exists(e, (e == request.kind.kind)))'
+  validations:
+    - expression: |
+        !(
+          has(object.metadata) && has(object.metadata.labels) && "heritage" in object.metadata.labels
+          && (
+            oldObject == null
+            || !has(oldObject.metadata)
+            || !has(oldObject.metadata.labels)
+            || !("heritage" in oldObject.metadata.labels)
+            || oldObject.metadata.labels["heritage"] != object.metadata.labels["heritage"]
+          )
+        )
+      reason: Forbidden
+      messageExpression: "'Setting the `heritage` label is forbidden for non-system users'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to set the heritage label'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    objectSelector:
+      matchExpressions:
+        - key: "heritage"
+          operator: Exists
 {{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
