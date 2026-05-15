@@ -23,7 +23,13 @@ jobs:
     runs-on: "ubuntu-latest"
     needs:
       - skip_tests_repos
+    permissions:
+      contents: read
+      id-token: write
     steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
     - uses: actions/stale@v7
       with:
         repo-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
@@ -38,4 +44,4 @@ jobs:
         stale-issue-label: "status/needs-triage"
         remove-issue-stale-when-updated: false
         labels-to-remove-when-unstale: ""
-{!{ tmpl.Exec "send_fail_report"                   | strings.Indent 4 }!}
+{!{ tmpl.Exec "send_fail_report" | strings.Indent 4 }!}

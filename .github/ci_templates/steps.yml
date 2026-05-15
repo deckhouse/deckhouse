@@ -280,7 +280,7 @@
 - name: Send fail report
   if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
   env:
-    LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+    LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
     JOB_NAME: ${{ github.job }}
     WORKFLOW_NAME: ${{ github.workflow }}
     WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/

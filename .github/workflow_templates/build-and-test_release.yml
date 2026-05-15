@@ -123,7 +123,6 @@ jobs:
       WERF_ENV: "FE"
       SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
 {!{ tmpl.Exec "build_template" (slice $ctx "release" "FE") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 {!{- range $werfEnv := slice "EE" "SE" "SE-plus" "BE" "CE" }!}
   build_{!{$werfEnv}!}:
@@ -136,9 +135,6 @@ jobs:
     env:
       WERF_ENV: "{!{$werfEnv}!}"
 {!{ tmpl.Exec "build_template" (slice $ctx "release" $werfEnv) | strings.Indent 4 }!}
-{!{- if eq $werfEnv "EE" }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-{!{- end }!}
 {!{ end }!}
 
   analyze_deckhouse:
@@ -181,6 +177,9 @@ jobs:
         with:
           python-version: '3.12.3'
       {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
       - name: Check tag
         id: check-tag

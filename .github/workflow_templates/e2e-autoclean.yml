@@ -47,6 +47,7 @@ jobs:
     {!{- $secrets := slice -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_TOKEN" "E2E_COMMANDER_TOKEN" ) $secrets -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables" "E2E_COMMANDER_HOST" "E2E_COMMANDER_HOST" ) $secrets -}!}
+    {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
     {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4  }!}
     - uses: {!{ index (ds "actions") "actions/setup-python" }!}
       with:

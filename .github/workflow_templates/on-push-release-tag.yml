@@ -39,7 +39,13 @@ jobs:
   start_release_build_workflow:
     name: Start build for release
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
+      id-token: write
     steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Find latest milestone and issue
         uses: {!{ index (ds "actions") "actions/github-script" }!}
