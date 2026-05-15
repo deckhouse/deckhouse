@@ -16,11 +16,18 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -36,6 +43,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyMasterNodeFilter,
 		},
+		{
+			Name:              "converge_state",
+			ApiVersion:        "v1",
+			Kind:              "Secret",
+			NamespaceSelector: &types.NamespaceSelector{NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}}},
+			NameSelector:      &types.NameSelector{MatchNames: []string{"d8-dhctl-converge-state"}},
+			FilterFunc:        applyConvergeStateFilter,
+		},
 	},
 }, isHighAvailabilityCluster)
 
@@ -43,13 +58,71 @@ func applyMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	return obj.GetName(), nil
 }
 
+type convergeState struct {
+	PreserveExistingHAMode bool `json:"preserveExistingHAMode"`
+}
+
+func applyConvergeStateFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		slog.Info("Failed to parse converge state secret", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+
+	stateBytes, ok := secret.Data["state.json"]
+	if !ok || len(stateBytes) == 0 {
+		return false, nil
+	}
+
+	var st convergeState
+	if err := json.Unmarshal(stateBytes, &st); err != nil {
+		slog.Info("Failed to unmarshal converge state", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("unmarshal converge state: %w", err)
+	}
+
+	return st.PreserveExistingHAMode, nil
+}
+
 func isHighAvailabilityCluster(_ context.Context, input *go_hook.HookInput) error {
 	masterNodesSnap := input.Snapshots.Get("master_node_names")
+	convergeStateSnap := input.Snapshots.Get("converge_state")
 
 	mastersCount := len(masterNodesSnap)
+	preserveExistingHAMode := false
+	for v, err := range sdkobjectpatch.SnapshotIter[bool](convergeStateSnap) {
+		if err != nil {
+			continue
+		}
+		if v {
+			preserveExistingHAMode = true
+			break
+		}
+	}
 
 	input.Values.Set("global.discovery.clusterMasterCount", mastersCount)
-	input.Values.Set("global.discovery.clusterControlPlaneIsHighlyAvailable", mastersCount > 1)
+
+	haPath := "global.discovery.clusterControlPlaneIsHighlyAvailable"
+	prevHAValue, haAlreadySet := input.Values.GetOk(haPath)
+
+	if preserveExistingHAMode && haAlreadySet {
+		currentHA := prevHAValue.Bool()
+		input.Logger.Info(
+			"HA mode autodetection preserved",
+			slog.Int("master_count", mastersCount),
+			slog.Bool("preserveExistingHAMode", preserveExistingHAMode),
+			slog.Bool("isHA", currentHA),
+		)
+		return nil
+	}
+
+	isHA := mastersCount > 1
+	input.Logger.Info(
+		"HA mode autodetection recalculated",
+		slog.Int("master_count", mastersCount),
+		slog.Bool("preserveExistingHAMode", preserveExistingHAMode),
+		slog.Bool("isHA", isHA),
+	)
+	input.Values.Set(haPath, isHA)
 
 	return nil
 }
