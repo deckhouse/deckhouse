@@ -139,11 +139,15 @@ shell:
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
   
   - mkdir -pv ${BAZEL_OUTPUT_BASE}/external
-  - bazel fetch //:envoy
-  - sed -n '100,130p' "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
+  #- bazel fetch //:envoy
+  #- sed -n '100,130p' "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
   #- tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   #- rm -rf /tmp/bazel-deps
-
+  - |
+    bazel fetch @emsdk//emscripten_toolchain:all \
+      || bazel fetch //:envoy
+    sed -i '/^[[:space:]]*srcs = \[\"wasm_binary.py\"\],[[:space:]]*$/a\    python_version = "PY3",' \
+      "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
   #- bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - bazel build --disk_cache=/tmp/bazel-cache --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
