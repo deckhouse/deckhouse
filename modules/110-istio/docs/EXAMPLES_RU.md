@@ -645,6 +645,90 @@ annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
 
+<span id="telemetry-api-mesh-observability"></span>
+
+## Telemetry API: метрики mesh и журналы доступа
+
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) —  рекомендуемый способ настройки сбора данных о работе сервисов (метрики, access log, провайдеры трассировки) в связке с `meshConfig`.
+
+Модуль поддерживает два режима, задаваемые параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
+
+| Режим | Поведение |
+|-------|-----------|
+| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **не** создаёт объекты `Telemetry` с именами `main-prometheus-metrics` и `main-access-log-format`. |
+| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены при включённом `telemetry.enabled`; модуль создаёт CR `Telemetry` `main-prometheus-metrics` (стандартные серии `istio_*` для Prometheus, Grafana и Kiali) и `main-access-log-format` (stdout access log через extension provider того же имени). Формат строки лога по-прежнему задаётся в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+
+### Как включить режим Telemetry API
+
+Пример `ModuleConfig`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+```
+
+Дождитесь применения манифеста `Istio` / `IstioOperator` в неймспейсе `d8-istio` и обновления конфигурации сайдкаров; при необходимости перезапустите прикладные поды после появления трафика, если метрики ещё не видны на дашбордах.
+
+### Проверка метрик и логов
+
+После генерации трафика между сервисами mesh:
+
+```shell
+istio_pod="$(
+  kubectl -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
+)"
+kubectl exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
+  curl -sS localhost:15020/stats/prometheus | head
+```
+
+В выводе должны присутствовать метрики вроде `istio_requests_total`, если сбор настроен корректно.
+
+### Prometheus и Grafana
+
+При включённом модуле [`operator-prometheus`](../../modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](../../modules/prometheus/). Набор неймспейсов под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы **не попадать** в скрейп, на `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
+
+Если в Grafana пустые панели «workload», а control plane в порядке, проверьте:
+
+- у подов есть сайдкар и лейбл `service.istio.io/canonical-name`;
+- на неймспейсе приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
+
+### Дополнительные политики `Telemetry` (по желанию)
+
+Istio объединяет несколько ресурсов `Telemetry`. Можно задать свои настройки сбора метрик — например, в прикладном неймспейсе:
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: team-a-prometheus-defaults
+  namespace: team-a
+spec:
+  metrics:
+  - providers:
+    - name: prometheus
+```
+
+Тонкая настройка тегов и отключение отдельных метрик описана в [документации Istio](https://istio.io/latest/docs/tasks/observability/metrics/telemetry-api/).
+
+### Возврат к legacy режиму метрик
+
+```yaml
+spec:
+  settings:
+    telemetryAPI:
+      enabled: false
+```
+
+Управляемые модулем `Telemetry` для этого режима будут убраны при следующей синхронизации; снова включится прежний `telemetry.v2`.
+
 ## Ограничения режима перенаправления прикладного трафика `CNIPlugin`
 
 В отличие от режима `InitContainer`, настройка перенаправления осуществляется в момент создании пода, а не в момент срабатывания init-контейнера `istio-init`. Это значит, что прикладные init-контейнеры не смогут взаимодействовать с остальными сервисами так как весь трафик будет перенаправлен на обработку в sidecar-контейнер `istio-proxy`, который ещё не запущен. Обходные пути:
