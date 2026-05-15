@@ -28,13 +28,13 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"gopkg.in/yaml.v3"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
-
 	"registry-modules-watcher/internal"
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/metrics"
+
+	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -64,6 +64,8 @@ type ImageMetadata struct {
 func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
+	s.ms.Grouped().ExpireGroupMetrics(metrics.RegistryScannerTelemetryGroup)
+
 	versions := make([]internal.VersionData, 0, len(s.registryClients))
 
 	for _, registry := range s.registryClients {
@@ -72,27 +74,29 @@ func (s *registryscanner) processRegistries(ctx context.Context) []backends.Docu
 			s.logger.Error("registry is unavailable",
 				slog.String("registry", registry.Name()),
 				log.Err(err))
-			return nil
+
+			s.ms.Grouped().GaugeSet(
+				metrics.RegistryScannerTelemetryGroup,
+				metrics.RegistryScannerRegistryUnavailable,
+				1.0,
+				map[string]string{"registry": registry.Name()},
+			)
+
+			continue
 		}
 
 		s.logger.Debug("found modules",
 			slog.Any("modules", modules),
 			slog.String("registry", registry.Name()))
 
-		vers, err := s.processModules(ctx, registry, modules)
-		if err != nil {
-			s.logger.Error("failed to process modules",
-				slog.String("registry", registry.Name()),
-				log.Err(err))
-			return nil
-		}
+		vers := s.processModules(ctx, registry, modules)
 		versions = append(versions, vers...)
 	}
 
 	return s.cache.SyncWithRegistryVersions(versions)
 }
 
-func (s *registryscanner) processModules(ctx context.Context, registry Client, modules []string) ([]internal.VersionData, error) {
+func (s *registryscanner) processModules(ctx context.Context, registry Client, modules []string) []internal.VersionData {
 	versions := make([]internal.VersionData, 0, len(modules))
 
 	for _, module := range modules {
@@ -104,7 +108,15 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 				slog.String("module", module),
 				slog.String("registry", registry.Name()),
 				log.Err(err))
-			return nil, err
+
+			s.ms.Grouped().GaugeSet(
+				metrics.RegistryScannerTelemetryGroup,
+				metrics.RegistryScannerModuleWithoutTags,
+				1.0,
+				map[string]string{"module": module, "registry": registry.Name()},
+			)
+
+			continue
 		}
 
 		releaseChannels := getReleaseChannelsFromTags(tags)
@@ -112,7 +124,7 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 		versions = append(versions, vers...)
 	}
 
-	return versions, nil
+	return versions
 }
 
 func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, module string, releaseChannels []string) []internal.VersionData {
@@ -181,7 +193,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 
 	// check that the module sign annotation exists
 	if len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
-		s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
+		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
 	}
 
 	// Extract version from image
@@ -195,12 +207,12 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		slog.Bool("found", imageMeta.ModuleDefinitionFound),
 		slog.Bool("critical", imageMeta.ModuleCritical))
 	if !imageMeta.ModuleDefinitionFound {
-		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
+		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
 	}
 
 	// Track critical modules to identify potential "critical" field misuse
 	if imageMeta.ModuleCritical {
-		s.ms.GaugeSet(metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
+		s.ms.Grouped().GaugeSet(metrics.RegistryScannerTelemetryGroup, metrics.RegistryScannerCriticalMetricSet, 1.0, map[string]string{"module": module})
 	}
 
 	versionData.Version = imageMeta.Version
