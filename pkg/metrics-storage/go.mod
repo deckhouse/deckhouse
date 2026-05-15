@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/pkg/metrics-storage
 
-go 1.23.8
+go 1.25.0
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
@@ -9,7 +9,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
+	golang.org/x/exp v0.0.0-20260508232706-74f9aab9d74a
 )
 
 require (
