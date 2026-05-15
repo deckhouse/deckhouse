@@ -2911,7 +2911,7 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..0405f7e4049
+index 00000000000..69997df625c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 @@ -0,0 +1,153 @@
@@ -3588,7 +3588,7 @@ index 00000000000..b68ac38e2eb
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..914d28c2f38
+index 00000000000..1394310e406
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 @@ -0,0 +1,128 @@
@@ -3797,10 +3797,10 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..2af942b707c
+index 00000000000..46bdc797108
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,320 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3825,7 +3825,6 @@ index 00000000000..2af942b707c
 +	"sort"
 +
 +	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
-+	"k8s.io/klog/v2"
 +)
 +
 +// MaskedValue is the replacement string used by MaskSensitiveFields.
@@ -4039,7 +4038,6 @@ index 00000000000..2af942b707c
 +		oldItems, _ := oldObj.([]interface{})
 +		var lookupOldByKey func(newItem interface{}) interface{}
 +		if s.XListType != nil && *s.XListType == "map" && len(s.XListMapKeys) > 0 {
-+			klog.Infof("[sensitive-listmap] key-matching: path=%s keys=%v newLen=%d oldLen=%d", path, s.XListMapKeys, len(x), len(oldItems))
 +			lookupOldByKey = makeListMapLookup(oldItems, s.XListMapKeys)
 +		}
 +
@@ -6002,7 +6000,7 @@ index 5b93d594bff..ebbfa6e66c8 100644
  // It is safe to call at most parts of request flow that come after WithAuditAnnotations.
  // The notable exception being that this function must not be called via a
 diff --git a/staging/src/k8s.io/apiserver/pkg/audit/request.go b/staging/src/k8s.io/apiserver/pkg/audit/request.go
-index d5f9c730f51..b80c5b76535 100644
+index d5f9c730f51..b8f07c9415b 100644
 --- a/staging/src/k8s.io/apiserver/pkg/audit/request.go
 +++ b/staging/src/k8s.io/apiserver/pkg/audit/request.go
 @@ -113,6 +113,10 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
@@ -6016,7 +6014,7 @@ index d5f9c730f51..b80c5b76535 100644
  	// TODO(audit): hook into the serializer to avoid double conversion
  	requestObject, err := encodeObject(obj, objGV, s)
  	if err != nil {
-@@ -159,11 +163,13 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
+@@ -159,11 +163,17 @@ func LogRequestObject(ctx context.Context, obj runtime.Object, objGV schema.Grou
  }
  
  // LogRequestPatch fills in the given patch as the request object into an audit event.
@@ -6027,11 +6025,15 @@ index d5f9c730f51..b80c5b76535 100644
  	if ac.GetEventLevel().Less(auditinternal.LevelRequest) {
  		return
  	}
-+	patch = ac.TransformPatch(patch, contentType)
++
++	if ac != nil {
++		patch = ac.TransformPatch(patch, contentType)
++	}
++
  	ac.LogRequestPatch(patch)
  }
  
-@@ -189,6 +195,10 @@ func LogResponseObject(ctx context.Context, obj runtime.Object, gv schema.GroupV
+@@ -189,6 +199,10 @@ func LogResponseObject(ctx context.Context, obj runtime.Object, gv schema.GroupV
  		}
  	}
  
