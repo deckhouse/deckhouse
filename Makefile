@@ -518,6 +518,7 @@ build: bin/werf set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: bin/werf set-build-envs ## render werf.yaml for build Deckhouse images.
+	echo "Cur dir $$(pwd)"
 	bin/werf config render --dev
 
 GO=$(shell which go)

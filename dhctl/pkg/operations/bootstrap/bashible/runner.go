@@ -34,15 +34,22 @@ const (
 )
 
 var (
-	alreadyRunDefaultOpts    = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	prepareDefaultOpts       = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	executeBundleDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(30, 10*time.Second)
+	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(30, 10*time.Second)
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(10, 3*time.Second)
 )
 
 type LoopsParams struct {
-	AlreadyRun    retry.Params
-	Prepare       retry.Params
-	ExecuteBundle retry.Params
+	AlreadyRun      retry.Params
+	Prepare         retry.Params
+	ExecuteBundle   retry.Params
+	ReadFileForInfo retry.Params
+}
+
+type NodeInfo struct {
+	NodeName string
+	NodeIP   string
 }
 
 type Runner struct {
@@ -101,6 +108,43 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 		return nil
 	})
+}
+
+func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
+	res := NodeInfo{}
+
+	infoFiles := map[string]*string{
+		"/var/lib/bashible/discovered-node-name": &res.NodeName,
+		"/var/lib/bashible/discovered-node-ip":   &res.NodeIP,
+	}
+
+	logger := r.loggerProvider()
+
+	for fileName, resPointer := range infoFiles {
+		loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ReadFileForInfo, readFileForInfoDefaultOpts...).
+			Clone(
+				retry.WithName("Read info file %s", fileName),
+				retry.WithLogger(logger),
+			)
+
+		err := retry.NewLoopWithParams(loopParams).
+			RunContext(ctx, func() error {
+				f := r.nodeInterface.File()
+				content, err := f.DownloadBytes(ctx, fileName)
+				if err != nil {
+					return err
+				}
+
+				*resPointer = strings.TrimSpace(string(content))
+				return nil
+			})
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &res, nil
 }
 
 type ExecuteBundleParams struct {

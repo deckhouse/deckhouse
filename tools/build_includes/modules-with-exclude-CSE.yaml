@@ -850,6 +850,27 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+  to: /deckhouse/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/monitoring/prometheus-rules
+  to: /deckhouse/modules/040-control-plane-manager/monitoring/prometheus-rules
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   excludePaths:

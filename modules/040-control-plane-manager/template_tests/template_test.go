@@ -19,6 +19,8 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
+	"path"
 	"slices"
 	"strings"
 
@@ -29,6 +31,7 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	validation "github.com/deckhouse/deckhouse/testing/library/values_validation"
 )
 
 type PrefixedClaimOrExpression struct {
@@ -342,9 +345,50 @@ apiserver:
     loadBalancer: {}
   authn: {}
 `
+	const (
+		eeModuleDir        = "/deckhouse/ee/modules/040-control-plane-manager"
+		moduleDir          = "/deckhouse/modules/040-control-plane-manager"
+		valuesInModulePath = "openapi/values.yaml"
+	)
+
+	var (
+		valuesSpecSource   = path.Join(moduleDir, valuesInModulePath)
+		valuesSpecLinkDest = path.Join(eeModuleDir, valuesInModulePath)
+	)
+
+	localRun := false
+
+	_, err := os.Stat(eeModuleDir)
+	if err == nil {
+		localRun = true
+	}
+
+	BeforeSuite(func() {
+		if !localRun {
+			return
+		}
+		err := os.Symlink(valuesSpecSource, valuesSpecLinkDest)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		if !localRun {
+			return
+		}
+
+		err := os.Remove(valuesSpecLinkDest)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
+
 	f := SetupHelmConfig(`controlPlaneManager: {}`)
 
 	BeforeEach(func() {
+		if localRun {
+			valuesValidator, err := validation.NewValuesValidator("controlPlaneManager", eeModuleDir)
+			Expect(err).To(BeNil())
+			f.ValuesValidator = valuesValidator
+		}
+
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("controlPlaneManager", moduleValues)
@@ -392,6 +436,14 @@ apiserver:
 
 				assertSpecDotGroupsArray(rule, 1)
 			})
+
+			It("Not have prom rule for signature if sign mode not set", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				rule := f.KubernetesResource("PrometheusRule", "d8-system", "control-plane-manager-signature")
+
+				Expect(rule.Exists()).Should(BeFalse())
+			})
 		})
 	})
 
@@ -410,20 +462,100 @@ apiserver:
 		})
 	})
 
-	Context("With secretEncryptionKey", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("controlPlaneManager.internal.secretEncryptionKey", `ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD`)
-			f.HelmRender()
+	Context("apiserver tests", func() {
+		Context("DS sing enabled annotation", func() {
+			assertDsSignAnnotation := func(ff *Config, enabled bool) {
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+				annotation := ds.Field("metadata.annotations.signature/enabled").String()
+				enabledStr := "false"
+				if enabled {
+					enabledStr = "true"
+				}
+				Expect(annotation).To(Equal(enabledStr))
+			}
+
+			Context("Without signature", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("should have correct annotation", func() {
+					assertDsSignAnnotation(f, false)
+				})
+			})
+
+			Context("With signature Rollback", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager.apiserver.signature", "Rollback")
+					f.HelmRender()
+				})
+
+				It("should have correct annotation", func() {
+					assertDsSignAnnotation(f, false)
+				})
+			})
+
+			Context("With signature Enforce", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager.apiserver.signature", "Enforce")
+					f.HelmRender()
+				})
+
+				It("should have correct annotation", func() {
+					assertDsSignAnnotation(f, true)
+				})
+			})
+
+			Context("With signature Migrate", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager.apiserver.signature", "Migrate")
+					f.HelmRender()
+				})
+
+				It("should have correct annotation", func() {
+					assertDsSignAnnotation(f, true)
+				})
+			})
 		})
 
-		It("should render correctly", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		Context("Encryption config", func() {
+			assertEncryptionConf := func(ff *Config, expectedYAML string) {
+				Expect(ff.RenderError).ShouldNot(HaveOccurred())
 
-			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
-			Expect(s.Exists()).To(BeTrue())
-			data, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-secret-encryption-config\\.yaml").String())
-			Expect(err).To(BeNil())
-			Expect(data).To(MatchYAML(`
+				s := ff.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+
+				confVal := s.Field("data.extra-file-secret-encryption-config\\.yaml")
+				if expectedYAML == "" {
+					Expect(confVal.Exists()).Should(BeFalse())
+					return
+				}
+
+				data, err := base64.StdEncoding.DecodeString(confVal.String())
+				Expect(err).To(BeNil())
+				Expect(data).To(MatchYAML(expectedYAML))
+			}
+
+			Context("Without secretEncryptionKey and signature", func() {
+				BeforeEach(func() {
+					f.HelmRender()
+				})
+
+				It("should render correctly", func() {
+					// empty assert that key is not exists
+					assertEncryptionConf(f, "")
+				})
+			})
+
+			Context("With secretEncryptionKey", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager.internal.secretEncryptionKey", `ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD`)
+					f.HelmRender()
+				})
+
+				It("should render correctly", func() {
+					assertEncryptionConf(f, `
 apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
 resources:
@@ -435,10 +567,57 @@ resources:
         - name: secretbox
           secret: ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD
     - identity: {}
-`))
+`)
+				})
+			})
+
+			Context("With signature", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager.apiserver.signature", "Enforce")
+					f.HelmRender()
+				})
+
+				It("should render correctly", func() {
+					assertEncryptionConf(f, `
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+signature:
+  privKeyPath: "/etc/kubernetes/pki/signature-private.jwk"
+  pubKeyPath:  "/etc/kubernetes/pki/signature-public.jwks"
+  mode: enforce
+`)
+				})
+			})
+
+			Context("With signature and encryption key", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager.apiserver.signature", "Rollback")
+					f.ValuesSetFromYaml("controlPlaneManager.internal.secretEncryptionKey", `ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD`)
+					f.HelmRender()
+				})
+
+				It("should render correctly", func() {
+					assertEncryptionConf(f, `
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+signature:
+  privKeyPath: "/etc/kubernetes/pki/signature-private.jwk"
+  pubKeyPath:  "/etc/kubernetes/pki/signature-public.jwks"
+  mode: rollback
+resources:
+  - resources:
+    - secrets
+    providers:
+    - aescbc:
+        keys:
+        - name: secretbox
+          secret: ABCDEFGHIJABCDEFGHIJABCDEFGHIJABCDEFGHIJABCD
+    - identity: {}
+`)
+				})
+			})
 		})
-	})
-	Context("apiserver tests", func() {
+
 		Context("only apiserver.serviceAccount.issuer", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesOnlyIssuer)

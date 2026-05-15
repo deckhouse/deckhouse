@@ -1,0 +1,266 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# ../../../ee/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+# ../../../ee/cse/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+properties:
+  apiserver:
+    description: |
+      Параметры `kube-apiserver`.
+    properties:
+      serviceAccount:
+        description: |
+          Настройки выпуска ServiceAccount'ов.
+        properties:
+          issuer:
+            description: |
+              Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
+
+              Издатель по умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
+
+              **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
+          additionalAPIAudiences:
+            description: |
+              Список дополнительных API audience'ов, которые следует добавить при создании токенов ServiceAccount.
+
+              Список audience'ов по умолчанию содержит:
+
+              - `serviceAccount.issuer`, eсли указано
+              - `serviceAccount.additionalAPIIssuers`, eсли указано
+              - `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local` - этот audience добавляется всегда для обратной совместимости.
+
+              Аутентификатор токенов ServiceAccount проверяет, что токены, использованные с API, привязаны как минимум к одной из этих audiences.
+
+              Этот вариант полезен при переходе от одного издателя API к другому.
+          additionalAPIIssuers:
+            description: |
+              Список дополнительных издателей API токенов ServiceAccount, которые нужно включить при их создании.
+
+              Эти издатели (iss) используются для проверки источника токенов, чтобы гарантировать, что они поступают от доверенных сущностей.
+
+              Когда указано несколько издателей, то первый используется для генерации токенов, а все указанные издатели принимаются для валидации токенов.
+
+              Этот вариант полезен при переходе от одного API издателя к другому.
+      admissionPlugins:
+        description: |
+          Список включенных дополнительных [admission-плагинов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
+
+          **Обратите внимание**, что, помимо включенных по умолчанию в Kubernetes admission-плагинов, также всегда включены (без возможности отключения) следующие admission-плагины:
+          - `ExtendedResourceToleration`;
+          - `PodNodeSelector`;
+          - `PodTolerationRestriction`;
+          - `EventRateLimit`, который использует следующую конфигурацию:
+
+            ```yaml
+            apiVersion: eventratelimit.admission.k8s.io/v1alpha1
+            kind: Configuration
+            limits:
+            - type: Namespace
+              qps: 50
+              burst: 100
+              cacheSize: 2000
+            ```
+
+          > Admission-плагин `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен (namespace'ах).
+      bindToWildcard:
+        description: |
+          Прослушивание на `0.0.0.0`.
+
+          По умолчанию API-сервер слушает на hostIP, который обычно соответствует Internal-адресу узла, но это зависит от типа кластера (Static или Cloud) и выбранной схемы размещения (layout).
+      certSANs:
+        description: |
+          Массив строк, список дополнительных [SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name), с которыми будет сгенерирован сертификат API-сервера.
+
+          Кроме переданного списка, всегда используется и следующий список:
+          * `kubernetes`;
+          * `kubernetes.default`;
+          * `kubernetes.default.svc`;
+          * `kubernetes.default.svc.cluster.local`;
+          * Адрес API-сервера кластера;
+          * `127.0.0.1`;
+          * DNS-имя хоста (hostname);
+          * IP-адрес хоста.
+      authn:
+        description: |
+          Опциональные параметры аутентификации клиентов Kubernetes API.
+
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/modules/user-authn/).
+        properties:
+          oidcIssuerURL:
+            description: |
+              URL OIDC-провайдера.
+          oidcCA:
+            description: |
+              CA OIDC-провайдера.
+          oidcIssuerAddress:
+            description: |
+              Сетевой адрес OIDC-провайдера.
+          webhookURL:
+            description: |
+              URL аутентификационного webhook'а.
+          webhookCA:
+            description: |
+              CA аутентификационного webhook'a.
+          webhookCacheTTL:
+            description: |
+              Продолжительность кеширования ответов от аутентификационного webhook'a.
+
+              Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
+      authz:
+        description: |
+          Параметры авторизации клиентов Kubernetes API.
+
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/modules/user-authz/).
+        properties:
+          webhookURL:
+            description: |
+              URL webhook'а авторизации.
+          webhookCA:
+            description: |
+              CA webhook'а авторизации.
+      publishAPI:
+        description: |
+          Настройки публикации доступа к API-серверу Kubernetes.
+        properties:
+          ingress:
+            description: 'Настройки для публикации API через Ingress.'
+            properties:
+              enabled:
+                description: 'Если указать `true`, в namespace `kube-system` кластера будет создан Ingress-ресурс `kubernetes-api`, который откроет публичный доступ к API-серверу.'
+              ingressClass:
+                description: 'Ingress-класс, который будет использован для публикации API Kubernetes через Ingress.'
+              whitelistSourceRanges:
+                description: 'Список адресов в формате CIDR, которым разрешено подключение к API-серверу.'
+              addKubeconfigGeneratorEntry:
+                description: 'Если указать `false`, будет удалена запись в kubeconfig-generator.'
+              https:
+                description: 'Режим работы HTTPS для Ingress API-сервера.'
+                properties:
+                  mode:
+                    description: |
+                      Режим выдачи сертификатов для данного Ingress-ресурса.
+
+                      В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
+
+                      Получить выпущенный сертификат можно следующей командой: `d8 k -n kube-system get secrets kubernetes-api-ca-key-pair -oyaml`.
+
+                      В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
+                  global:
+                    description: 'Дополнительный параметр для режима `Global`.'
+                    properties:
+                      kubeconfigGeneratorMasterCA:
+                        description: |
+                          Если перед Ingress-контроллером есть внешний балансировщик, который терминирует HTTPS-трафик с использованием непубличного сертификата, укажите цепочку CA в этом параметре. Она будет добавлена в сгенерированные файлы конфигурации kubectl.
+
+                          Если вы используете в кластере сертификаты, выдаваемые c помощью модуля `cert-manager` и Let's Encrypt, следует в качестве значения установить пустую строку `""`.
+
+                          В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике сделает невалидными ранее сгенерированные файлы конфигурации kubectl.
+          loadBalancer:
+            description: 'Настройки для публикации API через service с типом LoadBalancer.'
+            properties:
+              enabled:
+                description: 'Если указать `true`, будет создан сервис `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.'
+              annotations:
+                description: |
+                  Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+                  > **Внимание.** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              sourceRanges:
+                description: |
+                  Список CIDR, которым разрешен доступ к API.
+
+                  Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+              port:
+                description: |
+                  Внешний порт TCP-балансировщика.
+      auditPolicyEnabled:
+        description: |
+          Применяет [дополнительные политики аудита](faq.html#как-настроить-дополнительные-политики-аудита) с конфигурацией из Secret'а `kube-system/audit-policy`.
+      basicAuditPolicyEnabled:
+        description: |
+          Применяет базовые политики аудита Deckhouse.
+      auditLog:
+        description: |
+          Параметры аудита.
+        properties:
+          output:
+            description: |
+              Тип потока для вывода журнала аудита.
+          path:
+            description: |
+              Путь к директории. Действует только в случае `output: "File"`.
+      signature:
+        type: string
+        default: Rollback
+        description: |
+          Включает проверку подписи API-сервером для всех записей.
+          Преобразует все записи в etcd в новый формат с подписью.
+
+          Возможные значения:
+          - Migrate
+          Разрешить чтение записей без подписи или с недействительной подписью.
+          - Enforce
+          Отклонить записи без подписи, с недействительной подписью или в неправильном формате.
+          - Rollback
+          Преобразовать записи в стандартный формат (формат по умолчанию для etcd) при изменении записей.
+          Разрешить использование записей без подписи или с недействительной подписью.
+      encryptionEnabled:
+        description: |
+          Включает шифрование данных в etcd ([Encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
+
+          При включении создаётся Secret `kube-system/d8-secret-encryption-key` с ключом шифрования.
+
+          Включение этого параметра автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`,
+          который защищает поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`,
+          через шифрование в etcd, фильтрацию полей через субресурс `<resource>/sensitive` на основе RBAC
+          и маскировку значений в журнале аудита.
+
+          > **Внимание.** После включения этот параметр нельзя отключить.
+  rootKubeconfigSymlink:
+    description: |
+      Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.
+
+      Когда включён модуль [user-authz](/modules/user-authz/) и этот параметр равен `false`, символическая ссылка удаляется, в подах `control-plane-manager` выставляется переменная окружения `NODE_ADMIN_KUBECONFIG` соответствующим образом. Для доступа к API с узла используйте `d8 k` с `--kubeconfig=/etc/kubernetes/admin.conf` (или другие учётные данные).
+
+      Если модуль `user-authz` выключен, `control-plane-manager` этот параметр не учитывает и сохраняет поведение по умолчанию (симлинк создаётся).
+
+      Переключение обратно на `true` восстанавливает симлинк при следующем цикле согласования.
+  etcd:
+    description: |
+      Параметры etcd.
+    properties:
+      backup:
+        description: |
+          Параметры резервного копирования etcd.
+        properties:
+          enabled:
+            description: |
+              Включение резервного копирование etcd.
+          cronSchedule:
+            description: |
+              Расписание резервного копирования etcd в формате cron. Используется локальный часовой пояс `kube-controller-manager`.
+          hostPath:
+            description: |
+              Путь для хранения резервных копий etcd на master-узлах.
+      maxDbSize:
+        description: |
+          [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
+          Deckhouse автоматически управляет `quota-backend-bytes` параметром.
+          Если параметр `maxDbSize` установлен, Deckhouse будет использовать это значение для параметра `quota-backend-bytes` etcd.
+
+          Минимальное значение: 512MB.
+
+          Максимальное значение: 8GB.
+
+          **Экспериментальный**. Может быть удален в будущем.
+  nodeMonitorGracePeriodSeconds:
+    description: |
+      Число секунд, через которое узел перейдет в состояние `Unreachable` при потере с ним связи.
+  failedNodePodEvictionTimeoutSeconds:
+    description: |
+      Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены поды.
+      > **Важно!** При изменении этого параметра потребуется перезапуск подов.
+  enabledFeatureGates:
+    description: |
+      Список включенных в control plane экспериментальных функций (feature gates).
+
+      Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      Список поддерживаемых в DKP feature gates доступен на [странице описания модуля](./#feature-gates).

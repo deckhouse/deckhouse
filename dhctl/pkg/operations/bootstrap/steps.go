@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
@@ -59,6 +60,11 @@ import (
 const (
 	BastionHostCacheKey = "bastion-hosts"
 )
+
+type ModulePreparator interface {
+	PrepareModule(ctx context.Context) error
+	Module() string
+}
 
 type BashiblePipelineParams struct {
 	Node           libcon.Interface
@@ -111,6 +117,8 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
 
+	logger := loggerProvider()
+
 	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
 	if err := depsChecker.Check(ctx); err != nil {
 		return err
@@ -139,7 +147,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		log.Success("Bashible already run! Skip bashible install\n")
+		logger.Success("Bashible already run! Skip bashible install")
 		return nil
 	}
 
@@ -171,24 +179,44 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
+	nodeInfo, err := bashible.ReadNodeInfo(ctx)
 	if err != nil {
-		return fmt.Errorf("read discovered node name: %w", err)
+		return fmt.Errorf("Cannot read node info: %w", err)
 	}
 
-	discoveredNodeIP, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
-	if err != nil {
-		return fmt.Errorf("read discovered node IP: %w", err)
-	}
-
-	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, dc); err != nil {
+	if err := PrepareControlPlaneArtifacts(nodeInfo, cfg, templateController, dc); err != nil {
 		return err
+	}
+
+	modulesPreparators := getModulesPreparators(params)
+	for _, preparator := range modulesPreparators {
+		logger.DebugF("Starting prepare module %s", preparator.Module())
+		if err := preparator.PrepareModule(ctx); err != nil {
+			return err
+		}
 	}
 
 	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
 	})
+}
+
+func getModulesPreparators(params *BashiblePipelineParams) []ModulePreparator {
+	controlPlaneSettings := controlplane.NewSettingsExtractor(
+		params.MetaConfig,
+		config.NewSchemaStore(params.DirsConfig),
+		config.GetEdition(),
+		params.LoggerProvider,
+	)
+
+	return []ModulePreparator{
+		controlplane.NewBootstrapPreparator(
+			controlPlaneSettings,
+			params.Node,
+			params.LoggerProvider,
+		),
+	}
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
@@ -262,12 +290,15 @@ func PrepareBashibleBundle(
 // control-plane static-pod manifests into the local template tmp dir for the
 // node identified by (nodeName, nodeIP).
 func PrepareControlPlaneArtifacts(
-	nodeName, nodeIP string,
+	nodeInfo *dhbashible.NodeInfo,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
 	dc *directoryconfig.DirectoryConfig,
 ) error {
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
+		nodeName := nodeInfo.NodeName
+		nodeIP := nodeInfo.NodeIP
+
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
 		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
@@ -289,51 +320,6 @@ func PrepareControlPlaneArtifacts(
 
 		return nil
 	})
-}
-
-func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	cmd := nodeInterface.Command("cat", path)
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(10 * time.Second)
-
-	stdout, stderr, err := cmd.Output(ctx)
-	if err != nil {
-		return "", fmt.Errorf("read remote file %s: %w; stderr: %s", path, err, string(stderr))
-	}
-
-	output := string(stdout)
-	// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
-	// strip everything up to and including the last occurrence so we keep only
-	// the actual file payload. For non-sudo paths the marker is absent and
-	// output stays untouched.
-	if idx := strings.LastIndex(output, "SUDO-SUCCESS"); idx >= 0 {
-		output = output[idx+len("SUDO-SUCCESS"):]
-	}
-
-	return strings.TrimSpace(output), nil
-}
-
-// readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
-func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	const (
-		attempts = 5
-		wait     = 3 * time.Second
-	)
-
-	var value string
-	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
-		RunContext(ctx, func() error {
-			v, err := readRemoteFile(ctx, nodeInterface, path)
-			if err != nil {
-				return err
-			}
-			value = v
-			return nil
-		})
-	if err != nil {
-		return "", err
-	}
-	return value, nil
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {

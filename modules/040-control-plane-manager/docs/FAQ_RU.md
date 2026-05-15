@@ -1426,3 +1426,119 @@ Kubelet использует клиентский TLS-сертификат (`/va
 | Маскировка в журнале аудита | Значения чувствительных полей заменяются на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита. |
 
 Полный пример конфигурации и результатов доступен в разделе [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями).
+
+## Как проверить функционал контроля целостности данных, хранимых в etcd?
+
+{% alert level="warning" %}
+Функционал контроля целостности данных, хранимых в etcd доступен только для EE, CSE-lite и CSE-pro редакций.
+{% endalert %}
+
+### Проверка формата хранимых данных
+Для проверки типа данных, хранящихся в etcd, необходимо создать объект, а затем запросить его содержимое через etcdctl. Приведённые команды следует выполнять с узла control-plane кластера.
+
+Создание тестового объекта:
+```bash
+kubectl create secret generic test-secret --from-literal=foo=bar
+```
+
+Запрос содержимого через etcdctl:
+```bash
+ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
+```
+
+Примеры вывода команды:
+1. Режим работы контроля целостности `Enforce` или `Migrate`:
+```bash
+/registry/secrets/default/test-secret
+{"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+```
+2. Режим работы контроля целостности `Rollback`:
+```bash
+/registry/secrets/default/test-secret
+k8s
+v1Secret
+test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+kubectl-createUpdatevFieldsV1:,
+*{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+foobarOpaque"
+```
+3. Включено шифрование секретов (`apiserver.encryptionEnabled`), режим работы контроля целостности `Rollback`:
+```bash
+/registry/secrets/default/test-secret
+k8s:enc:aescbc:v1:secretbox: <binary data>
+```
+
+### Проверка запрета обработки данных, не прошедших проверку подписи
+Приведённые команды следует выполнять с узла control-plane кластера.
+
+Создание тестового объекта:
+```bash
+kubectl create secret generic test-secret --from-literal=foo=bar
+```
+
+Запрос содержимого через etcdctl:
+```bash
+ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
+```
+
+Намеренное изменение поля `signature` в секрете:
+```bash
+etcdctl put /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+```
+
+Запрос содержимого через kubectl:
+```bash
+kubectl get secret test-secret 
+```
+
+Пример вывода (только в режиме работы контроля целостности `Enforce`):
+```bash
+Error from server (InternalError): Internal error occurred: bad signature, record rejected
+```
+
+Просмотр аудит-лога запроса (в любом режиме работы контроля целостности):
+```bash
+jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+```
+
+Пример вывода:
+```bash
+{
+  "kind": "Event",
+  "apiVersion": "audit.k8s.io/v1",
+  "level": "Metadata",
+  "auditID": "57e0ed6c-6ed4-40cd-81a9-13c656220d83",
+  "stage": "ResponseComplete",
+  "requestURI": "/api/v1/namespaces/default/secrets?limit=500",
+  "verb": "list",
+  "user": {
+    "username": "kubernetes-admin",
+    "groups": [
+      "kubeadm:cluster-admins",
+      "system:authenticated"
+    ]
+  },
+  "sourceIPs": [
+    "10.112.0.10"
+  ],
+  "userAgent": "kubectl/v1.31.13 (linux/amd64) kubernetes/0000000",
+  "objectRef": {
+    "resource": "secrets",
+    "namespace": "default",
+    "apiVersion": "v1"
+  },
+  "responseStatus": {
+    "metadata": {},
+    "code": 200
+  },
+  "requestReceivedTimestamp": "2025-10-02T16:21:35.325764Z",
+  "stageTimestamp": "2025-10-02T16:21:35.328644Z",
+  "annotations": {
+    "authorization.k8s.io/decision": "allow",
+    "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"kubeadm:cluster-admins\" of ClusterRole \"cluster-admin\" to Group \"kubeadm:cluster-admins\"",
+    "deckhouse.io/signature": "Absent signature"
+  }
+}
+```
