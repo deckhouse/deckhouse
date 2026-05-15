@@ -7,7 +7,7 @@ spec:
     priority: 50
     classReference:
       kind: DVPInstanceClass
-      name: worker
+      name: e2e-worker-small
     maxPerZone: 3
     minPerZone: 0
   nodeType: CloudEphemeral

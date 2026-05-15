@@ -8,7 +8,7 @@ spec:
     assert: 15m
     error: 2m
     delete: 5m
-    cleanup: 10m
+    cleanup: 20m
     exec: 5m
   execution:
     failFast: true

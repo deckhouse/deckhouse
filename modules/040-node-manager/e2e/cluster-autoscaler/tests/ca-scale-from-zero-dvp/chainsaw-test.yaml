@@ -9,25 +9,6 @@ spec:
     deploys a workload, and asserts that the higher-priority group is selected.
   concurrent: false
   steps:
-    - name: assert-cluster-autoscaler-exists
-      try:
-        - description: Check cluster-autoscaler deployment has ready replicas
-          assert:
-            file: asserts/assert-ca-exists.yaml
-
-    - name: assert-ca-uses-clusterapi-provider
-      try:
-        - description: Check CA container args contain 'clusterapi'
-          script:
-            timeout: 30s
-            content: |
-              set -eu
-              CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
-                -o jsonpath='{.spec.template.spec.containers[0].args}')
-              echo "$CA_ARGS" | grep -q "clusterapi"
-            check:
-              ($error == null): true
-
     - name: assert-dvpinstanceclass-worker-exists
       try:
         - description: Assert DVPInstanceClass worker resource exists
@@ -50,6 +31,87 @@ spec:
               apiVersion: deckhouse.io/v1
               kind: NodeGroup
               name: e2e-worker-50
+        - description: Delete leftover DVPInstanceClass e2e-worker-small
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: DVPInstanceClass
+              name: e2e-worker-small
+
+    - name: create-e2e-worker-small-instanceclass
+      try:
+        - description: Clone DVPInstanceClass 'worker' as 'e2e-worker-small' with reduced specs
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              kubectl get dvpinstanceclass worker -o json | \
+                jq '{
+                  apiVersion: .apiVersion,
+                  kind: .kind,
+                  metadata: { name: "e2e-worker-small" },
+                  spec: (.spec |
+                    .virtualMachine.cpu.cores = 2 |
+                    .virtualMachine.cpu.coreFraction = "20%" |
+                    .virtualMachine.memory.size = "4Gi" |
+                    .rootDisk.size = "20Gi"
+                  )
+                }' | kubectl apply -f -
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete DVPInstanceClass e2e-worker-small
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: DVPInstanceClass
+              name: e2e-worker-small
+
+    - name: apply-nodegroup-100
+      try:
+        - description: Apply NodeGroup e2e-worker-100 manifest
+          apply:
+            file: manifests/nodegroup-100.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-worker-100
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-100
+
+    - name: apply-nodegroup-50
+      try:
+        - description: Apply NodeGroup e2e-worker-50 manifest
+          apply:
+            file: manifests/nodegroup-50.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-worker-50
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-50
+
+    - name: assert-cluster-autoscaler-exists
+      try:
+        - description: Check cluster-autoscaler deployment has ready replicas
+          assert:
+            file: asserts/assert-ca-exists.yaml
+
+    - name: assert-ca-uses-clusterapi-provider
+      try:
+        - description: Check CA container args contain 'clusterapi'
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
+                -o jsonpath='{.spec.template.spec.containers[0].args}')
+              echo "$CA_ARGS" | grep -q "clusterapi"
+            check:
+              ($error == null): true
 
     - name: restart-cluster-autoscaler
       try:
@@ -69,42 +131,13 @@ spec:
           sleep:
             duration: 15s
 
-    - name: apply-nodegroup-100
-      try:
-        - description: Apply NodeGroup e2e-worker-100 manifest
-          apply:
-            file: manifests/nodegroup-100.yaml
-      cleanup:
-        - description: Delete NodeGroup e2e-worker-100
-          continueOnError: true
-          delete:
-            ref:
-              apiVersion: deckhouse.io/v1
-              kind: NodeGroup
-              name: e2e-worker-100
-
-    - name: apply-nodegroup-50
-      try:
-        - description: Apply NodeGroup e2e-worker-50 manifest
-          apply:
-            file: manifests/nodegroup-50.yaml
-      cleanup:
-        - description: Delete NodeGroup e2e-worker-50
-          continueOnError: true
-          delete:
-            ref:
-              apiVersion: deckhouse.io/v1
-              kind: NodeGroup
-              name: e2e-worker-50
-
     - name: apply-deployment
       try:
         - description: Apply shared Deployment manifest
           apply:
-            file: ../../common/manifests/deployment.yaml
+            file: ../common/manifests/deployment.yaml
       cleanup:
         - description: Delete e2e-nginx Deployment
-          continueOnError: true
           delete:
             ref:
               apiVersion: apps/v1
@@ -112,10 +145,10 @@ spec:
               name: e2e-nginx
         - description: Wait for test nodes to be removed from the cluster
           script:
-            timeout: 600s
+            timeout: 1200s
             content: |
               set -eu
-              for i in $(seq 1 60); do
+              for i in $(seq 1 120); do
                 NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
                 if [ "$NODES" -eq 0 ]; then
                   exit 0
@@ -190,6 +223,11 @@ spec:
             timeout: 60s
             content: |
               set -eu
+              POD_COUNT=$(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx --no-headers | wc -l | tr -d ' ')
+              if [ "$POD_COUNT" -ne 3 ]; then
+                echo "Expected 3 pods, got $POD_COUNT"
+                exit 1
+              fi
               for NODE in $(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx \
                 -o jsonpath='{.items[*].spec.nodeName}'); do
                 NG=$(kubectl get node "$NODE" \

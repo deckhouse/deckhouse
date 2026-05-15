@@ -5,21 +5,22 @@ vars:
 
 tasks:
   run:
-    desc: Run ca-scale-from-zero-yandex e2e test with JUNIT report
+    desc: Run e2e test with JUNIT report
     cmds:
       - mkdir -p ./reports
       - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/
 
-  run:verbose:
-    desc: Run ca-scale-from-zero-yandex e2e test with verbose output
+  run:quiet:
+    desc: Run e2e test with suppressed output (only errors, failures, summary)
     cmds:
       - mkdir -p ./reports
-      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --verbose
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --quiet
 
   dry-run:
-    desc: Validate test YAML without a cluster
+    desc: Validate test and configuration YAML against the chainsaw schema (no cluster needed)
     cmds:
-      - chainsaw test --test-dir . --config {{.CONFIG}} --no-cluster
+      - chainsaw lint test -f chainsaw-test.yaml
+      - chainsaw lint configuration -f {{.CONFIG}}
 
   run:debug:
     desc: Run test with pause on failure and fail-fast
