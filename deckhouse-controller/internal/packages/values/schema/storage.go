@@ -125,7 +125,7 @@ func prepareSchemas(settings, values []byte) (map[Type]*spec.Schema, error) {
 
 		res[TypeValues] = transformers.Transform(
 			schemaObj,
-			&transformers.Extend{Parent: res[TypeValues]},
+			&transformers.Extend{Parent: res[TypeSettings]},
 			&transformers.AdditionalProperties{},
 		)
 

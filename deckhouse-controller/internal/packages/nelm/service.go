@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -42,6 +43,10 @@ const (
 
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
+
+	// managedByAnnotation marks a release as owned by this service.
+	managedByAnnotation      = "packages.deckhouse.io/managed-by"
+	managedByAnnotationValue = "deckhouse"
 )
 
 const (
@@ -77,9 +82,14 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
-	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
-		"heritage": "deckhouse",
-	}))
+	nelmClient := nelm.New(logger,
+		nelm.WithResourcesLabels(map[string]string{
+			"heritage": "deckhouse",
+		}),
+		nelm.WithReleaseAnnotations(map[string]string{
+			managedByAnnotation: managedByAnnotationValue,
+		}),
+	)
 
 	return &Service{
 		tmpDir:         os.TempDir(),
@@ -272,7 +282,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
-			nelm.LabelPackageChecksum: checksum,
+			nelm.ReleaseLabelPackageChecksum: checksum,
 		},
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
@@ -286,6 +296,35 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)
 
 	return nil
+}
+
+// Cleanup uninstalls releases owned by this service (carrying the managed-by
+// annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) {
+	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
+		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
+	})
+	if err != nil {
+		s.logger.Warn("failed to list releases", log.Err(err))
+		return
+	}
+
+	for _, r := range releases {
+		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
+			continue
+		}
+
+		if slices.Contains(ignoreNamespaces, r.Namespace) {
+			continue
+		}
+
+		if err = s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
+			s.logger.Warn("failed to delete orphan release",
+				slog.String("namespace", r.Namespace),
+				slog.String("release", r.Name),
+				log.Err(err))
+		}
+	}
 }
 
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.

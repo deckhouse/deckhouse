@@ -643,34 +643,41 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// PreservePackage identifies one downloaded package version to preserve during cleanup.
+// PreservePackage identifies one installed Package instance to preserve during Cleanup.
 type PreservePackage struct {
-	// Name is the downloaded package directory name.
-	Name string
-	// Version is the downloaded package version name.
-	Version string
-	// Repository is the downloaded repository directory name.
-	Repository string
+	PackageName string
+	Repository  string
+	Version     string
+
+	ReleaseName      string
+	ReleaseNamespace string
 }
 
-// Cleanup removes deployed packages that are not listed in preserve from both app and module deployers.
-func (r *Runtime) Cleanup(ctx context.Context, preserve []PreservePackage) {
+// Cleanup removes downloaded application packages on disk and orphan nelm
+// releases in the cluster that are not in preserve. Runs once during preflight.
+func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	converted := make([]deployer.PreservePackage, 0, len(preserve))
-	for _, packageVersion := range preserve {
-		converted = append(converted, deployer.PreservePackage{
-			Name:       packageVersion.Name,
-			Repository: packageVersion.Repository,
-			Version:    packageVersion.Version,
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
+	keepReleases := make(map[string]struct{}, len(preserves))
+	for _, preserve := range preserves {
+		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
 		})
+
+		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
 	}
 
-	if err := r.appDeployer.Cleanup(ctx, converted); err != nil {
+	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
 		r.logger.Warn("cleanup apps failed", log.Err(err))
 		return
 	}
+
+	// do not cleanup modules namespace
+	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
 }
 
 // Status returns package status service for external access
