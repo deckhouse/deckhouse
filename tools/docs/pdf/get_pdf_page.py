@@ -251,6 +251,14 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
             margin-left: 0;
             margin-right: 0;
         }
+        /* OSS info page: constrain logo images to match website sizing */
+        .oss__item-logo,
+        .oss__item-logo img,
+        img.oss__item-logo {
+            height: 60px !important;
+            width: auto !important;
+            max-width: 100% !important;
+        }
         /* Блоки кода (Rouge/Jekyll): визуальное отделение от текста + перенос строк */
         pre,
         pre.highlight,
