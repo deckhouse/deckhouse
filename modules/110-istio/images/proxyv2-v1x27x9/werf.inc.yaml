@@ -4,7 +4,7 @@
 {{- $istioProxyCacheRev := "v1.27.9-3a854667d854d2d92f81b713431d17e830c94cc4-v1" }}
 {{- $istioProxyDepsRev := "v1.27.9-3a854667d854d2d92f81b713431d17e830c94cc4-v1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersion := "6.5.0" }}
+{{- $bazelVersion := "6.4.0" }}
 {{- $iptables_image_version := "1.8.9" | replace "." "-" }}
 ---
 # Based on https://github.com/istio/istio/blob/1.27.9/docker/Dockerfile.base
@@ -133,7 +133,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export TARGETARCH=amd64 ARCH="x86_64"
-  - export BAZEL_VERSION="6.5.0" USE_BAZEL_VERSION="6.5.0"
+  - export BAZEL_VERSION="6.4.0" USE_BAZEL_VERSION="6.4.0"
   - cd /src/proxy
   - go mod download
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
