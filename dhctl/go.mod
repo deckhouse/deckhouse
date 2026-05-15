@@ -34,7 +34,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/mitchellh/copystructure v1.2.0
-	github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9
+	github.com/mwitkow/grpc-proxy v0.0.0-20250813121105-2866842de9a5
 	github.com/name212/govalue v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0

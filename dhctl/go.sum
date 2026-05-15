@@ -436,6 +436,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9 h1:62uLwA3l2JMH84liO4ZhnjTH5PjFyCYxbHLgXPaJMtI=
 github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9/go.mod h1:MvMXoufZAtqExNexqi4cjrNYE9MefKddKylxjS+//n0=
+github.com/mwitkow/grpc-proxy v0.0.0-20250813121105-2866842de9a5 h1:lfn6/BOFpIfsiZzud6wi0Gi5iVZiwyUqVHgQJZZq46M=
+github.com/mwitkow/grpc-proxy v0.0.0-20250813121105-2866842de9a5/go.mod h1:xQkv7+tlyB565yH6OiKQ7Ylr7mgHdmkMlIDyJqN6x5U=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J1GEMiLbxo1LJaP8RfCpH6pymGZus=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
 github.com/name212/govalue v1.1.0 h1:kSdUVs21cM5bFp7RW5sWPrwQ0RzC/Xhk3f+A+dUL6TM=
