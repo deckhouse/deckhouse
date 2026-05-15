@@ -2915,7 +2915,7 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..0405f7e4049
+index 00000000000..69997df625c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 @@ -0,0 +1,153 @@
@@ -3074,10 +3074,10 @@ index 00000000000..0405f7e4049
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 new file mode 100644
-index 00000000000..b68ac38e2eb
+index 00000000000..f1b97733b8d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
-@@ -0,0 +1,512 @@
+@@ -0,0 +1,505 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3201,7 +3201,6 @@ index 00000000000..b68ac38e2eb
 +	}
 +}
 +
-+
 +func TestSensitiveSSAMiddleware_PassthroughForNonSSA(t *testing.T) {
 +	var innerCalled bool
 +	var innerBody []byte
@@ -3225,7 +3224,6 @@ index 00000000000..b68ac38e2eb
 +		t.Errorf("body modified for non-SSA: got %q, want %q", innerBody, body)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_ScalarSensitive_YAML(t *testing.T) {
 +	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
@@ -3255,7 +3253,6 @@ index 00000000000..b68ac38e2eb
 +		t.Errorf("inner body = %v, want %v", got, want)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_ObjectSensitive_YAML(t *testing.T) {
 +	schemaSpec := &structuralschema.Structural{
@@ -3348,7 +3345,6 @@ index 00000000000..b68ac38e2eb
 +	}
 +}
 +
-+
 +func TestSensitiveSSAMiddleware_ScalarSensitive_CBOR(t *testing.T) {
 +	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
 +		"spec": map[string]interface{}{"password": "real-pass"},
@@ -3406,7 +3402,6 @@ index 00000000000..b68ac38e2eb
 +	}
 +}
 +
-+
 +func TestSensitiveSSAMiddleware_CreateNoOmitted(t *testing.T) {
 +	getter := &fakeGetter{err: apierrors.NewNotFound(runtimeschema.GroupResource{}, "primary")}
 +
@@ -3450,7 +3445,6 @@ index 00000000000..b68ac38e2eb
 +		t.Errorf("expected 422, got %d: %s", rec.Code, rec.Body.String())
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_GetError_NonNotFound(t *testing.T) {
 +	getter := &fakeGetter{err: fmt.Errorf("timeout")}
@@ -3557,7 +3551,6 @@ index 00000000000..b68ac38e2eb
 +	}
 +}
 +
-+
 +func TestSensitiveSSAMiddleware_ContentLengthUpdated(t *testing.T) {
 +	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
 +		"spec": map[string]interface{}{"password": "a-much-longer-real-password"},
@@ -3592,7 +3585,7 @@ index 00000000000..b68ac38e2eb
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 new file mode 100644
-index 00000000000..914d28c2f38
+index 00000000000..1394310e406
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
 @@ -0,0 +1,128 @@
@@ -3801,10 +3794,10 @@ index df78ba77e61..56e0c94ca95 100644
  func (x *ValidationExtensions) toKubeOpenAPI(ret *spec.Schema) {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
 new file mode 100644
-index 00000000000..2af942b707c
+index 00000000000..46bdc797108
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive.go
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,320 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3829,7 +3822,6 @@ index 00000000000..2af942b707c
 +	"sort"
 +
 +	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
-+	"k8s.io/klog/v2"
 +)
 +
 +// MaskedValue is the replacement string used by MaskSensitiveFields.
@@ -4043,7 +4035,6 @@ index 00000000000..2af942b707c
 +		oldItems, _ := oldObj.([]interface{})
 +		var lookupOldByKey func(newItem interface{}) interface{}
 +		if s.XListType != nil && *s.XListType == "map" && len(s.XListMapKeys) > 0 {
-+			klog.Infof("[sensitive-listmap] key-matching: path=%s keys=%v newLen=%d oldLen=%d", path, s.XListMapKeys, len(x), len(oldItems))
 +			lookupOldByKey = makeListMapLookup(oldItems, s.XListMapKeys)
 +		}
 +
@@ -4129,10 +4120,10 @@ index 00000000000..2af942b707c
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
 new file mode 100644
-index 00000000000..c0dce69bcc7
+index 00000000000..f4deab0ef7a
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
-@@ -0,0 +1,1665 @@
+@@ -0,0 +1,1662 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5432,7 +5423,6 @@ index 00000000000..c0dce69bcc7
 +	}
 +}
 +
-+
 +func TestUnmaskSensitiveFromOld_ListMap_CompositeKeys(t *testing.T) {
 +	mapType := "map"
 +	schema := &structuralschema.Structural{
@@ -5651,7 +5641,6 @@ index 00000000000..c0dce69bcc7
 +	}
 +}
 +
-+
 +func TestUnmaskSensitiveFromOld_ListMap_WholeItemSensitive_IndexFallback(t *testing.T) {
 +	mapType := "map"
 +	schema := &structuralschema.Structural{
@@ -5707,7 +5696,6 @@ index 00000000000..c0dce69bcc7
 +		t.Errorf("result = %v, want %v", newObj, expected)
 +	}
 +}
-+
 +
 +func TestUnmaskSensitiveFromOld_ListMap_WholeArraySensitive(t *testing.T) {
 +	mapType := "map"
