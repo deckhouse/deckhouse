@@ -33,7 +33,6 @@ builder/debian-svace-trixie-slim: "sha256:efc4539ef4b04be27ff722d3182fc6b108fe9d
 builder/debian-trixie-slim: "sha256:cb1a802f2b79d201ed2a530c99b9fa0188187783c7c396ec40b9f458ab44d426" # from: debian:trixie-slim
 builder/golang-alpine-1.24: "sha256:fc2b5185de5be4b0a37a43579ff080e4d061a83f4028056603b7f87e94c6ca7d" # from: builder/alpine
 builder/golang-alpine-1.25: "sha256:379017641b538725a5c0a5ac3228e09f54ca823b84407f19908e04760c84a3a9" # from: builder/alpine
-builder/golang-alpine-1.26.2: "sha256:d93400cc2bdf2a155987de7618fb43e506ea172b6ad92a0d7abf02d72ba4bc7b" # from: alpine:3.22.2
 builder/golang-alpine: "sha256:379017641b538725a5c0a5ac3228e09f54ca823b84407f19908e04760c84a3a9" # from: builder/alpine
 builder/golang-alpine-svace-1.24: "sha256:4f456e3016bb66c97c4573e43336ad68a0bb1aedea731790aea80cc1332ef543" # from: builder/golang-alpine-1.24
 builder/golang-alpine-svace-1.25: "sha256:cd91fd78ad02651674a2aca9ecc3c09f94b49a656270167389b17b5c743e3f4e" # from: builder/golang-alpine-1.25
