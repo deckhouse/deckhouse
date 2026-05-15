@@ -56,7 +56,7 @@ CSI-драйвер `csi-nfs` состоит из следующих компон
 
       * [**livenessprobe**](https://github.com/kubernetes-csi/livenessprobe) — отслеживает состояние CSI-драйвера через RPC `Probe` из Identity Service и предоставляет HTTP-эндпоинт `/healthz`, за которым следит [kubelet](../../kubernetes-and-scheduling/kubelet.html). При неуспешной *livenessProbe* kubelet перезапускает под csi-controller.
 
-1. **Csi-node** (DaemonSet) — Node Plugin, работающий на всех узлах кластера и отвечающий за локальное монтирование и размонтирование томов.
+1. **Csi-node** (DaemonSet) — Node Plugin, работающий на узлах кластера с установленным лейблом `storage.deckhouse.io/csi-nfs-node` и отвечающий за локальное монтирование и размонтирование томов.
 
    > **Внимание.** У плагина есть привилегированный доступ к файловой системе каждого узла. В Linux для этого требуется capability `CAP_SYS_ADMIN`. Это необходимо для выполнения операций монтирования и работы с блочными устройствами.
 

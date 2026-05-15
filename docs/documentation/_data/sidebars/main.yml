@@ -1436,12 +1436,16 @@ entries:
               url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: Storage system modules
-                ru: Модули системы хранения
+                ru: Модули систем хранения
               folders:
                 - title:
                     en: Csi-nfs module
                     ru: Модуль csi-nfs
                   url: /architecture/storage/external/csi-nfs.html
+                - title:
+                    en: Csi-ceph module
+                    ru: Модуль csi-ceph
+                  url: /architecture/storage/external/csi-ceph.html
             - title:
                 en: CSI drivers
                 ru: CSI-драйверы
@@ -1450,6 +1454,10 @@ entries:
                     en: NFS CSI driver
                     ru: CSI-драйвер NFS
                   url: /architecture/storage/csi-drivers/csi-driver-nfs.html
+                - title:
+                    en: Ceph RBD CSI driver
+                    ru: CSI-драйвер Ceph RBD
+                  url: /architecture/storage/csi-drivers/csi-driver-ceph-rbd.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability

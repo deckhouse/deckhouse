@@ -1,11 +1,11 @@
 ---
-title: NFS CSI driver
-permalink: en/architecture/storage/csi-drivers/csi-driver-nfs.html
-search: csi-nfs, nfs
-description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Kubernetes Platform.
+title: Ceph RBD CSI driver
+permalink: en/architecture/storage/csi-drivers/csi-driver-ceph-rbd.html
+search: csi-ceph, ceph, rbd, rados block device
+description: Architecture of the CSI driver for Ceph RBD volumes in Deckhouse Kubernetes Platform.
 ---
 
-The CSI driver `csi-nfs` is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage NFS-based volumes in Deckhouse Kubernetes Platform (DKP).
+The `csi-rbd` CSI driver is an implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage Ceph [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) volumes in Deckhouse Kubernetes Platform (DKP).
 
 ## Driver architecture
 
@@ -16,32 +16,28 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the `csi-nfs` CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the `csi-rbd` CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Architecture of the csi-nfs CSI driver](../../../images/architecture/storage/c4-l2-csi-driver-nfs.png)
+![Architecture of the csi-rbd CSI driver](../../../images/architecture/storage/c4-l2-csi-ceph-rbd-driver.png)
 
 ## Driver components
 
-The `csi-nfs` CSI driver consists of the following components:
+The `csi-rbd` CSI driver consists of the following components:
 
 1. **Csi-controller** (Deployment): Controller Plugin responsible for global volume operations such as creating and deleting volumes, attaching and detaching volumes from nodes, and managing snapshots.
 
    It consists of the following containers:
 
-   * **wait-rpcbind**: Init-container. It waits for when the Unix socket of the `rpcbind` service is ready and accepts connections.
+   * **controller**: Main container that performs background tasks for managing Kubernetes resources related to Ceph.
 
-   * **ktls-enabler**: Init-container. It loads and checks Linux kernel modules on the node for RPC-with-TLS support.
-
-   * **net-handshake-checker**: Init-container. It runs [`tlshd`](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
-
-   * **controller**: Main container implementing CSI driver functionality (capabilities) through the gRPC services Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
+   * **rbdplugin**: Sidecar container exposes the CSI endpoint over a Unix socket, implements Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface). It interacts with the Ceph cluster for RBD volumes.
 
    * **controller sidecar containers**: Kubernetes community-maintained external controllers.
 
-     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI driver functions in the controller container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
+     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI RPC methods exposed by the `rbdplugin` container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
 
-     External controllers communicate with the controller container over gRPC via Unix sockets.
+     External controllers communicate with the `rbdplugin` container over gRPC via Unix sockets.
 
      Csi-controller includes the following external controllers:
 
@@ -55,23 +51,15 @@ The `csi-nfs` CSI driver consists of the following components:
 
      * [**Livenessprobe**](https://github.com/kubernetes-csi/livenessprobe): Monitors the health of the CSI driver through the `Probe` RPC from the Identity Service and exposes the HTTP endpoint `/healthz`, which is checked by [kubelet](../../kubernetes-and-scheduling/kubelet.html). If *livenessProbe* fails, kubelet restarts the csi-controller pod.
 
-1. **Csi-node** (DaemonSet): Node Plugin running on cluster nodes labeled with `storage.deckhouse.io/csi-nfs-node` and responsible for local volume mount and unmount operations.
+1. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
    > **Warning.** The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
 
    It consists of the following containers:
 
-   * **wait-rpcbind**: Init-container. It waits for when the Unix socket of the `rpcbind` service is ready and accepts connections.
-
-   * **ktls-enabler**: Init-container. It loads and checks Linux kernel modules on the node for RPC-with-TLS support.
-
-   * **net-handshake-checker**: Init-container. It runs [`tlshd`](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
-
    * **node**: Main container implementing CSI driver functionality through the gRPC services Identity Service and Node Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
 
-   * **tlshd**: Sidecar container that provides an RPC-with-TLS connection.
-
-   * **node-driver-registrar**: Sidecar container that registers the Node Plugin with [kubelet](../../kubernetes-and-scheduling/kubelet.html). It calls the RPC methods `GetPluginInfo` and `NodeGetInfo` in the node container to retrieve plugin and node information. Communication with the node container occurs over gRPC via a Unix socket.
+   * **node-driver-registrar**: Sidecar container that registers the Node Plugin with [kubelet](../../kubernetes-and-scheduling/kubelet.html). It calls the RPC methods `GetPluginInfo` and `NodeGetInfo` in the node container to retrieve plugin and node information. Communication with the **node** container occurs over gRPC via a Unix socket.
 
 ## Driver interactions
 
@@ -79,10 +67,7 @@ The driver interacts with the following components:
 
 1. **Kube-apiserver**: Monitors PersistentVolumeClaim, VolumeAttachment, and VolumeSnapshotContent resources.
 
-1. **NFS storage**:
-
-   * Attaches and detaches NFS-based volumes from nodes.
-   * Manages snapshots.
+1. **Ceph cluster**: Creates and deletes volumes, attaches and detaches volumes from nodes, and manages snapshots.
 
 The following external components interact with the driver:
 
