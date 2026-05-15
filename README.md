@@ -24,7 +24,7 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Kubernetes Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30._
+*Deckhouse Kubernetes Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30.*
 
 ## Platform features across layers
 
@@ -57,6 +57,8 @@ If anything works in an unexpected manner or you have any questions, feel free t
 
 In addition to common GitHub features, here are some other online resources related to Deckhouse Kubernetes Platform:
 
-* [Twitter](https://twitter.com/deckhouseio) to stay informed about everything happening around Deckhouse Kubernetes Platform;
-* [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
-* [Deckhouse Kubernetes Platform blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse Kubernetes Platform.
+- [Twitter](https://twitter.com/deckhouseio) to stay informed about everything happening around Deckhouse Kubernetes Platform;
+- [Telegram chat](https://t.me/deckhouse) to discuss (there's a dedicated [Telegram chat in Russian](https://t.me/deckhouse_ru) as well);
+- [Deckhouse Kubernetes Platform blog](https://blog.deckhouse.io/) to read the latest articles about Deckhouse Kubernetes Platform.
+
+d
