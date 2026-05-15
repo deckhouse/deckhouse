@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "vex-base-terraform-manager-opentofu",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-53859"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cli/go-gh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2024-53859 связана с небезопасной обработкой переменных окружения в go-gh CLI. opentofu использует go-gh как транзитивную зависимость v1, обновление до v2
+невозможно без изменения кода, уязвимый функционал CLI не используется в opentofu",
+      "timestamp": "2026-05-15T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-05-15T12:00:00Z"
+}
