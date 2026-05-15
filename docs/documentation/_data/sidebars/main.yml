@@ -1230,6 +1230,10 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /architecture/kubernetes-and-scheduling/vpa.html
+            - title:
+                en: Vertical-pod-autoscaler module
+                ru: Модуль vertical-pod-autoscaler
+              url: /architecture/kubernetes-and-scheduling/vertical-pod-autoscaler.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
