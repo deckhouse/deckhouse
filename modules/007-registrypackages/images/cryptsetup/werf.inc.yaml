@@ -56,4 +56,4 @@ shell:
   - find . -type f -name "*.la" -exec rm -f \{} \;
   - find . -type f -name "*.a" -exec rm -f \{} \;
   - find . -type f -name "*.pc" -exec rm -f \{} \;
-  - chown -R 64535:64535 /opt/deckhouse
+  - chown -R 0:0 /opt/deckhouse
