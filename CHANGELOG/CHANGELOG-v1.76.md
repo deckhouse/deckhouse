@@ -182,6 +182,8 @@
  - **[dhctl]** Refactored preflight checks. [#17564](https://github.com/deckhouse/deckhouse/pull/17564)
  - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19505](https://github.com/deckhouse/deckhouse/pull/19505)
  - **[docs]** Updated the `d8 cni-migration` commands in the CNI migration guide to `d8 network cni-migration`. [#18547](https://github.com/deckhouse/deckhouse/pull/18547)
+ - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19846](https://github.com/deckhouse/deckhouse/pull/19846)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Added validating x-forwarded-port and x-forwarded-proto headers when redirecting from www. [#19081](https://github.com/deckhouse/deckhouse/pull/19081)
     All Ingress-NGINX controller pods of 1.12 and 1.14 will be restarted.
  - **[ingress-nginx]** Initial ingress store sync is  fixed. [#19031](https://github.com/deckhouse/deckhouse/pull/19031)
@@ -221,6 +223,7 @@
  - **[upmeter]** checks for Observability module in Upmeter + fix Grafana v10 [#18111](https://github.com/deckhouse/deckhouse/pull/18111)
  - **[user-authn]** Add "cache" get parameter to prevent stale caches from breaking login page [#18976](https://github.com/deckhouse/deckhouse/pull/18976)
  - **[user-authn]** Disable implicit flow due to security concerns. [#18288](https://github.com/deckhouse/deckhouse/pull/18288)
+ - **[user-authz]** Extend cluster-admin clusterrole  with kubelet-api-admin rights. [#19878](https://github.com/deckhouse/deckhouse/pull/19878)
  - **[user-authz]** Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules [#18689](https://github.com/deckhouse/deckhouse/pull/18689)
 
 ## Chore
