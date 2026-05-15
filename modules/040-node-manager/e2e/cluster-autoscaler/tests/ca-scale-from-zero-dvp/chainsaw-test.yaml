@@ -14,6 +14,23 @@ spec:
         - description: Assert DVPInstanceClass worker resource exists
           assert:
             file: asserts/assert-dvp-instanceclass.yaml
+      cleanup:
+        - description: Wait until all test nodes are removed (runs last in cleanup chain)
+          script:
+            timeout: 15m
+            content: |
+              set -eu
+              for i in $(seq 1 90); do
+                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then
+                  exit 0
+                fi
+                sleep 10
+              done
+              echo "Timed out waiting for test nodes removal"
+              exit 1
+            check:
+              ($error == null): true
 
     - name: cleanup-leftover-resources
       try:
@@ -133,9 +150,9 @@ spec:
 
     - name: apply-deployment
       try:
-        - description: Apply shared Deployment manifest
+        - description: Apply Deployment (tolerates only worker-100 taint)
           apply:
-            file: ../common/manifests/deployment.yaml
+            file: ../common/manifests/deployment-scale-from-zero.yaml
       cleanup:
         - description: Delete e2e-nginx Deployment
           delete:
@@ -143,19 +160,6 @@ spec:
               apiVersion: apps/v1
               kind: Deployment
               name: e2e-nginx
-        - description: Wait for test nodes to be removed from the cluster
-          script:
-            timeout: 1200s
-            content: |
-              set -eu
-              for i in $(seq 1 120); do
-                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
-                if [ "$NODES" -eq 0 ]; then
-                  exit 0
-                fi
-                sleep 10
-              done
-              echo "WARNING: Timed out waiting for test nodes removal"
 
     - name: wait-for-deckhouse-processing
       try:
