@@ -328,3 +328,16 @@ properties:
             > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public keys. At the same time, the traffic between control-plane components is still encrypted at the application layer.
 
           > Note! When this mode is active, `NodePort` and `HostPort` are not available from the `PodNetwork`.
+  nodePortAddresses:
+    type: array
+    items:
+      type: string
+      format: cidr
+    example:
+      - 192.168.1.100/32
+      - 10.0.0.0/8
+      - 192.168.1.0/24
+    description: |
+      List of CIDRs that restrict which node IP addresses are used for Cilium BPF NodePort listeners.
+
+      Only addresses assigned to selected network devices and matching one of the configured CIDRs will be exposed as NodePort frontends.

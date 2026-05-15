@@ -121,6 +121,7 @@ resourcesManagement:
     memory:
       min: "256Mi"
       max: "2Gi"
+nodePortAddresses: ["192.168.1.0/24", "10.10.10.0/24"]
 `
 )
 
@@ -198,6 +199,13 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
 			f.HelmRender()
+		})
+
+		It("Renders ConfigMap cilium-config with expected keys", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+
+			Expect(cm.Field("data.nodeport-addresses").String()).To(Equal("192.168.1.0/24,10.10.10.0/24"))
 		})
 
 		It("Everything must render properly", func() {
