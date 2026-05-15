@@ -11,6 +11,8 @@ positive:
     createNodeRoutes: false
     svcSourceRangeCheck: false
     policyAuditMode: false
+    hostFirewallEnabled: false
+  - hostFirewallEnabled: true
   - resourcesManagement:
       mode: "VPA"
       vpa:

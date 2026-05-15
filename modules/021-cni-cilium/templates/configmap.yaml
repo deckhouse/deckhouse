@@ -98,7 +98,7 @@ data:
 
   ipv4-native-routing-cidr: {{ .Values.global.discovery.podSubnet }}
 
-  enable-host-firewall: "true"
+  enable-host-firewall: {{ .Values.cniCilium.hostFirewallEnabled | quote }}
 
   kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
