@@ -8,10 +8,10 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   folderID: {{ .Values.nodeManager.internal.cloudProvider.yandex.folderID | quote }}
-  {{- if and (hasKey .Values "cloudProviderYandex") (hasKey .Values.cloudProviderYandex "internal") (hasKey .Values.cloudProviderYandex.internal "controlPlaneEndpoint") }}
+  {{- if and (hasKey .Values.nodeManager.internal.cloudProvider.yandex "controlPlaneEndpoint") .Values.nodeManager.internal.cloudProvider.yandex.controlPlaneEndpoint.host .Values.nodeManager.internal.cloudProvider.yandex.controlPlaneEndpoint.port }}
   controlPlaneEndpoint:
-    host: {{ .Values.cloudProviderYandex.internal.controlPlaneEndpoint.host | quote }}
-    port: {{ .Values.cloudProviderYandex.internal.controlPlaneEndpoint.port }}
+    host: {{ .Values.nodeManager.internal.cloudProvider.yandex.controlPlaneEndpoint.host | quote }}
+    port: {{ .Values.nodeManager.internal.cloudProvider.yandex.controlPlaneEndpoint.port }}
   {{- end }}
   loadBalancer:
     type: "ALB"
