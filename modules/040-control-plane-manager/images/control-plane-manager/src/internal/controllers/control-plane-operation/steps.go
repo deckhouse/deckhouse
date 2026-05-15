@@ -176,7 +176,7 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 	if !needsJoin {
 		logger.Info("etcd already in cluster, syncing manifest to desired state")
 		annotations := buildSyncManifestAnnotations(op)
-		results, err := syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations)
+		results, err := syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations, env.Node)
 		if err != nil {
 			logger.Error("failed to sync manifests for joined etcd member", log.Err(err))
 			return StepResult{}, err
@@ -207,7 +207,7 @@ func (c *syncManifestsStep) Execute(_ context.Context, env *StepEnv, logger *log
 	)
 
 	if annotations.ConfigChecksum != "" {
-		results, err = syncFullManifest(component, env.Secrets.CPMData, annotations)
+		results, err = syncFullManifest(component, env.Secrets.CPMData, annotations, env.Node)
 	} else {
 		results, err = syncAnnotationsOnly(component, annotations)
 	}
@@ -225,13 +225,13 @@ func (c *syncManifestsStep) Execute(_ context.Context, env *StepEnv, logger *log
 
 // syncFullManifest writes the static pod manifest plus extra files, and removes stale extras.
 // Used by syncManifestsStep and joinEtcdClusterStep (post-join sync).
-func syncFullManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations) ([]fileWriteResult, error) {
+func syncFullManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, node NodeIdentity) ([]fileWriteResult, error) {
 	extraResults, err := writeExtraFilesIfChanged(component, secretData, constants.ExtraFilesPath)
 	if err != nil {
 		return nil, fmt.Errorf("write extra-files: %w", err)
 	}
 
-	manifestResult, err := writeStaticPodManifestIfChanged(component, secretData, annotations, constants.ManifestsPath)
+	manifestResult, err := writeStaticPodManifestIfChanged(component, secretData, annotations, constants.ManifestsPath, node)
 	if err != nil {
 		return nil, fmt.Errorf("write manifest: %w", err)
 	}
