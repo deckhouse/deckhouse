@@ -284,7 +284,7 @@ spec:
 Для получения Prometheus-метрик используйте PromQL-запрос `falcosecurity_falcosidekick_falco_events_total{}`:
 
 ```shell
-d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+d8 k -n d8-monitoring --as system:sudouser exec -it prometheus-main-0 prometheus -- \
   curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" | jq
 ```
 
@@ -344,7 +344,7 @@ d8 k run falco-event-generator --image=falcosecurity/event-generator run
 1. Проверьте метрику события:
 
    ```shell
-   d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+   d8 k -n d8-monitoring --as system:sudouser exec -it prometheus-main-0 prometheus -- \
      curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" \
      | jq '.data.result.[] | select (.metric.priority_raw == "debug")'
    ```

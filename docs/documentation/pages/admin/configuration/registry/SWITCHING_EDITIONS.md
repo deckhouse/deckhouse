@@ -43,7 +43,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
 1. Ensure the Deckhouse queue is empty and error-free:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Example of the output (queues are empty):
@@ -82,7 +82,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    Once the pod is in `Running` state, execute the following commands:
 
    ```shell
-   NEW_EDITION_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   NEW_EDITION_MODULES=$(d8 k --as system:sudouser exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
@@ -104,7 +104,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    Wait for the Deckhouse pod to reach `Ready` state and ensure all tasks in the queue are completed:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Example of the output (queues are empty):
@@ -262,7 +262,7 @@ Removing this parameter will trigger a check for the presence of critical compon
 
    ```shell
    # Get the list of valid digest values from the images_digests.json file inside Deckhouse.
-   IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+   IMAGES_DIGESTS=$(d8 k -n d8-system --as system:sudouser exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Check for Pods using Deckhouse images from `registry.d8-system.svc:5001/system/deckhouse`
    # with a digest that is NOT present in the list of valid digest values (IMAGES_DIGESTS).
@@ -305,7 +305,7 @@ Removing this parameter will trigger a check for the presence of critical compon
 1. Ensure the Deckhouse queue is empty and error-free:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Example of the output (queues are empty):
@@ -390,7 +390,7 @@ Removing this parameter will trigger a check for the presence of critical compon
 1. Once the pod is in `Running` state, execute the following commands:
 
    ```shell
-   NEW_EDITION_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   NEW_EDITION_MODULES=$(d8 k --as system:sudouser exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
@@ -412,7 +412,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    Wait for the Deckhouse pod to reach `Ready` state and ensure all tasks in the queue are completed:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Example of the output (queues are empty):
@@ -431,13 +431,13 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```shell
    DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
    d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
+   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
    ```
 
    To switch to CE edition:
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
+   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:

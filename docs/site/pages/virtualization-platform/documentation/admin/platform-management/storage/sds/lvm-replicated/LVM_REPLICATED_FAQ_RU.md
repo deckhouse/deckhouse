@@ -38,7 +38,7 @@ lang: ru
 1. Через командный интерфейс:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list
    ```
 
    > **Внимание.** Значение отражает состояние всего доступного пространства. При создании томов с двумя репликами полученные цифры следует делить на два, чтобы оценить, сколько томов реально можно разместить.
@@ -82,7 +82,7 @@ lang: ru
 1. Убедитесь, что нет проблемных DRBD-ресурсов и ресурсов в состоянии `SyncTarget`. Чтобы проверить это, выполните следующую команду и проанализируйте вывод:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume exec -t deploy/linstor-controller -- linstor r l --faulty
+   d8 k -n d8-sds-replicated-volume --as system:sudouser exec -t deploy/linstor-controller -- linstor r l --faulty
    ```
 
    Если ресурсы в состоянии `SyncTarget` присутствуют, дождитесь завершения синхронизации или выполните корректирующие действия.
@@ -111,37 +111,37 @@ lang: ru
 1. Просмотрите список Storage Pool на исходном узле, чтобы определить, в каком из них недостаточно свободного места:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
    ```
 
 1. Определите, какие тома находятся в переполненном Storage Pool, чтобы понять, какие из них можно перенести:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
    ```
 
 1. Получите список ресурсов, к которым относятся эти тома, чтобы далее можно было инициировать их перенос:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
    ```
 
 1. Создайте копии выбранных ресурсов на другом узле (не более 1–2 ресурсов одновременно):
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
    ```
 
 1. Дождитесь завершения синхронизации ресурсов между узлами, чтобы убедиться в корректности переноса:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
    ```
 
 1. Удалите ресурсы с исходного узла, чтобы освободить место в переполненном Storage Pool:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
    ```
 
 ## Автоматизированное управление репликами и мониторинг состояния LINSTOR
@@ -195,7 +195,7 @@ lang: ru
 2. Исправьте ошибочные ресурсы:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor resource list --faulty
+   d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor resource list --faulty
    ```
 
 3. Проверьте, что все поды в пространстве имён `d8-sds-replicated-volume` находятся в состоянии `Running`:
@@ -239,7 +239,7 @@ lang: ru
 Чтобы вновь разрешить размещение ресурсов, выполните:
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor node set-property "worker-1" AutoplaceTarget
 d8 k uncordon "worker-1"
 ```
@@ -247,7 +247,7 @@ d8 k uncordon "worker-1"
 Проверьте параметр `AutoplaceTarget` у всех узлов (поле `AutoplaceTarget` будет пустым у тех узлов, на которых разрешено размещать ресурсы LINSTOR):
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
 
@@ -309,7 +309,7 @@ for exclusive open failed: wrong medium type, check device health
 Проверьте, где используется устройство, с помощью следующей команды:
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
@@ -346,7 +346,7 @@ dmesg | grep 'Remote failed to finish a request within'
 Операции, которые требуют ручного вмешательства, в модуле `sds-replicated-volume` частично или полностью автоматизированы. Поэтому модуль `sds-replicated-volume` ограничивает список разрешенных команд в LINSTOR. Например, автоматизировано создание Tie-Breaker, —  сам LINSTOR иногда их не создает для ресурсов с двумя репликами. Чтобы посмотреть список разрешённых команд, выполните:
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor --help
 ```
 
@@ -525,7 +525,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 1. Убедитесь, что в бэкенде отсутствуют неисправные ресурсы. Команда должна выводить пустой список:
 
    ```shell
-   alias linstor='d8 k -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-linstor --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -601,7 +601,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 1. Измените алиас к команде `linstor` и проверьте ресурсы:
 
    ```shell
-   alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -647,7 +647,7 @@ StorageClass в данном модуле управляются через ре
 1. Убедитесь, что в кластере отсутствуют неисправные DRBD-ресурсы. Команда должна выводить пустой список:
 
    ```shell
-   alias linstor='d8 k -n d8-sds-drbd exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-drbd --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -702,7 +702,7 @@ StorageClass в данном модуле управляются через ре
 1. Измените алиас к команде `linstor` и проверьте ресурсы DRBD:
 
    ```shell
-   alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 

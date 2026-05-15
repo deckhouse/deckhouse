@@ -49,7 +49,7 @@ Deckhouse uses the [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster
 To modify the configuration in a running cluster, execute:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 After changing node parameters, run the command:

@@ -37,7 +37,7 @@ There are two ways to obtain this information:
 1. Via the command line:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list
    ```
 
    > **Warning.** The value reflects the state of all available space. When you create volumes with two replicas, divide the reported figures by two to estimate how many volumes can actually be placed.
@@ -82,7 +82,7 @@ To ensure stable module operation, avoid rebooting multiple nodes at the same ti
 1. Make sure there are no faulty DRBD resources or resources in the `SyncTarget` state. To check this, run the following command and analyze the output:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume exec -t deploy/linstor-controller -- linstor r l --faulty
+   d8 k -n d8-sds-replicated-volume --as system:sudouser exec -t deploy/linstor-controller -- linstor r l --faulty
    ```
 
    If any resources are in the `SyncTarget` state, wait for the synchronization to complete or take corrective actions.
@@ -111,37 +111,37 @@ If you need to reboot another node, repeat the procedure.
 1. List the Storage Pools on the source node to identify which one is running low on free space:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
    ```
 
 1. Determine which volumes are located in the overloaded Storage Pool to identify potential candidates for migration:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
    ```
 
 1. Get the list of resources that own these volumes so that you can proceed with moving them:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
    ```
 
 1. Create copies of the selected resources on another node (no more than 1–2 at a time):
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
    ```
 
 1. Wait for the resource synchronization to complete to ensure the data has been replicated properly:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
    ```
 
 1. Remove the resource from the source node to free up space in the overloaded Storage Pool:
 
    ```shell
-   d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
+   d8 k --as system:sudouser exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
    ```
 
 ## Automatic management of replicas and monitoring of LINSTOR state
@@ -195,7 +195,7 @@ Before eviction:
 1. Fix faulty resources:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor resource list --faulty
+   d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor resource list --faulty
    ```
 
 1. Ensure all pods in the `d8-sds-replicated-volume` namespace are in the `Running` state:
@@ -239,7 +239,7 @@ After the script completes, the node remains in `SchedulingDisabled` status and 
 To allow resource placement again, run:
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor node set-property "worker-1" AutoplaceTarget
 d8 k uncordon "worker-1"
 ```
@@ -247,7 +247,7 @@ d8 k uncordon "worker-1"
 Check the `AutoplaceTarget` parameter on all nodes (the field will be empty on nodes where LINSTOR resource placement is allowed):
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
 
@@ -309,7 +309,7 @@ for exclusive open failed: wrong medium type, check device health
 Check where the device is in use:
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
 
@@ -346,7 +346,7 @@ For temporary external issues (for example, when `kube‑apiserver` is unavailab
 Operations requiring manual intervention are partially or fully automated in the `sds-replicated-volume` module. Therefore, the module restricts the list of allowed LINSTOR commands. For example, creating a Tie‑Breaker is automated because LINSTOR sometimes does not create one for two‑replica resources. To see the list of allowed commands, run:
 
 ```shell
-alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
 linstor --help
 ```
 
@@ -526,7 +526,7 @@ User data is not affected because the migration moves to a new namespace and add
 1. Ensure no faulty resources exist in the backend. The command should return an empty list:
 
    ```shell
-   alias linstor='d8 k -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-linstor --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -602,7 +602,7 @@ User data is not affected because the migration moves to a new namespace and add
 1. Update the `linstor` alias and check resources:
 
    ```shell
-   alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -648,7 +648,7 @@ The migration will not affect user data, as it is performed in a new namespace a
 1. Make sure there are no faulty DRBD resources in the cluster. The command should return an empty list:
 
    ```shell
-   alias linstor='d8 k -n d8-sds-drbd exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-drbd --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 
@@ -703,7 +703,7 @@ The migration will not affect user data, as it is performed in a new namespace a
 1. Update the `linstor` alias and check DRBD resources:
 
    ```shell
-   alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
+   alias linstor='d8 k -n d8-sds-replicated-volume --as system:sudouser exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
 

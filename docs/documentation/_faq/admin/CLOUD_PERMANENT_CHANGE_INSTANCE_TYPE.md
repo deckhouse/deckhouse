@@ -88,7 +88,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
 
    ```bash
    for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     d8 k -n kube-system --as system:sudouser exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
      --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
      --endpoints https://127.0.0.1:2379/ member list -w table
      if [ $? -eq 0 ]; then

@@ -141,7 +141,7 @@ ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true    
 
 ```shell
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
-  | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
+  | awk '{print "echo "$2"; kubectl -n d8-csi-ceph --as system:sudouser exec  "$1" -c node -- rbd showmapped"}' | bash
 
 ```
 

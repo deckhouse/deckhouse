@@ -82,9 +82,9 @@ lang: ru
 1. Отключите модуль `cni-simple-bridge` или `cni-flannel`. Выполняйте шаг после того, как поды Cilium перешли в состояние `Ready`:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
    # или
-   d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
    ```
 
 1. Удалите `validating webhook` (если присутствует):

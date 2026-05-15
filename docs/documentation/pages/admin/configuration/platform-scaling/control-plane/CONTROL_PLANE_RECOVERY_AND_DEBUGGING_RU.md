@@ -61,7 +61,7 @@ lang: ru
 
 ```shell
 for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  d8 k -n kube-system --as system:sudouser exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
   --endpoints https://127.0.0.1:2379/ member list -w table
   if [ $? -eq 0 ]; then
@@ -80,7 +80,7 @@ done
 
 ```shell
 for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  d8 k -n kube-system --as system:sudouser exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
   --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
   if [ $? -eq 0 ]; then
@@ -148,7 +148,7 @@ done
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится read-only. Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+d8 k -n kube-system --as system:sudouser exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -160,7 +160,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+   d8 k -n kube-system --as system:sudouser exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
@@ -177,7 +177,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 Для просмотра размера БД etcd на определенном узле перед дефрагментацией и после ее выполнения используйте команду (здесь `NODE_NAME` — имя master-узла):
 
 ```bash
-d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+d8 k -n kube-system --as system:sudouser exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
   --cert=/etc/kubernetes/pki/etcd/server.crt \
   --key=/etc/kubernetes/pki/etcd/server.key \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -208,7 +208,7 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 Чтобы выполнить дефрагментацию etcd в кластере с одним master-узлом, используйте следующую команду (здесь `NODE_NAME` — имя master-узла):
 
 ```bash
-d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+d8 k -n kube-system --as system:sudouser exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
   --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt \
   --key /etc/kubernetes/pki/etcd/ca.key \
@@ -245,7 +245,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 1. Определите master-узел — лидер. Для этого обратитесь к любому поду etcd и получите список узлов — участников кластера etcd с помощью команды (где `NODE_NAME` — имя master-узла):
 
    ```bash
-   d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+   d8 k -n kube-system --as system:sudouser exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
      --cert=/etc/kubernetes/pki/etcd/server.crt \
      --key=/etc/kubernetes/pki/etcd/server.key \
      --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -273,7 +273,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    > Восстановление etcd на узле после дефрагментации может занять некоторое время. Рекомендуется подождать не менее минуты прежде чем переходить к дефрагментации etcd следующего узла.
 
    ```bash
-   d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+   d8 k -n kube-system --as system:sudouser exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
      --cacert /etc/kubernetes/pki/etcd/ca.crt \
      --cert /etc/kubernetes/pki/etcd/ca.crt \
      --key /etc/kubernetes/pki/etcd/ca.key \

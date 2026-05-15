@@ -65,5 +65,5 @@ Good luck!
 
 The user `admin` password for Grafana can also be found by running the command:
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
+kubectl -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 ```

@@ -83,7 +83,7 @@ spec:
 1. Зайдите в нужный под:
 
    ```shell
-   d8 k -n d8-keepalived exec -it keepalived-<name> -- sh
+   d8 k -n d8-keepalived --as system:sudouser exec -it keepalived-<name> -- sh
    ```
 
 1. Отредактируйте файл `vi /etc/keepalived/keepalived.conf`, где в строке с параметром `priority` замените значение на число подов keepalived + 1.
