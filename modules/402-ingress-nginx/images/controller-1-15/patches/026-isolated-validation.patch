@@ -2,14 +2,13 @@ diff --git a/internal/ingress/controller/controller.go b/internal/ingress/contro
 index 42b4a25d3..41780e0d9 100644
 --- a/internal/ingress/controller/controller.go
 +++ b/internal/ingress/controller/controller.go
-@@ -390,6 +390,10 @@ type Configuration struct {
+@@ -390,6 +390,9 @@ type Configuration struct {
  	DisableSyncEvents bool
  
  	EnableTopologyAwareRouting bool
 +
 +	ValidationIsolationMode string
 +
-+	KubeDNSIP string
  }
  
  func getIngressPodZone(svc *apiv1.Service) string {
@@ -42,7 +41,7 @@ index d05307838..ddf8eb31b 100644
  		metricCollector: mc,
  
 -		command: NewNginxCommand(),
-+		command: NewNginxCommand(config.ValidationIsolationMode, config.KubeDNSIP),
++		command: NewNginxCommand(config.ValidationIsolationMode),
  	}
  
  	if n.cfg.ValidationWebhook != "" {
@@ -112,7 +111,7 @@ index 776440658..6f1b8f5b7 100644
  )
  
  // NginxExecTester defines the interface to execute
-@@ -112,14 +113,20 @@ type NginxExecTester interface {
+@@ -112,14 +113,18 @@ type NginxExecTester interface {
  
  // NginxCommand stores context around a given nginx executable path
  type NginxCommand struct {
@@ -120,19 +119,17 @@ index 776440658..6f1b8f5b7 100644
 +	Binary                  string
 +	SandboxBinary           string
 +	ValidationIsolationMode string
-+	KubeDNSIP               string
  }
  
  // NewNginxCommand returns a new NginxCommand from which path
  // has been detected from environment variable NGINX_BINARY or default
 -func NewNginxCommand() NginxCommand {
-+func NewNginxCommand(validationIsolationMode, kubeDNSIP string) NginxCommand {
++func NewNginxCommand(validationIsolationMode string) NginxCommand {
  	command := NginxCommand{
 -		Binary: defBinary,
-+		Binary:                  defBinary,
-+		SandboxBinary:           defSandboxBinary,
++		Binary:        defBinary,
++		SandboxBinary: defSandboxBinary,
 +		ValidationIsolationMode: validationIsolationMode,
-+		KubeDNSIP:               kubeDNSIP,
  	}
  
  	binary := os.Getenv("NGINX_BINARY")
@@ -145,7 +142,7 @@ index 776440658..6f1b8f5b7 100644
 +	cmdArgs := []string{"-c", cfg, "-t", "-e", "/dev/null"}
 +	switch nc.ValidationIsolationMode {
 +	case "IsolatedProcess":
-+		sandboxArgs := append([]string{"--allow-dns-to", fmt.Sprintf("%s:53", nc.KubeDNSIP), "--", "/usr/bin/unshare", "--map-current-user", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		sandboxArgs := append([]string{"--isolated-process", "--", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
 +		klog.InfoS("Running config test with process isolation", "dir", cfg)
 +		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
 +	case "IsolatedFilesystem":
@@ -162,20 +159,6 @@ diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
 index e8d7d7c1b..9fdf68bdd 100644
 --- a/pkg/flags/flags.go
 +++ b/pkg/flags/flags.go
-@@ -17,11 +17,13 @@ limitations under the License.
- package flags
- 
- import (
-+	"bufio"
- 	"errors"
- 	"flag"
- 	"fmt"
- 	"net"
- 	"os"
-+	"strings"
- 	"time"
- 
- 	"github.com/prometheus/client_golang/prometheus"
 @@ -39,6 +41,11 @@ import (
  	klog "k8s.io/klog/v2"
  )
@@ -188,7 +171,7 @@ index e8d7d7c1b..9fdf68bdd 100644
  // TODO: We should split the flags functions between common for all programs
  // and specific for each component (like webhook, controller and configurer)
  // ParseFlags generates a configuration for Ingress Controller based on the flags
-@@ -341,6 +348,16 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
+@@ -341,6 +348,11 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
  
  	ngx_config.EnableSSLChainCompletion = *enableSSLChainCompletion
  
@@ -197,57 +180,14 @@ index e8d7d7c1b..9fdf68bdd 100644
 +		isolationMode = noIsolationMode
 +	}
 +
-+	kubeDNSIP, kerr := getKubeDNSIP()
-+	if kerr != nil {
-+		return false, nil, kerr
-+	}
-+
  	config := &controller.Configuration{
  		APIServerHost:               *apiserverHost,
  		KubeConfigFile:              *kubeConfigFile,
-@@ -400,6 +417,8 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
+@@ -400,6 +417,7 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
  		ValidationWebhookKeyPath:  *validationWebhookKey,
  		InternalLoggerAddress:     *internalLoggerAddress,
  		DisableSyncEvents:         *disableSyncEvents,
 +		ValidationIsolationMode:   isolationMode,
-+		KubeDNSIP:                 kubeDNSIP,
  	}
  
  	if *apiserverHost != "" {
-@@ -431,3 +450,36 @@ func ResetForTesting(usage func()) {
- 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
- 	flag.Usage = usage
- }
-+
-+func getKubeDNSIP() (string, error) {
-+	file, err := os.Open("/etc/resolv.conf")
-+	if err != nil {
-+		return "", err
-+	}
-+
-+	defer file.Close()
-+	var kubeDNSIP string
-+
-+	scanner := bufio.NewScanner(file)
-+	for scanner.Scan() {
-+		line := scanner.Text()
-+		if strings.HasPrefix(strings.TrimSpace(line), "nameserver") {
-+			fields := strings.Fields(line)
-+			if len(fields) >= 2 {
-+				if ip := net.ParseIP(fields[1]); ip != nil {
-+					kubeDNSIP = fields[1]
-+				}
-+			}
-+		}
-+	}
-+
-+	if err := scanner.Err(); err != nil {
-+		return "", err
-+	}
-+
-+	if len(kubeDNSIP) == 0 {
-+		return "", fmt.Errorf("failed to get a valid kube dns ip")
-+	}
-+
-+	return kubeDNSIP, nil
-+}

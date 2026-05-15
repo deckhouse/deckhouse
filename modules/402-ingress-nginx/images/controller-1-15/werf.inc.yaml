@@ -991,6 +991,8 @@ git:
 shell:
   install:
   - /usr/bin/cp -alf /chroot/. /validation-chroot/
+  # Break the hardlink created by cp -alf so validation can exec an uncapped nginx copy.
+  - /usr/bin/cp --remove-destination /chroot/usr/local/nginx/sbin/nginx /validation-chroot/usr/local/nginx/sbin/nginx
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare

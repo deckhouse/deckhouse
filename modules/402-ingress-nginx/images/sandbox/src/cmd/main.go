@@ -20,7 +20,10 @@ import (
 	"context"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
+	"syscall"
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
 	"github.com/criyle/go-sandbox/pkg/forkexec"
@@ -29,6 +32,7 @@ import (
 	"github.com/criyle/go-sandbox/ptracer"
 	"github.com/criyle/go-sandbox/runner"
 	sbptrace "github.com/criyle/go-sandbox/runner/ptrace"
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -36,13 +40,10 @@ func main() {
 }
 
 func run(argv []string) int {
+	mode, argv := parseSandboxMode(argv)
 	debug := isDebug()
 	debugCrashOnDeny := isDebugCrashOnDeny()
-	dnsPolicy, argv, err := parseSandboxArgs(argv)
-	if err != nil {
-		log.Print(err)
-		return 1
-	}
+	argv = normalizeSandboxArgs(argv)
 	if len(argv) == 0 {
 		log.Print("not enough arguments after --")
 		return 1
@@ -55,28 +56,43 @@ func run(argv []string) int {
 	}
 
 	extraRead := getSandboxExtraRead(nginxConfigPath)
-
-	workDir, err := os.Getwd()
-	if err != nil {
-		log.Printf("failed get pwd: %v", err)
-		return 1
-	}
 	extraWrite := getSandboxExtraWrite()
-	// Wrapper chain (`/usr/bin/nginx` shell script -> `unshare` -> nginx binary) needs fork/exec syscalls.
+
+	workDir := ""
+	switch mode {
+	case sandboxModeIsolatedProcess:
+		return runIsolatedProcessHelper(argv)
+	case sandboxModeIsolatedProcessChild:
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
+		if err := setupIsolatedProcessChild(); err != nil {
+			log.Printf("failed to setup isolated process mode: %v", err)
+			return 1
+		}
+		workDir = "/"
+	default:
+		var err error
+		workDir, err = os.Getwd()
+		if err != nil {
+			log.Printf("failed get pwd: %v", err)
+			return 1
+		}
+	}
+
 	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
 	var traceHandler sbptrace.Handler = handler
 	if debug {
 		traceHandler = withDebugHandler(handler, debugCrashOnDeny)
 	}
 	allow = append(allow, sandboxExtraAllowSyscalls...)
-	trace = append(trace, sandboxExtraTraceSyscalls(dnsPolicy)...)
 
 	limit := runner.Limit{
 		TimeLimit:   sandboxCPUTimeLimit,
 		MemoryLimit: sandboxMemoryLimit,
 	}
 
-	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, dnsPolicy, limit, debug)
+	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, limit, debug)
 	if err != nil {
 		log.Printf("seccomp build (ptrace): %v", err)
 		return 1
@@ -113,7 +129,6 @@ func runWithPtrace(
 	args, allow, trace []string,
 	workDir string,
 	handler sbptrace.Handler,
-	dnsPolicy *sandboxDNSPolicy,
 	limit runner.Limit,
 	debug bool,
 ) (runner.Result, error) {
@@ -133,7 +148,7 @@ func runWithPtrace(
 
 		UnshareCgroupAfterSync: os.Getuid() == 0,
 	}
-	traceHandler := newSandboxTraceHandler(handler, dnsPolicy, debug)
+	traceHandler := newSandboxTraceHandler(handler, debug)
 	tracer := ptracer.Tracer{
 		Handler: traceHandler,
 		Runner:  r,
@@ -154,6 +169,85 @@ func buildFilter(allow, trace []string) (seccomp.Filter, error) {
 		// before converting it into a hard failure in the ptrace handler.
 		Default: sbseccomp.ActionTrace,
 	}).Build()
+}
+
+func normalizeSandboxArgs(argv []string) []string {
+	if len(argv) > 0 && argv[0] == "--" {
+		return argv[1:]
+	}
+	return argv
+}
+
+type sandboxMode uint8
+
+const (
+	sandboxModeDefault sandboxMode = iota
+	sandboxModeIsolatedProcess
+	sandboxModeIsolatedProcessChild
+)
+
+func parseSandboxMode(argv []string) (sandboxMode, []string) {
+	if len(argv) > 0 && argv[0] == "--isolated-process" {
+		return sandboxModeIsolatedProcess, argv[1:]
+	}
+	if len(argv) > 0 && argv[0] == "--isolated-process-child" {
+		return sandboxModeIsolatedProcessChild, argv[1:]
+	}
+
+	return sandboxModeDefault, argv
+}
+
+func runIsolatedProcessHelper(argv []string) int {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Printf("failed to resolve sandbox executable: %v", err)
+		return 1
+	}
+
+	cmd := newIsolatedProcessChildCmd(exe, argv, os.Getuid(), os.Getgid())
+	cmd.Env = os.Environ()
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitErr.ExitCode()
+		}
+		log.Printf("failed to run isolated process child: %v", err)
+		return 1
+	}
+
+	return 0
+}
+
+func newIsolatedProcessChildCmd(exe string, argv []string, uid, gid int) *exec.Cmd {
+	// The helper mode creates an exec boundary before entering user/net namespaces.
+	// Unsharing CLONE_NEWUSER from the already running Go sandbox process is unreliable
+	// because the runtime may already have multiple OS threads.
+	childArgs := append([]string{"--isolated-process-child", "--"}, argv...)
+	cmd := exec.Command(exe, childArgs...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags: syscall.CLONE_NEWUSER | syscall.CLONE_NEWNET,
+		UidMappings: []syscall.SysProcIDMap{{
+			ContainerID: uid,
+			HostID:      uid,
+			Size:        1,
+		}},
+		GidMappings: []syscall.SysProcIDMap{{
+			ContainerID: gid,
+			HostID:      gid,
+			Size:        1,
+		}},
+		GidMappingsEnableSetgroups: false,
+		// The child needs to enter /validation-chroot and keep low-port bind
+		// capability for the final nginx exec in the private network namespace.
+		AmbientCaps: []uintptr{
+			unix.CAP_NET_BIND_SERVICE,
+			unix.CAP_SYS_CHROOT,
+		},
+	}
+
+	return cmd
 }
 
 // getNginxConfByArg return parametr args of nginx, as sample for `-c` flag return path config
