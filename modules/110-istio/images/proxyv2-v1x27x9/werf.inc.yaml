@@ -137,7 +137,9 @@ shell:
   - cd /src/proxy
   - go mod download
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
-  - mkdir -p ${BAZEL_OUTPUT_BASE}/external
+  
+  - mkdir -pv ${BAZEL_OUTPUT_BASE}/external
+  - sed -n '100,130p' "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
   #- tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   #- rm -rf /tmp/bazel-deps
 
