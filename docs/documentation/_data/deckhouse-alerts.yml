@@ -1699,6 +1699,32 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceDataPlaneNotConnected
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The data-plane health check of {{$labels.alliance_kind}} `{{$labels.name}}` with uuid `{{$labels.remote_cluster_uuid}}` has been failing for more than 5 minutes.
+
+        This means that actual service mesh traffic between clusters is not flowing properly, even though the control plane metadata exchange may be working.
+
+        Possible causes:
+
+        - The remote cluster's `alliance-healthcheck` pod is not running.
+        - Istio sidecar injection is not working properly on the healthcheck pods.
+        - The ingress gateway between clusters is misconfigured or unreachable.
+        - mTLS or trust domain configuration issues between clusters.
+
+        To check the status:
+
+        ```bash
+        d8 k get {{$labels.alliance_kind}} {{$labels.name}} -o json | jq '.status.conditions[] | select(.type=="DataplaneConnectionReady")'
+        ```
+      summary: |
+        Data-plane connectivity check failed for {{$labels.alliance_kind}} {{$labels.name}}.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
       moduleUrl: 110-istio
