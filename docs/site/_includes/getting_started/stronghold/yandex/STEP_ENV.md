@@ -1,4 +1,4 @@
-{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+{%- include getting_started/stronghold/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 You need to create a Yandex Cloud service account with the editor role to manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available in the [documentation](/modules/cloud-provider-yandex/environment.html). Below, we will provide a brief overview of the necessary actions:
 

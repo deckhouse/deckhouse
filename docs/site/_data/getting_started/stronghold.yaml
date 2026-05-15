@@ -1,8 +1,6 @@
 global:
   revisions:
-    - be
-    - se
-    - se-plus
+    - ce
     - ee
   step1:
     name:
@@ -58,6 +56,7 @@ installTypes:
         template: getting_started/stronghold/global/STEP_FINISH.md
   vsphere:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
+    ce_only: true
     ee_only: true
     se_support: true
     type: cloud
@@ -149,7 +148,7 @@ installTypes:
         name:
           en: Installation information
           ru: Информация об установке
-        template: getting_started/stronghold/bm/STEP_INSTALL_SCHEMA.md
+        template: getting_started/stronghold/bm-private/STEP_INSTALL_SCHEMA.md
       step3:
         name:
           en: Preparing for installation

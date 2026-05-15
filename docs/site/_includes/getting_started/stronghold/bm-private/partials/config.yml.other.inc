@@ -22,8 +22,8 @@ clusterDomain: "cluster.local"
 # [<en>] The container runtime type that used on cluster nodes (NodeGroups) by default.
 # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
-# [<en>] Proxy server settings. In the exception list (noProxy parameter), also specify the comma-separated IP addresses of cluster nodes, container registry, or proxy server.
-# [<ru>] Настройки proxy-сервера. В списке исключений (параметр noProxy) также укажите IP-адреса узлов кластера, container registry или прокси-сервера, разделённые запятой.
+# [<en>] Proxy server settings. In the exception list (noProxy parameter), also specify the subnet of the cluster nodes.
+# [<ru>] Настройки proxy-сервера. В списке исключений (параметр noProxy) также укажите подсеть узлов кластера.
 proxy:
   httpProxy: <HTTP_PROXY_ADDRESS>
   httpsProxy: <HTTPS_PROXY_ADDRESS>
@@ -74,7 +74,7 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
