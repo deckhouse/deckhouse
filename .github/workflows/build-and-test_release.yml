@@ -2247,18 +2247,8 @@ jobs:
           password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           logout: false
       # </template: login_readonly_registry_step>
-      - name: Check tag
-        id: check-tag
-        uses: actions/github-script@v6.4.1
-        with:
-          result-encoding: string
-          script: |
-            const tag = context.ref.replace("refs/tags/", "");
-            const patchNumber = Number(tag.split(".")[2]);
-            return patchNumber >= 1;
       - name: List changed modules from latest released version
         id: list_changed_modules
-        if: ${{ steps.check-tag.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10

@@ -184,18 +184,8 @@ jobs:
           python-version: '3.12.3'
       {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 6 }!}
-      - name: Check tag
-        id: check-tag
-        uses: {!{ index (ds "actions") "actions/github-script" }!}
-        with:
-          result-encoding: string
-          script: |
-            const tag = context.ref.replace("refs/tags/", "");
-            const patchNumber = Number(tag.split(".")[2]);
-            return patchNumber >= 1;
       - name: List changed modules from latest released version
         id: list_changed_modules
-        if: ${{ steps.check-tag.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
