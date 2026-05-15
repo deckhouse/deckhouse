@@ -30,11 +30,14 @@ clusterIsBootstrapped: false
 enabledModules: ["vertical-pod-autoscaler-crd", "service-with-healthchecks"]
 `
 	goodModuleValuesA = `
-debug: true
+verboseStatus: true
+`
+	goodModuleValuesB = `
+verboseStatus: false
 `
 	desiredDaemonSetContainerSpecA = `
 - args:
-  - --debugging=true
+  - --verbose-status=true
   env:
   - name: NODE_NAME
     valueFrom:
@@ -136,7 +139,7 @@ debug: true
 var _ = Describe("Module :: serviceWithHealthchecks :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Good test A", func() {
+	Context("verboseStatus=true", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -144,12 +147,30 @@ var _ = Describe("Module :: serviceWithHealthchecks :: helm template ::", func()
 			f.HelmRender()
 		})
 
-		It("Everything must render properly", func() {
+		It("Everything must render properly with --verbose-status=true", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			ds := f.KubernetesResource("DaemonSet", "d8-service-with-healthchecks", "agent")
 			Expect(ds.Exists()).To(BeTrue())
 
 			Expect(ds.Field("spec.template.spec.containers").String()).To(MatchYAML(desiredDaemonSetContainerSpecA))
+		})
+	})
+
+	Context("verboseStatus=false", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("serviceWithHealthchecks", goodModuleValuesB)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with --verbose-status=false", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ds := f.KubernetesResource("DaemonSet", "d8-service-with-healthchecks", "agent")
+			Expect(ds.Exists()).To(BeTrue())
+
+			containers := ds.Field("spec.template.spec.containers").String()
+			Expect(containers).To(ContainSubstring("--verbose-status=false"))
 		})
 	})
 })

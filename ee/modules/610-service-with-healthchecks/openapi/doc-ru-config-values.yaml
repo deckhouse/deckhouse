@@ -1,5 +1,5 @@
 type: object
 properties:
-  debug:
+  verboseStatus:
     description: |
-      Опция, указывающая логгеру выводить stacktraces для предупреждений и ошибок.
+      Если true, агент будет обновлять поле lastProbeTime в статусе ServiceWithHealthchecks при каждой проверке (каждые periodSeconds). Это может быть полезно для отладки, но создает высокую нагрузку на API-сервер. Если false, фиксируются только изменения состояния.
