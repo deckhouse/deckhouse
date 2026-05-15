@@ -12,19 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package telemetry
 
-import otattribute "go.opentelemetry.io/otel/attribute"
-
-// ControlPlaneOptions configures the test-control-plane sub-commands.
-type ControlPlaneOptions struct {
-	Hostname string
-	IP       string
-}
-
-func (o *ControlPlaneOptions) ToSpanAttributes() []otattribute.KeyValue {
-	return []otattribute.KeyValue{
-		otattribute.String("controlPlane.hostname", o.Hostname),
-		otattribute.String("controlPlane.ip", o.IP),
-	}
-}
+const (
+	traceApplicationName = "dhctl"
+)

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
@@ -55,6 +56,10 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
 
 		loggerProvider := log.ExternalLoggerProvider(logger)
@@ -67,6 +72,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 
 		if !opts.Global.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
+
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
 			}
@@ -122,6 +128,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		if err != nil {
 			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
 			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 

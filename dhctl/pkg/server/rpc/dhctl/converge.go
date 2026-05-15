@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	otcodes "go.opentelemetry.io/otel/codes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -43,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -171,6 +173,9 @@ func (s *Service) convergeSafe(ctx context.Context, p *convergeParams) (result *
 }
 
 func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeResult {
+	ctx, span := telemetry.StartSpan(ctx, "grpc.converge")
+	defer span.End()
+
 	var err error
 
 	cleanuper := callback.NewCallback()
@@ -255,6 +260,8 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		}
 	}
 
+	span.SetAttributes(opts.ToSpanAttributes()...)
+
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: p.request.Options.CommanderMode,
@@ -331,6 +338,12 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(convergeErr, stateErr, marshalResultErr)
+
+	if err != nil {
+		span.SetStatus(otcodes.Error, err.Error())
+	} else {
+		span.SetStatus(otcodes.Ok, "")
+	}
 
 	return &pb.ConvergeResult{State: string(state), Result: string(resultData), Err: util.ErrToString(err)}
 }
