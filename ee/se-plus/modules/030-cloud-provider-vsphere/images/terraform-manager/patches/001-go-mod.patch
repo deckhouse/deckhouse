@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 45bcde4b..9608a4f1 100644
+index 45bcde4b..1c308d73 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,77 +1,116 @@
  module github.com/hashicorp/terraform-provider-vsphere
  
 -go 1.23
-+go 1.25.7
++go 1.25.8
  
  require (
 -	github.com/davecgh/go-spew v1.1.1
@@ -89,7 +89,7 @@ index 45bcde4b..9608a4f1 100644
 -	github.com/hashicorp/go-getter v1.7.5 // indirect
 -	github.com/hashicorp/go-hclog v0.15.0 // indirect
 -	github.com/hashicorp/go-multierror v1.0.0 // indirect
-+	github.com/hashicorp/go-getter v1.8.6 // indirect
++	github.com/hashicorp/go-getter v1.8.5 // indirect
 +	github.com/hashicorp/go-hclog v1.6.3 // indirect
 +	github.com/hashicorp/go-multierror v1.1.1 // indirect
  	github.com/hashicorp/go-plugin v1.4.1 // indirect
@@ -162,7 +162,7 @@ index 45bcde4b..9608a4f1 100644
 +	google.golang.org/protobuf v1.36.11 // indirect
  )
 diff --git a/go.sum b/go.sum
-index 2faee4d7..01e8eb18 100644
+index 2faee4d7..3cb29032 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,3 +1,5 @@
@@ -641,8 +641,8 @@ index 2faee4d7..01e8eb18 100644
  github.com/hashicorp/go-getter v1.5.3/go.mod h1:BrrV/1clo8cCYu6mxvboYg+KutTiFnXjMEgDD8+i7ZI=
 -github.com/hashicorp/go-getter v1.7.5 h1:dT58k9hQ/vbxNMwoI5+xFYAJuv6152UNvdHokfI5wE4=
 -github.com/hashicorp/go-getter v1.7.5/go.mod h1:W7TalhMmbPmsSMdNjD0ZskARur/9GJ17cfHTRtXV744=
-+github.com/hashicorp/go-getter v1.8.6 h1:9sQboWULaydVphxc4S64oAI4YqpuCk7nPmvbk131ebY=
-+github.com/hashicorp/go-getter v1.8.6/go.mod h1:nVH12eOV2P58dIiL3rsU6Fh3wLeJEKBOJzhMmzlSWoo=
++github.com/hashicorp/go-getter v1.8.5 h1:DMPV5CSw5JrNg/IK7kDZt3+l2REKXOi3oAw7uYLh2NM=
++github.com/hashicorp/go-getter v1.8.5/go.mod h1:WIffejwAyDSJhoVptc3UEshEMkR9O63rw34V7k43O3Q=
  github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd/go.mod h1:9bjs9uLqI8l75knNv3lV1kA55veR+WUPSiKIWcQHudI=
  github.com/hashicorp/go-hclog v0.14.1/go.mod h1:whpDNt7SSdeAju8AWKIWsul05p54N/39EeqMAyrmvFQ=
 -github.com/hashicorp/go-hclog v0.15.0 h1:qMuK0wxsoW4D0ddCCYwPSTm4KQv1X1ke3WmPWZ0Mvsk=
