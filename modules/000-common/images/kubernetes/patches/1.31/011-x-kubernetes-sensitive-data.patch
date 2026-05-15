@@ -2916,7 +2916,7 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..c2da2367e49
+index 00000000000..69997df625c
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 @@ -0,0 +1,153 @@
@@ -2967,7 +2967,7 @@ index 00000000000..c2da2367e49
 +func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind) http.HandlerFunc {
 +	return func(w http.ResponseWriter, req *http.Request) {
 +		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
-+		if mediaType != string(types.ApplyPatchType) && mediaType != "application/apply-patch+cbor" {
++		if mediaType != string(types.ApplyYAMLPatchType) && mediaType != string(types.ApplyCBORPatchType) {
 +			inner.ServeHTTP(w, req)
 +			return
 +		}
@@ -3053,9 +3053,9 @@ index 00000000000..c2da2367e49
 +// Supports application/apply-patch+yaml and application/apply-patch+cbor.
 +func unmarshalApplyBody(mediaType string, data []byte, out *map[string]interface{}) error {
 +	switch mediaType {
-+	case string(types.ApplyPatchType):
++	case string(types.ApplyYAMLPatchType):
 +		return yaml.Unmarshal(data, out)
-+	case "application/apply-patch+cbor":
++	case string(types.ApplyCBORPatchType):
 +		return direct.Unmarshal(data, out)
 +	default:
 +		return fmt.Errorf("unsupported content type: %s", mediaType)
@@ -3065,9 +3065,9 @@ index 00000000000..c2da2367e49
 +// marshalApplyBody encodes an SSA apply-patch body in the given media type.
 +func marshalApplyBody(mediaType string, in map[string]interface{}) ([]byte, error) {
 +	switch mediaType {
-+	case string(types.ApplyPatchType):
++	case string(types.ApplyYAMLPatchType):
 +		return yaml.Marshal(in)
-+	case "application/apply-patch+cbor":
++	case string(types.ApplyCBORPatchType):
 +		return direct.Marshal(in)
 +	default:
 +		return nil, fmt.Errorf("unsupported content type: %s", mediaType)
@@ -3075,10 +3075,10 @@ index 00000000000..c2da2367e49
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 new file mode 100644
-index 00000000000..b58a01da39c
+index 00000000000..f1b97733b8d
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
-@@ -0,0 +1,512 @@
+@@ -0,0 +1,505 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3167,13 +3167,13 @@ index 00000000000..b58a01da39c
 +		},
 +	}
 +
-+	bs, err := marshalApplyBody(string(types.ApplyPatchType), in)
++	bs, err := marshalApplyBody(string(types.ApplyYAMLPatchType), in)
 +	if err != nil {
 +		t.Fatalf("marshalApplyBody = %v", err)
 +	}
 +
 +	got := map[string]interface{}{}
-+	if err := unmarshalApplyBody(string(types.ApplyPatchType), bs, &got); err != nil {
++	if err := unmarshalApplyBody(string(types.ApplyYAMLPatchType), bs, &got); err != nil {
 +		t.Fatalf("unmarshalApplyBody = %v", err)
 +	}
 +	if !reflect.DeepEqual(in, got) {
@@ -3188,20 +3188,19 @@ index 00000000000..b58a01da39c
 +		},
 +	}
 +
-+	bs, err := marshalApplyBody("application/apply-patch+cbor", in)
++	bs, err := marshalApplyBody(string(types.ApplyCBORPatchType), in)
 +	if err != nil {
 +		t.Fatalf("marshalApplyBody = %v", err)
 +	}
 +
 +	got := map[string]interface{}{}
-+	if err := unmarshalApplyBody("application/apply-patch+cbor", bs, &got); err != nil {
++	if err := unmarshalApplyBody(string(types.ApplyCBORPatchType), bs, &got); err != nil {
 +		t.Fatalf("unmarshalApplyBody = %v", err)
 +	}
 +	if !reflect.DeepEqual(in, got) {
 +		t.Errorf("round-trip mismatch: got %v, want %v", got, in)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_PassthroughForNonSSA(t *testing.T) {
 +	var innerCalled bool
@@ -3227,7 +3226,6 @@ index 00000000000..b58a01da39c
 +	}
 +}
 +
-+
 +func TestSensitiveSSAMiddleware_ScalarSensitive_YAML(t *testing.T) {
 +	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
 +		"spec": map[string]interface{}{"password": "real-pass"},
@@ -3245,7 +3243,7 @@ index 00000000000..b58a01da39c
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	body := "spec:\n  password: <omitted>\n"
-+	mw.ServeHTTP(httptest.NewRecorder(), makeRequest(t, string(types.ApplyPatchType), body, "primary"))
++	mw.ServeHTTP(httptest.NewRecorder(), makeRequest(t, string(types.ApplyYAMLPatchType), body, "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3256,7 +3254,6 @@ index 00000000000..b58a01da39c
 +		t.Errorf("inner body = %v, want %v", got, want)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_ObjectSensitive_YAML(t *testing.T) {
 +	schemaSpec := &structuralschema.Structural{
@@ -3291,7 +3288,7 @@ index 00000000000..b58a01da39c
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyPatchType), "spec:\n  credentials: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  credentials: <omitted>\n", "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3335,7 +3332,7 @@ index 00000000000..b58a01da39c
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyPatchType), "spec:\n  tags: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  tags: <omitted>\n", "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3348,7 +3345,6 @@ index 00000000000..b58a01da39c
 +		t.Errorf("inner body = %v, want %v", got, want)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_ScalarSensitive_CBOR(t *testing.T) {
 +	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
@@ -3365,12 +3361,12 @@ index 00000000000..b58a01da39c
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	in := map[string]interface{}{"spec": map[string]interface{}{"password": "<omitted>"}}
-+	body, _ := marshalApplyBody("application/apply-patch+cbor", in)
++	body, _ := marshalApplyBody(string(types.ApplyCBORPatchType), in)
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, "application/apply-patch+cbor", string(body), "primary"))
++		makeRequest(t, string(types.ApplyCBORPatchType), string(body), "primary"))
 +
 +	got := map[string]interface{}{}
-+	if err := unmarshalApplyBody("application/apply-patch+cbor", innerBody, &got); err != nil {
++	if err := unmarshalApplyBody(string(types.ApplyCBORPatchType), innerBody, &got); err != nil {
 +		t.Fatalf("unmarshal inner body: %v", err)
 +	}
 +	want := map[string]interface{}{"spec": map[string]interface{}{"password": "real-pass"}}
@@ -3393,7 +3389,7 @@ index 00000000000..b58a01da39c
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
-+	req := makeRequest(t, string(types.ApplyPatchType)+"; charset=utf-8",
++	req := makeRequest(t, string(types.ApplyYAMLPatchType)+"; charset=utf-8",
 +		"spec:\n  password: <omitted>\n", "primary")
 +	mw.ServeHTTP(httptest.NewRecorder(), req)
 +
@@ -3406,7 +3402,6 @@ index 00000000000..b58a01da39c
 +		t.Errorf("got %v, want %v", got, want)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_CreateNoOmitted(t *testing.T) {
 +	getter := &fakeGetter{err: apierrors.NewNotFound(runtimeschema.GroupResource{}, "primary")}
@@ -3421,7 +3416,7 @@ index 00000000000..b58a01da39c
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyPatchType), "spec:\n  password: real\n", "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: real\n", "primary"))
 +
 +	if !innerCalled {
 +		t.Fatalf("inner not called for valid create")
@@ -3442,7 +3437,7 @@ index 00000000000..b58a01da39c
 +
 +	rec := httptest.NewRecorder()
 +	mw.ServeHTTP(rec,
-+		makeRequest(t, string(types.ApplyPatchType), "spec:\n  password: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: <omitted>\n", "primary"))
 +
 +	if innerCalled {
 +		t.Fatalf("inner should not be called when create has <omitted>")
@@ -3451,7 +3446,6 @@ index 00000000000..b58a01da39c
 +		t.Errorf("expected 422, got %d: %s", rec.Code, rec.Body.String())
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_GetError_NonNotFound(t *testing.T) {
 +	getter := &fakeGetter{err: fmt.Errorf("timeout")}
@@ -3465,7 +3459,7 @@ index 00000000000..b58a01da39c
 +
 +	rec := httptest.NewRecorder()
 +	mw.ServeHTTP(rec,
-+		makeRequest(t, string(types.ApplyPatchType), "spec:\n  password: <omitted>\n", "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: <omitted>\n", "primary"))
 +
 +	if innerCalled {
 +		t.Fatalf("inner should not be called on getter error")
@@ -3520,7 +3514,7 @@ index 00000000000..b58a01da39c
 +
 +	yamlBody := "spec:\n  endpoints:\n  - name: replica\n    secret: <omitted>\n  - name: main\n    secret: <omitted>\n"
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyPatchType), yamlBody, "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), yamlBody, "primary"))
 +
 +	got := map[string]interface{}{}
 +	if err := yaml.Unmarshal(innerBody, &got); err != nil {
@@ -3551,13 +3545,12 @@ index 00000000000..b58a01da39c
 +
 +	bad := "spec:\n  password: [unclosed"
 +	mw.ServeHTTP(httptest.NewRecorder(),
-+		makeRequest(t, string(types.ApplyPatchType), bad, "primary"))
++		makeRequest(t, string(types.ApplyYAMLPatchType), bad, "primary"))
 +
 +	if string(innerBody) != bad {
 +		t.Errorf("malformed body should pass through unchanged; got %q", innerBody)
 +	}
 +}
-+
 +
 +func TestSensitiveSSAMiddleware_ContentLengthUpdated(t *testing.T) {
 +	oldObj := &unstructured.Unstructured{Object: map[string]interface{}{
@@ -3576,7 +3569,7 @@ index 00000000000..b58a01da39c
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
 +		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
 +
-+	req := makeRequest(t, string(types.ApplyPatchType),
++	req := makeRequest(t, string(types.ApplyYAMLPatchType),
 +		"spec:\n  password: <omitted>\n", "primary")
 +	origLen := req.ContentLength
 +	mw.ServeHTTP(httptest.NewRecorder(), req)
@@ -4128,10 +4121,10 @@ index 00000000000..46bdc797108
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
 new file mode 100644
-index 00000000000..c0dce69bcc7
+index 00000000000..f4deab0ef7a
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/schema/sensitive/sensitive_test.go
-@@ -0,0 +1,1665 @@
+@@ -0,0 +1,1662 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -5431,7 +5424,6 @@ index 00000000000..c0dce69bcc7
 +	}
 +}
 +
-+
 +func TestUnmaskSensitiveFromOld_ListMap_CompositeKeys(t *testing.T) {
 +	mapType := "map"
 +	schema := &structuralschema.Structural{
@@ -5650,7 +5642,6 @@ index 00000000000..c0dce69bcc7
 +	}
 +}
 +
-+
 +func TestUnmaskSensitiveFromOld_ListMap_WholeItemSensitive_IndexFallback(t *testing.T) {
 +	mapType := "map"
 +	schema := &structuralschema.Structural{
@@ -5706,7 +5697,6 @@ index 00000000000..c0dce69bcc7
 +		t.Errorf("result = %v, want %v", newObj, expected)
 +	}
 +}
-+
 +
 +func TestUnmaskSensitiveFromOld_ListMap_WholeArraySensitive(t *testing.T) {
 +	mapType := "map"
@@ -5843,7 +5833,7 @@ index 7304018fb34..2a7071a4083 100644
  		var serializationValidationRules apiextensionsv1.ValidationRules
  		if err := apiextensionsv1.Convert_apiextensions_ValidationRules_To_v1_ValidationRules(&in.XValidations, &serializationValidationRules, nil); err != nil {
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
-index 8ceab525415..3f2af5affd1 100644
+index 8ceab525415..b1d685b2f60 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/cmd/server/options/options.go
 @@ -28,6 +28,7 @@ import (
@@ -5854,7 +5844,9 @@ index 8ceab525415..3f2af5affd1 100644
  	generatedopenapi "k8s.io/apiextensions-apiserver/pkg/generated/openapi"
  	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
  	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-@@ -38,4 +39,5 @@ import (
+@@ -36,6 +37,7 @@ import (
+ 	genericapiserver "k8s.io/apiserver/pkg/server"
+ 	genericoptions "k8s.io/apiserver/pkg/server/options"
  	storagevalue "k8s.io/apiserver/pkg/storage/value"
 +	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	flowcontrolrequest "k8s.io/apiserver/pkg/util/flowcontrol/request"
@@ -5887,7 +5879,7 @@ index 8ceab525415..3f2af5affd1 100644
  	return config, nil
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
-index b41d13e5364..ee2bfda0c88 100644
+index b41d13e5364..7815c249af5 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/features/kube_features.go
 @@ -41,6 +41,11 @@ const (
@@ -5902,13 +5894,11 @@ index b41d13e5364..ee2bfda0c88 100644
  )
  
  func init() {
-@@ -51,6 +56,7 @@ func init() {
- // To add a new feature, define a key for it above and add it here. The features will be
- // available throughout Kubernetes binaries.
+@@ -53,4 +58,5 @@ func init() {
  var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-+	CRDSensitiveData:             {Default: false, PreRelease: featuregate.Alpha},
  	CRDValidationRatcheting:      {Default: true, PreRelease: featuregate.Beta},
  	CustomResourceFieldSelectors: {Default: true, PreRelease: featuregate.Beta},
++	CRDSensitiveData:             {Default: true, PreRelease: featuregate.Beta},
  }
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/generated/openapi/zz_generated.openapi.go
 index bfe07168955..c9f46c1b590 100644
@@ -5942,6 +5932,18 @@ index bfe07168955..c9f46c1b590 100644
  				},
  			},
  		},
+diff --git a/staging/src/k8s.io/apimachinery/pkg/types/patch.go b/staging/src/k8s.io/apimachinery/pkg/types/patch.go
+index fe8ecaaffa6..bf9cd29af15 100644
+--- a/staging/src/k8s.io/apimachinery/pkg/types/patch.go
++++ b/staging/src/k8s.io/apimachinery/pkg/types/patch.go
+@@ -26,4 +26,7 @@ const (
+ 	MergePatchType          PatchType = "application/merge-patch+json"
+ 	StrategicMergePatchType PatchType = "application/strategic-merge-patch+json"
+ 	ApplyPatchType          PatchType = "application/apply-patch+yaml"
++	// For sensetive patch
++	ApplyYAMLPatchType PatchType = "application/apply-patch+yaml"
++	ApplyCBORPatchType PatchType = "application/apply-patch+cbor"
+ )
 diff --git a/staging/src/k8s.io/apiserver/pkg/audit/context.go b/staging/src/k8s.io/apiserver/pkg/audit/context.go
 index 9648587378e..f4ef2603cc7 100644
 --- a/staging/src/k8s.io/apiserver/pkg/audit/context.go
@@ -6076,7 +6078,7 @@ index 14278aed743..9e59c2ae24a 100644
  
  		baseContentType := runtime.ContentTypeJSON
 diff --git a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
-index 40879f78e06..d18175eb915 100644
+index 40879f78e06..36690fc4f59 100644
 --- a/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
 +++ b/staging/src/k8s.io/apiserver/pkg/server/options/encryptionconfig/config.go
 @@ -899,12 +899,17 @@ func computeEncryptionConfigHash(data []byte) string {
@@ -6155,18 +6157,19 @@ index 40879f78e06..d18175eb915 100644
  }
  
  var anyGroupAnyResource = schema.GroupResource{
-@@ -1013,7 +1033,9 @@ var anyGroupAnyResource = schema.GroupResource{
+@@ -1013,7 +1033,10 @@ var anyGroupAnyResource = schema.GroupResource{
  	Resource: "*",
  }
  
 -func transformerFromOverrides(transformerOverrides map[schema.GroupResource]storagevalue.Transformer, resource schema.GroupResource) storagevalue.Transformer {
 +var secretsGroupResource = schema.GroupResource{Group: "", Resource: "secrets"}
 +
-+func transformerFromOverrides(transformerOverrides map[schema.GroupResource]storagevalue.Transformer, resource schema.GroupResource, sensitiveResources *sync.Map) storagevalue.Transformer {
++func transformerFromOverrides(transformerOverrides map[schema.GroupResource]storagevalue.Transformer, resource schema.GroupResource, sensitiveResources *sync.Map) (out storagevalue.Transformer) {
++
  	if transformer := transformerOverrides[resource]; transformer != nil {
  		return transformer
  	}
-@@ -1029,6 +1051,14 @@ func transformerFromOverrides(transformerOverrides map[schema.GroupResource]stor
+@@ -1029,6 +1052,14 @@ func transformerFromOverrides(transformerOverrides map[schema.GroupResource]stor
  		return transformer
  	}
  
