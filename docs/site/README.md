@@ -131,6 +131,15 @@ To stop the documentation site, cancel the running process and run the following
 make docs-down
 ```
 
+## Manual QA: DVP bare-metal quick start (install flow)
+
+After changes to DVP getting-started assets (Liquid, `snippetcut`, `getting-started-cluster-setup.js`, or shared `config_highlight`), run through this short checklist in the built site.
+
+1. **Install step** — Open the DVP bare-metal install page; the large `config.yml` snippet should show **Rouge** syntax highlighting and line numbers in the visible block, and the **Copy** action should return the full multi-document YAML (raw) without line-number noise.
+2. **Session + tokens** — Complete **step 2** (cluster parameters), return to the install step: placeholder tokens in both the raw copy target and the highlighted block should be replaced consistently; `mightChange` / `mustChange` legend styling should still apply after updates.
+3. **CE / EE** — Switch **Community / Enterprise** tabs: license-dependent fragments and `config_update` behavior should match the selected revision (no stuck tokens in snippets).
+4. **Reload** — Hard refresh or new tab: with session data present, values should still apply; with empty session, tokens that are allowed to stay unresolved should still appear as in the template.
+
 ## Debugging (WIP)
 
 The [Delve](https://github.com/go-delve/delve) debugger is used for debugging the documentation site's backend.

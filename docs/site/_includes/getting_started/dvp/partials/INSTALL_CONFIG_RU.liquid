@@ -1,0 +1,75 @@
+{% assign revision=include.revision %}
+{% capture dvp_cfg_yaml %}
+{% include getting_started/dvp/partials/config-dvp.yml.inc.liquid revision=revision %}
+{% endcapture %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^\s*# \[<en>\][^\r\n]*(?:\r\n|\n|\r)', '' %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^\s*# \[<en>\][^\r\n]*\z', '' %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^(\s*)# \[<ru>\]\s*', '\1# ' %}
+
+{% if revision == 'ee' %}
+{% include getting_started/global/EE_ACCESS_RU.md revision=revision %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+<div markdown="1">
+Ниже сгенерированы рекомендованные настройки для установки Deckhouse Virtualization Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}:
+- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера, описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера){% endif %} и начальные параметры кластера.
+
+**Обратите внимание**:
+- <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
+- <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
+- Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемых YAML-файлов конфигурации UTF-8 (либо удалите примечания на русском языке).
+{%- if page.platform_type == 'baremetal' %}
+- Выполнять установку необходимо с **[персонального компьютера](step2.html#что-необходимо-для-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
+{%- endif %}
+{%- if page.platform_type == 'existing' %}
+- Ознакомьтесь с разделом *[Если что-то пошло не так](#если-что-то-пошло-не-так)*, возможно там описан случай для вашего провайдера. Обращайтесь к нему, если испытываете какие-то проблемы в процессе установки.
+{%- endif %}
+
+Создайте файл `config.yml`.
+{% snippetcut name="config.yml" selector="config-yml" %}
+```yaml
+{{ dvp_cfg_yaml }}
+```
+{% endsnippetcut %}
+
+{% alert level="info" %}
+
+При загрузке больших образов ВМ (особенно при медленном канале) добавьте увеличенный таймаут завершения worker-узлов для ресурса `IngressNginxController` с именем `nginx` в этом манифесте. Иначе длительная загрузка может оборваться при перезагрузке конфигурации контроллера и смене воркер-узлов, так как типового окна ожидания может не хватить на один долгий запрос. Укажите в `spec` рядом с `ingressClass`, `inlet` и остальными полями:
+
+```yaml
+  config:
+    worker-shutdown-timeout: 1800s  # 30 минут или более при необходимости
+```
+
+{% endalert %}
+
+{%- if page.platform_type == 'existing' %}
+{% offtopic title="Про nodeSelector, taints и tolerations..." %}
+Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.
+
+> Пример указания `nodeSelector`/`tolerations` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> ```yaml
+> deckhouse:
+>   configOverrides:
+>     # ...
+>     deckhouse:
+>       tolerations:
+>         - key: dedicated.deckhouse.io
+>           operator: Exists
+>     # ...
+>     global:
+>       modules:
+>         # ...
+>         placement:
+>           customTolerationKeys:
+>           - SystemLoad
+>           - app.kubernetes.io/instance
+> ```
+{% endofftopic %}
+{% endif %}
+</div>
+
+{% if revision == 'ee' %}
+</div>
+{% endif %}
