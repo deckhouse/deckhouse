@@ -1,3 +1,7 @@
+{{- $ciliumConfig := `{
+  "mode": "VXLAN",
+  "masqueradeMode": "BPF"
+}` }}
 ---
 apiVersion: v1
 kind: Secret
@@ -9,5 +13,6 @@ data:
 {{- if hasKey .Values.cloudProviderGcp.internal "cniSecretData" }}
   {{- .Values.cloudProviderGcp.internal.cniSecretData | b64dec | nindent 2 }}
 {{- else }}
-  cni: {{ b64enc "simple-bridge" | quote }}
+  cni: {{ b64enc "cilium" | quote }}
+  cilium: {{ $ciliumConfig | b64enc | quote }}
 {{- end }}

@@ -191,9 +191,18 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-azure:cluster-admin")
 
 			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			cniSecret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
+			Expect(cniSecret.Exists()).To(BeTrue())
+			Expect(cniSecret.Field("data.cni").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("cilium"))))
+			actualCiliumConfig, err := base64.StdEncoding.DecodeString(cniSecret.Field("data.cilium").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(actualCiliumConfig)).To(MatchJSON(`{
+  "mode": "VXLAN",
+  "masqueradeMode": "BPF"
+}`))
 
 			// user story #1
 
@@ -360,6 +369,31 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 
 			d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 			Expect(d.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Azure with existing CNI secret data", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+			f.ValuesSet("cloudProviderAzure.internal.cniSecretData", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`cni: %s
+flannel: %s
+`,
+				base64.StdEncoding.EncodeToString([]byte("flannel")),
+				base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`)),
+			))))
+			f.HelmRender()
+		})
+
+		It("Should render CNI secret from internal value", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cniSecret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(cniSecret.Exists()).To(BeTrue())
+			Expect(cniSecret.Field("data.cni").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("flannel"))))
+			Expect(cniSecret.Field("data.flannel").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"podNetworkMode":"host-gw"}`))))
+			Expect(cniSecret.Field("data.cilium").Exists()).To(BeFalse())
 		})
 	})
 })
