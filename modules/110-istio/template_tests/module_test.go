@@ -256,6 +256,32 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("Telemetry API mesh defaults for control plane revisions", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.HelmRender()
+		})
+
+		It("adds default Prometheus provider and disables telemetry v2 filters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istioV25.Field("spec.values.meshConfig.defaultProviders.metrics.0").String()).To(Equal("prometheus"))
+			Expect(istioV25.Field("spec.values.telemetry.enabled").String()).To(Equal("true"))
+			Expect(istioV25.Field("spec.values.telemetry.v2.enabled").String()).To(Equal("false"))
+
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			Expect(iopV21.Field("spec.meshConfig.defaultProviders.metrics.0").String()).To(Equal("prometheus"))
+			Expect(iopV21.Field("spec.values.telemetry.enabled").String()).To(Equal("true"))
+			Expect(iopV21.Field("spec.values.telemetry.v2.enabled").String()).To(Equal("false"))
+		})
+	})
+
 	Context("There are revisions to install, no federations or multiclusters", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)

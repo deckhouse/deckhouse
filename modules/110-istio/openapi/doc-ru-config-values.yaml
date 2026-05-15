@@ -107,23 +107,15 @@ properties:
     description: |
       Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
 
-      Если `enabled` — `true`, модуль отключает в Istio Operator / ресурсе `Istio` legacy-секцию `telemetry` / `telemetry.v2`, чтобы политики observability (метрики, access log, трассировка) задавались через ресурсы **Telemetry** (модулем или вручную).
+      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; модуль создаёт CR `main-prometheus-metrics` и `main-access-log-format`, чтобы серии `istio_*` снова были видны в Grafana/Kiali.
 
-      В этом режиме модуль создаёт Telemetry:
+      Если `false` (по умолчанию), остаётся полный legacy-путь `telemetry.v2` (в т.ч. `prometheus` в Sail), без `defaultProviders` и без перечисленных Telemetry-манифестов модуля.
 
-      - `main-access-log-format` — включает access logs через провайдер `meshConfig.extensionProviders` с именем `main-access-log-format`; формат задаётся в [`dataPlane.accessLog`](#parameters-dataplane-accesslog).
-
-      - `main-prometheus-metrics` — включает встроенный в Istio провайдер метрик `prometheus` по спецификации Telemetry API (эквивалент активного `telemetry.v2.prometheus` в манифесте Sail / Istio Operator).
-
-      Если `false` (по умолчанию), остаётся legacy-телеметрия в control plane, а перечисленные объекты Telemetry **не** создаются (описание провайдера access log в `meshConfig` может оставаться для собственных ресурсов Telemetry).
-
-      Отдельно от маршрута Telemetry API: [`dataPlane.accessLog`](#parameters-dataplane-accesslog) только задаёт шаблон лога Envoy в `meshConfig.extensionProviders` и не создаёт CR Telemetry без включения этого параметра.
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) задаёт только шаблон лога для провайдера `main-access-log-format`; сам CR появляется только при включённом Telemetry API режиме.
     properties:
       enabled:
         description: |
-          Отключить встроенные `telemetry` / `v2` в Istio Operator / ресурсе `Istio` и установить Telemetry `main-access-log-format` и `main-prometheus-metrics`; остальные политики — дополнительными ресурсами Telemetry.
-
-          Держите `false` (по умолчанию), пока не готов полный набор Telemetry-политик.
+          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, CR `main-prometheus-metrics` и `main-access-log-format`.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:

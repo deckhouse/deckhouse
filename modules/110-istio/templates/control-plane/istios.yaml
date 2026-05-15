@@ -14,6 +14,7 @@
   {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
   {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
+    {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
     {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -108,6 +109,11 @@ spec:
     meshConfig:
       rootNamespace: d8-{{ $.Chart.Name }}
       trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
+      {{- if $telemetryAPI.enabled }}
+      defaultProviders:
+        metrics:
+        - prometheus
+      {{- end }}
 
       extensionProviders:
       - envoyFileAccessLog:
@@ -206,9 +212,10 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ "any-node") | nindent 6 }}
   {{- end }}
     telemetry:
-  {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict }}
   {{- if $telemetryAPI.enabled }}
-      enabled: false
+      enabled: true
+      v2:
+        enabled: false
   {{- else }}
       enabled: true
       v2:
