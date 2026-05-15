@@ -57,3 +57,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/loki"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
