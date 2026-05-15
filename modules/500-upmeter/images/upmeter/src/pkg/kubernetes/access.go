@@ -46,6 +46,7 @@ type Access interface {
 	CloudControllerManagerNamespace() string
 
 	ClusterDomain() string
+	SmokeMiniServiceFQDN() string
 }
 
 type ProbeImageConfig struct {
@@ -101,6 +102,7 @@ type Accessor struct {
 	schedulerProbeImage             *ProbeImage
 	schedulerProbeNode              string
 	cloudControllerManagerNamespace string
+	clusterDNSZone                  string
 	kubernetesDomain                string
 	tokenExpire                     int64
 	tokenRotationMu                 sync.Mutex
@@ -129,7 +131,8 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 
 	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
-	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain + "." // Trailing dot to avoid domain search
+	a.clusterDNSZone = strings.TrimSuffix(config.ClusterDomain, ".")
+	a.kubernetesDomain = "kubernetes.default.svc." + a.clusterDNSZone + "."
 	a.userAgent = userAgent
 
 	return nil
@@ -209,6 +212,10 @@ func (a *Accessor) CloudControllerManagerNamespace() string {
 
 func (a *Accessor) ClusterDomain() string {
 	return a.kubernetesDomain
+}
+
+func (a *Accessor) SmokeMiniServiceFQDN() string {
+	return "smoke-mini.d8-upmeter.svc." + a.clusterDNSZone + "."
 }
 
 func FakeAccessor() *Accessor {

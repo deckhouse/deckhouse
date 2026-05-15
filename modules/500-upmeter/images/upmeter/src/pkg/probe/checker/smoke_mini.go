@@ -44,7 +44,7 @@ type SmokeMiniAvailable struct {
 
 func (s SmokeMiniAvailable) Checker() check.Checker {
 	lkp := &nameLookuper{
-		name:    "smoke-mini",
+		name:    s.Access.SmokeMiniServiceFQDN(),
 		port:    "8080",
 		timeout: s.DNSTimeout,
 	}
