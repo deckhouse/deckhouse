@@ -175,9 +175,9 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 30
         securityContext:
-          runAsGroup: 1337
+          runAsGroup: 64535
           runAsNonRoot: true
-          runAsUser: 1337
+          runAsUser: 64535
           readOnlyRootFilesystem: true
         resources:
           requests:

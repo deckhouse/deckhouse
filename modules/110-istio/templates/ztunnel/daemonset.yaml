@@ -78,7 +78,7 @@ spec:
             - SYS_ADMIN # Required for `setns` - doing things in other netns
             - NET_RAW # Required for RAW/PACKET sockets, TPROXY
           readOnlyRootFilesystem: true
-          runAsGroup: 1337
+          runAsGroup: 64535
           runAsNonRoot: false
           runAsUser: 0
         readinessProbe:
