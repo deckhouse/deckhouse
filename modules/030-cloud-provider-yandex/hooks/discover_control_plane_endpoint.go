@@ -105,7 +105,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoverControlPlaneEndpoint)
 
 func discoverControlPlaneEndpoint(_ context.Context, input *go_hook.HookInput) error {
-	const valuesPath = "cloudProviderYandex.internal.controlPlaneEndpoint"
+	const valuesPath = "nodeManager.internal.cloudProvider.yandex.controlPlaneEndpoint"
 
 	if len(input.Snapshots.Get("publish_api_ingress")) > 0 {
 		var endpoint ingressControlPlaneEndpoint
