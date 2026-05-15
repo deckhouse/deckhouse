@@ -1,0 +1,251 @@
+admission-policy-engine:
+  fixes:
+    - summary: Security fix for CVE-2026-33186, CVE-2026-39882, CVE-2026-39883.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19224
+    - summary: Fix cve for ratify
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18927
+candi:
+  features:
+    - summary: Bump deckhouse-cli version up to v0.29.29
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19230
+    - summary: Bump deckhouse-cli version up to v0.29.28
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19228
+  fixes:
+    - summary: Fix cve for admission-policy-engine, cert-manager, kube-rbac-proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18790
+    - summary: cve fix for user-authn module
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18679
+cert-manager:
+  fixes:
+    - summary: Security fixes for CVE-2026-34986, CVE-2026-39883
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19224
+ci:
+  fixes:
+    - summary: revert VEX file merge logic in signing template and restore previous attestation flow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19272
+    - summary: change users for Yandex and opestack e2e tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18763
+cilium-hubble:
+  fixes:
+    - summary: Fixed CVE-2026-33186 in the hubble-ui image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18721
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        update cloud-controller-manager dependencies and VEX metadata to address current CVE
+        findings
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19272
+    - summary: fixe cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18599
+cni-simple-bridge:
+  fixes:
+    - summary: Updated base image reference to support new Werf import format.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19313
+common:
+  fixes:
+    - summary: fix cve's in docker-registry docker_auth image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19356
+    - summary: Fixed an issue where Trivy could not detect VEX files in coredns images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19316
+    - summary: Bump google.golang.org/grpc to v1.79.3 in CSI sidecar patches to fix CVE-2026-33186.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19298
+    - summary: >-
+        Removed Python completely from the debug-container image as it is no longer needed,
+        resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18845
+    - summary: Fixed CVE-2026-33186 in the CoreDNS image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18724
+      impact: CoreDNS pods will undergo a rolling restart.
+deckhouse:
+  fixes:
+    - summary: Bump deckhouse-cli to v0.30.2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19851
+    - summary: Add VEX entries for CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19671
+    - summary: Fix CVEs in docs-builder and add cryptography VEX.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19343
+    - summary: Fix CVEs and update VEX entries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19233
+    - summary: >-
+        Remove notified=false annotation reset from runReleaseDeploy in the module release
+        controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19178
+    - summary: Switch CI tests image to golang-bookworm.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19065
+    - summary: Fix CVEs in webhook-handler and cleanup VEX files.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19033
+deckhouse-tools:
+  fixes:
+    - summary: Add vex for CVE-2026-39882
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19351
+dhctl:
+  fixes:
+    - summary: Wait for stronghold cluster sync before node deletion
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19643
+    - summary: dhctl cve fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19359
+    - summary: dhctl vex upd
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18894
+    - summary: mitigate CVE-2026-33186
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18610
+ingress-nginx:
+  fixes:
+    - summary: Nginx is updated up to 1.30.1.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19848
+      impact: All Ingress-nginx controller pods will be restarted.
+    - summary: Backported missing pod security context settings to hpa scaler pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19238
+      impact: HPA scaler pods will be restarted.
+    - summary: CVE-2025-15566 is backported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19220
+      impact: All pods of Ingress-NGINX controller will be restarted.
+    - summary: Kruise go dependencies are updated to mitigate latest CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19077
+      impact: Kruise controller will be restarted.
+    - summary: Fixes are backported to 1.73.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18960
+      impact: All Ingress-NGINX controller pods will be restarted.
+istio:
+  fixes:
+    - summary: CNI-node readonly root filesystem enable fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19690
+      impact: When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+    - summary: fixed CVEs in module images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19358
+      impact: module pods will be restarted
+    - summary: CNI-node readonly root filesystem enable
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19342
+    - summary: fixed CVE-2026-39882, CVE-2026-39883 and CVE-2026-35206
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19096
+      impact: istio module pods will be restarted
+    - summary: fixed CVE-2026-34986
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18967
+      impact: istio module pods will be restarted
+    - summary: fixed CVE in istio module v1.19.7
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18811
+      impact: istio module pods will be restarted
+    - summary: fixed CVEs in module v1.25.2 images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18807
+      impact: istio module pods will be restarted
+    - summary: fixed CVE in istio module v1.21.6
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18688
+      impact: istio module pods will be restarted
+kube-proxy:
+  fixes:
+    - summary: Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19120
+      impact: This update triggers a rolling update of the kube-proxy pods.
+local-path-provisioner:
+  fixes:
+    - summary: >-
+        Add wildcard tolerations to the helper pod template so PVC provisioning works on tainted
+        nodes after local-path-provisioner v0.0.32+.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19447
+    - summary: >-
+        Bump `local-path-provisioner` to `v0.0.34` to fix CVE-2025-62878 (path traversal via
+        `StorageClass.parameters.pathPattern`, CVSS 10.0).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19345
+      impact: >-
+        The `local-path-provisioner` Pod is restarted during the update. PV provisioning/teardown
+        briefly pauses while the new Pod becomes Ready; existing volumes are not affected.
+log-shipper:
+  fixes:
+    - summary: Bump Go version to 1.25.8 in reloader image to fix stdlib CVEs in Go 1.24.13.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19849
+loki:
+  fixes:
+    - summary: >-
+        Fix CVE-2026-33186 (google.golang.org/grpc) and CVE-2026-32285 (github.com/buger/jsonparser)
+        in the loki image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19373
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        Fix CVE-2026-33186 (google.golang.org/grpc) and CVE-2026-24051 / CVE-2026-39883
+        (go.opentelemetry.io/otel/sdk) in the kube-state-metrics image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19374
+multitenancy-manager:
+  fixes:
+    - summary: Security fixes for CVE-2026-35206, CVE-2026-33186, CVE-2026-34986.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19222
+network-gateway:
+  fixes:
+    - summary: Fixed werf import syntax for compatibility with older werf versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19275
+node-manager:
+  features:
+    - summary: >-
+        Backported per-GPU custom MIG configurations via `customConfigs` with `partedConfig: custom`
+        support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18999
+  fixes:
+    - summary: fixed cve in caps
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18892
+    - summary: Mitigate multiple CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18867
+    - summary: mitigate CVE-2026-33186
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18786
+prometheus:
+  fixes:
+    - summary: >-
+        Fix CVEs in prometheus, mimir, memcached-exporter, grafana-v10 and promxy by bumping
+        vulnerable Go/JS dependencies (grpc, otel/sdk, otlptracehttp, go-jose, goxmldsig, circl,
+        react-router, x/crypto/ssh); add VEX statements only for the remaining non-applicable CVEs
+        (Docker daemon AuthZ/plugin-install, Grafana public-dashboards leak).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19378
+registrypackages:
+  fixes:
+    - summary: Fix last changes in go.mod patch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19880
+    - summary: Add vex entries for d8 image CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19353
+    - summary: Add vex for CVE-2026-39882
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19101
+    - summary: Remediated CVE-2026-32285 in crictl dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19072
+    - summary: Added vex with CVE-2026-33186 for kubeadm and kubelet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18783
+    - summary: Added vex with CVE-2026-33186.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18700
+terraform-manager:
+  fixes:
+    - summary: bump moby/spdystream to v0.5.1 in terraform-manager-dvp image to fix CVE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19722
+    - summary: fixed cve in terraform manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18892
+    - summary: Implemented automatic VEX file merging from dhctl into terraform-manager images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18892
+    - summary: fixed cve in terraform manager and update version in terraform-manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18800
+    - summary: Fixed critical CVEs in dependencies across all cloud providers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18599
+tools:
+  fixes:
+    - summary: Added HTTP client proxy support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18583
+upmeter:
+  fixes:
+    - summary: >-
+        Fix CVE-2026-33186 (google.golang.org/grpc) in the upmeter image; drop unmaintained
+        otel-contrib cortex exporter dependency by inlining the small Config type already used.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19380
+    - summary: >-
+        Add proper securityContext to the upmeter probe to meet the restricted security profile
+        constraints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18492
+user-authn:
+  features:
+    - summary: >-
+        Add UserOperation CR (Lock, Unlock, ResetPassword, Reset2FA) for local users and Lock/Unlock
+        for external password-connector accounts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19664
+    - summary: add detail logging in some places for dex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19595
+    - summary: >-
+        Add per-IP rate limit on Dex password endpoints and account lockout for LDAP / Crowd
+        connectors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19552
+  fixes:
+    - summary: Security fix for CVE-2026-34986.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19222
+
