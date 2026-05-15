@@ -4,7 +4,7 @@
 {{- $istioProxyCacheRev := "v1.27.9-3a854667d854d2d92f81b713431d17e830c94cc4-v1" }}
 {{- $istioProxyDepsRev := "v1.27.9-3a854667d854d2d92f81b713431d17e830c94cc4-v1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersion := "6.4.0" }}
+{{- $bazelVersion := "6.3.2" }}
 {{- $iptables_image_version := "1.8.9" | replace "." "-" }}
 ---
 # Based on https://github.com/istio/istio/blob/1.27.9/docker/Dockerfile.base
@@ -133,7 +133,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export TARGETARCH=amd64 ARCH="x86_64"
-  - export BAZEL_VERSION="6.4.0" USE_BAZEL_VERSION="6.4.0"
+  - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"
   - cd /src/proxy
   - go mod download
   - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
@@ -143,11 +143,11 @@ shell:
   #- sed -n '100,130p' "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
   #- tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
   #- rm -rf /tmp/bazel-deps
-  - |
-    bazel fetch @emsdk//emscripten_toolchain:all \
-      || bazel fetch //:envoy
-    sed -i '/^[[:space:]]*srcs = \[\"wasm_binary.py\"\],[[:space:]]*$/a\    python_version = "PY3",' \
-      "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
+  #- |
+  #  bazel fetch @emsdk//emscripten_toolchain:all \
+  #    || bazel fetch //:envoy
+  #  sed -i '/^[[:space:]]*srcs = \[\"wasm_binary.py\"\],[[:space:]]*$/a\    python_version = "PY3",' \
+  #    "$(bazel info output_base)/external/emsdk/emscripten_toolchain/BUILD.bazel"
   #- bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release //:envoy
   - bazel build --disk_cache=/tmp/bazel-cache --stamp --config=release //:envoy
   - mkdir /src/proxy/bin
