@@ -43,6 +43,15 @@ spec:
         - -ec
         - |
           cp -a /var/lib/cilium-rw/bpf /var/lib/cilium/;
+          # Cap Go runtime parallelism to avoid scheduler scaling problems on
+          # high-CPU nodes (golang/go#65064, golang/go#68399). Default
+          # GOMAXPROCS=NumCPU burns 1+ CPU core in runtime.(*lfstack).pop and
+          # runtime.gcDrain on 32+ core machines with no throughput benefit;
+          # min(NumCPU, 8) covers cilium-agent's actual parallelism needs.
+          # An explicit GOMAXPROCS env var (if set) takes precedence.
+          NPROC=$(grep -c '^processor' /proc/cpuinfo)
+          [ "${NPROC:-0}" -gt 8 ] && NPROC=8
+          export GOMAXPROCS="${GOMAXPROCS:-$NPROC}"
           exec cilium-agent --config-dir=/tmp/cilium/config-map \
                             --prometheus-serve-addr=127.0.0.1:9092
         startupProbe:
