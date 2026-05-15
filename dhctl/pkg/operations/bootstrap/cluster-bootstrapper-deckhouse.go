@@ -80,7 +80,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
-	installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
 	if err != nil {
 		return err
 	}

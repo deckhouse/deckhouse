@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (
@@ -114,21 +115,29 @@ func ApplyPipeline(
 	var extractedData *PipelineOutputs
 
 	pipelineFunc := func(ctx context.Context) (err error) {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - ApplyPipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
 		if err := r.Init(ctx); err != nil {
 			return err
 		}
+		span.AddEvent("Runner inited")
 
 		if err := r.Plan(ctx, false, false); err != nil {
 			return err
 		}
+		span.AddEvent("Plan done")
 
 		defer func() { extractedData, err = extractFn(ctx, r) }()
 
 		if err := r.Apply(ctx); err != nil {
 			return err
 		}
+		span.AddEvent("Apply done")
 
 		extractedData, err = extractFn(ctx, r)
+		span.AddEvent("Extracted data")
+
 		return err
 	}
 

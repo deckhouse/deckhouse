@@ -24,6 +24,8 @@ import (
 	"os"
 	"path/filepath"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
@@ -67,6 +69,27 @@ func (o *Options) DirConfig() *directoryconfig.DirectoryConfig {
 		DownloadCacheDir: o.Global.DownloadCacheDir,
 		VersionFilePath:  o.BuildInfo.VersionFile,
 	}
+}
+
+func (o *Options) ToSpanAttributes() []otattribute.KeyValue {
+	attrs := make([]otattribute.KeyValue, 0)
+
+	attrs = append(attrs, o.Global.ToSpanAttributes()...)
+	attrs = append(attrs, o.BuildInfo.ToSpanAttributes()...)
+	attrs = append(attrs, o.SSH.ToSpanAttributes()...)
+	attrs = append(attrs, o.Become.ToSpanAttributes()...)
+	attrs = append(attrs, o.Kube.ToSpanAttributes()...)
+	attrs = append(attrs, o.Cache.ToSpanAttributes()...)
+	attrs = append(attrs, o.Bootstrap.ToSpanAttributes()...)
+	attrs = append(attrs, o.Preflight.ToSpanAttributes()...)
+	attrs = append(attrs, o.Converge.ToSpanAttributes()...)
+	attrs = append(attrs, o.AutoConverge.ToSpanAttributes()...)
+	attrs = append(attrs, o.Server.ToSpanAttributes()...)
+	attrs = append(attrs, o.Render.ToSpanAttributes()...)
+	attrs = append(attrs, o.ControlPlane.ToSpanAttributes()...)
+	attrs = append(attrs, o.Destroy.ToSpanAttributes()...)
+
+	return attrs
 }
 
 // New returns Options with built-in defaults applied.

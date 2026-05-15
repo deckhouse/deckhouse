@@ -17,6 +17,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/api/coordination/v1"
 
@@ -49,10 +50,14 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,

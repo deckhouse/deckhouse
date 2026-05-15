@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,13 @@ var (
 	RppSignCheck             = "false"
 )
 
-func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig, opts ...ValidateOption) (*MetaConfig, error) {
+func LoadConfigFromFile(
+	ctx context.Context,
+	paths []string,
+	preparatorProvider MetaConfigPreparatorProvider,
+	dc *directoryconfig.DirectoryConfig,
+	opts ...ValidateOption,
+) (*MetaConfig, error) {
 	if dc == nil {
 		return nil, fmt.Errorf("directory config is nil")
 	}
@@ -140,7 +146,13 @@ func numerateManifestLines(manifest []byte) string {
 	return builder.String()
 }
 
-func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig, opts ...ValidateOption) (*MetaConfig, error) {
+func ParseConfig(
+	ctx context.Context,
+	paths []string,
+	preparatorProvider MetaConfigPreparatorProvider,
+	dc *directoryconfig.DirectoryConfig,
+	opts ...ValidateOption,
+) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
@@ -158,7 +170,12 @@ func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaCon
 	return ParseConfigFromData(ctx, content, preparatorProvider, dc, opts...)
 }
 
-func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig) (*MetaConfig, error) {
+func ParseConfigFromCluster(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	preparatorProvider MetaConfigPreparatorProvider,
+	dc *directoryconfig.DirectoryConfig,
+) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
 
@@ -171,9 +188,16 @@ func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 	})
 }
 
-func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig) (*MetaConfig, error) {
-	var metaConfig *MetaConfig
-	var err error
+func ParseConfigInCluster(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	preparatorProvider MetaConfigPreparatorProvider,
+	dc *directoryconfig.DirectoryConfig,
+) (*MetaConfig, error) {
+	var (
+		metaConfig *MetaConfig
+		err        error
+	)
 
 	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
@@ -188,6 +212,7 @@ func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, 
 
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{}
+
 	if err := checkDirs(); err != nil {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
 		if err != nil {
@@ -213,6 +238,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		metaConfig.DownloadCacheDir = dc.DownloadCacheDir
 		metaConfig.VersionFilePath = dc.VersionFilePath
 	}
+
 	schemaStore := NewSchemaStore(dc)
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
@@ -389,7 +415,12 @@ func detectMergedDocuments(doc string) error {
 	return nil
 }
 
-func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig, opts ...ValidateOption) (*MetaConfig, error) {
+func ParseConfigFromData(
+	ctx context.Context,
+	configData string, preparatorProvider MetaConfigPreparatorProvider,
+	dc *directoryconfig.DirectoryConfig,
+	opts ...ValidateOption,
+) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore(dc)
 
 	bigFileTmp := strings.TrimSpace(configData)
@@ -554,10 +585,13 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dc *direct
 	if err != nil {
 		return err
 	}
+
 	if dc == nil {
 		return fmt.Errorf("directory config is nil")
 	}
+
 	imgName := conf.GetRegistry() + "@" + candiImage
+
 	if err = image.DownloadAndUnpackImage(ctx, imgName, dc.DownloadDir, dc.DownloadCacheDir, *conf); err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -101,6 +102,9 @@ func (p *BashiblePipelineParams) errIsNil(c string) error {
 }
 
 func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "RunBashiblePipeline")
+	defer span.End()
+
 	if err := params.Validate(); err != nil {
 		return err
 	}
@@ -206,7 +210,13 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
+	ctx, span := telemetry.StartSpan(ctx, "prepareMasterNode")
+	defer span.End()
+
 	upload := func(ctx context.Context, scriptPath string) error {
+		ctx, span := telemetry.StartSpan(ctx, "upload script")
+		defer span.End()
+
 		if _, err := os.Stat(scriptPath); err != nil {
 			if os.IsNotExist(err) {
 				log.InfoF("Script %s wasn't found\n", scriptPath)
@@ -214,25 +224,30 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			}
 			return fmt.Errorf("script path: %v", err)
 		}
+
 		logs := make([]string, 0)
+
 		cmd := nodeInterface.UploadScript(scriptPath)
 		cmd.WithStdoutHandler(func(l string) {
 			logs = append(logs, l)
 			log.DebugLn(l)
 		})
-
 		cmd.Sudo()
 
 		_, err := cmd.Execute(ctx)
 		if err != nil {
 			stderr := ""
+
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
 				stderr = string(exitErr.Stderr)
 			}
+
 			log.ErrorF("%s\nstderr:\n%s\n", strings.Join(logs, "\n"), stderr)
+
 			return fmt.Errorf("run %s: %w", scriptPath, err)
 		}
+
 		return nil
 	}
 
@@ -387,6 +402,9 @@ func InstallDeckhouse(
 	res := &InstallDeckhouseResult{}
 
 	return res, log.ProcessCtx(ctx, "bootstrap", "Install Deckhouse", func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, "InstallDeckhouse")
+		defer span.End()
+
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
 		if err != nil {
 			return err
@@ -543,6 +561,9 @@ func applyPostBootstrapModuleConfigs(
 }
 
 func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+	ctx, span := telemetry.StartSpan(ctx, "RunPostInstallTasks")
+	defer span.End()
+
 	if result == nil {
 		log.DebugF("Skip post install tasks because result is nil\n")
 		return nil

@@ -180,7 +180,10 @@
  - **[dhctl]** Added a preflight check for validating InstanceClasses against the selected cloud provider. [#18473](https://github.com/deckhouse/deckhouse/pull/18473)
  - **[dhctl]** Excluded `BaseInfraPhase` from the progress phase list for static clusters. [#17856](https://github.com/deckhouse/deckhouse/pull/17856)
  - **[dhctl]** Refactored preflight checks. [#17564](https://github.com/deckhouse/deckhouse/pull/17564)
+ - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19505](https://github.com/deckhouse/deckhouse/pull/19505)
  - **[docs]** Updated the `d8 cni-migration` commands in the CNI migration guide to `d8 network cni-migration`. [#18547](https://github.com/deckhouse/deckhouse/pull/18547)
+ - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19846](https://github.com/deckhouse/deckhouse/pull/19846)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Added validating x-forwarded-port and x-forwarded-proto headers when redirecting from www. [#19081](https://github.com/deckhouse/deckhouse/pull/19081)
     All Ingress-NGINX controller pods of 1.12 and 1.14 will be restarted.
  - **[ingress-nginx]** Initial ingress store sync is  fixed. [#19031](https://github.com/deckhouse/deckhouse/pull/19031)
@@ -199,6 +202,7 @@
     ServiceEntry and DestinationRule resources for federated public services will be recreated with new names. This causes a brief traffic interruption for cross-cluster federated service routing during the first reconciliation after the update.
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#18673](https://github.com/deckhouse/deckhouse/pull/18673)
+ - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
  - **[node-manager]** Improve fencing-agent health monitor logging — warn on fallback feeding, error on watchdog starvation, add diagnostic context to all feeding log messages. [#19400](https://github.com/deckhouse/deckhouse/pull/19400)
     Operators can now detect degraded fencing states (quorum loss, API unreachability) through log levels and diagnostic fields without parsing log messages.
  - **[node-manager]** fix draining hook event generation [#19165](https://github.com/deckhouse/deckhouse/pull/19165)
@@ -219,6 +223,7 @@
  - **[upmeter]** checks for Observability module in Upmeter + fix Grafana v10 [#18111](https://github.com/deckhouse/deckhouse/pull/18111)
  - **[user-authn]** Add "cache" get parameter to prevent stale caches from breaking login page [#18976](https://github.com/deckhouse/deckhouse/pull/18976)
  - **[user-authn]** Disable implicit flow due to security concerns. [#18288](https://github.com/deckhouse/deckhouse/pull/18288)
+ - **[user-authz]** Extend cluster-admin clusterrole  with kubelet-api-admin rights. [#19878](https://github.com/deckhouse/deckhouse/pull/19878)
  - **[user-authz]** Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules [#18689](https://github.com/deckhouse/deckhouse/pull/18689)
 
 ## Chore

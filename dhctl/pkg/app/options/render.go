@@ -14,6 +14,8 @@
 
 package options
 
+import otattribute "go.opentelemetry.io/otel/attribute"
+
 // RenderOptions covers the `dhctl config render ...` and `config parse ...` commands.
 type RenderOptions struct {
 	BashibleBundleDir string
@@ -26,5 +28,14 @@ type RenderOptions struct {
 func NewRenderOptions() RenderOptions {
 	return RenderOptions{
 		ParseOutput: "json",
+	}
+}
+
+func (o *RenderOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("render.bashibleBundleDir", o.BashibleBundleDir),
+		otattribute.String("render.parseInputFile", o.ParseInputFile),
+		otattribute.String("render.parseOutput", o.ParseOutput),
+		otattribute.String("render.editor", o.Editor),
 	}
 }
