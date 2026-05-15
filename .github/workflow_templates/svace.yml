@@ -44,8 +44,8 @@ jobs:
     env:
       WERF_ENV: "FE"
       SVACE_ENABLED: "true"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ANALYZE_HOST: "${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_USER }}"
 {!{ tmpl.Exec "build_template" (slice $ctx "main" "FE") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 

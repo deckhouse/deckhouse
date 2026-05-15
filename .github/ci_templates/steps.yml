@@ -235,11 +235,11 @@
   uses: {!{ index (ds "actions") "ssh-agent" }!}
   with:
     ssh-private-key: |
-      ${{secrets.SOURCE_REPO_SSH_KEY}}
-      ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+      ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
 - name: Add ssh_known_hosts
   run: |
-    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
     echo "::add-mask::$HOST"
     IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
     for IP in $IPS; do
@@ -257,7 +257,7 @@
 - name: Add svace analyze server to ssh_known_hosts
   continue-on-error: true
   run: |
-    host=${{ secrets.SVACE_ANALYZE_HOST }}
+    host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
     host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
     echo "::add-mask::$host_ip"
     mkdir -p ~/.ssh
