@@ -8,10 +8,10 @@ cni-cilium:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19789
 deckhouse:
   fixes:
-    - summary: Fix exp modules auto enabling.
-      pull_request: https://github.com/deckhouse/deckhouse/pull/19670
     - summary: Fixed global configuration generation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19689
+    - summary: Fix exp modules auto enabling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19670
 dhctl:
   fixes:
     - summary: Wait for stronghold cluster sync before node deletion
