@@ -404,6 +404,10 @@ entries:
                     - title:
                         en: Hybrid cluster with vSphere
                         ru: Гибридный кластер с vSphere
+                      url: /admin/integrations/hybrid/vsphere-hybrid.html
+                    - title:
+                        en: Hybrid cluster with DVP
+                        ru: Гибридный кластер с DVP
                       url: /admin/integrations/hybrid/vsphere-hybrid.html  
             - title:
                 en: High reliability and availability

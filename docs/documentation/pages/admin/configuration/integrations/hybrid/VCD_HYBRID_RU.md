@@ -82,7 +82,7 @@ lang: ru
    d8 k get mc cloud-provider-vcd
    ```
 
-1. Убедитесь, что все поды в пространстве имён `d8-cloud-provider-vcd` находятся в состоянии `Running`:
+1. Убедитесь, что все поды в неймспейсе `d8-cloud-provider-vcd` находятся в состоянии `Running`:
 
    ```shell
    d8 k get pods -n d8-cloud-provider-vcd
