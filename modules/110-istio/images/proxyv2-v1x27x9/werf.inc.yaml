@@ -126,7 +126,8 @@ shell:
   - git lfs install
   #- git clone --depth 1 --branch {{ $istioProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-deps.git /tmp/bazel-deps
   #- rm -rf /tmp/bazel-deps/.git
-
+  - | 
+    python3 python3-pip python3-venv \
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
