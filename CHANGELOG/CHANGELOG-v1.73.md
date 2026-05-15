@@ -1,14 +1,45 @@
 # Changelog v1.73
 
+## [MALFORMED]
+
+
+ - #13577 unknown section "dashboard"
+ - #13577 unknown section "operator-trivy"
+ - #15401 unknown section "operator-trivy"
+ - #15637 unknown section "operator-trivy"
+ - #15669 unknown section "operator-trivy"
+ - #15881 unknown section "operator-trivy"
+ - #15909 unknown section "operator-trivy"
+ - #15977 unknown section "operator-trivy"
+ - #15992 unknown section "operator-trivy"
+ - #16006 unknown section "operator-trivy"
+ - #16085 unknown section "operator-trivy"
+ - #16194 unknown section "operator-trivy"
+ - #16277 unknown section "operator-trivy"
+ - #16338 unknown section "operator-trivy"
+ - #16445 unknown section "operator-trivy"
+ - #16489 unknown section "operator-trivy"
+ - #16927 unknown section "dashboard"
+ - #17803 unknown section "docs-builder"
+ - #18879 unknown section "operator-trivy"
+ - #19226 unknown section "operator-trivy"
+ - #19340 unknown section "operator-trivy"
+ - #19751 missing summary, unknown section "nodeManager"
+ - #19751 missing summary
+ - #19751 missing summary, unknown section "registryPackagesProxy cve fixes"
+
 ## Know before update
 
 
  - ALL pods of the ingress-nginx module will be restarted.
  - Deckhouse now has privileged mode and runs as root.
  - Fixed multiple security vulnerabilities that could affect authentication components.
+ - The `local-path-provisioner` Pod is restarted during the update. PV provisioning/teardown briefly pauses while the new Pod becomes Ready; existing volumes are not affected.
  - The runtime-audit-engine module has been moved to external. All pods of the module will be restarted.
  - This update fixes a security vulnerability in the `user-authn` module (CVE-2025-22868) that could potentially allow bypass of authentication validation.
+ - This update triggers a rolling update of the kube-proxy pods.
  - Users should update to this patch release to mitigate known security vulnerabilities. No breaking changes expected.
+ - When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
 
 ## Features
 
@@ -18,6 +49,8 @@
     Enables Gatekeeper constraints to act on CONNECT (kubectl exec) events; default behavior unchanged unless such constraints are created.
  - **[admission-policy-engine]** Added `allowRbacWildcards` SecurityPolicy flag and Gatekeeper template to restrict `*` in Role and RoleBinding. [#15567](https://github.com/deckhouse/deckhouse/pull/15567)
  - **[admission-policy-engine]** Added OperationPolicy knob pods.disallowedTolerations and enable DELETE admission by default in Gatekeeper webhook. [#15457](https://github.com/deckhouse/deckhouse/pull/15457)
+ - **[candi]** Bump deckhouse-cli version up to v0.29.29 [#19230](https://github.com/deckhouse/deckhouse/pull/19230)
+ - **[candi]** Bump deckhouse-cli version up to v0.29.28 [#19228](https://github.com/deckhouse/deckhouse/pull/19228)
  - **[candi]** Added support of the new module csi-vsphere. [#14549](https://github.com/deckhouse/deckhouse/pull/14549)
  - **[candi]** Added metadata to VCD objects such as networks, virtual machines, and disks. [#14505](https://github.com/deckhouse/deckhouse/pull/14505)
  - **[cloud-provider-dvp]** Changed go_lib path for cse needs. [#15445](https://github.com/deckhouse/deckhouse/pull/15445)
@@ -62,11 +95,13 @@
  - **[ingress-nginx]** Added NGINX memory profiling for the Ingress controller. [#14736](https://github.com/deckhouse/deckhouse/pull/14736)
  - **[istio]** Added access log format setting for proxy sidecars. [#16129](https://github.com/deckhouse/deckhouse/pull/16129)
  - **[istio]** Added PSS restriction for api-proxy and  ingressgateway. [#15791](https://github.com/deckhouse/deckhouse/pull/15791)
+ - **[node-manager]** Backported per-GPU custom MIG configurations via `customConfigs` with `partedConfig: custom` support. [#18999](https://github.com/deckhouse/deckhouse/pull/18999)
  - **[node-manager]** Disabled update system packages index during boot cloud ephemeral nodes. [#15859](https://github.com/deckhouse/deckhouse/pull/15859)
  - **[registry]** Added configurable unmanaged mode. [#14820](https://github.com/deckhouse/deckhouse/pull/14820)
  - **[registry]** Added registry default and relax check modes. [#14820](https://github.com/deckhouse/deckhouse/pull/14820)
  - **[registry]** Disable change registry helper when registry module is enabled. [#14820](https://github.com/deckhouse/deckhouse/pull/14820)
  - **[upmeter]** Added the ability to pass headers in RW. [#15533](https://github.com/deckhouse/deckhouse/pull/15533)
+ - **[user-authn]** Add UserOperation CR (Lock, Unlock, ResetPassword, Reset2FA) for local users and Lock/Unlock for external password-connector accounts. [#19664](https://github.com/deckhouse/deckhouse/pull/19664)
  - **[user-authn]** Add DexProvider .spec.enabled flag (default true) and kubectl printer columns; skip disabled providers in Dex connectors. [#16007](https://github.com/deckhouse/deckhouse/pull/16007)
  - **[user-authn]** Enforce lowercase emails for User on create and on email changes; case-insensitive email uniqueness; backward-compatible for legacy uppercase emails. [#15960](https://github.com/deckhouse/deckhouse/pull/15960)
  - **[user-authn]** Increase Dex AuthRequest flexibility with token-bucket rate-limiting and global ResourceQuota. [#15421](https://github.com/deckhouse/deckhouse/pull/15421)
@@ -78,6 +113,7 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fix cve for ratify [#18927](https://github.com/deckhouse/deckhouse/pull/18927)
  - **[admission-policy-engine]** added mount-points in ratify [#17925](https://github.com/deckhouse/deckhouse/pull/17925)
  - **[admission-policy-engine]** Prohibit only creation or modification for objects with vulnerable images [#16134](https://github.com/deckhouse/deckhouse/pull/16134)
  - **[admission-policy-engine]** Fixed proxy support for trivy-provider [#16113](https://github.com/deckhouse/deckhouse/pull/16113)
@@ -85,8 +121,10 @@
  - **[admission-policy-engine]** Fix CVE. [#15966](https://github.com/deckhouse/deckhouse/pull/15966)
  - **[admission-policy-engine]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[basic-auth]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[candi]** Fix cve for admission-policy-engine, cert-manager, kube-rbac-proxy [#18790](https://github.com/deckhouse/deckhouse/pull/18790)
+ - **[candi]** cve fix for user-authn module [#18679](https://github.com/deckhouse/deckhouse/pull/18679)
+ - **[candi]** Add cve patches for admission-policy-engine, cert-manager [#18566](https://github.com/deckhouse/deckhouse/pull/18566)
  - **[candi]** cve fix for admission-policy-engine, cert-manager, user-authn, multitenancy-manager [#18171](https://github.com/deckhouse/deckhouse/pull/18171)
- - **[candi]** Updated pwru tool to v1.0.11 to fix CVE-2025-68121. [#17975](https://github.com/deckhouse/deckhouse/pull/17975)
  - **[candi]** Updated pwru tool to v1.0.11 to fix CVE-2025-68121. [#17952](https://github.com/deckhouse/deckhouse/pull/17952)
  - **[candi]** Updated the bashible step to include Linux kernel versions that address CVE-2025-37999 [#17369](https://github.com/deckhouse/deckhouse/pull/17369)
  - **[candi]** Add missing debian 13 version to detect_bundle [#16617](https://github.com/deckhouse/deckhouse/pull/16617)
@@ -102,10 +140,13 @@
  - **[cert-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[chrony]** mitigate CVE-2025-58181 [#17958](https://github.com/deckhouse/deckhouse/pull/17958)
  - **[chrony]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18721](https://github.com/deckhouse/deckhouse/pull/18721)
  - **[cilium-hubble]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-aws]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cloud-provider-azure]** fix build image for azure ccm [#16560](https://github.com/deckhouse/deckhouse/pull/16560)
  - **[cloud-provider-azure]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[cloud-provider-dvp]** update cloud-controller-manager dependencies and VEX metadata to address current CVE findings [#19272](https://github.com/deckhouse/deckhouse/pull/19272)
+ - **[cloud-provider-dvp]** fixe cve [#18599](https://github.com/deckhouse/deckhouse/pull/18599)
  - **[cloud-provider-dvp]** Added functionality to wait for a disk to be attached to a VM [#16965](https://github.com/deckhouse/deckhouse/pull/16965)
  - **[cloud-provider-dvp]** add missing field to Cluster [#16399](https://github.com/deckhouse/deckhouse/pull/16399)
  - **[cloud-provider-dvp]** Correct the calculation of the path to the device [#16212](https://github.com/deckhouse/deckhouse/pull/16212)
@@ -141,13 +182,20 @@
  - **[cni-cilium]** Fixed egress gateway reselection for case node hard reset. [#15090](https://github.com/deckhouse/deckhouse/pull/15090)
  - **[cni-cilium]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[cni-flannel]** Used mode HostGW as default for podNetworkMode. [#15710](https://github.com/deckhouse/deckhouse/pull/15710)
+ - **[common]** fix cve's in docker-registry docker_auth image. [#19356](https://github.com/deckhouse/deckhouse/pull/19356)
+ - **[common]** Removed Python completely from the debug-container image as it is no longer needed, resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX. [#18845](https://github.com/deckhouse/deckhouse/pull/18845)
+ - **[common]** Fixed CVE-2026-33186 in the CoreDNS image. [#18724](https://github.com/deckhouse/deckhouse/pull/18724)
+    CoreDNS pods will undergo a rolling restart.
  - **[control-plane-manager]** Fix  “etcd join” phase for control-plane scaling in v1.33. [#16660](https://github.com/deckhouse/deckhouse/pull/16660)
     Allows scaling control-plane from 1→3 in clusters where ControlPlaneKubeletLocalMode=true.
  - **[control-plane-manager]** Add vex for CVE-2025-31133, CVE-2025-52881 . [#16337](https://github.com/deckhouse/deckhouse/pull/16337)
  - **[control-plane-manager]** Append audit policies for virtualization before appending custom policies from Secret. [#15603](https://github.com/deckhouse/deckhouse/pull/15603)
  - **[control-plane-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
- - **[dashboard]** Fixed CVE-2025-30204 by updating dashboard components [#16927](https://github.com/deckhouse/deckhouse/pull/16927)
- - **[dashboard]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[deckhouse]** Add VEX entries for CVEs. [#19671](https://github.com/deckhouse/deckhouse/pull/19671)
+ - **[deckhouse]** Fix CVEs in docs-builder and add cryptography VEX. [#19343](https://github.com/deckhouse/deckhouse/pull/19343)
+ - **[deckhouse]** Fix CVEs and update VEX entries. [#19233](https://github.com/deckhouse/deckhouse/pull/19233)
+ - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19178](https://github.com/deckhouse/deckhouse/pull/19178)
+ - **[deckhouse]** Fix CVEs in webhook-handler and cleanup VEX files. [#19033](https://github.com/deckhouse/deckhouse/pull/19033)
  - **[deckhouse]** Fix module enabling. [#17043](https://github.com/deckhouse/deckhouse/pull/17043)
  - **[deckhouse]** Fix validation logic for a disabled module [#16385](https://github.com/deckhouse/deckhouse/pull/16385)
  - **[deckhouse]** Automatically set node ip to deckhouse pod during bootstrap phase to no_proxy env. [#15978](https://github.com/deckhouse/deckhouse/pull/15978)
@@ -170,6 +218,10 @@
  - **[deckhouse-tools]** Added tolerations support to DexAuthenticator configuration. [#14869](https://github.com/deckhouse/deckhouse/pull/14869)
  - **[deckhouse-tools]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[descheduler]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19643](https://github.com/deckhouse/deckhouse/pull/19643)
+ - **[dhctl]** dhctl cve fix [#19359](https://github.com/deckhouse/deckhouse/pull/19359)
+ - **[dhctl]** dhctl vex upd [#18894](https://github.com/deckhouse/deckhouse/pull/18894)
+ - **[dhctl]** mitigate CVE-2026-33186 [#18610](https://github.com/deckhouse/deckhouse/pull/18610)
  - **[dhctl]** Fix parallel bootstrap cloud permanent nodes [#16886](https://github.com/deckhouse/deckhouse/pull/16886)
  - **[dhctl]** Fix panic during destroy. Change opentofu log level to INFO. [#16726](https://github.com/deckhouse/deckhouse/pull/16726)
  - **[dhctl]** Fix StaticInstance readiness check and refactoring readiness check for resources. [#16616](https://github.com/deckhouse/deckhouse/pull/16616)
@@ -197,6 +249,12 @@
     the extended monitoring will only be enabled when the label is explicitly set on a namespace
  - **[extended-monitoring]** Init extended-monitoring-exporter on unavailable API. [#15529](https://github.com/deckhouse/deckhouse/pull/15529)
  - **[extended-monitoring]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19848](https://github.com/deckhouse/deckhouse/pull/19848)
+    All Ingress-nginx controller pods will be restarted.
+ - **[ingress-nginx]** CVE-2025-15566 is backported. [#19220](https://github.com/deckhouse/deckhouse/pull/19220)
+    All pods of Ingress-NGINX controller will be restarted.
+ - **[ingress-nginx]** Fixes are backported to 1.73. [#18960](https://github.com/deckhouse/deckhouse/pull/18960)
+    All Ingress-NGINX controller pods will be restarted.
  - **[ingress-nginx]** CVE-2026-3288 fix is backported in all Ingress-Nginx controllers. [#18428](https://github.com/deckhouse/deckhouse/pull/18428)
     All Ingress-Nginx controller pods will be restarted.
  - **[ingress-nginx]** Golang and Altlinux updates are reverted. [#18223](https://github.com/deckhouse/deckhouse/pull/18223)
@@ -215,6 +273,22 @@
  - **[ingress-nginx]** Fixed nginx image build for ingress controller and template tests. [#15464](https://github.com/deckhouse/deckhouse/pull/15464)
  - **[ingress-nginx]** Disabled log messages such as `Error obtaining Endpoints for Service...`. [#15260](https://github.com/deckhouse/deckhouse/pull/15260)
  - **[ingress-nginx]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[istio]** CNI-node readonly root filesystem enable fix [#19690](https://github.com/deckhouse/deckhouse/pull/19690)
+    When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+ - **[istio]** fixed CVEs in module images [#19358](https://github.com/deckhouse/deckhouse/pull/19358)
+    module pods will be restarted
+ - **[istio]** CNI-node readonly root filesystem enable [#19342](https://github.com/deckhouse/deckhouse/pull/19342)
+ - **[istio]** fixed CVE-2026-39882, CVE-2026-39883 and CVE-2026-35206 [#19096](https://github.com/deckhouse/deckhouse/pull/19096)
+    istio module pods will be restarted
+ - **[istio]** fixed CVE-2026-34986 [#18967](https://github.com/deckhouse/deckhouse/pull/18967)
+    istio module pods will be restarted
+ - **[istio]** fixed CVE in istio module v1.19.7 [#18811](https://github.com/deckhouse/deckhouse/pull/18811)
+    istio module pods will be restarted
+ - **[istio]** fixed CVEs in module v1.25.2 images [#18807](https://github.com/deckhouse/deckhouse/pull/18807)
+    istio module pods will be restarted
+ - **[istio]** fixed CVE in istio module v1.21.6 [#18688](https://github.com/deckhouse/deckhouse/pull/18688)
+    istio module pods will be restarted
+ - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18334](https://github.com/deckhouse/deckhouse/pull/18334)
  - **[istio]** Fix CVE for Istio version 1.21 and 1.25 [#17298](https://github.com/deckhouse/deckhouse/pull/17298)
  - **[istio]** fixing the CVE in Kiali [#17045](https://github.com/deckhouse/deckhouse/pull/17045)
  - **[istio]** The same owner is specified for the files that are used to run in the operator container. [#16154](https://github.com/deckhouse/deckhouse/pull/16154)
@@ -223,7 +297,12 @@
  - **[istio]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[kube-dns]** Improved /etc/hosts renderer compatibility with admission-policy-engine Restricted mode. [#16599](https://github.com/deckhouse/deckhouse/pull/16599)
  - **[kube-dns]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[kube-proxy]** Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies. [#19120](https://github.com/deckhouse/deckhouse/pull/19120)
+    This update triggers a rolling update of the kube-proxy pods.
  - **[kube-proxy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[local-path-provisioner]** Add wildcard tolerations to the helper pod template so PVC provisioning works on tainted nodes after local-path-provisioner v0.0.32+. [#19447](https://github.com/deckhouse/deckhouse/pull/19447)
+ - **[local-path-provisioner]** Bump `local-path-provisioner` to `v0.0.34` to fix CVE-2025-62878 (path traversal via `StorageClass.parameters.pathPattern`, CVSS 10.0). [#19345](https://github.com/deckhouse/deckhouse/pull/19345)
+    The `local-path-provisioner` Pod is restarted during the update. PV provisioning/teardown briefly pauses while the new Pod becomes Ready; existing volumes are not affected.
  - **[local-path-provisioner]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[log-shipper]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[loki]** Fixed CVE-2025-47914, CVE-2025-58181 [#17555](https://github.com/deckhouse/deckhouse/pull/17555)
@@ -246,19 +325,18 @@
  - **[multitenancy-manager]** Patched critical CVEs in dependencies. [#15312](https://github.com/deckhouse/deckhouse/pull/15312)
     Users should update to this patch release to mitigate known security vulnerabilities. No breaking changes expected.
  - **[multitenancy-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[network-gateway]** Fixed werf import syntax for compatibility with older werf versions. [#19275](https://github.com/deckhouse/deckhouse/pull/19275)
  - **[node-local-dns]** Fixed CVEs [#17471](https://github.com/deckhouse/deckhouse/pull/17471)
  - **[node-local-dns]** Fixed CVE-2025-59530 and updated CoreDNS to version 1.13.1. [#15965](https://github.com/deckhouse/deckhouse/pull/15965)
+ - **[node-manager]** fixed cve in caps [#18892](https://github.com/deckhouse/deckhouse/pull/18892)
+ - **[node-manager]** Mitigate multiple CVEs [#18867](https://github.com/deckhouse/deckhouse/pull/18867)
+ - **[node-manager]** mitigate CVE-2026-33186 [#18786](https://github.com/deckhouse/deckhouse/pull/18786)
  - **[node-manager]** Fix panic in registry packages proxy if image not found. [#16425](https://github.com/deckhouse/deckhouse/pull/16425)
  - **[node-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[openvpn]** ovpn-admin upgraded to fix the validation of static IP addresses, as well as add routes migration during the rotation of client certificates, openvpn instances will be restarted. [#14578](https://github.com/deckhouse/deckhouse/pull/14578)
  - **[openvpn]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[operator-prometheus]** Fixed CVE-2025-47914, CVE-2025-58181 [#17601](https://github.com/deckhouse/deckhouse/pull/17601)
  - **[operator-prometheus]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
- - **[operator-trivy]** Fix CIS Benchmark report template [#16489](https://github.com/deckhouse/deckhouse/pull/16489)
- - **[operator-trivy]** Add grep to node-collector and improve error reporting [#16277](https://github.com/deckhouse/deckhouse/pull/16277)
- - **[operator-trivy]** Fixed node-collector pods crasing on startup. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
- - **[operator-trivy]** Added a passtrough for a HTTP(s) proxy parameters from operator to vulnerability scanning jobs processes. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
- - **[operator-trivy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[prometheus]** Fixed CVE-2025-47914, CVE-2025-58181, CVE-2025-65637 [#17597](https://github.com/deckhouse/deckhouse/pull/17597)
  - **[prometheus]** Fix namespace label value in the Ingress Nginx controller and several other metrics [#16720](https://github.com/deckhouse/deckhouse/pull/16720)
     Ingress Nginx controller dashboards are fixed
@@ -268,14 +346,14 @@
  - **[prometheus-metrics-adapter]** Fixed CVE-2025-47914, CVE-2025-58181 [#17570](https://github.com/deckhouse/deckhouse/pull/17570)
  - **[prometheus-metrics-adapter]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[prometheus-pushgateway]** Fixed CVE-2025-47914, CVE-2025-58181, CVE-2025-22872, CVE-2025-22868 [#17556](https://github.com/deckhouse/deckhouse/pull/17556)
- - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18347](https://github.com/deckhouse/deckhouse/pull/18347)
-    Registry pods will be restarted.
  - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18231](https://github.com/deckhouse/deckhouse/pull/18231)
     Registry pods will be restarted.
  - **[registry]** Omitted the auth field in DockerConfig when credentials (username and password) are empty. [#17332](https://github.com/deckhouse/deckhouse/pull/17332)
  - **[registry]** bump go_lib/registry dependencies [#15985](https://github.com/deckhouse/deckhouse/pull/15985)
  - **[registry-packages-proxy]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
- - **[registrypackages]** Update integrity patch for containerd (cse only). [#17028](https://github.com/deckhouse/deckhouse/pull/17028)
+ - **[registrypackages]** Fix last changes in go.mod patch [#19880](https://github.com/deckhouse/deckhouse/pull/19880)
+ - **[registrypackages]** Added vex with CVE-2026-33186 for kubeadm and kubelet. [#18783](https://github.com/deckhouse/deckhouse/pull/18783)
+ - **[registrypackages]** Added vex with CVE-2026-33186. [#18700](https://github.com/deckhouse/deckhouse/pull/18700)
  - **[registrypackages]** Update integrity patch for containerd (cse only). [#17000](https://github.com/deckhouse/deckhouse/pull/17000)
  - **[registrypackages]** Update containerd to 1.7.29 / 2.1.5 and runc to 1.3.3 [#16335](https://github.com/deckhouse/deckhouse/pull/16335)
  - **[registrypackages]** Fixes CVE in kubernetes-cni [#16343](https://github.com/deckhouse/deckhouse/pull/16343)
@@ -283,6 +361,11 @@
  - **[service-with-healthchecks]** Fixed CVEs [#16950](https://github.com/deckhouse/deckhouse/pull/16950)
  - **[service-with-healthchecks]** Improved the module's security [#15358](https://github.com/deckhouse/deckhouse/pull/15358)
  - **[service-with-healthchecks]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
+ - **[terraform-manager]** bump moby/spdystream to v0.5.1 in terraform-manager-dvp image to fix CVE [#19722](https://github.com/deckhouse/deckhouse/pull/19722)
+ - **[terraform-manager]** fixed cve in terraform manager [#18892](https://github.com/deckhouse/deckhouse/pull/18892)
+ - **[terraform-manager]** Implemented automatic VEX file merging from dhctl into terraform-manager images [#18892](https://github.com/deckhouse/deckhouse/pull/18892)
+ - **[terraform-manager]** fixed cve in terraform manager and update version in terraform-manager [#18800](https://github.com/deckhouse/deckhouse/pull/18800)
+ - **[terraform-manager]** Fixed critical CVEs in dependencies across all cloud providers [#18599](https://github.com/deckhouse/deckhouse/pull/18599)
  - **[terraform-manager]** Update container configurations to use improvement securityContext. [#13577](https://github.com/deckhouse/deckhouse/pull/13577)
  - **[upmeter]** Add proper securityContext to the upmeter probe to meet the restricted security profile constraints. [#18492](https://github.com/deckhouse/deckhouse/pull/18492)
  - **[upmeter]** Fixed CVE-2025-47914, CVE-2025-58181, CVE-2025-65637 [#17557](https://github.com/deckhouse/deckhouse/pull/17557)
@@ -314,6 +397,7 @@
 ## Chore
 
 
+ - **[admission-policy-engine]** Updated VEX entries for trivy-provider [#18951](https://github.com/deckhouse/deckhouse/pull/18951)
  - **[admission-policy-engine]** Made trivy-provider set readOnlyRootFilesystem. [#15837](https://github.com/deckhouse/deckhouse/pull/15837)
  - **[admission-policy-engine]** Updated dependencies to fix CVE's. [#15459](https://github.com/deckhouse/deckhouse/pull/15459)
  - **[admission-policy-engine]** Fixed CVE's. [#15237](https://github.com/deckhouse/deckhouse/pull/15237)
@@ -361,6 +445,8 @@
  - **[docs]** Add NGC examples for automatically installation of NVIDIA drivers. [#16864](https://github.com/deckhouse/deckhouse/pull/16864)
  - **[extended-monitoring]** Migrated to golang. [#15781](https://github.com/deckhouse/deckhouse/pull/15781)
  - **[extended-monitoring]** Added FAQ document. [#15640](https://github.com/deckhouse/deckhouse/pull/15640)
+ - **[ingress-nginx]** Shrinking 1.10 image is backported. [#19518](https://github.com/deckhouse/deckhouse/pull/19518)
+    All pods of the 1.10 Ingress-NGINX controller will be restarted.
  - **[ingress-nginx]** Fix CVEs in sources [#16190](https://github.com/deckhouse/deckhouse/pull/16190)
  - **[ingress-nginx]** The readOnlyRootFilesystem security option is set to true for all containers. [#15496](https://github.com/deckhouse/deckhouse/pull/15496)
     ALL pods of the ingress-nginx module will be restarted.
@@ -394,10 +480,6 @@
  - **[node-manager]** Added sign check and integrity check to the registry-packages-proxy. [#14685](https://github.com/deckhouse/deckhouse/pull/14685)
  - **[openvpn]** The readOnlyRootFilesystem security option is set to true for all containers. [#15346](https://github.com/deckhouse/deckhouse/pull/15346)
     Pods of the openvpn module will be restarted.
- - **[operator-trivy]** Distroless-based node-collector in Trivy Operator. [#16006](https://github.com/deckhouse/deckhouse/pull/16006)
- - **[operator-trivy]** Added VEX manifests to artifacts. [#15992](https://github.com/deckhouse/deckhouse/pull/15992)
- - **[operator-trivy]** Fixed CVE-2025-22868 in trivy node-collector image. [#15669](https://github.com/deckhouse/deckhouse/pull/15669)
- - **[operator-trivy]** Fix CVE's. [#15401](https://github.com/deckhouse/deckhouse/pull/15401)
  - **[prometheus]** update pip version [#16228](https://github.com/deckhouse/deckhouse/pull/16228)
  - **[prometheus]** Add svace analyze for mimir image. [#16068](https://github.com/deckhouse/deckhouse/pull/16068)
  - **[prometheus]** Added pre-created paths create folder. [#15832](https://github.com/deckhouse/deckhouse/pull/15832)
@@ -411,5 +493,7 @@
  - **[registry]** Fixed CVE's: CVE-2020-26160, CVE-2020-8911, CVE-2020-8912, CVE-2022-21698, CVE-2022-2582, CVE-2025-22868, CVE-2025-22869, CVE-2025-22870, CVE-2025-22872, CVE-2025-27144 [#15235](https://github.com/deckhouse/deckhouse/pull/15235)
  - **[registry-packages-proxy]** mitigate cves [#17974](https://github.com/deckhouse/deckhouse/pull/17974)
  - **[registry-packages-proxy]** Added separate secret to rpp for imagePullSecrets. [#15783](https://github.com/deckhouse/deckhouse/pull/15783)
+ - **[registrypackages]** Fixed CVEs through vex files [#19014](https://github.com/deckhouse/deckhouse/pull/19014)
+ - **[registrypackages]** Add vex for etcdl/etcdutil, crictl, containerd. [#18784](https://github.com/deckhouse/deckhouse/pull/18784)
  - **[registrypackages]** update pip version [#16228](https://github.com/deckhouse/deckhouse/pull/16228)
 
