@@ -87,3 +87,8 @@ password policy.
 
 Manual unlock is performed by patching the user's `OfflineSessions` resource
 (clearing `lockedUntil` and `incorrectPasswordLoginAttempts`).
+
+### 011-fix-cve.patch
+
+Update Go module dependencies to fix:
+- CVE-2026-32952 (`github.com/Azure/go-ntlmssp` -> `v0.1.1`)
