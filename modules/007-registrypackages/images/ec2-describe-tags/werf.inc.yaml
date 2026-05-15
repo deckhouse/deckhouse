@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 {{- $version := include "get_oss_version_by_id" (list "ec2-describe-tags" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
@@ -56,3 +57,4 @@ shell:
     - cd /src/go-ec2-describe-tags
     - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ec2_describe_tags
     - mv /src/scripts/* /
+{{- end }}
