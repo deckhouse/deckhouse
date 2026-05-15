@@ -163,6 +163,11 @@ func reconcileEtcdJoin(
 		logger.Error("failed to prepare etcd manifest", log.Err(err))
 		return fmt.Errorf("prepare etcd manifest: %w", err)
 	}
+	manifest, err = applyComponentOverrides(component, manifest, node)
+	if err != nil {
+		logger.Error("failed to apply node overrides to etcd manifest", log.Err(err))
+		return fmt.Errorf("apply node overrides: %w", err)
+	}
 
 	logger.Info("etcd join: calling JoinCluster", slog.String("ip", node.AdvertiseIP))
 	if err := etcd.JoinCluster(manifest, node.AdvertiseIP, node.Name,

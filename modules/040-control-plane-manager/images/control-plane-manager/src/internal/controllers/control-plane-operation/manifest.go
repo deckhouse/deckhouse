@@ -37,7 +37,8 @@ type fileWriteResult struct {
 }
 
 // prepareManifestBytes expands env vars in the template and sets checksum annotations.
-// Returns raw manifest bytes
+// Pure template-rendering step: no node-specific policy. Node-aware patches happen
+// in applyComponentOverrides on top of the result.
 func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations) ([]byte, error) {
 	key := component.SecretKey()
 	if key == "" {
@@ -59,9 +60,29 @@ func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, sec
 	return manifest, nil
 }
 
-// writeStaticPodManifestIfChanged expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
-func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string) (fileWriteResult, error) {
+// applyComponentOverrides applies node-specific post-processing to a rendered manifest.
+// Return the input unchanged when no override applies.
+func applyComponentOverrides(component controlplanev1alpha1.OperationComponent, manifest []byte, node NodeIdentity) ([]byte, error) {
+	if component == controlplanev1alpha1.OperationComponentEtcd {
+		if params, ok := etcdPerformanceParamsForNode(node); ok {
+			patched, err := applyEtcdPerformanceTuning(manifest, params)
+			if err != nil {
+				return nil, fmt.Errorf("apply etcd performance tuning: %w", err)
+			}
+			return patched, nil
+		}
+	}
+	return manifest, nil
+}
+
+// writeStaticPodManifestIfChanged renders the template, applies node-specific overrides and writes the manifest to manifestDir/<component>.yaml atomically.
+func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string, node NodeIdentity) (fileWriteResult, error) {
 	manifest, err := prepareManifestBytes(component, secretData, annotations)
+	if err != nil {
+		return fileWriteResult{}, err
+	}
+
+	manifest, err = applyComponentOverrides(component, manifest, node)
 	if err != nil {
 		return fileWriteResult{}, err
 	}
