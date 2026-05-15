@@ -30,7 +30,7 @@ shell:
   - rm -rf .git hack test
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -44,8 +44,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash git
+  - pm install git
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
