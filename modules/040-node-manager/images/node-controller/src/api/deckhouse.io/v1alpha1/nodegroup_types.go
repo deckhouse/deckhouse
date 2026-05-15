@@ -305,6 +305,10 @@ type KubeletSpec struct {
 
 // NodeGroupStatus defines the observed state of NodeGroup
 type NodeGroupStatus struct {
+	// Engine specifies machinery used to control nodes in this group
+	// +optional
+	Engine string `json:"engine,omitempty"`
+
 	// Ready specifies the number of ready nodes
 	Ready int32 `json:"ready,omitempty"`
 

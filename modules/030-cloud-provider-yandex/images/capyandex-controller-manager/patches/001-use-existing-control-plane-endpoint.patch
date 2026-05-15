@@ -1,0 +1,65 @@
+diff --git a/controllers/yandexcluster_controller.go b/controllers/yandexcluster_controller.go
+index d45185a..ef49988 100644
+--- a/controllers/yandexcluster_controller.go
++++ b/controllers/yandexcluster_controller.go
+@@ -121,6 +121,23 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 		return ctrl.Result{Requeue: true}, nil
+ 	}
+ 
++	switch r.Config.ControlPlaneEndpointManagementMode {
++	case options.ControlPlaneEndpointManagementModeExternal:
++		if clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Host == "" || clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Port == 0 {
++			conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
++				"control plane endpoint is not configured", clusterv1.ConditionSeverityError, "")
++			return ctrl.Result{}, fmt.Errorf("controlPlaneEndpoint must be set when control plane endpoint management mode is %q", options.ControlPlaneEndpointManagementModeExternal)
++		}
++
++		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
++		clusterScope.SetReady()
++		return ctrl.Result{}, nil
++
++	case "", options.ControlPlaneEndpointManagementModeManagedLoadBalancer:
++	default:
++		return ctrl.Result{}, fmt.Errorf("unsupported control plane endpoint management mode %q", r.Config.ControlPlaneEndpointManagementMode)
++	}
++
+ 	// Get loadbalancer service and reconcile load balancer.
+ 	lb := loadbalancer.New(clusterScope)
+ 	if err := lb.Reconcile(ctx); err != nil {
+@@ -189,6 +206,15 @@ func (r *YandexClusterReconciler) reconcileDelete(ctx context.Context, clusterSc
+ 		return ctrl.Result{}, nil
+ 	}
+ 
++	switch r.Config.ControlPlaneEndpointManagementMode {
++	case options.ControlPlaneEndpointManagementModeExternal:
++		controllerutil.RemoveFinalizer(clusterScope.YandexCluster, infrav1.ClusterFinalizer)
++		return ctrl.Result{}, nil
++	case "", options.ControlPlaneEndpointManagementModeManagedLoadBalancer:
++	default:
++		return ctrl.Result{}, fmt.Errorf("unsupported control plane endpoint management mode %q", r.Config.ControlPlaneEndpointManagementMode)
++	}
++
+ 	// Delete load balancer and remove finalizer from YandexCluster.
+ 	lb := loadbalancer.New(clusterScope)
+ 	deleted, err := lb.Delete(ctx)
+diff --git a/internal/pkg/options/options.go b/internal/pkg/options/options.go
+index 7ad61d7..9236dc9 100644
+--- a/internal/pkg/options/options.go
++++ b/internal/pkg/options/options.go
+@@ -2,8 +2,14 @@ package options
+ 
+ import "time"
+ 
++const (
++	ControlPlaneEndpointManagementModeManagedLoadBalancer = "ManagedLoadBalancer"
++	ControlPlaneEndpointManagementModeExternal            = "External"
++)
++
+ // Config describes all environment variables required for controllers
+ type Config struct {
+-	YandexCloudSAKey string        `env:"YC_SA_KEY"`
+-	ReconcileTimeout time.Duration `env:"CAPY_RECONCILE_TIMEOUT" envDefault:"1m"`
++	YandexCloudSAKey                   string        `env:"YC_SA_KEY"`
++	ReconcileTimeout                   time.Duration `env:"CAPY_RECONCILE_TIMEOUT" envDefault:"1m"`
++	ControlPlaneEndpointManagementMode string        `env:"CAPY_CONTROL_PLANE_ENDPOINT_MANAGEMENT_MODE" envDefault:"ManagedLoadBalancer"`
+ }

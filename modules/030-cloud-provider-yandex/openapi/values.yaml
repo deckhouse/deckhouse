@@ -6,6 +6,32 @@ properties:
     type: object
     default: {}
     properties:
+      controlPlaneEndpoint:
+        type: object
+        default: {}
+        properties:
+          host:
+            type: string
+          port:
+            type: integer
+      capyandexControllerManagerWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       cniSecretData:
         type: string
       storageClasses:

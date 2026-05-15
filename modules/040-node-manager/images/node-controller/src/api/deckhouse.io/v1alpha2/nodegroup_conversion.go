@@ -337,6 +337,7 @@ func (ng *NodeGroupList) ConvertFrom(srcRaw conversion.Hub) error {
 
 // convertStatusTo converts v1alpha2.NodeGroupStatus to v1.NodeGroupStatus
 func convertStatusTo(in *NodeGroupStatus, out *v1.NodeGroupStatus) error {
+	out.Engine = in.Engine
 	out.Ready = in.Ready
 	out.Nodes = in.Nodes
 	out.Instances = in.Instances
@@ -377,6 +378,7 @@ func convertStatusTo(in *NodeGroupStatus, out *v1.NodeGroupStatus) error {
 
 // convertStatusFrom converts v1.NodeGroupStatus to v1alpha2.NodeGroupStatus
 func convertStatusFrom(in *v1.NodeGroupStatus, out *NodeGroupStatus) error {
+	out.Engine = in.Engine
 	out.Ready = in.Ready
 	out.Nodes = in.Nodes
 	out.Instances = in.Instances

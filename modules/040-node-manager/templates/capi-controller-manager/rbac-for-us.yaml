@@ -273,6 +273,9 @@ rules:
     - huaweicloudclusters
     - huaweicloudmachines
     - huaweicloudmachinetemplates
+    - yandexclusters
+    - yandexmachines
+    - yandexmachinetemplates
     - deckhouseclusters
     - deckhousemachines
     - deckhousemachinetemplates

@@ -1,0 +1,29 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: YandexMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+      zoneID: {{ .zoneName | quote }}
+      platformID: {{ .nodeGroup.instanceClass.platformID | default "standard-v3" | quote }}
+      resources:
+        cores: {{ .nodeGroup.instanceClass.cores }}
+        coreFraction: {{ .nodeGroup.instanceClass.coreFraction | default 100 }}
+        memory: {{ printf "%dMi" (.nodeGroup.instanceClass.memory | int) | quote }}
+        gpus: {{ .nodeGroup.instanceClass.gpus | default 0 }}
+      bootDisk:
+        typeID: {{ .nodeGroup.instanceClass.diskType | default "network-hdd" | quote }}
+        size: {{ printf "%dGi" (.nodeGroup.instanceClass.diskSizeGB | default 50 | int) | quote }}
+        imageID: {{ .nodeGroup.instanceClass.imageID | default .Values.nodeManager.internal.cloudProvider.yandex.instanceClassDefaults.imageID | quote }}
+      networkInterfaces:
+        - subnetID: {{ .nodeGroup.instanceClass.mainSubnet | default (index .Values.nodeManager.internal.cloudProvider.yandex.zoneToSubnetIdMap .zoneName) | quote }}
+          hasPublicIP: {{- if hasKey .nodeGroup.instanceClass "assignPublicIPAddress" }} {{ .nodeGroup.instanceClass.assignPublicIPAddress }}{{- else }} {{ .Values.nodeManager.internal.cloudProvider.yandex.shouldAssignPublicIPAddress }}{{- end }}
+{{- range .nodeGroup.instanceClass.additionalSubnets }}
+        - subnetID: {{ . | quote }}
+{{- end }}

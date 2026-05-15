@@ -15,12 +15,46 @@
 {{- end }}
 
 {{- define "cluster_autoscaler_enabled" }}
-  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-    {{- if eq $ng.nodeType "CloudEphemeral" }}
-      {{- if lt (int $ng.cloudInstances.minPerZone) (int $ng.cloudInstances.maxPerZone) }}
-        not empty string
+  {{- if or .Values.nodeManager.internal.deployAutoscaler .Values.nodeManager.internal.deployAutoscalerMCM }}
+    not empty string
+  {{- else }}
+    {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+      {{- if eq $ng.nodeType "CloudEphemeral" }}
+        {{- if lt (int $ng.cloudInstances.minPerZone) (int $ng.cloudInstances.maxPerZone) }}
+          not empty string
+        {{- end }}
       {{- end }}
     {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "cluster_autoscaler_split_mode" }}
+  {{- if or (hasKey .Values.nodeManager.internal "deployAutoscaler") (hasKey .Values.nodeManager.internal "deployAutoscalerMCM") (hasKey .Values.nodeManager.internal "autoscalerNodes") (hasKey .Values.nodeManager.internal "autoscalerMCMNodes") }}
+    not empty string
+  {{- end }}
+{{- end }}
+
+{{- define "legacy_cluster_autoscaler_uses_capi" }}
+  {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
+    {{- if or (hasKey $.Values.nodeManager.internal.cloudProvider "vcd") (hasKey $.Values.nodeManager.internal.cloudProvider "zvirt") (hasKey $.Values.nodeManager.internal.cloudProvider "dynamix") (hasKey $.Values.nodeManager.internal.cloudProvider "huaweicloud") (hasKey $.Values.nodeManager.internal.cloudProvider "dvp") }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- define "cluster_autoscaler_mcm_enabled" }}
+  {{- if .Values.nodeManager.internal.deployAutoscalerMCM }}
+    not empty string
+  {{- else if and (include "cluster_autoscaler_enabled" .) (hasKey $.Values.nodeManager.internal "cloudProvider") (not (include "legacy_cluster_autoscaler_uses_capi" .)) }}
+    not empty string
+  {{- end }}
+{{- end }}
+
+{{- define "cluster_autoscaler_capi_enabled" }}
+  {{- if .Values.nodeManager.internal.deployAutoscaler }}
+    not empty string
+  {{- else if and (include "cluster_autoscaler_enabled" .) (hasKey $.Values.nodeManager.internal "cloudProvider") (include "legacy_cluster_autoscaler_uses_capi" .) }}
+    not empty string
   {{- end }}
 {{- end }}
 

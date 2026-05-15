@@ -79,10 +79,14 @@ func applyInstanceClassCrdFilter(obj *unstructured.Unstructured) (go_hook.Filter
 type NodeGroupCrdInfo struct {
 	Name            string
 	Spec            ngv1.NodeGroupSpec
+	Engine          ngv1.NodeGroupEngine
+	UseMCM          bool
 	ManualRolloutID string
 }
 
-// applyNodeGroupCrdFilter returns name, spec and manualRolloutID from the NodeGroup
+const useMCMAnnotation = "node.deckhouse.io/use-mcm"
+
+// applyNodeGroupCrdFilter returns name, spec, status.engine and manualRolloutID from the NodeGroup
 func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var nodeGroup ngv1.NodeGroup
 	err := sdk.FromUnstructured(obj, &nodeGroup)
@@ -93,6 +97,8 @@ func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return NodeGroupCrdInfo{
 		Name:            nodeGroup.GetName(),
 		Spec:            nodeGroup.Spec,
+		Engine:          nodeGroup.Status.Engine,
+		UseMCM:          nodeGroup.GetAnnotations()[useMCMAnnotation] != "",
 		ManualRolloutID: nodeGroup.GetAnnotations()["manual-rollout-id"],
 	}, nil
 }
@@ -329,6 +335,12 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
+		ngEngine := calculateNodeGroupEngine(input, nodeGroup)
+		ngForValues["engine"] = string(ngEngine)
+
+		if nodeGroup.Engine == "" {
+			setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "engine", ngEngine)
+		}
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
 			if staticValue, has := input.Values.GetOk("nodeManager.internal.static"); has {
@@ -676,6 +688,45 @@ func serializeTaints(info NodeGroupCrdInfo) string {
 	}
 
 	return strings.Join(res, ",")
+}
+
+func calculateNodeGroupEngine(input *go_hook.HookInput, nodeGroup NodeGroupCrdInfo) ngv1.NodeGroupEngine {
+	if nodeGroup.Engine != "" {
+		return nodeGroup.Engine
+	}
+
+	defaultEngine := defaultCloudEphemeralNodeGroupEngineForNewNodeGroups(input, nodeGroup.UseMCM)
+
+	switch nodeGroup.Spec.NodeType {
+	case ngv1.NodeTypeCloudEphemeral:
+		return defaultEngine
+	case ngv1.NodeTypeStatic:
+		if nodeGroup.Spec.StaticInstances != nil {
+			return ngv1.NodeGroupEngineCAPI
+		}
+		return ngv1.NodeGroupEngineNone
+	default:
+		return ngv1.NodeGroupEngineNone
+	}
+}
+
+func defaultCloudEphemeralNodeGroupEngineForNewNodeGroups(input *go_hook.HookInput, useMCM bool) ngv1.NodeGroupEngine {
+	hasMCM := valueExistsAndNotEmpty(input, "nodeManager.internal.cloudProvider.machineClassKind")
+	hasCAPI := valueExistsAndNotEmpty(input, "nodeManager.internal.cloudProvider.capiClusterKind")
+
+	switch {
+	case hasMCM && hasCAPI:
+		if useMCM {
+			return ngv1.NodeGroupEngineMCM
+		}
+		return ngv1.NodeGroupEngineCAPI
+	case hasMCM:
+		return ngv1.NodeGroupEngineMCM
+	case hasCAPI:
+		return ngv1.NodeGroupEngineCAPI
+	default:
+		return ngv1.NodeGroupEngineNone
+	}
 }
 
 func fillVsphereMainNewtork(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error {
