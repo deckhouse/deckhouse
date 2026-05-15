@@ -74,7 +74,7 @@ If both options are disabled, basic authentication with a generated password wil
 To view the generated password, run the following command:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
+d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
 To generate a new password, delete the Secret resource:

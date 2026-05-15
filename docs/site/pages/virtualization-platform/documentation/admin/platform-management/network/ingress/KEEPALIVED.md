@@ -84,7 +84,7 @@ spec:
 1. Go to the target pod:
 
    ```shell
-   d8 k -n d8-keepalived exec -it keepalived-<name> -- sh
+   d8 k -n d8-keepalived --as system:sudouser exec -it keepalived-<name> -- sh
    ```
 
 1. Edit the `/etc/keepalived/keepalived.conf` file and in the line with the `priority` parameter,

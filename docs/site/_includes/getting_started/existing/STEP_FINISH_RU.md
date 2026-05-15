@@ -20,18 +20,18 @@
   - Для Deckhouse 1.46 и новее:
 
     ```bash
-    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'"
+    kubectl -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'"
     ```
 
   - Для Deckhouse 1.45 и старее:
 
     ```bash
-    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
+    kubectl -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values deckhouse-web -o json | jq -r '.deckhouseWeb.internal.auth.password'"
     ```
 
   {% offtopic title="Пример вывода..." %}
 ```
-$ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'" 
+$ kubectl -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'" 
 3aE7nY1VlfiYCH4GFIqA
 ```
   {% endofftopic %}

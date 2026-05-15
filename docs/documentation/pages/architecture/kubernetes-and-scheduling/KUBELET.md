@@ -23,7 +23,7 @@ The following components interact with kubelet:
 1. **kube-apiserver**:
 
    * Retrieving pod logs (the `kubectl logs` command)
-   * Executing commands in running pods (the `kubectl exec` command)
+   * Executing commands in running pods (the `kubectl --as system:sudouser exec` command)
    * Port forwarding (the `kubectl port-forward` command)
 
 2. **prometheus-main**: Collects kubelet metrics.

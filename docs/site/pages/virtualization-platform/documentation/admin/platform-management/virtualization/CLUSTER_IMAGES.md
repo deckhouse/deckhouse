@@ -575,7 +575,7 @@ While garbage collection is running, the storage is switched to read-only mode, 
 To check for outdated images in the storage, you can run the following command:
 
 ```bash
-d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
+d8 k -n d8-virtualization --as system:sudouser exec deploy/dvcr -- dvcr-cleaner gc check
 ```
 
 It prints information about the storage status and a list of outdated images that can be deleted.

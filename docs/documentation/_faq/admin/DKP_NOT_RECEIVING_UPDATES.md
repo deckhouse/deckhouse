@@ -28,7 +28,7 @@ lang: en
   Example of obtaining an IP of `registry.deckhouse.io` from the `deckhouse` Pod:
 
   ```shell
-  d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
+  d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   ```
 
   Example output:

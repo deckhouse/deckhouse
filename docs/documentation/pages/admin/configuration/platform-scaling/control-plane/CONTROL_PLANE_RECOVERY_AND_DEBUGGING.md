@@ -59,7 +59,7 @@ Example:
 
 ```shell
 for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  d8 k -n kube-system --as system:sudouser exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
   --endpoints https://127.0.0.1:2379/ member list -w table
   if [ $? -eq 0 ]; then
@@ -78,7 +78,7 @@ Example:
 
 ```shell
 for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  d8 k -n kube-system --as system:sudouser exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
   --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
   if [ $? -eq 0 ]; then
@@ -146,7 +146,7 @@ Be careful: these actions completely erase the previous data and form a new etcd
 When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
 
 ```shell
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+d8 k -n kube-system --as system:sudouser exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -158,7 +158,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+   d8 k -n kube-system --as system:sudouser exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
@@ -175,7 +175,7 @@ Before defragmenting, [back up etcd](../../backup/backup-and-restore.html#creati
 To view the size of the etcd database on a specific node before and after defragmentation, use the command (where `NODE_NAME` is the name of the master node):
 
 ```bash
-d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+d8 k -n kube-system --as system:sudouser exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
   --cert=/etc/kubernetes/pki/etcd/server.crt \
   --key=/etc/kubernetes/pki/etcd/server.key \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -206,7 +206,7 @@ Keep this in mind when choosing a time to perform the operation in a cluster wit
 To defragment etcd in a cluster with a single master node, use the following command (where `NODE_NAME` is the name of the master node):
 
 ```bash
-d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+d8 k -n kube-system --as system:sudouser exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
   --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/ca.crt \
   --key /etc/kubernetes/pki/etcd/ca.key \
@@ -243,7 +243,7 @@ To defragment etcd in a cluster with multiple master nodes:
 1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
 
    ```bash
-   d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+   d8 k -n kube-system --as system:sudouser exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
      --cert=/etc/kubernetes/pki/etcd/server.crt \
      --key=/etc/kubernetes/pki/etcd/server.key \
      --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -271,7 +271,7 @@ To defragment etcd in a cluster with multiple master nodes:
    > Restoring etcd on a node after defragmentation may take some time. It is recommended to wait at least a minute before proceeding to defragment the next etcd node.
 
       ```bash
-   d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+   d8 k -n kube-system --as system:sudouser exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
      --cacert /etc/kubernetes/pki/etcd/ca.crt \
      --cert /etc/kubernetes/pki/etcd/ca.crt \
      --key /etc/kubernetes/pki/etcd/ca.key \

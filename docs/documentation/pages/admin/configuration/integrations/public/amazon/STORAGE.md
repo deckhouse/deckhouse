@@ -110,7 +110,7 @@ This is especially important when manually configuring Ingress controllers or us
 To retrieve the current list of subnets used in your DKP setup, run the following:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
+kubectl -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse \
   -- deckhouse-controller module values cloud-provider-aws -o json | \
   jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```

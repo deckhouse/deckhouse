@@ -241,7 +241,7 @@ containerd v2 использует новую схему по умолчанию
    Посмотреть текущие настройки registry можно с помощью команды:
 
    ```bash
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
 
    Данные настройки укажите при конфигурации `Unmanaged` режима:
@@ -347,7 +347,7 @@ containerd v2 использует новую схему по умолчанию
    Посмотреть текущие настройки registry можно с помощью команды:
 
    ```bash
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
 
    Данные настройки укажите при конфигурации `Unmanaged` режима:

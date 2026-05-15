@@ -124,7 +124,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
 1. После создания пода сделайте запрос к сервису `webserver`:
 
    ```bash
-   d8 k -n test-istio-mtls exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`
+   d8 k -n test-istio-mtls --as system:sudouser exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`
    ```
 
    В `tcpdump` будет виден только зашифрованный трафик.
@@ -164,7 +164,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
 1. После создания пода сделайте запрос к сервису `webserver.test-istio-mtls`:
 
    ```bash
-   d8 k -n test-istio-mtls-without-injection exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
+   d8 k -n test-istio-mtls-without-injection --as system:sudouser exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
    ```
 
    В выводе `tcpdump` будут отображаться незашифрованные (plain text) запросы и ответы:

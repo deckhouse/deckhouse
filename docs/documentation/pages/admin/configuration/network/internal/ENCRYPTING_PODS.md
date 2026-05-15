@@ -123,7 +123,7 @@ The settings can be overridden at the namespace level.
 1. After the Pod is created, make a request to the `webserver` service:
 
    ```bash
-   d8 k -n test-istio-mtls exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`
+   d8 k -n test-istio-mtls --as system:sudouser exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`
    ```
 
    The `tcpdump` output will show only encrypted traffic:
@@ -165,7 +165,7 @@ The settings can be overridden at the namespace level.
 1. After the Pod is created, make a request to the `webserver.test-istio-mtls` service:
 
    ```bash
-   d8 k -n test-istio-mtls-without-injection exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
+   d8 k -n test-istio-mtls-without-injection --as system:sudouser exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
    ```
 
    The `tcpdump` output will show only unencrypted (plain text) requests and responses:

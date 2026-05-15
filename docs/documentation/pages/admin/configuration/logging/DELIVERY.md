@@ -698,7 +698,7 @@ First, connect to one of the `log-shipper` pods:
 
 ```bash
 d8 k -n d8-log-shipper get pods -o wide | grep $node
-d8 k -n d8-log-shipper exec $pod -it -c vector -- bash
+d8 k -n d8-log-shipper --as system:sudouser exec $pod -it -c vector -- bash
 ```
 
 Execute subsequent commands from the pod's command shell.

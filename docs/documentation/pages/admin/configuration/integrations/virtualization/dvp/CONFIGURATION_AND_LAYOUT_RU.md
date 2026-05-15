@@ -48,7 +48,7 @@ Deckhouse использует ресурс [DVPClusterConfiguration](/modules/c
 Для изменения конфигурации в работающем кластере выполните:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 После изменения параметров узлов выполните команду:
