@@ -24,8 +24,9 @@ The Level 2 C4 architecture of the [`console`](/modules/console/) module and its
 ![Console module architecture](../../../images/architecture/deckhouse/c4-l2-deckhouse-console.png)
 
 {% alert level="info" %}
-The numbers in the diagram indicate the order in which the user's request passes through the `frontend`, `backend`, and `nginx` components:
-- At steps 1, 2, and 3 the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed by the [`user-authn`](/modules/user-authn) module. For more information about the architecture of the `user-authn` module, refer to [the corresponding documentation section](../iam/user-authn.html).
+The numbers in the diagram indicate the order in which the user's request passes through the `frontend`, `backend`, and `nginx` components.
+
+At steps 1, 2, and 3, the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed by the [`user-authn`](/modules/user-authn) module. For more information about the architecture of the `user-authn` module, refer to the [corresponding documentation section](../iam/user-authn.html).
 {% endalert %}
 
 ### Module components
@@ -88,8 +89,9 @@ The Level 2 C4 architecture of the [`documentation`](/modules/documentation/) mo
 
 {% alert level="info" %}
 The numbers in the diagram indicate the order in which the user's request passes through the `web` component:
-- At steps 1, 2, and 3 the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed by the [`user-authn`](/modules/user-authn) module. For more details about the architecture of the `user-authn` module, see [the corresponding documentation section](../iam/user-authn.html).
-- At steps 4 and 5 user authorization based on Kubernetes RBAC is performed to provide secure access.
+
+- At steps 1, 2, and 3, the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed by the [`user-authn`](/modules/user-authn) module.
+- At steps 4 and 5, user authorization based on the Kubernetes RBAC is performed to provide secure access.
 {% endalert %}
 
 ### Module components
@@ -98,7 +100,7 @@ The module consists of the following component:
 
 - **Documentation**: A component that provides the documentation web interface.
 
-    It consists of the following containers:
+  It consists of the following containers:
 
   * **web**: Main container.
 
@@ -106,7 +108,7 @@ The module consists of the following component:
 
   * **builder**: Sidecar container that dynamically extends the documentation when new DKP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
 
-      The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for documentation updates. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates when modules are updated or installed. This ensures that changes are promptly rendered in the web interface.
+    The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for documentation updates. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates when modules are updated or installed. This ensures that changes are promptly rendered in the web interface.
 
 ### Module interactions
 
@@ -143,15 +145,16 @@ The Level 2 C4 architecture of the [`deckhouse-tools`](/modules/deckhouse-tools/
 ![Deckhouse-tools module architecture](../../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.png)
 
 {% alert level="info" %}
-The numbers in the diagram indicate the order in which the user's request passes through the `web` component:
-- At steps 1, 2, and 3 the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed by the [`user-authn`](/modules/user-authn) module.
+The numbers in the diagram indicate the order in which the user's request passes through the `web` component.
+
+At steps 1, 2, and 3, the request passes through the Ingress NGINX Controller, where mandatory user authentication is performed by the [`user-authn`](/modules/user-authn) module.
 {% endalert %}
 
 ### Module components
 
 The module consists of the following component:
 
-- **Deckhouse-tools**: Consists of a single **web** container and provides a web interface with links to download the Deckhouse CLI utility.
+- **Deckhouse-tools**: Consists of a single **web** container and provides a web interface with links to download the [Deckhouse CLI](../../cli/d8/) utility.
 
 ### Module interactions
 
