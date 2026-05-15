@@ -6,7 +6,7 @@ index 45bcde4b..1c308d73 100644
  module github.com/hashicorp/terraform-provider-vsphere
  
 -go 1.23
-+go 1.25.8
++go 1.25.7
  
  require (
 -	github.com/davecgh/go-spew v1.1.1
