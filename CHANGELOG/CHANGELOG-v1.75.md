@@ -160,6 +160,7 @@
  - **[cloud-provider-openstack]** fix CVE in cloud-provider-openstack module [#18253](https://github.com/deckhouse/deckhouse/pull/18253)
  - **[cloud-provider-vcd]** fix vCD CCM TCP health monitors removal [#19089](https://github.com/deckhouse/deckhouse/pull/19089)
  - **[cloud-provider-vcd]** Fixed a queue hang caused by the module components failing to start. [#16796](https://github.com/deckhouse/deckhouse/pull/16796)
+ - **[cloud-provider-vsphere]** normalizes new paths and makes bashible resolve existing paths case-insensitively [#19748](https://github.com/deckhouse/deckhouse/pull/19748)
  - **[cloud-provider-yandex]** fix CVEs in cloud-provider-yandex [#18291](https://github.com/deckhouse/deckhouse/pull/18291)
  - **[cloud-provider-yandex]** Added fallback to `nat_instance_internal_address_calculated`. [#17341](https://github.com/deckhouse/deckhouse/pull/17341)
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
@@ -188,6 +189,8 @@
     etcd will restart.
  - **[control-plane-manager]** Switched kube-apiserver to structured authorization config with fail-closed webhook. [#17183](https://github.com/deckhouse/deckhouse/pull/17183)
     Authorization webhook now works in fail-closed mode. If the webhook is unavailable, authorization requests are denied instead of falling back to RBAC.
+ - **[deckhouse]** Fix exp modules auto enabling. [#19670](https://github.com/deckhouse/deckhouse/pull/19670)
+ - **[deckhouse]** Fixed global configuration generation. [#19689](https://github.com/deckhouse/deckhouse/pull/19689)
  - **[deckhouse]** Overwrite currentReleaseImageName on mismatch. [#19412](https://github.com/deckhouse/deckhouse/pull/19412)
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19277](https://github.com/deckhouse/deckhouse/pull/19277)
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19169](https://github.com/deckhouse/deckhouse/pull/19169)
@@ -212,6 +215,7 @@
  - **[descheduler]** Removed implicit default thresholds from Descheduler CRD and align behavior with upstream. [#17488](https://github.com/deckhouse/deckhouse/pull/17488)
     Thresholds and targetThresholds are no longer implicitly defaulted.
     If a resource is not specified in the Descheduler CR, it is treated as 100% and does not participate in eviction logic.
+ - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19797](https://github.com/deckhouse/deckhouse/pull/19797)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19555](https://github.com/deckhouse/deckhouse/pull/19555)
  - **[dhctl]** Use internal node ip if bastion ip was passed in converge. [#18979](https://github.com/deckhouse/deckhouse/pull/18979)
  - **[dhctl]** Skip tmp lock for exporter and auto-converger. [#18736](https://github.com/deckhouse/deckhouse/pull/18736)
@@ -246,6 +250,8 @@
  - **[docs]** Added docs about how NGC execution works. [#17870](https://github.com/deckhouse/deckhouse/pull/17870)
  - **[docs]** Fixed registry-modules-watcher deleting all documentation when registry returns an error. [#16771](https://github.com/deckhouse/deckhouse/pull/16771)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
+ - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** CVE-2025-15566 is fixed in 1.10 and 1.12 controllers. [#19205](https://github.com/deckhouse/deckhouse/pull/19205)
     All pods of Ingress-NGINX controller of 1.10 and 1.12 versions will be restarted.
  - **[ingress-nginx]** Added fix for CVE-2026-4342. [#18923](https://github.com/deckhouse/deckhouse/pull/18923)
