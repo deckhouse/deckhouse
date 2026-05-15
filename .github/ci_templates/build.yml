@@ -136,6 +136,8 @@ steps:
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
