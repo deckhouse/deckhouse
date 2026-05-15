@@ -43,7 +43,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 <h4>Select the Deckhouse Kubernetes Platform revision</h4>
 {% endif %}
   <div class="tabs">
-    {%- for revision in evisions %}
+    {%- for revision in revisions %}
       {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
       {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
       <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se-plus' %} active{% endif %}"
