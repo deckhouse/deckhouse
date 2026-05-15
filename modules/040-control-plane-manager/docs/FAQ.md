@@ -1379,7 +1379,7 @@ To protect sensitive fields (such as passwords, tokens, or keys) in resource sch
 
 To enable field protection, do the following:
 
-1. Enable etcd encryption using the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter in the module settings. The `CRDSensitiveData` feature gate is enabled automatically along with the encryption and shouldn't be specified manually.
+1. Enable etcd encryption using the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter in the module settings. The `CRDSensitiveData` feature gate is enabled by default and shouldn't be specified manually.
 
    {% alert level="warning" %}
    Enabling `apiserver.encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
