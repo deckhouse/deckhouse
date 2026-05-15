@@ -60,6 +60,20 @@
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость CVE-2026-27877 связана с тем, что при использовании public dashboards вместе с direct data-sources пароли всех direct data-sources раскрываются в публичной выдаче, даже если эти data-sources не используются в дашборде. Данная утечка происходит только для data-sources, работающих в режиме direct (атрибут access: direct). В Deckhouse-сборке Grafana все провижионируемые data-sources заданы исключительно в режиме access: proxy (см. modules/300-prometheus/templates/grafana/secret-datasources-list.yaml: main, main-old, longterm, main-uncached-*) — все запросы к Prometheus/Trickster проходят через grafana-server и аутентифицируются bearer-токеном prometheus-token из секрета, никаких direct-data-sources не создаётся. Соответственно, даже если оператор кластера включит public dashboards, утекать будет нечему: список direct-datasources пустой. Уязвимая комбинация условий (public dashboards + direct data-sources) в типовой инсталляции отсутствует."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "timestamp": "2026-05-14T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v1.8.2-0.20221021121301-51a44e6657c3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2026-40179 представляет собой Stored XSS в веб-интерфейсе Prometheus через имена метрик и значения меток в тултипах графиков и обозревателе метрик. Согласно официальному advisory (GHSA-vffh-x6r8-xx99), уязвимость затрагивает исключительно Prometheus версий >= 3.0 (конкретно: >= 3.0 <= 3.5.1 и >= 3.6.0 <= 3.11.1). Вектор атаки основан на поддержке UTF-8 в именах метрик и меток, которая была введена как поведение по умолчанию в Prometheus v3.x, что позволяет использовать символы '<', '>' и '\"' в именах метрик. Grafana v10.4.19 импортирует github.com/prometheus/prometheus как Go-библиотеку версии v1.8.2-0.20221021121301-51a44e6657c3 — это срез Prometheus 2.x, использующийся только для парсера PromQL, типов (pkg/labels, pkg/parser, model, promql) и работы с правилами алертинга. Данная версия использует строгую валидацию имён метрик по регулярному выражению [a-zA-Z_:][a-zA-Z0-9_:]* и имён меток по [a-zA-Z_][a-zA-Z0-9_]*, что приводит к отклонению HTML/JavaScript символов на этапе приёма данных (ingestion). Кроме того, Prometheus 2.x не содержит Mantine UI и тот вариант Old React UI с dangerouslySetInnerHTML в Metric Explorer, которые являются основными затронутыми компонентами. Сам Grafana использует собственный фронтенд и не рендерит метрики через Prometheus Web UI компоненты — уязвимый код в этом контексте не исполняется. Инъекция XSS через специально сформированные имена метрик невозможна в данной версии Prometheus, вендорированной в Grafana."
     }
   ]
 }
