@@ -103,6 +103,19 @@ properties:
               Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
 
               Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+  telemetryAPI:
+    description: |
+      Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
+
+      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; модуль создаёт CR `main-prometheus-metrics` и `main-access-log-format`, чтобы серии `istio_*` снова были видны в Grafana/Kiali.
+
+      Если `false` (по умолчанию), остаётся полный legacy-путь `telemetry.v2` (в т.ч. `prometheus` в Sail), без `defaultProviders` и без перечисленных Telemetry-манифестов модуля.
+
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) задаёт только шаблон лога для провайдера `main-access-log-format`; сам CR появляется только при включённом Telemetry API режиме.
+    properties:
+      enabled:
+        description: |
+          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, CR `main-prometheus-metrics` и `main-access-log-format`.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:

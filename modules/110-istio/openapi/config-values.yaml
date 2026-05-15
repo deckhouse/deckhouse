@@ -242,6 +242,24 @@ properties:
         - {}
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  telemetryAPI:
+    type: object
+    description: |
+      [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) integration.
+
+      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the legacy `telemetry.v2` filters, and installs **Telemetry** CRs `main-prometheus-metrics` and `main-access-log-format` so Grafana/Kiali keep seeing `istio_*` series from sidecars.
+
+      When `false` (default), the full legacy `telemetry.v2` stack stays on (including Sail’s `telemetry.v2.prometheus`), without `defaultProviders` or the bundled Telemetry manifests from this toggle.
+
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) only defines the Envoy log template referenced by `main-access-log-format`; it alone does not install that CR unless Telemetry API mode is enabled.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: |
+          Telemetry API path for mesh metrics: wires `defaultProviders.metrics`, turns off `telemetry.v2`, renders `main-prometheus-metrics` + `main-access-log-format`.
+        default: false
+        x-examples: [true]
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.

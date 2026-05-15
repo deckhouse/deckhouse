@@ -641,6 +641,91 @@ annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
 
+<span id="telemetry-api-mesh-observability"></span>
+
+## Telemetry API for mesh metrics and access logs
+
+[Istio Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) is the recommended way to configure the collection of data on the operation of services (metrics, access logs, tracing providers) together with `meshConfig`.
+
+The module can run in two modes, controlled by [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled):
+
+| Mode | Behaviour |
+|------|-----------|
+| **`false` (default)** | Classic path: full `telemetry.v2` in the Istio Operator / `Istio` resource (including Sail’s `telemetry.v2.prometheus`). The module does **not** deploy the bundled `Telemetry` objects `main-prometheus-metrics` and `main-access-log-format`. |
+| **`true`** | Telemetry API path: `meshConfig.defaultProviders.metrics` is set to the builtin `prometheus` provider, `telemetry.v2` is turned off, and the module creates `Telemetry` resources `main-prometheus-metrics` (standard `istio_*` series for Prometheus/Grafana/Kiali) and `main-access-log-format` (stdout access logs via the `main-access-log-format` extension provider). The log line format still comes from [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+
+### Enabling Telemetry API mode
+
+Apply a `ModuleConfig` for the Istio module (or the same structure in the cluster config):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    telemetryAPI:
+      enabled: true
+```
+
+Wait until the `Istio` / `IstioOperator` resource in `d8-istio` reconciles and workloads have picked up the new config (restart application pods if dashboards stay empty after traffic was sent).
+
+### Verifying metrics and logs
+
+Generate traffic between meshed pods, then on a pod with `istio-proxy`:
+
+```shell
+# Prometheus text on merged stats port (inside the mesh / from debug tooling)
+istio-proxy-pod="$(
+  kubectl -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
+)"
+kubectl exec -n my-namespace "${istio-proxy-pod}" -c istio-proxy -- \
+  curl -sS localhost:15020/stats/prometheus | head
+```
+
+You should see series such as `istio_requests_total` if metrics are wired correctly.
+
+### Prometheus scraping and Grafana
+
+The module creates a [`PodMonitor`](../../modules/prometheus/) for sidecar metrics when the [`operator-prometheus`](../../modules/operator-prometheus/) module is enabled. Monitored namespaces are derived automatically from mesh membership (istio-injected workloads); you can exclude a namespace from scraping with label `istio.deckhouse.io/discard-metrics: "true"` on the `Namespace`.
+
+If workload dashboards stay empty while control plane dashboards work, confirm that:
+
+- workloads run with the Istio sidecar and label `service.istio.io/canonical-name` is present on pods;
+- the namespace is not marked with `istio.deckhouse.io/discard-metrics: "true"`.
+
+### Extra `Telemetry` policies (optional)
+
+Istio merges multiple `Telemetry` objects. Alongside the module defaults you can narrow or tune metrics—for example, per namespace:
+
+```yaml
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: team-a-prometheus-defaults
+  namespace: team-a
+spec:
+  metrics:
+  - providers:
+    - name: prometheus
+```
+
+For tag removal, disabling specific metrics or modes, follow [Customizing Istio metrics with Telemetry API](https://istio.io/latest/docs/tasks/observability/metrics/telemetry-api/).
+
+### Rolling back to the legacy telemetry stack
+
+```yaml
+spec:
+  settings:
+    telemetryAPI:
+      enabled: false
+```
+
+The module-managed `Telemetry` objects for this mode disappear on the next sync; Istio restores the full `telemetry.v2` configuration.
+
 ## `CNIPlugin` application traffic redirection mode restrictions
 
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
