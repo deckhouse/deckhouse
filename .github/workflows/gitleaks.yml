@@ -32,6 +32,7 @@ jobs:
         with:
           scan_mode: full
           gitleaks_version: v8.28.0
+
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}

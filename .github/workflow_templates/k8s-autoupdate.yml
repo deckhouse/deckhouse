@@ -35,6 +35,9 @@ jobs:
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
     - uses: {!{ index (ds "actions") "actions/setup-go" }!}
       with:
         go-version: '1.23.7'
@@ -101,14 +104,14 @@ jobs:
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' && github.repository == 'deckhouse/deckhouse' }}
       env:
-        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --webhook "k8s_update" "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
       if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
       env:
-        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
         bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
