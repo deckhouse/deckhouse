@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 16,
+  "version": 17,
   "statements": [
     {
       "vulnerability": {
@@ -463,8 +463,20 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость в github.com/moby/spdystream v0.5.0 достигается исключительно через подкоманду d8 backup etcd, где spdystream приходит транзитивно из k8s.io/client-go/transport/spdy. Уязвимый код обрабатывает SPDY-фреймы от kube-apiserver, который в типовой модели эксплуатации является доверенным компонентом под управлением администратора кластера. Возможность подачи вредоносных SPDY-фреймов нарушителем исключена архитектурой взаимодействия d8 с Kubernetes API.",
       "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32952"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/Azure/go-ntlmssp@v0.0.0-20221128193559-754e69321358"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/Azure/go-ntlmssp является транзитивной, поступающей в d8 через цепочку deckhouse-cli (stronghold/vault command) → vault-plugin-secrets-openldap → go-ldap/ldap/v3. Уязвимость связана с panic при парсинге специально сформированных NTLM Type 2 challenge-сообщений от вредоносного NTLM-сервера. Функционал NTLM-аутентификации против произвольных LDAP-серверов в d8 не используется — LDAP-операции выполняются только в контексте управления Stronghold/Vault администратором кластера через d8 stronghold, где NTLM bind не применяется. Уязвимый исполняемый путь недостижим в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
+      "timestamp": "2026-05-15T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-04-22T12:00:00Z"
+  "last_updated": "2026-05-15T12:00:00Z"
 }
