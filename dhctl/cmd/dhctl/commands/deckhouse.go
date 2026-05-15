@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
