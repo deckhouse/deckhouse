@@ -251,14 +251,6 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
             margin-left: 0;
             margin-right: 0;
         }
-        /* OSS info page: constrain logo images to match website sizing */
-        .oss__item-logo,
-        .oss__item-logo img,
-        img.oss__item-logo {
-            height: 60px !important;
-            width: auto !important;
-            max-width: 100% !important;
-        }
         /* Блоки кода (Rouge/Jekyll): визуальное отделение от текста + перенос строк */
         pre,
         pre.highlight,
@@ -1076,6 +1068,11 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
     else:
         remove_sections_with_exact_heading(soup, "Внешние компоненты")
 
+    # OSS info page: remove logo images, bold titles
+    for logo_div in soup.find_all("div", class_="oss__item-logo"):
+        logo_div.decompose()
+    for title_a in soup.find_all("a", class_="oss__item-title"):
+        title_a["style"] = "font-weight:bold;"
 
 
 class _ChunkWriter:
