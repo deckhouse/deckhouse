@@ -336,7 +336,7 @@ index 0b5c192a9b..2dcea3ea17 100644
  )
  
 -go 1.22
-+go 1.25.8
++go 1.25.7
  
  replace github.com/hashicorp/hcl/v2 v2.20.1 => github.com/opentofu/hcl/v2 v2.0.0-20240814143621-8048794c5c52
 diff --git a/go.sum b/go.sum
