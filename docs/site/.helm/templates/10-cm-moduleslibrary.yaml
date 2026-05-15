@@ -143,6 +143,8 @@ data:
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
 
+            add_header Cache-Control "public, max-age=1800" always;
+
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
@@ -201,6 +203,8 @@ data:
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
 
+            add_header Cache-Control "public, max-age=1800" always;
+
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
@@ -233,6 +237,8 @@ data:
             proxy_connect_timeout   30s;
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
+
+            add_header Cache-Control "public, max-age=1800" always;
 
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
