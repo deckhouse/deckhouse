@@ -150,6 +150,9 @@ Jobs for visual control allowed editions when approving deploy to environments.
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "update_comment_on_start" $workflowName | strings.Indent 6 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 
@@ -349,7 +352,7 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
       - name: Send failure report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Deploy to channel {!{ .channel }!} failed!🛑\n[URL]($WORKFLOW_URL)"
@@ -384,7 +387,13 @@ stage:
       {!{- end }!}
     needs:
       - run_deploy
+    permissions:
+      contents: read
+      id-token: write
     steps:
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 
       - name: Setup Python
@@ -436,9 +445,15 @@ stage:
     if: ${{ needs.post_deploy_preparation.outputs.{!{ printf "DEPLOY_%s" $env_properties.kubeconfig }!} == 'true' }}
     name: "{!{ $env_properties.job_name }!}"
     runs-on: [self-hosted, regular]
+    permissions:
+      contents: read
+      id-token: write
     needs:
       - post_deploy_preparation
     steps:
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       {!{- tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
 
       - name: Download artifacts
@@ -467,8 +482,12 @@ stage:
     needs: post_deploy_preparation
     permissions:
       contents: write
+      id-token: write
 
     steps:
+      {!{- $secrets := slice -}!}
+      {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+      {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
       - name: Make latest stable release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

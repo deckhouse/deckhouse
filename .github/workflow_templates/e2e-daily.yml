@@ -82,8 +82,11 @@ jobs:
     needs: {!{ $dependsJobsForAlert | data.ToJSON }!}
     if: ${{ failure() && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
     steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "token" "LOOP_CVE_REPORTS_SEND_TOKEN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "channel_id" "LOOP_E2E_REPORT_CHANNEL_ID" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{- $labels := dict "trigger" "DailyE2EWorkflowFailed" -}!}
 {!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}
 {!{- $annotations = coll.Merge $annotations (dict "description" "Check Daily e2e workflow log for more information or see another alerts in this group.") -}!}
-
-{!{- tmpl.Exec "send_alert_loop_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}
+{!{ tmpl.Exec "send_alert_loop_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 }!}
