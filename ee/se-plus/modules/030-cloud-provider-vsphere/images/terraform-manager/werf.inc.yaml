@@ -23,6 +23,12 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
 fromCacheVersion: "2025-02-05.03"
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -30,6 +36,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ .TF.vsphere.version }}-flant.2 $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-terraform-provider-vsphere.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf vendor
   - rm -rf .git
 ---

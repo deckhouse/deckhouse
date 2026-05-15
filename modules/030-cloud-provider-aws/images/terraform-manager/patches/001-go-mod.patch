@@ -6,10 +6,10 @@ index ac1df3fce34..53cc1a6f929 100644
 -1.23.3
 +1.24.0
 diff --git a/go.mod b/go.mod
-index a0274c844a7..461b52df79d 100644
+index a0274c844a7..a94090142e0 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,10 +1,6 @@
+@@ -1,17 +1,13 @@
  module github.com/hashicorp/terraform-provider-aws
  
 -go 1.23.3
@@ -21,6 +21,64 @@ index a0274c844a7..461b52df79d 100644
  
  require (
  	github.com/ProtonMail/go-crypto v1.1.4
+ 	github.com/YakDriver/go-version v0.1.0
+ 	github.com/YakDriver/regexache v0.24.0
+ 	github.com/aws/aws-sdk-go v1.55.5
+-	github.com/aws/aws-sdk-go-v2 v1.32.7
++	github.com/aws/aws-sdk-go-v2 v1.41.5
+ 	github.com/aws/aws-sdk-go-v2/config v1.28.8
+ 	github.com/aws/aws-sdk-go-v2/credentials v1.17.49
+ 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22
+@@ -59,7 +55,7 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/cloudsearch v1.26.7
+ 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.46.5
+ 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.5
+-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.2
++	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.65.0
+ 	github.com/aws/aws-sdk-go-v2/service/codeartifact v1.33.8
+ 	github.com/aws/aws-sdk-go-v2/service/codebuild v1.49.4
+ 	github.com/aws/aws-sdk-go-v2/service/codecatalyst v1.17.8
+@@ -146,13 +142,13 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/kafkaconnect v1.21.8
+ 	github.com/aws/aws-sdk-go-v2/service/kendra v1.55.1
+ 	github.com/aws/aws-sdk-go-v2/service/keyspaces v1.16.3
+-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.9
++	github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5
+ 	github.com/aws/aws-sdk-go-v2/service/kinesisanalytics v1.25.9
+ 	github.com/aws/aws-sdk-go-v2/service/kinesisanalyticsv2 v1.31.9
+ 	github.com/aws/aws-sdk-go-v2/service/kinesisvideo v1.27.8
+ 	github.com/aws/aws-sdk-go-v2/service/kms v1.37.9
+ 	github.com/aws/aws-sdk-go-v2/service/lakeformation v1.39.2
+-	github.com/aws/aws-sdk-go-v2/service/lambda v1.69.3
++	github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5
+ 	github.com/aws/aws-sdk-go-v2/service/launchwizard v1.8.8
+ 	github.com/aws/aws-sdk-go-v2/service/lexmodelbuildingservice v1.28.8
+ 	github.com/aws/aws-sdk-go-v2/service/lexmodelsv2 v1.49.8
+@@ -214,7 +210,7 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/route53recoveryreadiness v1.21.8
+ 	github.com/aws/aws-sdk-go-v2/service/route53resolver v1.34.4
+ 	github.com/aws/aws-sdk-go-v2/service/rum v1.21.8
+-	github.com/aws/aws-sdk-go-v2/service/s3 v1.72.1
++	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3
+ 	github.com/aws/aws-sdk-go-v2/service/s3control v1.52.2
+ 	github.com/aws/aws-sdk-go-v2/service/s3outposts v1.28.8
+ 	github.com/aws/aws-sdk-go-v2/service/s3tables v1.0.1
+@@ -263,13 +259,13 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/workspaces v1.51.0
+ 	github.com/aws/aws-sdk-go-v2/service/workspacesweb v1.25.2
+ 	github.com/aws/aws-sdk-go-v2/service/xray v1.30.3
+-	github.com/aws/smithy-go v1.22.1
++	github.com/aws/smithy-go v1.24.2
+ 	github.com/beevik/etree v1.4.1
+ 	github.com/cedar-policy/cedar-go v0.1.0
+ 	github.com/davecgh/go-spew v1.1.1
+ 	github.com/dlclark/regexp2 v1.11.4
+ 	github.com/gertd/go-pluralize v0.2.1
+-	github.com/google/go-cmp v0.6.0
++	github.com/google/go-cmp v0.7.0
+ 	github.com/hashicorp/aws-cloudformation-resource-schema-sdk-go v0.23.0
+ 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.60
+ 	github.com/hashicorp/aws-sdk-go-base/v2/awsv1shim/v2 v2.0.0-beta.61
 @@ -301,10 +297,10 @@ require (
  	github.com/mitchellh/mapstructure v1.5.0
  	github.com/pquerna/otp v1.4.0
@@ -29,97 +87,324 @@ index a0274c844a7..461b52df79d 100644
 -	golang.org/x/mod v0.22.0
 -	golang.org/x/text v0.21.0
 -	golang.org/x/tools v0.29.0
-+	golang.org/x/crypto v0.45.0
-+	golang.org/x/mod v0.29.0
-+	golang.org/x/text v0.31.0
-+	golang.org/x/tools v0.38.0
++	golang.org/x/crypto v0.46.0
++	golang.org/x/mod v0.30.0
++	golang.org/x/text v0.32.0
++	golang.org/x/tools v0.39.0
  	gopkg.in/dnaeon/go-vcr.v3 v3.2.1
  	gopkg.in/yaml.v3 v3.0.1
  	syreclabs.com/go/faker v1.2.3
-@@ -332,7 +328,7 @@ require (
+@@ -318,24 +314,25 @@ require (
+ 	github.com/agext/levenshtein v1.2.3 // indirect
+ 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
+ 	github.com/armon/go-radix v1.0.0 // indirect
+-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 // indirect
+-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26 // indirect
+-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26 // indirect
++	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
++	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21 // indirect
++	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21 // indirect
+ 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
+-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.26 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.7 // indirect
++	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.7 // indirect
  	github.com/bgentry/speakeasy v0.2.0 // indirect
  	github.com/boombuler/barcode v1.0.1 // indirect
  	github.com/bufbuild/protocompile v0.6.0 // indirect
 -	github.com/cloudflare/circl v1.5.0 // indirect
++	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 +	github.com/cloudflare/circl v1.6.3 // indirect
  	github.com/evanphx/json-patch v0.5.2 // indirect
  	github.com/fatih/color v1.18.0 // indirect
- 	github.com/go-logr/logr v1.4.2 // indirect
-@@ -370,9 +366,9 @@ require (
- 	go.opentelemetry.io/otel v1.33.0 // indirect
- 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
- 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
+-	github.com/go-logr/logr v1.4.2 // indirect
++	github.com/go-logr/logr v1.4.3 // indirect
+ 	github.com/go-logr/stdr v1.2.2 // indirect
+ 	github.com/go-test/deep v1.1.0 // indirect
+ 	github.com/golang/protobuf v1.5.4 // indirect
+@@ -365,18 +362,18 @@ require (
+ 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+ 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
+ 	github.com/zclconf/go-cty v1.15.1 // indirect
+-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
++	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+ 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.58.0 // indirect
+-	go.opentelemetry.io/otel v1.33.0 // indirect
+-	go.opentelemetry.io/otel/metric v1.33.0 // indirect
+-	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 -	golang.org/x/net v0.34.0 // indirect
 -	golang.org/x/sync v0.10.0 // indirect
 -	golang.org/x/sys v0.29.0 // indirect
-+	golang.org/x/net v0.47.0 // indirect
-+	golang.org/x/sync v0.18.0 // indirect
-+	golang.org/x/sys v0.38.0 // indirect
++	go.opentelemetry.io/otel v1.39.0 // indirect
++	go.opentelemetry.io/otel/metric v1.39.0 // indirect
++	go.opentelemetry.io/otel/trace v1.39.0 // indirect
++	golang.org/x/net v0.48.0 // indirect
++	golang.org/x/sync v0.19.0 // indirect
++	golang.org/x/sys v0.39.0 // indirect
  	google.golang.org/appengine v1.6.8 // indirect
- 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
- 	google.golang.org/grpc v1.68.1 // indirect
+-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
+-	google.golang.org/grpc v1.68.1 // indirect
+-	google.golang.org/protobuf v1.35.2 // indirect
++	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
++	google.golang.org/grpc v1.79.3 // indirect
++	google.golang.org/protobuf v1.36.10 // indirect
+ )
+ 
+ replace github.com/hashicorp/terraform-plugin-log => github.com/gdavison/terraform-plugin-log v0.0.0-20230928191232-6c653d8ef8fb
 diff --git a/go.sum b/go.sum
-index 5002c980caa..4bedaf14a2b 100644
+index 5002c980caa..67829b06ac2 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -23,10 +23,10 @@ github.com/armon/go-radix v1.0.0 h1:F4z6KzEeeQIMeLFa97iZU6vupzoecKdU5TX24SNppXI=
+ github.com/armon/go-radix v1.0.0/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
+ github.com/aws/aws-sdk-go v1.55.5 h1:KKUZBfBoyqy5d3swXyiC7Q76ic40rYcbqH7qjh59kzU=
+ github.com/aws/aws-sdk-go v1.55.5/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
+-github.com/aws/aws-sdk-go-v2 v1.32.7 h1:ky5o35oENWi0JYWUZkB7WYvVPP+bcRF5/Iq7JWSb5Rw=
+-github.com/aws/aws-sdk-go-v2 v1.32.7/go.mod h1:P5WJBrYqqbWVaOxgH0X/FYYD47/nooaPOZPlQdmiN2U=
+-github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 h1:lL7IfaFzngfx0ZwUGOZdsFFnQ5uLvR0hWqqhyE7Q9M8=
+-github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7/go.mod h1:QraP0UcVlQJsmHfioCrveWOC1nbiWUl3ej08h4mXWoc=
++github.com/aws/aws-sdk-go-v2 v1.41.5 h1:dj5kopbwUsVUVFgO4Fi5BIT3t4WyqIDjGKCangnV/yY=
++github.com/aws/aws-sdk-go-v2 v1.41.5/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
++github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 h1:eBMB84YGghSocM7PsjmmPffTa+1FBUeNvGvFou6V/4o=
++github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8/go.mod h1:lyw7GFp3qENLh7kwzf7iMzAxDn+NzjXEAGjKS2UOKqI=
+ github.com/aws/aws-sdk-go-v2/config v1.28.8 h1:4nUeC9TsZoHm9GHlQ5tnoIklNZgISXXVGPKP5/CS0fk=
+ github.com/aws/aws-sdk-go-v2/config v1.28.8/go.mod h1:2C+fhFxnx1ymomFjj5NBUc/vbjyIUR7mZ/iNRhhb7BU=
+ github.com/aws/aws-sdk-go-v2/credentials v1.17.49 h1:+7u6eC8K6LLGQwWMYKHSsHAPQl+CGACQmnzd/EPMW0k=
+@@ -35,14 +35,14 @@ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22 h1:kqOrpojG71DxJm/KDPO+Z/
+ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22/go.mod h1:NtSFajXVVL8TA2QNngagVZmUtXciyrHOt7xgz4faS/M=
+ github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.46 h1:03ylK6hyAhB9E6U2kWcBi9EIORe8vJGox1fi9DQ7tRQ=
+ github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.46/go.mod h1:XIZKyo7DYSsFXsFdrwRAYc3b1bHZpX2boIxXuJw9OS8=
+-github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26 h1:I/5wmGMffY4happ8NOCuIUEWGUvvFp5NSeQcXl9RHcI=
+-github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26/go.mod h1:FR8f4turZtNy6baO0KJ5FJUmXH/cSkI9fOngs0yl6mA=
+-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26 h1:zXFLuEuMMUOvEARXFUVJdfqZ4bvvSgdGRq/ATcrQxzM=
+-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26/go.mod h1:3o2Wpy0bogG1kyOPrgkXA8pgIfEEv0+m19O9D5+W8y8=
++github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21 h1:Rgg6wvjjtX8bNHcvi9OnXWwcE0a2vGpbwmtICOsvcf4=
++github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21/go.mod h1:A/kJFst/nm//cyqonihbdpQZwiUhhzpqTsdbhDdRF9c=
++github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21 h1:PEgGVtPoB6NTpPrBgqSE5hE/o47Ij9qk/SEZFbUOe9A=
++github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21/go.mod h1:p+hz+PRAYlY3zcpJhPwXlLC4C+kqn70WIHwnzAfs6ps=
+ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 h1:VaRN3TlFdd6KxX1x3ILT5ynH6HvKgqdiXoTxAF4HQcQ=
+ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1/go.mod h1:FbtygfRFze9usAadmnGJNc8KsP346kEe+y2/oyhGAGc=
+-github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.26 h1:GeNJsIFHB+WW5ap2Tec4K6dzcVTsRbsT1Lra46Hv9ME=
+-github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.26/go.mod h1:zfgMpwHDXX2WGoG84xG2H+ZlPTkJUU4YUvx2svLQYWo=
++github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22 h1:rWyie/PxDRIdhNf4DzRk0lvjVOqFJuNnO8WwaIRVxzQ=
++github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22/go.mod h1:zd/JsJ4P7oGfUhXn1VyLqaRZwPmZwg44Jf2dS84Dm3Y=
+ github.com/aws/aws-sdk-go-v2/service/accessanalyzer v1.36.4 h1:UESN2kL6NEqhlaLvg1maDmb090rENe5SXlQPniFPAHQ=
+ github.com/aws/aws-sdk-go-v2/service/accessanalyzer v1.36.4/go.mod h1:H7KyxzxenQN4btMpYIMErtXJF/Wdxt9nuDf0dfDNMkg=
+ github.com/aws/aws-sdk-go-v2/service/account v1.22.1 h1:MfaYo0TO/FibfEObTTGU+JZqOnexjMVc1iFqu9DImCE=
+@@ -129,8 +129,8 @@ github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.46.5 h1:+fSJTvw91AyBSgS7iaPlS
+ github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.46.5/go.mod h1:2lQF0aEQAXkUf/Td7RqGIuylJlJO6wSv/onvNdShVyA=
+ github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.5 h1:+NHuBj2D4pZq+9Y8NZykdBebInAwCTywvr6/MOte+ro=
+ github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.5/go.mod h1:aBk4XbmWf8p4N15l6DPVgb2t/n5gpk+mZMbigYV3a1Y=
+-github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.2 h1:9zwK03mlPPGzTaiLh1AJS6IhOAWDYnVXfZTwdyBhQtg=
+-github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.2/go.mod h1:u8Bi6DG9tLOVIS9MNqtE3vh9T6I/U/8RBpYvy/VyMjc=
++github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.65.0 h1:3yaFbUbuLfN8n1q01wZtQtHRzUDc/jm0VvniMY0IPE8=
++github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.65.0/go.mod h1:PobeppEnIjw4pcgjFryNDZCTH7AiqZw0yb5r98Gvf9c=
+ github.com/aws/aws-sdk-go-v2/service/codeartifact v1.33.8 h1:1ztU+umT5kFQpbTC+8HNtbYEEpDKAMuJfbJCspljEbg=
+ github.com/aws/aws-sdk-go-v2/service/codeartifact v1.33.8/go.mod h1:LB1mlJyYyiQlOWEcTjVFBF02MPtuekmymBgCgVuAYUA=
+ github.com/aws/aws-sdk-go-v2/service/codebuild v1.49.4 h1:Ot0JuMkwX6BkDCLH526ELBIPdGI6Ra3aLnv/D6/K/xE=
+@@ -283,16 +283,16 @@ github.com/aws/aws-sdk-go-v2/service/inspector v1.25.8 h1:Et5o92SeqmgWdmH+htC85Y
+ github.com/aws/aws-sdk-go-v2/service/inspector v1.25.8/go.mod h1:esbcyZItviqB1B7lUKaWPsPo20usI+mxi/RRS1hXwkU=
+ github.com/aws/aws-sdk-go-v2/service/inspector2 v1.34.2 h1:CcQCGFVjLOcFxNwW5ZOv0qoL3TZRtiNSOozH5gU4rkk=
+ github.com/aws/aws-sdk-go-v2/service/inspector2 v1.34.2/go.mod h1:mLnwoGGkALpyxU8Hh/p7U8jvAqTty1oXmlbQe7xoBbw=
+-github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 h1:iXtILhvDxB6kPvEXgsDhGaZCSC6LQET5ZHSdJozeI0Y=
+-github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1/go.mod h1:9nu0fVANtYiAePIBh2/pFUSwtJ402hLnp854CNoDOeE=
+-github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.7 h1:tB4tNw83KcajNAzaIMhkhVI2Nt8fAZd5A5ro113FEMY=
+-github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.7/go.mod h1:lvpyBGkZ3tZ9iSsUIcC2EWp+0ywa7aK3BLT+FwZi+mQ=
++github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7 h1:5EniKhLZe4xzL7a+fU3C2tfUN4nWIqlLesfrjkuPFTY=
++github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7/go.mod h1:x0nZssQ3qZSnIcePWLvcoFisRXJzcTVvYpAAdYX8+GI=
++github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13 h1:JRaIgADQS/U6uXDqlPiefP32yXTda7Kqfx+LgspooZM=
++github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13/go.mod h1:CEuVn5WqOMilYl+tbccq8+N2ieCy0gVn3OtRb0vBNNM=
+ github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7 h1:EqGlayejoCRXmnVC6lXl6phCm9R2+k35e0gWsO9G5DI=
+ github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7/go.mod h1:BTw+t+/E5F3ZnDai/wSOYM54WUVjSdewE7Jvwtb7o+w=
+-github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7 h1:8eUsivBQzZHqe/3FE+cqwfH+0p5Jo8PFM/QYQSmeZ+M=
+-github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7/go.mod h1:kLPQvGUmxn/fqiCrDeohwG33bq2pQpGeY62yRO6Nrh0=
+-github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.7 h1:Hi0KGbrnr57bEHWM0bJ1QcBzxLrL/k2DHvGYhb8+W1w=
+-github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.7/go.mod h1:wKNgWgExdjjrm4qvfbTorkvocEstaoDl4WCvGfeCy9c=
++github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21 h1:c31//R3xgIJMSC8S6hEVq+38DcvUlgFY0FM6mSI5oto=
++github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21/go.mod h1:r6+pf23ouCB718FUxaqzZdbpYFyDtehyZcmP5KL9FkA=
++github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21 h1:ZlvrNcHSFFWURB8avufQq9gFsheUgjVD9536obIknfM=
++github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21/go.mod h1:cv3TNhVrssKR0O/xxLJVRfd2oazSnZnkUeTf6ctUwfQ=
+ github.com/aws/aws-sdk-go-v2/service/internetmonitor v1.20.5 h1:C658qdjSO3wvmFXKEwbrqSD+JxBBfFseI1vIJVRLg0M=
+ github.com/aws/aws-sdk-go-v2/service/internetmonitor v1.20.5/go.mod h1:7TNNDrsoVl5OxM0UEh2uX/H/3Hq59Jw3809u4bATn/4=
+ github.com/aws/aws-sdk-go-v2/service/iot v1.62.1 h1:3q2RRmd6BZd0jJT4719a4e+kcvSLF0dKovfLU8X3sBE=
+@@ -313,8 +313,8 @@ github.com/aws/aws-sdk-go-v2/service/kendra v1.55.1 h1:EX8rYBovCNrTm7zANC5FjDrog
+ github.com/aws/aws-sdk-go-v2/service/kendra v1.55.1/go.mod h1:uBUgXTy2ibIe6dY0/7Ku5CTE7YC3FVTFzULZot29Nro=
+ github.com/aws/aws-sdk-go-v2/service/keyspaces v1.16.3 h1:uXRHMEF5VIW6iiG2g+90lIqAHSAR9s+kh+MmU/8T7R8=
+ github.com/aws/aws-sdk-go-v2/service/keyspaces v1.16.3/go.mod h1:ZjsHqse6ZuBieZOLY3AqZXSSLXnumtZNFpZnSMvfN6E=
+-github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.9 h1:TJwtWqaszpQfHlN+gGvvYbTylBQ9KZaX3/OBI4OGZeI=
+-github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.9/go.mod h1:WmoBj0ARg65jSdpLzavVmbMvhw6k1uyG1y4CKtdZXBs=
++github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5 h1:LxgRVyuY+5DEPSX7kmin/V7toE8MWZ9U8n2dqRtX+RE=
++github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5/go.mod h1:eUebEBEqVfOwEyDDDbGauH4PNqDCuepRvTaNbJeWr5w=
+ github.com/aws/aws-sdk-go-v2/service/kinesisanalytics v1.25.9 h1:HupfSCXSkQ4YD3seFb8bgbwHLsCKJNEQjEufp19LMMM=
+ github.com/aws/aws-sdk-go-v2/service/kinesisanalytics v1.25.9/go.mod h1:ch9RoDuhuStevvh1qn29mBKDDIAsuVHKZZUCobS0TFE=
+ github.com/aws/aws-sdk-go-v2/service/kinesisanalyticsv2 v1.31.9 h1:oydBzTZIhO5k6clmHGYgXxwOQKXrnMGt0ZHB7oky6cQ=
+@@ -325,8 +325,8 @@ github.com/aws/aws-sdk-go-v2/service/kms v1.37.9 h1:Ns4iL+x1XB1SATmwAFzuebrn/d/7
+ github.com/aws/aws-sdk-go-v2/service/kms v1.37.9/go.mod h1:ANs9kBhK4Ghj9z1W+bsr3WsNaPF71qkgd6eE6Ekol/Y=
+ github.com/aws/aws-sdk-go-v2/service/lakeformation v1.39.2 h1:IUlID9r2gZKHN+oxQ7ph9pE0nqLgL45czJGnPapvcLE=
+ github.com/aws/aws-sdk-go-v2/service/lakeformation v1.39.2/go.mod h1:/8URO3jdXHx2trFkw8886/BvIymTacL7D8ycHuYly6M=
+-github.com/aws/aws-sdk-go-v2/service/lambda v1.69.3 h1:zDBQUFed2z2nf/SuXoOh1MknV3qKOizFZMexi1zjRAw=
+-github.com/aws/aws-sdk-go-v2/service/lambda v1.69.3/go.mod h1:jWFEZMgQ48dPvuAWy2zcRIq8Mx/L0eO0iR1xkGR4Ov8=
++github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5 h1:HWN7xwaV7Zwrn3Jlauio4u4aTMFgRzG2fblHWQeir/k=
++github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5/go.mod h1:6HBXRyFFqOw+ALkJ6YGHfrr20/YXYv6X9pcZErXRvCA=
+ github.com/aws/aws-sdk-go-v2/service/launchwizard v1.8.8 h1:Kxrp+zOb2WYS4BDRS7osCBOPIK1T7OedcOytIe2I8CY=
+ github.com/aws/aws-sdk-go-v2/service/launchwizard v1.8.8/go.mod h1:f+ruiwPQPaXW7OnTCUn5ttZm21UvB3WKMd7PxFxaSaM=
+ github.com/aws/aws-sdk-go-v2/service/lexmodelbuildingservice v1.28.8 h1:wlqWZFl1a5658FCynvBGxlZVRzwgltRkAbggFSc48Jc=
+@@ -449,8 +449,8 @@ github.com/aws/aws-sdk-go-v2/service/route53resolver v1.34.4 h1:FwXUUubNQFB4nDl1
+ github.com/aws/aws-sdk-go-v2/service/route53resolver v1.34.4/go.mod h1:vYD7xWxRn4FA2LL0zRgiP4GQZPev0VIuKWOYPdU7LEU=
+ github.com/aws/aws-sdk-go-v2/service/rum v1.21.8 h1:PsjsKI4htYgVNS7SkrvDamC1pudlKdebfKKfT+B+p0k=
+ github.com/aws/aws-sdk-go-v2/service/rum v1.21.8/go.mod h1:2k7Pf5TV51+bdYg994/m6Pg9pDEU3/75ljg0twzfeqc=
+-github.com/aws/aws-sdk-go-v2/service/s3 v1.72.1 h1:+IrM0EXV6ozLqJs3Kq2iwQGJBWmgRiYBXWETQQUMZRY=
+-github.com/aws/aws-sdk-go-v2/service/s3 v1.72.1/go.mod h1:r+xl5yzMk9083rMR+sJ5TYj9Tihvf/l1oxzZXDgGj2Q=
++github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3 h1:HwxWTbTrIHm5qY+CAEur0s/figc3qwvLWsNkF4RPToo=
++github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3/go.mod h1:uoA43SdFwacedBfSgfFSjjCvYe8aYBS7EnU5GZ/YKMM=
+ github.com/aws/aws-sdk-go-v2/service/s3control v1.52.2 h1:waRy4WnrQyfdAMR5HvVsftcQ+26m1Y++08B5ZHydJ98=
+ github.com/aws/aws-sdk-go-v2/service/s3control v1.52.2/go.mod h1:6BuUa52of67a+ri/poTH82XiL+rTGQWUPZCmf2cfVHI=
+ github.com/aws/aws-sdk-go-v2/service/s3outposts v1.28.8 h1:47G52E232ytagHeaPcTIxd8GaVstyT4fKS9CrVRWbXM=
+@@ -549,8 +549,8 @@ github.com/aws/aws-sdk-go-v2/service/workspacesweb v1.25.2 h1:ylaPCY2qs+w5e7dTSy
+ github.com/aws/aws-sdk-go-v2/service/workspacesweb v1.25.2/go.mod h1:0hb1mJfmE+QtsHfNWspgPIwp4ltIP5ZaYQlLSYUVsiA=
+ github.com/aws/aws-sdk-go-v2/service/xray v1.30.3 h1:1YNWITeCg+dZRTFf2X+KRQDNCl/En2Zqhcs0zwrZ6r4=
+ github.com/aws/aws-sdk-go-v2/service/xray v1.30.3/go.mod h1:MIDlhv/eUulnYyGjNflyrKF4f77kcvfS9zTWTeUTAog=
+-github.com/aws/smithy-go v1.22.1 h1:/HPHZQ0g7f4eUeK6HKglFz8uwVfZKgoI25rb/J+dnro=
+-github.com/aws/smithy-go v1.22.1/go.mod h1:irrKGvNn1InZwb2d7fkIRNucdfwR8R+Ts3wxYa/cJHg=
++github.com/aws/smithy-go v1.24.2 h1:FzA3bu/nt/vDvmnkg+R8Xl46gmzEDam6mZ1hzmwXFng=
++github.com/aws/smithy-go v1.24.2/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
+ github.com/beevik/etree v1.4.1 h1:PmQJDDYahBGNKDcpdX8uPy1xRCwoCGVUiW669MEirVI=
+ github.com/beevik/etree v1.4.1/go.mod h1:gPNJNaBGVZ9AwsidazFZyygnd+0pAU38N4D+WemwKNs=
+ github.com/bgentry/speakeasy v0.2.0 h1:tgObeVOf8WAvtuAX6DhJ4xks4CFNwPDZiqzGqIHE51E=
 @@ -562,8 +562,10 @@ github.com/bufbuild/protocompile v0.6.0 h1:Uu7WiSQ6Yj9DbkdnOe7U4mNKp58y9WDMKDn28
  github.com/bufbuild/protocompile v0.6.0/go.mod h1:YNP35qEYoYGme7QMtz5SBCoN4kL4g12jTtjuzRNdjpE=
  github.com/cedar-policy/cedar-go v0.1.0 h1:2tZwWn8tNO/896YAM7OQmH3vn98EeHEA3g9anwdVZvA=
  github.com/cedar-policy/cedar-go v0.1.0/go.mod h1:pEgiK479O5dJfzXnTguOMm+bCplzy5rEEFPGdZKPWz4=
 -github.com/cloudflare/circl v1.5.0 h1:hxIWksrX6XN5a1L2TI/h53AGPhNHoUBo+TD1ms9+pys=
 -github.com/cloudflare/circl v1.5.0/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
-+github.com/cloudflare/circl v1.6.3-0.20260122110810-fcba359f4178 h1:n+zqUd1FtiFkNMBQzj0Lfm8U59goBZMubLmS/upiAoY=
-+github.com/cloudflare/circl v1.6.3-0.20260122110810-fcba359f4178/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
++github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
++github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 +github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
 +github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
  github.com/cyphar/filepath-securejoin v0.2.4 h1:Ugdm7cg7i6ZK6x3xDF1oEu1nfkyfH53EtKeQYTC3kyg=
  github.com/cyphar/filepath-securejoin v0.2.4/go.mod h1:aPGpWjXOXUn2NCNjFvBE6aRxGGx79pTxQpKOJNYHHl4=
  github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-@@ -782,22 +784,22 @@ go.opentelemetry.io/otel/trace v1.33.0 h1:cCJuF7LRjUFso9LPnEAHJDB2pqzp+hbO8eu1qq
- go.opentelemetry.io/otel/trace v1.33.0/go.mod h1:uIcdVUZMpTAmz0tI1z04GoVSezK37CbGV4fr1f2nBck=
+@@ -591,8 +593,8 @@ github.com/go-git/go-billy/v5 v5.5.0/go.mod h1:hmexnoNsr2SJU1Ju67OaNz5ASJY3+sHgF
+ github.com/go-git/go-git/v5 v5.12.0 h1:7Md+ndsjrzZxbddRDZjF14qK+NN56sy6wkqaVrjZtys=
+ github.com/go-git/go-git/v5 v5.12.0/go.mod h1:FTM9VKtnI2m65hNI/TenDDDnUf2Q9FHnXYjuz9i5OEY=
+ github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+-github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
+-github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
++github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=
++github.com/go-logr/logr v1.4.3/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+ github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
+ github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
+ github.com/go-test/deep v1.1.0 h1:WOcxcdHcvdgThNXjw0t76K42FXTU7HpNQWHpA2HHNlg=
+@@ -606,8 +608,8 @@ github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek
+ github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
+ github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
+ github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+-github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+-github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
++github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
++github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+ github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+ github.com/hashicorp/aws-cloudformation-resource-schema-sdk-go v0.23.0 h1:l16/Vrl0+x+HjHJWEjcKPwHYoxN9EC78gAFXKlH6m84=
+@@ -733,8 +735,8 @@ github.com/posener/complete v1.2.3 h1:NP0eAhjcjImqslEwo/1hq7gpajME0fTLTezBKDqfXq
+ github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
+ github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
+ github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
+-github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
+-github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
++github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
++github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
+ github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN3Uc8sB6B/s6Z4t2xvBgU1htSHuq8=
+ github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
+ github.com/shopspring/decimal v1.4.0 h1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=
+@@ -747,8 +749,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
+ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
+ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
+ github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
+-github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+-github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
++github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
++github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+ github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
+ github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
+ github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
+@@ -770,34 +772,38 @@ github.com/zclconf/go-cty v1.15.1 h1:RgQYm4j2EvoBRXOPxhUvxPzRrGDo1eCOhHXuGfrj5S0
+ github.com/zclconf/go-cty v1.15.1/go.mod h1:VvMs5i0vgZdhYawQNq5kePSpLAoz8u1xvZgrPIxfnZE=
+ github.com/zclconf/go-cty-debug v0.0.0-20240509010212-0d6042c53940 h1:4r45xpDWB6ZMSMNJFMOjqrGHynW3DIBuR2H9j0ug+Mo=
+ github.com/zclconf/go-cty-debug v0.0.0-20240509010212-0d6042c53940/go.mod h1:CmBdvvj3nqzfzJ6nTCIwDTPZ56aVGvDrmztiO5g3qrM=
+-go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
+-go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
++go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
++go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
+ go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.58.0 h1:g2rorZw2f1qnyfLOC7FP99argIWsN708Fjs2Zwz6SOk=
+ go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.58.0/go.mod h1:QzTypGPlQn4NselMPALVKGwm/p3XKLVCB/UG2Dq3PxQ=
+-go.opentelemetry.io/otel v1.33.0 h1:/FerN9bax5LoK51X/sI0SVYrjSE0/yUL7DpxW4K3FWw=
+-go.opentelemetry.io/otel v1.33.0/go.mod h1:SUUkR6csvUQl+yjReHu5uM3EtVV7MBm5FHKRlNx4I8I=
+-go.opentelemetry.io/otel/metric v1.33.0 h1:r+JOocAyeRVXD8lZpjdQjzMadVZp2M4WmQ+5WtEnklQ=
+-go.opentelemetry.io/otel/metric v1.33.0/go.mod h1:L9+Fyctbp6HFTddIxClbQkjtubW6O9QS3Ann/M82u6M=
+-go.opentelemetry.io/otel/trace v1.33.0 h1:cCJuF7LRjUFso9LPnEAHJDB2pqzp+hbO8eu1qqW2d/s=
+-go.opentelemetry.io/otel/trace v1.33.0/go.mod h1:uIcdVUZMpTAmz0tI1z04GoVSezK37CbGV4fr1f2nBck=
++go.opentelemetry.io/otel v1.39.0 h1:8yPrr/S0ND9QEfTfdP9V+SiwT4E0G7Y5MO7p85nis48=
++go.opentelemetry.io/otel v1.39.0/go.mod h1:kLlFTywNWrFyEdH0oj2xK0bFYZtHRYUdv1NklR/tgc8=
++go.opentelemetry.io/otel/metric v1.39.0 h1:d1UzonvEZriVfpNKEVmHXbdf909uGTOQjA0HF0Ls5Q0=
++go.opentelemetry.io/otel/metric v1.39.0/go.mod h1:jrZSWL33sD7bBxg1xjrqyDjnuzTUB0x1nBERXd7Ftcs=
++go.opentelemetry.io/otel/sdk v1.39.0 h1:nMLYcjVsvdui1B/4FRkwjzoRVsMK8uL/cj0OyhKzt18=
++go.opentelemetry.io/otel/sdk v1.39.0/go.mod h1:vDojkC4/jsTJsE+kh+LXYQlbL8CgrEcwmt1ENZszdJE=
++go.opentelemetry.io/otel/sdk/metric v1.39.0 h1:cXMVVFVgsIf2YL6QkRF4Urbr/aMInf+2WKg+sEJTtB8=
++go.opentelemetry.io/otel/sdk/metric v1.39.0/go.mod h1:xq9HEVH7qeX69/JnwEfp6fVq5wosJsY1mt4lLfYdVew=
++go.opentelemetry.io/otel/trace v1.39.0 h1:2d2vfpEDmCJ5zVYz7ijaJdOF59xLomrvj7bjt6/qCJI=
++go.opentelemetry.io/otel/trace v1.39.0/go.mod h1:88w4/PnZSazkGzz/w84VHpQafiU4EtqqlVdxWy+rNOA=
  golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
  golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 -golang.org/x/crypto v0.32.0 h1:euUpcYgM8WcP71gNpTqQCn6rC2t6ULUPiOzfWaXVVfc=
 -golang.org/x/crypto v0.32.0/go.mod h1:ZnnJkOaASj8g0AjIduWNlq2NRxL0PlBrbKVyZ6V/Ugc=
-+golang.org/x/crypto v0.45.0 h1:jMBrvKuj23MTlT0bQEOBcAE0mjg8mK9RXFhRH6nyF3Q=
-+golang.org/x/crypto v0.45.0/go.mod h1:XTGrrkGJve7CYK7J8PEww4aY7gM3qMCElcJQ8n8JdX4=
++golang.org/x/crypto v0.46.0 h1:cKRW/pmt1pKAfetfu+RCEvjvZkA9RimPbh7bhFjGVBU=
++golang.org/x/crypto v0.46.0/go.mod h1:Evb/oLKmMraqjZ2iQTwDwvCtJkczlDuTmdJXoZVzqU0=
  golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
 -golang.org/x/mod v0.22.0 h1:D4nJWe9zXqHOmWqj4VMOJhvzj7bEZg4wEYa759z1pH4=
 -golang.org/x/mod v0.22.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
-+golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
-+golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
++golang.org/x/mod v0.30.0 h1:fDEXFVZ/fmCKProc/yAXXUijritrDzahmwwefnjoPFk=
++golang.org/x/mod v0.30.0/go.mod h1:lAsf5O2EvJeSFMiBxXDki7sCgAxEUcZHXoXMKT4GJKc=
  golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
  golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
  golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 -golang.org/x/net v0.34.0 h1:Mb7Mrk043xzHgnRM88suvJFwzVrRfHEHJEl5/71CKw0=
 -golang.org/x/net v0.34.0/go.mod h1:di0qlW3YNM5oh6GqDGQr92MyTozJPmybPK4Ev/Gm31k=
-+golang.org/x/net v0.47.0 h1:Mx+4dIFzqraBXUugkia1OOvlD6LemFo1ALMHjrXDOhY=
-+golang.org/x/net v0.47.0/go.mod h1:/jNxtkgq5yWUGYkaZGqo27cfGZ1c5Nen03aYrrKpVRU=
++golang.org/x/net v0.48.0 h1:zyQRTTrjc33Lhh0fBgT/H3oZq9WuvRR5gPC70xpDiQU=
++golang.org/x/net v0.48.0/go.mod h1:+ndRgGjkh8FGtu1w1FGbEC31if4VrNVMuKTgcAAnQRY=
  golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 -golang.org/x/sync v0.10.0 h1:3NQrjDixjgGwUOCaF8w2+VYHv0Ve/vGYSbdkTa98gmQ=
 -golang.org/x/sync v0.10.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
-+golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
-+golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
++golang.org/x/sync v0.19.0 h1:vV+1eWNmZ5geRlYjzm2adRgW2/mcpevXNg50YZtPCE4=
++golang.org/x/sync v0.19.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
  golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-@@ -810,24 +812,24 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
+@@ -810,37 +816,39 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 -golang.org/x/sys v0.29.0 h1:TPYlXGxvx1MGTn2GiZDhnjPA9wZzZeGKHHmKhHYvgaU=
 -golang.org/x/sys v0.29.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
-+golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
-+golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
++golang.org/x/sys v0.39.0 h1:CvCKL8MeisomCi6qNZ+wbb0DN9E5AATixKsvNtMoMFk=
++golang.org/x/sys v0.39.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
  golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
  golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 -golang.org/x/term v0.28.0 h1:/Ts8HFuMR2E6IP/jlo7QVLZHggjKQbhu/7H0LJFr3Gg=
 -golang.org/x/term v0.28.0/go.mod h1:Sw/lC2IAUZ92udQNf3WodGtn4k/XoLyZoh8v/8uiwek=
-+golang.org/x/term v0.37.0 h1:8EGAD0qCmHYZg6J17DvsMy9/wJ7/D/4pV/wfnld5lTU=
-+golang.org/x/term v0.37.0/go.mod h1:5pB4lxRNYYVZuTLmy8oR2BH8dflOR+IbTYFD8fi3254=
++golang.org/x/term v0.38.0 h1:PQ5pkm/rLO6HnxFR7N2lJHOZX6Kez5Y1gDSJla6jo7Q=
++golang.org/x/term v0.38.0/go.mod h1:bSEAKrOT1W+VSu9TSCMtoGEOUcKxOKgl3LE5QEF/xVg=
  golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
  golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
@@ -127,18 +412,39 @@ index 5002c980caa..4bedaf14a2b 100644
  golang.org/x/text v0.3.8/go.mod h1:E6s5w1FMmriuDzIBO73fBruAKo1PCIq6d2Q6DHfQ8WQ=
 -golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
 -golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
-+golang.org/x/text v0.31.0 h1:aC8ghyu4JhP8VojJ2lEHBnochRno1sgL6nEi9WGFGMM=
-+golang.org/x/text v0.31.0/go.mod h1:tKRAlv61yKIjGGHX/4tP1LTbc13YSec1pxVEWXzfoeM=
++golang.org/x/text v0.32.0 h1:ZD01bjUt1FQ9WJ0ClOL5vxgxOI/sVCNgX1YtKwcY0mU=
++golang.org/x/text v0.32.0/go.mod h1:o/rUWzghvpD5TXrTIBuJU77MTaN0ljMWE47kxGJQ7jY=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
  golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
  golang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc=
 -golang.org/x/tools v0.29.0 h1:Xx0h3TtM9rzQpQuR4dKLrdglAmCEN5Oi+P74JdhdzXE=
 -golang.org/x/tools v0.29.0/go.mod h1:KMQVMRsVxU6nHCFXrBPhDB8XncLNLM0lIy/F14RP588=
-+golang.org/x/tools v0.38.0 h1:Hx2Xv8hISq8Lm16jvBZ2VQf+RLmbd7wVUsALibYI/IQ=
-+golang.org/x/tools v0.38.0/go.mod h1:yEsQ/d/YK8cjh0L6rZlY8tgtlKiBNTL14pGDJPJpYQs=
++golang.org/x/tools v0.39.0 h1:ik4ho21kwuQln40uelmciQPp9SipgNDdrafrYA4TmQQ=
++golang.org/x/tools v0.39.0/go.mod h1:JnefbkDPyD8UU2kI5fuf8ZX4/yUeh9W877ZeBONxUqQ=
  golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
++gonum.org/v1/gonum v0.16.0 h1:5+ul4Swaf3ESvrOnidPp4GZbzf0mxVQpDCYUQE7OJfk=
++gonum.org/v1/gonum v0.16.0/go.mod h1:fef3am4MQ93R2HHpKnLk4/Tbh/s0+wqD5nfa6Pnwy4E=
  google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
+ google.golang.org/appengine v1.6.8 h1:IhEN5q69dyKagZPYMSdIjS2HqprW324FRQZJcGqPAsM=
+ google.golang.org/appengine v1.6.8/go.mod h1:1jJ3jBArFh5pcgW8gCtRJnepW8FzD1V44FJffLiz/Ds=
+-google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 h1:8ZmaLZE4XWrtU3MyClkYqqtl6Oegr3235h7jxsDyqCY=
+-google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576/go.mod h1:5uTbfoYQed2U9p3KIj2/Zzm02PYhndfdmML0qC3q3FU=
+-google.golang.org/grpc v1.68.1 h1:oI5oTa11+ng8r8XMMN7jAOmWfPZWbYpCFaMUTACxkM0=
+-google.golang.org/grpc v1.68.1/go.mod h1:+q1XYFJjShcqn0QZHvCyeR4CXPA+llXIeUIfIe00waw=
++google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 h1:gRkg/vSppuSQoDjxyiGfN4Upv/h/DQmIR10ZU8dh4Ww=
++google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217/go.mod h1:7i2o+ce6H/6BluujYR+kqX3GKH+dChPTQU19wjRPiGk=
++google.golang.org/grpc v1.79.3 h1:sybAEdRIEtvcD68Gx7dmnwjZKlyfuc61Dyo9pGXXkKE=
++google.golang.org/grpc v1.79.3/go.mod h1:KmT0Kjez+0dde/v2j9vzwoAScgEPx/Bw1CYChhHLrHQ=
+ google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
+ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+-google.golang.org/protobuf v1.35.2 h1:8Ar7bF+apOIoThw1EdZl0p1oWvMqTHmpA2fRTyZO8io=
+-google.golang.org/protobuf v1.35.2/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
++google.golang.org/protobuf v1.36.10 h1:AYd7cD/uASjIL6Q9LiTjz8JLcrh/88q5UObnmY3aOOE=
++google.golang.org/protobuf v1.36.10/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
 diff --git a/skaff/go.mod b/skaff/go.mod
 index 2c366c3a89f..6e76f69d6a9 100644
 --- a/skaff/go.mod
@@ -187,7 +493,7 @@ index 7b8971dd0d4..a809b82b0cb 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 diff --git a/tools/tfsdk2fw/go.mod b/tools/tfsdk2fw/go.mod
-index 9c6ce580340..88d6fba6d16 100644
+index 9c6ce580340..e349fbf177d 100644
 --- a/tools/tfsdk2fw/go.mod
 +++ b/tools/tfsdk2fw/go.mod
 @@ -1,6 +1,6 @@
@@ -198,19 +504,112 @@ index 9c6ce580340..88d6fba6d16 100644
  
  require (
  	github.com/hashicorp/terraform-plugin-sdk/v2 v2.35.0
-@@ -287,7 +287,7 @@ require (
+@@ -20,16 +20,16 @@ require (
+ 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
+ 	github.com/armon/go-radix v1.0.0 // indirect
+ 	github.com/aws/aws-sdk-go v1.55.5 // indirect
+-	github.com/aws/aws-sdk-go-v2 v1.32.7 // indirect
+-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 // indirect
++	github.com/aws/aws-sdk-go-v2 v1.41.5 // indirect
++	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/config v1.28.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/credentials v1.17.49 // indirect
+ 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22 // indirect
+ 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.46 // indirect
+-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26 // indirect
+-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26 // indirect
++	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21 // indirect
++	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21 // indirect
+ 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
+-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.26 // indirect
++	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/accessanalyzer v1.36.4 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/account v1.22.1 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/acm v1.30.9 // indirect
+@@ -73,7 +73,7 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/cloudsearch v1.26.7 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.46.5 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.5 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.2 // indirect
++	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.65.0 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/codeartifact v1.33.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/codebuild v1.49.4 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/codecatalyst v1.17.8 // indirect
+@@ -150,11 +150,11 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/imagebuilder v1.40.0 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/inspector v1.25.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/inspector2 v1.34.2 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21 // indirect
++	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/internetmonitor v1.20.5 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/iot v1.62.1 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/iotanalytics v1.26.8 // indirect
+@@ -165,13 +165,13 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/kafkaconnect v1.21.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/kendra v1.55.1 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/keyspaces v1.16.3 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.9 // indirect
++	github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/kinesisanalytics v1.25.9 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/kinesisanalyticsv2 v1.31.9 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/kinesisvideo v1.27.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/kms v1.37.9 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/lakeformation v1.39.2 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/lambda v1.69.3 // indirect
++	github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/launchwizard v1.8.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/lexmodelbuildingservice v1.28.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/lexmodelsv2 v1.49.8 // indirect
+@@ -233,7 +233,7 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/route53recoveryreadiness v1.21.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/route53resolver v1.34.4 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/rum v1.21.8 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/s3 v1.72.1 // indirect
++	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/s3control v1.52.2 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/s3outposts v1.28.8 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/s3tables v1.0.1 // indirect
+@@ -283,18 +283,19 @@ require (
+ 	github.com/aws/aws-sdk-go-v2/service/workspaces v1.51.0 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/workspacesweb v1.25.2 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/xray v1.30.3 // indirect
+-	github.com/aws/smithy-go v1.22.1 // indirect
++	github.com/aws/smithy-go v1.24.2 // indirect
  	github.com/beevik/etree v1.4.1 // indirect
  	github.com/bgentry/speakeasy v0.2.0 // indirect
  	github.com/cedar-policy/cedar-go v0.1.0 // indirect
 -	github.com/cloudflare/circl v1.5.0 // indirect
++	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 +	github.com/cloudflare/circl v1.6.3 // indirect
  	github.com/davecgh/go-spew v1.1.1 // indirect
  	github.com/fatih/color v1.18.0 // indirect
  	github.com/gertd/go-pluralize v0.2.1 // indirect
-@@ -356,13 +356,13 @@ require (
- 	go.opentelemetry.io/otel v1.33.0 // indirect
- 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
- 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
+-	github.com/go-logr/logr v1.4.2 // indirect
++	github.com/go-logr/logr v1.4.3 // indirect
+ 	github.com/go-logr/stdr v1.2.2 // indirect
+ 	github.com/golang/protobuf v1.5.4 // indirect
+-	github.com/google/go-cmp v0.6.0 // indirect
++	github.com/google/go-cmp v0.7.0 // indirect
+ 	github.com/google/uuid v1.6.0 // indirect
+ 	github.com/hashicorp/aws-cloudformation-resource-schema-sdk-go v0.23.0 // indirect
+ 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.60 // indirect
+@@ -351,22 +352,22 @@ require (
+ 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+ 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
+ 	github.com/zclconf/go-cty v1.15.1 // indirect
+-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
++	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+ 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.58.0 // indirect
+-	go.opentelemetry.io/otel v1.33.0 // indirect
+-	go.opentelemetry.io/otel/metric v1.33.0 // indirect
+-	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 -	golang.org/x/crypto v0.32.0 // indirect
 -	golang.org/x/mod v0.22.0 // indirect
 -	golang.org/x/net v0.34.0 // indirect
@@ -218,150 +617,274 @@ index 9c6ce580340..88d6fba6d16 100644
 -	golang.org/x/sys v0.29.0 // indirect
 -	golang.org/x/text v0.21.0 // indirect
 -	golang.org/x/tools v0.29.0 // indirect
-+	golang.org/x/crypto v0.45.0 // indirect
-+	golang.org/x/mod v0.29.0 // indirect
-+	golang.org/x/net v0.47.0 // indirect
-+	golang.org/x/sync v0.18.0 // indirect
-+	golang.org/x/sys v0.38.0 // indirect
-+	golang.org/x/text v0.31.0 // indirect
-+	golang.org/x/tools v0.38.0 // indirect
++	go.opentelemetry.io/otel v1.39.0 // indirect
++	go.opentelemetry.io/otel/metric v1.39.0 // indirect
++	go.opentelemetry.io/otel/trace v1.39.0 // indirect
++	golang.org/x/crypto v0.46.0 // indirect
++	golang.org/x/mod v0.30.0 // indirect
++	golang.org/x/net v0.48.0 // indirect
++	golang.org/x/sync v0.19.0 // indirect
++	golang.org/x/sys v0.39.0 // indirect
++	golang.org/x/text v0.32.0 // indirect
++	golang.org/x/tools v0.39.0 // indirect
  	google.golang.org/appengine v1.6.8 // indirect
- 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
- 	google.golang.org/grpc v1.68.1 // indirect
+-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
+-	google.golang.org/grpc v1.68.1 // indirect
+-	google.golang.org/protobuf v1.35.2 // indirect
++	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
++	google.golang.org/grpc v1.79.3 // indirect
++	google.golang.org/protobuf v1.36.10 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ )
+ 
 diff --git a/tools/tfsdk2fw/go.sum b/tools/tfsdk2fw/go.sum
-index 98669f64331..f5d5ec8034f 100644
+index 98669f64331..dc29ead9d99 100644
 --- a/tools/tfsdk2fw/go.sum
 +++ b/tools/tfsdk2fw/go.sum
-@@ -1,3 +1,5 @@
-+cel.dev/expr v0.16.1/go.mod h1:AsGA5zb3WruAEQeQng1RZdGEXmBj0jvMWh6l5SnNuC8=
-+cloud.google.com/go/compute/metadata v0.5.0/go.mod h1:aHnloV2TPI38yx4s9+wAZhHykWvVCfu7hQbF+9CWoiY=
- dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
- dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
- github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
-@@ -17,6 +19,7 @@ github.com/YakDriver/regexache v0.24.0/go.mod h1:awcd8uBj614F3ScW06JqlfSGqq2/7vd
- github.com/agext/levenshtein v1.2.3 h1:YB2fHEn0UJagG8T1rrWknE3ZQzWM06O8AMAatNn7lmo=
- github.com/agext/levenshtein v1.2.3/go.mod h1:JEDfjyjHDjOF/1e4FlBE/PkbqA9OfWu2ki2W0IB5558=
- github.com/apparentlymart/go-textseg/v12 v12.0.0/go.mod h1:S/4uRK2UtaQttw1GenVJEynmyUenKwP++x/+DdGV/Ec=
-+github.com/apparentlymart/go-textseg/v13 v13.0.0/go.mod h1:ZK2fH7c4NqDTLtiYLvIkEghdlcqw7yxLeM89kiTRPUo=
- github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew1u1fNQOlOtuGxQY=
- github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
- github.com/armon/go-radix v1.0.0 h1:F4z6KzEeeQIMeLFa97iZU6vupzoecKdU5TX24SNppXI=
-@@ -559,17 +562,24 @@ github.com/boombuler/barcode v1.0.1 h1:NDBbPmhS+EqABEs5Kg3n/5ZNjy73Pz7SIV+KCeqyX
- github.com/boombuler/barcode v1.0.1/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
- github.com/bufbuild/protocompile v0.6.0 h1:Uu7WiSQ6Yj9DbkdnOe7U4mNKp58y9WDMKDn28/ZlunY=
+@@ -23,10 +23,10 @@ github.com/armon/go-radix v1.0.0 h1:F4z6KzEeeQIMeLFa97iZU6vupzoecKdU5TX24SNppXI=
+ github.com/armon/go-radix v1.0.0/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
+ github.com/aws/aws-sdk-go v1.55.5 h1:KKUZBfBoyqy5d3swXyiC7Q76ic40rYcbqH7qjh59kzU=
+ github.com/aws/aws-sdk-go v1.55.5/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
+-github.com/aws/aws-sdk-go-v2 v1.32.7 h1:ky5o35oENWi0JYWUZkB7WYvVPP+bcRF5/Iq7JWSb5Rw=
+-github.com/aws/aws-sdk-go-v2 v1.32.7/go.mod h1:P5WJBrYqqbWVaOxgH0X/FYYD47/nooaPOZPlQdmiN2U=
+-github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 h1:lL7IfaFzngfx0ZwUGOZdsFFnQ5uLvR0hWqqhyE7Q9M8=
+-github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7/go.mod h1:QraP0UcVlQJsmHfioCrveWOC1nbiWUl3ej08h4mXWoc=
++github.com/aws/aws-sdk-go-v2 v1.41.5 h1:dj5kopbwUsVUVFgO4Fi5BIT3t4WyqIDjGKCangnV/yY=
++github.com/aws/aws-sdk-go-v2 v1.41.5/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
++github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 h1:eBMB84YGghSocM7PsjmmPffTa+1FBUeNvGvFou6V/4o=
++github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8/go.mod h1:lyw7GFp3qENLh7kwzf7iMzAxDn+NzjXEAGjKS2UOKqI=
+ github.com/aws/aws-sdk-go-v2/config v1.28.8 h1:4nUeC9TsZoHm9GHlQ5tnoIklNZgISXXVGPKP5/CS0fk=
+ github.com/aws/aws-sdk-go-v2/config v1.28.8/go.mod h1:2C+fhFxnx1ymomFjj5NBUc/vbjyIUR7mZ/iNRhhb7BU=
+ github.com/aws/aws-sdk-go-v2/credentials v1.17.49 h1:+7u6eC8K6LLGQwWMYKHSsHAPQl+CGACQmnzd/EPMW0k=
+@@ -35,14 +35,14 @@ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22 h1:kqOrpojG71DxJm/KDPO+Z/
+ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22/go.mod h1:NtSFajXVVL8TA2QNngagVZmUtXciyrHOt7xgz4faS/M=
+ github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.46 h1:03ylK6hyAhB9E6U2kWcBi9EIORe8vJGox1fi9DQ7tRQ=
+ github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.46/go.mod h1:XIZKyo7DYSsFXsFdrwRAYc3b1bHZpX2boIxXuJw9OS8=
+-github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26 h1:I/5wmGMffY4happ8NOCuIUEWGUvvFp5NSeQcXl9RHcI=
+-github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26/go.mod h1:FR8f4turZtNy6baO0KJ5FJUmXH/cSkI9fOngs0yl6mA=
+-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26 h1:zXFLuEuMMUOvEARXFUVJdfqZ4bvvSgdGRq/ATcrQxzM=
+-github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26/go.mod h1:3o2Wpy0bogG1kyOPrgkXA8pgIfEEv0+m19O9D5+W8y8=
++github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21 h1:Rgg6wvjjtX8bNHcvi9OnXWwcE0a2vGpbwmtICOsvcf4=
++github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21/go.mod h1:A/kJFst/nm//cyqonihbdpQZwiUhhzpqTsdbhDdRF9c=
++github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21 h1:PEgGVtPoB6NTpPrBgqSE5hE/o47Ij9qk/SEZFbUOe9A=
++github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21/go.mod h1:p+hz+PRAYlY3zcpJhPwXlLC4C+kqn70WIHwnzAfs6ps=
+ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 h1:VaRN3TlFdd6KxX1x3ILT5ynH6HvKgqdiXoTxAF4HQcQ=
+ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1/go.mod h1:FbtygfRFze9usAadmnGJNc8KsP346kEe+y2/oyhGAGc=
+-github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.26 h1:GeNJsIFHB+WW5ap2Tec4K6dzcVTsRbsT1Lra46Hv9ME=
+-github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.26/go.mod h1:zfgMpwHDXX2WGoG84xG2H+ZlPTkJUU4YUvx2svLQYWo=
++github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22 h1:rWyie/PxDRIdhNf4DzRk0lvjVOqFJuNnO8WwaIRVxzQ=
++github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22/go.mod h1:zd/JsJ4P7oGfUhXn1VyLqaRZwPmZwg44Jf2dS84Dm3Y=
+ github.com/aws/aws-sdk-go-v2/service/accessanalyzer v1.36.4 h1:UESN2kL6NEqhlaLvg1maDmb090rENe5SXlQPniFPAHQ=
+ github.com/aws/aws-sdk-go-v2/service/accessanalyzer v1.36.4/go.mod h1:H7KyxzxenQN4btMpYIMErtXJF/Wdxt9nuDf0dfDNMkg=
+ github.com/aws/aws-sdk-go-v2/service/account v1.22.1 h1:MfaYo0TO/FibfEObTTGU+JZqOnexjMVc1iFqu9DImCE=
+@@ -129,8 +129,8 @@ github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.46.5 h1:+fSJTvw91AyBSgS7iaPlS
+ github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.46.5/go.mod h1:2lQF0aEQAXkUf/Td7RqGIuylJlJO6wSv/onvNdShVyA=
+ github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.5 h1:+NHuBj2D4pZq+9Y8NZykdBebInAwCTywvr6/MOte+ro=
+ github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.5/go.mod h1:aBk4XbmWf8p4N15l6DPVgb2t/n5gpk+mZMbigYV3a1Y=
+-github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.2 h1:9zwK03mlPPGzTaiLh1AJS6IhOAWDYnVXfZTwdyBhQtg=
+-github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.2/go.mod h1:u8Bi6DG9tLOVIS9MNqtE3vh9T6I/U/8RBpYvy/VyMjc=
++github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.65.0 h1:3yaFbUbuLfN8n1q01wZtQtHRzUDc/jm0VvniMY0IPE8=
++github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.65.0/go.mod h1:PobeppEnIjw4pcgjFryNDZCTH7AiqZw0yb5r98Gvf9c=
+ github.com/aws/aws-sdk-go-v2/service/codeartifact v1.33.8 h1:1ztU+umT5kFQpbTC+8HNtbYEEpDKAMuJfbJCspljEbg=
+ github.com/aws/aws-sdk-go-v2/service/codeartifact v1.33.8/go.mod h1:LB1mlJyYyiQlOWEcTjVFBF02MPtuekmymBgCgVuAYUA=
+ github.com/aws/aws-sdk-go-v2/service/codebuild v1.49.4 h1:Ot0JuMkwX6BkDCLH526ELBIPdGI6Ra3aLnv/D6/K/xE=
+@@ -283,16 +283,16 @@ github.com/aws/aws-sdk-go-v2/service/inspector v1.25.8 h1:Et5o92SeqmgWdmH+htC85Y
+ github.com/aws/aws-sdk-go-v2/service/inspector v1.25.8/go.mod h1:esbcyZItviqB1B7lUKaWPsPo20usI+mxi/RRS1hXwkU=
+ github.com/aws/aws-sdk-go-v2/service/inspector2 v1.34.2 h1:CcQCGFVjLOcFxNwW5ZOv0qoL3TZRtiNSOozH5gU4rkk=
+ github.com/aws/aws-sdk-go-v2/service/inspector2 v1.34.2/go.mod h1:mLnwoGGkALpyxU8Hh/p7U8jvAqTty1oXmlbQe7xoBbw=
+-github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 h1:iXtILhvDxB6kPvEXgsDhGaZCSC6LQET5ZHSdJozeI0Y=
+-github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1/go.mod h1:9nu0fVANtYiAePIBh2/pFUSwtJ402hLnp854CNoDOeE=
+-github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.7 h1:tB4tNw83KcajNAzaIMhkhVI2Nt8fAZd5A5ro113FEMY=
+-github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.7/go.mod h1:lvpyBGkZ3tZ9iSsUIcC2EWp+0ywa7aK3BLT+FwZi+mQ=
++github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7 h1:5EniKhLZe4xzL7a+fU3C2tfUN4nWIqlLesfrjkuPFTY=
++github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7/go.mod h1:x0nZssQ3qZSnIcePWLvcoFisRXJzcTVvYpAAdYX8+GI=
++github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13 h1:JRaIgADQS/U6uXDqlPiefP32yXTda7Kqfx+LgspooZM=
++github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13/go.mod h1:CEuVn5WqOMilYl+tbccq8+N2ieCy0gVn3OtRb0vBNNM=
+ github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7 h1:EqGlayejoCRXmnVC6lXl6phCm9R2+k35e0gWsO9G5DI=
+ github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7/go.mod h1:BTw+t+/E5F3ZnDai/wSOYM54WUVjSdewE7Jvwtb7o+w=
+-github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7 h1:8eUsivBQzZHqe/3FE+cqwfH+0p5Jo8PFM/QYQSmeZ+M=
+-github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7/go.mod h1:kLPQvGUmxn/fqiCrDeohwG33bq2pQpGeY62yRO6Nrh0=
+-github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.7 h1:Hi0KGbrnr57bEHWM0bJ1QcBzxLrL/k2DHvGYhb8+W1w=
+-github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.7/go.mod h1:wKNgWgExdjjrm4qvfbTorkvocEstaoDl4WCvGfeCy9c=
++github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21 h1:c31//R3xgIJMSC8S6hEVq+38DcvUlgFY0FM6mSI5oto=
++github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21/go.mod h1:r6+pf23ouCB718FUxaqzZdbpYFyDtehyZcmP5KL9FkA=
++github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21 h1:ZlvrNcHSFFWURB8avufQq9gFsheUgjVD9536obIknfM=
++github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21/go.mod h1:cv3TNhVrssKR0O/xxLJVRfd2oazSnZnkUeTf6ctUwfQ=
+ github.com/aws/aws-sdk-go-v2/service/internetmonitor v1.20.5 h1:C658qdjSO3wvmFXKEwbrqSD+JxBBfFseI1vIJVRLg0M=
+ github.com/aws/aws-sdk-go-v2/service/internetmonitor v1.20.5/go.mod h1:7TNNDrsoVl5OxM0UEh2uX/H/3Hq59Jw3809u4bATn/4=
+ github.com/aws/aws-sdk-go-v2/service/iot v1.62.1 h1:3q2RRmd6BZd0jJT4719a4e+kcvSLF0dKovfLU8X3sBE=
+@@ -313,8 +313,8 @@ github.com/aws/aws-sdk-go-v2/service/kendra v1.55.1 h1:EX8rYBovCNrTm7zANC5FjDrog
+ github.com/aws/aws-sdk-go-v2/service/kendra v1.55.1/go.mod h1:uBUgXTy2ibIe6dY0/7Ku5CTE7YC3FVTFzULZot29Nro=
+ github.com/aws/aws-sdk-go-v2/service/keyspaces v1.16.3 h1:uXRHMEF5VIW6iiG2g+90lIqAHSAR9s+kh+MmU/8T7R8=
+ github.com/aws/aws-sdk-go-v2/service/keyspaces v1.16.3/go.mod h1:ZjsHqse6ZuBieZOLY3AqZXSSLXnumtZNFpZnSMvfN6E=
+-github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.9 h1:TJwtWqaszpQfHlN+gGvvYbTylBQ9KZaX3/OBI4OGZeI=
+-github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.9/go.mod h1:WmoBj0ARg65jSdpLzavVmbMvhw6k1uyG1y4CKtdZXBs=
++github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5 h1:LxgRVyuY+5DEPSX7kmin/V7toE8MWZ9U8n2dqRtX+RE=
++github.com/aws/aws-sdk-go-v2/service/kinesis v1.43.5/go.mod h1:eUebEBEqVfOwEyDDDbGauH4PNqDCuepRvTaNbJeWr5w=
+ github.com/aws/aws-sdk-go-v2/service/kinesisanalytics v1.25.9 h1:HupfSCXSkQ4YD3seFb8bgbwHLsCKJNEQjEufp19LMMM=
+ github.com/aws/aws-sdk-go-v2/service/kinesisanalytics v1.25.9/go.mod h1:ch9RoDuhuStevvh1qn29mBKDDIAsuVHKZZUCobS0TFE=
+ github.com/aws/aws-sdk-go-v2/service/kinesisanalyticsv2 v1.31.9 h1:oydBzTZIhO5k6clmHGYgXxwOQKXrnMGt0ZHB7oky6cQ=
+@@ -325,8 +325,8 @@ github.com/aws/aws-sdk-go-v2/service/kms v1.37.9 h1:Ns4iL+x1XB1SATmwAFzuebrn/d/7
+ github.com/aws/aws-sdk-go-v2/service/kms v1.37.9/go.mod h1:ANs9kBhK4Ghj9z1W+bsr3WsNaPF71qkgd6eE6Ekol/Y=
+ github.com/aws/aws-sdk-go-v2/service/lakeformation v1.39.2 h1:IUlID9r2gZKHN+oxQ7ph9pE0nqLgL45czJGnPapvcLE=
+ github.com/aws/aws-sdk-go-v2/service/lakeformation v1.39.2/go.mod h1:/8URO3jdXHx2trFkw8886/BvIymTacL7D8ycHuYly6M=
+-github.com/aws/aws-sdk-go-v2/service/lambda v1.69.3 h1:zDBQUFed2z2nf/SuXoOh1MknV3qKOizFZMexi1zjRAw=
+-github.com/aws/aws-sdk-go-v2/service/lambda v1.69.3/go.mod h1:jWFEZMgQ48dPvuAWy2zcRIq8Mx/L0eO0iR1xkGR4Ov8=
++github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5 h1:HWN7xwaV7Zwrn3Jlauio4u4aTMFgRzG2fblHWQeir/k=
++github.com/aws/aws-sdk-go-v2/service/lambda v1.88.5/go.mod h1:6HBXRyFFqOw+ALkJ6YGHfrr20/YXYv6X9pcZErXRvCA=
+ github.com/aws/aws-sdk-go-v2/service/launchwizard v1.8.8 h1:Kxrp+zOb2WYS4BDRS7osCBOPIK1T7OedcOytIe2I8CY=
+ github.com/aws/aws-sdk-go-v2/service/launchwizard v1.8.8/go.mod h1:f+ruiwPQPaXW7OnTCUn5ttZm21UvB3WKMd7PxFxaSaM=
+ github.com/aws/aws-sdk-go-v2/service/lexmodelbuildingservice v1.28.8 h1:wlqWZFl1a5658FCynvBGxlZVRzwgltRkAbggFSc48Jc=
+@@ -449,8 +449,8 @@ github.com/aws/aws-sdk-go-v2/service/route53resolver v1.34.4 h1:FwXUUubNQFB4nDl1
+ github.com/aws/aws-sdk-go-v2/service/route53resolver v1.34.4/go.mod h1:vYD7xWxRn4FA2LL0zRgiP4GQZPev0VIuKWOYPdU7LEU=
+ github.com/aws/aws-sdk-go-v2/service/rum v1.21.8 h1:PsjsKI4htYgVNS7SkrvDamC1pudlKdebfKKfT+B+p0k=
+ github.com/aws/aws-sdk-go-v2/service/rum v1.21.8/go.mod h1:2k7Pf5TV51+bdYg994/m6Pg9pDEU3/75ljg0twzfeqc=
+-github.com/aws/aws-sdk-go-v2/service/s3 v1.72.1 h1:+IrM0EXV6ozLqJs3Kq2iwQGJBWmgRiYBXWETQQUMZRY=
+-github.com/aws/aws-sdk-go-v2/service/s3 v1.72.1/go.mod h1:r+xl5yzMk9083rMR+sJ5TYj9Tihvf/l1oxzZXDgGj2Q=
++github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3 h1:HwxWTbTrIHm5qY+CAEur0s/figc3qwvLWsNkF4RPToo=
++github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3/go.mod h1:uoA43SdFwacedBfSgfFSjjCvYe8aYBS7EnU5GZ/YKMM=
+ github.com/aws/aws-sdk-go-v2/service/s3control v1.52.2 h1:waRy4WnrQyfdAMR5HvVsftcQ+26m1Y++08B5ZHydJ98=
+ github.com/aws/aws-sdk-go-v2/service/s3control v1.52.2/go.mod h1:6BuUa52of67a+ri/poTH82XiL+rTGQWUPZCmf2cfVHI=
+ github.com/aws/aws-sdk-go-v2/service/s3outposts v1.28.8 h1:47G52E232ytagHeaPcTIxd8GaVstyT4fKS9CrVRWbXM=
+@@ -549,8 +549,8 @@ github.com/aws/aws-sdk-go-v2/service/workspacesweb v1.25.2 h1:ylaPCY2qs+w5e7dTSy
+ github.com/aws/aws-sdk-go-v2/service/workspacesweb v1.25.2/go.mod h1:0hb1mJfmE+QtsHfNWspgPIwp4ltIP5ZaYQlLSYUVsiA=
+ github.com/aws/aws-sdk-go-v2/service/xray v1.30.3 h1:1YNWITeCg+dZRTFf2X+KRQDNCl/En2Zqhcs0zwrZ6r4=
+ github.com/aws/aws-sdk-go-v2/service/xray v1.30.3/go.mod h1:MIDlhv/eUulnYyGjNflyrKF4f77kcvfS9zTWTeUTAog=
+-github.com/aws/smithy-go v1.22.1 h1:/HPHZQ0g7f4eUeK6HKglFz8uwVfZKgoI25rb/J+dnro=
+-github.com/aws/smithy-go v1.22.1/go.mod h1:irrKGvNn1InZwb2d7fkIRNucdfwR8R+Ts3wxYa/cJHg=
++github.com/aws/smithy-go v1.24.2 h1:FzA3bu/nt/vDvmnkg+R8Xl46gmzEDam6mZ1hzmwXFng=
++github.com/aws/smithy-go v1.24.2/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
+ github.com/beevik/etree v1.4.1 h1:PmQJDDYahBGNKDcpdX8uPy1xRCwoCGVUiW669MEirVI=
+ github.com/beevik/etree v1.4.1/go.mod h1:gPNJNaBGVZ9AwsidazFZyygnd+0pAU38N4D+WemwKNs=
+ github.com/bgentry/speakeasy v0.2.0 h1:tgObeVOf8WAvtuAX6DhJ4xks4CFNwPDZiqzGqIHE51E=
+@@ -561,8 +561,10 @@ github.com/bufbuild/protocompile v0.6.0 h1:Uu7WiSQ6Yj9DbkdnOe7U4mNKp58y9WDMKDn28
  github.com/bufbuild/protocompile v0.6.0/go.mod h1:YNP35qEYoYGme7QMtz5SBCoN4kL4g12jTtjuzRNdjpE=
-+github.com/bwesterb/go-ristretto v1.2.3/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7NFEuV9ekS419A0=
  github.com/cedar-policy/cedar-go v0.1.0 h1:2tZwWn8tNO/896YAM7OQmH3vn98EeHEA3g9anwdVZvA=
  github.com/cedar-policy/cedar-go v0.1.0/go.mod h1:pEgiK479O5dJfzXnTguOMm+bCplzy5rEEFPGdZKPWz4=
 -github.com/cloudflare/circl v1.5.0 h1:hxIWksrX6XN5a1L2TI/h53AGPhNHoUBo+TD1ms9+pys=
 -github.com/cloudflare/circl v1.5.0/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
-+github.com/census-instrumentation/opencensus-proto v0.4.1/go.mod h1:4T9NM4+4Vw91VeyqjLS6ao50K5bOcLKN6Q42XnYaRYw=
++github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 +github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 +github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
 +github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
-+github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78/go.mod h1:W+zGtBO5Y1IgJhy4+A9GOqVhqLpfZi+vwmdNXUehLA8=
  github.com/cyphar/filepath-securejoin v0.2.4 h1:Ugdm7cg7i6ZK6x3xDF1oEu1nfkyfH53EtKeQYTC3kyg=
  github.com/cyphar/filepath-securejoin v0.2.4/go.mod h1:aPGpWjXOXUn2NCNjFvBE6aRxGGx79pTxQpKOJNYHHl4=
  github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
- github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
- github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-+github.com/dlclark/regexp2 v1.11.4/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
- github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
- github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
-+github.com/envoyproxy/go-control-plane v0.13.0/go.mod h1:GRaKG3dwvFoTg4nj7aXdZnvMg4d7nvT/wl9WgVXn3Q8=
-+github.com/envoyproxy/protoc-gen-validate v1.1.0/go.mod h1:sXRDRVmzEbkM7CVcM06s9shE/m23dg3wzjl0UWqJ2q4=
- github.com/evanphx/json-patch v0.5.2 h1:xVCHIVMUu1wtM/VkR9jVZ45N3FhZfYMMYGorLCR8P3k=
- github.com/evanphx/json-patch v0.5.2/go.mod h1:ZWS5hhDbVDyob71nXKNL0+PWn6ToqBHMikGIFbs31qQ=
- github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
-@@ -594,6 +604,7 @@ github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
+@@ -588,8 +590,8 @@ github.com/go-git/go-billy/v5 v5.5.0/go.mod h1:hmexnoNsr2SJU1Ju67OaNz5ASJY3+sHgF
+ github.com/go-git/go-git/v5 v5.12.0 h1:7Md+ndsjrzZxbddRDZjF14qK+NN56sy6wkqaVrjZtys=
+ github.com/go-git/go-git/v5 v5.12.0/go.mod h1:FTM9VKtnI2m65hNI/TenDDDnUf2Q9FHnXYjuz9i5OEY=
+ github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+-github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
+-github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
++github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=
++github.com/go-logr/logr v1.4.3/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+ github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
  github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
  github.com/go-test/deep v1.1.0 h1:WOcxcdHcvdgThNXjw0t76K42FXTU7HpNQWHpA2HHNlg=
- github.com/go-test/deep v1.1.0/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
-+github.com/golang/glog v1.2.2/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
- github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da h1:oI5xCqsCo564l8iNU+DwB5epxmsaqB+rhGL0m5jtYqE=
- github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
- github.com/golang/protobuf v1.1.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
-@@ -677,6 +688,7 @@ github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8
- github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
- github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
- github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
-+github.com/imdario/mergo v0.3.15/go.mod h1:WBLT9ZmE3lPoWsEzCh9LPo3TiwVN+ZKEjmz+hD27ysY=
- github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
- github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
- github.com/jhump/protoreflect v1.15.1 h1:HUMERORf3I3ZdX05WaQ6MIpd/NJ434hTp5YiKgfCL6c=
-@@ -723,6 +735,7 @@ github.com/pjbgf/sha1cd v0.3.0 h1:4D5XXmUUBUl/xQ6IjCkEAbqXskkq/4O7LmGn0AqMDs4=
- github.com/pjbgf/sha1cd v0.3.0/go.mod h1:nZ1rrWOcGJ5uZgEEVL1VUM9iRQiZvWdbZjkKyFzPPsI=
- github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
- github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-+github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10/go.mod h1:t/avpk3KcrXxUnYOhZhMXJlSEyie6gQbtLq5NM3loB8=
- github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
- github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
- github.com/posener/complete v1.2.3 h1:NP0eAhjcjImqslEwo/1hq7gpajME0fTLTezBKDqfXqo=
-@@ -731,6 +744,7 @@ github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
+@@ -603,8 +605,8 @@ github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek
+ github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
+ github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMywk6iLU=
+ github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+-github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+-github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
++github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
++github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
+ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+ github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+ github.com/hashicorp/aws-cloudformation-resource-schema-sdk-go v0.23.0 h1:l16/Vrl0+x+HjHJWEjcKPwHYoxN9EC78gAFXKlH6m84=
+@@ -729,8 +731,8 @@ github.com/posener/complete v1.2.3 h1:NP0eAhjcjImqslEwo/1hq7gpajME0fTLTezBKDqfXq
+ github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
+ github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
  github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
- github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
- github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
-+github.com/sebdah/goldie v1.0.0/go.mod h1:jXP4hmWywNEwZzhMuv2ccnqTSFpuq8iyQhtQdkkZBH4=
+-github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
+-github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWNMNyH2VO9fmH0o=
++github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=
++github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
  github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 h1:n661drycOFuPLCN3Uc8sB6B/s6Z4t2xvBgU1htSHuq8=
  github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3/go.mod h1:A0bzQcvG0E7Rwjx0REVgAGH58e96+X0MeOfepqsbeW4=
  github.com/shopspring/decimal v1.4.0 h1:bxl37RwXBklmTi0C79JfXCEBD1cqqHt0bbgBAGFp81k=
-@@ -739,6 +753,7 @@ github.com/skeema/knownhosts v1.2.2 h1:Iug2P4fLmDw9f41PB6thxUkNUkJzB5i+1/exaj40L
- github.com/skeema/knownhosts v1.2.2/go.mod h1:xYbVRSPxqBZFrdmDyMmsOs+uX1UZC3nTN3ThzgDxUwo=
- github.com/spf13/cast v1.7.0 h1:ntdiHjuueXFgm5nzDRdOS4yfT43P5Fnud6DH50rz/7w=
- github.com/spf13/cast v1.7.0/go.mod h1:ancEpBxwJDODSW/UG4rDrAqiKolqNNh2DX3mk86cAdo=
-+github.com/spf13/pflag v1.0.2/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
- github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+@@ -743,8 +745,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
  github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
  github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
-@@ -778,24 +793,25 @@ go.opentelemetry.io/otel/trace v1.33.0 h1:cCJuF7LRjUFso9LPnEAHJDB2pqzp+hbO8eu1qq
- go.opentelemetry.io/otel/trace v1.33.0/go.mod h1:uIcdVUZMpTAmz0tI1z04GoVSezK37CbGV4fr1f2nBck=
+ github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
+-github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
+-github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
++github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
++github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+ github.com/vmihailenco/msgpack v3.3.3+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
+ github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=
+ github.com/vmihailenco/msgpack v4.0.4+incompatible/go.mod h1:fy3FlTQTDXWkZ7Bh6AcGMlsjHatGryHQYUTf1ShIgkk=
+@@ -766,36 +768,40 @@ github.com/zclconf/go-cty v1.15.1 h1:RgQYm4j2EvoBRXOPxhUvxPzRrGDo1eCOhHXuGfrj5S0
+ github.com/zclconf/go-cty v1.15.1/go.mod h1:VvMs5i0vgZdhYawQNq5kePSpLAoz8u1xvZgrPIxfnZE=
+ github.com/zclconf/go-cty-debug v0.0.0-20240509010212-0d6042c53940 h1:4r45xpDWB6ZMSMNJFMOjqrGHynW3DIBuR2H9j0ug+Mo=
+ github.com/zclconf/go-cty-debug v0.0.0-20240509010212-0d6042c53940/go.mod h1:CmBdvvj3nqzfzJ6nTCIwDTPZ56aVGvDrmztiO5g3qrM=
+-go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
+-go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
++go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
++go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
+ go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.58.0 h1:g2rorZw2f1qnyfLOC7FP99argIWsN708Fjs2Zwz6SOk=
+ go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.58.0/go.mod h1:QzTypGPlQn4NselMPALVKGwm/p3XKLVCB/UG2Dq3PxQ=
+-go.opentelemetry.io/otel v1.33.0 h1:/FerN9bax5LoK51X/sI0SVYrjSE0/yUL7DpxW4K3FWw=
+-go.opentelemetry.io/otel v1.33.0/go.mod h1:SUUkR6csvUQl+yjReHu5uM3EtVV7MBm5FHKRlNx4I8I=
+-go.opentelemetry.io/otel/metric v1.33.0 h1:r+JOocAyeRVXD8lZpjdQjzMadVZp2M4WmQ+5WtEnklQ=
+-go.opentelemetry.io/otel/metric v1.33.0/go.mod h1:L9+Fyctbp6HFTddIxClbQkjtubW6O9QS3Ann/M82u6M=
+-go.opentelemetry.io/otel/trace v1.33.0 h1:cCJuF7LRjUFso9LPnEAHJDB2pqzp+hbO8eu1qqW2d/s=
+-go.opentelemetry.io/otel/trace v1.33.0/go.mod h1:uIcdVUZMpTAmz0tI1z04GoVSezK37CbGV4fr1f2nBck=
++go.opentelemetry.io/otel v1.39.0 h1:8yPrr/S0ND9QEfTfdP9V+SiwT4E0G7Y5MO7p85nis48=
++go.opentelemetry.io/otel v1.39.0/go.mod h1:kLlFTywNWrFyEdH0oj2xK0bFYZtHRYUdv1NklR/tgc8=
++go.opentelemetry.io/otel/metric v1.39.0 h1:d1UzonvEZriVfpNKEVmHXbdf909uGTOQjA0HF0Ls5Q0=
++go.opentelemetry.io/otel/metric v1.39.0/go.mod h1:jrZSWL33sD7bBxg1xjrqyDjnuzTUB0x1nBERXd7Ftcs=
++go.opentelemetry.io/otel/sdk v1.39.0 h1:nMLYcjVsvdui1B/4FRkwjzoRVsMK8uL/cj0OyhKzt18=
++go.opentelemetry.io/otel/sdk v1.39.0/go.mod h1:vDojkC4/jsTJsE+kh+LXYQlbL8CgrEcwmt1ENZszdJE=
++go.opentelemetry.io/otel/sdk/metric v1.39.0 h1:cXMVVFVgsIf2YL6QkRF4Urbr/aMInf+2WKg+sEJTtB8=
++go.opentelemetry.io/otel/sdk/metric v1.39.0/go.mod h1:xq9HEVH7qeX69/JnwEfp6fVq5wosJsY1mt4lLfYdVew=
++go.opentelemetry.io/otel/trace v1.39.0 h1:2d2vfpEDmCJ5zVYz7ijaJdOF59xLomrvj7bjt6/qCJI=
++go.opentelemetry.io/otel/trace v1.39.0/go.mod h1:88w4/PnZSazkGzz/w84VHpQafiU4EtqqlVdxWy+rNOA=
  golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
  golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 -golang.org/x/crypto v0.32.0 h1:euUpcYgM8WcP71gNpTqQCn6rC2t6ULUPiOzfWaXVVfc=
 -golang.org/x/crypto v0.32.0/go.mod h1:ZnnJkOaASj8g0AjIduWNlq2NRxL0PlBrbKVyZ6V/Ugc=
-+golang.org/x/crypto v0.45.0 h1:jMBrvKuj23MTlT0bQEOBcAE0mjg8mK9RXFhRH6nyF3Q=
-+golang.org/x/crypto v0.45.0/go.mod h1:XTGrrkGJve7CYK7J8PEww4aY7gM3qMCElcJQ8n8JdX4=
++golang.org/x/crypto v0.46.0 h1:cKRW/pmt1pKAfetfu+RCEvjvZkA9RimPbh7bhFjGVBU=
++golang.org/x/crypto v0.46.0/go.mod h1:Evb/oLKmMraqjZ2iQTwDwvCtJkczlDuTmdJXoZVzqU0=
  golang.org/x/exp v0.0.0-20241210194714-1829a127f884 h1:Y/Mj/94zIQQGHVSv1tTtQBDaQaJe62U9bkDZKKyhPCU=
  golang.org/x/exp v0.0.0-20241210194714-1829a127f884/go.mod h1:qj5a5QZpwLU2NLQudwIN5koi3beDhSAlJwa67PuM98c=
  golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4/go.mod h1:jJ57K6gSWd91VN4djpZkiMVwK6gcyfeH4XE8wZrZaV4=
 -golang.org/x/mod v0.22.0 h1:D4nJWe9zXqHOmWqj4VMOJhvzj7bEZg4wEYa759z1pH4=
 -golang.org/x/mod v0.22.0/go.mod h1:6SkKJ3Xj0I0BrPOZoBy3bdMptDDU9oJrpohJ3eWZ1fY=
-+golang.org/x/mod v0.29.0 h1:HV8lRxZC4l2cr3Zq1LvtOsi/ThTgWnUk/y64QSs8GwA=
-+golang.org/x/mod v0.29.0/go.mod h1:NyhrlYXJ2H4eJiRy/WDBO6HMqZQ6q9nk4JzS3NuCK+w=
++golang.org/x/mod v0.30.0 h1:fDEXFVZ/fmCKProc/yAXXUijritrDzahmwwefnjoPFk=
++golang.org/x/mod v0.30.0/go.mod h1:lAsf5O2EvJeSFMiBxXDki7sCgAxEUcZHXoXMKT4GJKc=
  golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
  golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
  golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v0D8zg8gWTRqZa9RBIspLL5mdg=
  golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 -golang.org/x/net v0.34.0 h1:Mb7Mrk043xzHgnRM88suvJFwzVrRfHEHJEl5/71CKw0=
 -golang.org/x/net v0.34.0/go.mod h1:di0qlW3YNM5oh6GqDGQr92MyTozJPmybPK4Ev/Gm31k=
-+golang.org/x/net v0.47.0 h1:Mx+4dIFzqraBXUugkia1OOvlD6LemFo1ALMHjrXDOhY=
-+golang.org/x/net v0.47.0/go.mod h1:/jNxtkgq5yWUGYkaZGqo27cfGZ1c5Nen03aYrrKpVRU=
-+golang.org/x/oauth2 v0.23.0/go.mod h1:XYTD2NtWslqkgxebSiOHnXEap4TF09sJSc7H1sXbhtI=
++golang.org/x/net v0.48.0 h1:zyQRTTrjc33Lhh0fBgT/H3oZq9WuvRR5gPC70xpDiQU=
++golang.org/x/net v0.48.0/go.mod h1:+ndRgGjkh8FGtu1w1FGbEC31if4VrNVMuKTgcAAnQRY=
  golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 -golang.org/x/sync v0.10.0 h1:3NQrjDixjgGwUOCaF8w2+VYHv0Ve/vGYSbdkTa98gmQ=
 -golang.org/x/sync v0.10.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
-+golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
-+golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
++golang.org/x/sync v0.19.0 h1:vV+1eWNmZ5geRlYjzm2adRgW2/mcpevXNg50YZtPCE4=
++golang.org/x/sync v0.19.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
  golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
  golang.org/x/sys v0.0.0-20200116001909-b77594299b42/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
  golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-@@ -808,29 +824,31 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
+@@ -808,37 +814,39 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
  golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
  golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 -golang.org/x/sys v0.29.0 h1:TPYlXGxvx1MGTn2GiZDhnjPA9wZzZeGKHHmKhHYvgaU=
 -golang.org/x/sys v0.29.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
-+golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
-+golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
-+golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8/go.mod h1:Pi4ztBfryZoJEkyFTI5/Ocsu2jXyDr6iSdgJiYE/uwE=
++golang.org/x/sys v0.39.0 h1:CvCKL8MeisomCi6qNZ+wbb0DN9E5AATixKsvNtMoMFk=
++golang.org/x/sys v0.39.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
  golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
  golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 -golang.org/x/term v0.28.0 h1:/Ts8HFuMR2E6IP/jlo7QVLZHggjKQbhu/7H0LJFr3Gg=
 -golang.org/x/term v0.28.0/go.mod h1:Sw/lC2IAUZ92udQNf3WodGtn4k/XoLyZoh8v/8uiwek=
-+golang.org/x/term v0.37.0 h1:8EGAD0qCmHYZg6J17DvsMy9/wJ7/D/4pV/wfnld5lTU=
-+golang.org/x/term v0.37.0/go.mod h1:5pB4lxRNYYVZuTLmy8oR2BH8dflOR+IbTYFD8fi3254=
++golang.org/x/term v0.38.0 h1:PQ5pkm/rLO6HnxFR7N2lJHOZX6Kez5Y1gDSJla6jo7Q=
++golang.org/x/term v0.38.0/go.mod h1:bSEAKrOT1W+VSu9TSCMtoGEOUcKxOKgl3LE5QEF/xVg=
  golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
  golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
  golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
@@ -369,26 +892,36 @@ index 98669f64331..f5d5ec8034f 100644
  golang.org/x/text v0.3.8/go.mod h1:E6s5w1FMmriuDzIBO73fBruAKo1PCIq6d2Q6DHfQ8WQ=
 -golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
 -golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
-+golang.org/x/text v0.31.0 h1:aC8ghyu4JhP8VojJ2lEHBnochRno1sgL6nEi9WGFGMM=
-+golang.org/x/text v0.31.0/go.mod h1:tKRAlv61yKIjGGHX/4tP1LTbc13YSec1pxVEWXzfoeM=
++golang.org/x/text v0.32.0 h1:ZD01bjUt1FQ9WJ0ClOL5vxgxOI/sVCNgX1YtKwcY0mU=
++golang.org/x/text v0.32.0/go.mod h1:o/rUWzghvpD5TXrTIBuJU77MTaN0ljMWE47kxGJQ7jY=
  golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
  golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
  golang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc=
 -golang.org/x/tools v0.29.0 h1:Xx0h3TtM9rzQpQuR4dKLrdglAmCEN5Oi+P74JdhdzXE=
 -golang.org/x/tools v0.29.0/go.mod h1:KMQVMRsVxU6nHCFXrBPhDB8XncLNLM0lIy/F14RP588=
-+golang.org/x/tools v0.38.0 h1:Hx2Xv8hISq8Lm16jvBZ2VQf+RLmbd7wVUsALibYI/IQ=
-+golang.org/x/tools v0.38.0/go.mod h1:yEsQ/d/YK8cjh0L6rZlY8tgtlKiBNTL14pGDJPJpYQs=
++golang.org/x/tools v0.39.0 h1:ik4ho21kwuQln40uelmciQPp9SipgNDdrafrYA4TmQQ=
++golang.org/x/tools v0.39.0/go.mod h1:JnefbkDPyD8UU2kI5fuf8ZX4/yUeh9W877ZeBONxUqQ=
  golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
++gonum.org/v1/gonum v0.16.0 h1:5+ul4Swaf3ESvrOnidPp4GZbzf0mxVQpDCYUQE7OJfk=
++gonum.org/v1/gonum v0.16.0/go.mod h1:fef3am4MQ93R2HHpKnLk4/Tbh/s0+wqD5nfa6Pnwy4E=
  google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
  google.golang.org/appengine v1.6.8 h1:IhEN5q69dyKagZPYMSdIjS2HqprW324FRQZJcGqPAsM=
  google.golang.org/appengine v1.6.8/go.mod h1:1jJ3jBArFh5pcgW8gCtRJnepW8FzD1V44FJffLiz/Ds=
-+google.golang.org/genproto/googleapis/api v0.0.0-20240903143218-8af14fe29dc1/go.mod h1:qpvKtACPCQhAdu3PyQgV4l3LMXZEtft7y8QcarRsp9I=
- google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 h1:8ZmaLZE4XWrtU3MyClkYqqtl6Oegr3235h7jxsDyqCY=
- google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576/go.mod h1:5uTbfoYQed2U9p3KIj2/Zzm02PYhndfdmML0qC3q3FU=
- google.golang.org/grpc v1.68.1 h1:oI5oTa11+ng8r8XMMN7jAOmWfPZWbYpCFaMUTACxkM0=
-@@ -853,3 +871,4 @@ gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
- gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
- gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
- gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-+syreclabs.com/go/faker v1.2.3/go.mod h1:NAXInmkPsC2xuO5MKZFe80PUXX5LU8cFdJIHGs+nSBE=
+-google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 h1:8ZmaLZE4XWrtU3MyClkYqqtl6Oegr3235h7jxsDyqCY=
+-google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576/go.mod h1:5uTbfoYQed2U9p3KIj2/Zzm02PYhndfdmML0qC3q3FU=
+-google.golang.org/grpc v1.68.1 h1:oI5oTa11+ng8r8XMMN7jAOmWfPZWbYpCFaMUTACxkM0=
+-google.golang.org/grpc v1.68.1/go.mod h1:+q1XYFJjShcqn0QZHvCyeR4CXPA+llXIeUIfIe00waw=
++google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 h1:gRkg/vSppuSQoDjxyiGfN4Upv/h/DQmIR10ZU8dh4Ww=
++google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217/go.mod h1:7i2o+ce6H/6BluujYR+kqX3GKH+dChPTQU19wjRPiGk=
++google.golang.org/grpc v1.79.3 h1:sybAEdRIEtvcD68Gx7dmnwjZKlyfuc61Dyo9pGXXkKE=
++google.golang.org/grpc v1.79.3/go.mod h1:KmT0Kjez+0dde/v2j9vzwoAScgEPx/Bw1CYChhHLrHQ=
+ google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
+ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+-google.golang.org/protobuf v1.35.2 h1:8Ar7bF+apOIoThw1EdZl0p1oWvMqTHmpA2fRTyZO8io=
+-google.golang.org/protobuf v1.35.2/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
++google.golang.org/protobuf v1.36.10 h1:AYd7cD/uASjIL6Q9LiTjz8JLcrh/88q5UObnmY3aOOE=
++google.golang.org/protobuf v1.36.10/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
