@@ -262,7 +262,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	printBanner()
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger)
 		if err != nil {
