@@ -352,6 +352,11 @@ sudo -i d8 k create -f $PWD/user.yml
 </li>
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
   <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер:
+  <div>
+  {% alert type="info" %}
+  Приведенная ниже команда актуальна для случая, когда в качестве узлов кластера используются физические серверы. Если узлы кластера — виртуальные машины, выясните публичный IP-адрес узла, на котором работает Ingress-контроллер, другим способом.
+  {% endalert %}
+  </div>
   <div class="highlight">
   <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
   </div>
