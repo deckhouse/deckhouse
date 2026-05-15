@@ -31,6 +31,20 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "CVE-2026-4660 связана с произвольным чтением файлов через специально сформированный URL в go-getter. Фикс требует v1.8.6 которая несовместима с текущей версией Go в сборочном образе (go 1.25.7 < 1.25.8). opentofu использует go-getter для загрузки модулей из доверенных источников, URL контролируется пользователем terraform-конфигурации, а не внешним атакующим",
       "timestamp": "2026-05-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2026-39882 связана с уязвимостью в OpenTelemetry OTLP HTTP exporter. Обновление до v1.43.0 невозможно без breaking changes в цепочке зависимостей (aws-sdk-go-base, otelaws). opentofu не использует OTLP HTTP exporter напрямую, библиотека присутствует как транзитивная зависимость",
+      "timestamp": "2026-05-15T12:00:00Z"
     }
   ],
   "timestamp": "2026-05-15T12:00:00Z"
