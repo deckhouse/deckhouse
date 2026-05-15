@@ -29,8 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
@@ -60,14 +58,6 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 
-		interactive := input.IsTerminal()
-		if interactive {
-			_, _, err := progressbar.InitProgressBarWithDeferredFunc("Edit", logger)
-			if err != nil {
-				return err
-			}
-		}
-
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
@@ -81,12 +71,6 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return err
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
-
-		//nolint: errcheck
-		if interactive {
-			progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
-			progressbar.GetDefaultPb().MultiPrinter.Stop()
-		}
 
 		return operations.SecretEdit(
 			ctx,

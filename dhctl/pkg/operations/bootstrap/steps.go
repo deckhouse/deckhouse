@@ -523,8 +523,8 @@ func applyPostBootstrapModuleConfigs(
 	for _, task := range tasks {
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 		p := retry.NewEmptyParams(
-			retry.WithName(task.Title),
-			retry.WithAttempts(51),
+			retry.WithName("%s", task.Title),
+			retry.WithAttempts(15),
 			retry.WithWait(5*time.Second),
 			retry.WithLogger(extLogger()),
 		)
