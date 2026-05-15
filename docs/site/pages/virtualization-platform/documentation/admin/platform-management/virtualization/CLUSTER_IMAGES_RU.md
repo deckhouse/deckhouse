@@ -576,7 +576,7 @@ spec:
 Для проверки наличия неактуальных образов в хранилище можно выполнить такую команду:
 
 ```bash
-d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
+d8 k -n d8-virtualization --as system:sudouser exec deploy/dvcr -- dvcr-cleaner gc check
 ```
 
 На экран будут выведены сведения о состоянии хранилища и список неактуальных образов, которые могут быть удалены.

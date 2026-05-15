@@ -74,7 +74,7 @@ spec:
 Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
+d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
 Чтобы сгенерировать новый пароль, удалите секрет:

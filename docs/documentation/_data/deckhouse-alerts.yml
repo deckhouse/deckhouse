@@ -265,7 +265,7 @@ alerts:
         1. Verify the agent's health status:
 
            ```bash
-           d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
+           d8 k -n {{ $labels.namespace }} --as system:sudouser exec -ti {{ $labels.pod }} cilium-health status
            ```
 
         1. Compare the metrics with those of a neighboring agent.
@@ -299,7 +299,7 @@ alerts:
         For details, query Cilium health status API:
 
         ```bash
-        d8 k -n {{ $labels.namespace }} exec {{ $labels.pod }} -- cilium-health status
+        d8 k -n {{ $labels.namespace }} --as system:sudouser exec {{ $labels.pod }} -- cilium-health status
         ```
 
         You can also refer to the agent logs:
@@ -1255,7 +1255,7 @@ alerts:
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
-      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
+      description: "Deckhouse has detected an error in the client-go informer, possibly due to connection issues with the API server.\n\nSteps to investigate:\n\n1. Check Deckhouse logs for more information by running:\n\n   ```bash\n   d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch\n   ```\n\n1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.\n   \n   To compare the snapshot with the actual node objects for this hook, run the following command:\n\n   ```bash\n   diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{\"\\n\"}{end}'|sort) <(d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '.\"040-node-manager/hooks/handle_node_templates.go\"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)\n   ```\n"
       summary: |
         Possible API server connection error in the client-go informer.
       severity: "5"
@@ -1342,7 +1342,7 @@ alerts:
         To resolve this issue, defragment the etcd database by running the following command:
 
         ```bash
-        d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+        d8 k -n kube-system --as system:sudouser exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
           --cacert /etc/kubernetes/pki/etcd/ca.crt \
           --cert /etc/kubernetes/pki/etcd/ca.crt \
           --key /etc/kubernetes/pki/etcd/ca.key \
@@ -1982,7 +1982,7 @@ alerts:
         - Defragment the etcd database by running the following command:
 
           ```bash
-          d8 k -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
+          d8 k -n kube-system --as system:sudouser exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl \
             --cacert /etc/kubernetes/pki/etcd/ca.crt \
             --cert /etc/kubernetes/pki/etcd/ca.crt \
             --key /etc/kubernetes/pki/etcd/ca.key \
@@ -2397,7 +2397,7 @@ alerts:
 
         ```
         for pod in $(d8 k get pod -n kube-system -l component=etcd,tier=control-plane -o name); do
-          d8 k -n kube-system exec -ti "$pod" -- /usr/bin/etcdctl \
+          d8 k -n kube-system --as system:sudouser exec -ti "$pod" -- /usr/bin/etcdctl \
             --cacert /etc/kubernetes/pki/etcd/ca.crt \
             --cert /etc/kubernetes/pki/etcd/ca.crt \
             --key /etc/kubernetes/pki/etcd/ca.key \
@@ -2442,7 +2442,7 @@ alerts:
         - Current Terraform version:
 
           ```shell
-          d8 k -n d8-system exec -it deployments/terraform-state-exporter -c exporter -- terraform version
+          d8 k -n d8-system --as system:sudouser exec -it deployments/terraform-state-exporter -c exporter -- terraform version
           ```
 
         - Version in the Terraform state:
@@ -2454,7 +2454,7 @@ alerts:
         - Check for destructive changes:
 
           ```shell
-          d8 k exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
+          d8 k --as system:sudouser exec -it deploy/terraform-state-exporter -n d8-system -- dhctl terraform check
           ```
 
         To resolve the issue and migrate to OpenTofu manually, follow these steps:
@@ -4049,8 +4049,8 @@ alerts:
         d8 k get modulesources
 
         # Check available modules in all sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
-        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+        d8 k -n d8-system --as system:sudouser exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+        d8 k -n d8-system --as system:sudouser exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
 
         # Check Deckhouse logs for more details
         d8 k -n d8-system logs -f -l app=deckhouse
@@ -5600,7 +5600,7 @@ alerts:
         1. Migrate the NAT instance. To get `providerClusterConfiguration.withNATInstance`, run the following command:
 
            ```bash
-           d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+           d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
            ```
 
            - If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in `providerClusterConfiguration`, remove them using the following command:
@@ -5646,13 +5646,13 @@ alerts:
            - Get the route table name:
 
              ```bash
-             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+             d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
              ```
 
            - Get the NAT instance name:
 
              ```bash
-             d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+             d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
              ```
 
            - Get the NAT instance internal IP address:
@@ -6454,7 +6454,7 @@ alerts:
         2. Verify the chrony daemon's status by executing the following command:
 
            ```bash
-           d8 k -n d8-chrony exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
+           d8 k -n d8-chrony --as system:sudouser exec <POD_NAME> -- /opt/chrony-static/bin/chronyc sources
            ```
 
         3. Resolve the time synchronization issues:
@@ -6873,7 +6873,7 @@ alerts:
         To check the current usage, run the following command:
 
         ```shell
-        d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
+        d8 k -n {{ $labels.namespace }} --as system:sudouser exec -ti {{ $labels.pod_name }} -c prometheus -- df -PBG /prometheus
         ```
 
         Consider expanding disk size following the [guide](https://deckhouse.io/modules/prometheus/faq.html#how-to-expand-disk-size).

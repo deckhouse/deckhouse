@@ -34,7 +34,7 @@ To properly restore the cluster, follow these steps on the master node:
 1. Check the etcd version in the cluster (if the Kubernetes API is accessible):
 
    ```shell
-   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
+   d8 k -n kube-system --as system:sudouser exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
    If the command executes successfully, it will display the current etcd version.
@@ -274,10 +274,10 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
 1. Commands below will filter needed resources by `$FILTER` and output them into `$BACKUP_OUTPUT_DIR` directory:
 
    ```shell
-   files=($(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
+   files=($(kubectl -n default --as system:sudouser exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
    for file in "${files[@]}"
    do
-     OBJECT=$(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
+     OBJECT=$(kubectl -n default --as system:sudouser exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
      FILENAME=$(echo $file | sed -e "s#/registry/##g;s#/#_#g")
      echo "$OBJECT" > "$BACKUP_OUTPUT_DIR/$FILENAME.yaml"
      echo $BACKUP_OUTPUT_DIR/$FILENAME.yaml

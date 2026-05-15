@@ -21,7 +21,7 @@ To switch the cluster to use an external registry, follow these steps:
    Example:
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
+   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
    ```
 
 1. If the registry uses self-signed certificates, place the corresponding root certificate in the file `/tmp/ca.crt` inside the DKP pod and add the -`-ca-file /tmp/ca.crt` option to the command.
@@ -37,13 +37,13 @@ To switch the cluster to use an external registry, follow these steps:
    -----END CERTIFICATE-----
    EOF
    )
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+   d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
    ```
 
    To view the list of available flags for the `deckhouse-controller helper change-registry` command, run:
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
+   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
    ```
 
    Example output:

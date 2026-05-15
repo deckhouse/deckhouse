@@ -280,7 +280,7 @@ spec:
 To retrieve Prometheus metrics, use the PromQL query `falcosecurity_falcosidekick_falco_events_total{}`:
 
 ```shell
-d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+d8 k -n d8-monitoring --as system:sudouser exec -it prometheus-main-0 prometheus -- \
   curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" | jq
 ```
 
@@ -340,7 +340,7 @@ To simulate sending test events to the `falcosidekick` service, use its `/test` 
 1. Check the event metric:
 
    ```shell
-   d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+   d8 k -n d8-monitoring --as system:sudouser exec -it prometheus-main-0 prometheus -- \
      curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" \
      | jq '.data.result.[] | select (.metric.priority_raw == "debug")'
    ```

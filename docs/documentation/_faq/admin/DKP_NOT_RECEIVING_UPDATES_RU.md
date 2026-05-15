@@ -27,7 +27,7 @@ lang: ru
   Пример получения IP-адреса хранилища образов Deckhouse в поде `deckhouse`:
 
   ```shell
-  d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.ru
+  d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.ru
   ```
 
   Пример вывода:

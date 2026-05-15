@@ -242,7 +242,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    You can view the current registry settings using the following command:
 
    ```bash
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
 
    Specify this configuration when setting up the `Unmanaged` mode:
@@ -348,7 +348,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    You can view the current registry settings using the following command:
 
    ```bash
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
 
    Specify this configuration when setting up the `Unmanaged` mode:

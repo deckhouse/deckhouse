@@ -58,5 +58,5 @@ lang: ru
 1. Повторите [штатную процедуру](./third-party.html) смены registry, подставив ваш токен и нужный адрес registry и редакцию вместо `example`:
 
    ```shell
-   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password MY-PASSWORD registry-example.deckhouse.ru/deckhouse/example
+   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password MY-PASSWORD registry-example.deckhouse.ru/deckhouse/example
    ```

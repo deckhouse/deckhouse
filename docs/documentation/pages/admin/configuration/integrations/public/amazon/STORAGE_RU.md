@@ -99,7 +99,7 @@ metadata:
 Чтобы получить список текущих подсетей, используемых в установке DKP, выполните команду:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse \
+d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse \
   -- deckhouse-controller module values cloud-provider-aws -o json | \
   jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```

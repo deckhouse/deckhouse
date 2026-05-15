@@ -90,7 +90,7 @@ If these options are disabled, the module will enable basic authentication with 
 You can view the generated password with the command:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
+d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
 ```
 
 To generate a new password, you need to delete the Secret:
@@ -102,7 +102,7 @@ d8 k -n d8-upmeter delete secret/basic-auth-webui
 You can view the generated password for the status page with the command:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
+d8 k -n d8-system --as system:sudouser exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
 ```
 
 To generate a new password for the status page, you need to delete the secret:

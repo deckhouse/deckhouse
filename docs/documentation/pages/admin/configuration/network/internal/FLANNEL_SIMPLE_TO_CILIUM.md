@@ -81,9 +81,9 @@ To perform the migration, follow these steps:
 1. Disable `cni-simple-bridge` or `cni-flannel`. Perform this step only after the Cilium pods have reached the `Ready` state:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
    # or
-   d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
+   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
    ```
 
 1. Delete the `validating webhook` (if present):

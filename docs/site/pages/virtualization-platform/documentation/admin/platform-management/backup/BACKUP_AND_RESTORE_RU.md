@@ -35,7 +35,7 @@ lang: ru
 1. Проверьте версию etcd в кластере (при доступном Kubernetes API) выполнив команду:
 
    ```shell
-   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
+   d8 k -n kube-system --as system:sudouser exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
    Если команда выполнится успешно, вы увидите актуальную версию etcd.
@@ -276,10 +276,10 @@ lang: ru
 1. Выполните команды, которые отфильтруют список нужных ресурсов по переменной `$FILTER` и выгрузят их в каталог `$BACKUP_OUTPUT_DIR`:
 
    ```shell
-   files=($(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
+   files=($(kubectl -n default --as system:sudouser exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
    for file in "${files[@]}"
    do
-     OBJECT=$(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
+     OBJECT=$(kubectl -n default --as system:sudouser exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
      FILENAME=$(echo $file | sed -e "s#/registry/##g;s#/#_#g")
      echo "$OBJECT" > "$BACKUP_OUTPUT_DIR/$FILENAME.yaml"
      echo $BACKUP_OUTPUT_DIR/$FILENAME.yaml

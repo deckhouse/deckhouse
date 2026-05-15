@@ -159,7 +159,7 @@ For monitoring and diagnostics, it's useful to know which RBD volumes are connec
 
 ```shell
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
-  | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
+  | awk '{print "echo "$2"; kubectl -n d8-csi-ceph --as system:sudouser exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
 
 ### Which versions of Ceph clusters are supported
