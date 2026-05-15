@@ -334,7 +334,8 @@ properties:
       type: string
       format: cidr
     example:
-      - [10.0.0.0/8, 192.168.1.0/24]
+      - 10.0.0.0/8
+      - 192.168.1.0/24
     description: |
       List of CIDRs that restrict which node IP addresses are used for Cilium BPF NodePort listeners.
       Only addresses assigned to selected network devices and matching one of the configured CIDRs will be exposed as NodePort frontends.
