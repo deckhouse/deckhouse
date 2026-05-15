@@ -1072,7 +1072,7 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
     for logo_div in soup.find_all("div", class_="oss__item-logo"):
         logo_div.decompose()
     for title_a in soup.find_all("a", class_="oss__item-title"):
-        title_a["style"] = "font-weight:bold;"
+        title_a["style"] = "font-weight:bold; display:block; margin-top:1em;"
 
 
 class _ChunkWriter:
