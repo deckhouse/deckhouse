@@ -119,6 +119,9 @@ spec:
             - "--config=/etc/promxy/config.yaml"
             - "--log-format=json"
             - "--log-level=info"
+          env:
+          - name: GOMEMLIMIT
+            value: "250MiB"
           volumeMounts:
             - mountPath: /etc/promxy/config.yaml
               name: aggregating-proxy-config
