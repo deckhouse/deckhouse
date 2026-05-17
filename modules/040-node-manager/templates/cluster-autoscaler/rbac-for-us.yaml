@@ -1,11 +1,15 @@
 {{- define "cluster_autoscaler_rbac" }}
   {{- $ctx := index . 0 }}
   {{- $name := index . 1 }}
+  {{- $serviceAccountName := index . 2 }}
+  {{- if not $serviceAccountName }}
+    {{- $serviceAccountName = $name }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ $name }}
+  name: {{ $serviceAccountName }}
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ctx (dict "app" $name)) | nindent 2 }}
 automountServiceAccountToken: false
@@ -121,7 +125,7 @@ roleRef:
   name: {{ $name }}
 subjects:
 - kind: ServiceAccount
-  name: {{ $name }}
+  name: {{ $serviceAccountName }}
   namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -193,7 +197,7 @@ roleRef:
   name: d8:node-manager:{{ $name }}
 subjects:
 - kind: ServiceAccount
-  name: {{ $name }}
+  name: {{ $serviceAccountName }}
   namespace: d8-cloud-instance-manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -207,17 +211,17 @@ roleRef:
   name: d8:rbac-proxy
 subjects:
 - kind: ServiceAccount
-  name: {{ $name }}
+  name: {{ $serviceAccountName }}
   namespace: d8-cloud-instance-manager
 {{- end }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
   {{- if not (include "cluster_autoscaler_split_mode" .) }}
-{{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler") }}
+{{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler" "cluster-autoscaler") }}
   {{- else if include "cluster_autoscaler_mcm_enabled" . }}
-{{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler-mcm") }}
+{{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler-mcm" "node-manager-cluster-autoscaler") }}
   {{- end }}
   {{- if and (include "cluster_autoscaler_split_mode" .) (include "cluster_autoscaler_capi_enabled" .) }}
-{{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler") }}
+{{ include "cluster_autoscaler_rbac" (list . "cluster-autoscaler" "cluster-autoscaler") }}
   {{- end }}
 {{- end }}

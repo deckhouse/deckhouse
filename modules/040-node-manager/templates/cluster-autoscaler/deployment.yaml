@@ -8,8 +8,12 @@ memory: 150Mi
   {{- $name := index . 1 }}
   {{- $provider := index . 2 }}
   {{- $nodes := index . 3 }}
+  {{- $serviceAccountName := index . 4 }}
   {{- if not $nodes }}
     {{- $nodes = list }}
+  {{- end }}
+  {{- if not $serviceAccountName }}
+    {{- $serviceAccountName = $name }}
   {{- end }}
   {{- $kubernetesSemVer := semver $ctx.Values.global.discovery.kubernetesVersion }}
   {{- $autoscalerImageName := join "" (list "clusterAutoscaler" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
@@ -74,7 +78,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ctx "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ctx | nindent 6 }}
       automountServiceAccountToken: true
-      serviceAccountName: {{ $name }}
+      serviceAccountName: {{ $serviceAccountName }}
       terminationGracePeriodSeconds: 5
       imagePullSecrets:
       - name: deckhouse-registry
@@ -129,6 +133,15 @@ spec:
             port: 8443
             scheme: HTTPS
           failureThreshold: 6
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 8443
+            scheme: HTTPS
+          failureThreshold: 3
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
@@ -189,16 +202,16 @@ spec:
 {{- end }}
 
 {{- if include "cluster_autoscaler_enabled" . }}
-  {{- if not (include "cluster_autoscaler_split_mode" .) }}
+    {{- if not (include "cluster_autoscaler_split_mode" .) }}
     {{- if include "legacy_cluster_autoscaler_uses_capi" . }}
-{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "clusterapi" .Values.nodeManager.internal.autoscalerNodes) }}
+{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "clusterapi" .Values.nodeManager.internal.autoscalerNodes "cluster-autoscaler") }}
     {{- else }}
-{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes) }}
+{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes "cluster-autoscaler") }}
     {{- end }}
   {{- else if include "cluster_autoscaler_mcm_enabled" . }}
-{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler-mcm" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes) }}
+{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler-mcm" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes "node-manager-cluster-autoscaler") }}
   {{- end }}
   {{- if and (include "cluster_autoscaler_split_mode" .) (include "cluster_autoscaler_capi_enabled" .) }}
-{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "clusterapi" .Values.nodeManager.internal.autoscalerNodes) }}
+{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "clusterapi" .Values.nodeManager.internal.autoscalerNodes "cluster-autoscaler") }}
   {{- end }}
 {{- end }}
