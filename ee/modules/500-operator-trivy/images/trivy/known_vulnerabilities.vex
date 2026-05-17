@@ -169,9 +169,45 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, insufficient validation of Git URL fragment subdir components may allow access to files outside the checked-out Git repository root. Possible access is limited to files on the same mounted filesystem. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
-      "timestamp": "2026-04-17T12:23:32Z"
+      "timestamp": "2026-05-16T12:31:20Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-23831",
+        "description": "COSE v0.0.1 entry type nil pointer dereference in Canonicalize via empty Message",
+        "name": "CVE-2026-23831",
+        "aliases": [ "GHSA-273p-m2cw-6833" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:github.com/sigstore/rekor@v1.3.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Rekor is a software supply chain transparency log. In versions 1.4.3 and below, the entry implementation can panic on attacker-controlled input when canonicalizing a proposed entry with an empty spec.message, causing nil Pointer Dereference. Function validate() returns nil (success) when message is empty, leaving sign1Msg uninitialized, and Canonicalize() later dereferences v.sign1Msg.Payload. A malformed proposed entry of the cose/v0.0.1 type can cause a panic on a thread within the Rekor process. The thread is recovered so the client receives a 500 error message and service still continues, so the availability impact of this is minimal. Deckhouse Kubernetes Platform is not vulnerable since it does not utilize rekor in any way.",
+      "timestamp": "2026-05-16T12:31:20Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33997",
+        "description": "Off-by-one error in plugin privilege validation",
+        "name": "CVE-2026-33997",
+        "aliases": [ "GHSA-pxq6-2prw-chj9" ]
+      },
+      "products": [
+        { "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible" },
+        { "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prior to version 29.3.1, a security vulnerability has been detected that allows plugins privilege validation to be bypassed during docker plugin install. Due to an error in the daemon's privilege comparison logic, the daemon may incorrectly accept a privilege set that differs from the one approved by the user. Plugins that request exactly one privilege are also affected, because no comparison is performed at all. This issue has been patched in version 29.3.1. Deckhouse Kubernetes Platform is not affeceted by this since it does not ship or use Docker daemon or it's plugins in any way.",
+      "timestamp": "2026-05-16T12:31:20Z"
     }
+
   ],
-  "timestamp": "2026-04-17T12:23:32Z"
+  "timestamp": "2026-05-16T12:31:20Z"
 }
 

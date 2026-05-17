@@ -72,3 +72,13 @@ Fixes CVEs:
 - CVE-2026-4660
 - CVE-2026-39883
 - CVE-2026-34986
+
+### 016-fix-cve4.patch
+
+Fixec CVEs:
+
+- CVE-2026-33762
+- CVE-2026-34165
+- CVE-2026-35206
+- GHSA-xmrv-pmrh-hhx2
+- GHSA-3xc5-wrhm-f963
