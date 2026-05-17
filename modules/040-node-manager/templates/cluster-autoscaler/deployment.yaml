@@ -209,7 +209,7 @@ spec:
 {{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes "cluster-autoscaler") }}
     {{- end }}
   {{- else if include "cluster_autoscaler_mcm_enabled" . }}
-{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler-mcm" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes "node-manager-cluster-autoscaler") }}
+{{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler-mcm" "mcm" .Values.nodeManager.internal.autoscalerMCMNodes "cluster-autoscaler") }}
   {{- end }}
   {{- if and (include "cluster_autoscaler_split_mode" .) (include "cluster_autoscaler_capi_enabled" .) }}
 {{ include "cluster_autoscaler_deployment" (list . "cluster-autoscaler" "clusterapi" .Values.nodeManager.internal.autoscalerNodes "cluster-autoscaler") }}
