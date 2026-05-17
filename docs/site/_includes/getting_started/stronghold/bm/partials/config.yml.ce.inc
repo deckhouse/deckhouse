@@ -30,12 +30,8 @@ defaultCRI: "ContainerdV2"
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  # [<en>] Address of the Docker registry where the Deckhouse images are located
-  # [<ru>] Адрес Docker registry с образами Deckhouse
-  imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
-  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token)
-  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
-  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -50,7 +46,13 @@ spec:
   enabled: true
   settings:
     bundle: Default
-    releaseChannel: Stable
+    # [<ru>] Канал обновлений Deckhouse. Канал Early Access достаточно стабилен, его можно использовать в продуктивных окружениях.
+    # [<ru>] Если планируется использовать несколько кластеров, то рекомендуется установить на них разные каналы обновлений.
+    # [<ru>] Подробнее: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/release-channels.html
+    # [<en>] Deckhouse release channel. The Early Access channel is stable enough to be used in productive environments.
+    # [<en>] If you plan to use several clusters, it is recommended to use different release channels on them.
+    # [<en>] More info: https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/release-channels.html
+    releaseChannel: EarlyAccess
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
@@ -74,11 +76,6 @@ spec:
       # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
-      https:
-        certManager:
-          # [<en>] Use self-signed certificates for Deckhouse modules.
-          # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
-          clusterIssuerName: selfsigned
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/modules/user-authn/configuration.html
@@ -93,7 +90,7 @@ spec:
   enabled: true
   settings:
     controlPlaneConfigurator:
-      dexCAMode: FromIngressSecret
+      dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
     # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
@@ -104,6 +101,18 @@ spec:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] stronghold module settings.
+# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
+# [<ru>] Настройки модуля stronghold.
+# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  version: 1
+  enabled: true
 ---
 # [<en>] cni-cilium module settings.
 # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
@@ -141,33 +150,3 @@ kind: StaticClusterConfiguration
 # [<ru>] Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: Static
-  nodeTemplate:
-    labels:
-      node-role.kubernetes.io/control-plane: ""
-      node-role.kubernetes.io/master: ""
-    taints: []
----
-# [<en>] Stronghold module settings.
-# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
-# [<ru>] Настройки модуля stronghold.
-# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: stronghold
-spec:
-  enabled: true
-  version: 1
-  settings:
-    management:
-      mode: Automatic
-      administrators:
-      - type: Group
-        name: admins
