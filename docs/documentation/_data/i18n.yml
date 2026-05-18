@@ -191,8 +191,8 @@ common:
     en: Enter a&nbsp;name
     ru: Введите название
   search_placeholder_text_404:
-    en: Enter a&nbsp;name
-    ru: Поиск по каталогу
+    en: Search Documentation
+    ru: Поиск по документации
   search_context_dkpdocs_and_modules:
     en: The search is performed throughout DKP documentation and modules.
     ru: Поиск выполняется по всей документации DKP и модулям.
