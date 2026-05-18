@@ -24,6 +24,28 @@ const (
 	StaticClusterType = "Static"
 )
 
+// providersRequiringProviderClusterConfig is the closed list of cloud providers
+// for which dhctl mandates a <Provider>ClusterConfiguration section. Providers
+// outside this list (notably "dvp") may be configured via ModuleConfig alone.
+var providersRequiringProviderClusterConfig = map[string]struct{}{
+	"yandex":    {},
+	"vcd":       {},
+	"gcp":       {},
+	"aws":       {},
+	"azure":     {},
+	"openstack": {},
+	"vsphere":   {},
+	"zvirt":     {},
+}
+
+// ProviderRequiresClusterConfig reports whether the given cloud provider must
+// have a <Provider>ClusterConfiguration section. For providers outside the
+// whitelist (e.g. "dvp") a ModuleConfig-only configuration is allowed.
+func ProviderRequiresClusterConfig(providerName string) bool {
+	_, required := providersRequiringProviderClusterConfig[providerName]
+	return required
+}
+
 type SchemaIndex struct {
 	Kind    string `json:"kind"`
 	Version string `json:"apiVersion"`

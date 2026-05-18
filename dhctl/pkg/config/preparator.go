@@ -14,27 +14,48 @@
 
 package config
 
-import "context"
+import (
+	"context"
+	"encoding/json"
 
-type MetaConfigPreparator interface {
-	Validate(ctx context.Context, metaConfig *MetaConfig) error
-	Prepare(ctx context.Context, metaConfig *MetaConfig) error
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+)
+
+// ProviderInput is the native input for built-in provider preparators.
+// Unlike providerdata.PrepareInput, it avoids serialization round-trips:
+// ProviderClusterConfig stays as json.RawMessage and CloudProviderVars
+// is already parsed.
+type ProviderInput struct {
+	ProviderName          string
+	ClusterPrefix         string
+	Layout                string
+	Operation             string
+	ProviderClusterConfig map[string]json.RawMessage
+	CloudProviderVars     *providerdata.CloudProviderVars
 }
 
-type MetaConfigPreparatorProvider func(provider string) MetaConfigPreparator
+type MetaConfigPreparator interface {
+	Validate(ctx context.Context, input ProviderInput) error
+	Prepare(ctx context.Context, input ProviderInput) (providerdata.PrepareResult, error)
+}
+
+// MetaConfigPreparatorProvider selects a MetaConfigPreparator for the given
+// provider. downloadRootDir is the directory where provider images have been
+// unpacked; external preparators look for their binary there.
+type MetaConfigPreparatorProvider func(provider, downloadRootDir string) MetaConfigPreparator
 
 type dummyPreparator struct{}
 
 func DummyPreparatorProvider() MetaConfigPreparatorProvider {
-	return func(provider string) MetaConfigPreparator {
+	return func(provider, _ string) MetaConfigPreparator {
 		return &dummyPreparator{}
 	}
 }
 
-func (p *dummyPreparator) Validate(_ context.Context, _ *MetaConfig) error {
+func (p *dummyPreparator) Validate(_ context.Context, _ ProviderInput) error {
 	return nil
 }
 
-func (p *dummyPreparator) Prepare(_ context.Context, _ *MetaConfig) error {
-	return nil
+func (p *dummyPreparator) Prepare(_ context.Context, _ ProviderInput) (providerdata.PrepareResult, error) {
+	return providerdata.PrepareResult{}, nil
 }
