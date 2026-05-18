@@ -50,10 +50,13 @@ Bump dependencies to fix CVEs:
 The `replace google.golang.org/grpc => google.golang.org/grpc v1.65.0` pin
 from upstream `go.mod` is removed by this patch.
 
+`go.opentelemetry.io/otel v1.43.0` requires `go >= 1.25.0` in its `go.mod`,
+so the `go` directive is bumped from `1.24.0` to `1.25.8`.
+
 Generated with:
 
 ```sh
-go mod edit -dropreplace=google.golang.org/grpc
+go mod edit -dropreplace=google.golang.org/grpc -go=1.25.8
 go get google.golang.org/grpc@v1.79.3 \
        github.com/go-jose/go-jose/v4@v4.1.4 \
        go.opentelemetry.io/otel@v1.43.0 \
