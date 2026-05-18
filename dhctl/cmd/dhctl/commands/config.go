@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -39,9 +40,23 @@ var (
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -83,9 +98,23 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -115,9 +144,23 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,

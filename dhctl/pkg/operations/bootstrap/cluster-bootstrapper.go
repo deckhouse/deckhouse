@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -185,6 +186,18 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
 		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
+
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
+		ctx,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
 
 	_, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
 	defer configSpan.End()
