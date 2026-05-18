@@ -433,12 +433,7 @@ func (r *Runtime) buildHealthService() error {
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
-		if len(discovery) == 0 {
-			return nil, fmt.Errorf("discovery section not found in global values")
-		}
-
-		value, ok := discovery[deckhouseVersionValue]
+		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
