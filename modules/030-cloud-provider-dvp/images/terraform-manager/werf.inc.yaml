@@ -4,7 +4,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
-  to: /candi
+  to: /candi/cloud-providers/dvp
   excludePaths:
   - '**/terraform_versions.yml'
   stageDependencies:
@@ -12,6 +12,8 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi/
+  to: /candi/cloud-providers/dvp/module-openapi/
 import:
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes

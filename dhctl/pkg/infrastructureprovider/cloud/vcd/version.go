@@ -29,12 +29,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func VersionContentProvider(ctx context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
-	client, err := newVcdCloudClient(metaConfig, logger)
+func VersionContentProvider(ctx context.Context, s settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
+	client, err := newVcdCloudClientFromMetaConfig(metaConfig, logger)
 	if err != nil {
 		return nil, "", err
 	}
-	return versionContentProviderWithClient(ctx, client, settings, logger)
+	return versionContentProviderWithClient(ctx, client, s, logger)
 }
 
 type cloudClient interface {
@@ -45,17 +45,25 @@ type vcdCloudClient struct {
 	client *govcd.VCDClient
 }
 
-func newVcdCloudClient(m *config.MetaConfig, _ log.Logger) (cloudClient, error) {
+func newVcdCloudClientFromMetaConfig(m *config.MetaConfig, logger log.Logger) (cloudClient, error) {
 	if m.ClusterType != config.CloudClusterType || len(m.ProviderClusterConfig) == 0 {
 		return nil, fmt.Errorf("current cluster type is not a cloud type")
 	}
-
 	if m.ProviderName != ProviderName {
 		return nil, fmt.Errorf("current provider type is not VCD")
 	}
 
+	return newVcdCloudClient(m.ProviderClusterConfig, logger)
+}
+
+func newVcdCloudClient(pcc map[string]json.RawMessage, _ log.Logger) (cloudClient, error) {
+	raw, ok := pcc["provider"]
+	if !ok {
+		return nil, fmt.Errorf("unable to unmarshal provider configuration: provider key missing")
+	}
+
 	var providerConfiguration providerConfig
-	if err := json.Unmarshal(m.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
+	if err := json.Unmarshal(raw, &providerConfiguration); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
 	}
 
@@ -63,13 +71,8 @@ func newVcdCloudClient(m *config.MetaConfig, _ log.Logger) (cloudClient, error) 
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
 	}
-	insecure := providerConfiguration.Insecure
 
-	vcdClient := govcd.NewVCDClient(
-		*vcdURL,
-		insecure,
-	)
-
+	vcdClient := govcd.NewVCDClient(*vcdURL, providerConfiguration.Insecure)
 	vcdClient.Client.APIVCDMaxVersionIs("")
 	vcdClient.Client.MaxRetryTimeout = 10 // seconds
 
@@ -81,7 +84,6 @@ func (v *vcdCloudClient) GetVersion(context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to get VCD API version: %v", err)
 	}
-
 	return apiVersion, nil
 }
 
@@ -97,7 +99,7 @@ func versionConstraintAction(apiVersion string, logger log.Logger, action func(l
 
 	versionConstraint, err := semver.NewConstraint(versionConstraintStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse version constraint '%s': %v", versionConstraint, err)
+		return fmt.Errorf("failed to parse version constraint '%s': %v", versionConstraintStr, err)
 	}
 
 	if versionConstraint.Check(ver) {
@@ -105,11 +107,11 @@ func versionConstraintAction(apiVersion string, logger log.Logger, action func(l
 		return action(true)
 	}
 
-	logger.LogDebugF("Use latest VCD version %s (%s)e\n", ver, versionConstraintStr)
+	logger.LogDebugF("Use latest VCD version %s (%s)\n", ver, versionConstraintStr)
 	return action(false)
 }
 
-func versionContentProviderWithClient(ctx context.Context, client cloudClient, settings settings.ProviderSettings, logger log.Logger) ([]byte, string, error) {
+func versionContentProviderWithClient(ctx context.Context, client cloudClient, s settings.ProviderSettings, logger log.Logger) ([]byte, string, error) {
 	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
 		return nil, "", err
@@ -119,7 +121,7 @@ func versionContentProviderWithClient(ctx context.Context, client cloudClient, s
 	var resultVersion string
 
 	err = versionConstraintAction(apiVersion, logger, func(legacy bool) error {
-		versions := settings.Versions()
+		versions := s.Versions()
 		if len(versions) != 2 {
 			return fmt.Errorf("expected 2 versions, got %d", len(versions))
 		}
@@ -134,8 +136,7 @@ func versionContentProviderWithClient(ctx context.Context, client cloudClient, s
 		}
 
 		resultVersion = ver
-		content = version.GetVersionContent(settings, ver)
-
+		content = version.GetVersionContent(s, ver)
 		return nil
 	})
 

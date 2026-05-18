@@ -35,9 +35,6 @@ func mustRawMessage(v interface{}) json.RawMessage {
 func newMetaConfig(t *testing.T, clusterConfig map[string]json.RawMessage, moduleConfigs []*ModuleConfig) *MetaConfig {
 	t.Helper()
 	m := &MetaConfig{ClusterConfig: clusterConfig, ModuleConfigs: moduleConfigs}
-	// Empty CRI is unsupported, so ConfigProvider falls back to legacy Unmanaged
-	// mode with default registry parameters — same path the un-exported
-	// useDefault(false) used to take directly.
 	cfg, err := registry.NewConfigProvider(nil, nil).Config("", true)
 	require.NoError(t, err)
 	m.Registry = cfg

@@ -17,71 +17,109 @@ package dvp
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/name212/govalue"
+	otattribute "go.opentelemetry.io/otel/attribute"
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-type MetaConfigPreparator struct {
-	validateKubeConfig bool
-	validateKubeAPI    bool
-	logger             log.Logger
+type PreparatorOptions struct {
+	// ValidateKubeAPI enables full kubeconfig validation including an API call.
+	// Only meaningful when operation is bootstrap.
+	ValidateKubeAPI bool
 }
 
-func NewMetaConfigPreparator() *MetaConfigPreparator {
-	return &MetaConfigPreparator{
-		logger: log.NewSilentLogger(),
+type Preparator struct {
+	operation string
+	opts      PreparatorOptions
+}
+
+func NewPreparator(operation string, opts PreparatorOptions) *Preparator {
+	return &Preparator{operation: operation, opts: opts}
+}
+
+func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) error {
+	ctx, span := telemetry.StartSpan(ctx, "dvp.Validate")
+	defer span.End()
+
+	var secretsCount, nodeGroupsCount, instanceClassesCount int
+	if input.CloudProviderVars != nil {
+		secretsCount = len(input.CloudProviderVars.Secrets)
+		nodeGroupsCount = len(input.CloudProviderVars.NodeGroups)
+		instanceClassesCount = len(input.CloudProviderVars.InstanceClasses)
 	}
-}
+	span.SetAttributes(
+		otattribute.String("provider.name", input.ProviderName),
+		otattribute.String("provider.operation", p.operation),
+		otattribute.Bool("provider.cloudProviderVarsPresent", input.CloudProviderVars != nil),
+		otattribute.Int("provider.secretsCount", secretsCount),
+		otattribute.Int("provider.nodeGroupsCount", nodeGroupsCount),
+		otattribute.Int("provider.instanceClassesCount", instanceClassesCount),
+	)
 
-func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparator {
-	if !govalue.IsNil(logger) {
-		p.logger = logger
+	if err := p.validateLegacyClusterConfiguration(ctx, input); err != nil {
+		return err
 	}
+	span.AddEvent("kubeconfig validated")
 
-	return p
+	return p.validateCloudProviderResources(input)
 }
 
-func (p *MetaConfigPreparator) EnableValidateKubeConfig(validateKubeAPI bool) *MetaConfigPreparator {
-	p.validateKubeAPI = validateKubeAPI
-	p.validateKubeConfig = true
-	return p
+func (p *Preparator) Prepare(_ context.Context, input config.ProviderInput) (providerdata.PrepareResult, error) {
+	return providerdata.PrepareResult{Vars: input.CloudProviderVars}, nil
 }
 
-func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.MetaConfig) error {
-	if !p.validateKubeConfig {
+func (p *Preparator) validateLegacyClusterConfiguration(ctx context.Context, input config.ProviderInput) error {
+	if p.operation != providerdata.OperationBootstrap {
 		return nil
 	}
 
-	client, err := p.KubeconfigDataBase64(metaConfig)
+	// DVP can be configured via ModuleConfig/cloud-provider-dvp without a
+	// DVPClusterConfiguration section. In that case there is no kubeconfig to
+	// validate here — the module is responsible for sourcing it from settings.
+	if len(input.ProviderClusterConfig) == 0 {
+		return nil
+	}
+
+	client, err := p.buildKubeClient(input)
 	if err != nil {
 		return err
 	}
 
-	if !p.validateKubeAPI {
-		return nil
+	if p.opts.ValidateKubeAPI {
+		return p.whoAmI(ctx, client)
 	}
 
-	return p.whoAmI(ctx, client)
-}
-
-func (p *MetaConfigPreparator) Prepare(_ context.Context, metaConfig *config.MetaConfig) error {
 	return nil
 }
 
-func (p *MetaConfigPreparator) KubeconfigDataBase64(metaConfig *config.MetaConfig) (*kubernetes.Clientset, error) {
-	spec, err := dhctljson.UnmarshalToFromMessageMap[DVPProviderSpec](metaConfig.ProviderClusterConfig, "provider")
-	if err != nil {
-		return nil, fmt.Errorf("Unable to unmarshal provider from provider cluster configuration: %v", err)
+func (p *Preparator) validateCloudProviderResources(input config.ProviderInput) error {
+	if input.CloudProviderVars == nil || len(input.CloudProviderVars.Secrets) == 0 {
+		return fmt.Errorf("DVP cloud provider config validation error: no credential Secret found\n" +
+			"Hint: Check your config file: a Secret with provider credentials is required.")
+	}
+	return nil
+}
+
+func (p *Preparator) buildKubeClient(input config.ProviderInput) (*kubernetes.Clientset, error) {
+	raw, ok := input.ProviderClusterConfig["provider"]
+	if !ok {
+		return nil, fmt.Errorf("provider.kubeconfigDataBase64 must be set")
+	}
+
+	var spec DVPProviderSpec
+	if err := json.Unmarshal(raw, &spec); err != nil {
+		return nil, fmt.Errorf("unmarshal provider from provider cluster configuration: %w", err)
 	}
 
 	if spec.KubeconfigDataBase64 == "" {
@@ -90,38 +128,37 @@ func (p *MetaConfigPreparator) KubeconfigDataBase64(metaConfig *config.MetaConfi
 
 	kubeconfigBytes, err := base64.StdEncoding.DecodeString(spec.KubeconfigDataBase64)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to decode provider.kubeconfigDataBase64: %w", err)
+		return nil, fmt.Errorf("decode provider.kubeconfigDataBase64: %w", err)
 	}
 
 	cfg, err := clientcmd.Load(kubeconfigBytes)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse provider.kubeconfigDataBase64 as kubeconfig: %w", err)
+		return nil, fmt.Errorf("parse provider.kubeconfigDataBase64 as kubeconfig: %w", err)
 	}
 
 	restCfg, err := clientcmd.NewDefaultClientConfig(*cfg, &clientcmd.ConfigOverrides{}).ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to build rest config from provider.kubeconfigDataBase64: %w", err)
+		return nil, fmt.Errorf("build rest config from provider.kubeconfigDataBase64: %w", err)
 	}
+
+	log.DebugF("dvp kubeconfig host: %s, clusters: %d, contexts: %d\n",
+		restCfg.Host, len(cfg.Clusters), len(cfg.Contexts))
 
 	clientset, err := kubernetes.NewForConfig(restCfg)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to create kubernetes client from provider.kubeconfigDataBase64: %w", err)
+		return nil, fmt.Errorf("create kubernetes client from provider.kubeconfigDataBase64: %w", err)
 	}
 
 	return clientset, nil
 }
 
-func (p *MetaConfigPreparator) whoAmI(ctx context.Context, client *kubernetes.Clientset) error {
+func (p *Preparator) whoAmI(ctx context.Context, client *kubernetes.Clientset) error {
 	review := &authv1.SelfSubjectReview{}
 	response, err := client.AuthenticationV1().SelfSubjectReviews().Create(ctx, review, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf(
-			`Failed to connect to cluster using kubeconfig from provider.kubeconfigDataBase64, please verify its contents and fix the error.
-Please note that the kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts and should not use 'command' to connect.
-
-=== client-go error ===
-
-%v`,
+			"connect to cluster using provider.kubeconfigDataBase64: %w\n"+
+				"Check that the kubeconfig is attached to a service account and does not use 'command' to connect.",
 			err,
 		)
 	}
@@ -132,9 +169,11 @@ Please note that the kubeconfig from provider.kubeconfigDataBase64 must be attac
 
 	if !strings.HasPrefix(response.Status.UserInfo.Username, "system:serviceaccount:") {
 		return fmt.Errorf(
-			"kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts, but got: %s", response.Status.UserInfo.Username,
+			"kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts, but got: %s",
+			response.Status.UserInfo.Username,
 		)
 	}
 
 	return nil
 }
+

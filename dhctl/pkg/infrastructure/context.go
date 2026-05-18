@@ -434,10 +434,8 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 		return nil, err
 	}
 
-	nodeConfig := metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)
-
 	r := f.newRunner(metaConfig, stateCache, executor).
-		WithVariables(nodeConfig).
+		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 		WithName(opts.NodeName).
 		WithLogger(opts.RunnerLogger).
 		WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)

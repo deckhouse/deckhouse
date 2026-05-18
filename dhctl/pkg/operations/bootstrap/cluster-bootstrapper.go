@@ -204,10 +204,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	// first, parse and check cluster config
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
-	preparatorParams.WithPhaseBootstrap()
-	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
-		DVPValidateKubeAPI: true,
-	})
+	preparatorParams.WithOperationBootstrap()
+	preparatorParams.WithDVPValidateKubeAPI(true)
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
@@ -218,6 +216,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	metaConfig.Operation = string(preparatorParams.Operation)
 
 	log.DebugLn("MetaConfig was loaded")
 

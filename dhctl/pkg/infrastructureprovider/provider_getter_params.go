@@ -94,18 +94,13 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 	diDefaultParams := &fsprovider.DIParams{
 		InfraVersionsFile: infraVersionsFile,
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
-		CloudProviderDir:  filepath.Join(dhctlPath, "deckhouse", "candi", "cloud-providers"),
+		DownloadDir:       dDir,
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
 	}
 
 	if _, err := os.Stat(diDefaultParams.BinariesDir); err != nil {
 		// fallback to /bin
 		diDefaultParams.BinariesDir = "/bin"
-	}
-
-	if _, err = os.Stat(diDefaultParams.CloudProviderDir); err != nil {
-		// fallback to /tmp
-		diDefaultParams.CloudProviderDir = filepath.Join(dDir, "deckhouse", "candi", "cloud-providers")
 	}
 
 	if _, err = os.Stat(diDefaultParams.PluginsDir); err != nil {

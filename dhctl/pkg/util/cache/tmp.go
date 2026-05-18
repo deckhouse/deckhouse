@@ -32,6 +32,11 @@ import (
 
 const cleanupErrorPrefix = "Error during cleanup tmp dir:"
 
+const (
+	traceFilePrefix = "trace-"
+	traceFileSuffix = ".jsonl"
+)
+
 type ClearTmpParams struct {
 	IsDebug         bool
 	RemoveTombStone bool
@@ -211,6 +216,11 @@ func (r *regularTmpCleaner) Cleanup() {
 			}
 		}
 
+		if isTraceFile(fullPath) {
+			keepFiles = append(keepFiles, fullPath)
+			return nil
+		}
+
 		// keep download layers cache
 		if r.params.DownloadCacheDir != "" && strings.Contains(fullPath, r.params.DownloadCacheDir) {
 			keepFiles = append(keepFiles, fullPath)
@@ -272,6 +282,12 @@ func (r *regularTmpCleaner) Cleanup() {
 	} else {
 		logger.LogDebugF("Cleaning temp dir '%s' skipeed because it default or have keept files %d\n", tmpDir, len(keepFiles))
 	}
+}
+
+func isTraceFile(fullPath string) bool {
+	fileName := filepath.Base(fullPath)
+
+	return strings.HasPrefix(fileName, traceFilePrefix) && strings.HasSuffix(fileName, traceFileSuffix)
 }
 
 func (r *regularTmpCleaner) DisableCleanup(msg string) {

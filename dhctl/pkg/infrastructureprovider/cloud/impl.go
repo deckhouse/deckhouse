@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -35,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
@@ -182,6 +185,16 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 	p.rootDirRoutinesMutex.Lock()
 	defer p.rootDirRoutinesMutex.Unlock()
 
+	ctx, span := telemetry.StartSpan(ctx, "cloud.Executor")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("provider.name", p.name),
+		otattribute.String("provider.layout", p.layout),
+		otattribute.String("provider.step", string(step)),
+		otattribute.String("provider.uuid", p.uuid),
+		otattribute.String("provider.prefix", p.prefix),
+	)
+
 	const errPrefix = "Failed init executor"
 
 	if p.di.VersionsContentProviderGetter == nil {
@@ -232,6 +245,16 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 
 	stepStr := string(step)
 	stepDir := filepath.Join(modulesDir, fsproviderpath.LayoutsDir, p.layout, stepStr)
+
+	span.SetAttributes(
+		otattribute.String("provider.version", version),
+		otattribute.String("provider.infraRootDir", infraRootDir),
+		otattribute.String("provider.modulesDir", modulesDir),
+		otattribute.String("provider.stepDir", stepDir),
+		otattribute.String("provider.pluginsDir", pluginsDir),
+		otattribute.String("provider.infraUtil", infraUtilDestination),
+		otattribute.String("provider.versionContent", string(versionContent)),
+	)
 
 	err = p.fillVersionsToModulesAndLayoutStep(versionContent, infraRootDir, stepDir, modulesDir)
 	if err != nil {
@@ -454,7 +477,7 @@ func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string,
 	p.logger.LogDebugF("Download modules config %s for %s\n", destination, p.String())
 
 	err = p.di.ModulesProvider.DownloadModules(ctx, DownloadModulesParams{
-		ModulesParams{
+		ModulesParams: ModulesParams{
 			Settings: p.settings,
 		},
 	}, destination)

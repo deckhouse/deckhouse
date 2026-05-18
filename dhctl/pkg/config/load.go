@@ -100,6 +100,13 @@ func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *Schem
 			paths = append(paths, filepath.Join(dc.DownloadDir, "deckhouse", "candi"))
 		}
 	}
+	if dc != nil {
+		// Provider terraformManager images unpack into dc.DownloadDir/candi/cloud-providers/<provider>/.
+		providerCandiDir := filepath.Join(dc.DownloadDir, "candi", "cloud-providers")
+		if _, err := os.Stat(providerCandiDir); err == nil {
+			paths = append(paths, providerCandiDir)
+		}
+	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {

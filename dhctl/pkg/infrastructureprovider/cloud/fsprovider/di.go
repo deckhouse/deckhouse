@@ -27,7 +27,7 @@ import (
 type DIParams struct {
 	InfraVersionsFile string
 	BinariesDir       string
-	CloudProviderDir  string
+	DownloadDir       string
 	PluginsDir        string
 }
 
@@ -85,10 +85,6 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, err
 	}
 
-	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
-		return nil, err
-	}
-
 	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
 		return nil, err
 	}
@@ -97,6 +93,6 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
-		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
+		ModulesProvider:     newModulesProvider(logger, params.DownloadDir),
 	}, nil
 }

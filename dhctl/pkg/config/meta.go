@@ -32,27 +32,34 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
+	ottrace "go.opentelemetry.io/otel/trace"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type MetaConfig struct {
-	ClusterType          string                 `json:"-"`
-	Layout               string                 `json:"-"`
-	ProviderName         string                 `json:"-"`
-	OriginalProviderName string                 `json:"-"`
-	ClusterPrefix        string                 `json:"-"`
-	ClusterDNSAddress    string                 `json:"-"`
-	DeckhouseConfig      DeckhouseClusterConfig `json:"-"`
-	MasterNodeGroupSpec  MasterNodeGroupSpec    `json:"-"`
-	TerraNodeGroupSpecs  []TerraNodeGroupSpec   `json:"-"`
+	ClusterType         string                 `json:"-"`
+	Layout              string                 `json:"-"`
+	ProviderName        string                 `json:"-"`
+	ClusterPrefix       string                 `json:"-"`
+	ClusterDNSAddress   string                 `json:"-"`
+	DeckhouseConfig     DeckhouseClusterConfig `json:"-"`
+	MasterNodeGroupSpec MasterNodeGroupSpec    `json:"-"`
+	TerraNodeGroupSpecs []TerraNodeGroupSpec   `json:"-"`
 
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
+
+	CloudProviderVars *CloudProviderVars `json:"-"`
+	Operation         string             `json:"-"`
 
 	ClusterDomain string `json:"-"`
 
@@ -92,14 +99,55 @@ const (
 )
 
 func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
-	preparator := preparatorProvider(m.ProviderName)
+	ctx, span := telemetry.StartSpan(ctx, "validateAndPrepareMetaConfig")
+	defer span.End()
 
-	if err := preparator.Validate(ctx, m); err != nil {
-		return nil, err
+	span.SetAttributes(
+		otattribute.String("provider.name", m.ProviderName),
+		otattribute.String("provider.layout", m.Layout),
+		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
+	)
+
+	providerPreparator := preparatorProvider(m.ProviderName)
+	providerInput := m.buildProviderInput()
+
+	if rawInput, err := json.Marshal(providerInput.ProviderClusterConfig); err == nil {
+		span.AddEvent("provider.input", ottrace.WithAttributes(otattribute.String("providerClusterConfig", string(rawInput))))
+	}
+	if providerInput.CloudProviderVars != nil {
+		if rawVars, err := json.Marshal(providerInput.CloudProviderVars); err == nil {
+			span.AddEvent("provider.input", ottrace.WithAttributes(otattribute.String("cloudProviderVars", string(rawVars))))
+		}
 	}
 
-	if err := preparator.Prepare(ctx, m); err != nil {
+	if err := providerPreparator.Validate(ctx, providerInput); err != nil {
 		return nil, err
+	}
+	span.AddEvent("provider validated")
+
+	result, err := providerPreparator.Prepare(ctx, providerInput)
+	if err != nil {
+		return nil, err
+	}
+	span.AddEvent("provider prepared")
+
+	if result.Vars != nil {
+		m.CloudProviderVars = result.Vars
+		if rawVars, err := json.Marshal(result.Vars); err == nil {
+			span.AddEvent("provider.result.vars", ottrace.WithAttributes(otattribute.String("cloudProviderVars", string(rawVars))))
+		}
+		span.SetAttributes(
+			otattribute.Int("provider.nodeGroupsCount", len(result.Vars.NodeGroups)),
+			otattribute.Int("provider.instanceClassesCount", len(result.Vars.InstanceClasses)),
+			otattribute.Int("provider.secretsCount", len(result.Vars.Secrets)),
+		)
+	}
+	for k, v := range result.ProviderClusterConfig {
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("marshal provider cluster config key %q: %w", k, err)
+		}
+		m.ProviderClusterConfig[k] = raw
 	}
 
 	return m, nil
@@ -152,37 +200,106 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
 
-	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
+	if m.ClusterType != CloudClusterType {
 		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 	}
 
-	if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal layout from cluster configuration: %v", err)
+	if err := m.prepareProviderName(); err != nil {
+		return nil, err
 	}
-	m.Layout = strcase.ToKebab(m.Layout)
+	cloudSpec, err := m.clusterCloudSpec()
+	if err != nil {
+		return nil, err
+	}
+	m.ClusterPrefix = cloudSpec.Prefix
 
-	var cloud ClusterConfigCloudSpec
-	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+	if len(m.ProviderClusterConfig) > 0 {
+		if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal layout from cluster configuration: %v", err)
+		}
+		m.Layout = strcase.ToKebab(m.Layout)
+
+		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &m.MasterNodeGroupSpec); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+		}
+
+		m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
+		if nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]; ok {
+			if err := json.Unmarshal(nodeGroups, &m.TerraNodeGroupSpecs); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
+			}
+		}
 	}
 
-	m.ProviderName = strings.ToLower(cloud.Provider)
-	m.OriginalProviderName = cloud.Provider
-	m.ClusterPrefix = cloud.Prefix
-
-	if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &m.MasterNodeGroupSpec); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+	if m.CloudProviderVars == nil && m.ResourcesYAML != "" {
+		cv, err := providerdata.CloudProviderVarsFromInput(ctx, providerdata.PrepareInput{ResourcesYAML: m.ResourcesYAML})
+		if err != nil {
+			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
+		}
+		m.CloudProviderVars = cv
 	}
 
-	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
-	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
-	if ok {
-		if err := json.Unmarshal(nodeGroups, &m.TerraNodeGroupSpecs); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
+	// For bootstrap-from-file: pick up cloud-provider-<name> ModuleConfig as Settings
+	// so the provider preparator and terraform-modules can use it when
+	// <Provider>ClusterConfiguration is not supplied.
+	if mc := m.findModuleConfig(providerdata.CloudProviderModuleName(m.ProviderName)); mc != nil {
+		if m.CloudProviderVars == nil {
+			m.CloudProviderVars = &CloudProviderVars{}
+		}
+		if m.CloudProviderVars.Settings == nil {
+			raw, err := json.Marshal(mc)
+			if err != nil {
+				return nil, fmt.Errorf("marshal %s module config: %w", providerdata.CloudProviderModuleName(m.ProviderName), err)
+			}
+			var obj map[string]interface{}
+			if err := json.Unmarshal(raw, &obj); err != nil {
+				return nil, fmt.Errorf("unmarshal %s module config: %w", providerdata.CloudProviderModuleName(m.ProviderName), err)
+			}
+			m.CloudProviderVars.Settings = obj
 		}
 	}
 
 	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+}
+
+func (m *MetaConfig) findModuleConfig(name string) *ModuleConfig {
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == name {
+			return mc
+		}
+	}
+	return nil
+}
+
+func (m *MetaConfig) clusterCloudSpec() (ClusterConfigCloudSpec, error) {
+	var cloud ClusterConfigCloudSpec
+	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
+		return cloud, fmt.Errorf("parse cloud spec: %w", err)
+	}
+	return cloud, nil
+}
+
+func (m *MetaConfig) prepareProviderName() error {
+	cloud, err := m.clusterCloudSpec()
+	if err != nil {
+		return err
+	}
+	if cloud.Provider == "" {
+		return fmt.Errorf("unmarshal cloud section from cluster configuration: provider is empty")
+	}
+	m.ProviderName = strings.ToLower(cloud.Provider)
+	return nil
+}
+
+func (m *MetaConfig) buildProviderInput() ProviderInput {
+	return ProviderInput{
+		ProviderName:          m.ProviderName,
+		ClusterPrefix:         m.ClusterPrefix,
+		Layout:                m.Layout,
+		Operation:             m.Operation,
+		ProviderClusterConfig: m.ProviderClusterConfig,
+		CloudProviderVars:     m.CloudProviderVars,
+	}
 }
 
 func (m *MetaConfig) prepareRegistry() error {
@@ -205,7 +322,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	}
 
 	// Deckhouse mc
-	if mc := m.getModuleConfig("deckhouse"); mc != nil {
+	if mc := m.findModuleConfig("deckhouse"); mc != nil {
 		rawJSON, err := json.Marshal(mc)
 		if err != nil {
 			return err
@@ -235,15 +352,6 @@ func (m *MetaConfig) prepareRegistry() error {
 		m.Registry = registry
 	}
 	return err
-}
-
-func (m *MetaConfig) getModuleConfig(name string) *ModuleConfig {
-	for _, mc := range m.ModuleConfigs {
-		if mc.GetName() == name {
-			return mc
-		}
-	}
-	return nil
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {
@@ -326,10 +434,30 @@ func (m *MetaConfig) MarshalFullConfig() []byte {
 	return data
 }
 
+// MarshalConfig serializes the MetaConfig to JSON. When CloudProviderVars is
+// set, its fields (settings, nodeGroups, instanceClasses, secrets) are added at
+// the top level alongside clusterConfiguration/providerClusterConfiguration.
 func (m *MetaConfig) MarshalConfig() []byte {
+	type cfg struct {
+		*MetaConfig
+		Settings        map[string]interface{}            `json:"settings,omitempty"`
+		NodeGroups      map[string]map[string]interface{} `json:"nodeGroups,omitempty"`
+		InstanceClasses map[string]map[string]interface{} `json:"instanceClasses,omitempty"`
+		Secrets         map[string]map[string]interface{} `json:"secrets,omitempty"`
+	}
+
 	newM := m.DeepCopy()
 	newM.StaticClusterConfig = nil
-	data, _ := json.Marshal(newM)
+
+	wrap := cfg{MetaConfig: newM}
+	if cv := m.CloudProviderVars; cv != nil {
+		wrap.Settings = cv.Settings
+		wrap.NodeGroups = cv.NodeGroups
+		wrap.InstanceClasses = cv.InstanceClasses
+		wrap.Secrets = cv.Secrets
+	}
+
+	data, _ := json.Marshal(wrap)
 	return data
 }
 
@@ -501,7 +629,9 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	return configForBashibleBundleTemplate, nil
 }
 
-// NodeGroupConfig returns values for infrastructure utility to order master node or static node
+// NodeGroupConfig returns values for infrastructure utility to order master node
+// or static node. When CloudProviderVars is set, its fields are added at the top
+// level.
 func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]interface{}{
 		"clusterConfiguration":         m.ClusterConfig,
@@ -520,6 +650,21 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 
 	if len(m.ResourceManagementTimeout) > 0 {
 		result["resourceManagementTimeout"] = m.ResourceManagementTimeout
+	}
+
+	if cv := m.CloudProviderVars; cv != nil {
+		if cv.Settings != nil {
+			result["settings"] = cv.Settings
+		}
+		if cv.NodeGroups != nil {
+			result["nodeGroups"] = cv.NodeGroups
+		}
+		if cv.InstanceClasses != nil {
+			result["instanceClasses"] = cv.InstanceClasses
+		}
+		if cv.Secrets != nil {
+			result["secrets"] = cv.Secrets
+		}
 	}
 
 	data, _ := json.Marshal(result)
@@ -583,12 +728,17 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.ProviderName = m.ProviderName
 	}
 
-	if m.OriginalProviderName != "" {
-		out.OriginalProviderName = m.OriginalProviderName
-	}
-
 	if m.UUID != "" {
 		out.UUID = m.UUID
+	}
+
+	if m.Operation != "" {
+		out.Operation = m.Operation
+	}
+
+	if m.CloudProviderVars != nil {
+		cv := *m.CloudProviderVars
+		out.CloudProviderVars = &cv
 	}
 
 	if m.ResourceManagementTimeout != "" {

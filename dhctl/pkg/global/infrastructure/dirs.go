@@ -38,15 +38,15 @@ func GetDhctlPath() string {
 }
 
 // GetInfrastructureProviderDir returns the directory containing the cloud
-// provider's terraform/tofu modules. Falls back to <downloadDir>/deckhouse/candi
-// if the bundled candiDir does not exist.
+// provider's terraform/tofu modules. Falls back to <downloadDir>/candi/cloud-providers
+// if the bundled candiDir does not exist (provider images unpack into <downloadDir>/candi/).
 func GetInfrastructureProviderDir(provider, downloadDir string) string {
 	_, err := os.Stat(filepath.Join(candiDir, "cloud-providers", provider))
 	if err == nil {
 		return filepath.Join(candiDir, "cloud-providers", provider)
 	}
 
-	return filepath.Join(downloadDir, "deckhouse", "candi", "cloud-providers", provider)
+	return filepath.Join(downloadDir, "candi", "cloud-providers", provider)
 }
 
 func GetInfrastructureModulesDir(provider, downloadDir string) string {
@@ -58,13 +58,12 @@ func GetInfrastructureModulesForRunningDir(provider, layout, module, downloadDir
 }
 
 // GetInfrastructureVersions returns the path to the infrastructure-utility
-// versions file. Falls back to <downloadDir>/deckhouse/candi if the bundled
-// path does not exist.
+// versions file. Falls back to <downloadDir>/candi if the bundled path does not exist.
 func GetInfrastructureVersions(downloadDir string) string {
 	_, err := os.Stat(infrastructureVersions)
 	if err == nil {
 		return infrastructureVersions
 	}
 
-	return filepath.Join(downloadDir, "deckhouse", "candi", "terraform_versions.yml")
+	return filepath.Join(downloadDir, "candi", "terraform_versions.yml")
 }

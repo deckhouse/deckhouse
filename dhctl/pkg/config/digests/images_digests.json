@@ -1,5 +1,513 @@
 {
-  "something": {
-    "app": "sha256:522bcb42f731b929d8379c210dd79fa5281472951505fd462b0b3ad7c21d341c"
+  "controlPlaneManager": {
+    "kubeApiserver133": "sha256:2c8d94966b6ed51b757fbe45d590619f8a9ed4b5e436ab670b09a1a9103e7b25",
+    "kubeApiserver132": "sha256:58400b3b353cd42c997fe194f479dd6c0f40bc3c552252829676ba47d1c28873",
+    "controlPlaneManager135": "sha256:057ffff2211cd7c796fd0b24df1dd3cdcb93e566f9524e60c16f30afe65d954e",
+    "kubeApiserver131": "sha256:d4ae5ec42d3c2397bcc0bbbc9aae9b0993514748aced6a1adff7769dd2bcb16a",
+    "controlPlaneManager134": "sha256:057ffff2211cd7c796fd0b24df1dd3cdcb93e566f9524e60c16f30afe65d954e",
+    "controlPlaneManager133": "sha256:057ffff2211cd7c796fd0b24df1dd3cdcb93e566f9524e60c16f30afe65d954e",
+    "controlPlaneManager132": "sha256:057ffff2211cd7c796fd0b24df1dd3cdcb93e566f9524e60c16f30afe65d954e",
+    "controlPlaneManager131": "sha256:057ffff2211cd7c796fd0b24df1dd3cdcb93e566f9524e60c16f30afe65d954e",
+    "kubeApiserver135": "sha256:f457cb0f0e41dd8c5ad125a0093ea58b8f022da0b4bf77c4e4e8725cee04ae32",
+    "kubeApiserver134": "sha256:0bb1916958b0958ef38bad9af14e2f80841a0eebcb55da8fe7aecf4f6525edda",
+    "kubeScheduler131": "sha256:660dcfc73dd42032fd816752272fd510db7295eed596300ef94f0d6dc59278f3",
+    "kubeScheduler133": "sha256:fbc5de4b9a9dc57c99138b09f228d76d9268e4b7f73e00909529d2eddb8778bf",
+    "kubeScheduler132": "sha256:48f8ebde95f1c40e18d776fb8d4c73b1050c64b9a8bf9e4c602aef22663f15b4",
+    "kubeScheduler135": "sha256:7f6f83d3a08951ad8eee73a8bd69a2ed1fc5c7ab2819c95af32937ecbcd7224d",
+    "kubeScheduler134": "sha256:8e18d4f64351a210ab99a88d54bd1dab3baf6ccddc126f8b03d247e74c215484",
+    "etcdBackup": "sha256:97026ae04b8da31f374ad4bd775494c98fd26c1f68529ea862ccb91347a38cbb",
+    "etcd": "sha256:d816f66d7c92c52acbb05d316733409f5cf30e2b5aa1b29308072a1f89f2fa88",
+    "kubeControllerManager135": "sha256:49e7d81868a8ceaa80333fddc8649f33882f939dbe50b788c75a24a0e4ece9c0",
+    "kubeControllerManager134": "sha256:b519ad5e6208cb68ba117cd02e8e5c3419b2f904f7efbfb18c380b0b648d9937",
+    "kubeControllerManager133": "sha256:76c08c7c66e95e53d9e3832845c4b6c8d880a93cdbe44653f29683573eb3df95",
+    "kubeControllerManager132": "sha256:28253868fad8937a60ed0a2e9220f7059475aae1b020b5def36314b725f031a2",
+    "kubeControllerManager131": "sha256:61f699c8c40f393754f9d9a831506b4824c84515ff2b43a687d2ecbde2a0bc53"
+  },
+  "kubeProxy": {
+    "kubeProxy133": "sha256:0752c355cb5b4b9f542a0390dbbe177f24cdf0099d8712127b5b1276f923df8e",
+    "kubeProxy132": "sha256:1024513751b857b56936e0c50c4d054b89dce6ef862fdd6127f027f54bac1222",
+    "kubeProxy131": "sha256:6a44dff7d9b96c7159ab4641daba145e3928ce13aa6ca8fd21c61ed099eb65e8",
+    "kubeProxy135": "sha256:f72e2cd68b12c1a985dd863abba59a44acb509b9ce5b8786aef85c2a2d016fcc",
+    "kubeProxy134": "sha256:2eadb5a218a465bfa574c44658000d4fae0bd302594cf509e70c219f59d96408",
+    "iptablesWrapperInit": "sha256:26f2fa6d700fbd439857081090b04163aea8adc64808546e6b5f2d3541d388e6",
+    "initContainer": "sha256:e2e35b87b51dd1a73e275be17709e6e0b22031e4f5c10a210b95b06c8f9fbf4a"
+  },
+  "nodeManager": {
+    "capsControllerManager": "sha256:ceeaab021f327949400ff5995b59f758784575e6cbd9f940828a6f666602da23",
+    "d8ShutdownInhibitor": "sha256:bb69c5aa43bc1bce82857a3d7652ee462e690dfe99b3dea857f1791bab8e65f4",
+    "nvidiaDcgmExporter": "sha256:de5eceb9ca2865719216dd897691775e8db1c2020428e0fc41277efaa2588391",
+    "capiControllerManager": "sha256:c46451e3f6fe36186e8b7d5f36c88b6959004f099360686e7fd391e57b105e39",
+    "nvidiaDcgm": "sha256:89dcda93a9b24a45ef7f49c5dfa40d707a7a7fe3b0ca20a08d3b47d611eecbda",
+    "fencingAgent": "sha256:3ceb9dc28b3168faf5487c10995bedc24f37057fd29bd2239ec914c90970f29a",
+    "nvidiaMigManager135": "sha256:0f8b134cdd99f10051d136252bef6c07ea3742cd0d065ba67a4abe196e96fefe",
+    "nvidiaMigManager134": "sha256:d9993f890a3a9420a651629e8977dfe58083c76cdbcdbfaaf50895550e0c63f6",
+    "nvidiaMigManager131": "sha256:d3f1ceaf5f217435eeefb3743ddc8df39b6f2ac0436908288e7772d885c2b82c",
+    "nvidiaMigManager133": "sha256:95c79f53e5c104f42b8dcb137722f720782fb24da1e12497d6fd6c71f92c73ad",
+    "nvidiaMigManager132": "sha256:f9f6de78631e6a6bf639a8bf024a8b085a3e3aaacdd6e75108cc59df46ac0277",
+    "kubernetesApiProxy": "sha256:acf506a0dc3256b96a30cdb80b41a58ae08cf2f5d97ec8a6ccd0ded2fedde385",
+    "nodeController": "sha256:d0876a31d75db89a0ecb87af7645ffb7f1b5a5c7adbc3185798027266cb29293",
+    "nodeFeatureDiscovery": "sha256:95ab543889972ac9eb77b82cd7a1f6a2876c24310e24da28fc4b8dd8125c98b0",
+    "machineControllerManager": "sha256:5cbb30359ba4586ff1efcd954301892e6444ee95d83c0f4473c790ccf209ff0e",
+    "earlyOom": "sha256:917127db51fbb8cc50e0406e68098d0b4f97c5c3e1601a2189f15839bb528362",
+    "nodeGroupExporter": "sha256:5702bd65bc3bda4b0e1dbed18b27ef2540314854b0fac6c68d98209adaef009a",
+    "clusterAutoscaler135": "sha256:b5d5a98450d1f41c56da02773ec3851379670bb7a2739f6c219463497511d88f",
+    "clusterAutoscaler134": "sha256:b5d5a98450d1f41c56da02773ec3851379670bb7a2739f6c219463497511d88f",
+    "clusterAutoscaler131": "sha256:44dd903acf2820d951f7c46afd75325406a846a41cfabcd5c9cb547000aa28ff",
+    "clusterAutoscaler133": "sha256:a1a3a3422e8c2d182a62f90510976f5d5b378a738f4668e2c01ee6f425759674",
+    "nvidiaDevicePlugin": "sha256:ae6b0265ee94845bf6849a04c04ea93d0a53d92f64f26140cb407d2d745c5d91",
+    "bashibleApiserver": "sha256:9d0a64d3b2c590e4981aaa89ad08d8b5a3946d9af5a0441bdf7cb6386b2e476f",
+    "clusterAutoscaler132": "sha256:db912992a7a0206691176b464d67db8aa6f1adac91f1c906f7b1b461ffd26475"
+  },
+  "prometheus": {
+    "trickster": "sha256:143b137f00730a77e86b696d0d8e560fd6d8c4743398f70ea701cffae8cda8eb",
+    "alertsReceiver": "sha256:85c04e30958d7cdfc0db8a16b33ebcb2c7a8bf25e1719d645a9649f813b54011",
+    "grafanaDashboardProvisioner": "sha256:84a981fb6a5dfe8f21038fc04b134de14a434d5267a5f19e1c0156c87ab2b57f",
+    "memcachedExporter": "sha256:996c4ddf2f7eb699434d24bc2fce5d57871808bf24ae555305b5168560394ead",
+    "grafanaV10": "sha256:7743b14272ae2c09624f4cb70a5ff0ea4cb6f17be81dca0c23b977caa2ad998a",
+    "memcached": "sha256:334cb59dd11ca191685338cde9cff8c2a45363df494c541f4dae0565a26b3bf7",
+    "prometheus": "sha256:6229044117b16fb052c5320c1f3bd7002f4e164f99061f9fb5beafd24024a415",
+    "alertmanager": "sha256:a6395cffd13639e62d80057f2a44f6016d32f0a57fcfc8f4982f77f8afa86f0d",
+    "mimir": "sha256:d70d1fc383c17f5f76dd72ba71ff14cf5e829fa2a0ea99f96c4d18a9c274a788",
+    "promxy": "sha256:ec472afc326a53145c0ed4784a5c184ade4e940273a8f81281703a71259fd680"
+  },
+  "registrypackages": {
+    "amazonEc2Utils220": "sha256:cdc650ae06f011a5d0a1ae7968077bfae890a05c126d440d1833a86be32d765f",
+    "ec2DescribeTagsV001Flant3": "sha256:a19c13d0dfbc9eebf37678f1f3b82bd5d10a5f0ef22ffe9a4e33624e7cde3612",
+    "jq171": "sha256:665aa5b6f656c4ec8712e6718c236c0f95cd9216619382332fbe116d278e638e",
+    "e2fsprogs1472": "sha256:160cccf2d2380f0ebe2b8ed5f005ca530d06e5f3bb2dad21dd8dd537c842a730",
+    "socat1734": "sha256:1a102d946fe6a555c62cee21e696a04fec148dd30cf66f21cdb9db129a13c052",
+    "kubelet13114": "sha256:d944775c03de52bf1b065b4f5a893709318afdc89981c35f57567bf13ff01a9b",
+    "pause": "sha256:5594792dc80ad1864af1df7b77c42d355b1d96fd55fbcd996dc38391ba93eaa5",
+    "crictl132": "sha256:99d4bbb037a4746b1e69c172dfc954cd8529fbd71b7aa8484259f9361d6505e5",
+    "crictl133": "sha256:7ef9aeaa6cc160cb19d581fc3d8c775dbac100da3fbf975a04186f7b78fcd194",
+    "dockerRegistry283": "sha256:0c07cd522b272f433517f04fb774b87cf2c7c83260da1e7bb1eb429181306ae4",
+    "systemctlPowerCommandsWrapper02": "sha256:0782a8de2dbe6310bc8b8c9f9763cb38442e49e550bdbfeb6ed8eef31a09410b",
+    "tomlMerge01": "sha256:8005e666598c0041ff875685ec3a2da9593617283aa021f55fda8b2186eaf557",
+    "crictl131": "sha256:c40f07132064495df9174028e874c0e22a0b3905bd8834506eb640f6a213b0d9",
+    "virtWhat125": "sha256:256fcfb520fbee56002db963c51f8548c3964d515cd2fe8a0c0b95589b0970aa",
+    "containerd223": "sha256:6f64d10f994f9b5ad44134bd577832ecda9e096c4c039650caa86c0d44e4da81",
+    "kubectl13312": "sha256:0c6bf72bef724fe36812fcd941448418721fd618bca9f7476583c6d12e8fb3b5",
+    "crictl134": "sha256:41b9a4ac332c48b158c3c07ed2a286eabcc64513d0aa1370e8ee960f8d24d0cd",
+    "crictl135": "sha256:269e69cb0ebb071abb29ec9668d8a38343c318ae90c9191c6e182716159d7b38",
+    "d8Curl891": "sha256:4ba416521ab90a0da537c7f3672203138b404f048f06160e2345e9a6e97cc80d",
+    "kubectl13213": "sha256:390bfafcf1daa42b5253ff02d0b1c386a825f66500adf3fa757109caf3f06fa8",
+    "nfsMount282": "sha256:e2e9d94678b3e8b50d7a6775b43a6175b34829b539380ada4498395322ea40ff",
+    "cfssl165": "sha256:7e7bc2e2a3ba055392d3e9f53e0a0a8a9ba8d3236eef49046a42d23d7b2aec0b",
+    "cryptsetup": "sha256:ada718beac08a6dc02ebf47a4bf534bf488893de0813ec17a20bf6af150131ee",
+    "rppGet": "sha256:484d277b24f9e9a2a11f2dd021da530c77c5a8cdea40922ec85309144ca45e77",
+    "xfsprogs670": "sha256:ab26bfa1dc3fc5b5f0cea048c7a24ed045898e108b6e9f4354ad5e0236598404",
+    "d8CaUpdater200225": "sha256:6e95a587434e09da4f1331e3c7799294fea3ce2513375dfd4c9b954afe0d0602",
+    "registryProxy": "sha256:3258884c58cce4c183991d79182ba8abf125af28f29807316890e0f2808eea7f",
+    "kubelet1348": "sha256:9d625a0ec892850eb41c4ddecadbd548a60ec265530db26ebe1682e9ee31819e",
+    "kubectl1355": "sha256:afe2fe8686123fa283576885f433e7d880792e4070e516ccb9a85a9524a0e08f",
+    "tailLog": "sha256:40f2014aacdbcec4b0ab19e03070ef66ca433845e20c572d785ada63959fb425",
+    "kubernetesApiProxy": "sha256:b8fdfc4abf3c2724dde90ddb62e6c8f4295f146afcb5f167498d7ec1f7a3c858",
+    "lsblk2402": "sha256:f962608bc7e5ad2cd40f36fa9d1cbe22a1d2cac03cd914ae497e3776a2154313",
+    "which223": "sha256:e22c55bb68e6e9cde018095b4a786bf8a993aef6c1876d05b9a32617509619b8",
+    "containerd1730": "sha256:0ec3983d800d41653e4b2761b75d5c93a8a50d31693728de119fa2caf6c35371",
+    "kubectl13114": "sha256:fe56bcb48d42114c28e25e3f95348189742de6333de23613e81dd21871e5b629",
+    "growpart033": "sha256:87a5a5ab80b5ef0a02d276ae9c6e509460080c9a00c4cff6c3640dc9d500383f",
+    "iptables189": "sha256:4cc0f887cce6473799603ab8d086c5a89e2a41f94a6bd4466657c551368bec07",
+    "kubelet13312": "sha256:7481fe1c78e2ef2710142de4d565c41772fb68ea9d9707bcc3f8c66c032a7c1f",
+    "kubelet13213": "sha256:f4ab33ce25752c205b4572688c4468ba0bf863c63c057b36d1ee62b6d16151e6",
+    "nvmeCli211": "sha256:4ecf2a03d4b1b0eca4bda5484c83a766ffea8a18e170819b04e1aee464981784",
+    "erofs": "sha256:91faba9600707e7b9ee6f6741371079c5155b9c402e0ab540f797a89c3d0bac6",
+    "kubernetesCni162": "sha256:5fad6959a115ea2ede36436ae70516e19f799d747eb41b108c7ead312f844dc2",
+    "netcat110501": "sha256:b14f3be82fcc8fc3b70bb27beaf7ecbb01ba8a54f85f0b85d65026ef7ed8c303",
+    "d8": "sha256:de2ec09f6bff20bc5333ae07a807a5b888a3ed5d25cdbb5d9f17320877af8388",
+    "kubectl1348": "sha256:b9ab3817ac0a89415efd8e7d511e78e314ce9d4e44b9152b01dbeaace71c0530",
+    "ecrCredentialProvider135": "sha256:550eb408f457b1ecfcf2aff537eb75b788803a446b84b86c881f39b5008feb91",
+    "ecrCredentialProvider134": "sha256:aaee46b362b8bebd6dabcceb289503395231f5cea750f7f42491c165e38a8709",
+    "kubelet1355": "sha256:459989442574e18fe861c07441c0a718e5c426cafa841401ac7d5cbda1073908",
+    "yq4471": "sha256:d8b4d87f8718a5f5698a5834b3e4f99462a7debfbc76c5ab67ae4819f10552a9",
+    "ecrCredentialProvider133": "sha256:dc91cd20d9e1e48d932e925420ae76037f7e16c17fabfb3c4136d781fc189f44",
+    "ecrCredentialProvider132": "sha256:8f066aaf74f4b29e522bb190d01796affa5e3353fa89df0e1f5c75b12f89a31c",
+    "ecrCredentialProvider131": "sha256:44f364d5f48638bf3ff54ea2fb1e98c4d43c4c9730562325f0199386fa6d5992"
+  },
+  "registry": {
+    "nodeservicesManager": "sha256:58cb7b0dc2d97bbdbe920c1643fb0c939a5fc4da6edee8c2eefaeef06419411e",
+    "dockerAuth": "sha256:036e00e962279bc790c4ebe3c3545358e7ae88ee131c700c8f6c7e4ce160ec26",
+    "registryProxy": "sha256:03bd6b8c68d6954269c0cec037e7606aa31b44c97baaca00909fe1801fa3cb8d",
+    "mirrorer": "sha256:52680ca79a41f9097faed4fed0ec9c7c5093b4750a0be97ef5316380598a2464",
+    "dockerDistribution": "sha256:e417619173e4577dd4fd593a33fbe8a332a04c06f78a382fd3003cb0c93e7554"
+  },
+  "terraformManager": {
+    "terraformManagerGcp": "sha256:4cd2b429f26db3775c5ff95dbb857e8638b6d5aebd0d873fd129841fcea9ac85",
+    "terraformManagerAzure": "sha256:c2f31c9cd5a3ae5533c4527cda35346d2a91802ef9746d53eac3c270553e03a8",
+    "terraformManagerAws": "sha256:4f6f872e73bf6bdf936d5201e6175382511ad64ae12d39d10d514b020c0a2f93",
+    "baseTerraform": "sha256:a3fb3f17f817933bbfa8af663de26504d99cfe36fd06648dd7b485db97365ffb",
+    "baseOpentofu": "sha256:37d3a090b91d5ae1800cf835b49e55f32061f0f6479b32e9fd0eaeb261d867a0",
+    "terraformManagerDynamix": "sha256:7847579ea6f02e598c4e75c0182b593d1d45fce1b20979c2b8a9cb7500575f56",
+    "terraformManagerVsphere": "sha256:8896c3904a427f84b8a105aa2351f201ef7ee031b547431ef3593eab23198e81",
+    "terraformManagerOpenstack": "sha256:48ca953b5bd08e8ca49e11b2af620dd5d1c73273339525dd4630e95a7055aa9b",
+    "terraformManagerYandex": "sha256:da34fa9f54baf371f826a8278331d187ac651bcb965be167b1fe03a5c49a6dbe",
+    "terraformManagerHuaweicloud": "sha256:74337d2adf0497254492e335606109baf1557bf8ea262dd9c15671c5ee2370c2",
+    "terraformManagerDvp": "sha256:8124c546e0248062893cc5add734c9742321e5f499b457c3dd4348120a568cbe",
+    "terraformManagerZvirt": "sha256:f23b7b78a79bf88665004428ac67cdcedfeedfb2f9eee60c9f9d6aeafe9ba9ae",
+    "terraformManagerVcd": "sha256:a7426ae5cccd8dfafd76e24982e9d2cd0340448c06f3a3d53392fd598a6c3793"
+  },
+  "cloudProviderVcd": {
+    "cloudControllerManager": "sha256:2f64a4be72c45dfcc4f05ae26c49262e2d8ae421f89ca9c62c326ebb8fa031a3",
+    "cloudControllerManagerLegacy": "sha256:b64663da595174b363e4772c10642d18e113c174cc7f800569d25a2708fbdcf4",
+    "terraformManager": "sha256:b8d8ba8976d210b76d68e09a6d197fe3e5bdc298feacd0c81c4e30cf74d6b93c",
+    "infraControllerManagerLegacy": "sha256:a00780b9c5d151c34b87852941154d34d0f97818ea2b85ea29938e81cb26419b",
+    "cloudDataDiscoverer": "sha256:5d2a77852c3b74aa804b7c9cf5b23261842267f90453bc2d51090a09457080fd",
+    "capcdControllerManagerLegacy": "sha256:a1db195f3a09e354806d9d4bca696d4e326b0f8d892d6bd0ef146ed97c7db9ee",
+    "vcdCsiPlugin": "sha256:d4bd3cc5da296405ca5f371322ab52773030f7e2f9c2e59d089ad1b3690db312",
+    "vcdCsiPluginLegacy": "sha256:cc986818202fe6361855eabcf879b6fcb5b2a94ef58ff0b3686f100f0c28512b",
+    "cloudDataDiscovererLegacy": "sha256:0a3b95afdfca8d38c0ab262315551abef7ec71ef72b66a295114c572feba1cf2",
+    "infraControllerManager": "sha256:ddb0c1d9f55da1d2a0c686f40f0b8168a04bcd111b90a37d6ef98c9e6ba94446",
+    "capcdControllerManager": "sha256:80fec18bc1a4c47c16064c5250a5b447a9604051d85deaad24682fab5ea9d157"
+  },
+  "kubeDns": {
+    "stsPodsHostsAppenderInitContainer": "sha256:88df4fb573241d6bd71f93e2bb6846ac2f4e68e0e34f7aacfd34a615c283dbad",
+    "stsPodsHostsAppenderWebhook": "sha256:d4ccd93023aca498f004e77f9eb37e35e475f982fb0eb93fdf29af5c98cccbf0"
+  },
+  "common": {
+    "coredns": "sha256:b3ac633823388d87b098bdd46742749582fdbc84bf41dfe8e5aa7aac2ab9dbf7",
+    "cniMigrationInitChecker": "sha256:bfa8124d2fadb54188c38ab7496a4f371d08719ecfbbac3600121804168ba0fa",
+    "debugContainer": "sha256:294b1d9423371e254afabcddd7a5eec581935f2f0a8ea2e1e4f1647f21c2d357",
+    "csiVsphereSyncer134": "sha256:fba727be67d32972a7f27e9ca92271b3ec351e9d09d9235f96b50daee7052436",
+    "csiVsphereSyncer135": "sha256:fba727be67d32972a7f27e9ca92271b3ec351e9d09d9235f96b50daee7052436",
+    "csiVsphereSyncer132": "sha256:fba727be67d32972a7f27e9ca92271b3ec351e9d09d9235f96b50daee7052436",
+    "nginxStatic": "sha256:f37c54a9b92d0b31fe11782134ef4cea8a256f10b5b7447bcef11610f61203bf",
+    "shellOperator": "sha256:b9309dd72f26c0d4b424f3a18da3e2398635ddd8e9d65bd35422f73df46c7174",
+    "candi": "sha256:7f4142f667fe73bc90cbce9de54e489bf6f356af5454ba2d8216f80157bbfb0b",
+    "csiVsphereSyncer133": "sha256:fba727be67d32972a7f27e9ca92271b3ec351e9d09d9235f96b50daee7052436",
+    "csiVsphereSyncer131": "sha256:fba727be67d32972a7f27e9ca92271b3ec351e9d09d9235f96b50daee7052436",
+    "distroless": "sha256:cfff4c60b938cbacab7c262c07cd3ca1c37729513e49de15c5f536a45d969e95",
+    "cniMigrationController": "sha256:a6f08bdfc4fa2d4febf32b674479e2218f78009a23f3d2f222f1ca2d3c45b5cd",
+    "checkKernelVersion": "sha256:cc6a465db2e474978df6ce63a9128073c2ad721ac470e5101cc55e4ac15ca1b4",
+    "csiExternalProvisioner134": "sha256:2c7228f1372b209a38cdd0371896a59a02546be805c4ec0dff44b55167f6df46",
+    "init": "sha256:fafd52e84dbc6a606a370c56579763698f875a9b7052541b7f0ec05d92e563fc",
+    "csiExternalProvisioner135": "sha256:2c7228f1372b209a38cdd0371896a59a02546be805c4ec0dff44b55167f6df46",
+    "csiExternalProvisioner131": "sha256:2c7228f1372b209a38cdd0371896a59a02546be805c4ec0dff44b55167f6df46",
+    "csiExternalProvisioner132": "sha256:2c7228f1372b209a38cdd0371896a59a02546be805c4ec0dff44b55167f6df46",
+    "csiExternalProvisioner133": "sha256:2c7228f1372b209a38cdd0371896a59a02546be805c4ec0dff44b55167f6df46",
+    "csiExternalResizer132": "sha256:ef9e8588248c74cbb9b0e31869d201db706eda5f08a8162825e8533ebe94543a",
+    "csiExternalResizer133": "sha256:5a138f79f739b1b21b557e85934d6c595baeb8fa543609ff2b02aeeea8824bdb",
+    "csiExternalResizer131": "sha256:ce233af21a81ec5cbeeb6104f455e8504f8ec34babf6e321d840111e65e7e1ac",
+    "csiExternalResizer134": "sha256:5a138f79f739b1b21b557e85934d6c595baeb8fa543609ff2b02aeeea8824bdb",
+    "csiExternalResizer135": "sha256:5a138f79f739b1b21b557e85934d6c595baeb8fa543609ff2b02aeeea8824bdb",
+    "iptablesWrapper": "sha256:d5d94c3487ce54c04a861c33898745610752a585ec2ad9940a14589943dc74be",
+    "csiExternalAttacher132": "sha256:af10d85aba3ec7760f4b1a11cde25916d6e9e9a61e82f440072dd3f7ca9919fe",
+    "csiExternalAttacher133": "sha256:fe8554626d786efe397eacc16ae5f5e36459c806bdbe748b08a656a8bf60cf1e",
+    "csiExternalAttacher131": "sha256:22d9bd0b56932adff56d119577ad2ae3568b7030e2df191456b69a1cd3db57b4",
+    "pause": "sha256:6badbf68d6d97680441a67719e2050f08f6d61ffcb4fd1426a8276fb05191f9f",
+    "csiExternalAttacher134": "sha256:fe8554626d786efe397eacc16ae5f5e36459c806bdbe748b08a656a8bf60cf1e",
+    "csiExternalAttacher135": "sha256:fe8554626d786efe397eacc16ae5f5e36459c806bdbe748b08a656a8bf60cf1e",
+    "kubeRbacProxy": "sha256:fdaad58e89797ec98db44e173182d9edc9c256df28d8932ada166ad2b1763bbb",
+    "csiLivenessprobe131": "sha256:9e1efe9ecfb794536cfc2210393b7f9f9cee4ae1ac933d4dd80e43147f5cf4ad",
+    "csiNodeDriverRegistrar131": "sha256:ef79acd7b0dde31ca062882fe32bce5102966b73871ca7bcbc715d6a948dd917",
+    "csiLivenessprobe132": "sha256:9e1efe9ecfb794536cfc2210393b7f9f9cee4ae1ac933d4dd80e43147f5cf4ad",
+    "csiNodeDriverRegistrar132": "sha256:ef79acd7b0dde31ca062882fe32bce5102966b73871ca7bcbc715d6a948dd917",
+    "csiLivenessprobe133": "sha256:9e1efe9ecfb794536cfc2210393b7f9f9cee4ae1ac933d4dd80e43147f5cf4ad",
+    "csiNodeDriverRegistrar133": "sha256:ef79acd7b0dde31ca062882fe32bce5102966b73871ca7bcbc715d6a948dd917",
+    "csiLivenessprobe134": "sha256:9e1efe9ecfb794536cfc2210393b7f9f9cee4ae1ac933d4dd80e43147f5cf4ad",
+    "csiNodeDriverRegistrar134": "sha256:ef79acd7b0dde31ca062882fe32bce5102966b73871ca7bcbc715d6a948dd917",
+    "csiLivenessprobe135": "sha256:9e1efe9ecfb794536cfc2210393b7f9f9cee4ae1ac933d4dd80e43147f5cf4ad",
+    "csiNodeDriverRegistrar135": "sha256:ef79acd7b0dde31ca062882fe32bce5102966b73871ca7bcbc715d6a948dd917",
+    "csiExternalSnapshotter133": "sha256:10a48e47aa3d9b3781d23e79847aea52a8e4dd0d18431e70f0baa3f09b1d69f5",
+    "vxlanOffloadingFixer": "sha256:415de4cb2bed1a1579d1582a606c66e30ad57ddc18752c13ed999f436e22acb3",
+    "csiExternalSnapshotter132": "sha256:10a48e47aa3d9b3781d23e79847aea52a8e4dd0d18431e70f0baa3f09b1d69f5",
+    "csiExternalSnapshotter131": "sha256:10a48e47aa3d9b3781d23e79847aea52a8e4dd0d18431e70f0baa3f09b1d69f5",
+    "redisStatic": "sha256:448e0dafb2544eb064ef5e050d08992deaffe5eae14356a9e9f607862bd8c3e1",
+    "csiExternalSnapshotter135": "sha256:10a48e47aa3d9b3781d23e79847aea52a8e4dd0d18431e70f0baa3f09b1d69f5",
+    "csiExternalSnapshotter134": "sha256:10a48e47aa3d9b3781d23e79847aea52a8e4dd0d18431e70f0baa3f09b1d69f5"
+  },
+  "cloudProviderYandex": {
+    "yandexCsiPlugin": "sha256:c653a333b384e9a2b193eafb472e7fb158d18c9bf83d3a14b623461c7680db6f",
+    "cloudControllerManager": "sha256:d1fd939edb0f3f5e3d2e1bf1abdaf8ac8b98513d5c63d3df4120681d82609353",
+    "cloudMigrator": "sha256:0eba607b6b0ff0c82aa87096190a965bfe75bad693f9019fd14405230abf1ba4",
+    "cloudDataDiscoverer": "sha256:a48c8d4cfca642ea0ccef2bb73d74311639a08b8410d0a82a00f1d15c41c3aa2",
+    "terraformManager": "sha256:03aa164fce905ce1917f3294ab28153f0a2f16e208b4d2396c047c3af8087ebf",
+    "cloudMetricsExporter": "sha256:f2248ad2840fc3ba18b427bc7d1938ef345fcf2dac807f622afa0387ac6cc9e2"
+  },
+  "extendedMonitoring": {
+    "imageAvailabilityExporter": "sha256:2116a6cdf4c03545ab287856f71a14620aef1ddd7fed1fc12727697de77a4d92",
+    "extendedMonitoringExporter": "sha256:299276d5932249de6e4cc9cdbca983dcf1976a799e50ca8ae620e6ebb2448960",
+    "x509CertificateExporter": "sha256:0dd2f73d1bbdf9ef6735a935bdbb9c3b02f51ef1aa0b3e63cce180b8151dc99c",
+    "eventsExporter": "sha256:158fe38090d03f591275e4255f24dbca23863618d8e7c4d37e9fc30ef4d9754c"
+  },
+  "chrony": {
+    "chronyExporter": "sha256:ea6bea38781b1bd5e9e49cc001e0951f9b7234fa06f3e3c90b9109d49c48f116",
+    "chrony": "sha256:5989d23cab9af4e8651a8766665030f0efac8a3be4b8aafc968d924676957205"
+  },
+  "cloudProviderDvp": {
+    "dvpCsiDriver": "sha256:8ad6582f907f67d48b6dfffc7273720aa66816da88da0500cab1bc410f8b3440",
+    "capdvpControllerManager": "sha256:5fcd11751457a7387ffa517d095550ff68916371034531e78854474ac963f77f",
+    "cloudDataDiscoverer": "sha256:a39dfa9111990c192aa8b74dedb21e1f751eb355a76f5431860c5dc9011c785f",
+    "cloudControllerManager": "sha256:89d3bf02bdeea83774115c6fd11e37dee97a0be9056d18f5ba4d634fc98ec7aa",
+    "terraformManager": "sha256:64b2b9c83dd1784b6b7f7988dbaafea5b0e568b535038e812b0e9008f0b89d2e"
+  },
+  "networkGateway": {
+    "iptablesWrapperInit": "sha256:26f2fa6d700fbd439857081090b04163aea8adc64808546e6b5f2d3541d388e6",
+    "dnsmasq": "sha256:6dd07d0c6a07f0063e1534cfc23fc482a1d393aa1001181278779fe36351b5b6",
+    "snat": "sha256:ce3df25aa2a75e6001ba07a85a041b6b1aca92d1e208d8957acd14b770ea565f"
+  },
+  "cniFlannel": {
+    "flanneld": "sha256:4315ed14e534bdf56a9d099ab865299577cba5b0536d6896220abcb3dac72920",
+    "iptablesWrapperInit": "sha256:26f2fa6d700fbd439857081090b04163aea8adc64808546e6b5f2d3541d388e6"
+  },
+  "ingressNginx": {
+    "kubeRbacProxy": "sha256:3f4455a1fcec3348e3646f546204798d5ee3636e64f0d0d2cc405992bece5aad",
+    "protobufExporter": "sha256:88ca3cfc69a53b24977088174e79b53075b289d371cc7f03c6c4d4138c2bfa9c",
+    "iptablesWrapperInit": "sha256:3eae55d8029e5644bc5cfbb4a2810c3b3cbe0c66480aade1cfa7f548b91bfc3a",
+    "kruiseStateMetrics": "sha256:538aa9445660ffe12c561f22814260dfe21b8ea96135ada547621e5ef38dca8a",
+    "controller112": "sha256:8b2811cbc3c765a9afc94dcd8947e497ade8dcd9b2c5fe9d597957da31e3e60b",
+    "controller114": "sha256:4b2e2656bc98a70cd73cbe596798cb77d22e6a4b9c2cbdc08bd5cbe192690c5c",
+    "controller115": "sha256:eaf611ed79c4ad7a946aedb12f9e43b10c9188ffff5309ec37c2fd36cb8f9ca0",
+    "failoverCleaner": "sha256:febceb94769f27be9ffed39065d3abdc6c49b24bf9e3537c9234b51251bf6a26",
+    "kruise": "sha256:27ab5a1ebee32bb20e509817d3474e25b336dd1c70bcc82a224e12cc1d1a271c",
+    "proxyFailover": "sha256:c584697d1e2005cfccfd02311fafeafbee81aa16adaac24aa77b8b9de2875204",
+    "proxyFailoverIptables": "sha256:075444077dc1dedbf6e7583229acffb67e918d66785d8c7821548d020a294fb1",
+    "geoproxy": "sha256:7a9152a339c06a9a8a577fd9be8a0a999eddf357ae5ca4f8529f001e78efd598",
+    "init": "sha256:b6d60f5b1dc811c2da988a8c50968555261de90572baa7f00079623a3174ea0a",
+    "nginxExporter": "sha256:76cb7302eded28575e9051cc05435513a87519bbe92b514f3297a93160b2454c"
+  },
+  "istio": {
+    "proxyv2V1x25x2": "sha256:2b2a4e5aea352b74aa57b4decf8db9c9a13839c8d884944dc02a7a9f281184a0",
+    "operatorV1x21x6": "sha256:153f108bbf2e3b3a33b729cd095f9b4d858ddfc4a3b4bbcfb5276285c14ae89a",
+    "pilotV1x25x2": "sha256:9a3244e82b7e7bee8c273152df2c52e3242b4ce68ffb85d63f3ce968624abcc3",
+    "kialiV1x21x6": "sha256:850cc5836fb2baacf3a0b9e70a570de413e3536069266f86de49b7777f70fc63",
+    "metricsExporter": "sha256:1bfce54f7d767031690bdd99830b15c2c8d3ea1502d88cad701db93dff5d6b9f",
+    "cniV1x21x6": "sha256:dd55cffa944e021e3b8cdfc4a6860f3c76ac2c79bc24726da3ec1b8e7a1b7f38",
+    "kialiV1x25x2": "sha256:fae036b4a478bbde7a874a1a52da868ded9b46305850f51bc183d1bb5c5f5384",
+    "cniV1x25x2": "sha256:92da769589f050af6dd560b065ddf5466c23ac5dd093bbd54758144a911bb4b4",
+    "proxyv2V1x21x6": "sha256:41cfaa9bff16c19399dc3cae032031668c5e357ea506ac6bdce912fa76aed7a2",
+    "ztunnelV1x25x2": "sha256:e4b7152396805b25ed74650a82364aeb50aa31bd29918068af48d17e5b165628",
+    "operatorV1x25x2": "sha256:2635c30e934504a85cb2f3b3d5c3e38668d987fb914463f4103a898499d2ce50",
+    "apiProxy": "sha256:3d198a29189152b951a9a491ad22246a3503d62be4af7b40043f9768254c84ec",
+    "metadataExporter": "sha256:d9493130365c7ecf2e1faa726b6c1bc7756d1c39f46f9e1ff7791f6a5c712c7c",
+    "pilotV1x21x6": "sha256:181cb4be7b697057d3eff637ee654c488e5d714101ad4c7614a11889dea04d01"
+  },
+  "operatorPrometheus": {
+    "prometheusConfigReloader": "sha256:8758615c597ca6ee2a229529a66f5597e087661a65a4792265e3faf2d73e707c",
+    "prometheusOperator": "sha256:f92aa00035f694d1a5c5364f878ad2ea4a9dead3f1276a755d276c87363c8882"
+  },
+  "serviceWithHealthchecks": {
+    "controller": "sha256:7c381cd3b135eb1f58c40167c391d9b47dde71101872fd5d4fe2c1b047f4bcb0",
+    "agent": "sha256:e4d0a075d88e98dc76d008b11004d80350352e0c6d7ca00a42e8aea7c64d95fc"
+  },
+  "cloudProviderAws": {
+    "cloudControllerManager132": "sha256:16e43aedd7a9278e408f462ee51419870646944b10caea59671025fb402bb3a7",
+    "cloudControllerManager133": "sha256:5a7a4ef42482c03df0fd8b20e781cb18e1f0bce3d5235823b5699a81d65e6fc0",
+    "cloudControllerManager131": "sha256:3409ef9653debe23c42339477581383345d26621ee3855c835d7d39d1f364222",
+    "cloudControllerManager134": "sha256:be18859544b003b3e82ebfb6e1759fa94f5949520d444bbb766fd25b7e04b7c5",
+    "cloudControllerManager135": "sha256:d1b910c0523516d3304a0cf50148602fc8716dc09c986c8e2c688b328b74a6c3",
+    "ebsCsiPlugin134": "sha256:204d50907736f24f233bfd9f8c4a24afa64ddd98d86a38fa096b753026623894",
+    "ebsCsiPlugin135": "sha256:204d50907736f24f233bfd9f8c4a24afa64ddd98d86a38fa096b753026623894",
+    "ebsCsiPlugin131": "sha256:204d50907736f24f233bfd9f8c4a24afa64ddd98d86a38fa096b753026623894",
+    "ebsCsiPlugin132": "sha256:204d50907736f24f233bfd9f8c4a24afa64ddd98d86a38fa096b753026623894",
+    "ebsCsiPlugin133": "sha256:204d50907736f24f233bfd9f8c4a24afa64ddd98d86a38fa096b753026623894",
+    "nodeTerminationHandler": "sha256:25a13e8ce1d151bfcbb0a7962413b585213b4a30be1b0c6677858a0fe863e74a",
+    "cloudDataDiscoverer": "sha256:0f5134635309762378c75a9d8830d3dad9ad74775465ec2d6eac023ac01ab717",
+    "terraformManager": "sha256:6332751a358517982f52b451ca711bb9e0cc9bfb97a3190692b59919afd7afaf"
+  },
+  "cloudProviderAzure": {
+    "cloudControllerManager134": "sha256:c8b9e2b48dc735aaaa5f091e021e6440b7dd6e4de213160434d491e5ccdaa4da",
+    "cloudControllerManager135": "sha256:4781057b8cfa5edbdc68a1bbd31ac9217e7c2f512a4522ef4f41f05dbd93c6ee",
+    "cloudControllerManager131": "sha256:34c06c325b418b6b0a29b891a20c8ca4aaf17f06c73bd7d04d267bc62d567709",
+    "terraformManager": "sha256:bc9e15d755f6f180bc8be3308e35301f0176e8f2a9438b3ed78aea68fbf2c6c0",
+    "cloudControllerManager132": "sha256:5c1da50021c0758b0b7a9520cf186a9cfba99a9265425e61c577697b62b342fd",
+    "cloudControllerManager133": "sha256:4f024a3410347c29cfa054bb0b9c56abbecce06c993229d767af5678b6e316c3",
+    "azurediskCsi133": "sha256:a6d4ada898b7ace9a8ea9c85a7060459464c932a9cef3c32af03459c050cdcce",
+    "azurediskCsi132": "sha256:1c3a81eac076b9f268a6bee6ab9ac22bc0b8d0961a535537844e78b72f44c8cc",
+    "azurediskCsi131": "sha256:02586205c9b3fd1349b1af0dc7090e9a55ade79dbf243c8070d29dd144e5a6c1",
+    "azurediskCsi135": "sha256:fc5c8f6e8ef68e4d244cdaada67e3ba3b53a0f9487f952a93c05c33724344775",
+    "azurediskCsi134": "sha256:fc5c8f6e8ef68e4d244cdaada67e3ba3b53a0f9487f952a93c05c33724344775",
+    "cloudDataDiscoverer": "sha256:c2bb144bf08973ea17dacea8f17c232902481bbf4296d621c46935f229c40eed"
+  },
+  "cloudProviderGcp": {
+    "pdCsiPlugin133": "sha256:4a3272f1ba5121cc7f339f6006eaeb3542f304908ca8dc0367e4815c80720924",
+    "pdCsiPlugin132": "sha256:4a3272f1ba5121cc7f339f6006eaeb3542f304908ca8dc0367e4815c80720924",
+    "pdCsiPlugin131": "sha256:4a3272f1ba5121cc7f339f6006eaeb3542f304908ca8dc0367e4815c80720924",
+    "pdCsiPlugin135": "sha256:4a3272f1ba5121cc7f339f6006eaeb3542f304908ca8dc0367e4815c80720924",
+    "pdCsiPlugin134": "sha256:4a3272f1ba5121cc7f339f6006eaeb3542f304908ca8dc0367e4815c80720924",
+    "cloudDataDiscoverer": "sha256:e000b1399ad581486e10002fdb9cd841763ded872204cbbe382bed45e8e731fc",
+    "terraformManager": "sha256:bb37bf3db3cf22f15eed53d1a9157442fd323e732986af713ed9d5d8f7ca7e53",
+    "cloudControllerManager133": "sha256:0ad3692fc4daae8b8b61c3873c83b4b60e8571b1b8fb69efaffac05dd8e1385d",
+    "cloudControllerManager132": "sha256:e222b9cfe2fc4cad90c265ee2f6eb65799645feb3f98492128262f77cfa10d58",
+    "cloudControllerManager131": "sha256:00b85444af6b3bc35b2d80e0909591f8c89b236fec09956259fbf80133243888",
+    "cloudControllerManager135": "sha256:6b41d4654e533c87ee1f991a2bddad5df1a2ab871bb5bb58a7d2d08c65dfa1ef",
+    "cloudControllerManager134": "sha256:283ada8bfff48e0a4e29652c44c2a6da6f9a9ce51f9f53f39a3675bce916bf13"
+  },
+  "cloudProviderVsphere": {
+    "vsphereCsiPluginLegacy": "sha256:af77f6fd40797c8811de984f4c11752467c04532c1b1d980fcde48bfa18aff15",
+    "cloudControllerManager134": "sha256:e3b069c80b696809560feed714d87e2d6cb3e7746ca7b9b86d04a07a8a21a307",
+    "cloudControllerManager135": "sha256:e585d36cf4fc7db02b32b2e7ba1449a7cfa8d9c9f225aee5ae7863346eeb42da",
+    "cloudControllerManager131": "sha256:717e07579033c78eaae1f66fe11806cd030297996c2aa7673c265ecb01975bc5",
+    "terraformManager": "sha256:26267615f1af677fcbe9eabfcfab486123ed79d9863a6d282338533112e6a345",
+    "cloudControllerManager132": "sha256:f79a9a1a10fc92cfe2b97d9a8982adb136ad96b97295d8aa3804e9a4634e64b6",
+    "cloudControllerManager133": "sha256:3b99214584efa63a7c8d1b47946aecb563409dd1cc936ac02cc43e7c658bbde8",
+    "cloudDataDiscoverer": "sha256:7441fc14d047e717f19c4ebac97310978ceb61cac301b80496075728b605c93e",
+    "vsphereCsiPlugin133": "sha256:d8c4ec64fc2a3f855378dea320cb11de122abbe8e78e9972cc766d7c84596f53",
+    "vsphereCsiPlugin132": "sha256:d8c4ec64fc2a3f855378dea320cb11de122abbe8e78e9972cc766d7c84596f53",
+    "vsphereCsiPlugin131": "sha256:d8c4ec64fc2a3f855378dea320cb11de122abbe8e78e9972cc766d7c84596f53",
+    "vsphereCsiPlugin135": "sha256:d8c4ec64fc2a3f855378dea320cb11de122abbe8e78e9972cc766d7c84596f53",
+    "vsphereCsiPlugin134": "sha256:d8c4ec64fc2a3f855378dea320cb11de122abbe8e78e9972cc766d7c84596f53"
+  },
+  "multitenancyManager": {
+    "multitenancyManager": "sha256:e3db1cb050dca616ad966b30df8f5d21c85f7239048fd2b7c88f580b9776e734"
+  },
+  "upmeter": {
+    "upmeter": "sha256:57ffcc7e99ad3fb428dd46eb60cf666bab4ad97088a58d82962f2cea56d3625d",
+    "status": "sha256:95643980eeda1d4d201ad80293e971ab00875d27441c7d85c5bbb6da701eed68",
+    "smokeMini": "sha256:a17e453f518e74cccb3f01c22ebd5a713351c53cfcc423036820ff982d7be186",
+    "webui": "sha256:30a49da73a93f420b9769b6064d1079141efb5c8b247899fa7c979cdd38f72f8"
+  },
+  "cloudProviderDynamix": {
+    "dynamixCsiDriver": "sha256:a7506f1249c146320acc77bb0b545f621b66422a8328a6a67ffe771dc3ada76e",
+    "cloudControllerManager": "sha256:16ad7058990aee80ebe0bb4560cbad79ea6e6844e72875e46a2b8dbf4505e6c4",
+    "terraformManager": "sha256:d7951f6576fcf9ba860d0e137cbddfea023162812c52aeca81bf966c1fade251",
+    "capdControllerManager": "sha256:5a50685587b83ca7cbfb894d0c4dc4f26f438b6633cbce9eee2b6f161f1526b3",
+    "cloudDataDiscoverer": "sha256:1f18a7e5298e1b4919e88443285628690e4c574de6185545ed5795867f182911"
+  },
+  "userAuthz": {
+    "permissionBrowserApiserver": "sha256:92d216e4b5d491f30b485d7d5172a71f57ad0e07a8300ac6c305afac521ee7a4",
+    "webhook": "sha256:ec807aee159e561278e9ed979d0f7368a30475af12cdd963a3d1bf26131f0fc1"
+  },
+  "documentation": {
+    "docsBuilder": "sha256:445ae5568b81a61fffa12026b9873cbb22a17a3dfa8f595b1960b6a5bef7ed56",
+    "web": "sha256:d0d076dc95b5521082b6afe827212282ed8f0670e55db4c18cd665120db30e2e"
+  },
+  "prometheusMetricsAdapter": {
+    "k8sPrometheusAdapter": "sha256:998cd43a2b50bd8d37e43bc9e05cacb62c46478fc5930722f4897f9d5789bc65",
+    "prometheusReverseProxy": "sha256:fe1cad29d109c665f58eb8d5f320dc2acfc75e8a5182b68bc91e521068441dc8"
+  },
+  "cniCilium": {
+    "agentDistroless": "sha256:0740264b598738024043efbf6a01cb13b91696334fc88ea17386facc546313ba",
+    "checkWgKernelCompat": "sha256:7acd040c5b8b37fc5cc0ba27630dbc852052c6d27258c423148c25d27e40c8f3",
+    "safeAgentUpdater": "sha256:3c8820f1445ea6d2e192848d4fd8ba886f7fb373343d7ccdf09fa73c0f1bbc8b",
+    "kubeRbacProxy": "sha256:c87686d996108a7a02f65abf2cab1bb4003f6e462ac492d7235f122110afce67",
+    "checkKernelVersion": "sha256:b111c358b0528056cbbc566367e5e7ce94c16bfd8a9ae7790a377761934d5d31",
+    "egressGatewayAgent": "sha256:56c29cc56457cb62a4cbb6638615bee54d5008373a3d26d3a6634a9244a76c04",
+    "operator": "sha256:e96690aa7d9e8a28d67408f7426a06c009d83794f923635e7a480130d5906b37"
+  },
+  "monitoringKubernetes": {
+    "kubeStateMetrics": "sha256:d9f077bd2198ee64abe3d900515a77c0bca51b62e1f241631d1e0df914fb020a",
+    "nodeExporter": "sha256:a4e706be3d7dc8b272da69dbb8d486d3b61bb77d9035eccce2cd5237cdccccf6",
+    "kubeletEvictionThresholdsExporter": "sha256:461058a440975d06f5292b7740d441e424a8ae36dccb625c28ef140862cfade6",
+    "oomKillsExporter": "sha256:32c68aaaec2f04510dacb5fb307b4af3b202dd0716e8e072a7ad05853c9b6439"
+  },
+  "networkPolicyEngine": {
+    "iptablesWrapperInit": "sha256:8f230a1a0a34c478f60b794ab5f9fa64b9c2dc8ac79edf6ff1ed8c98e778c1c6",
+    "kubeRouter": "sha256:a9f0f3f671e1ca7802253c1851196dc6d6af7731acf8399e09284f6f2128cb58"
+  },
+  "verticalPodAutoscaler": {
+    "recommender": "sha256:d12a03444065d9648a5b021de72b2580daa0f45c767198b55fd824305d3dbbe0",
+    "updater": "sha256:62ecda339b958a45841680f4a6d4a45cae6c938f1e39f7ee52f2fd3204a3379f",
+    "admissionController": "sha256:685d7d44a3755e4ffb27b143f061a7af56222cea3c8dd5b0cd30499e112ebc0f"
+  },
+  "basicAuth": {
+    "nginx": "sha256:90f5bb97ed1847210017ddd94dbeb23905b5d800e62ed0bc9a5f3011dae66461"
+  },
+  "nodeLocalDns": {
+    "coredns": "sha256:11058f1c59502a85e694d8ab27043ed0d788fc0dd27ba3f5e136224a5e0fb871",
+    "safeUpdater": "sha256:ee5683f9edb0360f45a5b29d9529e52847786eda70be00f76a501e442172dfbb",
+    "staleDnsConnectionsCleaner": "sha256:fec9dd805b6ea758224ecae7d5088e93ed391f43ecc87968c215a869a8d2560a",
+    "iptablesWrapperInit": "sha256:df1f245fbfed173ddd3db52248b2947dd5b65e1dfc49e029ad5713b88384a2a4",
+    "iptablesLoop": "sha256:1108f78a9644c68767ea51c91469e9ae26c802561aa8ae474d7d93c5c7190e70"
+  },
+  "prometheusPushgateway": {
+    "pushgateway": "sha256:a0d8e114fc48ef47da3e59be55eb75b6deb6a9a6e9c87db2123ceaaf3f415dff"
+  },
+  "cloudProviderZvirt": {
+    "cloudControllerManager": "sha256:922fb3f836286ee63e08e5d306e0eaf1d150fcbf4fc09bd2ae7111f48a1bcc4f",
+    "zvirtCsiDriver": "sha256:2e6f8cabd49670dc596454a0f7e6be52e41eae783ac91844b64b5cb4d314c8f4",
+    "terraformManager": "sha256:c1e31a9d82c26f03be19a30816c53c4c523cb5e62ffa9f32f1ba1929e3bed6d4",
+    "cloudDataDiscoverer": "sha256:0513f51fc6a99815a069d6ba196b1100ced0d8457af15970ffd5d4879683cbcf",
+    "capzControllerManager": "sha256:babaeb3d183fa88b32d43e3905cef511a2a301e086018d016d4fa797f5091226"
+  },
+  "metallb": {
+    "l2lbController": "sha256:17801138612fda26b441a91a216994041a82e27d611aeda6a0cd79ec6aa227a9",
+    "metallbController": "sha256:0089721e2269920ca951b13ce232094f02d518bd3d404ef90d3f0833f70e2630",
+    "metallbSpeaker": "sha256:783ea0f4dc418345b26a5f8137490a54f26cdbf5ac3b1e7d09bdbb3887ad9b13",
+    "l2lbSpeaker": "sha256:03fae669895e5600829a98d63d5a573cdb25191e2e001261a00d7a13c1baf031"
+  },
+  "userAuthn": {
+    "dexAuthenticator": "sha256:5c27aeda8c65ebfc59a412fd547e4ff5cd8205f21c971c1a2c11186e483a9e38",
+    "basicAuthProxy": "sha256:ca68070a0afd9083487294c5e7b58eaae27a6e192b157eeab32a0a377d074ecc",
+    "selfSignedGenerator": "sha256:5d9e904cacacf52861a089aff81c43a6e0ae89d8955cb4ebbdd6d68d69727fd8",
+    "userApi": "sha256:9a64ea8ab5d6186f189700a3a29a032cf4814c70f7d6644351c7ea71dbb97a6a",
+    "kubeconfigGenerator": "sha256:f87929b287028b59261981e98d8a49ab85d1ef03401229fb2d50e65fee516a0a",
+    "dex": "sha256:41ac0ea53c3a95ce3a185b506e40f623cc4cd697e07610b21fe7f6ea8078d3aa"
+  },
+  "cloudProviderHuaweicloud": {
+    "terraformManager": "sha256:7980be4b76c6a5de3a326b11f899f677c56acd7efc2b0d44f82f404a954c2980",
+    "cloudDataDiscoverer": "sha256:4dc5016b96a5231c4f7027aab7f26f53c5eefe98e57b0b0a45e4ba9fa974ea36",
+    "cloudControllerManager": "sha256:ee7383f5018f2f4fce0fd2018dd47dac6aea1a5b8ecda617122f237c2795cc21",
+    "caphcControllerManager": "sha256:44fb54245fec40c733479e6b2eb5edd06b4028de1fa10d3ca78fb89553d2d0af",
+    "huaweicloudCsiDriver": "sha256:cafdc3f0d54c781339cbd05df82c0eecac2255d1986e82bcb643facdb05fe587"
+  },
+  "openvpn": {
+    "easyrsaMigrator": "sha256:e5807b7cd57d915a55dca479c313b893b3d60b1f9e7fac7e92c4dd0871f7288f",
+    "openvpn": "sha256:6db980dd401659139d06c662005ef058b595d24c1df806497b05ee7ae5234859",
+    "iptablesWrapperInit": "sha256:2b304b20193632eaa035904dffe942be0bf7c5af934eb53ddb7730122721e3aa",
+    "ovpnAdmin": "sha256:d60f55444cfd706fa6c12ab7f0e57df9aa5f3fb1d8596ae0666e5127e7aae6a2",
+    "pmacct": "sha256:0c8ac5f0579176ce7a1c6fd1486ee81abbbd3623fd15223806b8b78bc9dad890"
+  },
+  "certManager": {
+    "certManagerController": "sha256:4eaab2125babef7523a3e2ce05e9016a09ec1b1c6a3460c03d4d8ad312f96e21",
+    "certManagerAcmeSolver": "sha256:7cd575cacf71f9cd04d62394252979f671ac914594b530f839883b0788d8ec58",
+    "certManagerCainjector": "sha256:938af0380791be605227a9c67dc8911d3d843111cb98f3151e5310efabe31d52",
+    "certManagerWebhook": "sha256:f975423e757a88e88b2afb3a1c36e9615705e1f4cfe973dcd01fdc17715d3584"
+  },
+  "monitoringPing": {
+    "monitoringPing": "sha256:38e0f474d898e61dba5e3771b5409b8cc638fd8ced577b48800f9b01a34c37fd"
+  },
+  "loki": {
+    "loki": "sha256:23d6274007f3046b12265fe97e2754f629d4a750231e94b27137801881e467b2"
+  },
+  "cloudProviderOpenstack": {
+    "cinderCsiPlugin134": "sha256:f8413b9a7cfea8bd759d14beec12a42cd839f273dc52e5e63ab30af4088c7cb5",
+    "terraformManager": "sha256:a52c6e7df770d0b1104feb3c26debf0ab03b105842e986e98b3b4d58bc9698fd",
+    "cinderCsiPlugin135": "sha256:c0a31a6c4e26ff0ea5d0dc398971ae2625bb687972cbc32253ff907f450d93d2",
+    "cinderCsiPlugin132": "sha256:51d5ecce0e0b2120f0a133fef5931413452b504df17234390e2251ae4ea11fd0",
+    "cinderCsiPlugin133": "sha256:699537b41e39a32c4f7e3857e989081ad751a4f8b449fd9312a13ae7410851c8",
+    "cinderCsiPlugin131": "sha256:755523de00317d5c8b8de9a95d81c207c8e3125445f3349024ff5101615256b6",
+    "cloudControllerManager135": "sha256:e2aaf5561beb85a4eed1eb96bbef25097309074b24d11cc7b645a57957e4eeae",
+    "cloudControllerManager134": "sha256:c1d3f22e22bf776953586f8c5bc0b56c6515442a75466e749330abe50887774f",
+    "cloudControllerManager131": "sha256:ff5468c44e7dd5a1eb4fedfa56aa768d4e46ec1672aa054606d8b04471ab806a",
+    "cloudControllerManager133": "sha256:e11d05f4c963e3c85d141c225ea634af3029623f265d8509ecfb86e13779055b",
+    "cloudControllerManager132": "sha256:972c511c3770ddfa9924716f2bf5c83b3cd5302515267c1e631b1096ecf1a231",
+    "cloudDataDiscoverer": "sha256:ddff6074eccffefebeec3062f4a42a3849f97816311c158fe462a9ff5f3a919b"
+  },
+  "admissionPolicyEngine": {
+    "ratify": "sha256:50962794c6375c7c71a9cd9afb11efd83e0c88d0305c9c9d8db7a675b824d028",
+    "constraintExporter": "sha256:e8d71047bed8f4b890909b110cf5e1c1430f170c2e07ee0342ca9ae0109abe7c",
+    "gatekeeper": "sha256:8b2f702334603aed12e08e6479452355ff90be2a7ce265bd1bf82ca20b32d2de"
+  },
+  "deckhouse": {
+    "webhookHandler": "sha256:cb60f580e5399ba163ed814659815ee29bdd55e19a650e9e6c057a5586495d19",
+    "init": "sha256:e9bf8241ad13ca7f44c8b6ab0467353514a7b4fe2f2418542e3f93c399820128"
+  },
+  "ciliumHubble": {
+    "relay": "sha256:65900c38a32aac721e69fb5cc998bd5ea84843bcd4632192b90ab1acd91dcfac",
+    "uiFrontend": "sha256:1ccbb32623479056a9f9fe287c7a9d8bf1dd6a75cd6e4d59be75f7bfcd52a2c2",
+    "uiBackend": "sha256:be0b4c1f71eaa48e0223bb48520a9864b5b123ef36cf4ec0e5f7813db10110ef"
+  },
+  "logShipper": {
+    "vector": "sha256:e6497d71e3905ef511f4a3169f65fc75d6d28918e5db3b8f4c5096ff2c3bcde0"
+  },
+  "registryPackagesProxy": {
+    "registryPackagesProxy": "sha256:5c0b2e8175f6d6eac9592bc6f588d544f95647cf8d4f905ebad5573cc5af045a"
+  },
+  "keepalived": {
+    "keepalived": "sha256:80e79fc7a74f133ac4c69175933902cddf9a21693132c8ada82bd30e6ac2fb24"
+  },
+  "localPathProvisioner": {
+    "localPathProvisioner": "sha256:e3555eeec89371ea30628b68dbabc371b9ea2f88efecc350f3a6590ba86b3b0c",
+    "helper": "sha256:0db3e86a22eb8564b6ddaa7a909985300a503101a4f0b025738dd308dcb9cd47"
+  },
+  "descheduler": {
+    "descheduler": "sha256:2d0121ed6c5104c3baa04c6af94ea7ef6edcc9bdd456dfdd188e11f7d50006ed"
+  },
+  "cniSimpleBridge": {
+    "simpleBridge": "sha256:4c22cd19c0ebf8d243d853eda57cf8c2e9be3c7b9c1e568d84a79857d519a469",
+    "iptablesWrapperInit": "sha256:26f2fa6d700fbd439857081090b04163aea8adc64808546e6b5f2d3541d388e6"
+  },
+  "deckhouseTools": {
+    "web": "sha256:57b1e3d976604e1d7000dbb6c15086c362f4464b46d0ac62362979ded8ed5af9"
   }
 }

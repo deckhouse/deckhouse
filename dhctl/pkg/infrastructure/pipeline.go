@@ -128,8 +128,10 @@ func ApplyPipeline(
 		span.AddEvent("Plan done")
 
 		defer func() {
+			var extractErr error
+			extractedData, extractErr = extractFn(ctx, r)
 			if err == nil {
-				extractedData, err = extractFn(ctx, r)
+				err = extractErr
 			}
 		}()
 

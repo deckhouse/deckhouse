@@ -29,7 +29,7 @@ import (
 
 func preparatorProvider(_ string) config.MetaConfigPreparator {
 	// prefix does not provide here
-	return yandex.NewMetaConfigPreparator(false)
+	return yandex.NewMetaConfigPreparator(false, "hook")
 }
 
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {

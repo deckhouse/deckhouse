@@ -17,6 +17,8 @@ package infrastructureprovider
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/name212/govalue"
 
@@ -25,37 +27,42 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/external"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-// todo it is ugly solution because we validate some filds in providers only in bootstrap
-// need migration in cloud-provider-yandex in withNat layout
-type DhctlPhase string
+type DhctlOperation string
 
 const (
-	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
+	DhctlOperationBootstrap DhctlOperation = providerdata.OperationBootstrap
 )
 
-type PreflightChecks struct {
-	DVPValidateKubeAPI bool
-}
-
 type PreparatorProviderParams struct {
-	logger          log.Logger
-	phase           DhctlPhase
-	PreflightChecks PreflightChecks
+	logger    log.Logger
+	Operation DhctlOperation
+	DVPOptions dvp.PreparatorOptions
+	// PluginsDir is the directory where external provider binaries are stored.
+	// When set, providers not built into dhctl are looked up as
+	// dhctl-provider-<name> binaries in this directory.
+	PluginsDir string
 }
 
-func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
-	p.phase = phase
+func (p *PreparatorProviderParams) WithPluginsDir(dir string) *PreparatorProviderParams {
+	p.PluginsDir = dir
+	return p
 }
 
-func (p *PreparatorProviderParams) WithPhaseBootstrap() {
-	p.WithPhase(DhctlPhaseBootstrap)
+func (p *PreparatorProviderParams) WithOperation(op DhctlOperation) {
+	p.Operation = op
 }
 
-func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
-	p.PreflightChecks = checks
+func (p *PreparatorProviderParams) WithOperationBootstrap() {
+	p.WithOperation(DhctlOperationBootstrap)
+}
+
+func (p *PreparatorProviderParams) WithDVPValidateKubeAPI(v bool) {
+	p.DVPOptions.ValidateKubeAPI = v
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -84,39 +91,48 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
-			if params.phase == DhctlPhaseBootstrap {
-				yandexPreparator.EnableValidateWithNATLayout()
-			}
-			return yandexPreparator
+			return yandex.NewMetaConfigPreparator(true, string(params.Operation)).WithLogger(logger)
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
 				PrepareMetaConfig:     true,
 				ValidateClusterPrefix: true,
 			}, logger)
 		case dvp.ProviderName:
-			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
-			if params.phase != DhctlPhaseBootstrap {
-				return prep
-			}
-			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
+			return dvp.NewPreparator(string(params.Operation), params.DVPOptions)
 		default:
+			if binaryPath := findExternalPreparatorBinary(params.PluginsDir, provider); binaryPath != "" {
+				return external.NewBinaryPreparator(binaryPath)
+			}
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
 	}
 }
 
+const externalPreparatorBinaryPrefix = "dhctl-provider-"
+
+// findExternalPreparatorBinary looks for a dhctl-provider-<name> binary in pluginsDir.
+// Returns the full path if found and executable, empty string otherwise.
+func findExternalPreparatorBinary(pluginsDir, providerName string) string {
+	if pluginsDir == "" {
+		return ""
+	}
+	path := filepath.Join(pluginsDir, externalPreparatorBinaryPrefix+providerName)
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return ""
+	}
+	return path
+}
+
 type defaultCloudOnlyPrefixValidatorPreparator struct{}
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
-	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
-	if err != nil {
-		return fmt.Errorf("%v for provider %s", err, metaConfig.ProviderName)
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, input config.ProviderInput) error {
+	if err := validation.DefaultPrefixValidator(input.ClusterPrefix); err != nil {
+		return fmt.Errorf("%v for provider %s", err, input.ProviderName)
 	}
-
 	return nil
 }
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
-	return nil
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ config.ProviderInput) (providerdata.PrepareResult, error) {
+	return providerdata.PrepareResult{}, nil
 }
