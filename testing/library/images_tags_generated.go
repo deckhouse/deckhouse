@@ -440,8 +440,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pmacct":              "imageHash-openvpn-pmacct",
 	},
 	"operatorPrometheus": map[string]interface{}{
-		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
-		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
+		"prometheusConfigReloader":            "imageHash-operatorPrometheus-prometheusConfigReloader",
+		"prometheusConfigReloaderVexArtifact": "imageHash-operatorPrometheus-prometheusConfigReloaderVexArtifact",
+		"prometheusOperator":                  "imageHash-operatorPrometheus-prometheusOperator",
+		"prometheusOperatorVexArtifact":       "imageHash-operatorPrometheus-prometheusOperatorVexArtifact",
 	},
 	"operatorTrivy": map[string]interface{}{
 		"nodeCollector":       "imageHash-operatorTrivy-nodeCollector",
