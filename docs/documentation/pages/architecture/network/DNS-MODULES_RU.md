@@ -32,7 +32,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 1. **D8-kube-dns** (Deployment) — основной компонент модуля, реализующий DNS-сервер в кластере Kubernetes.
 
-   Компонент d8-kube-dns отслеживает изменения стандартных ресурсов Service, EndpointSlice, Namespace, Pod, а также периодически запрашивает ресурсы Node. На основе полученных данных он обновляет записи в локальной базе объектов.
+   Компонент d8-kube-dns отслеживает изменения стандартных ресурсов Service, EndpointSlice, Namespace, Pod, а также периодически запрашивает ресурсы Node. На основе полученных данных d8-kube-dns обновляет записи в локальной базе объектов.
 
    Состоит из следующих контейнеров:
 
@@ -43,7 +43,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
    Deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse/) создаёт этот компонент, если в ModuleConfig задан параметр `.spec.settings.clusterDomainAliases`.
 
-   Компонент реализует мутирующий webhook-сервер. Он добавляет init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в Pod, созданный StatefulSet-контроллером, если в спецификации Pod указана опция `.spec.subdomain`.
+   Компонент реализует мутирующий webhook-сервер, добавляющий init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в Pod, созданный StatefulSet-контроллером, если в спецификации Pod указана опция `.spec.subdomain`.
 
    Init-контейнер изменяет файл `/etc/hosts`, чтобы подсистема разрешения имён корректно работала с алиасами домена кластера.
 
