@@ -48,6 +48,7 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod tidy
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
   - mv terraform-provider-gcp /terraform-provider-gcp
   - chmod -R 755 /terraform-provider-gcp
