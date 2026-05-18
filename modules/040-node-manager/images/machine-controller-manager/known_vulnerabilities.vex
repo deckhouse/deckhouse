@@ -45,6 +45,20 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2020-8565 является неполным исправлением CVE-2019-11250 — токены могут попадать в логи при высоком уровне verbosity. machine-controller-manager в production запускается с уровнем логирования по умолчанию, конфигурация verbosity не доступна внешнему пользователю, утечка токенов через логи невозможна при штатной эксплуатации",
       "timestamp": "2026-04-29T14:34:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2022-21698"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/client_golang"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2022-21698 связана с DoS через высококардинальные HTTP-метки в InstrumentHandlerCounter библиотеки prometheus/client_golang. machine-controller-manager не экспонирует metrics endpoint для внешних пользователей, доступ к метрикам ограничен внутренним сетевым периметром кластера, эксплуатация внешним атакующим невозможна",
+      "timestamp": "2026-05-18T12:00:00Z"
     }
   ],
   "timestamp": "2026-04-29T14:34:00Z"
