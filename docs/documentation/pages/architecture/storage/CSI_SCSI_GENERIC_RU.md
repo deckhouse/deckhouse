@@ -28,12 +28,13 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-scsi-generic/cr.html):
+1. **Controller** — контроллер, обслуживающий следующие кастомные ресурсы:
 
-    * SCSITarget — описание точки подключения к СХД (iSCSI/FC);
-    * SCSIDevice — описание обнаруженного SCSI-устройства;
-    * PendingResizeRequest — заявка на отложенное расширение PVC, если запрошенный размер больше текущего размера устройства;
-    * SCSIStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+    * [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget) — описание точки подключения к СХД (iSCSI/FC);
+    * [SCSIDevice](/modules/csi-scsi-generic/cr.html#scsidevice) — описание обнаруженного SCSI-устройства;
+    * [PendingResizeRequest](/modules/csi-scsi-generic/cr.html#pendingresizerequest) — заявка на отложенное расширение PVC, если запрошенный размер больше текущего размера устройства;
+    * [SCSIStorageClass](/modules/csi-scsi-generic/cr.html#scsistorageclass) — определяет конфигурацию для Kubernetes StorageClass;
+    * BlockDeviceFilter — определяет фильтры для выбора физических SCSI-устройств, которые можно использовать для создания томов системой. Позволяет гибко управлять пулом доступных устройств путем задания правил по атрибутам устройств и исключения/разрешения отдельных устройств.
 
     В SCSIStorageClass задаются селектор устройств (`scsiDeviceSelector`), reclaim policy и параметры очистки тома.
 

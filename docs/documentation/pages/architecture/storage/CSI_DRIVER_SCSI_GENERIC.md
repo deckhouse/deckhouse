@@ -65,7 +65,7 @@ The `csi-scsi-generic` CSI driver consists of the following components:
 
 The driver interacts with the following components:
 
-1. **Kube-apiserver**: Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, SCSIDevice, and SCSITarget resources.
+1. **Kube-apiserver**: Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, PendingResizeRequest, SCSIDevice, and SCSITarget resources.
 
 1. **SCSI-connected storage systems**: Orchestrates the use of already available SCSI devices, including their binding/cleanup and node attachment.
 

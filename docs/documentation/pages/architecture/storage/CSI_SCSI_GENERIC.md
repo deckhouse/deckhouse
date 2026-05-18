@@ -29,10 +29,11 @@ The module consists of the following components:
 
 1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-scsi-generic/cr.html):
 
-    * SCSITarget: Description of a storage connection endpoint (iSCSI/FC).
-    * SCSIDevice: Description of a discovered SCSI device.
-    * PendingResizeRequest: A request for deferred PVC expansion when the requested size is larger than the current device size.
-    * SCSIStorageClass: Defines configuration for Kubernetes StorageClass.
+    * [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget): Describes a storage connection endpoint (iSCSI/FC).
+    * [SCSIDevice](/modules/csi-scsi-generic/cr.html#scsidevice): Describes a discovered SCSI device.
+    * [PendingResizeRequest](/modules/csi-scsi-generic/cr.html#pendingresizerequest): Represents a request for deferred PVC expansion when the requested size is larger than the current device size.
+    * [SCSIStorageClass](/modules/csi-scsi-generic/cr.html#scsistorageclass): Defines configuration for Kubernetes StorageClass.
+    * BlockDeviceFilter: Specifies filters for selecting physical SCSI devices that can be used to create volumes in the system. Provides flexible management of the available device pool by setting rules based on device attributes and including/excluding specific devices.
 
     SCSIStorageClass defines the device selector (`scsiDeviceSelector`), reclaim policy, and volume cleanup parameters.
 

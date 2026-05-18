@@ -43,7 +43,7 @@ The module consists of the following components:
 
 1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-1. **Primera3par-csp**: A service container provider (Container Storage Provider, CSP) required for the CSI driver to work with HPE Primera and 3PAR storage systems. It is responsible for communication between Kubernetes and storage arrays, session management, path replication, and provides multipath access to storage for reliability and fault tolerance.
+1. **Primera3par-csp**: A service container provider (Container Storage Provider, CSP) responsible for integrating the CSI driver with HPE Primera and 3PAR storage systems. It handles communication between Kubernetes and the storage arrays, manages session handling, and path replication.
 
 ## Module interactions
 
