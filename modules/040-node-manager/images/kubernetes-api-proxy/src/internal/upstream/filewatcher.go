@@ -76,7 +76,7 @@ func (fw *fileWatcher) triggerChangedOutside() {
 
 	var upstreamRecords []string
 
-	if err := json.NewDecoder(changedFile).Decode(&upstreamRecords); err != nil {
+	if err := json.NewDecoder(changedFile).Decode(&upstreamRecords); err != nil || upstreamRecords == nil {
 		return
 	}
 
