@@ -112,15 +112,35 @@ func discoverControlPlaneEndpoint(_ context.Context, input *go_hook.HookInput) e
 		return nil
 	}
 
+	setEndpoint := func(host string, port int) error {
+		raw := input.Values.Get("nodeManager.internal.cloudProvider")
+		cloudProvider, ok := raw.Value().(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("nodeManager.internal.cloudProvider has unexpected type %T", raw.Value())
+		}
+
+		yandexValues, ok := cloudProvider["yandex"].(map[string]interface{})
+		if !ok || yandexValues == nil {
+			yandexValues = map[string]interface{}{}
+		}
+
+		yandexValues["controlPlaneEndpoint"] = map[string]interface{}{
+			"host": host,
+			"port": port,
+		}
+		cloudProvider["yandex"] = yandexValues
+		input.Values.Set("nodeManager.internal.cloudProvider", cloudProvider)
+
+		return nil
+	}
+
 	if len(input.Snapshots.Get("publish_api_ingress")) > 0 {
 		var endpoint ingressControlPlaneEndpoint
 		if err := input.Snapshots.Get("publish_api_ingress")[0].UnmarshalTo(&endpoint); err != nil {
 			return fmt.Errorf("failed to unmarshal 'publish_api_ingress' snapshot: %w", err)
 		}
 		if endpoint.Host != "" && endpoint.Port > 0 {
-			input.Values.Set(valuesPath+".host", endpoint.Host)
-			input.Values.Set(valuesPath+".port", endpoint.Port)
-			return nil
+			return setEndpoint(endpoint.Host, endpoint.Port)
 		}
 	}
 
@@ -130,9 +150,7 @@ func discoverControlPlaneEndpoint(_ context.Context, input *go_hook.HookInput) e
 			return fmt.Errorf("failed to unmarshal 'publish_api_load_balancer' snapshot: %w", err)
 		}
 		if endpoint.Host != "" && endpoint.Port > 0 {
-			input.Values.Set(valuesPath+".host", endpoint.Host)
-			input.Values.Set(valuesPath+".port", int(endpoint.Port))
-			return nil
+			return setEndpoint(endpoint.Host, int(endpoint.Port))
 		}
 	}
 
@@ -151,7 +169,5 @@ func discoverControlPlaneEndpoint(_ context.Context, input *go_hook.HookInput) e
 		return fmt.Errorf("failed to convert nodeManager.internal.clusterMasterAddresses[0] port to int: %w", err)
 	}
 
-	input.Values.Set(valuesPath+".host", host)
-	input.Values.Set(valuesPath+".port", portNumber)
-	return nil
+	return setEndpoint(host, portNumber)
 }
