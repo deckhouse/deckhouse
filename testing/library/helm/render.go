@@ -67,29 +67,7 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (map[string]string,
 	}
 
 	caps := chartutil.DefaultCapabilities
-	vers := []string(caps.APIVersions)
-
-	hasAPIVersion := func(required string) bool {
-		for _, ver := range vers {
-			if ver == required {
-				return true
-			}
-		}
-
-		return false
-	}
-
-	if !hasAPIVersion("autoscaling.k8s.io/v1/VerticalPodAutoscaler") {
-		vers = append(vers, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
-	}
-	if !hasAPIVersion("admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy") {
-		vers = append(vers, "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy")
-	}
-	if !hasAPIVersion("admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding") {
-		vers = append(vers, "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding")
-	}
-
-	caps.APIVersions = vers
+	caps.APIVersions = append(caps.APIVersions, "autoscaling.k8s.io/v1/VerticalPodAutoscaler")
 
 	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
 	if err != nil {
