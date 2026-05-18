@@ -322,13 +322,15 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 			Kubernetes: &v1alpha1.PackageVersionConstraint{
 				Constraint: meta.definition.Requirements.Kubernetes.Constraint,
 			},
-			Modules: setModulesRequirement(meta.definition.Requirements.Modules),
 		},
 		Changelog: &v1alpha1.PackageChangelog{
 			Features: meta.changelog.Features,
 			Fixes:    meta.changelog.Fixes,
 		},
 	}
+
+	setModulesRequirement(apv, meta.definition.Requirements.Modules)
+	setSubscribe(apv, meta.definition.Subscribe)
 
 	if err := setPackageSchema(apv, schemaTypeSettings, meta.rawSettingsSchema); err != nil {
 		return fmt.Errorf("set settings schema: %w", err)
@@ -383,31 +385,55 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 	return nil
 }
 
-// setModulesRequirement maps the three module requirement buckets onto the CRD shape.
-// Returns nil when all buckets are empty so the field is omitted from the wire payload.
-func setModulesRequirement(req dto.ModulesRequirement) *v1alpha1.PackageModulesRequirement {
+// setSubscribe writes the Subscribe block into apv.Status.PackageMetadata.
+// No-op when PackageMetadata is uninitialized or the block carries nothing
+// (no APIs and no values entries), so callers may invoke unconditionally.
+func setSubscribe(apv *v1alpha1.ApplicationPackageVersion, s dto.Subscribe) {
+	if len(s.APIs) == 0 && len(s.Values) == 0 {
+		return
+	}
+
+	apv.Status.PackageMetadata.Subscribe = &v1alpha1.PackageSubscribe{
+		APIs:   s.APIs,
+		Values: make([]v1alpha1.PackageSubscribeValues, len(s.Values)),
+	}
+
+	for i, v := range s.Values {
+		apv.Status.PackageMetadata.Subscribe.Values[i] = v1alpha1.PackageSubscribeValues{Module: v.Module, Path: v.Path}
+	}
+}
+
+// setModulesRequirement writes the three module requirement buckets onto
+// apv.Status.PackageMetadata.Requirements.Modules. No-op when Requirements
+// is uninitialized or all buckets are empty.
+func setModulesRequirement(apv *v1alpha1.ApplicationPackageVersion, req dto.ModulesRequirement) {
 	if len(req.Mandatory) == 0 && len(req.Conditional) == 0 && len(req.AnyOf) == 0 {
-		return nil
+		return
 	}
 
-	out := &v1alpha1.PackageModulesRequirement{}
-
-	for _, m := range req.Mandatory {
-		out.Mandatory = append(out.Mandatory, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	apv.Status.PackageMetadata.Requirements.Modules = &v1alpha1.PackageModulesRequirement{
+		Mandatory:   make([]v1alpha1.PackageModuleDependency, len(req.Mandatory)),
+		Conditional: make([]v1alpha1.PackageModuleDependency, len(req.Conditional)),
+		AnyOf:       make([]v1alpha1.PackageModuleGroup, len(req.AnyOf)),
 	}
 
-	for _, m := range req.Conditional {
-		out.Conditional = append(out.Conditional, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	for i, m := range req.Mandatory {
+		apv.Status.PackageMetadata.Requirements.Modules.Mandatory[i] = v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint}
 	}
 
-	for _, g := range req.AnyOf {
-		group := v1alpha1.PackageModuleGroup{Name: g.Name, Description: g.Description}
-		for _, m := range g.Modules {
-			group.Modules = append(group.Modules, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	for i, m := range req.Conditional {
+		apv.Status.PackageMetadata.Requirements.Modules.Conditional[i] = v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint}
+	}
+
+	for i, g := range req.AnyOf {
+		apv.Status.PackageMetadata.Requirements.Modules.AnyOf[i] = v1alpha1.PackageModuleGroup{
+			Name:        g.Name,
+			Description: g.Description,
+			Modules:     make([]v1alpha1.PackageModuleDependency, len(g.Modules)),
 		}
 
-		out.AnyOf = append(out.AnyOf, group)
+		for j, m := range g.Modules {
+			apv.Status.PackageMetadata.Requirements.Modules.AnyOf[i].Modules[j] = v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint}
+		}
 	}
-
-	return out
 }

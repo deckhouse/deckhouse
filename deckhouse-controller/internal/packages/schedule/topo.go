@@ -22,19 +22,29 @@ import (
 // topoSort returns nodes in topological order respecting dependency edges,
 // with Order as the primary tiebreaker and name as the secondary tiebreaker
 // for nodes at the same topological level.
-// Nodes involved in cycles are silently omitted from the result.
+//
+// Predecessor edges come from n.dependencies (Mandatory + Conditional + AnyOf
+// members), NOT from n.followees — followees carry subscription edges only
+// (used by Trigger) and may be cyclic, which is incompatible with topo sort.
+//
+// Nodes involved in cycles in the dep graph are silently omitted from the
+// result; their callers (compute) will not visit them this pass.
 func topoSort(nodes map[string]*node) []*node {
 	if len(nodes) == 0 {
 		return nil
 	}
 
-	// Compute in-degree: count of followees that actually exist in nodes.
+	// Build the reverse dep map locally so we know whose in-degree to decrement
+	// when a node is processed. Walking n.dependencies directly avoids relying
+	// on the (subscription-only) followees set.
+	dependents := make(map[string][]string, len(nodes))
 	inDegree := make(map[string]int, len(nodes))
 	for name, n := range nodes {
 		deg := 0
-		for dep := range n.followees {
+		for dep := range dependencyNames(n) {
 			if _, ok := nodes[dep]; ok {
 				deg++
+				dependents[dep] = append(dependents[dep], name)
 			}
 		}
 		inDegree[name] = deg
@@ -63,16 +73,38 @@ func topoSort(nodes map[string]*node) []*node {
 		ready = ready[1:]
 		result = append(result, n)
 
-		// Decrement in-degree for all followers.
-		for followerName := range n.followers {
-			inDegree[followerName]--
-			if inDegree[followerName] == 0 {
-				if fn, ok := nodes[followerName]; ok {
-					ready = append(ready, fn)
+		// Decrement in-degree for everyone that depends on n.
+		for _, dependentName := range dependents[n.name] {
+			inDegree[dependentName]--
+			if inDegree[dependentName] == 0 {
+				if dn, ok := nodes[dependentName]; ok {
+					ready = append(ready, dn)
 				}
 			}
 		}
 	}
 
 	return result
+}
+
+// dependencyNames returns the deduped union of module names this node depends
+// on across the three buckets (Mandatory, Conditional, AnyOf members). Used as
+// topological predecessors.
+func dependencyNames(n *node) map[string]struct{} {
+	out := make(map[string]struct{}, len(n.dependencies.Mandatory)+len(n.dependencies.Conditional))
+	for name := range n.dependencies.Mandatory {
+		out[name] = struct{}{}
+	}
+
+	for name := range n.dependencies.Conditional {
+		out[name] = struct{}{}
+	}
+
+	for _, g := range n.dependencies.AnyOf {
+		for name := range g.Modules {
+			out[name] = struct{}{}
+		}
+	}
+
+	return out
 }

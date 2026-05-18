@@ -205,8 +205,10 @@ spec:
                             items:
                               properties:
                                 description:
-                                  description: Human-readable explanation surfaced
-                                    in failure messages.
+                                  description: |-
+                                    Human-readable description of the group. Optional documentation; the
+                                    scheduler does not consume it. Preserved for UIs and operator-facing
+                                    status output.
                                   type: string
                                 modules:
                                   description: Modules within the group; at least
@@ -224,6 +226,13 @@ spec:
                                     - name
                                     type: object
                                   type: array
+                                name:
+                                  description: |-
+                                    Identifier for the group. Surfaced in scheduler failure messages so
+                                    operators can tell which anyOf group failed.
+                                  type: string
+                              required:
+                              - name
                               type: object
                             type: array
                           conditional:
@@ -264,6 +273,37 @@ spec:
                     description: The development stage of the package (e.g., alpha,
                       beta, stable).
                     type: string
+                  subscribe:
+                    description: |-
+                      Reactive bindings: API groups the package wants to observe and a values
+                      path on another package whose changes should trigger a rerun.
+                    properties:
+                      apis:
+                        description: Kubernetes API groups to observe.
+                        items:
+                          type: string
+                        type: array
+                      values:
+                        description: Values paths on other packages that trigger a
+                          rerun on change.
+                        items:
+                          description: |-
+                            PackageSubscribeValues identifies a values path on another package whose
+                            changes should rerun the subscribing package.
+                          properties:
+                            module:
+                              description: Module is the target package name.
+                              type: string
+                            path:
+                              description: Path is the dotted path into the target
+                                package's values document.
+                              type: string
+                          required:
+                          - module
+                          - path
+                          type: object
+                        type: array
+                    type: object
                   versionCompatibilityRules:
                     description: Version compatibility rules for upgrades and downgrades.
                     properties:

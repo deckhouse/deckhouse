@@ -336,6 +336,25 @@ func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
 }
 
+// GetSubscriptions returns the names of packages this application subscribes
+// to. Subscriptions are reload edges (independent of Constraints): when a
+// target changes, this package is reset to idle and re-evaluated. The names
+// are collected from every Subscribe.Values entry's Module field; empty
+// modules are skipped. Subscribe.APIs is handled by the runtime informer
+// layer, not the scheduler.
+func (a *Application) GetSubscriptions() []string {
+	var subs []string
+	for _, sub := range a.definition.Subscribe.Values {
+		if sub.Module == "" {
+			continue
+		}
+
+		subs = append(subs, sub.Module)
+	}
+
+	return subs
+}
+
 // HooksInitialized reports whether the package requires a hook initialize phase.
 // This is true when hooks have not yet been initialized (no controllers attached),
 // meaning the pkg needs to go through the full startup sequence before it can run.

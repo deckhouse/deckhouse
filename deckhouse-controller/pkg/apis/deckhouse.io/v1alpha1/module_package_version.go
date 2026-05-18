@@ -159,6 +159,11 @@ type ModulePackageVersionStatusMetadata struct {
 	// Version compatibility rules for upgrades and downgrades.
 	// +optional
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
+
+	// Reactive bindings: API groups the package wants to observe and a values
+	// path on another package whose changes should trigger a rerun.
+	// +optional
+	Subscribe *PackageSubscribe `json:"subscribe,omitempty"`
 }
 
 // IsDraft checks if this package version is marked as a draft.

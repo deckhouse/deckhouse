@@ -24,6 +24,7 @@ status:
     status: "True"
     type: MetadataLoaded
   packageMetadata:
+    changelog: {}
     description:
       en: Legacy module from old registry
     stage: Sandbox

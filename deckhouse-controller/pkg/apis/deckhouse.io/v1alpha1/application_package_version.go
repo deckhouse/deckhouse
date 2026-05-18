@@ -189,6 +189,35 @@ type ApplicationPackageVersionStatusMetadata struct {
 	// Version compatibility rules for upgrades and downgrades.
 	// +optional
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
+
+	// Reactive bindings: API groups the package wants to observe and a values
+	// path on another package whose changes should trigger a rerun.
+	// +optional
+	Subscribe *PackageSubscribe `json:"subscribe,omitempty"`
+}
+
+// PackageSubscribe declares reactive bindings for a package. APIs lists
+// Kubernetes API groups whose changes the runtime should observe; the
+// scheduler does not consume these. Each Values entry's Module becomes a
+// scheduler subscription edge at registration time.
+type PackageSubscribe struct {
+	// Kubernetes API groups to observe.
+	// +optional
+	APIs []string `json:"apis,omitempty"`
+
+	// Values paths on other packages that trigger a rerun on change.
+	// +optional
+	Values []PackageSubscribeValues `json:"values,omitempty"`
+}
+
+// PackageSubscribeValues identifies a values path on another package whose
+// changes should rerun the subscribing package.
+type PackageSubscribeValues struct {
+	// Module is the target package name.
+	Module string `json:"module"`
+
+	// Path is the dotted path into the target package's values document.
+	Path string `json:"path"`
 }
 
 // IsDraft checks if this package version is marked as a draft.

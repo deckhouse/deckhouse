@@ -49,6 +49,7 @@ type Definition struct {
 	Descriptions   Descriptions   `yaml:"descriptions" json:"descriptions"`
 	Requirements   Requirements   `yaml:"requirements" json:"requirements"`
 	DisableOptions DisableOptions `yaml:"disable" json:"disable"`
+	Subscribe      Subscribe      `yaml:"subscribe,omitempty" json:"subscribe,omitempty"`
 }
 
 // ApplicationDefinition extends Definition for application packages.
@@ -76,6 +77,24 @@ type Descriptions struct {
 type DisableOptions struct {
 	Confirmation bool   `json:"confirmation" yaml:"confirmation"` // Whether confirmation is required to disable
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
+}
+
+// Subscribe declares reactive bindings for a package. APIs lists Kubernetes
+// API groups whose changes the package wants to be notified about (handled by
+// the runtime informer layer, not the scheduler). Values declares a values
+// dependency on another package: when that package's values change at Path,
+// this package is rerun. Values.Module becomes a scheduler subscription edge.
+type Subscribe struct {
+	APIs   []string          `yaml:"apis" json:"apis"`
+	Values []SubscribeValues `yaml:"values" json:"values"`
+}
+
+// SubscribeValues identifies a values path on a specific package whose changes
+// should trigger this package to rerun. Module is the package name; Path is a
+// dotted path into its values document.
+type SubscribeValues struct {
+	Module string `yaml:"module" json:"module"`
+	Path   string `yaml:"path" json:"path"`
 }
 
 // Requirements specifies dependencies required by this package.
@@ -148,6 +167,10 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 			Deckhouse:  deckhouseConstraint,
 			Modules:    deps,
 		},
+		Subscribe: apps.Subscribe{
+			APIs:   d.Subscribe.APIs,
+			Values: appsSubscribeValues(d.Subscribe.Values),
+		},
 	}, nil
 }
 
@@ -183,7 +206,39 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 			Deckhouse:  deckhouseConstraint,
 			Modules:    deps,
 		},
+		Subscribe: modules.Subscribe{
+			APIs:   d.Subscribe.APIs,
+			Values: modulesSubscribeValues(d.Subscribe.Values),
+		},
 	}, nil
+}
+
+// appsSubscribeValues translates dto SubscribeValues into the apps domain.
+func appsSubscribeValues(in []SubscribeValues) []apps.SubscribeValues {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]apps.SubscribeValues, len(in))
+	for i, v := range in {
+		out[i] = apps.SubscribeValues{Module: v.Module, Path: v.Path}
+	}
+
+	return out
+}
+
+// modulesSubscribeValues translates dto SubscribeValues into the modules domain.
+func modulesSubscribeValues(in []SubscribeValues) []modules.SubscribeValues {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make([]modules.SubscribeValues, len(in))
+	for i, v := range in {
+		out[i] = modules.SubscribeValues{Module: v.Module, Path: v.Path}
+	}
+
+	return out
 }
 
 // resolveModuleDeps parses the YAML-shaped module requirements into the

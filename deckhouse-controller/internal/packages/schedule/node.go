@@ -39,6 +39,12 @@ type Package interface {
 	GetName() string
 	GetVersion() *semver.Version
 	GetConstraints() Constraints
+	// GetSubscriptions returns the names of packages this one subscribes to.
+	// Subscriptions are reload edges (stored as followees/followers, walked by
+	// Trigger): when a target changes, this package is reset to idle and
+	// re-evaluated. They are independent of Constraints — they do NOT impose
+	// ordering, may form mutual loops, and may flow from parents to children.
+	GetSubscriptions() []string
 }
 
 // Constraints defines the scheduling requirements for a Package:
@@ -82,25 +88,29 @@ type node struct {
 
 	status checker.Result // Last computed enabled/disabled result from the checker chain.
 
-	followees    map[string]struct{} // Packages this node waits for before it can be scheduled.
-	followers    map[string]struct{} // Packages that are waiting on this node to become active.
-	dependencies Dependencies        // Declared dependency constraints (version bounds, optional flag).
+	followees    map[string]struct{} // Subscription edges out: packages whose changes should reset me. Used by Trigger only.
+	followers    map[string]struct{} // Subscription edges in: packages that should reset when I change. Used by Trigger only.
+	dependencies Dependencies        // Declared dependency constraints — source of topological ordering and checker inputs.
 
 	checkers []checker.Checker // Ordered list of checkers to evaluate
 }
 
-// addNode creates a node from a Package, wires followee/follower edges in both
-// directions, attaches version/condition/dependency checkers, and inserts the
-// node into the graph. It does NOT trigger a scheduling pass — the caller is
-// responsible for that.
+// addNode creates a node from a Package, wires subscription edges (followees /
+// followers) from the package's GetSubscriptions plus the implicit global
+// subscription, attaches the checker chain, and inserts the node into the
+// graph. It does NOT trigger a scheduling pass — the caller is responsible
+// for that.
 //
-// If a node with the same name already exists (version update), its stale
-// reverse edges are cleaned up before the new node is inserted. This prevents
-// old followees from keeping the package as a follower after its constraints change.
+// Dependency edges are NOT wired here; ordering is derived from n.dependencies
+// by topoSort, and enable state is computed by the dependency / anyof checkers.
+//
+// If a node with the same name already exists (version update), stale
+// subscription back-edges are cleaned up before the new node is inserted so
+// dropped subscriptions stop triggering this node.
 func (s *Scheduler) addNode(pkg Package) {
-	// Clean up stale reverse edges from the previous node (if any).
-	// Without this, a dependency dropped in the new version would still
-	// hold a followers["name"] reference and spuriously trigger this node.
+	// Clean up stale subscription back-edges from the previous node (if any).
+	// Without this, a subscription dropped in the new version would still
+	// hold a follower reference and spuriously trigger this node.
 	if old, ok := s.nodes[pkg.GetName()]; ok {
 		for dep := range old.followees {
 			if parent, ok := s.nodes[dep]; ok {
@@ -125,7 +135,8 @@ func (s *Scheduler) addNode(pkg Package) {
 	if n.name != packageGlobal {
 		n.followees[packageGlobal] = struct{}{}
 
-		// all packages should be subscribed to global
+		// Every package is implicitly subscribed to global so a global change
+		// resets every package via Trigger(packageGlobal).
 		if global, ok := s.nodes[packageGlobal]; ok {
 			global.followers[n.name] = struct{}{}
 		}
@@ -134,6 +145,19 @@ func (s *Scheduler) addNode(pkg Package) {
 	for _, existing := range s.nodes {
 		if _, ok := existing.followees[n.name]; ok {
 			n.followers[existing.name] = struct{}{}
+		}
+	}
+
+	// Subscription edges feed the reload graph (followees / followers, walked
+	// by Trigger). They are NOT used for ordering — ordering is derived from
+	// n.dependencies via topoSort. Mutual loops and parent→child edges are
+	// legal because Trigger walks one hop and compute() re-evaluates every
+	// node on the next pass.
+	for _, sub := range pkg.GetSubscriptions() {
+		n.followees[sub] = struct{}{}
+
+		if other, ok := s.nodes[sub]; ok {
+			other.followers[n.name] = struct{}{}
 		}
 	}
 

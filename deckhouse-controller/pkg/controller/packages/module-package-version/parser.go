@@ -28,7 +28,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -56,9 +55,15 @@ const (
 // Either packageDefinition (v2) or moduleDefinition (legacy fallback) is populated, not both.
 type moduleMetadata struct {
 	version           string
-	changelog         *v1alpha1.PackageChangelog
+	changelog         packageChangelog
 	packageDefinition *dto.ModuleDefinition
 	moduleDefinition  *moduletypes.Definition
+}
+
+// packageChangelog represents user-facing release notes for a package version.
+type packageChangelog struct {
+	Features []string `yaml:"features,omitempty"`
+	Fixes    []string `yaml:"fixes,omitempty"`
 }
 
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
@@ -119,11 +124,8 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 	}
 
 	if mr.changelogReader.Len() > 0 {
-		var changelog v1alpha1.PackageChangelog
-		if err := yaml.NewDecoder(mr.changelogReader).Decode(&changelog); err != nil {
-			r.logger.Warn("unmarshal changelog yaml", log.Err(err))
-		} else if len(changelog.Features) > 0 || len(changelog.Fixes) > 0 {
-			meta.changelog = &changelog
+		if err := yaml.NewDecoder(mr.changelogReader).Decode(&meta.changelog); err != nil {
+			r.logger.Warn("unmarshal package changelog", log.Err(err))
 		}
 	}
 

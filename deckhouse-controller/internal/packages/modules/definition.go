@@ -30,6 +30,25 @@ type Definition struct {
 
 	Requirements   Requirements   `json:"requirements" yaml:"requirements"`
 	DisableOptions DisableOptions `json:"disableOptions" yaml:"disableOptions"`
+	Subscribe      Subscribe      `json:"subscribe,omitempty" yaml:"subscribe,omitempty"`
+}
+
+// Subscribe declares reactive bindings for a module. APIs lists Kubernetes
+// API groups whose changes the runtime should observe; the scheduler does
+// not consume these. Values is a list of values-path bindings on other
+// packages — each Module becomes a scheduler subscription edge through
+// Module.GetSubscriptions.
+type Subscribe struct {
+	APIs   []string          `json:"apis,omitempty" yaml:"apis,omitempty"`
+	Values []SubscribeValues `json:"values,omitempty" yaml:"values,omitempty"`
+}
+
+// SubscribeValues identifies a values path on another package whose changes
+// should rerun this module. Module is the target package name; Path is the
+// dotted path into its values document.
+type SubscribeValues struct {
+	Module string `json:"module" yaml:"module"`
+	Path   string `json:"path" yaml:"path"`
 }
 
 // Requirements specifies dependencies required by the module.

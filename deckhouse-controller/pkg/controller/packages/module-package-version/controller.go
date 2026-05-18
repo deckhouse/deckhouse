@@ -319,8 +319,9 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 		setFromModuleDefinition(mpv, meta.moduleDefinition)
 	}
 
-	if mpv.Status.PackageMetadata != nil {
-		mpv.Status.PackageMetadata.Changelog = meta.changelog
+	mpv.Status.PackageMetadata.Changelog = &v1alpha1.PackageChangelog{
+		Features: meta.changelog.Features,
+		Fixes:    meta.changelog.Fixes,
 	}
 }
 
@@ -343,9 +344,11 @@ func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.Module
 			Kubernetes: &v1alpha1.PackageVersionConstraint{
 				Constraint: pd.Requirements.Kubernetes.Constraint,
 			},
-			Modules: setModulesRequirement(pd.Requirements.Modules),
 		},
 	}
+
+	setModulesRequirement(mpv, pd.Requirements.Modules)
+	setSubscribe(mpv, pd.Subscribe)
 }
 
 // setFromModuleDefinition projects a legacy module.yaml onto the MPV status.
@@ -368,58 +371,87 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 		mpv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{
 			Deckhouse:  &v1alpha1.PackageVersionConstraint{Constraint: def.Requirements.Deckhouse},
 			Kubernetes: &v1alpha1.PackageVersionConstraint{Constraint: def.Requirements.Kubernetes},
-			Modules:    parentModulesToRequirement(def.Requirements.ParentModules),
 		}
+
+		setParentModulesRequirement(mpv, def.Requirements.ParentModules)
 	}
 }
 
-// setModulesRequirement maps the three module requirement buckets onto the CRD shape.
-// Returns nil when all buckets are empty so the field is omitted from the wire payload.
-func setModulesRequirement(req dto.ModulesRequirement) *v1alpha1.PackageModulesRequirement {
+// setSubscribe writes the Subscribe block into mpv.Status.PackageMetadata.
+// No-op when PackageMetadata is uninitialized or the block carries nothing
+// (no APIs and no values entries), so callers may invoke unconditionally.
+func setSubscribe(mpv *v1alpha1.ModulePackageVersion, s dto.Subscribe) {
+	if len(s.APIs) == 0 && len(s.Values) == 0 {
+		return
+	}
+
+	mpv.Status.PackageMetadata.Subscribe = &v1alpha1.PackageSubscribe{
+		APIs:   s.APIs,
+		Values: make([]v1alpha1.PackageSubscribeValues, len(s.Values)),
+	}
+
+	for i, v := range s.Values {
+		mpv.Status.PackageMetadata.Subscribe.Values[i] = v1alpha1.PackageSubscribeValues{Module: v.Module, Path: v.Path}
+	}
+}
+
+// setModulesRequirement writes the three module requirement buckets onto
+// mpv.Status.PackageMetadata.Requirements.Modules. No-op when Requirements
+// is uninitialized or all buckets are empty.
+func setModulesRequirement(mpv *v1alpha1.ModulePackageVersion, req dto.ModulesRequirement) {
 	if len(req.Mandatory) == 0 && len(req.Conditional) == 0 && len(req.AnyOf) == 0 {
-		return nil
+		return
 	}
 
-	out := &v1alpha1.PackageModulesRequirement{}
-
-	for _, m := range req.Mandatory {
-		out.Mandatory = append(out.Mandatory, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	mpv.Status.PackageMetadata.Requirements.Modules = &v1alpha1.PackageModulesRequirement{
+		Mandatory:   make([]v1alpha1.PackageModuleDependency, len(req.Mandatory)),
+		Conditional: make([]v1alpha1.PackageModuleDependency, len(req.Conditional)),
+		AnyOf:       make([]v1alpha1.PackageModuleGroup, len(req.AnyOf)),
 	}
 
-	for _, m := range req.Conditional {
-		out.Conditional = append(out.Conditional, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	for i, m := range req.Mandatory {
+		mpv.Status.PackageMetadata.Requirements.Modules.Mandatory[i] = v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint}
 	}
 
-	for _, g := range req.AnyOf {
-		group := v1alpha1.PackageModuleGroup{Name: g.Name, Description: g.Description}
-		for _, m := range g.Modules {
-			group.Modules = append(group.Modules, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	for i, m := range req.Conditional {
+		mpv.Status.PackageMetadata.Requirements.Modules.Conditional[i] = v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint}
+	}
+
+	for i, g := range req.AnyOf {
+		mpv.Status.PackageMetadata.Requirements.Modules.AnyOf[i] = v1alpha1.PackageModuleGroup{
+			Name:        g.Name,
+			Description: g.Description,
+			Modules:     make([]v1alpha1.PackageModuleDependency, len(g.Modules)),
 		}
 
-		out.AnyOf = append(out.AnyOf, group)
+		for j, m := range g.Modules {
+			mpv.Status.PackageMetadata.Requirements.Modules.AnyOf[i].Modules[j] = v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint}
+		}
 	}
-
-	return out
 }
 
-// parentModulesToRequirement converts the legacy module.yaml parentModules map
-// into the new Mandatory bucket. The legacy schema treats every parent module
-// as required to be installed, so there is no Conditional / AnyOf to emit.
-func parentModulesToRequirement(parents map[string]string) *v1alpha1.PackageModulesRequirement {
-	if len(parents) == 0 {
-		return nil
+// setParentModulesRequirement converts the legacy module.yaml parentModules
+// map into the Mandatory bucket and writes it onto
+// mpv.Status.PackageMetadata.Requirements.Modules. The legacy schema treats
+// every parent module as required, so no Conditional / AnyOf is emitted.
+// No-op when Requirements is uninitialized or parents is empty.
+func setParentModulesRequirement(mpv *v1alpha1.ModulePackageVersion, parents map[string]string) {
+	if mpv.Status.PackageMetadata == nil || mpv.Status.PackageMetadata.Requirements == nil {
+		return
 	}
 
-	out := &v1alpha1.PackageModulesRequirement{
+	if len(parents) == 0 {
+		return
+	}
+
+	mpv.Status.PackageMetadata.Requirements.Modules = &v1alpha1.PackageModulesRequirement{
 		Mandatory: make([]v1alpha1.PackageModuleDependency, 0, len(parents)),
 	}
 
 	for name, constraint := range parents {
-		out.Mandatory = append(out.Mandatory, v1alpha1.PackageModuleDependency{
-			Name:       name,
-			Constraint: constraint,
-		})
+		mpv.Status.PackageMetadata.Requirements.Modules.Mandatory = append(
+			mpv.Status.PackageMetadata.Requirements.Modules.Mandatory,
+			v1alpha1.PackageModuleDependency{Name: name, Constraint: constraint},
+		)
 	}
-
-	return out
 }

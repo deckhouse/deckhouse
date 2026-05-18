@@ -8,6 +8,25 @@ requirements:
     constraint: ">=1.28"
   deckhouse:
     constraint: ">=1.60"
-module:
-  weight: 900
-  critical: false
+  modules:
+    mandatory:
+      - name: prometheus
+        constraint: ">=2.40.0"
+    conditional:
+      - name: cert-manager
+        constraint: ">=1.10.0"
+    anyOf:
+      - name: ingress
+        description: One of the supported ingress controllers must be installed
+        modules:
+          - name: ingress-nginx
+            constraint: ">=1.5.0"
+          - name: ingress-traefik
+            constraint: ">=2.0.0"
+subscribe:
+  apis:
+    - apps/v1
+  values:
+    - module: prometheus
+      path: .retention
+

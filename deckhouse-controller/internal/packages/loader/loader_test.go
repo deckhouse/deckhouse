@@ -65,6 +65,19 @@ func (s *LoaderTestSuite) TestLoadAppConfCompletePackage() {
 	s.NotNil(cfg.Definition.Requirements.Kubernetes)
 	s.NotNil(cfg.Definition.Requirements.Deckhouse)
 
+	// Verify module-dependency buckets resolved from the new YAML shape.
+	mods := cfg.Definition.Requirements.Modules
+	s.Contains(mods.Mandatory, "prometheus")
+	s.Contains(mods.Conditional, "cert-manager")
+	s.Require().Len(mods.AnyOf, 1)
+	s.Equal("cloud-provider", mods.AnyOf[0].Name)
+	s.Contains(mods.AnyOf[0].Modules, "cloud-provider-aws")
+
+	// Verify the subscribe block round-trips through the dto → apps conversion.
+	s.ElementsMatch([]string{"apps/v1", "batch/v1"}, cfg.Definition.Subscribe.APIs)
+	s.Require().Len(cfg.Definition.Subscribe.Values, 2)
+	s.Equal("prometheus", cfg.Definition.Subscribe.Values[0].Module)
+
 	// Verify static values
 	s.NotNil(cfg.StaticValues)
 	s.Equal(float64(3), cfg.StaticValues["replicas"])
@@ -163,6 +176,19 @@ func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 	// Verify requirements
 	s.NotNil(cfg.Definition.Requirements.Kubernetes)
 	s.NotNil(cfg.Definition.Requirements.Deckhouse)
+
+	// Verify module-dependency buckets resolved from the new YAML shape.
+	mods := cfg.Definition.Requirements.Modules
+	s.Contains(mods.Mandatory, "prometheus")
+	s.Contains(mods.Conditional, "cert-manager")
+	s.Require().Len(mods.AnyOf, 1)
+	s.Equal("ingress", mods.AnyOf[0].Name)
+	s.Contains(mods.AnyOf[0].Modules, "ingress-nginx")
+
+	// Verify the subscribe block round-trips through the dto → modules conversion.
+	s.ElementsMatch([]string{"apps/v1"}, cfg.Definition.Subscribe.APIs)
+	s.Require().Len(cfg.Definition.Subscribe.Values, 1)
+	s.Equal("prometheus", cfg.Definition.Subscribe.Values[0].Module)
 
 	// Verify static values
 	s.NotNil(cfg.StaticValues)

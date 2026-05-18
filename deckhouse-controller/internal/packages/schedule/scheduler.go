@@ -198,8 +198,8 @@ func (s *Scheduler) AddNode(pkg Package) {
 	s.schedule()
 }
 
-// RemoveNode removes a package from the graph, cleans up all dependency
-// edges that reference it, and triggers a full reschedule.
+// RemoveNode removes a package from the graph, cleans up subscription
+// back-edges that reference it, and triggers a full reschedule.
 func (s *Scheduler) RemoveNode(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -209,7 +209,7 @@ func (s *Scheduler) RemoveNode(name string) {
 		return
 	}
 
-	// Remove this node from the followers set of every node it depends on.
+	// Remove this node from the followers set of every node it subscribed to.
 	for dep := range n.followees {
 		if parent, ok := s.nodes[dep]; ok {
 			delete(parent.followers, name)
@@ -247,8 +247,12 @@ func (s *Scheduler) Complete(completed string) {
 	s.schedule()
 }
 
-// Trigger resets a node's direct followers to idle, then runs a full
-// scheduling pass so they are re-evaluated and potentially rescheduled.
+// Trigger resets a node's direct followers (subscribers) to idle, then runs
+// a full scheduling pass so they are re-evaluated and potentially rescheduled.
+// Followers are subscription edges only; ordering and enable state are handled
+// by topoSort over dependencies and the checker chain. Mutual subscriptions
+// are safe — propagation is one hop, and compute() re-evaluates every node's
+// checkers on the next pass.
 func (s *Scheduler) Trigger(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -257,7 +261,10 @@ func (s *Scheduler) Trigger(name string) {
 	s.schedule()
 }
 
-// trigger resets a node's direct followers to idle.
+// trigger resets a node's direct followers to idle. It does NOT recurse;
+// with mutual subscriptions the single hop is sufficient because the
+// subsequent compute() pass re-evaluates every node's checkers and resets
+// any node whose Enabled status flipped.
 func (s *Scheduler) trigger(name string) {
 	n, ok := s.nodes[name]
 	if !ok {
@@ -268,14 +275,6 @@ func (s *Scheduler) trigger(name string) {
 		if fn, ok := s.nodes[follower]; ok {
 			fn.state = nodeStateIdle
 		}
-	}
-}
-
-// reconverge resets all nodes to idle
-// forcing the entire graph to re-converge from scratch.
-func (s *Scheduler) reconverge() {
-	for _, n := range s.nodes {
-		n.state = nodeStateIdle
 	}
 }
 
@@ -323,32 +322,35 @@ func (s *Scheduler) schedule() {
 }
 
 // compute recomputes the enabled status for all nodes in topological order,
-// guaranteeing that dependencies are resolved before dependents. Nodes that
-// lose eligibility emit an [EventDisable]. If any status changed, reconverge
-// is called to reset the graph for a fresh scheduling pass.
+// guaranteeing that dependencies are resolved before dependents. Nodes whose
+// Enabled status flipped are individually reset to idle so they re-enter the
+// scheduling path on the next pass; nodes that lose eligibility emit an
+// [EventDisable]. No global reconverge happens — canSchedule no longer gates
+// on followee state, so one node's status change cannot invalidate another
+// node's schedulability beyond the live order-tier check.
 func (s *Scheduler) compute() []*node {
-	var changed bool
 	sorted := topoSort(s.nodes)
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
-		if current != n.status.Enabled {
-			changed = true
+		if current == n.status.Enabled {
+			continue
+		}
 
-			if !n.status.Enabled {
-				s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
-			}
+		// Status flipped — reset this node so the next schedule pass can
+		// either re-schedule it (now enabled) or mark it active via the
+		// disabled-hack below (now disabled).
+		n.state = nodeStateIdle
+
+		if !n.status.Enabled {
+			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
 		}
 	}
 
-	if changed {
-		s.reconverge()
-	}
-
-	// Disabled nodes have nothing to wait for — mark them active so they
-	// do not block higher-order or dependent nodes. If a node later becomes
-	// enabled, the status change above triggers reconverge (resetting all
-	// states to idle), so it will go through normal scheduling.
+	// Disabled nodes have nothing to wait for — mark them active so they do
+	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
+	// that later flip back to enabled are reset to idle by the loop above and
+	// go through normal scheduling from there.
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive
@@ -358,22 +360,17 @@ func (s *Scheduler) compute() []*node {
 	return sorted
 }
 
-// canSchedule returns true if a node is eligible to transition from idle to scheduled.
-// Three conditions must hold:
-//  1. The node must be enabled (all dependency checks passed).
-//  2. All direct dependencies (followees) must be active.
-//  3. All nodes with a strictly lower Order must be active.
+// canSchedule returns true if a node is eligible to transition from idle to
+// scheduled. Two conditions must hold:
+//  1. The node must be enabled (all checkers passed).
+//  2. All nodes with a strictly lower Order must be active.
+//
+// Dependency-level ordering between same-tier nodes is not gated here — it
+// is encoded in the checker chain (the dependency.Getter contract returns
+// versions only for nodes that have reached nodeStateActive).
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.status.Enabled {
 		return false
-	}
-
-	for dep := range n.followees {
-		if existing, ok := s.nodes[dep]; ok {
-			if existing.state != nodeStateActive {
-				return false
-			}
-		}
 	}
 
 	for _, other := range s.nodes {

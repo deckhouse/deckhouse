@@ -8,3 +8,28 @@ requirements:
     constraint: ">=1.28"
   deckhouse:
     constraint: ">=1.60"
+  modules:
+    mandatory:
+      - name: prometheus
+        constraint: ">=2.40.0"
+    conditional:
+      - name: cert-manager
+        constraint: ">=1.10.0"
+    anyOf:
+      - name: cloud-provider
+        description: One of the supported cloud providers must be installed
+        modules:
+          - name: cloud-provider-aws
+            constraint: ">=1.0.0"
+          - name: cloud-provider-gcp
+            constraint: ">=1.0.0"
+          - name: cloud-provider-azure
+subscribe:
+  apis:
+    - apps/v1
+    - batch/v1
+  values:
+    - module: prometheus
+      path: .retention
+    - module: cert-manager
+      path: .clusterIssuer
