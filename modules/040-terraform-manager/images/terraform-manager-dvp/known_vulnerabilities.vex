@@ -136,7 +136,35 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "В OpenTofu github.com/cli/go-gh не используется в рабочем коде продукта, зависимость присутствует только как вспомогательная часть build/tooling и не вызывается при выполнении tofu. В поставке Deckhouse этот код не обрабатывает пользовательские GitHub-хосты и не работает с GitHub-токенами во время выполнения OpenTofu, поэтому условие утечки токена отсутствует.",
       "timestamp": "2026-04-22T11:06:38Z"
-    }
+    },
+    {                                                                                                                                                                                                
+        "vulnerability": {                                                                                                                                                                       
+          "name": "CVE-2025-13281"                                                                                                                                                                         },                                                                                                                                                                                       
+        "products": [                                                                                                                                                                                        {                                                                                                                                                                                      
+            "@id": "pkg:golang/k8s.io/kubernetes"
+          }
+        ],
+        "status": "not_affected",
+        "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+        "impact_statement": "Уязвимость CVE-2025-13281 связана с Portworx SSRF в kube-controller-manager. terraform-provider-kubernetes не запускает kube-controller-manager, библиотека
+  k8s.io/kubernetes используется только как транзитивная зависимость для типов, уязвимый код не используется",
+        "timestamp": "2025-10-10T07:23:24.447174Z"
+      },
+      {
+        "vulnerability": {
+          "name": "CVE-2025-5187"
+        },
+        "products": [
+          {
+            "@id": "pkg:golang/k8s.io/kubernetes"
+          }
+        ],
+        "status": "not_affected",
+        "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+        "impact_statement": "Уязвимость CVE-2025-5187 связана с возможностью нод удалять себя через OwnerReference в kube-apiserver. terraform-provider-kubernetes не запускает kube-apiserver,
+  библиотека k8s.io/kubernetes используется только как транзитивная зависимость для типов, уязвимый код не используется",
+        "timestamp": "2025-10-10T07:23:24.447174Z"
+      }
   ],
   "timestamp": "2025-10-10T07:23:24Z"
 }
