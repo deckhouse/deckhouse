@@ -130,7 +130,9 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 		return nil, err
 	}
 
-	tasks = append(tasks, *providerSpecifiedTask)
+	if providerSpecifiedTask != nil {
+		tasks = append(tasks, *providerSpecifiedTask)
+	}
 
 	return tasks, nil
 }
@@ -178,7 +180,12 @@ func (t *taskProviderForCluster) Cloud(ctx context.Context, metaConfig *config.M
 	}
 
 	if len(providerClusterConfig) == 0 {
-		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+		if config.ProviderRequiresClusterConfig(metaConfig.ProviderName) {
+			return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+		}
+		// Configured via ModuleConfig only (e.g. DVP). Nothing to write to
+		// d8-provider-cluster-configuration.
+		return nil, nil
 	}
 
 	const secretName = "d8-provider-cluster-configuration"

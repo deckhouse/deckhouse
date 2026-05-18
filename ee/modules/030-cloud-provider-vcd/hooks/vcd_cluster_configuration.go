@@ -20,7 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-func preparatorProvider(_ string) config.MetaConfigPreparator {
+func preparatorProvider(_, _ string) config.MetaConfigPreparator {
 	return vcd.NewMetaConfigPreparatorWithoutLogger(
 		vcd.MetaConfigPreparatorParams{
 			// todo it was bad idea patch metaconfig during installation
