@@ -38,8 +38,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
+	otattribute "go.opentelemetry.io/otel/attribute"
+	ottrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
@@ -280,7 +283,7 @@ func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, di
 	}
 
 	log.DebugF("checksum: %s\n", checksum)
-	if err = saveHash(digest, checksum, dstPath); err != nil {
+	if err = saveHash(digest, checksum, cacheDir); err != nil {
 		return cached, fmt.Errorf("saving checksum to file: %w", err)
 	}
 
@@ -372,6 +375,13 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 }
 
 func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig, showProgress bool) error {
+	ctx, span := telemetry.StartSpan(ctx, "image.DownloadAndUnpack")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("image.ref", imageRef),
+		otattribute.String("image.destDir", destDir),
+	)
+
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
@@ -380,9 +390,11 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	imgName := ref.Identifier()
 	img, err := tryToRestoreLocalImage(imgName, destDir)
 	if err == nil {
+		span.AddEvent("image.restored_from_cache")
 		return extractImage(img, destDir)
 	}
 	log.DebugF("Could not use local image. Reason: %s\n", err.Error())
+	span.AddEvent("image.cache_miss", ottrace.WithAttributes(otattribute.String("reason", err.Error())))
 
 	opts, err := getOptsFromRegistryConfig(ref, &regConfig)
 	if err != nil {
@@ -394,11 +406,13 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 		return fmt.Errorf("getting manifest descriptor for %q: %w", ref.String(), err)
 	}
 	log.DebugF("hash: %s\n", desc.Digest.String())
+	span.SetAttributes(otattribute.String("image.digest", desc.Digest.String()))
 
 	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir, showProgress)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}
+	span.AddEvent("image.pulled")
 
 	return extractImage(img, destDir)
 }
