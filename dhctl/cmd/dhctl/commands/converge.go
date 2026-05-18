@@ -234,7 +234,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				AutomaticSettings: infrastructure.AutomaticSettings{
 					AutoDismissDestructive: true,
-					AutoDismissChanges:     false,
+					AutoDismissChanges:     true,
 					AutoApproveSettings: infrastructure.AutoApproveSettings{
 						AutoApprove: true,
 					},
