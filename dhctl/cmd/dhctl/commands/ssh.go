@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -50,7 +51,12 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+		defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+			err := sshProviderInitializer.Cleanup(ctx)
+			if err != nil {
+				log.WarnF("failed to cleanup SSH provider: %v", err)
+			}
+		}(sshProviderInitializer, ctx)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -99,7 +105,12 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+		defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+			err := sshProviderInitializer.Cleanup(ctx)
+			if err != nil {
+				log.WarnF("failed to cleanup SSH provider: %v", err)
+			}
+		}(sshProviderInitializer, ctx)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -177,7 +188,12 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+		defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+			err := sshProviderInitializer.Cleanup(ctx)
+			if err != nil {
+				log.WarnF("failed to cleanup SSH provider: %v", err)
+			}
+		}(sshProviderInitializer, ctx)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -238,7 +254,12 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+		defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+			err := sshProviderInitializer.Cleanup(ctx)
+			if err != nil {
+				log.WarnF("failed to cleanup SSH provider: %v", err)
+			}
+		}(sshProviderInitializer, ctx)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {

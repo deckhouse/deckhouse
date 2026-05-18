@@ -317,7 +317,7 @@ func saveImageAsTarGz(ctx context.Context, imageRef string, outPath string, img 
 		}
 
 		p = mpb.New(mpb.WithWidth(64))
-		bar = p.New(int64(total),
+		bar = p.New(total,
 			mpb.BarStyle(),
 			mpb.PrependDecorators(
 				decor.Name("downloading image", decor.WC{C: decor.DindentRight | decor.DextraSpace}),

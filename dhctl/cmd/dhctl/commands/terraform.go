@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -62,7 +63,12 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
+			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+				err := sshProviderInitializer.Cleanup(ctx)
+				if err != nil {
+					log.WarnF("failed to cleanup SSH provider: %v", err)
+				}
+			}(sshProviderInitializer, ctx)
 		}
 
 		kube, err := kubeProvider.Client(ctx)
@@ -116,7 +122,12 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
+			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+				err := sshProviderInitializer.Cleanup(ctx)
+				if err != nil {
+					log.WarnF("failed to cleanup SSH provider: %v", err)
+				}
+			}(sshProviderInitializer, ctx)
 		}
 		logger.LogInfoLn("Check started ...\n")
 

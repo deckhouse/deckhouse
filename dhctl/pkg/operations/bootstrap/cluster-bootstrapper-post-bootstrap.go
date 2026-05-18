@@ -66,7 +66,10 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		onComplete := func() {
 			pb := progressbar.GetDefaultPb()
 			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-			pb.MultiPrinter.Stop()
+			_, err := pb.MultiPrinter.Stop()
+			if err != nil {
+				log.WarnF("failed to stop multi printer: %v", err)
+			}
 		}
 		defer onComplete()
 	}

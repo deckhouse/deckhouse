@@ -65,7 +65,12 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		}
 
 		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
+			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+				err := sshProviderInitializer.Cleanup(ctx)
+				if err != nil {
+					log.WarnF("failed to cleanup SSH provider: %v", err)
+				}
+			}(sshProviderInitializer, ctx)
 		}
 
 		return log.ProcessCtx(ctx, "default", "Remove Deckhouse️", func(ctx context.Context) error {
@@ -116,7 +121,12 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 		}
 
 		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
+			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+				err := sshProviderInitializer.Cleanup(ctx)
+				if err != nil {
+					log.WarnF("failed to cleanup SSH provider: %v", err)
+				}
+			}(sshProviderInitializer, ctx)
 		}
 
 		metaConfig, err := config.ParseConfig(

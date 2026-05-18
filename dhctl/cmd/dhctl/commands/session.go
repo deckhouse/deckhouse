@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -28,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -56,7 +58,12 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+		defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+			err := sshProviderInitializer.Cleanup(ctx)
+			if err != nil {
+				log.WarnF("failed to cleanup SSH provider: %v", err)
+			}
+		}(sshProviderInitializer, ctx)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {

@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -57,7 +58,12 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
+			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+				err := sshProviderInitializer.Cleanup(ctx)
+				if err != nil {
+					log.WarnF("failed to cleanup SSH provider: %v", err)
+				}
+			}(sshProviderInitializer, ctx)
 		}
 
 		kube, err := kubeProvider.Client(ctx)
@@ -109,7 +115,12 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
+			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
+				err := sshProviderInitializer.Cleanup(ctx)
+				if err != nil {
+					log.WarnF("failed to cleanup SSH provider: %v", err)
+				}
+			}(sshProviderInitializer, ctx)
 		}
 
 		kube, err := kubeProvider.Client(ctx)

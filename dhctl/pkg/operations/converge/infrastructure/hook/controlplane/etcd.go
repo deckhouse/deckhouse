@@ -151,7 +151,10 @@ func getEtcdMembers(ctx context.Context, client libcon.KubeClient, fieldSelector
 		Stdout:    &stdout,
 	}
 
-	client.Exec(ctx, &params)
+	err = client.Exec(ctx, &params)
+	if err != nil {
+		return nil, err
+	}
 
 	var members memberListOutput
 	if err = json.Unmarshal(stdout.Bytes(), &members); err != nil {

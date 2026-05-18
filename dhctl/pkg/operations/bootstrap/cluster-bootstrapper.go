@@ -764,7 +764,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			// MultiPrinter must render InfoF before exit and ProgressBar must be completed
 			if interactive {
 				progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
-				progressbar.GetDefaultPb().MultiPrinter.Stop()
+				_, err := progressbar.GetDefaultPb().MultiPrinter.Stop()
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil

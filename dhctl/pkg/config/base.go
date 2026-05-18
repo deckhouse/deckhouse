@@ -480,7 +480,7 @@ func InitGlobalVars(pwd string) {
 	versionMap = candiDir + "/version_map.yml"
 }
 
-// check for existance deckhouse dir
+// check for existence deckhouse dir
 func checkDirs() error {
 	absDh, err := os.Stat("/deckhouse")
 	if err != nil {

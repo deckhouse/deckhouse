@@ -725,9 +725,7 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
 	task := controllerDeploymentTask(ctx, kubeCl, cfg)
 
-	return log.ProcessCtx(ctx, "default", "Create Deployment", func(ctx context.Context) error {
-		return task.CreateOrUpdate(ctx)
-	})
+	return log.ProcessCtx(ctx, "default", "Create Deployment", task.CreateOrUpdate)
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
