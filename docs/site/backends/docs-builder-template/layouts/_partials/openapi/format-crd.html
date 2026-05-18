@@ -49,6 +49,12 @@
     {{- end }}
 
     <div class="resources__prop_description">{{ partial "openapi/format-description" $description }}</div>
+
+    {{- if or (isset $versionSchema "x-doc-examples") (isset $versionSchema "x-doc-example") (isset $versionSchema "example") (isset $versionSchema "x-examples") }}
+      {{- $linkAnchor := printf "%s-%s" $kindDowncase $versionName }}
+      {{- template "format-example" ( dict "attributes" $versionSchema "linkAnchor" $linkAnchor "name" "" ) }}
+    {{- end }}
+
     <ul class="resources">
       {{- range $property, $propertyData := $versionSchema.properties }}
         
