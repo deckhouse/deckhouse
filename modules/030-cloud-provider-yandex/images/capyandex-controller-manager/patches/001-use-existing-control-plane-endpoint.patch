@@ -1,17 +1,28 @@
 diff --git a/controllers/yandexcluster_controller.go b/controllers/yandexcluster_controller.go
-index d45185a..5ce0e59 100644
+index c2cba74..28bb7a7 100644
 --- a/controllers/yandexcluster_controller.go
 +++ b/controllers/yandexcluster_controller.go
-@@ -18,6 +18,8 @@ import (
+@@ -17,8 +17,11 @@ package controllers
+ import (
  	"context"
  	"fmt"
- 	"net/http"
 +	"net/url"
 +	"strconv"
  
- 	"github.com/pkg/errors"
- 	corev1 "k8s.io/api/core/v1"
-@@ -121,6 +123,34 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	"k8s.io/client-go/rest"
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	"sigs.k8s.io/cluster-api/util"
+@@ -46,6 +49,7 @@ type YandexClusterReconciler struct {
+ 	Scheme             *runtime.Scheme
+ 	YandexClientGetter yandex.YandexClientGetter
+ 	Config             options.Config
++	RESTConfig         *rest.Config
+ }
+ 
+ //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=yandexclusters,verbs=get;list;watch;create;update;patch;delete
+@@ -117,6 +121,31 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
  		return ctrl.Result{Requeue: true}, nil
  	}
  
@@ -35,7 +46,6 @@ index d45185a..5ce0e59 100644
 +		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)
 +		clusterScope.SetReady()
 +		return ctrl.Result{}, nil
-+
 +	case "", options.ControlPlaneEndpointManagementModeManagedLoadBalancer:
 +	default:
 +		return ctrl.Result{}, fmt.Errorf("unsupported control plane endpoint management mode %q", r.Config.ControlPlaneEndpointManagementMode)
@@ -44,7 +54,7 @@ index d45185a..5ce0e59 100644
  	// Get loadbalancer service and reconcile load balancer.
  	lb := loadbalancer.New(clusterScope)
  	if err := lb.Reconcile(ctx); err != nil {
-@@ -189,6 +206,15 @@ func (r *YandexClusterReconciler) reconcileDelete(ctx context.Context, clusterSc
+@@ -188,6 +217,15 @@ func (r *YandexClusterReconciler) reconcileDelete(ctx context.Context, clusterSc
  		return ctrl.Result{}, nil
  	}
  
@@ -81,3 +91,25 @@ index 7ad61d7..9236dc9 100644
 +	ReconcileTimeout                   time.Duration `env:"CAPY_RECONCILE_TIMEOUT" envDefault:"1m"`
 +	ControlPlaneEndpointManagementMode string        `env:"CAPY_CONTROL_PLANE_ENDPOINT_MANAGEMENT_MODE" envDefault:"ManagedLoadBalancer"`
  }
+diff --git a/main.go b/main.go
+index 80db3a5..ee507f2 100644
+--- a/main.go
++++ b/main.go
+@@ -89,7 +89,8 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ 
+-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
++	restConfig := ctrl.GetConfigOrDie()
++	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
+ 		Scheme: scheme,
+ 		Metrics: metricsserver.Options{
+ 			BindAddress: metricsAddr,
+@@ -126,6 +127,7 @@ func main() {
+ 		Scheme:             mgr.GetScheme(),
+ 		YandexClientGetter: yandexClientProvider,
+ 		Config:             cfg,
++		RESTConfig:         restConfig,
+ 	}).SetupWithManager(ctx, mgr); err != nil {
+ 		setupLog.Error(err, "unable to create controller", "controller", "YandexCluster")
+ 		os.Exit(1)
