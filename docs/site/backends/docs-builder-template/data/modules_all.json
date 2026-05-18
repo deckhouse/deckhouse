@@ -42,7 +42,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce",
@@ -70,7 +72,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "path": "/modules/commander-agent/",
     "tags": [
