@@ -299,8 +299,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
-		app = suite.getApplication("test-app", "foobar")
-		// TODO: Completed = "false" // require conditions with reason VersionNotFound
 	})
 
 	suite.Run("version is draft", func() {

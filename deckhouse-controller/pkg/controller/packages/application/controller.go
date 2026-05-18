@@ -200,8 +200,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
 
-		// TODO: Completed = "false"
-
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
 
@@ -213,16 +211,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
 
-		// TODO: Completed = "false"
-
 		return fmt.Errorf("get application package version '%s': %w", apv.Name, err)
 	}
 
 	// check if application package version is not draft
 	if apv.IsDraft() {
 		logger.Debug("application package version is in draft", slog.String("apv", apvName))
-
-		// TODO: Completed = "false"
 
 		return fmt.Errorf("application package version '%s' is draft", apvName)
 	}
@@ -327,8 +321,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		},
 		Settings: app.Spec.Settings.GetMap(),
 	})
-
-	// TODO: Completed = "true"
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
