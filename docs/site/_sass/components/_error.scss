@@ -161,9 +161,6 @@
                 font-size: 20px;
                 font-weight: 400;
                 line-height: 30px;
-                text-decoration-line: underline;
-                text-decoration-skip-ink: none;
-                text-decoration-color: #0064FF;
 
                 @include breakpoints.max-w(xl) {
                     font-size: 18px;
@@ -175,6 +172,13 @@
 
                 a {
                     color: #0064FF;
+                    text-decoration-line: underline;
+                    text-decoration-skip-ink: none;
+                    text-decoration-color: #0064FF;
+
+                    &:hover {
+                        text-decoration: none;
+                    }
                 }
 
                 &::before {
