@@ -301,6 +301,17 @@ func InteractiveWarnLn(a ...any) {
 	logger.WarnLn(a...)
 }
 
+func InteractiveWarnF(format string, a ...any) {
+	provider := ExternalLoggerProvider(defaultLogger)
+	logger := provider()
+	l, ok := logger.(*InteractiveLoggerWrapper)
+	if ok {
+		logger = l.logger
+	}
+
+	logger.WarnFWithoutLn(format, a...)
+}
+
 func InteractiveInfoF(format string, a ...any) {
 	provider := ExternalLoggerProvider(defaultLogger)
 	logger := provider()
