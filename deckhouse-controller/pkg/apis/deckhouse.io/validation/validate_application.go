@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -120,45 +119,75 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		Order: schedule.FunctionalOrder,
 	}
 	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		var err error
+		req := apv.Status.PackageMetadata.Requirements
 
 		// Parse the minimum Kubernetes version constraint (e.g. ">=1.28").
-		var kubernetesConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
-			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
+		if req.Kubernetes != nil && len(req.Kubernetes.Constraint) > 0 {
+			c, err := semver.NewConstraint(req.Kubernetes.Constraint)
+			if err != nil {
 				return fmt.Errorf("parse kubernetes requirement: %w", err)
 			}
-		}
 
-		constraints.Kubernetes = kubernetesConstraint
+			constraints.Kubernetes = c
+		}
 
 		// Parse the minimum Deckhouse version constraint (e.g. ">=1.60").
-		var deckhouseConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
-			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
+		if req.Deckhouse != nil && len(req.Deckhouse.Constraint) > 0 {
+			c, err := semver.NewConstraint(req.Deckhouse.Constraint)
+			if err != nil {
 				return fmt.Errorf("parse deckhouse requirement: %w", err)
 			}
+
+			constraints.Deckhouse = c
 		}
 
-		constraints.Deckhouse = deckhouseConstraint
-
-		// Parse module dependency constraints. Each module requirement may have an
-		// "!optional" suffix indicating the dependency is not mandatory.
-		modules := make(map[string]schedule.Dependency)
-		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
-			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-			constraint, err := semver.NewConstraint(raw)
-			if err != nil {
-				return fmt.Errorf("parse module requirement '%s': %w", module, err)
+		// Translate module dependency requirements into the scheduler's three-bucket
+		// Dependencies shape so admission-time evaluation matches runtime evaluation.
+		if req.Modules != nil {
+			deps := schedule.Dependencies{
+				Mandatory:   make(map[string]*semver.Constraints, len(req.Modules.Mandatory)),
+				Conditional: make(map[string]*semver.Constraints, len(req.Modules.Conditional)),
+				AnyOf:       make([]schedule.AnyOfGroup, 0, len(req.Modules.AnyOf)),
 			}
 
-			modules[module] = schedule.Dependency{
-				Constraint: constraint,
-				Optional:   optional,
+			for _, m := range req.Modules.Mandatory {
+				c, err := parseModuleConstraint(m.Constraint)
+				if err != nil {
+					return fmt.Errorf("parse mandatory module %q requirement: %w", m.Name, err)
+				}
+
+				deps.Mandatory[m.Name] = c
 			}
+
+			for _, m := range req.Modules.Conditional {
+				c, err := parseModuleConstraint(m.Constraint)
+				if err != nil {
+					return fmt.Errorf("parse conditional module %q requirement: %w", m.Name, err)
+				}
+
+				deps.Conditional[m.Name] = c
+			}
+
+			for _, g := range req.Modules.AnyOf {
+				group := schedule.AnyOfGroup{
+					Name:    g.Name,
+					Modules: make(map[string]*semver.Constraints, len(g.Modules)),
+				}
+
+				for _, m := range g.Modules {
+					c, err := parseModuleConstraint(m.Constraint)
+					if err != nil {
+						return fmt.Errorf("parse anyOf group %q module %q requirement: %w", g.Name, m.Name, err)
+					}
+
+					group.Modules[m.Name] = c
+				}
+
+				deps.AnyOf = append(deps.AnyOf, group)
+			}
+
+			constraints.Dependencies = deps
 		}
-
-		constraints.Dependencies = modules
 	}
 
 	// Delegate to the manager which checks the parsed constraints against actual cluster state.
@@ -194,4 +223,14 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.
 
 	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
 	return storage.ValidateConfigValues(app.Spec.PackageName, values)
+}
+
+// parseModuleConstraint compiles a semver range expression, returning a nil
+// Constraints when the input is empty (meaning "no version gate").
+func parseModuleConstraint(s string) (*semver.Constraints, error) {
+	if s == "" {
+		return nil, nil
+	}
+
+	return semver.NewConstraint(s)
 }

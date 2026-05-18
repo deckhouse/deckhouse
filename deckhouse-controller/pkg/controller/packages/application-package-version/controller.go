@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -315,9 +316,13 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 			En: meta.definition.Descriptions.En,
 		},
 		Requirements: &v1alpha1.PackageRequirements{
-			Deckhouse:  meta.definition.Requirements.Deckhouse,
-			Kubernetes: meta.definition.Requirements.Kubernetes,
-			Modules:    meta.definition.Requirements.Modules,
+			Deckhouse: &v1alpha1.PackageVersionConstraint{
+				Constraint: meta.definition.Requirements.Deckhouse.Constraint,
+			},
+			Kubernetes: &v1alpha1.PackageVersionConstraint{
+				Constraint: meta.definition.Requirements.Kubernetes.Constraint,
+			},
+			Modules: setModulesRequirement(meta.definition.Requirements.Modules),
 		},
 		Changelog: &v1alpha1.PackageChangelog{
 			Features: meta.changelog.Features,
@@ -376,4 +381,33 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 	}
 
 	return nil
+}
+
+// setModulesRequirement maps the three module requirement buckets onto the CRD shape.
+// Returns nil when all buckets are empty so the field is omitted from the wire payload.
+func setModulesRequirement(req dto.ModulesRequirement) *v1alpha1.PackageModulesRequirement {
+	if len(req.Mandatory) == 0 && len(req.Conditional) == 0 && len(req.AnyOf) == 0 {
+		return nil
+	}
+
+	out := &v1alpha1.PackageModulesRequirement{}
+
+	for _, m := range req.Mandatory {
+		out.Mandatory = append(out.Mandatory, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	}
+
+	for _, m := range req.Conditional {
+		out.Conditional = append(out.Conditional, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+	}
+
+	for _, g := range req.AnyOf {
+		group := v1alpha1.PackageModuleGroup{Name: g.Name, Description: g.Description}
+		for _, m := range g.Modules {
+			group.Modules = append(group.Modules, v1alpha1.PackageModuleDependency{Name: m.Name, Constraint: m.Constraint})
+		}
+
+		out.AnyOf = append(out.AnyOf, group)
+	}
+
+	return out
 }

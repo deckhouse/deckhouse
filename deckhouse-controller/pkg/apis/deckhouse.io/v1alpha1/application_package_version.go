@@ -254,15 +254,60 @@ type ApplicationPackageVersionList struct {
 type PackageRequirements struct {
 	// Required Deckhouse version.
 	// +optional
-	Deckhouse string `json:"deckhouse,omitempty"`
+	Deckhouse *PackageVersionConstraint `json:"deckhouse,omitempty"`
 
 	// Required Kubernetes version.
 	// +optional
-	Kubernetes string `json:"kubernetes,omitempty"`
+	Kubernetes *PackageVersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required versions of other modules.
+	// Module dependencies grouped by enforcement semantics.
 	// +optional
-	Modules map[string]string `json:"modules,omitempty"`
+	Modules *PackageModulesRequirement `json:"modules,omitempty"`
+}
+
+type PackageVersionConstraint struct {
+	// Semver range expression (e.g. ">= 1.26").
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+type PackageModulesRequirement struct {
+	// Modules that must be installed and version-satisfying; otherwise the package does not start.
+	// +optional
+	Mandatory []PackageModuleDependency `json:"mandatory,omitempty"`
+
+	// Modules checked only when installed; absent modules are silently skipped.
+	// +optional
+	Conditional []PackageModuleDependency `json:"conditional,omitempty"`
+
+	// "Satisfy at least one" module groups: each group passes when ≥1 of its modules is installed and version-satisfying.
+	// +optional
+	AnyOf []PackageModuleGroup `json:"anyOf,omitempty"`
+}
+
+type PackageModuleDependency struct {
+	// Module name.
+	Name string `json:"name"`
+
+	// Semver range expression the module must satisfy. Empty means any version.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+type PackageModuleGroup struct {
+	// Identifier for the group. Surfaced in scheduler failure messages so
+	// operators can tell which anyOf group failed.
+	Name string `json:"name"`
+
+	// Human-readable description of the group. Optional documentation; the
+	// scheduler does not consume it. Preserved for UIs and operator-facing
+	// status output.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// Modules within the group; at least one must be installed and version-satisfying.
+	// +optional
+	Modules []PackageModuleDependency `json:"modules,omitempty"`
 }
 
 type PackageDescription struct {

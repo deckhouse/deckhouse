@@ -30,13 +30,13 @@ type dump struct {
 
 // nodeDump combines status info for a single node.
 type nodeDump struct {
-	Version      string                `json:"version" yaml:"version"`
-	Order        Order                 `json:"order" yaml:"order"`
-	State        nodeState             `json:"state" yaml:"state"`
-	Status       checker.Result        `json:"status" yaml:"status"`
-	Followees    []string              `json:"followees,omitempty" yaml:"followees,omitempty"`
-	Followers    []string              `json:"followers,omitempty" yaml:"followers,omitempty"`
-	Dependencies map[string]Dependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Version      string         `json:"version" yaml:"version"`
+	Order        Order          `json:"order" yaml:"order"`
+	State        nodeState      `json:"state" yaml:"state"`
+	Status       checker.Result `json:"status" yaml:"status"`
+	Followees    []string       `json:"followees,omitempty" yaml:"followees,omitempty"`
+	Followers    []string       `json:"followers,omitempty" yaml:"followers,omitempty"`
+	Dependencies Dependencies   `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 }
 
 // Dump returns a YAML snapshot of all nodes and their current state.
@@ -56,7 +56,7 @@ func (s *Scheduler) Dump() []byte {
 			Status:       n.status,
 			Followees:    slices.Collect(maps.Keys(n.followees)),
 			Followers:    slices.Collect(maps.Keys(n.followers)),
-			Dependencies: maps.Clone(n.dependencies),
+			Dependencies: n.dependencies,
 		}
 	}
 
@@ -85,7 +85,7 @@ func (s *Scheduler) DumpByName(name string) []byte {
 		Status:       n.status,
 		Followees:    slices.Collect(maps.Keys(n.followees)),
 		Followers:    slices.Collect(maps.Keys(n.followers)),
-		Dependencies: maps.Clone(n.dependencies),
+		Dependencies: n.dependencies,
 	}
 
 	// Marshal to YAML; errors are intentionally ignored because nodeDump

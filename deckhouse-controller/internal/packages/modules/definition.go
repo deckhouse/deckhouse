@@ -36,12 +36,7 @@ type Definition struct {
 type Requirements struct {
 	Kubernetes *semver.Constraints   `json:"kubernetes" yaml:"kubernetes"`
 	Deckhouse  *semver.Constraints   `json:"deckhouse" yaml:"deckhouse"`
-	Modules    map[string]Dependency `json:"modules" yaml:"modules"`
-}
-
-type Dependency struct {
-	Constraints *semver.Constraints `json:"constraints" yaml:"constraints"`
-	Optional    bool                `json:"optional" yaml:"optional"`
+	Modules    schedule.Dependencies `json:"modules" yaml:"modules"`
 }
 
 // DisableOptions configures application disablement behavior.
@@ -50,15 +45,10 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
+// Constraints projects the module definition into the scheduler's Constraints
+// shape. Weight maps to the scheduler Order; modules without a weight fall
+// back to the functional tier.
 func (d Definition) Constraints() schedule.Constraints {
-	deps := make(map[string]schedule.Dependency)
-	for module, dep := range d.Requirements.Modules {
-		deps[module] = schedule.Dependency{
-			Constraint: dep.Constraints,
-			Optional:   dep.Optional,
-		}
-	}
-
 	order := schedule.Order(d.Weight)
 	if order == 0 {
 		order = schedule.FunctionalOrder
@@ -68,6 +58,6 @@ func (d Definition) Constraints() schedule.Constraints {
 		Order:        order,
 		Kubernetes:   d.Requirements.Kubernetes,
 		Deckhouse:    d.Requirements.Deckhouse,
-		Dependencies: deps,
+		Dependencies: d.Requirements.Modules,
 	}
 }

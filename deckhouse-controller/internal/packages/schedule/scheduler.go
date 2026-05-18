@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency/anyof"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/version"
 )
 
@@ -150,16 +151,32 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	if s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency)
-		for name, dep := range constraints.Dependencies {
+		for name, dep := range constraints.Dependencies.Mandatory {
 			deps[name] = dependency.Dependency{
-				Constraint: dep.Constraint,
-				Optional:   dep.Optional,
+				Constraint: dep,
+			}
+		}
+
+		for name, dep := range constraints.Dependencies.Conditional {
+			deps[name] = dependency.Dependency{
+				Constraint: dep,
+				Optional:   true,
 			}
 		}
 
 		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
+
+		anyOfDeps := make([]anyof.Group, 0, len(constraints.Dependencies.AnyOf))
+		for _, group := range constraints.Dependencies.AnyOf {
+			anyOfDeps = append(anyOfDeps, anyof.Group{
+				Name:    group.Name,
+				Modules: group.Modules,
+			})
+		}
+
+		checkers = append(checkers, anyof.NewChecker(s.dependencyGetter, anyOfDeps))
 	}
 
 	if res := checker.Check(checkers...); !res.Enabled {

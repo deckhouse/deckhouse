@@ -15,13 +15,12 @@
 package schedule
 
 import (
-	"maps"
-
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency/anyof"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/version"
 )
 
@@ -45,17 +44,27 @@ type Package interface {
 // Constraints defines the scheduling requirements for a Package:
 // ordering priority, version bounds, and inter-package dependencies.
 type Constraints struct {
-	Order        Order                 // Scheduling priority; lower values run first.
-	Kubernetes   *semver.Constraints   // Kubernetes version constraint (e.g., ">=1.21")
-	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
-	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name.
+	Order        Order               // Scheduling priority; lower values run first.
+	Kubernetes   *semver.Constraints // Kubernetes version constraint (e.g., ">=1.21")
+	Deckhouse    *semver.Constraints // Deckhouse version constraint (e.g., ">=1.60")
+	Dependencies Dependencies
 }
 
-// Dependency describes a requirement on another package, with an optional
-// semver constraint and a flag to skip the check when the target is absent.
-type Dependency struct {
-	Constraint *semver.Constraints `json:"constraint" yaml:"constraint"` // Semver constraint the dependency must satisfy
-	Optional   bool                `json:"optional" yaml:"optional"`     // If true, the check is skipped when the dependency is absent
+// Dependencies declares a Package's inter-package version requirements.
+// Mandatory and Conditional are flat name→constraint maps; AnyOf expresses
+// disjunctive groups where at least one member must be satisfied.
+type Dependencies struct {
+	Mandatory   map[string]*semver.Constraints `json:"mandatory" yaml:"mandatory"`     // Hard requirements: must be installed and match the constraint.
+	Conditional map[string]*semver.Constraints `json:"conditional" yaml:"conditional"` // Soft requirements: only enforced when the dependency is installed.
+	AnyOf       []AnyOfGroup                   `json:"any_of" yaml:"any_of"`           // Disjunctive groups; each group must have one satisfied member.
+}
+
+// AnyOfGroup is a "satisfy at least one" set of module dependencies: the group
+// passes as soon as a single member is installed at a constraint-satisfying
+// version. A nil constraint means any installed version of that module counts.
+type AnyOfGroup struct {
+	Name    string                         `json:"name" yaml:"name"`       // Group identifier; surfaced in error and status messages.
+	Modules map[string]*semver.Constraints `json:"modules" yaml:"modules"` // Candidate modules keyed by name; only one needs to satisfy.
 }
 
 // Order is a numeric priority for scheduling: lower values are processed first.
@@ -73,9 +82,9 @@ type node struct {
 
 	status checker.Result // Last computed enabled/disabled result from the checker chain.
 
-	followees    map[string]struct{}   // Packages this node waits for before it can be scheduled.
-	followers    map[string]struct{}   // Packages that are waiting on this node to become active.
-	dependencies map[string]Dependency // Declared dependency constraints (version bounds, optional flag).
+	followees    map[string]struct{} // Packages this node waits for before it can be scheduled.
+	followers    map[string]struct{} // Packages that are waiting on this node to become active.
+	dependencies Dependencies        // Declared dependency constraints (version bounds, optional flag).
 
 	checkers []checker.Checker // Ordered list of checkers to evaluate
 }
@@ -106,20 +115,12 @@ func (s *Scheduler) addNode(pkg Package) {
 		state:        nodeStateIdle,
 		followees:    make(map[string]struct{}),
 		followers:    make(map[string]struct{}),
-		dependencies: maps.Clone(pkg.GetConstraints().Dependencies),
+		dependencies: pkg.GetConstraints().Dependencies,
 	}
 
 	constraints := pkg.GetConstraints()
 
 	n.order = constraints.Order
-
-	for dep := range constraints.Dependencies {
-		n.followees[dep] = struct{}{}
-
-		if parent, ok := s.nodes[dep]; ok {
-			parent.followers[n.name] = struct{}{}
-		}
-	}
 
 	if n.name != packageGlobal {
 		n.followees[packageGlobal] = struct{}{}
@@ -148,16 +149,32 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	if s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency)
-		for name, dep := range constraints.Dependencies {
+		for name, dep := range constraints.Dependencies.Mandatory {
 			deps[name] = dependency.Dependency{
-				Constraint: dep.Constraint,
-				Optional:   dep.Optional,
+				Constraint: dep,
+			}
+		}
+
+		for name, dep := range constraints.Dependencies.Conditional {
+			deps[name] = dependency.Dependency{
+				Constraint: dep,
+				Optional:   true,
 			}
 		}
 
 		n.checkers = append(n.checkers, dependency.NewChecker(s.dependencyGetter, deps))
+
+		anyOfDeps := make([]anyof.Group, 0, len(constraints.Dependencies.AnyOf))
+		for _, group := range constraints.Dependencies.AnyOf {
+			anyOfDeps = append(anyOfDeps, anyof.Group{
+				Name:    group.Name,
+				Modules: group.Modules,
+			})
+		}
+
+		n.checkers = append(n.checkers, anyof.NewChecker(s.dependencyGetter, anyOfDeps))
 	}
 
 	s.nodes[pkg.GetName()] = n

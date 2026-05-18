@@ -408,8 +408,12 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 	var requirements dto.Requirements
 	if def.Requirements != nil {
 		requirements = dto.Requirements{
-			Kubernetes: def.Requirements.Kubernetes,
-			Deckhouse:  def.Requirements.Deckhouse,
+			Kubernetes: dto.VersionConstraint{
+				Constraint: def.Requirements.Kubernetes,
+			},
+			Deckhouse: dto.VersionConstraint{
+				Constraint: def.Requirements.Deckhouse,
+			},
 		}
 	}
 
