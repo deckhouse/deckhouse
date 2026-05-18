@@ -20,8 +20,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -56,19 +56,17 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 	}
 
-	sectionName := params.Settings.CloudName()
-	runes := []rune(sectionName)
-	runes[0] = unicode.ToUpper(runes[0])
-	sectionName = "cloudProvider" + string(runes)
+	cloudName := strings.ToLower(params.Settings.CloudName())
+	sectionName := "cloudProvider" + strings.ToUpper(cloudName[:1]) + cloudName[1:]
 
 	// Fast-path: if the fallback source binary is already present under DownloadRootDir
 	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
 	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
 	// us iterate with a custom-patched provider binary without dhctl clobbering it.
-	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
+	terraformManagerDir := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager")
 	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	if _, statErr := os.Stat(source); statErr == nil {
-		if err := copyTFVersionFile(conf.DownloadRootDir); err != nil {
+		if err := copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
 			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 		}
 		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
@@ -77,21 +75,31 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}
-	if err = copyTFVersionFile(conf.DownloadRootDir); err != nil {
+	if err = copyTFVersionFile(conf.DownloadRootDir, terraformManagerDir); err != nil {
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
+	}
+
+	providerPath := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager", params.Settings.DestinationBinary())
+	if _, err := os.Stat(providerPath); err == nil {
+		source = providerPath
+	} else {
+		source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	}
 
 	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }
 
-func copyTFVersionFile(downloadRootDir string) error {
-	terraformManagerDir := filepath.Join(downloadRootDir, "terraform-manager")
+func copyTFVersionFile(downloadRootDir, terraformManagerDir string) error {
 	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
 	src := filepath.Join(terraformManagerDir, versionFile)
 
 	f, err := os.OpenFile(src, os.O_RDONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("could not read file %s: %w\n", src, err)
+	}
+
+	if err = os.MkdirAll(downloadCandiPath, 0o755); err != nil {
+		return fmt.Errorf("could not create dir %s: %w", downloadCandiPath, err)
 	}
 
 	if err = os.RemoveAll(filepath.Join(downloadCandiPath, versionFile)); err != nil {

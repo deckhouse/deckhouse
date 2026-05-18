@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -102,55 +101,27 @@ terraform {
 }
 
 func TestVCDClientProvider(t *testing.T) {
-	logger := log.GetDefaultLogger()
+	makeInputWithServer := func(url string) map[string]json.RawMessage {
+		pc, err := json.Marshal(providerConfig{Server: url, Insecure: true})
+		require.NoError(t, err)
+		return map[string]json.RawMessage{"provider": pc}
+	}
 
-	assertError := func(t *testing.T, c *config.MetaConfig) {
-		_, err := newVcdCloudClient(c, logger)
+	assertError := func(t *testing.T, pcc map[string]json.RawMessage) {
+		_, err := newVcdCloudClient(pcc, log.GetDefaultLogger())
 		require.Error(t, err)
 	}
 
-	setProviderConfig := func(t *testing.T, c *config.MetaConfig, url string) {
-		pc, err := json.Marshal(providerConfig{
-			Server:   url,
-			Insecure: true,
-		})
-		require.NoError(t, err)
-
-		c.ProviderClusterConfig = map[string]json.RawMessage{
-			"provider": pc,
-		}
-	}
-
-	cfg := &config.MetaConfig{}
-	// no cloud
-	assertError(t, cfg)
-
-	// static cluster
-	cfg.ClusterType = config.StaticClusterType
-	assertError(t, cfg)
-
-	cfg.ClusterType = config.CloudClusterType
-
-	// valid cloud type but invalid cloud name
-	cfg.ProviderName = "yandex"
-	assertError(t, cfg)
-
-	// vcd but upper case
-	cfg.ProviderName = "VCD"
-	assertError(t, cfg)
-
-	cfg.ProviderName = ProviderName
-
-	// correct provider but without cluster config
-	assertError(t, cfg)
+	// no provider key
+	assertError(t, nil)
+	assertError(t, map[string]json.RawMessage{})
 
 	// invalid url
-	setProviderConfig(t, cfg, ":-//blah")
-	assertError(t, cfg)
+	assertError(t, makeInputWithServer(":-//blah"))
 
 	// valid url
-	setProviderConfig(t, cfg, "https://my-server:8080")
-	c, err := newVcdCloudClient(cfg, logger)
+	pcc := makeInputWithServer("https://my-server:8080")
+	c, err := newVcdCloudClient(pcc, log.GetDefaultLogger())
 	require.NoError(t, err)
 	require.False(t, govalue.IsNil(c))
 }
