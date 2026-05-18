@@ -31,9 +31,13 @@ Bump dependencies to fix CVEs:
 - [CVE-2026-33186](https://github.com/advisories/GHSA-prj3-ccx8-p6x4) — `google.golang.org/grpc` bumped from `v1.58.3` to `v1.79.3` (authorization bypass via the HTTP/2 `:path` pseudo-header in gRPC-Go).
 - [CVE-2026-29181](https://github.com/advisories/GHSA-mh2q-q3fh-2475) — `go.opentelemetry.io/otel` bumped from `v1.18.0` to `v1.43.0` (multi-value `baggage` header extraction causes excessive allocations).
 
+`go.opentelemetry.io/otel v1.43.0` requires `go >= 1.25.0` in its `go.mod`,
+so the `go` directive is bumped from `1.24.0` to `1.25.8`.
+
 Generated with:
 
 ```sh
+go mod edit -go=1.25.8
 go get google.golang.org/grpc@v1.79.3 \
        go.opentelemetry.io/otel@v1.43.0 \
        go.opentelemetry.io/otel/metric@v1.43.0 \
