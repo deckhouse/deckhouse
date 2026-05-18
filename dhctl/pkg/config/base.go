@@ -61,10 +61,13 @@ func LoadConfigFromFile(
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
 	if globalOptions.NeedDownload {
-		// download and init schemaStore
-		// get registry setting first
+		docs, err := FetchDocuments(paths)
+		if err != nil {
+			return nil, err
+		}
+
 		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return FetchDocuments(paths)
+			return docs, nil
 		})
 		if err != nil {
 			return nil, err
@@ -87,6 +90,16 @@ func LoadConfigFromFile(
 
 		if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
 			return nil, err
+		}
+
+		cloudProvider, err := fetchCloudProvider(docs)
+		if err != nil {
+			return nil, err
+		}
+		if cloudProvider != "" {
+			if err = prepareProviderCandiDir(ctx, cloudProvider, conf, globalOptions); err != nil {
+				return nil, err
+			}
 		}
 	}
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, globalOptions, opts...)
@@ -134,7 +147,9 @@ func LoadConfigFromFile(
 	}
 
 	if metaConfig.ClusterType == CloudClusterType && len(metaConfig.ProviderClusterConfig) == 0 {
-		return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+		if ProviderRequiresClusterConfig(metaConfig.ProviderName) {
+			return nil, fmt.Errorf("ProviderClusterConfiguration section is required for a Cloud cluster.")
+		}
 	}
 
 	return metaConfig, nil
@@ -223,6 +238,21 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		globalOptions = &options.GlobalOptions{}
 	}
 
+	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
+
+	var parsedClusterConfig map[string]json.RawMessage
+	if err := yaml.Unmarshal(clusterConfigData, &parsedClusterConfig); err != nil {
+		return nil, err
+	}
+	var clusterType string
+	if err := json.Unmarshal(parsedClusterConfig["clusterType"], &clusterType); err != nil {
+		return nil, err
+	}
+
 	if globalOptions.NeedDownload {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
 		if err != nil {
@@ -231,6 +261,22 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 
 		if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
 			return nil, err
+		}
+
+		// For cloud clusters, also download provider's terraform-manager image
+		// so the provider-specific schemas are available before validation.
+		if clusterType == CloudClusterType {
+			var cloudSpec struct {
+				Provider string `json:"provider"`
+			}
+			if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloudSpec); err != nil {
+				return nil, fmt.Errorf("parse cloud provider from cluster config: %w", err)
+			}
+			if provider := strings.ToLower(cloudSpec.Provider); provider != "" {
+				if err := prepareProviderCandiDir(ctx, provider, conf, globalOptions); err != nil {
+					return nil, fmt.Errorf("prepare provider candi dir: %w", err)
+				}
+			}
 		}
 
 		metaConfig.DeckhouseConfig.RegistryDockerCfg = b64dc
@@ -245,34 +291,31 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 
 	schemaStore := NewSchemaStore(globalOptions)
 
-	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	clusterConfigData := clusterConfig.Data["cluster-configuration.yaml"]
 	_, err = schemaStore.Validate(&clusterConfigData)
 	if err != nil {
 		return nil, err
 	}
 
-	var parsedClusterConfig map[string]json.RawMessage
-	if err := yaml.Unmarshal(clusterConfigData, &parsedClusterConfig); err != nil {
-		return nil, err
-	}
-
 	metaConfig.ClusterConfig = parsedClusterConfig
-
-	var clusterType string
-	if err := json.Unmarshal(parsedClusterConfig["clusterType"], &clusterType); err != nil {
-		return nil, err
-	}
-
 	metaConfig.ClusterType = clusterType
 
 	_, err = DoByClusterType(ctx, metaConfig, newFromClusterMetaConfigFiller(kubeCl, schemaStore))
 	if err != nil {
 		return nil, err
+	}
+
+	// For cloud clusters, pre-load provider resources from the cluster so that
+	// CloudProviderVars is available when the preparator runs.
+	if clusterType == CloudClusterType {
+		if err := metaConfig.prepareProviderName(); err != nil {
+			return nil, err
+		}
+
+		cv, err := CloudProviderVarsFromCluster(ctx, kubeCl, metaConfig.ProviderName)
+		if err != nil {
+			return nil, fmt.Errorf("read cloud provider resources: %w", err)
+		}
+		metaConfig.CloudProviderVars = cv
 	}
 
 	return metaConfig.Prepare(ctx, preparatorProvider)
@@ -473,6 +516,17 @@ deckhouse: {}
 		}
 	}
 
+	var vopts validateOptions
+	for _, opt := range opts {
+		opt(&vopts)
+	}
+	if vopts.operation != "" {
+		metaConfig.Operation = vopts.operation
+	}
+	if vopts.downloadRootDir != "" {
+		metaConfig.DownloadRootDir = vopts.downloadRootDir
+	}
+
 	return metaConfig.Prepare(ctx, preparatorProvider)
 }
 
@@ -564,6 +618,53 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOpti
 	}
 
 	return os.MkdirAll(filepath.Join(globalOptions.DownloadDir, "plugins"), 0o755)
+}
+
+func fetchCloudProvider(docs []string) (string, error) {
+	for _, doc := range docs {
+		if err := detectMergedDocuments(doc); err != nil {
+			return "", fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
+		}
+
+		var config struct {
+			Kind  string `yaml:"kind"`
+			Cloud struct {
+				Provider string `yaml:"provider"`
+			} `yaml:"cloud"`
+		}
+		if err := yaml.Unmarshal([]byte(doc), &config); err != nil {
+			return "", err
+		}
+		if config.Kind == "ClusterConfiguration" {
+			return strings.ToLower(config.Cloud.Provider), nil
+		}
+	}
+	return "", nil
+}
+
+// prepareProviderCandiDir downloads the provider's terraformManager OCI image
+// if its schemas are not already present. The image is unpacked into
+// <DownloadDir>/<provider>/ so all provider-specific files stay under one directory.
+func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
+	systemSchemaPath := filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
+	if _, err := os.Stat(systemSchemaPath); err == nil {
+		return nil
+	}
+	downloadSchemaPath := filepath.Join(globalOptions.DownloadDir, provider, "openapi", "cluster_configuration.yaml")
+	if _, err := os.Stat(downloadSchemaPath); err == nil {
+		return nil
+	}
+
+	sectionName := "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
+	providerImage, err := digests.GetImage(sectionName, "terraformManager")
+	if err != nil {
+		log.DebugF("No image digest for provider %s, skipping: %v\n", provider, err)
+		return nil
+	}
+
+	imgName := conf.GetRegistry() + "@" + providerImage
+	log.DebugF("Downloading provider schemas for %s\n", provider)
+	return image.DownloadAndUnpackImage(ctx, imgName, filepath.Join(globalOptions.DownloadDir, provider), globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress)
 }
 
 // prepare CandiDir if not exists
