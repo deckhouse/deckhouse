@@ -8,13 +8,14 @@
 
 .docs.section {
     position: relative;
-    margin: 180px 0 180px 50%;
+    padding: 175px 0 93px 50%;
+    margin-top: 30px;
 
     @include breakpoints.max-w(xl) {
-        margin: 120px 0 120px 50%;
+        padding: 120px 0 38px 50%;
     }
 
-    @include breakpoints.max-w(m) {
+    @include breakpoints.max-w(l) {
         margin: 0;
         padding: 300px 0 160px;
     }
@@ -30,16 +31,25 @@
     &::before {
         content: "";
         position: absolute;
-        top: 15px;
-        left: -100%;
+        top: 31%;
+        left: 0;
         bottom: 0;
-        width: 100%;
-        height: 100%;
+        width: 50%;
+        height: 50%;
         background: url(/images/404.svg) top / contain no-repeat;
 
-        @include breakpoints.max-w(m) {
+        @include breakpoints.max-w(xl) {
+            top: 27%;
+        }
+
+        @include breakpoints.max-w(l) {
+            width: 100%;
             height: 30%;
-            left: 0;
+            top: 6%;
+        }
+
+        @include breakpoints.max-w(m) {
+            height: 27%;
         }
     }
 
@@ -51,7 +61,7 @@
         color: #222A5D;
 
         @include breakpoints.max-w(xxl) {
-            margin-left: 70px;
+            margin-left: 40px;
             font-size: 42px;
         }
 
@@ -60,12 +70,8 @@
         }
 
         @include breakpoints.max-w(l) {
-            margin-left: 50px;
-            font-size: 32px;
-        }
-
-        @include breakpoints.max-w(m) {
             margin-left: 0;
+            font-size: 32px;
         }
 
         @include breakpoints.max-w(xxs) {
@@ -77,14 +83,10 @@
         margin-left: 120px;
 
         @include breakpoints.max-w(xxl) {
-            margin-left: 70px;
+            margin-left: 40px;
         }
 
         @include breakpoints.max-w(l) {
-            margin-left: 50px;
-        }
-
-        @include breakpoints.max-w(m) {
             margin-left: 0;
         }
 
@@ -100,6 +102,8 @@
         }
 
         .searchV3 {
+            z-index: 50;
+
             .container {
                 padding: 0;
 
@@ -158,6 +162,7 @@
                 font-weight: 400;
                 line-height: 30px;
                 text-decoration-line: underline;
+                text-decoration-skip-ink: none;
                 text-decoration-color: #0064FF;
 
                 @include breakpoints.max-w(xl) {
