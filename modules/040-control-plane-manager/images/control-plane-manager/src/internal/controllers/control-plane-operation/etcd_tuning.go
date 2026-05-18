@@ -52,23 +52,15 @@ func applyEtcdPerformanceTuning(manifestBytes []byte, params etcdPerformancePara
 		return nil, fmt.Errorf("unmarshal etcd pod manifest: %w", err)
 	}
 
-	var patched bool
-	for i := range pod.Spec.Containers {
-		c := &pod.Spec.Containers[i]
-		if c.Name != etcdContainerName {
-			continue
-		}
-		if err := setContainerEnvValue(c, "ETCD_HEARTBEAT_INTERVAL", strconv.Itoa(params.HeartbeatIntervalMs)); err != nil {
-			return nil, err
-		}
-		if err := setContainerEnvValue(c, "ETCD_ELECTION_TIMEOUT", strconv.Itoa(params.ElectionTimeoutMs)); err != nil {
-			return nil, err
-		}
-		patched = true
-		break
-	}
-	if !patched {
+	c := findContainerByName(pod, etcdContainerName)
+	if c == nil {
 		return nil, fmt.Errorf("etcd container %q not found in static pod manifest", etcdContainerName)
+	}
+	if err := setContainerEnvValue(c, "ETCD_HEARTBEAT_INTERVAL", strconv.Itoa(params.HeartbeatIntervalMs)); err != nil {
+		return nil, err
+	}
+	if err := setContainerEnvValue(c, "ETCD_ELECTION_TIMEOUT", strconv.Itoa(params.ElectionTimeoutMs)); err != nil {
+		return nil, err
 	}
 
 	out, err := yaml.Marshal(pod)
