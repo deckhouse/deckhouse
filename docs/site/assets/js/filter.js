@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const urlSearch = 'search';
+  const urlEdition = 'edition';
+  const urlStage = 'stage';
+  const urlTag = 'tag';
+  const urlParamAll = '__all__';
+
   const description = {
     ru: {
       search: 'Поиск',
@@ -236,6 +242,102 @@ document.addEventListener('DOMContentLoaded', () => {
     createFilters();
   }
 
+  function buildFilterParams() {
+    const params = new URLSearchParams();
+    const query = filterSearch ? filterSearch.value.trim() : '';
+    if (query) {
+      params.set(urlSearch, query);
+    }
+
+    const appendSectionParams = (containerSelector, paramName) => {
+      const container = document.querySelector(containerSelector);
+      if (!container) return;
+
+      const selectAllCheckbox = getSectionSelectAllCheckbox(container);
+      if (selectAllCheckbox?.checked) {
+        params.set(paramName, urlParamAll);
+        return;
+      }
+
+      const checkedValues = getFilterContainerCheckboxes(container)
+        .filter(checkbox => checkbox.checked)
+        .map(checkbox => checkbox.value);
+
+      if (checkedValues.length > 0) {
+        params.set(paramName, checkedValues.join(','));
+      }
+    };
+
+    appendSectionParams('.filter__container--editions', urlEdition);
+    appendSectionParams('.filter__container--stages', urlStage);
+    appendSectionParams('.filter__container--tags', urlTag);
+
+    return params;
+  }
+
+  function syncUrlWithFilters() {
+    const params = buildFilterParams();
+    const qs = params.toString();
+    const nextSearch = qs ? `?${qs}` : '';
+
+    if (window.location.search === nextSearch) {
+      return;
+    }
+
+    history.replaceState(null, '', `${nextSearch}${window.location.hash}` || window.location.pathname);
+  }
+
+  function applyFiltersFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlStage) && !params.has(urlTag)) {
+      return;
+    }
+
+    if (filterSearch && params.has(urlSearch)) {
+      filterSearch.value = params.get(urlSearch) || '';
+    }
+
+    const parseSectionValues = (paramName, normalizeValue) => {
+      const values = params.getAll(paramName)
+        .flatMap(value => (value || '').split(','))
+        .map(value => normalizeValue(value))
+        .filter(value => value !== '');
+      return new Set(values);
+    };
+
+    const wantedEditions = parseSectionValues(urlEdition, value => value.trim().toLowerCase());
+    const wantedStages = parseSectionValues(urlStage, value => value.trim());
+    const wantedTags = parseSectionValues(urlTag, value => value.trim());
+
+    const applySectionParams = (containerSelector, wantedValues, normalizeValue = value => value) => {
+      const container = document.querySelector(containerSelector);
+      if (!container) return;
+
+      const selectAllCheckbox = getSectionSelectAllCheckbox(container);
+      if (wantedValues.has(urlParamAll)) {
+        setSectionCheckboxesState(container, true);
+        if (selectAllCheckbox) {
+          selectAllCheckbox.checked = true;
+          selectAllCheckbox.indeterminate = false;
+        }
+        return;
+      }
+
+      getFilterContainerCheckboxes(container).forEach(checkbox => {
+        checkbox.checked = wantedValues.has(normalizeValue(checkbox.value || ''));
+      });
+    };
+
+    applySectionParams('.filter__container--editions', wantedEditions, value => value.trim().toLowerCase());
+    applySectionParams('.filter__container--stages', wantedStages, value => value.trim());
+    applySectionParams('.filter__container--tags', wantedTags, value => value.trim());
+
+    document.querySelectorAll('.filter__container').forEach(container => {
+      syncSectionSelectAllState(container);
+      updateContainerTitleState(container);
+    });
+  }
+
   function resetAllFilters() {
     if (filterSearch) {
       filterSearch.value = '';
@@ -397,6 +499,8 @@ document.addEventListener('DOMContentLoaded', () => {
       updateContainerTitleState(container);
       syncSectionSelectAllState(container);
     });
+
+    syncUrlWithFilters();
   }
 
   document.querySelectorAll('.closing-title').forEach(title => {
@@ -439,11 +543,12 @@ document.addEventListener('DOMContentLoaded', () => {
     checkbox.addEventListener('change', filterArticles);
   });
 
+  markEmptyCheckboxes();
+  applyFiltersFromUrl();
   filterArticles();
   window.addEventListener('pageshow', () => {
     filterArticles();
   });
-  markEmptyCheckboxes();
 
   function createTooltipContent(titleText, descriptionText) {
     const container = document.createElement('div');

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -29,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -48,15 +47,16 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		logger := log.GetDefaultLogger()
-		extLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("could not get external logger")
-		}
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(extLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
+		logger := log.GetDefaultLogger()
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -73,10 +73,12 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 			KubeProvider:           kubeProvider,
 			Options:                opts,
 		})
+
 		err = bootstraper.Bootstrap(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 

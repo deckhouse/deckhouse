@@ -136,7 +136,7 @@ spec:
 `
 	assert := func(t *testing.T, tplCtx map[string]any, expect map[string]any) {
 		metaConfig := generateMetaConfig(t, tpl, tplCtx, false)
-		installConfig, err := PrepareDeckhouseInstallConfig(metaConfig)
+		installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.NoError(t, err)
 		require.Len(t, installConfig.ModuleConfigs, 1)
 		assertModuleConfig(t, installConfig.ModuleConfigs[0], true, 1, expect)
@@ -240,7 +240,7 @@ spec:
 `,
 		})
 
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+		iCfg, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.NoError(t, err)
 
 		require.Equal(t, iCfg.LogLevel, "Info")
@@ -272,7 +272,7 @@ spec:
 `,
 		})
 
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+		iCfg, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.NoError(t, err)
 
 		require.Equal(t, iCfg.LogLevel, "Debug")
@@ -339,7 +339,7 @@ spec:
 `,
 		})
 
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+		iCfg, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.NoError(t, err)
 
 		require.Len(t, iCfg.ModuleConfigs, 2)
@@ -375,7 +375,7 @@ spec:
 `,
 		})
 
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		_, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.Error(t, err)
 	})
 
@@ -396,7 +396,7 @@ spec:
 `,
 		})
 
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		_, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.Error(t, err)
 	})
 
@@ -412,7 +412,7 @@ spec:
 `,
 		})
 
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
+		iCfg, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.NoError(t, err)
 
 		require.Len(t, iCfg.ModuleConfigs, 2)
@@ -435,7 +435,7 @@ spec:
 `,
 		})
 
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		_, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.Error(t, err)
 	})
 }

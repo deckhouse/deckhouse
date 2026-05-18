@@ -50,7 +50,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- end }}
 
   {{- $default_runtime := "runc" }}
-  {{- if .nodeGroup.gpu }}
+  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
     {{ $default_runtime = "nvidia" }}
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.d/99-sysctl.conf # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.conf # REDOS
@@ -142,7 +142,7 @@ oom_score = 0
       default_runtime_name = {{ $default_runtime | quote }}
       ignore_blockio_not_enabled_errors = false
       ignore_rdt_not_enabled_errors = false
-  {{- if .nodeGroup.gpu }}
+  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
       [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes]
         [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.nvidia]
           privileged_without_host_devices = false
@@ -355,7 +355,7 @@ oom_score = 0
           base_runtime_spec = ""
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
             SystemdCgroup = ${systemd_cgroup}
-  {{- if .nodeGroup.gpu }}
+  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
         [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
           privileged_without_host_devices = false
           runtime_engine = ""

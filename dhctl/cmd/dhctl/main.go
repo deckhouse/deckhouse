@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -185,9 +186,9 @@ var (
 			Parent:     "render",
 		},
 		{
-			Name:       "kubeadm-config",
-			Help:       "Render kubeadm config.",
-			DefineFunc: commands.DefineRenderKubeadmConfig,
+			Name:       "control-plane-manifests",
+			Help:       "Render control-plane manifests and pki.",
+			DefineFunc: commands.DefineRenderControlPlaneAndPKI,
 			Parent:     "render",
 		},
 		{
@@ -293,15 +294,12 @@ func main() {
 
 	initGlobalVars()
 
-	tracesShutdownFn, err := enableTrace()
-	if err != nil {
+	if err := telemetry.Bootstrap(appContext); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
-	registerOnShutdown("Trace", tracesShutdownFn)
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
-	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
 		disableCleanupOnInterrupted,
@@ -328,6 +326,8 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 
 	// inject context.Context to kingpin.ParseContext
 	kpApp.Action(kpcontext.SetContextToAction(ctx))
+
+	kpApp.Action(kptelemetry.StartCommand)
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		initer.setParams(actionIniterParams{
@@ -363,6 +363,7 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 			log.ErrorLn(msg)
 			errorCode = 1
 		}
+		kptelemetry.EndCommand(err, errorCode)
 		tomb.Shutdown(errorCode)
 	}()
 

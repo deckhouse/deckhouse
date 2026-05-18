@@ -33,8 +33,7 @@ import (
 )
 
 var (
-	deckhouseDir           = "/deckhouse"
-	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
+	deckhouseDir = "/deckhouse"
 )
 
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -62,7 +61,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
 		return template.PrepareBashibleBundle(
 			ctx,
@@ -101,7 +100,8 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+
 		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
 	}
 
@@ -112,22 +112,39 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 	})
 }
 
-func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
 
 	runFunc := func(ctx context.Context) error {
-		templateData := make(map[string]interface{})
-		var err error
-		templateData["clusterConfiguration"], err = config.ParseBashibleConfig(opts.Global.ConfigPaths, kubeadmTemplateOpenAPI)
+		logger := log.GetDefaultLogger()
+
+		metaConfig, err := config.LoadConfigFromFile(
+			ctx,
+			opts.Global.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			),
+			opts.DirConfig(),
+		)
+		if err != nil {
+			return err
+		}
+
+		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareKubeadmConfig(ctx, templateController, templateData, opts.DirConfig())
+		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
+			return err
+		}
+		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
+		// the resulting PKI is not used to start a real cluster.
+		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -236,5 +253,4 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 
 func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
-	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 }

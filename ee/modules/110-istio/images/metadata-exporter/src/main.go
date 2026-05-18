@@ -15,6 +15,13 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	privateAllianceDeprecatedSubdomainRequests                               *prometheus.CounterVec
+	privateAllianceMetadataEndpointRequestedViaDeprecatedSubdomainMetricName = "d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain"
 )
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
@@ -29,7 +36,7 @@ func httpHandlerPublicJSON(exp *Exporter) http.HandlerFunc {
 
 func httpHandlerFederationPrivateJSON(exp *Exporter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := exp.CheckAuthn(r.Header, "private-federation")
+		uuid, err := exp.CheckAuthn(r.Header, "private-federation")
 		if err != nil {
 			http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
 			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, err)
@@ -39,12 +46,14 @@ func httpHandlerFederationPrivateJSON(exp *Exporter) http.HandlerFunc {
 		privateMetadataJSON := exp.RenderFederationPrivateMetadataJSON()
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+
+		exp.checkIfAccessedViaDeprecatedSubdomain(r, uuid)
 	}
 }
 
 func httpHandlerMulticlusterPrivateJSON(exp *Exporter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := exp.CheckAuthn(r.Header, "private-multicluster")
+		uuid, err := exp.CheckAuthn(r.Header, "private-multicluster")
 		if err != nil {
 			http.Error(w, "Authentication error: "+err.Error(), http.StatusUnauthorized)
 			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, err)
@@ -53,6 +62,8 @@ func httpHandlerMulticlusterPrivateJSON(exp *Exporter) http.HandlerFunc {
 		privateMetadataJSON := exp.RenderMulticlusterPrivateMetadataJSON()
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+
+		exp.checkIfAccessedViaDeprecatedSubdomain(r, uuid)
 	}
 }
 
@@ -89,6 +100,14 @@ func main() {
 	var ctx, cancel = context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup // for wait all go routine
+
+	reg := prometheus.NewRegistry()
+	registerMetadataExporterMetrics(reg)
+	metricsAddr := os.Getenv("METRICS_LISTEN_ADDR")
+	if metricsAddr == "" {
+		metricsAddr = "127.0.0.1:4225"
+	}
+	startMetadataMetricsServer(ctx, &wg, metricsAddr, reg, logger)
 
 	listenAddr := "0.0.0.0:8080"
 	logger.Println("Server is starting to listen on ", listenAddr, "...")
@@ -154,4 +173,16 @@ func main() {
 
 	wg.Wait()
 	logger.Println("Server gracefully stopped.")
+}
+
+func registerMetadataExporterMetrics(reg prometheus.Registerer) {
+	a := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: privateAllianceMetadataEndpointRequestedViaDeprecatedSubdomainMetricName,
+			Help: "Requests to private metadata whose Host equals this cluster are using deprecated 'istio' domain (<publicDomainTemplate> + istio).",
+		},
+		[]string{"remote_uuid", "alliance_kind", "name", "requested_to_hostname"},
+	)
+	reg.MustRegister(a)
+	privateAllianceDeprecatedSubdomainRequests = a
 }

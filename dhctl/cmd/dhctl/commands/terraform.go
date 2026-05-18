@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -45,6 +44,31 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
+		params, err := app.DefaultProviderParams(&opts.Global)
+		if err != nil {
+			return err
+		}
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
+		if err != nil {
+			return err
+		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
 			Address:     opts.Converge.ListenAddress,
@@ -54,8 +78,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 			DownloadDir: opts.Global.DownloadDir,
 			Logger:      logger,
 			IsDebug:     opts.Global.IsDebug,
-			Kube:        &opts.Kube,
-			SSH:         sshclient.ConfigFromOptions(opts),
+			KubeCl:      kubeCl,
 		})
 
 		exporter.Start(ctx)

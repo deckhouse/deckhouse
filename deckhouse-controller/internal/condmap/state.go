@@ -85,14 +85,12 @@ func (s *State) GetIntReason(cond string) (string, string) {
 	return c.Reason, c.Message
 }
 
-// ConditionByInt builds an external condition using reason and message from an
-// internal condition. If the internal condition has no reason, internalCond is
-// used as a stable fallback reason.
+// ConditionByInt builds an external condition that passes through reason and
+// message from an internal condition. The result has empty reason if the
+// internal condition has none — callers that need fallback handling should use
+// their own helper.
 func (s *State) ConditionByInt(cond string, condStatus metav1.ConditionStatus, internalCond string) metav1.Condition {
 	reason, message := s.GetIntReason(internalCond)
-	if reason == "" {
-		reason = internalCond
-	}
 
 	return metav1.Condition{
 		Type:    cond,
@@ -100,6 +98,17 @@ func (s *State) ConditionByInt(cond string, condStatus metav1.ConditionStatus, i
 		Reason:  reason,
 		Message: message,
 	}
+}
+
+// GetIntStatus returns the status of an internal condition.
+// Returns ("", false) if the condition is absent.
+func (s *State) GetIntStatus(cond string) (metav1.ConditionStatus, bool) {
+	c, ok := s.Internal[cond]
+	if !ok {
+		return "", false
+	}
+
+	return c.Status, true
 }
 
 // AllIntEqual reports whether every listed internal condition has the given

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,18 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -44,16 +46,14 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
-
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -81,17 +81,16 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 	app.DefineBashibleBundleFlags(cmd, &opts.Bootstrap)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
-		logger := log.GetDefaultLogger()
 		ctx := kpcontext.ExtractContext(c)
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
+		logger := log.GetDefaultLogger()
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -119,17 +118,16 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
-		logger := log.GetDefaultLogger()
 		ctx := kpcontext.ExtractContext(c)
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
+		logger := log.GetDefaultLogger()
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -158,17 +156,16 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	app.DefineAbortFlags(cmd, &opts.Bootstrap)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
-		logger := log.GetDefaultLogger()
 		ctx := kpcontext.ExtractContext(c)
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
+		logger := log.GetDefaultLogger()
+
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -184,6 +181,22 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			DirectoryConfig:        opts.DirConfig(),
 			Options:                opts,
 		})
+
+		interactive := input.IsTerminal() && !opts.Global.ShowProgress
+		if interactive {
+			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
+			if err != nil {
+				return err
+			}
+
+			onUpdateFunc := func(progress phases.Progress) error {
+				phasesChan <- progress
+				return nil
+			}
+			bootstraper.OnProgressFunc = onUpdateFunc
+
+			defer onComplete()
+		}
 
 		if err = bootstraper.Abort(ctx, opts.Bootstrap.ForceAbortFromCache); err != nil {
 			msg := fmt.Sprintf("Failed to abort cluster: %v", err)
@@ -202,16 +215,15 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
-		}
-
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -230,6 +242,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 
 		err = bootstraper.BaseInfrastructure(ctx)
 		cache.GetGlobalTmpCleaner().DisableCleanup("Create base infra for cluster")
+
 		return err
 	})
 }
@@ -242,14 +255,27 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:          opts.Global.TmpDir,
-			Logger:          logger,
-			IsDebug:         opts.Global.IsDebug,
-			DirectoryConfig: opts.DirConfig(),
-			Options:         opts,
+			TmpDir:                 opts.Global.TmpDir,
+			Logger:                 logger,
+			IsDebug:                opts.Global.IsDebug,
+			DirectoryConfig:        opts.DirConfig(),
+			Options:                opts,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 		})
 
 		return bootstraper.ExecPostBootstrap(ctx)

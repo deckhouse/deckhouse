@@ -46,13 +46,6 @@ type packageI interface {
 	GetSettings() addonutils.Values
 }
 
-// statusService provides condition updates and error handling for package status.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-	UpdateSettings(name string, settings addonutils.Values)
-}
-
 // task validates and applies new settings to a package.
 // On success, sets ConditionSettingsValid to True.
 // On failure, wraps errors with appropriate status conditions.
@@ -60,13 +53,13 @@ type task struct {
 	pkg      packageI
 	settings addonutils.Values
 
-	status statusService
+	status *status.Service
 
 	logger *log.Logger
 }
 
 // NewTask creates a task that will validate and apply the given settings.
-func NewTask(pkg packageI, settings addonutils.Values, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, settings addonutils.Values, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:      pkg,
 		settings: settings,
@@ -83,7 +76,7 @@ func (t *task) String() string {
 // Sets ConditionSettingsValid on success or delegates error handling to status service.
 func (t *task) Execute(ctx context.Context) error {
 	if err := t.applySettings(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)
 		return fmt.Errorf("configure: %w", err)
 	}
 
@@ -93,29 +86,27 @@ func (t *task) Execute(ctx context.Context) error {
 	// when ConditionReadyInCluster becomes True.
 	t.status.UpdateSettings(t.pkg.GetName(), t.pkg.GetSettings())
 
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionSettingsValid)
-
 	return nil
 }
 
 // applySettings validates and applies settings to the package.
 func (t *task) applySettings(ctx context.Context) error {
-	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Configure")
+	ctx, span := otel.Tracer(taskTracer).Start(ctx, "applySettings")
 	defer span.End()
 
-	t.logger.Debug("configure")
+	t.logger.Debug("configure package")
 
 	res, err := t.pkg.ValidateSettings(ctx, t.settings)
 	if err != nil {
-		return newConfigureErr(err)
+		return status.NewError("ValidateFailed", err)
 	}
 
 	if !res.Valid {
-		return newConfigureErr(errors.New(res.Message))
+		return status.NewError("ValidateFailed", errors.New(res.Message))
 	}
 
 	if err = t.pkg.ApplySettings(t.settings); err != nil {
-		return newConfigureErr(err)
+		return status.NewError("ConfigureFailed", err)
 	}
 
 	return nil

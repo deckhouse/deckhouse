@@ -55,6 +55,8 @@ lang: ru
 
 В подразделе «Обновление» содержится информация о релизах.
 
+![Релизы](../../images/console/releases.png)
+
 ### Модули
 
 В подразделе «Модули» перечислены запущенные и отключенные модули. Для поиска необходимого модуля предусмотрен фильтр.
@@ -267,13 +269,31 @@ lang: ru
 
 ![Лимиты](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core.png)
 
-![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-podse.png)
+![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-all-pods.png)
 
 ![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new-2.png)
 
 ![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
 
 ![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core.png)
+
+## Доступ
+
+### Подраздел «Операции над пользователями»
+
+Предоставляет интерфейс для управления пользователями.
+
+![Операции над пользователями](../../images/console/operation-with-users-1.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-2.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-3.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-4.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-5.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-6.png)
 
 ## Сеть
 
@@ -455,3 +475,15 @@ lang: ru
    - Фильтрация логов — (опционально) добавляются правила по лейблам и фильтры, чтобы сохранялись только нужные записи.
 
 ![Сбор логов](../../images/console/log_rule.png)
+
+## Просмотр информации об API
+
+Просмотреть информацию об API в формате Swagger можно по нажатию кнопки со знаком вопроса в нижней левой части экрана в выпадающем пользовательском меню.
+
+![API](../../images/console/releases.png)
+
+![API](../../images/console/swagger-1.png)
+
+![API](../../images/console/swagger-2.png)
+
+![API](../../images/console/swagger-3.png)

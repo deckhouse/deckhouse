@@ -20,7 +20,8 @@ NLB-based load balancing can be implemented in two ways:
 
 ## Application-level load balancing (ALB)
 
-For application-level traffic balancing, DKP provides two solutions:
+For application-level traffic balancing, DKP provides following solutions:
 
 - [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).
+- [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) ([`alb`](/modules/alb/) module),
 - [Istio](https://istio.io/) (via the [`istio`](/modules/istio/) module).

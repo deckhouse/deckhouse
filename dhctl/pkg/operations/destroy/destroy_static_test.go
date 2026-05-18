@@ -1729,18 +1729,22 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 		cloudStateProvider:   nil,
 		sshClientProvider:    sshProvider,
 		tmpDir:               tmpDir,
+		// Shrink inter-attempt waits — the production defaults (1-2s) are
+		// padding for real cluster latency the unit test does not exercise.
+		// 1s budget per loop is enough for the background goroutines that
+		// mark nodes ready, while keeping the failing-path tests fast.
 		staticLoopsParams: static.LoopsParams{
 			NodeUser: retry.NewEmptyParams(
-				retry.WithWait(2*time.Second),
-				retry.WithAttempts(4),
+				retry.WithWait(50*time.Millisecond),
+				retry.WithAttempts(10),
 			),
 			DestroyMaster: retry.NewEmptyParams(
-				retry.WithWait(1*time.Second),
+				retry.WithWait(50*time.Millisecond),
 				retry.WithAttempts(1),
 			),
 			GetMastersIPs: retry.NewEmptyParams(
-				retry.WithWait(1*time.Second),
-				retry.WithAttempts(2),
+				retry.WithWait(50*time.Millisecond),
+				retry.WithAttempts(10),
 			),
 		},
 	}

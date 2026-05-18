@@ -23,7 +23,7 @@ PROTOC_GEN_GO_GROC_VERSION = 1.3
 # Build versions
 GOARCH=amd64
 
-TEST_PACKAGES := $(shell go list ./... | grep -Ev '/pkg/preflight(/|$$)')
+TEST_PACKAGES := $(shell go list ./...)
 
 DHCTL_BIN_NAME=bin/dhctl
 MINGET_EMBED_PATH=pkg/minget/embed/minget
@@ -155,16 +155,17 @@ build/test: ADDITIONAL_BUILD_ARGS = -tags dev
 build/test: check-vars build/test/check-digests build
 
 test: check-vars
-	@echo "Warning! For passing ./pkg/infrastructureprovider/ you should prepare /dhctl-tests dir with opentofu and terraform binaries and yandex and gcp plugins and /deckhouse dir with cloud providers config. Or add SKIP_PROVIDER_TEST=true env for skip. Or use make test-skip-cloud-providers "
-	@echo "Warning! For passing all ./pkg/infrastructureprovider/ you should set YANDEX_CLOUD_CONFIG and GCP_CLOUD_CONFIG See check-cloud-providers-vars target"
-	@echo "Warning! For passing all ./pkg/system/node/gossh/ you should be able to run docker containers. Or add SKIP_GOSSH_TEST=true env for skip. Or use test-skip-gossh "
+	@echo "Tests that need external prerequisites (cloud-providers candi tree, /dhctl-tests, docker) auto-skip when those are missing."
+	@echo " - cloud-provider tests run only when /dhctl-tests + /deckhouse are populated; force-skip with DHCTL_SKIP_PROVIDER_TEST=true."
+	@echo " - gossh tests run only when docker is reachable; force-skip with DHCTL_SKIP_GOSSH_TEST=true."
+	@echo " - schema-driven tests (config/destroy/check/...) run only when /deckhouse/candi exists; override with DHCTL_TEST_CANDI_DIR."
 	go test -v -p 1 $(TEST_PACKAGES)
 
 test-skip-cloud-providers: check-vars
-	SKIP_PROVIDER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+	DHCTL_SKIP_PROVIDER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
 
 test-skip-gossh: check-vars
-	SKIP_GOSSH_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+	DHCTL_SKIP_DOCKER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
 
 check-cloud-providers-vars:
 	@[ "${YANDEX_CLOUD_CONFIG}" ] || ( echo "YANDEX_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with yandex without-nat layout"; exit 1 )

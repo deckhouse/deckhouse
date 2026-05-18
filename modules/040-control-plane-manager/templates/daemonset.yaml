@@ -8,10 +8,6 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
-{{- define "update_observer_resources" }}
-cpu: 10m
-memory: 10Mi
-{{- end }}
 
 {{- $profiles := list "main" }}
 {{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
@@ -38,13 +34,14 @@ memory: 10Mi
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
+{{- $_ := set $tpl_context "nodeName" "$NODE_NAME" }}
 {{- $_ := set $tpl_context "runType" "Normal" }}
 {{- $_ := set $tpl_context "etcd" (dict "existingCluster" true) }}
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
-{{- $_ := set $tpl_context "kubeadmDir" "kubeadm/v1beta4" -}}
+{{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
@@ -137,13 +134,22 @@ memory: 10Mi
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
+{{- /*
+Don't forget to also update checksum dependencies
+in modules/040-control-plane-manager/images/control-plane-manager/src/internal/checksum/checksum.go
+*/ -}}
 {{- define "control_plane_config" }}
   {{- $context := index . 0 }}
   {{- $tpl_context := index . 1 }}
-kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tpl_context.kubeadmDir)) $tpl_context | b64enc }}
-{{- range $path, $_ := $context.Files.Glob (printf "%s/patches/*" $tpl_context.kubeadmDir) }}
+{{- range $path, $_ := $context.Files.Glob (printf "%s/*" $tpl_context.controlPlaneTemplatesDir) }}
 {{ base $path }}: {{ tpl ($context.Files.Get $path) $tpl_context | b64enc }}
 {{- end }}
+  {{- if hasKey $tpl_context.apiserver "certSANs" }}
+cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
+  {{- end }}
+  {{- if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
+encryption-algorithm: {{ $tpl_context.clusterConfiguration.encryptionAlgorithm | b64enc }}
+  {{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
@@ -222,12 +228,6 @@ spec:
         cpu: 10m
         memory: 10Mi
     {{- end }}
-    - containerName: update-observer
-      minAllowed:
-        {{- include "update_observer_resources" $ | nindent 8 }}
-      maxAllowed:
-        cpu: 50m
-        memory: 80Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -245,10 +245,6 @@ spec:
       labels:
         app: {{ $dsMode }}
         component: control-plane-manager
-      annotations:
-        checksum/config: {{ include "control_plane_config" (list $ $tpl_context) | sha256sum }}
-        checksum/pki: {{ $.Values.controlPlaneManager.internal.pkiChecksum | quote }}
-        rollout-epoch: {{ $.Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
@@ -305,18 +301,25 @@ spec:
           value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        - name: AUTOMATIC_KUBERNETES_VERSION
+          value: {{ $automaticVersion | quote }}
         - name: NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        {{- if eq $profile "etcd-arbiter" }}
-        - name: ETCD_ARBITER
-          value: "true"
-        {{- end }}
+        - name: DAEMONSET_NAME
+          value: {{ $dsMode }}
+        - name: CLUSTER_DOMAIN
+          value: {{ $.Values.global.clusterConfiguration.clusterDomain | quote }}
+        - name: SERVICE_SUBNET_CIDR
+          value: {{ $.Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
         {{- if eq (include "cpm.disableRootKubeconfigSymlink" $ | trim) "true" }}
         - name: NODE_ADMIN_KUBECONFIG
           value: "false"
         {{- end }}
+        ports:
+        - containerPort: 4296
+          name: https-metrics
         livenessProbe:
           httpGet:
             host: 127.0.0.1
@@ -344,27 +347,6 @@ spec:
           requests:
             {{- include "image_holder_resources" $ | nindent 12 }}
 {{- end }}
-      - name: update-observer
-        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list $ "updateObserver") }}
-        command:
-        - /update-observer
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
-  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "update_observer_resources" $ | nindent 12 }}
-  {{- end }}
-        env:
-        - name: LEADER_ELECTION_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: ALLOWED_KUBERNETES_VERSIONS
-          value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
-        - name: AUTOMATIC_KUBERNETES_VERSION
-          value: {{ $automaticVersion | quote }}
-        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical

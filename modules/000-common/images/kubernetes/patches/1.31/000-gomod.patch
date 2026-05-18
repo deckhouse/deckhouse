@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index f9292dc9..d194e011 100644
+index f9292dc961f..8a5b8feea49 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -6,7 +6,9 @@
@@ -88,6 +88,15 @@ index f9292dc9..d194e011 100644
  	gopkg.in/evanphx/json-patch.v4 v4.12.0
  	gopkg.in/square/go-jose.v2 v2.6.0
  	gopkg.in/yaml.v2 v2.4.0
+@@ -174,7 +176,7 @@ require (
+ 	github.com/mailru/easyjson v0.7.7 // indirect
+ 	github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible // indirect
+ 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
+-	github.com/moby/spdystream v0.4.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/moby/sys/mountinfo v0.7.1 // indirect
+ 	github.com/moby/term v0.5.0 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 @@ -204,16 +206,18 @@ require (
  	go.etcd.io/etcd/raft/v3 v3.5.13 // indirect
  	go.etcd.io/etcd/server/v3 v3.5.13 // indirect
@@ -111,7 +120,7 @@ index f9292dc9..d194e011 100644
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
  	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
 diff --git a/go.sum b/go.sum
-index 84f1888a..ab17cd68 100644
+index 84f1888aa7f..47aca6c35e4 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,126 +1,8 @@
@@ -370,6 +379,17 @@ index 84f1888a..ab17cd68 100644
  github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible h1:aKW/4cBs+yK6gpqU3K/oIwk9Q/XICqd3zOX/UFuvqmk=
  github.com/mistifyio/go-zfs v2.1.2-0.20190413222219-f784269be439+incompatible/go.mod h1:8AuVvqP/mXw1px98n46wfvcGfQ4ci2FwoAjKYxuo3Z4=
  github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
+@@ -439,8 +304,8 @@ github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTS
+ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
+ github.com/moby/ipvs v1.1.0 h1:ONN4pGaZQgAx+1Scz5RvWV4Q7Gb+mvfRh3NsPS+1XQQ=
+ github.com/moby/ipvs v1.1.0/go.mod h1:4VJMWuf098bsUMmZEiD4Tjk/O7mOn3l1PTD3s4OoYAs=
+-github.com/moby/spdystream v0.4.0 h1:Vy79D6mHeJJjiPdFEL2yku1kl0chZpJfZcPpb16BRl8=
+-github.com/moby/spdystream v0.4.0/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
+ github.com/moby/sys/mountinfo v0.7.1 h1:/tTvQaSJRr2FshkhXiIpux6fQ2Zvc4j7tAhMTStAG2g=
+ github.com/moby/sys/mountinfo v0.7.1/go.mod h1:IJb6JQeOklcdMU9F5xQ8ZALD+CUr5VlGpwtX+VE0rpI=
+ github.com/moby/term v0.5.0 h1:xt8Q1nalod/v7BqbG21f8mQPqH+xAaC9C3N3wfWbVP0=
 @@ -454,13 +319,11 @@ github.com/mohae/deepcopy v0.0.0-20170603005431-491d3605edfb h1:e+l77LJOEqXTIQih
  github.com/mohae/deepcopy v0.0.0-20170603005431-491d3605edfb/go.mod h1:TaXosZuwdSHYgviHp1DAtfrULt5eUgsSMsZf+YrPgl8=
  github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 h1:n6/2gBQ3RWajuToeY6ZtZTIKv2v7ThUy5KKusIT0yc0=
@@ -628,7 +648,7 @@ index 84f1888a..ab17cd68 100644
  sigs.k8s.io/kustomize/kustomize/v5 v5.4.2/go.mod h1:5ypfJVYlPb2MKKeoGknVLxvHemDlQT+szI4+KOhnD6k=
  sigs.k8s.io/kustomize/kyaml v0.17.1 h1:TnxYQxFXzbmNG6gOINgGWQt09GghzgTP6mIurOgrLCQ=
 diff --git a/go.work b/go.work
-index 51b38eb1..e22cf912 100644
+index 51b38eb127e..e22cf91211c 100644
 --- a/go.work
 +++ b/go.work
 @@ -1,6 +1,8 @@

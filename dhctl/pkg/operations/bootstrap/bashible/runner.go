@@ -24,9 +24,10 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
-	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (
@@ -64,6 +65,9 @@ func (r *Runner) WithLoopParams(p LoopsParams) *Runner {
 }
 
 func (r *Runner) Prepare(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.Prepare")
+	defer span.End()
+
 	if err := r.createDir(ctx, app.NodeDeckhouseDirectoryPath, "0755"); err != nil {
 		return err
 	}
@@ -86,7 +90,7 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 	isReady := false
 
-	return isReady, retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		cmd := r.nodeInterface.Command("cat", endPipelineFileMark)
 		cmd.Sudo(ctx)
 		cmd.WithTimeout(10 * time.Second)
@@ -101,6 +105,8 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 		return nil
 	})
+
+	return isReady, err
 }
 
 type ExecuteBundleParams struct {
@@ -109,6 +115,9 @@ type ExecuteBundleParams struct {
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.ExecuteBundle")
+	defer span.End()
+
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ExecuteBundle, executeBundleDefaultOpts...).
 		Clone(
 			retry.WithName("Execute bundle"),
@@ -133,6 +142,9 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 }
 
 func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.attemptExecuteBundle")
+	defer span.End()
+
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()

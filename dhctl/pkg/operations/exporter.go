@@ -24,7 +24,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -33,8 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -106,26 +103,13 @@ type ExporterParams struct {
 	Logger      log.Logger
 	IsDebug     bool
 
-	// Kube is used to bootstrap the in-cluster API client.
-	Kube *options.KubeOptions
-
-	// SSH bundles every SSH connection setting needed to construct the
-	// initial SSH client (mode flags, hosts, bastion, sudo password,
-	// scratch directory, …).
-	SSH sshclient.Config
+	// KubeCl is the in-cluster API client. The caller builds it via
+	// providerinitializer.GetProviders / kubeProvider.Client(ctx) just like
+	// every other dhctl command does.
+	KubeCl *client.KubernetesClient
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
-	sshClient, err := sshclient.NewInitClientFromConfig(context.Background(), params.SSH)
-	if err != nil {
-		panic(err)
-	}
-
-	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-	if err := kubeCl.Init(client.AppKubernetesInitParams(params.Kube)); err != nil {
-		panic(err)
-	}
-
 	logger := params.Logger
 	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
@@ -135,7 +119,7 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
-		kubeCl:                kubeCl,
+		kubeCl:                params.KubeCl,
 		infrastructureContext: infraContext,
 		CheckInterval:         params.Interval,
 		existedEntities:       newPreviouslyExistedEntities(),

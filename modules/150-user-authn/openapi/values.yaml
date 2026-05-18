@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/150-user-authn/openapi/values.yaml
+# /ee/cse/modules/150-user-authn/openapi/values.yaml
 x-extend:
   schema: config-values.yaml
 type: object

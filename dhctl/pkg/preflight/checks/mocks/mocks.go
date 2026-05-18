@@ -85,6 +85,14 @@ func (m *MockScript) WithExecuteUploadDir(dir string) {
 	m.Called(dir)
 }
 
+func (m *MockScript) WithNoLogStepOutOnError(enabled bool) {
+	m.Called(enabled)
+}
+
+func (m *MockScript) WithBundlerOpts(opts ...libcon.BundlerOption) {
+	m.Called(opts)
+}
+
 type MockCommand struct {
 	mock.Mock
 }

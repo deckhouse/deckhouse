@@ -16,7 +16,6 @@ package enable
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -27,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hooksync"
@@ -62,12 +60,6 @@ type nelmI interface {
 	ResumeMonitor(name string)
 }
 
-// statusService provides condition updates and error handling.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 // queueService allows enqueuing hook sync tasks to separate queues.
 type queueService interface {
 	Enqueue(ctx context.Context, name string, task queue.Task, opts ...queue.EnqueueOption)
@@ -80,13 +72,13 @@ type task struct {
 
 	nelm   nelmI
 	queue  queueService
-	status statusService
+	status *status.Service
 
 	logger *log.Logger
 }
 
 // NewTask creates a startup task that will initialize hooks and run OnStartup bindings.
-func NewTask(pkg packageI, nelm nelmI, queueService queueService, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, nelm nelmI, queueService queueService, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:    pkg,
 		nelm:   nelm,
@@ -107,20 +99,12 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("startup package")
 
-	t.status.HandleError(t.pkg.GetName(), &status.Error{
-		Err: errors.New("startup package"),
-		Conditions: []status.Condition{
-			{
-				Type:   status.ConditionPending,
-				Status: metav1.ConditionFalse,
-			},
-		},
-	})
+	t.status.SetConditionFalse(t.pkg.GetName(), status.ConditionPending, "Scheduled", "")
 
 	// Step 1: Enable kubernetes/schedule hooks - registers watchers and cron schedules
 	infos, err := t.initializeHooks(ctx)
 	if err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
 
 		return fmt.Errorf("initialize hooks: %w", err)
 	}
@@ -156,7 +140,7 @@ func (t *task) Execute(ctx context.Context) error {
 
 	// Step 3: Run package startup hooks (onStartup binding)
 	if err = t.startupPackage(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
 		return fmt.Errorf("startup package: %w", err)
 	}
 
@@ -209,7 +193,7 @@ func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller
 		})
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return nil, newInitHooksErr(err)
+			return nil, status.NewError("HookInitializationFailed", err)
 		}
 	}
 
@@ -227,7 +211,7 @@ func (t *task) startupPackage(ctx context.Context) error {
 	t.logger.Debug("run startup hooks")
 	if err := t.pkg.RunHooksByBinding(ctx, shtypes.OnStartup); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newStartupHookErr(err)
+		return status.NewError("StartupHookFailed", err)
 	}
 
 	return nil

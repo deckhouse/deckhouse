@@ -14,7 +14,11 @@
 
 package options
 
-import "time"
+import (
+	"time"
+
+	otattribute "go.opentelemetry.io/otel/attribute"
+)
 
 // ConvergeOptions covers the converge / converge-exporter / migration commands.
 type ConvergeOptions struct {
@@ -36,6 +40,16 @@ func NewConvergeOptions() ConvergeOptions {
 	}
 }
 
+func (o *ConvergeOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("converge.metricsPath", o.MetricsPath),
+		otattribute.String("converge.listenAddress", o.ListenAddress),
+		otattribute.String("converge.checkInterval", o.CheckInterval.String()),
+		otattribute.String("converge.outputFormat", o.OutputFormat),
+		otattribute.Bool("converge.checkHasTerraformStateBeforeMigrateToTofu", o.CheckHasTerraformStateBeforeMigrateToTofu),
+	}
+}
+
 // AutoConvergeOptions configures the periodical auto-converge service.
 type AutoConvergeOptions struct {
 	ApplyInterval   time.Duration
@@ -48,5 +62,13 @@ func NewAutoConvergeOptions() AutoConvergeOptions {
 	return AutoConvergeOptions{
 		ApplyInterval: 30 * time.Minute,
 		ListenAddress: ":9101",
+	}
+}
+
+func (o *AutoConvergeOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("autoConverge.applyInterval", o.ApplyInterval.String()),
+		otattribute.String("autoConverge.listenAddress", o.ListenAddress),
+		otattribute.String("autoConverge.runningNodeName", o.RunningNodeName),
 	}
 }

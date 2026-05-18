@@ -27,6 +27,8 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type providerOptions struct {
@@ -117,7 +119,11 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 			return nil, err
 		}
 	} else {
-		parser := libcon_config.NewFlagsParser(baseProviderSettings)
+		// loggerProvider should be forced to non-interactive to ask for password, because our wrapper hides all Info* and Warn* output
+		sett := baseProviderSettings.Clone()
+		loggerProvider := log.NonInteractiveLoggerProvider()
+		sett.WithLogger(loggerProvider)
+		parser := libcon_config.NewFlagsParser(sett)
 		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
 		flags, err := parser.InitFlags(fset)
 		if err != nil {

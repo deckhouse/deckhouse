@@ -14,7 +14,15 @@
 
 package options
 
+import otattribute "go.opentelemetry.io/otel/attribute"
+
 // DestroyOptions covers the destroy command.
 type DestroyOptions struct {
 	SkipResources bool
+}
+
+func (o *DestroyOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.Bool("destroy.skipResources", o.SkipResources),
+	}
 }

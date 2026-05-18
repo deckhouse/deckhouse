@@ -35,7 +35,7 @@ import (
 )
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 
