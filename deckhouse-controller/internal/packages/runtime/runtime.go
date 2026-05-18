@@ -654,7 +654,7 @@ type PreservePackage struct {
 }
 
 // Cleanup removes downloaded application packages on disk and orphan nelm
-// releases in the cluster that are not in preserve. Runs once during preflight.
+// releases in the cluster that are not in preserves. Runs once during preflight.
 func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

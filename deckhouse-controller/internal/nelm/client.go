@@ -63,7 +63,7 @@ type Options struct {
 
 	// ResourcesLabels are stamped on every chart-rendered resource.
 	ResourcesLabels map[string]string
-	// ResourceAnnotations are stamped on every chart-rendered resource.
+	// ResourcesAnnotations are stamped on every chart-rendered resource.
 	ResourcesAnnotations map[string]string
 
 	// ReleaseAnnotations are stamped on Release.Info (visible via action.ReleaseList).
