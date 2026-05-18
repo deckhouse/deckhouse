@@ -1,4 +1,4 @@
 dirs:
-  - /var/run/kubernetes.io/kubernetes-api-proxy
+  - /run/kubernetes.io/kubernetes-api-proxy
 files:
-  - /var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json
+  - /run/kubernetes.io/kubernetes-api-proxy/upstreams.json
