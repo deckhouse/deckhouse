@@ -108,7 +108,7 @@ func InitProgressBar(param *PbParam) error {
 		return err
 	}
 
-	stopChan := make(chan struct{})
+	stopChan := make(chan struct{}, 2)
 
 	defaultpb = &Pb{
 		ProgressBarPrinter: p,
