@@ -14,6 +14,10 @@
 
 package options
 
+import (
+	otattribute "go.opentelemetry.io/otel/attribute"
+)
+
 // Allowed values for CacheOptions.UseTfCache.
 const (
 	UseStateCacheAsk = "ask"
@@ -45,5 +49,13 @@ func NewCacheOptions() CacheOptions {
 		Dir:        DefaultTmpDir(),
 		UseTfCache: UseStateCacheAsk,
 		KubeLabels: make(map[string]string),
+	}
+}
+
+func (o *CacheOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("cache.dir", o.Dir),
+		otattribute.String("cache.useTfCache", o.UseTfCache),
+		otattribute.Bool("cache.dropCache", o.DropCache),
 	}
 }

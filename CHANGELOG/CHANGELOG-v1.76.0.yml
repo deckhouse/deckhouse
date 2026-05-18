@@ -529,8 +529,14 @@ docs:
     - summary: Add section for Ldap manual synchronization
       pull_request: https://github.com/deckhouse/deckhouse/pull/18160
   fixes:
+    - summary: Improvements to the processing of OSS info pages in the PDF version of the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19873
+    - summary: Exclude PDF assets from documentation version upload.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19871
     - summary: Refactored web UI page.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19792
+    - summary: Add information about DKP ingress-nginx support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19788
     - summary: New screenshots have been added to the Console documentation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19735
     - summary: Fix broken links.
@@ -577,6 +583,9 @@ documentation:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
 ingress-nginx:
   fixes:
+    - summary: Nginx is updated up to 1.30.1.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19846
+      impact: All Ingress-nginx controller pods will be restarted.
     - summary: The CVE-2026-35469 is mitigated.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19723
       impact: The kruise controller will be restarted.
@@ -850,6 +859,8 @@ user-authz:
         ClusterRole d8:user-authz:admin-kubeconfig.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19420
   fixes:
+    - summary: Extend cluster-admin clusterrole  with kubelet-api-admin rights.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19878
     - summary: Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules
       pull_request: https://github.com/deckhouse/deckhouse/pull/18689
 vertical-pod-autoscaler:

@@ -14,7 +14,11 @@
 
 package options
 
-import "time"
+import (
+	"time"
+
+	otattribute "go.opentelemetry.io/otel/attribute"
+)
 
 // BootstrapOptions covers everything specific to the bootstrap flow.
 type BootstrapOptions struct {
@@ -41,5 +45,19 @@ func NewBootstrapOptions() BootstrapOptions {
 		ResourcesTimeout:           15 * time.Minute,
 		DeckhouseTimeout:           15 * time.Minute,
 		PostBootstrapScriptTimeout: 10 * time.Minute,
+	}
+}
+
+func (o *BootstrapOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("bootstrap.internalNodeIP", o.InternalNodeIP),
+		otattribute.String("bootstrap.devicePath", o.DevicePath),
+		otattribute.String("bootstrap.resourcesPath", o.ResourcesPath),
+		otattribute.String("bootstrap.resourcesTimeout", o.ResourcesTimeout.String()),
+		otattribute.String("bootstrap.deckhouseTimeout", o.DeckhouseTimeout.String()),
+		otattribute.String("bootstrap.postBootstrapScriptTimeout", o.PostBootstrapScriptTimeout.String()),
+		otattribute.String("bootstrap.postBootstrapScriptPath", o.PostBootstrapScriptPath),
+		otattribute.Bool("bootstrap.forceAbortFromCache", o.ForceAbortFromCache),
+		otattribute.Bool("bootstrap.dontUsePublicControlPlaneImages", o.DontUsePublicControlPlaneImages),
 	}
 }

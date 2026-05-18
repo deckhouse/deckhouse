@@ -50,6 +50,11 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return allowResult(nil)
 		}
 
+		ap := new(v1alpha1.ApplicationPackage)
+		if err := cli.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
+			return rejectResult(fmt.Sprintf("get application package: %v", err))
+		}
+
 		name := apps.BuildName(app.Namespace, app.Name)
 
 		res, err := manager.ValidateSettings(ctx, name, app.Spec.Settings.GetMap())
@@ -100,6 +105,10 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
 		return fmt.Errorf("get application package version: %w", err)
+	}
+
+	if apv.IsDraft() {
+		return fmt.Errorf("application package version '%s' is draft", name)
 	}
 
 	if err := validateAppSettings(apv, app); err != nil {

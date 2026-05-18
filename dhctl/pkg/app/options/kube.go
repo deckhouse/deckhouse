@@ -14,6 +14,10 @@
 
 package options
 
+import (
+	otattribute "go.opentelemetry.io/otel/attribute"
+)
+
 // KubeOptions describes how dhctl reaches the Kubernetes API.
 type KubeOptions struct {
 	Config        string
@@ -25,4 +29,12 @@ type KubeOptions struct {
 // Replaces the previous pkg/app.KubeFlagsDefined helper.
 func (o *KubeOptions) IsDefined() bool {
 	return len(o.Config) > 0 || len(o.ConfigContext) > 0 || o.InCluster
+}
+
+func (o *KubeOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		// otattribute.String("kube.kubeconfig", o.Config), // todo: validate than here NO private data
+		otattribute.String("kube.kubeconfig-context", o.ConfigContext),
+		otattribute.Bool("kube.in-cluster", o.InCluster),
+	}
 }

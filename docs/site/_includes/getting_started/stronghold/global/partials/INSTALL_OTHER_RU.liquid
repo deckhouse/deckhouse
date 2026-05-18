@@ -1,5 +1,10 @@
 {% assign revision=include.revision %}
 
+{% if revision != "ce" %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}" markdown="1"> 
+{% endif %}
+
+
 Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/<SSH_PRIVATE_KEY_FILE>`){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
@@ -31,8 +36,7 @@
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} \
-  -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash
+registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash
 ```
 {% endsnippetcut %}
 </div>
@@ -40,18 +44,18 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Windows install, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 {% snippetcut selector="docker-login-windows" %}
-```text
+```shell
 docker login -u license-token registry.deckhouse.ru
 ```
 {% endsnippetcut %}
 
 Запустите контейнер с установщиком:
 {% snippetcut selector="docker-run-windows" %}
-```text
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\resources.yml:/resources.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
+registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 {% endsnippetcut %}
 </div>
@@ -78,8 +82,6 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-{%- if page.platform_type == "cloud" %} \
-  -v "$PWD/resources.yml:/resources.yml" -v "$PWD/dhctl-tmp:/tmp/dhctl"{% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable{% endif %} bash
 ```
@@ -88,11 +90,10 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, CE -->
 {% snippetcut selector="docker-run-windows-ce" %}
-```text
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
-{%- if page.platform_type == "cloud" %} -v "%cd%\resources.yml:/resources.yml" -v "%cd%\dhctl-tmp:/tmp/dhctl" {% endif %}
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
@@ -116,7 +117,7 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
   --config=/config.yml \
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml --config=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
 {%- endif %}
 ```
 {% endsnippetcut %}
@@ -148,7 +149,8 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения.
 {% if page.platform_type == "baremetal" %}
 Пример вывода при успешном окончании установки:
-```
+
+```shell
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!
@@ -162,7 +164,8 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 ```
 {% else  %}
 По окончании установки инсталлятор выведет IP-адрес **master-узла** (он вам потребуется далее). Пример вывода:
-```
+
+```shell
 ...
 ┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@1.2.3.4
@@ -204,7 +207,10 @@ kubectl -n d8-ingress-nginx get po
 {%- if page.platform_type == "existing" %}
 <h2 id="если-что-то-пошло-не-так">Если что-то пошло не так</h2>
 
-{%  include getting_started/existing/partials/TROUBLESHOOT_RU.liquid %}
+{% include getting_started/existing/partials/TROUBLESHOOT_RU.liquid %}
 
 {% endif %}
-<!--  //-->
+
+{% if revision != "ce" %}
+  </div>
+{% endif %}

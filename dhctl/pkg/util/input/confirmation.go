@@ -15,11 +15,15 @@
 package input
 
 import (
+	"bufio"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pterm/pterm"
 	terminal "golang.org/x/term"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
@@ -48,13 +52,40 @@ func (c *Confirmation) Ask() bool {
 	}
 
 	pb := progressbar.GetDefaultPb()
-	confirmWriter := pb.MultiPrinter.NewWriter()
-	oldWriter := pb.MultiPrinter.Writer
-	pterm.SetDefaultOutput(confirmWriter)
-	result, _ := pterm.DefaultInteractiveConfirm.Show(c.message)
-	pterm.SetDefaultOutput(oldWriter)
+	if pb != nil {
+		confirmWriter := pb.MultiPrinter.NewWriter()
+		oldWriter := pb.MultiPrinter.Writer
+		pterm.SetDefaultOutput(confirmWriter)
+		result, _ := pterm.DefaultInteractiveConfirm.Show(c.message)
+		pterm.SetDefaultOutput(oldWriter)
 
-	return result
+		return result
+	} else {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			log.WarnF(fmt.Sprintf("%s [y/n]: ", c.message))
+			line, _, err := reader.ReadLine()
+			if err != nil {
+				log.ErrorF("can't read from stdin: %v\n", err)
+				return false
+			}
+
+			response := strings.ToLower(strings.TrimSpace(string(line)))
+
+			switch response {
+			case "y", "yes":
+				log.InfoF("\r")
+				return true
+
+			case "n", "no":
+				log.InfoF("\r")
+				return false
+			}
+
+			log.InfoF("\r")
+		}
+	}
+
 }
 
 func IsTerminal() bool {

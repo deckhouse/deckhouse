@@ -363,7 +363,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiVexArtifact": "imageHash-loki-lokiVexArtifact",
 	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
@@ -439,8 +440,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pmacct":              "imageHash-openvpn-pmacct",
 	},
 	"operatorPrometheus": map[string]interface{}{
-		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
-		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
+		"prometheusConfigReloader":            "imageHash-operatorPrometheus-prometheusConfigReloader",
+		"prometheusConfigReloaderVexArtifact": "imageHash-operatorPrometheus-prometheusConfigReloaderVexArtifact",
+		"prometheusOperator":                  "imageHash-operatorPrometheus-prometheusOperator",
+		"prometheusOperatorVexArtifact":       "imageHash-operatorPrometheus-prometheusOperatorVexArtifact",
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",

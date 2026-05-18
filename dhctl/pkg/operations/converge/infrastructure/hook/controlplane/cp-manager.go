@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -54,6 +55,9 @@ func NewManagerReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) *Ma
 }
 
 func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "ManagerReadinessChecker.IsReadyAll")
+	defer span.End()
+
 	kubeClient, err := c.getter.KubeClientCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
