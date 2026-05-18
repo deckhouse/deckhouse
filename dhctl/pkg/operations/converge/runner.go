@@ -27,7 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	convergecontext "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
@@ -48,10 +48,10 @@ type runner struct {
 	commanderUUID uuid.UUID
 
 	lockRunner *lock.InLockRunner
-	switcher   *context.KubeClientSwitcher
+	switcher   *convergecontext.KubeClientSwitcher
 }
 
-func newRunner(inLockRunner *lock.InLockRunner, switcher *context.KubeClientSwitcher) *runner {
+func newRunner(inLockRunner *lock.InLockRunner, switcher *convergecontext.KubeClientSwitcher) *runner {
 	return &runner{
 		excludedNodes: make(map[string]bool),
 		skipPhases:    make(map[phases.OperationPhase]bool),
@@ -97,7 +97,7 @@ func (r *runner) isSkip(phase phases.OperationPhase) bool {
 	return ok
 }
 
-func (r *runner) RunConverge(ctx *context.Context) error {
+func (r *runner) RunConverge(ctx *convergecontext.Context) error {
 	if r.lockRunner != nil {
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.converge(ctx)
@@ -112,7 +112,7 @@ func (r *runner) RunConverge(ctx *context.Context) error {
 	return r.converge(ctx)
 }
 
-func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
+func (r *runner) RunConvergeMigration(ctx *convergecontext.Context, checkHasTerraformStateBeforeMigration bool) error {
 	if r.lockRunner != nil {
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
@@ -127,7 +127,7 @@ func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformSta
 	return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
 }
 
-func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
+func loadNodesState(ctx *convergecontext.Context) (map[string]state.NodeGroupInfrastructureState, error) {
 	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
@@ -156,7 +156,7 @@ func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastruct
 	return nodesState, nil
 }
 
-func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
+func populateNodesState(ctx *convergecontext.Context) (map[string]state.NodeGroupInfrastructureState, error) {
 	var nodesState map[string]state.NodeGroupInfrastructureState
 	err := log.Process("converge", "Gather Nodes infrastructure state", func() error {
 		var err error
@@ -170,7 +170,7 @@ func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrast
 	return nodesState, nil
 }
 
-func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+func (r *runner) migrateTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -209,7 +209,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
+func (r *runner) convergeTerraNodes(ctx *convergecontext.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
@@ -283,7 +283,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderUUID uuid.UUID) error {
+func (r *runner) convergeDeckhouseConfiguration(ctx *convergecontext.Context, commanderUUID uuid.UUID) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -307,7 +307,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
-func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
+func (r *runner) convergeMigration(ctx *convergecontext.Context, checkHasTerraformStateBeforeMigration bool) error {
 	log.InfoF("Converge migration start\n")
 	defer log.InfoF("Converge migration finished\n")
 
@@ -423,7 +423,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 	return nil
 }
 
-func (r *runner) converge(ctx *context.Context) error {
+func (r *runner) converge(ctx *convergecontext.Context) error {
 	log.DebugF("Converge start\n")
 	defer log.DebugF("Converge finished\n")
 	metaConfig, err := ctx.MetaConfig()
@@ -479,7 +479,7 @@ func (r *runner) converge(ctx *context.Context) error {
 	return nil
 }
 
-func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.MetaConfig) error {
+func (r *runner) updateClusterState(ctx *convergecontext.Context, metaConfig *config.MetaConfig) error {
 	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.BaseInfraPhase, true); err != nil {
 		return err
 	} else if shouldStop {
