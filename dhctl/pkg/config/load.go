@@ -39,6 +39,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+var (
+	once  sync.Once
+	store *SchemaStore
+)
+
 type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
@@ -46,16 +51,14 @@ type SchemaStore struct {
 	conversionsStore   *conversion.ConversionsStore
 }
 
-var once sync.Once
-
-var store *SchemaStore
-
 type validateOptions struct {
 	omitDocInError     bool
 	commanderMode      bool
 	strictUnmarshal    bool
 	validateExtensions bool
 	requiredSSHHost    bool
+	operation          string
+	downloadRootDir    string
 }
 
 type ValidateOption func(o *validateOptions)
@@ -93,6 +96,18 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
+func ValidateOptionOperation(op string) ValidateOption {
+	return func(o *validateOptions) {
+		o.operation = op
+	}
+}
+
+func ValidateOptionDownloadRootDir(dir string) ValidateOption {
+	return func(o *validateOptions) {
+		o.downloadRootDir = dir
+	}
+}
+
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
 	candiDir := options.DefaultCandiDir
@@ -100,6 +115,21 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 		candiDir = globalOptions.CandiDir
 	}
 	paths = append([]string{candiDir}, paths...)
+
+	// External provider images unpack into <DownloadDir>/<provider>/.
+	// Add each provider subdir so its schemas (openapi/, etc.) are picked up.
+	if globalOptions != nil && globalOptions.DownloadDir != "" {
+		entries, _ := os.ReadDir(globalOptions.DownloadDir)
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			if e.Name() == "deckhouse" || e.Name() == "cache" {
+				continue
+			}
+			paths = append(paths, filepath.Join(globalOptions.DownloadDir, e.Name()))
+		}
+	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {

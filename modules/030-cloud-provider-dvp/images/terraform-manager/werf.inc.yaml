@@ -4,7 +4,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
-  to: /candi
+  to: /
   excludePaths:
   - '**/terraform_versions.yml'
   stageDependencies:
@@ -19,6 +19,10 @@ import:
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes
   to: /terraform-manager/terraform-provider-kubernetes
+  before: setup
+- image: {{ $.ModuleName }}/validator
+  add: /dhctl-provider-dvp
+  to: /validator
   before: setup
 shell:
   install:
