@@ -1,0 +1,56 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /dhctl-provider-dvp
+  to: /dhctl-provider-dvp
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /go_lib/dhctl-provider-protocol
+  to: /src/go_lib/dhctl-provider-protocol
+  excludePaths:
+  - "**/*.md"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+shell:
+  install:
+  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' /src/go.mod
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/golang-alpine" }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  install:
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - go mod download
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /dhctl-provider-dvp .
+  - chmod 0755 /dhctl-provider-dvp
