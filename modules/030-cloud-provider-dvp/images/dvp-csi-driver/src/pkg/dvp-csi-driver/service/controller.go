@@ -48,6 +48,7 @@ var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 	csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME, // attach/detach
 	csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+	csi.ControllerServiceCapability_RPC_MODIFY_VOLUME,
 }
 
 func NewController(
@@ -447,6 +448,33 @@ func isNodeExpansionRequired(
 		return false
 	}
 	return true
+}
+
+func (c *ControllerService) ControllerModifyVolume(
+	ctx context.Context,
+	req *csi.ControllerModifyVolumeRequest,
+) (*csi.ControllerModifyVolumeResponse, error) {
+	if len(req.VolumeId) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	dvpStorageClass, ok := req.MutableParameters[ParameterDVPStorageClass]
+	if !ok || dvpStorageClass == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "missing required mutable parameter %q", ParameterDVPStorageClass)
+	}
+
+	diskName := req.VolumeId
+	klog.Infof("Migrating disk %s to storage class %s", diskName, dvpStorageClass)
+
+	if err := c.dvpCloudAPI.DiskService.MigrateDiskStorageClass(ctx, diskName, dvpStorageClass); err != nil {
+		if errors.Is(err, cloudprovider.DiskNotFound) {
+			return nil, status.Errorf(codes.NotFound, "disk %s not found", diskName)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to migrate disk %s to storage class %s: %v", diskName, dvpStorageClass, err)
+	}
+
+	klog.Infof("Triggered storage class migration for disk %s to %s", diskName, dvpStorageClass)
+	return &csi.ControllerModifyVolumeResponse{}, nil
 }
 
 func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
