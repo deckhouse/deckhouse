@@ -1,17 +1,35 @@
 diff --git a/controllers/yandexcluster_controller.go b/controllers/yandexcluster_controller.go
-index d45185a..ef49988 100644
+index d45185a..5ce0e59 100644
 --- a/controllers/yandexcluster_controller.go
 +++ b/controllers/yandexcluster_controller.go
-@@ -121,6 +121,23 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
+@@ -18,6 +18,8 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"net/http"
++	"net/url"
++	"strconv"
+ 
+ 	"github.com/pkg/errors"
+ 	corev1 "k8s.io/api/core/v1"
+@@ -121,6 +123,34 @@ func (r *YandexClusterReconciler) reconcile(ctx context.Context, clusterScope *s
  		return ctrl.Result{Requeue: true}, nil
  	}
  
 +	switch r.Config.ControlPlaneEndpointManagementMode {
 +	case options.ControlPlaneEndpointManagementModeExternal:
-+		if clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Host == "" || clusterScope.YandexCluster.Spec.ControlPlaneEndpoint.Port == 0 {
-+			conditions.MarkFalse(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition,
-+				"control plane endpoint is not configured", clusterv1.ConditionSeverityError, "")
-+			return ctrl.Result{}, fmt.Errorf("controlPlaneEndpoint must be set when control plane endpoint management mode is %q", options.ControlPlaneEndpointManagementModeExternal)
++		controlPlaneEndpointURL, err := url.Parse(r.RESTConfig.Host)
++		if err != nil {
++			return ctrl.Result{}, fmt.Errorf("failed to parse api server host: %w", err)
++		}
++
++		port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
++		if err != nil {
++			return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
++		}
++
++		clusterScope.YandexCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
++			Host: controlPlaneEndpointURL.Hostname(),
++			Port: int32(port),
 +		}
 +
 +		conditions.MarkTrue(clusterScope.YandexCluster, infrav1.LoadBalancerReadyCondition)

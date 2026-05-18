@@ -5,5 +5,5 @@ source during the `capyandex-controller-manager` image build.
 
 Adds control plane endpoint management modes:
 - `ManagedLoadBalancer` keeps the upstream behavior.
-- `External` skips load balancer reconciliation and requires
-  `spec.controlPlaneEndpoint` to be set by the integrating platform.
+- `External` skips load balancer reconciliation and sets
+  `spec.controlPlaneEndpoint` from the controller manager `RESTConfig.Host`.

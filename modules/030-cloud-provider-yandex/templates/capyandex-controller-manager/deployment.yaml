@@ -14,6 +14,15 @@ security.deckhouse.io/security-policy-exception: capyandex-controller-manager
     secretKeyRef:
       name: yandex-credentials-capyandex
       key: key
+{{- if not .Values.global.clusterIsBootstrapped }}
+- name: KUBERNETES_SERVICE_HOST
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: status.hostIP
+- name: KUBERNETES_SERVICE_PORT
+  value: "6443"
+{{- end }}
 - name: CAPY_CONTROL_PLANE_ENDPOINT_MANAGEMENT_MODE
   value: External
 {{- end -}}
