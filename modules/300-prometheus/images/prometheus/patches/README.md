@@ -23,3 +23,11 @@ Update dependencies to fix CVEs
 ### 004-hardfix_bug_with_dropped_unknown_samples.patch
 
 Add loading chunk snapshots in remote-write to solve problem with unknown series's samples drop.
+
+### 005-fix-cve-bump.patch
+
+Bump dependencies to fix CVEs:
+- [CVE-2026-33186](https://github.com/advisories/GHSA-fw5q-2xv9-49qr) — `google.golang.org/grpc` bumped from v1.66.0 to v1.80.0.
+- [CVE-2026-24051](https://github.com/advisories/GHSA-9h8m-3fm2-qjrq) — `go.opentelemetry.io/otel/sdk` bumped from v1.29.0 to v1.43.0.
+- [CVE-2026-39883](https://github.com/advisories/GHSA-c98q-8jvw-w7p2) — `go.opentelemetry.io/otel/sdk` bumped from v1.29.0 to v1.43.0.
+- [CVE-2026-39882](https://github.com/advisories/GHSA-pqrx-pwhc-3wf2) — `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` bumped from v1.29.0 to v1.43.0.
