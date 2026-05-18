@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -35,6 +36,7 @@ import (
 
 type SSHTunnelCheck struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	dc                     *directoryconfig.DirectoryConfig
 }
 
 const (
@@ -67,11 +69,11 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 	if !ok {
 		return nil
 	}
-	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort), nil)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort), c.dc)
 	if err != nil {
 		return fmt.Errorf("render reverse tunnel script: %w", err)
 	}
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(localhost, strconv.Itoa(defaultTunnelRemotePort), nil)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(localhost, strconv.Itoa(defaultTunnelRemotePort), c.dc)
 	if err != nil {
 		return fmt.Errorf("render kill tunnel script: %w", err)
 	}
@@ -141,8 +143,8 @@ func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	return func() { _ = server.Shutdown(ctx) }, nil
 }
 
-func SSHTunnel(sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
-	check := SSHTunnelCheck{SSHProviderInitializer: sshProviderInitializer}
+func SSHTunnel(sshProviderInitializer *providerinitializer.SSHProviderInitializer, dc *directoryconfig.DirectoryConfig) preflight.Check {
+	check := SSHTunnelCheck{SSHProviderInitializer: sshProviderInitializer, dc: dc}
 	return preflight.Check{
 		Name:        SSHTunnelCheckName,
 		Description: check.Description(),

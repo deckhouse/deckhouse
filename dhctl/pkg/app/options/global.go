@@ -36,6 +36,7 @@ type GlobalOptions struct {
 	DownloadCacheDir       string
 	ConfigPaths            []string
 	SanityCheck            bool
+	ShowProgress           bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {

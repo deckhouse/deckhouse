@@ -98,7 +98,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	defer cleanup()
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		intLogger, ok := b.logger.(*log.InteractiveLogger)
 		if !ok {

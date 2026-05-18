@@ -226,7 +226,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !c.Options.Global.ShowProgress
 	if interactive {
 		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Converge", c.Logger)
 		if err != nil {

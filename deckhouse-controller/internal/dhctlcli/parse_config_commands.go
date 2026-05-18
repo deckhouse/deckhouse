@@ -31,8 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -45,14 +43,6 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var metaConfig *config.MetaConfig
 
 		logger := log.GetDefaultLogger()
-
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster configuration", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
 
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
@@ -103,14 +93,6 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		_ = kpcontext.ExtractContext(c)
-
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster discovery data", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
 
 		var err error
 		var data []byte

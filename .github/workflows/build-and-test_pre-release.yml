@@ -136,19 +136,6 @@ jobs:
 
   # </template: git_info_job>
 
-
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
-
   build_fe:
     name: Build FE
     needs:
@@ -202,6 +189,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -253,11 +244,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -275,7 +266,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -328,6 +319,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -439,20 +432,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
 
   build_CE:
@@ -510,6 +502,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -561,11 +557,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -583,7 +579,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -636,6 +632,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -747,20 +745,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
   build_EE:
     name: Build EE
@@ -817,6 +814,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -868,11 +869,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -890,7 +891,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -943,6 +944,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1054,20 +1057,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
   build_BE:
     name: Build BE
@@ -1124,6 +1126,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -1175,11 +1181,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1197,7 +1203,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1250,6 +1256,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1361,20 +1369,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
   build_SE:
     name: Build SE
@@ -1431,6 +1438,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -1482,11 +1493,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1504,7 +1515,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1557,6 +1568,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1668,20 +1681,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
   build_SE-plus:
     name: Build SE-plus
@@ -1738,6 +1750,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -1789,11 +1805,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1811,7 +1827,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1864,6 +1880,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1975,20 +1993,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
   build_CSE:
     name: Build CSE
@@ -2045,6 +2062,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -2096,11 +2117,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -2118,7 +2139,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -2171,6 +2192,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2281,20 +2304,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
 
   doc_web_build:
@@ -2571,10 +2593,35 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics url | DMT_METRICS_URL ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics token | DMT_METRICS_TOKEN ;
+
+      # </template: import_secrets>
       - name: DMT lint
         env:
-          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
-          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+          DMT_METRICS_URL: "${{ steps.secrets.outputs.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ steps.secrets.outputs.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>
@@ -3092,6 +3139,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
 
       # </template: import_secrets>
 
@@ -3125,7 +3173,7 @@ jobs:
         env:
           TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
           IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+          DECKHOUSE_PRIVATE_REPO: ${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
           make cve-base-images-check-default-user
@@ -3701,6 +3749,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -3838,7 +3887,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
