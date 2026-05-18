@@ -107,6 +107,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func discoverControlPlaneEndpoint(_ context.Context, input *go_hook.HookInput) error {
 	const valuesPath = "nodeManager.internal.cloudProvider.yandex.controlPlaneEndpoint"
 
+	if input.Values.Get("nodeManager.internal.cloudProvider.type").String() != "yandex" {
+		input.Values.Remove(valuesPath)
+		return nil
+	}
+
 	if len(input.Snapshots.Get("publish_api_ingress")) > 0 {
 		var endpoint ingressControlPlaneEndpoint
 		if err := input.Snapshots.Get("publish_api_ingress")[0].UnmarshalTo(&endpoint); err != nil {

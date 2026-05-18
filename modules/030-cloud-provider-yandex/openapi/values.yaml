@@ -6,14 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      controlPlaneEndpoint:
-        type: object
-        default: {}
-        properties:
-          host:
-            type: string
-          port:
-            type: integer
       capyandexControllerManagerWebhookCert:
         type: object
         default: {}
