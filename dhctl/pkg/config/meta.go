@@ -107,12 +107,7 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 var deprecatedClusterConfigFields = []struct {
 	field   string
 	message string
-}{
-	{
-		field:   "encryptionAlgorithm",
-		message: "Move it to control-plane-manager ModuleConfig spec.settings.encryptionAlgorithm.",
-	},
-}
+}{}
 
 func (m *MetaConfig) warnDeprecatedClusterConfigFields() {
 	for _, d := range deprecatedClusterConfigFields {
