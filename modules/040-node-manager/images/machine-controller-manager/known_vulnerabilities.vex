@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-mcm-node-manager",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2020-26160"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/dgrijalva/jwt-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2020-26160 связана с отсутствием проверки поля aud (audience) в JWT-токенах в библиотеке dgrijalva/jwt-go. machine-controller-manager использует эту библиотеку как транзитивную зависимость через k8s.io/client-go v0.16.x, при этом парсинг JWT-токенов с внешним input не выполняется — аутентификация осуществляется через ServiceAccount токены Kubernetes, валидация которых выполняется на стороне kube-apiserver",
+      "timestamp": "2026-04-29T14:34:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2019-11250"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/client-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2019-11250 связана с логированием Bearer-токенов при высоком уровне verbosity (>= 7) в k8s.io/client-go. machine-controller-manager в production запускается с уровнем логирования по умолчанию (verbosity < 7), конфигурация verbosity не доступна внешнему пользователю, утечка токенов через логи невозможна при штатной эксплуатации",
+      "timestamp": "2026-04-29T14:34:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2020-8565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/client-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2020-8565 является неполным исправлением CVE-2019-11250 — токены могут попадать в логи при высоком уровне verbosity. machine-controller-manager в production запускается с уровнем логирования по умолчанию, конфигурация verbosity не доступна внешнему пользователю, утечка токенов через логи невозможна при штатной эксплуатации",
+      "timestamp": "2026-04-29T14:34:00Z"
+    }
+  ],
+  "timestamp": "2026-04-29T14:34:00Z"
+}
