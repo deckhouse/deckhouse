@@ -1,0 +1,81 @@
+diff --git a/api/v1alpha1/yandexcluster_types.go b/api/v1alpha1/yandexcluster_types.go
+index 45871b5..a78d336 100644
+--- a/api/v1alpha1/yandexcluster_types.go
++++ b/api/v1alpha1/yandexcluster_types.go
+@@ -190,13 +190,21 @@ func (ir *IdentityReference) NamespacedName() types.NamespacedName {
+ 	}
+ }
+ 
++// ClusterInitializationStatus provides observations of the YandexCluster initialization process.
++type ClusterInitializationStatus struct {
++	// Provisioned denotes that the cluster infrastructure provisioning is completed.
++	Provisioned bool `json:"provisioned,omitempty"`
++}
++
+ // YandexClusterStatus defines the observed state of YandexCluster.
+ type YandexClusterStatus struct {
+ 	// Ready is true when the provider resource is ready.
+ 	// +kubebuilder:default=false
+-	Ready        bool                 `json:"ready"`
+-	LoadBalancer LoadBalancerStatus   `json:"loadBalancerStatus,omitempty"`
+-	Conditions   clusterv1.Conditions `json:"conditions,omitempty"`
++	Ready bool `json:"ready"`
++	// +optional
++	Initialization ClusterInitializationStatus `json:"initialization,omitempty"`
++	LoadBalancer   LoadBalancerStatus          `json:"loadBalancerStatus,omitempty"`
++	Conditions     clusterv1.Conditions        `json:"conditions,omitempty"`
+ }
+ 
+ // LoadBalancerStatus encapsulates load balancer resources.
+diff --git a/api/v1alpha1/yandexmachine_types.go b/api/v1alpha1/yandexmachine_types.go
+index b40a107..9f5047a 100644
+--- a/api/v1alpha1/yandexmachine_types.go
++++ b/api/v1alpha1/yandexmachine_types.go
+@@ -65,6 +65,12 @@ type YandexMachineSpec struct {
+ 	NetworkInterfaces []NetworkInterface `json:"networkInterfaces"`
+ }
+ 
++// InitializationStatus provides observations of the YandexMachine initialization process.
++type InitializationStatus struct {
++	// Provisioned denotes that the machine infrastructure provisioning is completed.
++	Provisioned bool `json:"provisioned,omitempty"`
++}
++
+ // NetworkInterface defines the network interface configuration of YandexCloud VM.
+ type NetworkInterface struct {
+ 	// SubnetID is the identifier of subnetwork to use for this instance.
+@@ -130,6 +136,10 @@ type YandexMachineStatus struct {
+ 	// +optional
+ 	Ready bool `json:"ready"`
+ 
++	// Initialization provides observations of the YandexMachine initialization process.
++	// +optional
++	Initialization InitializationStatus `json:"initialization,omitempty"`
++
+ 	// Addresses contains the YandexCloud instance associated addresses.
+ 	// +optional
+ 	Addresses []corev1.NodeAddress `json:"addresses,omitempty"`
+diff --git a/internal/pkg/cloud/scope/cluster.go b/internal/pkg/cloud/scope/cluster.go
+index 8d85c03..12ab1d7 100644
+--- a/internal/pkg/cloud/scope/cluster.go
++++ b/internal/pkg/cloud/scope/cluster.go
+@@ -99,6 +99,7 @@ func (c *ClusterScope) Name() string {
+ // SetReady sets the YandexCluster Ready Status.
+ func (c *ClusterScope) SetReady() {
+ 	c.YandexCluster.Status.Ready = true
++	c.YandexCluster.Status.Initialization.Provisioned = true
+ }
+ 
+ // GetClient gets client for YandexCloud API.
+diff --git a/internal/pkg/cloud/scope/machine.go b/internal/pkg/cloud/scope/machine.go
+index 9bd75e1..28f5315 100644
+--- a/internal/pkg/cloud/scope/machine.go
++++ b/internal/pkg/cloud/scope/machine.go
+@@ -103,6 +103,7 @@ func (m *MachineScope) IsControlPlane() bool {
+ // SetReady sets the YandexMachine Ready Status.
+ func (m *MachineScope) SetReady() {
+ 	m.YandexMachine.Status.Ready = true
++	m.YandexMachine.Status.Initialization.Provisioned = true
+ }
+ 
+ // GetProviderID returns the YandexMachine providerID from the spec.
