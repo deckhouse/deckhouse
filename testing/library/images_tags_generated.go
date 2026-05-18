@@ -363,7 +363,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiVexArtifact": "imageHash-loki-lokiVexArtifact",
 	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
