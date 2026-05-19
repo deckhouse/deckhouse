@@ -165,15 +165,14 @@ d8 k get node %node-name% --show-labels
 
    Примерный вывод [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup):
 
-   ```text
-   NAME              HEALTH        NODE            SIZE       ALLOCATED SIZE   VG        AGE
-   lvg-on-worker-0   Operational   node-worker-0   40956Mi    0                test-vg   15d
-   lvg-on-worker-1   Operational   node-worker-1   61436Mi    0                test-vg   15d
-   lvg-on-worker-2   Operational   node-worker-2   122876Mi   0                test-vg   15d
-   lvg-on-worker-3   Operational   node-worker-3   307196Mi   0                test-vg   15d
-   lvg-on-worker-4   Operational   node-worker-4   307196Mi   0                test-vg   15d
-   lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
-   ```
+   | NAME | HEALTH | NODE | SIZE | ALLOCATED SIZE | VG | AGE |
+   | --- | --- | --- | --- | --- | --- | --- |
+   | lvg-on-worker-0 | Operational | node-worker-0 | 40956Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-1 | Operational | node-worker-1 | 61436Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-2 | Operational | node-worker-2 | 122876Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-3 | Operational | node-worker-3 | 307196Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-4 | Operational | node-worker-4 | 307196Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-5 | Operational | node-worker-5 | 204796Mi | 0 | test-vg | 15d |
 
 1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
 

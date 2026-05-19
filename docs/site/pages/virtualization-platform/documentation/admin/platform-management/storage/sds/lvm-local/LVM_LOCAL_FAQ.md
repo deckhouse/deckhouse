@@ -164,15 +164,14 @@ To check the dependent resources, follow these steps:
 
    Example [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) output:
 
-   ```text
-   NAME              HEALTH        NODE            SIZE       ALLOCATED SIZE   VG        AGE
-   lvg-on-worker-0   Operational   node-worker-0   40956Mi    0                test-vg   15d
-   lvg-on-worker-1   Operational   node-worker-1   61436Mi    0                test-vg   15d
-   lvg-on-worker-2   Operational   node-worker-2   122876Mi   0                test-vg   15d
-   lvg-on-worker-3   Operational   node-worker-3   307196Mi   0                test-vg   15d
-   lvg-on-worker-4   Operational   node-worker-4   307196Mi   0                test-vg   15d
-   lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
-   ```
+   | NAME | HEALTH | NODE | SIZE | ALLOCATED SIZE | VG | AGE |
+   | --- | --- | --- | --- | --- | --- | --- |
+   | lvg-on-worker-0 | Operational | node-worker-0 | 40956Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-1 | Operational | node-worker-1 | 61436Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-2 | Operational | node-worker-2 | 122876Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-3 | Operational | node-worker-3 | 307196Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-4 | Operational | node-worker-4 | 307196Mi | 0 | test-vg | 15d |
+   | lvg-on-worker-5 | Operational | node-worker-5 | 204796Mi | 0 | test-vg | 15d |
 
 1. Ensure that the node you intend to remove from the module's control does not have any [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources used in [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resources. To avoid unintentionally losing control over volumes already created using the module, the user needs to manually delete dependent resources by performing necessary operations on the volume.
 
