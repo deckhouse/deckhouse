@@ -1,0 +1,9 @@
+name: legacy-module
+weight: 100
+requirements:
+  deckhouse: ">= 1.67"
+  kubernetes: ">= 1.31"
+  modules:
+    prometheus: ">= 1.0.0"
+    cert-manager: ">= 1.10.0 !optional"
+    observability: "!optional"
