@@ -1,0 +1,158 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                waypointFor:
+                  description: |
+                    Управляет значением лейбла `istio.io/waypoint-for` на всех управляемых ресурсах.
+                nodeSelector:
+                  description: |
+                    Node selector для подов waypoint proxy.
+                tolerations:
+                  description: |
+                    Tolerations для подов waypoint proxy.
+                replicasManagement:
+                  description: |
+                    Настройки управления репликацией и масштабированием для waypoint instance.
+                  properties:
+                    mode:
+                      description: |
+                        Режим управления репликами:
+                        - `Static` — режим, в котором количество реплик задаётся явно.
+                        - `HPA` — режим, в котором количество реплик рассчитывается автоматически с помощью HPA на основе загрузки CPU.
+                    static:
+                      description: |
+                        Настройки управления репликами для режима `Static`.
+                      properties:
+                        replicas:
+                          description: |
+                            Желаемое количество реплик.
+                    hpa:
+                      description: |
+                        Настройки управления репликами для режима `HPA`.
+                      properties:
+                        minReplicas:
+                          description: |
+                            Нижняя граница количества реплик, до которой HPA может масштабировать вниз.
+                        maxReplicas:
+                          description: |
+                            Верхняя граница количества реплик, до которой HPA может масштабировать вверх.
+                        metrics:
+                          description: |
+                            HPA будет использовать эти метрики для принятия решения об увеличении или уменьшении количества реплик.
+                          items:
+                            properties:
+                              type:
+                                description: |
+                                  Тип метрики.
+                              targetAverageUtilization:
+                                description: |
+                                  Целевое значение средней метрики ресурсов по всем соответствующим подам, выраженное в процентах от запрошенного значения.
+                resourcesManagement:
+                  description: |
+                    Настройки запросов и лимитов CPU и памяти для подов waypoint.
+                  properties:
+                    mode:
+                      description: |
+                        Режим управления ресурсами.
+                    vpa:
+                      description: |
+                        Настройки управления ресурсами для режима VPA.
+                      properties:
+                        mode:
+                          description: |
+                            Режим работы VPA.
+                        cpu:
+                          description: |
+                            Настройки VPA для CPU.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение CPU requests, которое может установить VPA.
+                            min:
+                              description: |
+                                Минимальное значение CPU requests, которое может установить VPA.
+                            limitRatio:
+                              description: |
+                                Соотношение limits/requests для CPU.
+
+                                Если задано, лимиты рассчитываются на основе запросов и указанного соотношения.
+                        memory:
+                          description: |
+                            Настройки VPA для памяти.
+                          properties:
+                            max:
+                              description: |
+                                Максимальное значение memory requests, которое может установить VPA.
+                            min:
+                              description: |
+                                Минимальное значение memory requests, которое может установить VPA.
+                            limitRatio:
+                              description: |
+                                Соотношение limits/requests для памяти.
+
+                                Если задано, лимиты рассчитываются на основе запросов и указанного соотношения.
+                    static:
+                      description: |
+                        Настройки статического режима управления ресурсами.
+                      properties:
+                        requests:
+                          description: |
+                            Resource requests.
+                          properties:
+                            cpu:
+                              description: |
+                                CPU requests.
+                            memory:
+                              description: |
+                                Memory requests.
+                        limits:
+                          description: |
+                            Resource limits.
+                          properties:
+                            cpu:
+                              description: |
+                                CPU limits.
+                            memory:
+                              description: |
+                                Memory limits.
+                allowedRoutes:
+                  description: |
+                    Конфигурация ограничения того, какие Routes могут прикрепляться к Gateway.
+                  properties:
+                    namespaces:
+                      description: |
+                        Конфигурация ограничения пространств имён Routes, которые могут прикрепляться к Gateway.
+                      properties:
+                        from:
+                          description: |
+                            Указывает, из каких пространств имён разрешено прикреплять Routes к этому Gateway.
+                            - `All` — Routes из всех пространств имён могут быть прикреплены.
+                            - `Selector` — только Routes из пространств имён, соответствующих `selector`, могут быть прикреплены.
+                            - `Same` — только Routes из того же пространства имён, что и Gateway, могут быть прикреплены.
+                        selector:
+                          description: |
+                            Label selector для выбора пространств имён. Обязателен, когда `from` имеет значение `Selector`.
+                          properties:
+                            matchLabels:
+                              description: |
+                                Карта пар {ключ, значение}. Одна пара {ключ, значение} в matchLabels эквивалентна элементу matchExpressions с оператором `In` и массивом values, содержащим только это значение.
+                            matchExpressions:
+                              description: |
+                                Список требований к label selector.
+                              items:
+                                properties:
+                                  key:
+                                    description: Имя лейбла.
+                                  operator:
+                                    description: Оператор сравнения.
+                                  values:
+                                    description: Значения лейбла.
+            status:
+              properties:
+                synced:
+                  description: True, когда желаемые и фактические ресурсы синхронизированы.

@@ -1,0 +1,342 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    module: istio
+    heritage: deckhouse
+  name: waypointinstances.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  names:
+    kind: WaypointInstance
+    listKind: WaypointInstanceList
+    plural: waypointinstances
+    singular: waypointinstance
+    shortNames:
+      - wpi
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.synced
+          name: Synced
+          type: boolean
+      name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 51
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+            spec:
+              type: object
+              x-kubernetes-validations:
+              - rule: "!(has(self.replicasManagement) && self.replicasManagement.mode == 'HPA') || (has(self.resourcesManagement) && self.resourcesManagement.mode == 'Static')"
+                message: "replicasManagement.mode HPA requires resourcesManagement.mode Static"
+                reason: FieldValueInvalid
+              properties:
+                waypointFor:
+                  type: string
+                  description: |
+                    Controls the `istio.io/waypoint-for` label on all managed resources.
+                  enum: ['All', 'Service', 'Workload']
+                  default: 'All'
+                nodeSelector:
+                  type: object
+                  description: |
+                    Node selector for waypoint proxy pods.
+                  additionalProperties:
+                    type: string
+                tolerations:
+                  type: array
+                  description: |
+                    Tolerations for waypoint proxy pods.
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                        default: "Equal"
+                        enum: ["Exists", "Equal"]
+                      value:
+                        type: string
+                      effect:
+                        type: string
+                        enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+                      tolerationSeconds:
+                        format: int64
+                        type: integer
+                replicasManagement:
+                  type: object
+                  description: |
+                    Replication management settings and scaling for the waypoint instance.
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        Replicas management mode:
+                        - `Static` — the mode where the number of replicas is specified explicitly.
+                        - `HPA` — the mode where the number of replicas is calculated automatically using HPA based on CPU usage.
+                      enum: ['Static', 'HPA']
+                      default: 'Static'
+                    static:
+                      type: object
+                      description: |
+                        Options for replicas management for the `Static` mode.
+                      properties:
+                        replicas:
+                          type: integer
+                          minimum: 1
+                          description: |
+                            Desired number of replicas.
+                    hpa:
+                      type: object
+                      description: |
+                        Options for replicas management for the `HPA` mode.
+                      x-kubernetes-validations:
+                        - rule: "self.minReplicas <= self.maxReplicas"
+                          message: "replicasManagement.hpa.minReplicas must be less than or equal to replicasManagement.hpa.maxReplicas"
+                          reason: FieldValueInvalid
+                      properties:
+                        minReplicas:
+                          type: integer
+                          minimum: 1
+                          description: |
+                            The lower limit for the number of replicas to which the HPA can scale down.
+                        maxReplicas:
+                          type: integer
+                          minimum: 1
+                          description: |
+                            The upper limit for the number of replicas to which the HPA can scale up.
+                        metrics:
+                          type: array
+                          description: |
+                            The HPA will use these metrics to decide whether to increase or decrease the number of replicas.
+                          minItems: 1
+                          items:
+                            type: object
+                            required: ["type", "targetAverageUtilization"]
+                            properties:
+                              type:
+                                type: string
+                                description: |
+                                  Metric type.
+                                enum: ['CPU']
+                              targetAverageUtilization:
+                                type: integer
+                                description: |
+                                  The target value of the average resource metric across all relevant pods, represented as a percentage of the requested value.
+                                minimum: 1
+                                maximum: 100
+                resourcesManagement:
+                  type: object
+                  description: |
+                    CPU and memory request and limit settings for the waypoint Pods.
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        Resource management mode.
+                      enum: ['VPA', 'Static']
+                      default: 'VPA'
+                    vpa:
+                      type: object
+                      description: |
+                        Resource management settings for the VPA mode.
+                      x-kubernetes-validations:
+                        - rule: "!has(self.cpu) || !has(self.cpu.min) || !has(self.cpu.max) || quantity(self.cpu.min).compareTo(quantity(self.cpu.max)) <= 0"
+                          message: "resourcesManagement.vpa.cpu.min must be less than or equal to resourcesManagement.vpa.cpu.max"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.memory) || !has(self.memory.min) || !has(self.memory.max) || quantity(self.memory.min).compareTo(quantity(self.memory.max)) <= 0"
+                          message: "resourcesManagement.vpa.memory.min must be less than or equal to resourcesManagement.vpa.memory.max"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.cpu) || !has(self.cpu.min) || quantity(self.cpu.min).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.vpa.cpu.min must be a valid quantity"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.cpu) || !has(self.cpu.max) || quantity(self.cpu.max).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.vpa.cpu.max must be a valid quantity"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.memory) || !has(self.memory.min) || quantity(self.memory.min).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.vpa.memory.min must be a valid quantity"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.memory) || !has(self.memory.max) || quantity(self.memory.max).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.vpa.memory.max must be a valid quantity"
+                          reason: FieldValueInvalid
+                      properties:
+                        mode:
+                          type: string
+                          description: |
+                            VPA operating mode.
+                          enum: ['Initial', 'InPlaceOrRecreate']
+                          default: 'InPlaceOrRecreate'
+                        cpu:
+                          type: object
+                          default: {}
+                          description: |
+                            CPU-related VPA settings.
+                          properties:
+                            max:
+                              description: |
+                                Maximum value of allowed CPU requests to be submitted by the VPA.
+                              default: '1000m'
+                              type: string
+                            min:
+                              description: |
+                                Minimum value of allowed CPU requests to be submitted by the VPA.
+                              default: '100m'
+                              type: string
+                            limitRatio:
+                              type: number
+                              description: |
+                                The CPU limits/requests ratio.
+
+                                If set, the limits are calculated based on the requests and the specified ratio.
+                        memory:
+                          type: object
+                          default: {}
+                          description: |
+                            Memory-related VPA settings.
+                          properties:
+                            max:
+                              description: |
+                                Maximum value of allowed memory requests to be submitted by the VPA.
+                              default: '2000Mi'
+                              type: string
+                            min:
+                              description: |
+                                Minimum value of allowed memory requests to be submitted by the VPA.
+                              default: '128Mi'
+                              type: string
+                            limitRatio:
+                              type: number
+                              description: |
+                                The memory limits/requests ratio.
+
+                                If set, the limits are calculated based on the requests and the specified ratio.
+                    static:
+                      type: object
+                      description: |
+                        Static mode settings.
+                      x-kubernetes-validations:
+                        - rule: "!has(self.requests) || !has(self.limits) || !has(self.requests.cpu) || !has(self.limits.cpu) || quantity(self.requests.cpu).compareTo(quantity(self.limits.cpu)) <= 0"
+                          message: "resourcesManagement.static.requests.cpu must be less than or equal to resourcesManagement.static.limits.cpu"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.requests) || !has(self.limits) || !has(self.requests.memory) || !has(self.limits.memory) || quantity(self.requests.memory).compareTo(quantity(self.limits.memory)) <= 0"
+                          message: "resourcesManagement.static.requests.memory must be less than or equal to resourcesManagement.static.limits.memory"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.requests) || !has(self.requests.cpu) || quantity(self.requests.cpu).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.static.requests.cpu must be a valid quantity"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.requests) || !has(self.requests.memory) || quantity(self.requests.memory).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.static.requests.memory must be a valid quantity"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.limits) || !has(self.limits.cpu) || quantity(self.limits.cpu).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.static.limits.cpu must be a valid quantity"
+                          reason: FieldValueInvalid
+                        - rule: "!has(self.limits) || !has(self.limits.memory) || quantity(self.limits.memory).compareTo(quantity('0')) >= 0"
+                          message: "resourcesManagement.static.limits.memory must be a valid quantity"
+                          reason: FieldValueInvalid
+                      properties:
+                        requests:
+                          type: object
+                          default: {}
+                          description: |
+                            Resource requests.
+                          properties:
+                            cpu:
+                              type: string
+                              description: |
+                                CPU requests.
+                              default: '100m'
+                            memory:
+                              type: string
+                              description: |
+                                Memory requests.
+                              default: '128Mi'
+                        limits:
+                          type: object
+                          default: {}
+                          description: |
+                            Resource limits.
+                          properties:
+                            cpu:
+                              type: string
+                              description: |
+                                CPU limits.
+                            memory:
+                              type: string
+                              description: |
+                                Memory limits.
+                allowedRoutes:
+                  type: object
+                  description: |
+                    Configuration for restricting which Routes can attach to the Gateway.
+                  properties:
+                    namespaces:
+                      type: object
+                      description: |
+                        Configuration for restricting the namespaces of Routes that can attach to the Gateway.
+                      x-kubernetes-validations:
+                      - rule: "self.from == 'Selector' ? has(self.selector) : true"
+                        message: "selector is required when from is Selector"
+                        reason: FieldValueInvalid
+                      - rule: "self.from == 'Selector' ? true : !has(self.selector)"
+                        message: "selector is only allowed when from is Selector"
+                        reason: FieldValueInvalid
+                      properties:
+                        from:
+                          type: string
+                          description: |
+                            Specifies which namespaces are allowed to attach Routes to this Gateway.
+                            - `All` — Routes in all namespaces may be attached.
+                            - `Selector` — Only Routes in namespaces matching the `selector` may be attached.
+                            - `Same` — Only Routes in the same namespace as the Gateway may be attached.
+                          enum: ['All', 'Selector', 'Same']
+                          default: 'Same'
+                        selector:
+                          type: object
+                          description: |
+                            Label selector for selecting namespaces. Required when `from` is `Selector`.
+                          properties:
+                            matchLabels:
+                              type: object
+                              description: |
+                                A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions with operator `In` and the values array containing only the value.
+                              additionalProperties:
+                                type: string
+                            matchExpressions:
+                              type: array
+                              description: |
+                                A list of label selector requirements.
+                              items:
+                                type: object
+                                required: ["key", "operator"]
+                                properties:
+                                  key:
+                                    type: string
+                                  operator:
+                                    type: string
+                                    enum: ['In', 'NotIn', 'Exists', 'DoesNotExist']
+                                  values:
+                                    type: array
+                                    items:
+                                      type: string
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  minimum: 0
+                synced:
+                  type: boolean
+                  description: True when desired and actual resources are in sync.
+      subresources:
+        status: {}
