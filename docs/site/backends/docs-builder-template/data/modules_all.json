@@ -1,4 +1,17 @@
 {
+  "adaptive-resource-management": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "scaling",
+      "ssdlc"
+    ]
+  },
   "alb": {
     "editions": [
       "ce",
@@ -627,6 +640,19 @@
     "path": "/modules/static-routing-manager/",
     "tags": [
       "network",
+      "ssdlc"
+    ]
+  },
+  "storage-foundation": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "storage",
       "ssdlc"
     ]
   },
