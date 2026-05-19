@@ -10,7 +10,7 @@
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
-metadata: 
+metadata:
   name: etcd
   namespace: kube-system
   labels:
