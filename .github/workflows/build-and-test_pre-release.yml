@@ -2586,7 +2586,7 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
       - name: Run python webhook tests
