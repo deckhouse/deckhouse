@@ -193,7 +193,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -507,7 +506,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -820,7 +818,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -1133,7 +1130,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -1446,7 +1442,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -1759,7 +1754,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -2072,7 +2066,6 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
 
       # </template: import_secrets>
 
@@ -2572,6 +2565,30 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
+
+      # </template: import_secrets>
       - name: Run python webhook tests
         env:
           DISTRO_PACKAGES_PROXY: "${{ steps.secrets.outputs.DISTRO_PACKAGES_PROXY }}"
