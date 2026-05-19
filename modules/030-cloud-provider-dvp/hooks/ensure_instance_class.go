@@ -18,4 +18,4 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-dvp/candi/openapi/instance_class.yaml")
+var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/030-cloud-provider-dvp/openapi/instance_class.yaml")

@@ -280,7 +280,7 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /modules/030-cloud-provider-dvp/candi/openapi
+- add: /modules/030-cloud-provider-dvp/openapi
   to: /src/modules/030-cloud-provider-dvp/crds
   owner: jekyll
   group: jekyll
