@@ -2824,7 +2824,10 @@ alerts:
 
         **To complete the migration, follow the steps below:**
 
-        1. Review current settings for `publishAPI` in the resource `moduleconfig user-authn` resource.
+        1. Review current settings for `publishAPI` in the `moduleconfig user-authn` resource.
+
+           Note that legacy `user-authn` `spec.version: 1` uses `publishAPI.enable` instead of `publishAPI.enabled`.
+           No manual rewrite is required: the command in step 4 uses the normalized payload from the temporary ConfigMap.
 
         2. If the `moduleconfig control-plane-manager` resource exists, update its spec to `spec.version: 3`. If `settings.apiserver.loadBalancer` is set, migrate it to `settings.apiserver.publishAPI.loadBalancer`. If the resource does not exist, proceed to step 3.
 

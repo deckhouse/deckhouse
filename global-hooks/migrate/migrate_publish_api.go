@@ -155,7 +155,23 @@ func extractPublishAPISettingsFromMC(mc *unstructured.Unstructured) (map[string]
 		return nil, false, nil
 	}
 
+	normalizeLegacyPublishAPISettings(publishAPISettings)
+
 	return publishAPISettings, true, nil
+}
+
+func normalizeLegacyPublishAPISettings(publishAPISettings map[string]interface{}) {
+	if publishAPISettings == nil {
+		return
+	}
+
+	if _, exists := publishAPISettings["enabled"]; !exists {
+		if legacyEnabled, legacyExists := publishAPISettings["enable"]; legacyExists {
+			publishAPISettings["enabled"] = legacyEnabled
+		}
+	}
+
+	delete(publishAPISettings, "enable")
 }
 
 func cleanupMigrationCm(input *go_hook.HookInput, kubeCl k8s.Client) error {
