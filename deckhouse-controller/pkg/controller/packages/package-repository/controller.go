@@ -24,6 +24,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -293,7 +294,7 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 	}
 
 	appPackages := &v1alpha1.ApplicationPackageList{}
-	if err := r.client.List(ctx, appPackages); err != nil {
+	if err := r.client.List(ctx, appPackages); err != nil && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("list application packages: %w", err)
 	}
 	for _, pkg := range appPackages.Items {
@@ -303,7 +304,7 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 	}
 
 	modulePackages := &v1alpha1.ModulePackageList{}
-	if err := r.client.List(ctx, modulePackages); err != nil {
+	if err := r.client.List(ctx, modulePackages); err != nil && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("list module packages: %w", err)
 	}
 	for _, pkg := range modulePackages.Items {
