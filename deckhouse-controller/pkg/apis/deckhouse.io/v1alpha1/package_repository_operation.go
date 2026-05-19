@@ -23,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+type PackageRepositoryOperationScanType string
+
 const (
 	PackageRepositoryOperationResource = "packagerepositoryoperations"
 	PackageRepositoryOperationKind     = "PackageRepositoryOperation"
@@ -40,8 +42,8 @@ const (
 	// that belong to a specific PackageRepository
 	PackagesRepositoryOperationLabelRepository = "packages.deckhouse.io/repository"
 
-	PackagesRepositoryOperationLabelOperationType = "packages.deckhouse.io/operation-type"
-	PackageRepositoryOperationTypeUpdate          = "Update"
+	PackagesRepositoryOperationLabelOperationType                                    = "packages.deckhouse.io/operation-type"
+	PackageRepositoryOperationTypeUpdate          PackageRepositoryOperationScanType = "Update"
 
 	PackagesRepositoryOperationLabelOperationTrigger = "packages.deckhouse.io/operation-trigger"
 	PackagesRepositoryTriggerManual                  = "manual"
@@ -93,7 +95,7 @@ type PackageRepositoryOperationSpec struct {
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
 	// Type of operation to perform.
-	Type string `json:"type"`
+	Type PackageRepositoryOperationScanType `json:"type"`
 
 	// Configuration for update operations.
 	// +optional

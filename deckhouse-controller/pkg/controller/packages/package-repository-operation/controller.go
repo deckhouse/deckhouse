@@ -140,9 +140,9 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 	}
 
 	// Ensure operation type label matches spec (sync on every reconcile)
-	if label, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || label != op.Spec.Type {
+	if label, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || label != string(op.Spec.Type) {
 		update = true
-		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = op.Spec.Type
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = string(op.Spec.Type)
 	}
 
 	// Set repository label for efficient filtering/querying
