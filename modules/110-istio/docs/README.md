@@ -100,7 +100,7 @@ Kiali is a tool for visualizing your application's service tree. It allows you t
 
 Metrics for Grafana workloads graphs and quantitative in Kiali on Prometheus scraping metrics `istio_*` series from `istio-proxy`. Starting with Istio&nbsp;1.21+, Istio exposes those using **Telemetry API** mesh defaults instead of legacy `telemetry.v2` filters alone.
 
-Deckhouse configures this parametr [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): when `false` you keep the legacy stack; when `true` you switch to `meshConfig.defaultProviders`, bundled `Telemetry` resources, and the [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) template wired into access logs. Step-by-step examples, readiness checks and optional extra `Telemetry` policies are in [Telemetry API for mesh metrics and access logs](examples.html#telemetry-api-mesh-observability).
+Deckhouse configures [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): when `false` you keep the legacy stack; when `true` you switch to `meshConfig.defaultProviders`, bundled `Telemetry` resources, and the [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) template wired into access logs. Step-by-step examples, readiness checks, optional extra `Telemetry` policies, and tracing (`spec.tracing`) are in [Telemetry API for mesh metrics, tracing, and access logs](examples.html#telemetry-api-mesh-observability).
 
 ## Architecture of the cluster with Istio enabled
 
