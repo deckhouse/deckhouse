@@ -205,6 +205,9 @@ rules:
   - moduleconfigs
   - deckhousereleases
   - modulesources
+  - modulereleases
+  - moduledocumentations
+  - modulesettingsdefinitions
   - moduleupdatepolicies
   - modulepulloverrides
   - packagerepositories
