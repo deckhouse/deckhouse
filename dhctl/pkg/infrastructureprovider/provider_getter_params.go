@@ -109,13 +109,8 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 	}
 
 	if _, err = os.Stat(diDefaultParams.PluginsDir); err != nil {
-		// First try well-known absolute /plugins (matches install image layout); falls
-		// back to dDir/plugins if not present.
-		if _, e := os.Stat("/plugins"); e == nil {
-			diDefaultParams.PluginsDir = "/plugins"
-		} else {
-			diDefaultParams.PluginsDir = filepath.Join(dDir, "plugins")
-		}
+		// fallback to /tmp
+		diDefaultParams.PluginsDir = filepath.Join(dDir, "plugins")
 	}
 
 	logger.LogDebugF("Using default FSDIParams: %+v\n", diDefaultParams)
