@@ -15,7 +15,7 @@
 # limitations under the License.
 set -Eeo pipefail
 
-apk update && apk add --no-cache python3 py3-pip findutils grep
+http_proxy=dev-registry-cse.deckhouse.ru:8082 apk update && apk add --no-cache python3 py3-pip findutils grep
 
 pip3 install --break-system-packages -r /requirements.txt
 
