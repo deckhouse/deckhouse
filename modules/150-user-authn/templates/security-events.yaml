@@ -23,9 +23,12 @@ spec:
 
     producesDefaults:
       transform:
-        timestamp: time
-        metadata.actor.sourceIPs: client_remote_addr
-        metadata.requestID: request_id
+        - key: timestamp
+          value: time
+        - key: metadata.actor.sourceIPs
+          value: client_remote_addr
+        - key: metadata.requestID
+          value: request_id
       enrich:
         - target: source.component
           source: Static
@@ -39,11 +42,16 @@ spec:
           values:
             - '.*"msg":"login successful".*'
         transform:
-          actor.id: username
-          metadata.actor.preferredUsername: preferred_username
-          metadata.actor.email: email
-          metadata.actor.groups: groups
-          metadata.auth.connectorID: connector_id
+          - key: actor.id
+            value: username
+          - key: metadata.actor.preferredUsername
+            value: preferred_username
+          - key: metadata.actor.email
+            value: email
+          - key: metadata.actor.groups
+            value: groups
+          - key: metadata.auth.connectorID
+            value: connector_id
         enrich:
           - target: actor.type
             source: Static
@@ -56,9 +64,12 @@ spec:
           values:
             - '.*"msg":"failed login attempt: Invalid credentials\.".*'
         transform:
-          actor.id: user
-          metadata.auth.connectorID: connector_id
-          metadata.auth.clientID: client_id
+          - key: actor.id
+            value: user
+          - key: metadata.auth.connectorID
+            value: connector_id
+          - key: metadata.auth.clientID
+            value: client_id
         enrich:
           - target: actor.type
             source: Static
@@ -78,7 +89,8 @@ spec:
           values:
             - '.*"msg":"keys rotated".*'
         transform:
-          metadata.auth.nextRotation: next_rotation
+          - key: metadata.auth.nextRotation
+            value: next_rotation
 
       # Assumption: all dex startup lines with msg beginning with "config " are
       # security-relevant runtime configuration signals for user-authn service.
@@ -96,7 +108,8 @@ spec:
           values:
             - '.*"msg":"listening on".*"server":"https".*"address":"0\.0\.0\.0:5556".*'
         transform:
-          metadata.network.bindAddress: address
+          - key: metadata.network.bindAddress
+            value: address
 ---
 apiVersion: security.deckhouse.io/v1alpha1
 kind: SecurityEventDefinition
