@@ -17,12 +17,17 @@ limitations under the License.
 package hooks
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -54,6 +59,11 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		return err
 	}
 	input.Values.Set("cloudProviderDvp.internal.providerClusterConfiguration", providerClusterConfiguration)
+
+	err = createProviderClusterConfigurationResources(input, &providerClusterConfiguration)
+	if err != nil {
+		return err
+	}
 
 	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
 	if providerDiscoveryData != nil {
@@ -89,6 +99,308 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 
 	return nil
 }, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
+
+const (
+	dvpModuleConfigName           = "cloud-provider-dvp"
+	dvpMigrationResourcesName     = "d8-migration-resources"
+	dvpMigrationResourcesFilename = "resources.yaml"
+	dvpCredentialSecretName       = "d8-cloud-provider-dvp-credentials"
+	dvpInstanceClassKind          = "DVPInstanceClass"
+	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
+	dvpDefaultInstanceSuffix      = "dvp"
+)
+
+func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
+	if cfg == nil || cfg.Provider == nil || cfg.Provider.KubeconfigDataBase64 == nil || cfg.Provider.Namespace == nil {
+		return nil
+	}
+
+	providerSettings := map[string]any{
+		"parameters": map[string]any{
+			"namespace": *cfg.Provider.Namespace,
+		},
+	}
+
+	nodesSettings := map[string]any{
+		"enabled": true,
+		"parameters": map[string]any{
+			"layout":       stringValue(cfg.Layout),
+			"sshPublicKey": stringValue(cfg.SSHPublicKey),
+		},
+	}
+	nodesParameters := nodesSettings["parameters"].(map[string]any)
+	if cfg.Region != nil {
+		nodesParameters["region"] = *cfg.Region
+	}
+	if cfg.Zones != nil {
+		nodesParameters["zones"] = stringsToAnySlice(*cfg.Zones)
+	}
+
+	resources := make([]any, 0, 4+len(cfg.NodeGroups))
+
+	moduleConfig := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleConfig",
+		"metadata": map[string]any{
+			"name": dvpModuleConfigName,
+		},
+		"spec": map[string]any{
+			"enabled": true,
+			"version": int64(1),
+			"settings": map[string]any{
+				"provider": providerSettings,
+				"storage": map[string]any{
+					"enabled":    true,
+					"parameters": map[string]any{},
+				},
+				"nodes": nodesSettings,
+			},
+		},
+	}
+	resources = append(resources, moduleConfig)
+
+	credentialSecret := map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Secret",
+		"metadata": map[string]any{
+			"name":      dvpCredentialSecretName,
+			"namespace": "d8-cloud-provider-dvp",
+			"labels": map[string]any{
+				"heritage": "deckhouse",
+				"module":   "cloud-provider-dvp",
+			},
+		},
+		"type": "cloud-provider.deckhouse.io/credentials",
+		"data": map[string]any{
+			"authScheme": "S3ViZWNvbmZpZw==",
+			"secret":     *cfg.Provider.KubeconfigDataBase64,
+		},
+	}
+	resources = append(resources, credentialSecret)
+
+	masterNodeGroup, err := mapFromAny(cfg.MasterNodeGroup)
+	if err != nil {
+		return fmt.Errorf("convert masterNodeGroup: %w", err)
+	}
+	if len(masterNodeGroup) != 0 {
+		masterResources, err := createNodeGroupResources("master", masterNodeGroup, true, cfg.Zones)
+		if err != nil {
+			return err
+		}
+		resources = append(resources, masterResources...)
+	}
+
+	for _, rawNodeGroup := range cfg.NodeGroups {
+		nodeGroup, err := mapFromAny(rawNodeGroup)
+		if err != nil {
+			return fmt.Errorf("convert nodeGroup: %w", err)
+		}
+
+		name, ok := nodeGroup["name"].(string)
+		if !ok || name == "" {
+			return errors.New("nodeGroups[].name cannot be empty")
+		}
+
+		nodeGroupResources, err := createNodeGroupResources(name, nodeGroup, false, cfg.Zones)
+		if err != nil {
+			return err
+		}
+		resources = append(resources, nodeGroupResources...)
+	}
+
+	return createMigrationResourcesSecret(input, resources)
+}
+
+func createMigrationResourcesSecret(input *go_hook.HookInput, resources []any) error {
+	manifest, err := marshalResourcesManifest(resources)
+	if err != nil {
+		return err
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dvpMigrationResourcesName,
+			Namespace: "d8-cloud-provider-dvp",
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   "cloud-provider-dvp",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			dvpMigrationResourcesFilename: manifest,
+		},
+	}
+	input.PatchCollector.CreateOrUpdate(secret)
+
+	return nil
+}
+
+func marshalResourcesManifest(resources []any) ([]byte, error) {
+	var buffer bytes.Buffer
+	for index, resource := range resources {
+		if index > 0 {
+			buffer.WriteString("---\n")
+		}
+
+		data, err := yaml.Marshal(resource)
+		if err != nil {
+			return nil, err
+		}
+		buffer.Write(data)
+	}
+
+	return buffer.Bytes(), nil
+}
+
+func createNodeGroupResources(name string, nodeGroup map[string]any, master bool, clusterZones *[]string) ([]any, error) {
+	instanceClassSpec, ok := nodeGroup["instanceClass"].(map[string]any)
+	if !ok || len(instanceClassSpec) == 0 {
+		return nil, fmt.Errorf("%s.instanceClass cannot be empty", name)
+	}
+
+	instanceClassName := fmt.Sprintf("%s-%s", name, dvpDefaultInstanceSuffix)
+	instanceClass := map[string]any{
+		"apiVersion": dvpInstanceClassAPI,
+		"kind":       dvpInstanceClassKind,
+		"metadata": map[string]any{
+			"name": instanceClassName,
+			"labels": map[string]any{
+				"heritage": "deckhouse",
+				"module":   "cloud-provider-dvp",
+			},
+		},
+		"spec": instanceClassSpec,
+	}
+
+	replicas, err := replicasFromNodeGroup(nodeGroup)
+	if err != nil {
+		return nil, fmt.Errorf("%s.replicas: %w", name, err)
+	}
+
+	zones := zonesFromNodeGroup(nodeGroup, clusterZones)
+	cloudInstances := map[string]any{
+		"zones":      zones,
+		"minPerZone": replicasForUnstructured(replicas),
+		"maxPerZone": replicasForUnstructured(replicas),
+		"classReference": map[string]any{
+			"kind": dvpInstanceClassKind,
+			"name": instanceClassName,
+		},
+	}
+
+	nodeGroupSpec := map[string]any{
+		"nodeType":       "CloudPermanent",
+		"cloudInstances": cloudInstances,
+	}
+	if nodeTemplate, ok := nodeGroup["nodeTemplate"]; ok {
+		nodeGroupSpec["nodeTemplate"] = nodeTemplate
+	}
+	if master {
+		nodeGroupSpec["nodeTemplate"] = map[string]any{
+			"labels": map[string]any{
+				"node-role.kubernetes.io/control-plane": "",
+				"node-role.kubernetes.io/master":        "",
+			},
+		}
+	}
+
+	nodeGroupResource := map[string]any{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]any{
+			"name": name,
+			"labels": map[string]any{
+				"heritage": "deckhouse",
+				"module":   "cloud-provider-dvp",
+			},
+		},
+		"spec": nodeGroupSpec,
+	}
+
+	return []any{instanceClass, nodeGroupResource}, nil
+}
+
+func mapFromAny(value any) (map[string]any, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]any)
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func replicasFromNodeGroup(nodeGroup map[string]any) (int, error) {
+	replicas, ok := nodeGroup["replicas"]
+	if !ok {
+		return 0, errors.New("cannot be empty")
+	}
+
+	switch v := replicas.(type) {
+	case float64:
+		return int(v), nil
+	case int64:
+		return int(v), nil
+	case int:
+		return v, nil
+	case int32:
+		return int(v), nil
+	default:
+		return 0, fmt.Errorf("unexpected type %T", replicas)
+	}
+}
+
+func replicasForUnstructured(replicas int) int64 {
+	return int64(replicas)
+}
+
+func zonesFromNodeGroup(nodeGroup map[string]any, clusterZones *[]string) []any {
+	if rawZones, ok := nodeGroup["zones"].([]interface{}); ok && len(rawZones) > 0 {
+		zones := make([]any, 0, len(rawZones))
+		for _, rawZone := range rawZones {
+			if zone, ok := rawZone.(string); ok && zone != "" {
+				zones = append(zones, zone)
+			}
+		}
+		if len(zones) > 0 {
+			return zones
+		}
+	}
+
+	if clusterZones != nil && len(*clusterZones) > 0 {
+		return stringsToAnySlice(*clusterZones)
+	}
+
+	return []any{"default"}
+}
+
+func stringsToAnySlice(values []string) []any {
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)

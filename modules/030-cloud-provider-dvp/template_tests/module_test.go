@@ -17,8 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -66,6 +66,17 @@ const globalValues = `
 `
 
 const moduleValuesA = `
+nodes:
+  enabled: true
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa AAAAB3N
+provider:
+  parameters:
+    namespace: cloud-provider01
+storage:
+  enabled: true
+  parameters: {}
 internal:
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
