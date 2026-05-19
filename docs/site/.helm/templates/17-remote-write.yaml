@@ -1,0 +1,15 @@
+---
+apiVersion: deckhouse.io/v1
+kind: PrometheusRemoteWrite
+metadata:
+  name: docs-telemetry-dev-remote-write
+  labels:
+    app.kubernetes.io/part-of: deckhouse-web-docs-telemetry
+spec:
+  customAuthToken: "{{ .Values.dop.auth.token }}"
+  url: "{{ .Values.dop.url }}/api/v1/push?component=registry-modules-watcher"
+  writeRelabelConfigs:
+  - action: keep
+    regex: (d8_telemetry_.*)
+    sourceLabels:
+    - __name__
