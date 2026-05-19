@@ -177,7 +177,7 @@ spec:
         - ""
         - "true"
 ---
-{{- $policyName := "deny-heritage-label-update.deckhouse.io" }}
+{{- $policyName := "deny-set-heritage-label.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -230,7 +230,9 @@ spec:
     objectSelector:
       matchExpressions:
         - key: "heritage"
-          operator: Exists
+          operator: In
+          values:
+            - "deckhouse"
 {{- end }}
 ---
 {{- $policyName := "update-policy-label-objects.deckhouse.io" }}
