@@ -15,6 +15,12 @@ description: "Настройка GCP для работы облачного пр
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
+{% alert level="warning" %}
+Начиная с версии DKP 1.77, в GCP CNI `cilium` используется по умолчанию для новых кластеров. В существующих кластерах текущая конфигурация CNI сохраняется.
+
+Для новых кластеров требуется ядро Linux версии `5.8` или новее на всех узлах. Также убедитесь, что файрволы и группы безопасности разрешают межузловой UDP-трафик для Cilium VXLAN. Подробнее см. [требования к установке](/products/kubernetes-platform/documentation/v1/installing/), [раздел «Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html) и [документацию модуля `cni-cilium`](/modules/cni-cilium/).
+{% endalert %}
+
 ## Настройка через Google Cloud Console
 
 Перейдите [по ссылке](https://console.cloud.google.com/iam-admin/serviceaccounts), выберите проект и создайте новый service account (также можно выбрать уже существующий).

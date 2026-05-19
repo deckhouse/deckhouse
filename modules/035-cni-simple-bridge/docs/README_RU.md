@@ -10,3 +10,7 @@ description: "Обеспечение работы сети в кластере D
 - [Azure](../../modules/cloud-provider-azure/).
 - [GCP](../../modules/cloud-provider-gcp/).
 - [Yandex](../../modules/cloud-provider-yandex/).
+
+{% alert level="info" %}
+Начиная с версии DKP 1.77 для AWS, Azure и GCP, а также с версии 1.76 для Yandex Cloud, CNI `cilium` используется по умолчанию для новых кластеров. В существующих кластерах текущая конфигурация CNI сохраняется.
+{% endalert %}

@@ -12,8 +12,14 @@ Features of the `cloud-provider-azure` module:
   - The CCM module creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type;
   - The CCM module updates the metadata of the cluster nodes according to the configuration parameters and deletes nodes that are no longer in Azure;
 - Provisioning nodes in Azure using the `CSI storage` component;
-- Enabling the necessary CNI plugin (using the [simple bridge](../../modules/cni-simple-bridge/));
+- Enabling the necessary CNI plugin (using [`cni-cilium`](../../modules/cni-cilium/));
 - Registering with the [node-manager](../../modules/node-manager/) module so that [AzureInstanceClasses](cr.html#azureinstanceclass) can be used when creating the [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
+
+{% alert level="warning" %}
+Starting with DKP version 1.77, Azure uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
+
+New clusters require Linux kernel version `5.8` or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
+{% endalert %}
 
 {% alert level="warning" %}
 When using load balancers, outgoing traffic also goes through it. If no balancer has UDP rules, all outgoing UDP traffic is blocked. As a result, such utilities as `ntpdate` and `chrony` do not work. To solve the problem, you need to add a load balancing rule with any UDP port to an existing balancer yourself, or create a service in the cluster with the LoadBalancer type with any UDP port.
