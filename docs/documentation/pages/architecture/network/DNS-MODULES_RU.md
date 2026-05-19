@@ -4,6 +4,13 @@ permalink: ru/architecture/network/dns-modules.html
 lang: ru
 search: dns, coredns, доменные имена
 description: Архитектура модулей kube-dns и node-local-dns в Deckhouse Kubernetes Platform.
+relatedLinks:
+  - title: "Модуль kube-dns: настройки"
+    url: /modules/kube-dns/configuration.html
+  - title: "Модуль node-local-dns: настройки"
+    url: /modules/node-local-dns/configuration.html
+  - title: "Кеширующий DNS-сервер в кластере"
+    url: /architecture/network/dns-caching.html
 ---
 
 Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [CoreDNS](https://coredns.io/) в Deckhouse Kubernetes Platform (DKP).
@@ -37,13 +44,13 @@ description: Архитектура модулей kube-dns и node-local-dns в
    Состоит из следующих контейнеров:
 
    * **coredns** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам coredns. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищённого доступа к метрикам coredns. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 1. **D8-kube-dns-sts-pods-hosts-appender-webhook** (Deployment) — опциональный компонент, состоящий из одного контейнера **webhook**.
 
    Deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse/) создаёт этот компонент, если в ModuleConfig задан параметр `.spec.settings.clusterDomainAliases`.
 
-   Компонент реализует мутирующий webhook-сервер, добавляющий init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в Pod, созданный StatefulSet-контроллером, если в спецификации Pod указана опция `.spec.subdomain`.
+   Компонент реализует мутирующий вебхук-сервер, добавляющий init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в Pod, созданный StatefulSet-контроллером, если в спецификации Pod указана опция `.spec.subdomain`.
 
    Init-контейнер изменяет файл `/etc/hosts`, чтобы подсистема разрешения имён корректно работала с алиасами домена кластера.
 
@@ -104,7 +111,9 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 1. **Stale-dns-connections-cleaner** (DaemonSet) — компонент, который удаляет устаревшие UDP-соединения, оставшиеся после перезапуска Pod `node-local-dns`. Состоит из одного контейнера **stale-dns-connections-cleaner**.
 
-   > **Внимание.** Компонент имеет привилегированный доступ к сетевой системе каждого узла. В Linux для этого требуется capability `CAP_NET_ADMIN`. Такой доступ необходим для выполнения операций с сетевыми подключениями на уровне ядра ОС Linux.
+   {% alert level="warning" %}
+   Компонент имеет привилегированный доступ к сетевой системе каждого узла. В Linux для этого требуется capability `CAP_NET_ADMIN`. Такой доступ необходим для выполнения операций с сетевыми подключениями на уровне ядра ОС Linux.
+   {% endalert %}
 
 1. **Safe-updater** (Deployment) — компонент, обеспечивающий безопасный перезапуск node-local-dns при изменении спецификации DaemonSet.
 

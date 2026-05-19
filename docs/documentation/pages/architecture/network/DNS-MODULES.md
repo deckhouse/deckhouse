@@ -4,13 +4,20 @@ permalink: en/architecture/network/dns-modules.html
 lang: en
 search: dns, coredns, domain names
 description: Architecture of the kube-dns and node-local-dns modules in Deckhouse Kubernetes Platform.
+relatedLinks:
+  - title: "kube-dns module configuration"
+    url: /modules/kube-dns/configuration.html
+  - title: "node-local-dns module configuration"
+    url: /modules/node-local-dns/configuration.html
+  - title: "Caching DNS server in a cluster"
+    url: /architecture/network/dns-caching.html
 ---
 
 The [`kube-dns`](/modules/kube-dns/) module provides domain name resolution based on [CoreDNS](https://coredns.io/) in Deckhouse Kubernetes Platform (DKP).
 
-For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/kube-dns/configuration.html).
+For more details about module configuration and usage examples, refer to [the corresponding documentation section](/modules/kube-dns/configuration.html).
 
-## Kube-dns module
+## kube-dns module
 
 ### Module architecture
 
@@ -36,8 +43,8 @@ The `kube-dns` module consists of the following components:
 
    It consists of the following containers:
 
-   * **Coredns**: Main container.
-   * **Kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns metrics. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
+   * **coredns**: Main container.
+   * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns metrics. It is an [Open Source project](https://github.com/brancz/kube-rbac-proxy).
 
 1. **D8-kube-dns-sts-pods-hosts-appender-webhook** (Deployment): Optional component that consists of a single **webhook** container.
 
@@ -61,7 +68,7 @@ The following external components interact with the module:
 1. **Kube-apiserver**: Modifies Pod resources created by the StatefulSet controller.
 1. **Prometheus-main**: Collects module metrics.
 
-## Node-local-dns module
+## node-local-dns module
 
 The [`node-local-dns`](/modules/node-local-dns/) module provides a caching DNS service and a DNS request forwarding mechanism on each cluster node, reducing the load on `coredns` of the [`kube-dns`](/modules/kube-dns/) module.
 
@@ -70,7 +77,7 @@ Depending on the CNI plugin used, the `node-local-dns` module implements differe
 - When using [`cni-cilium`](/modules/cni-cilium/), Cilium handles DNS request forwarding using the [CiliumLocalRedirectPolicy](https://docs.cilium.io/en/stable/network/kubernetes/local-redirect-policy/#create-cilium-local-redirect-policy-custom-resources) custom resource.
 - When using [`cni-flannel`](/modules/cni-flannel/) or [`cni-simple-bridge`](/modules/cni-simple-bridge/), iptables handles DNS request forwarding.
 
-For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/node-local-dns/configuration.html).
+For more details about module configuration and usage examples, refer to [the corresponding documentation section](/modules/node-local-dns/configuration.html).
 
 ### When using cni-cilium
 
@@ -98,13 +105,15 @@ The `node-local-dns` module consists of the following components:
 
    It consists of the following containers:
 
-   * **Check-linux-kernel**: Init container that checks the Linux kernel version.
-   * **Coredns**: Main container.
-   * **Kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns metrics. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
+   * **check-linux-kernel**: Init container that checks the Linux kernel version.
+   * **coredns**: Main container.
+   * **cube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns metrics. It is an [Open Source project](https://github.com/brancz/kube-rbac-proxy).
 
 1. **Stale-dns-connections-cleaner** (DaemonSet): Component that removes stale UDP connections left after the `node-local-dns` Pod is restarted. It consists of a single **stale-dns-connections-cleaner** container.
 
-   > **Warning.** The component has privileged access to the network subsystem of each node. On Linux, this requires the `CAP_NET_ADMIN` capability. This access is required to perform network connection operations at the Linux kernel level.
+   {% alert level="warning" %}
+   The component has privileged access to the network subsystem of each node. On Linux, this requires the `CAP_NET_ADMIN` capability. This access is required to perform network connection operations at the Linux kernel level.
+   {% endalert %}
 
 1. **Safe-updater** (Deployment): Component that provides safe restarts of node-local-dns when the DaemonSet spec changes.
 
@@ -153,10 +162,10 @@ The `node-local-dns` module consists of the following components:
 
    It consists of the following containers:
 
-  * **Iptables-wrapper**: Init container that prepares executables required for working with iptables.
-  * **Coredns**: Main container.
-  * **Iptables-loop**: Sidecar container that synchronizes iptables rules for DNS request forwarding with node-local-dns readiness.
-  * **Kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns container metrics. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
+  * **iptables-wrapper**: Init container that prepares executables required for working with iptables.
+  * **coredns**: Main container.
+  * **iptables-loop**: Sidecar container that synchronizes iptables rules for DNS request forwarding with node-local-dns readiness.
+  * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns container metrics. It is an [Open Source project](https://github.com/brancz/kube-rbac-proxy).
 
 #### Module interactions
 
