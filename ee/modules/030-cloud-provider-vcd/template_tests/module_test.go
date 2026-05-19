@@ -284,6 +284,68 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
 
+			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vcd:user")
+			Expect(userAuthzUser.Exists()).To(BeTrue())
+			Expect(userAuthzUser.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - vcdinstanceclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vcdclusters
+  - vcdclustertemplates
+  - vcdmachines
+  - vcdmachinetemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - vcdaffinityrules
+  verbs:
+  - get
+  - list
+  - watch`))
+
+			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vcd:cluster-admin")
+			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterAdmin.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - vcdinstanceclasses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - vcdclusters
+  - vcdclustertemplates
+  - vcdmachines
+  - vcdmachinetemplates
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - vcdaffinityrules
+  verbs:
+  - patch
+  - update`))
+
 			masterAffinityRule := f.KubernetesGlobalResource("VCDAffinityRule", "sandbox-master")
 			Expect(masterAffinityRule.Exists()).To(BeTrue())
 			Expect(masterAffinityRule.Parse().String()).To(MatchYAML(`
