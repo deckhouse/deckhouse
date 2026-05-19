@@ -82,6 +82,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 			}
 
 			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeTrue())
+			Expect(hasMetricWithGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
 		})
 	})
 
@@ -115,6 +116,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("expires the validation suspended metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasExpireForGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
 		})
 	})
 })
@@ -123,6 +125,25 @@ func hasMetric(metrics []operation.MetricOperation) bool {
 	const metricName = "ingress_nginx_validation_suspended"
 	for _, m := range metrics {
 		if m.Name == metricName {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMetricWithGroup(metrics []operation.MetricOperation, group string) bool {
+	const metricName = "ingress_nginx_validation_suspended"
+	for _, m := range metrics {
+		if m.Name == metricName && m.Group == group {
+			return true
+		}
+	}
+	return false
+}
+
+func hasExpireForGroup(metrics []operation.MetricOperation, group string) bool {
+	for _, m := range metrics {
+		if m.Action == operation.ActionExpireMetrics && m.Group == group {
 			return true
 		}
 	}
