@@ -2366,7 +2366,7 @@ index 00000000000..90094074c07
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index 55d31fc8eda..a7c32f0235f 100644
+index 55d31fc8eda..0059b8f2569 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -2524,7 +2524,7 @@ index 55d31fc8eda..a7c32f0235f 100644
 +				&unmaskingPatcher{Patcher: storage, schemas: sensitiveSchemaSlice, groupKind: sensitiveGroupKind},
 +				requestScope, r.admission, supportedTypes,
 +			)
-+			return sensitiveSSABodyUnmasker(inner, storage, sensitiveSchemaSlice, sensitiveGroupKind)
++			return sensitiveSSABodyUnmasker(inner, storage, sensitiveSchemaSlice, sensitiveGroupKind, requestScope.MaxRequestBodyBytes)
 +		}
  		return handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
  	case "delete":
@@ -2915,10 +2915,10 @@ index 00000000000..beadae0d539
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
 new file mode 100644
-index 00000000000..69997df625c
+index 00000000000..b0f970d9a49
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware.go
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,180 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2960,10 +2960,17 @@ index 00000000000..69997df625c
 +	"sigs.k8s.io/yaml"
 +)
 +
++var (
++	// "<omitted>" - plain form in YAML/CBOR apply bodies.
++	maskedValueBytes = []byte(sensitive.MaskedValue)
++	// when serializing the body through encoding/json
++	maskedValueHTMLEscapedBytes = []byte(`\u003comitted\u003e`)
++)
++
 +// sensitiveSSABodyUnmasker wraps an SSA-capable HTTP handler.
 +// For application/apply-patch+yaml|+cbor it rewrites <omitted> markers in the request body with values from the current stored object
 +// before the body reaches structured-merge-diff parsing inside fieldmanager.Apply. Other content types pass through unchanged.
-+func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind) http.HandlerFunc {
++func sensitiveSSABodyUnmasker(inner http.Handler, getter rest.Getter, schemas []*structuralschema.Structural, groupKind runtimeschema.GroupKind, maxRequestBodyBytes int64) http.HandlerFunc {
 +	return func(w http.ResponseWriter, req *http.Request) {
 +		mediaType, _, _ := mime.ParseMediaType(req.Header.Get("Content-Type"))
 +		if mediaType != string(types.ApplyYAMLPatchType) && mediaType != string(types.ApplyCBORPatchType) {
@@ -2971,9 +2978,12 @@ index 00000000000..69997df625c
 +			return
 +		}
 +
-+		body, err := io.ReadAll(req.Body)
-+		_ = req.Body.Close()
++		body, err := readLimitedRequestBody(req, maxRequestBodyBytes)
 +		if err != nil {
++			if apierrors.IsRequestEntityTooLargeError(err) {
++				http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
++				return
++			}
 +			http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
 +			return
 +		}
@@ -2982,8 +2992,8 @@ index 00000000000..69997df625c
 +		// Skip the parse/GET/walk/marshal cycle. Check both the plain form ("<omitted>") used in YAML/CBOR
 +		// bodies, and the JSON-HTML-escaped form (<omitted>) emitted by kubectl when it serializes
 +		// apply-patch+yaml body to JSON-with-HTML-escape.
-+		if !bytes.Contains(body, []byte(sensitive.MaskedValue)) &&
-+			!bytes.Contains(body, []byte("\\u003comitted\\u003e")) {
++		if !bytes.Contains(body, maskedValueBytes) &&
++			!bytes.Contains(body, maskedValueHTMLEscapedBytes) {
 +			req.Body = io.NopCloser(bytes.NewReader(body))
 +			inner.ServeHTTP(w, req)
 +			return
@@ -3072,12 +3082,29 @@ index 00000000000..69997df625c
 +		return nil, fmt.Errorf("unsupported content type: %s", mediaType)
 +	}
 +}
++
++// readLimitedRequestBody mirrors handlers.limitedReadBody (rest.go in k8s.io/apiserver/pkg/endpoints/handlers)
++func readLimitedRequestBody(req *http.Request, limit int64) ([]byte, error) {
++	defer req.Body.Close()
++	if limit <= 0 {
++		return io.ReadAll(req.Body)
++	}
++	lr := &io.LimitedReader{R: req.Body, N: limit + 1}
++	data, err := io.ReadAll(lr)
++	if err != nil {
++		return nil, err
++	}
++	if lr.N <= 0 {
++		return nil, apierrors.NewRequestEntityTooLargeError(fmt.Sprintf("limit is %d", limit))
++	}
++	return data, nil
++}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
 new file mode 100644
-index 00000000000..f1b97733b8d
+index 00000000000..71b57d26ea0
 --- /dev/null
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_ssa_middleware_test.go
-@@ -0,0 +1,505 @@
+@@ -0,0 +1,556 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -3210,7 +3237,7 @@ index 00000000000..f1b97733b8d
 +		w.WriteHeader(http.StatusOK)
 +	})
 +
-+	mw := sensitiveSSABodyUnmasker(inner, nil, nil, runtimeschema.GroupKind{})
++	mw := sensitiveSSABodyUnmasker(inner, nil, nil, runtimeschema.GroupKind{}, 0)
 +
 +	body := []byte(`{"spec":{"password":"<omitted>"}}`)
 +	req := httptest.NewRequest(http.MethodPatch, "/apis/example.com/v1/dbconfigs/x", bytes.NewReader(body))
@@ -3239,7 +3266,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, getter,
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	body := "spec:\n  password: <omitted>\n"
 +	mw.ServeHTTP(httptest.NewRecorder(), makeRequest(t, string(types.ApplyYAMLPatchType), body, "primary"))
@@ -3284,7 +3311,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
 +		[]*structuralschema.Structural{schemaSpec},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
 +		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  credentials: <omitted>\n", "primary"))
@@ -3328,7 +3355,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
 +		[]*structuralschema.Structural{schemaSpec},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
 +		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  tags: <omitted>\n", "primary"))
@@ -3357,7 +3384,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	in := map[string]interface{}{"spec": map[string]interface{}{"password": "<omitted>"}}
 +	body, _ := marshalApplyBody(string(types.ApplyCBORPatchType), in)
@@ -3386,7 +3413,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	req := makeRequest(t, string(types.ApplyYAMLPatchType)+"; charset=utf-8",
 +		"spec:\n  password: <omitted>\n", "primary")
@@ -3412,7 +3439,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, getter,
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	mw.ServeHTTP(httptest.NewRecorder(),
 +		makeRequest(t, string(types.ApplyYAMLPatchType), "spec:\n  password: real\n", "primary"))
@@ -3432,7 +3459,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, getter,
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	rec := httptest.NewRecorder()
 +	mw.ServeHTTP(rec,
@@ -3454,7 +3481,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, getter,
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	rec := httptest.NewRecorder()
 +	mw.ServeHTTP(rec,
@@ -3509,7 +3536,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
 +		[]*structuralschema.Structural{schemaSpec},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	yamlBody := "spec:\n  endpoints:\n  - name: replica\n    secret: <omitted>\n  - name: main\n    secret: <omitted>\n"
 +	mw.ServeHTTP(httptest.NewRecorder(),
@@ -3540,7 +3567,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, getter,
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	bad := "spec:\n  password: [unclosed"
 +	mw.ServeHTTP(httptest.NewRecorder(),
@@ -3566,7 +3593,7 @@ index 00000000000..f1b97733b8d
 +
 +	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{obj: oldObj},
 +		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
-+		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"})
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, 0)
 +
 +	req := makeRequest(t, string(types.ApplyYAMLPatchType),
 +		"spec:\n  password: <omitted>\n", "primary")
@@ -3581,6 +3608,57 @@ index 00000000000..f1b97733b8d
 +	}
 +	if strconv.FormatInt(innerLen, 10) != innerHeader {
 +		t.Errorf("ContentLength=%d vs header=%q mismatch", innerLen, innerHeader)
++	}
++}
++
++func TestSensitiveSSAMiddleware_BodyTooLarge(t *testing.T) {
++	var innerCalled bool
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { innerCalled = true })
++
++	const limit int64 = 64
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{},
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, limit)
++
++	big := bytes.Repeat([]byte("a"), int(limit)*4)
++	req := httptest.NewRequest(http.MethodPatch,
++		"/apis/example.com/v1/namespaces/ns/dbconfigs/primary",
++		bytes.NewReader(big))
++	req.Header.Set("Content-Type", string(types.ApplyYAMLPatchType))
++	req.ContentLength = -1
++	req = req.WithContext(request.WithRequestInfo(req.Context(), &request.RequestInfo{
++		Name: "primary", Namespace: "ns", Verb: "patch",
++	}))
++
++	rec := httptest.NewRecorder()
++	mw.ServeHTTP(rec, req)
++
++	if innerCalled {
++		t.Fatalf("inner must not be called for oversized body")
++	}
++	if rec.Code != http.StatusRequestEntityTooLarge {
++		t.Errorf("expected 413, got %d: %s", rec.Code, rec.Body.String())
++	}
++}
++
++func TestSensitiveSSAMiddleware_BodyAtLimit(t *testing.T) {
++	var innerCalled bool
++	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		innerCalled = true
++		w.WriteHeader(http.StatusOK)
++	})
++
++	body := []byte("spec:\n  password: real\n")
++	mw := sensitiveSSABodyUnmasker(inner, &fakeGetter{err: apierrors.NewNotFound(runtimeschema.GroupResource{}, "primary")},
++		[]*structuralschema.Structural{newSchemaWithScalarSensitive()},
++		runtimeschema.GroupKind{Group: "example.com", Kind: "DbConfig"}, int64(len(body)))
++
++	req := makeRequest(t, string(types.ApplyYAMLPatchType), string(body), "primary")
++	rec := httptest.NewRecorder()
++	mw.ServeHTTP(rec, req)
++
++	if !innerCalled {
++		t.Fatalf("inner not called for body exactly at limit; code=%d body=%s", rec.Code, rec.Body.String())
 +	}
 +}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_sensitive_unmask.go
