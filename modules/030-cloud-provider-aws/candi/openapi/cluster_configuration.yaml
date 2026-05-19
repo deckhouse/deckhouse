@@ -308,6 +308,16 @@ apiVersions:
         additionalProperties: false
         required: []
         properties:
+          natGatewayMode:
+            type: string
+            enum: [Single, PerAZ]
+            default: Single
+            description: |
+              NAT Gateway placement mode for the `WithNAT` layout:
+              - `Single` (default): create one NAT Gateway in a single Availability Zone.
+              - `PerAZ`: create one NAT Gateway in each Availability Zone (except Local Zones) and route private subnets through the NAT Gateway in their zone.
+
+              The `PerAZ` mode improves fault tolerance across Availability Zones, but increases costs.
           bastionInstance:
             type: object
             required: [instanceClass]

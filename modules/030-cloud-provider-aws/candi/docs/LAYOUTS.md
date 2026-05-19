@@ -58,7 +58,9 @@ tags:
 
 > **Caution!** A bastion host is required to access nodes (it can be created alongside the cluster by specifying the parameters in the section `withNAT.bastionInstance`).
 >
-> **Caution!** The NAT Gateway is always created in zone `a` in this layout. If cluster nodes are placed in other zones, then if there are problems in zone `a`, they will also be unavailable. In other words, when choosing the `WithNat` layout, the availability of the entire cluster will depend on the availability of zone `a`.
+> **Caution!** By default (`withNAT.natGatewayMode: Single`), a single NAT Gateway is created in one Availability Zone and all private subnets route through it.
+> If you need cross-zone fault tolerance, use `withNAT.natGatewayMode: PerAZ` to create one NAT Gateway per Availability Zone (except Local Zones).
+> Note that `PerAZ` increases costs.
 
 Virtual machines access the Internet using a NAT Gateway with a shared (and single) source IP.
 
@@ -76,6 +78,7 @@ provider:
   providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 withNAT:
+  natGatewayMode: PerAZ
   bastionInstance:
     zone: eu-central-1a
     instanceClass:

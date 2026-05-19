@@ -155,6 +155,16 @@ apiVersions:
         description: Схема размещения `Standard` считается **устаревшей**, не используйте ее.
       withNAT:
         properties:
+          natGatewayMode:
+            type: string
+            enum: [Single, PerAZ]
+            default: Single
+            description: |
+              Режим размещения NAT Gateway для схемы `WithNAT`:
+              - `Single` (по умолчанию): создается один NAT Gateway в одной Availability Zone.
+              - `PerAZ`: создается по одному NAT Gateway в каждой Availability Zone (кроме Local Zone), private-подсети маршрутизируются через NAT Gateway в своей зоне.
+
+              Режим `PerAZ` повышает отказоустойчивость между зонами доступности, но увеличивает стоимость.
           bastionInstance:
             properties:
               zone:

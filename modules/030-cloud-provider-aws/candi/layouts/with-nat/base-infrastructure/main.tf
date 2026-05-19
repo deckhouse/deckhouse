@@ -21,13 +21,13 @@ module "vpc" {
 }
 
 module "security-groups" {
-  source = "../../../terraform-modules/security-groups"
-  prefix = local.prefix
-  cluster_uuid = var.clusterUUID
-  vpc_id = module.vpc.id
-  tags = local.tags
-  ssh_allow_list = local.ssh_allow_list
-  public_network_allow_list = local.public_network_allow_list
+  source                         = "../../../terraform-modules/security-groups"
+  prefix                         = local.prefix
+  cluster_uuid                   = var.clusterUUID
+  vpc_id                         = module.vpc.id
+  tags                           = local.tags
+  ssh_allow_list                 = local.ssh_allow_list
+  public_network_allow_list      = local.public_network_allow_list
   disable_default_security_group = local.disable_default_sg
 }
 
@@ -41,8 +41,9 @@ data "aws_availability_zones" "available_except_local_zone" {
 }
 
 locals {
-  az_count    = length(data.aws_availability_zones.available.names)
-  subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
+  az_count         = length(data.aws_availability_zones.available.names)
+  subnet_cidr      = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
+  nat_gateway_mode = lower(lookup(local.with_nat, "natGatewayMode", "Single"))
 }
 
 resource "aws_subnet" "kube_public" {
@@ -75,11 +76,20 @@ resource "aws_subnet" "kube_internal" {
   })
 }
 
+locals {
+  public_subnet_ids_by_az = {
+    for subnet in aws_subnet.kube_public :
+    subnet.availability_zone => subnet.id
+  }
+  nat_gateway_azs = local.nat_gateway_mode == "peraz" ? data.aws_availability_zones.available_except_local_zone.names : [local.first_non_local_az]
+}
+
 resource "aws_eip" "natgw" {
-  domain = "vpc"
+  for_each = toset(local.nat_gateway_azs)
+  domain   = "vpc"
 
   tags = merge(local.tags, {
-    Name = "${local.prefix}-natgw"
+    Name = local.nat_gateway_mode == "peraz" ? "${local.prefix}-natgw-${each.key}" : "${local.prefix}-natgw"
   })
 }
 
@@ -93,25 +103,25 @@ resource "aws_internet_gateway" "kube" {
 
 locals {
   first_non_local_az = data.aws_availability_zones.available_except_local_zone.names[0]
-  first_non_local_subnet_id = [for subnet in aws_subnet.kube_public :
-    subnet.id if subnet.availability_zone == local.first_non_local_az][0]
 }
 
 
 resource "aws_nat_gateway" "kube" {
-  subnet_id     = local.first_non_local_subnet_id
-  allocation_id = aws_eip.natgw.id
+  for_each      = toset(local.nat_gateway_azs)
+  subnet_id     = local.public_subnet_ids_by_az[each.key]
+  allocation_id = aws_eip.natgw[each.key].id
 
   tags = merge(local.tags, {
-    Name = local.prefix
+    Name = local.nat_gateway_mode == "peraz" ? "${local.prefix}-${each.key}" : local.prefix
   })
 }
 
 resource "aws_route_table" "kube_internal" {
-  vpc_id = module.vpc.id
+  for_each = local.nat_gateway_mode == "peraz" ? toset(data.aws_availability_zones.available.names) : toset(["shared"])
+  vpc_id   = module.vpc.id
 
   tags = merge(local.tags, {
-    Name                                       = "${local.prefix}-internal"
+    Name                                       = local.nat_gateway_mode == "peraz" ? "${local.prefix}-internal-${each.key}" : "${local.prefix}-internal"
     "kubernetes.io/cluster/${var.clusterUUID}" = "shared"
     "kubernetes.io/cluster/${local.prefix}"    = "shared"
   })
@@ -126,9 +136,10 @@ resource "aws_route_table" "kube_public" {
 }
 
 resource "aws_route" "internet_access_internal" {
-  route_table_id         = aws_route_table.kube_internal.id
+  for_each               = aws_route_table.kube_internal
+  route_table_id         = each.value.id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.kube.id
+  nat_gateway_id         = local.nat_gateway_mode == "peraz" ? aws_nat_gateway.kube[each.key].id : aws_nat_gateway.kube[local.first_non_local_az].id
 }
 
 resource "aws_route" "internet_access_public" {
@@ -140,7 +151,7 @@ resource "aws_route" "internet_access_public" {
 resource "aws_route_table_association" "kube_internal" {
   count          = local.az_count
   subnet_id      = aws_subnet.kube_internal[count.index].id
-  route_table_id = aws_route_table.kube_internal.id
+  route_table_id = local.nat_gateway_mode == "peraz" ? aws_route_table.kube_internal[aws_subnet.kube_internal[count.index].availability_zone].id : aws_route_table.kube_internal["shared"].id
 }
 
 resource "aws_route_table_association" "kube_public" {
@@ -198,7 +209,7 @@ resource "aws_iam_role_policy" "node" {
 
 resource "aws_iam_instance_profile" "node" {
   name = "${local.prefix}-node"
-  role = lookup(var.providerClusterConfiguration,"iamNodeRole", aws_iam_role.node.id)
+  role = lookup(var.providerClusterConfiguration, "iamNodeRole", aws_iam_role.node.id)
 }
 
 resource "aws_key_pair" "ssh" {
@@ -269,7 +280,7 @@ resource "aws_instance" "bastion" {
 }
 
 resource "aws_eip" "bastion" {
-  count = local.bastion_instance != {} ? 1 : 0
+  count  = local.bastion_instance != {} ? 1 : 0
   domain = "vpc"
   tags = merge(local.tags, {
     Name = "${local.prefix}-bastion"
@@ -314,11 +325,22 @@ resource "aws_vpc_peering_connection_accepter" "kube" {
 }
 
 resource "aws_route" "kube" {
-  count                     = length(local.peer_vpc_ids)
-  route_table_id            = aws_route_table.kube_internal.id
-  destination_cidr_block    = data.aws_vpc.target[count.index].cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
-  depends_on                = [aws_route_table.kube_internal]
+  for_each = {
+    for route in flatten([
+      for peer_idx in range(length(local.peer_vpc_ids)) : [
+        for route_table_key, route_table in aws_route_table.kube_internal : {
+          key                    = "${peer_idx}-${route_table_key}"
+          peer_idx               = peer_idx
+          route_table_id         = route_table.id
+          destination_cidr_block = data.aws_vpc.target[peer_idx].cidr_block
+          peering_connection_id  = aws_vpc_peering_connection.kube[peer_idx].id
+        }
+      ]
+    ]) : route.key => route
+  }
+  route_table_id            = each.value.route_table_id
+  destination_cidr_block    = each.value.destination_cidr_block
+  vpc_peering_connection_id = each.value.peering_connection_id
 }
 
 data "aws_vpc" "target" {
@@ -344,5 +366,4 @@ resource "aws_route" "target" {
   route_table_id            = data.aws_route_table.target[count.index].id
   destination_cidr_block    = module.vpc.cidr_block
   vpc_peering_connection_id = aws_vpc_peering_connection.kube[count.index].id
-  depends_on                = [aws_route_table.kube_internal]
 }
