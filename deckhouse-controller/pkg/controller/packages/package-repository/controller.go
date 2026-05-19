@@ -179,7 +179,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 			Labels: map[string]string{
 				v1alpha1.PackagesRepositoryOperationLabelRepository:       repo.Name,
 				v1alpha1.PackagesRepositoryOperationLabelOperationTrigger: v1alpha1.PackagesRepositoryTriggerAuto,
-				v1alpha1.PackagesRepositoryOperationLabelOperationType:    v1alpha1.PackageRepositoryOperationTypeUpdate,
+				v1alpha1.PackagesRepositoryOperationLabelOperationType:    string(v1alpha1.PackageRepositoryOperationTypeUpdate),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
