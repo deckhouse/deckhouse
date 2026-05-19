@@ -94,13 +94,13 @@ func (s *SchedulerSuite) TearDownTest() {
 // and drives global to active. Drains all setup events so the test can assert
 // only on the events it triggers itself.
 func (s *SchedulerSuite) activateGlobal() {
-	s.sched.AddNode(&testPackage{
+	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    globalName,
 		version: mustVersion("1.0.0"),
 		constraints: schedule.Constraints{
 			Order: 0,
 		},
-	})
+	}))
 
 	s.sched.Resume()
 	s.sched.Complete(globalName)
@@ -448,6 +448,175 @@ func (s *SchedulerSuite) TestStatusFlipResetsOnlyAffectedNode() {
 	scheduled := eventNames(events, schedule.EventSchedule)
 	s.Contains(scheduled, "flapper")
 	s.NotContains(scheduled, "stable", "stable was already active; status flip on flapper must not reset it")
+}
+
+// TestAddNodeRejectsCyclicAddition pins AddNode as the authoritative cycle
+// gate: when adding a node would close a Mandatory dep cycle with an
+// already-registered node, AddNode returns a *CycleError without mutating
+// the graph. Subsequent higher-tier additions schedule normally because the
+// cycle never entered s.nodes.
+func (s *SchedulerSuite) TestAddNodeRejectsCyclicAddition() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 1,
+			Dependencies: schedule.Dependencies{
+				Mandatory: map[string]*semver.Constraints{"beta": nil},
+			},
+		},
+	}))
+
+	err := s.sched.AddNode(&testPackage{
+		name:    "beta",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 1,
+			Dependencies: schedule.Dependencies{
+				Mandatory: map[string]*semver.Constraints{"alpha": nil},
+			},
+		},
+	})
+
+	s.Require().Error(err)
+
+	var cyc *schedule.CycleError
+	s.Require().ErrorAs(err, &cyc)
+	s.ElementsMatch([]string{"alpha", "beta"}, cyc.Members)
+
+	// Cycle never entered the graph — a higher-tier consumer still schedules.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "consumer",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfMutualReferenceIsNotACycle verifies that mutual anyOf references
+// (alpha's anyOf includes beta, beta's anyOf includes alpha) do NOT form a
+// topological cycle — AnyOf is excluded from dependencyNames. Both nodes go
+// through compute normally; without any anyOf member installed, both end up
+// disabled-but-active and don't stall consumer at FunctionalOrder.
+func (s *SchedulerSuite) TestAnyOfMutualReferenceIsNotACycle() {
+	s.activateGlobal()
+
+	s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 1,
+			Dependencies: schedule.Dependencies{
+				AnyOf: []schedule.AnyOfGroup{
+					{Name: "fallback", Modules: map[string]*semver.Constraints{"beta": nil}},
+				},
+			},
+		},
+	})
+
+	s.sched.AddNode(&testPackage{
+		name:    "beta",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 1,
+			Dependencies: schedule.Dependencies{
+				AnyOf: []schedule.AnyOfGroup{
+					{Name: "fallback", Modules: map[string]*semver.Constraints{"alpha": nil}},
+				},
+			},
+		},
+	})
+
+	s.sched.AddNode(&testPackage{
+		name:        "consumer",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	})
+
+	s.Contains(
+		eventNames(s.collectEvents(), schedule.EventSchedule),
+		"consumer",
+		"AnyOf members are not topo predecessors; mutual references are valid and must not block higher tiers",
+	)
+}
+
+// TestCheckConstraintsRejectsDependencyCycle pins the admission-time cycle
+// gate: when adding a node whose dependencies would close a cycle with an
+// already-registered node, CheckConstraints returns a *CycleError naming the
+// participants. The graph is not mutated.
+func (s *SchedulerSuite) TestCheckConstraintsRejectsDependencyCycle() {
+	s.activateGlobal()
+
+	// alpha depends on a future beta; no cycle yet (beta isn't in the graph).
+	s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 1,
+			Dependencies: schedule.Dependencies{
+				Mandatory: map[string]*semver.Constraints{"beta": nil},
+			},
+		},
+	})
+	s.drainEvents()
+
+	// Populate versions so the dep checker chain passes (consumer's dep on
+	// alpha is satisfied); cycle simulation is what we want to evaluate.
+	s.versions["alpha"] = mustVersion("1.0.0")
+
+	// Proposed beta depends on alpha. Adding it would create alpha → beta → alpha.
+	err := s.sched.CheckConstraints("beta", schedule.Constraints{
+		Order: 1,
+		Dependencies: schedule.Dependencies{
+			Mandatory: map[string]*semver.Constraints{"alpha": nil},
+		},
+	})
+
+	s.Require().Error(err)
+
+	var cyc *schedule.CycleError
+	s.Require().ErrorAs(err, &cyc)
+	s.ElementsMatch([]string{"alpha", "beta"}, cyc.Members)
+}
+
+// TestCheckConstraintsAnyOfMutualReferenceIsAllowed verifies that mutual anyOf
+// references are NOT rejected by the cycle gate. AnyOf is excluded from
+// dependencyNames, so two packages whose anyOf groups list each other as
+// candidates are treated as soft fallbacks, not as a hard cycle.
+func (s *SchedulerSuite) TestCheckConstraintsAnyOfMutualReferenceIsAllowed() {
+	s.activateGlobal()
+
+	s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: 1,
+			Dependencies: schedule.Dependencies{
+				AnyOf: []schedule.AnyOfGroup{
+					{Name: "fallback", Modules: map[string]*semver.Constraints{"beta": nil}},
+				},
+			},
+		},
+	})
+	s.drainEvents()
+
+	// Populate alpha's version so beta's anyOf check is satisfied; we want to
+	// exercise the cycle gate, not the anyOf checker.
+	s.versions["alpha"] = mustVersion("1.0.0")
+
+	err := s.sched.CheckConstraints("beta", schedule.Constraints{
+		Order: 1,
+		Dependencies: schedule.Dependencies{
+			AnyOf: []schedule.AnyOfGroup{
+				{Name: "fallback", Modules: map[string]*semver.Constraints{"alpha": nil}},
+			},
+		},
+	})
+
+	s.Require().NoError(err, "AnyOf is soft cardinality; mutual references must not be rejected as cycles")
 }
 
 // TestPauseSuppressesScheduling confirms that AddNode does not advance state

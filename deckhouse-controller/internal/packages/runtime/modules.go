@@ -123,8 +123,16 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Populate r.modules before AddNode so scheduler events emitted during
+	// AddNode (Schedule/Disable) find the module in the lookup. On a cycle
+	// rejection, roll back the r.modules entry so we don't keep a package
+	// the scheduler never accepted.
 	r.modules[module.GetName()] = module
-	r.scheduler.AddNode(module)
+	if err = r.scheduler.AddNode(module); err != nil {
+		delete(r.modules, module.GetName())
+		span.SetStatus(codes.Error, err.Error())
+		return "", status.NewError("DependencyCycle", err)
+	}
 
 	return module.GetVersion().String(), nil
 }

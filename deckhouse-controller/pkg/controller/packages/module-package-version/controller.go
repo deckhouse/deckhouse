@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -396,8 +397,7 @@ func setSubscribe(mpv *v1alpha1.ModulePackageVersion, s dto.Subscribe) {
 }
 
 // setModulesRequirement writes the three module requirement buckets onto
-// mpv.Status.PackageMetadata.Requirements.Modules. No-op when Requirements
-// is uninitialized or all buckets are empty.
+// mpv.Status.PackageMetadata.Requirements.Modules.
 func setModulesRequirement(mpv *v1alpha1.ModulePackageVersion, req dto.ModulesRequirement) {
 	if len(req.Mandatory) == 0 && len(req.Conditional) == 0 && len(req.AnyOf) == 0 {
 		return
@@ -431,27 +431,33 @@ func setModulesRequirement(mpv *v1alpha1.ModulePackageVersion, req dto.ModulesRe
 }
 
 // setParentModulesRequirement converts the legacy module.yaml parentModules
-// map into the Mandatory bucket and writes it onto
-// mpv.Status.PackageMetadata.Requirements.Modules. The legacy schema treats
-// every parent module as required, so no Conditional / AnyOf is emitted.
-// No-op when Requirements is uninitialized or parents is empty.
+// map into the Mandatory / Conditional buckets and writes them onto
+// mpv.Status.PackageMetadata.Requirements.Modules. The legacy format encodes
+// optionality via a "!optional" suffix on the constraint string: entries with
+// the suffix go to Conditional (raw constraint stripped of the suffix);
+// entries without it go to Mandatory.
 func setParentModulesRequirement(mpv *v1alpha1.ModulePackageVersion, parents map[string]string) {
-	if mpv.Status.PackageMetadata == nil || mpv.Status.PackageMetadata.Requirements == nil {
-		return
-	}
-
 	if len(parents) == 0 {
 		return
 	}
 
-	mpv.Status.PackageMetadata.Requirements.Modules = &v1alpha1.PackageModulesRequirement{
-		Mandatory: make([]v1alpha1.PackageModuleDependency, 0, len(parents)),
-	}
+	mpv.Status.PackageMetadata.Requirements.Modules = &v1alpha1.PackageModulesRequirement{}
 
 	for name, constraint := range parents {
+		raw, optional := strings.CutSuffix(constraint, "!optional")
+		entry := v1alpha1.PackageModuleDependency{Name: name, Constraint: raw}
+
+		if optional {
+			mpv.Status.PackageMetadata.Requirements.Modules.Conditional = append(
+				mpv.Status.PackageMetadata.Requirements.Modules.Conditional,
+				entry,
+			)
+			continue
+		}
+
 		mpv.Status.PackageMetadata.Requirements.Modules.Mandatory = append(
 			mpv.Status.PackageMetadata.Requirements.Modules.Mandatory,
-			v1alpha1.PackageModuleDependency{Name: name, Constraint: constraint},
+			entry,
 		)
 	}
 }

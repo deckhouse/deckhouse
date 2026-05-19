@@ -415,6 +415,22 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 				Constraint: def.Requirements.Deckhouse,
 			},
 		}
+
+		for dep, constraint := range def.Requirements.ParentModules {
+			if def.Name == dep {
+				continue
+			}
+
+			raw, optional := strings.CutSuffix(constraint, "!optional")
+			entry := dto.ModuleDependency{Name: dep, Constraint: raw}
+
+			if optional {
+				requirements.Modules.Conditional = append(requirements.Modules.Conditional, entry)
+				continue
+			}
+
+			requirements.Modules.Mandatory = append(requirements.Modules.Mandatory, entry)
+		}
 	}
 
 	var disableOpts dto.DisableOptions

@@ -131,9 +131,17 @@ func (s *Scheduler) Resume() {
 	s.schedule()
 }
 
-// CheckConstraints evaluates the given constraints against the current cluster state
-// and returns an error describing the first unsatisfied constraint, or nil if all are met.
-func (s *Scheduler) CheckConstraints(constraints Constraints) error {
+// CheckConstraints evaluates the given constraints against the current cluster
+// state and the current dependency graph. Returns an error describing the first
+// unsatisfied constraint (version, dependency, anyOf) or a *CycleError if
+// adding a node named `name` with these dependencies would create a topological
+// cycle. Returns nil only when every check passes and the proposed addition
+// would leave the dep graph acyclic.
+//
+// `name` is the scheduler-side identifier of the package that would be added
+// (apps.BuildName(...) for applications; the module name for modules). It is
+// used by the cycle-simulation step to identify the proposed graph vertex.
+func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -183,19 +191,59 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 		return errors.New(res.Message)
 	}
 
+	return s.simulateCycle(name, constraints)
+}
+
+// simulateCycle returns a *CycleError if adding (or replacing) a node named
+// `name` with the given constraints would create a topological cycle in the
+// current graph. Used by both CheckConstraints (admission-time pre-check) and
+// AddNode (the authoritative gate before any mutation).
+//
+// Must be called with s.mu held in some mode.
+func (s *Scheduler) simulateCycle(name string, constraints Constraints) error {
+	snapshot := make(map[string]*node, len(s.nodes)+1)
+	for nodeName, n := range s.nodes {
+		if nodeName == name {
+			continue
+		}
+
+		snapshot[nodeName] = n
+	}
+
+	snapshot[name] = &node{
+		name:         name,
+		order:        constraints.Order,
+		dependencies: constraints.Dependencies,
+	}
+
+	if _, err := topoSort(snapshot); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // AddNode registers a single package, wires its dependency edges into the
 // existing graph, and triggers a full scheduling pass. Newly-eligible
 // dependents are advanced automatically.
-func (s *Scheduler) AddNode(pkg Package) {
+//
+// Returns a *CycleError (without mutating any state) if adding the package
+// would close a dependency cycle. Callers are expected to handle the error —
+// typically by surfacing a status condition on the corresponding CR — and to
+// retry once the manifest is fixed.
+func (s *Scheduler) AddNode(pkg Package) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.simulateCycle(pkg.GetName(), pkg.GetConstraints()); err != nil {
+		return err
+	}
 
 	s.addNode(pkg)
 
 	s.schedule()
+
+	return nil
 }
 
 // RemoveNode removes a package from the graph, cleans up subscription
@@ -329,7 +377,11 @@ func (s *Scheduler) schedule() {
 // on followee state, so one node's status change cannot invalidate another
 // node's schedulability beyond the live order-tier check.
 func (s *Scheduler) compute() []*node {
-	sorted := topoSort(s.nodes)
+	// CheckConstraints gates cycles upfront; the error here is best-effort
+	// defensive. If a cycle slips through, partial `sorted` is returned and
+	// the disabled-mark-active loop below (walking s.nodes) marks the cycle
+	// members active so they don't freeze higher-tier nodes via canSchedule.
+	sorted, _ := topoSort(s.nodes)
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
@@ -351,6 +403,11 @@ func (s *Scheduler) compute() []*node {
 	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
 	// that later flip back to enabled are reset to idle by the loop above and
 	// go through normal scheduling from there.
+	//
+	// Walking `sorted` is safe because AddNode is the authoritative cycle
+	// gate: cycles never enter s.nodes, so topoSort always returns every
+	// node. If a cycle ever did slip through (invariant violation), affected
+	// nodes would freeze idle — surfaced quickly by stalled higher tiers.
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive

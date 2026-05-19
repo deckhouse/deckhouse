@@ -16,22 +16,39 @@ package schedule
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
+	"strings"
 )
+
+// CycleError reports a topological cycle in the dependency graph. Members are
+// the participating node names, sorted alphabetically for deterministic output.
+type CycleError struct {
+	Members []string
+}
+
+// Error renders the cycle members in a single line suitable for K8s admission
+// rejections and operator-facing logs.
+func (e *CycleError) Error() string {
+	return fmt.Sprintf("dependency cycle through: %s", strings.Join(e.Members, ", "))
+}
 
 // topoSort returns nodes in topological order respecting dependency edges,
 // with Order as the primary tiebreaker and name as the secondary tiebreaker
 // for nodes at the same topological level.
 //
-// Predecessor edges come from n.dependencies (Mandatory + Conditional + AnyOf
-// members), NOT from n.followees — followees carry subscription edges only
-// (used by Trigger) and may be cyclic, which is incompatible with topo sort.
+// Predecessor edges come from n.dependencies (Mandatory + Conditional via
+// dependencyNames), NOT from n.followees — followees carry subscription edges
+// only and may be cyclic, which is incompatible with topo sort.
 //
-// Nodes involved in cycles in the dep graph are silently omitted from the
-// result; their callers (compute) will not visit them this pass.
-func topoSort(nodes map[string]*node) []*node {
+// On cycle, returns the partial sort plus a *CycleError naming the
+// participants. Callers (CheckConstraints) use this to reject configurations
+// that introduce cycles before they hit the live scheduler graph. compute()
+// falls back gracefully if a cycle ever slips through, relying on its
+// disabled-mark-active walk over s.nodes to unblock higher-tier packages.
+func topoSort(nodes map[string]*node) ([]*node, error) {
 	if len(nodes) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	// Build the reverse dep map locally so we know whose in-degree to decrement
@@ -58,7 +75,7 @@ func topoSort(nodes map[string]*node) []*node {
 		}
 	}
 
-	var result []*node
+	result := make([]*node, 0, len(nodes))
 	for len(ready) > 0 {
 		// Sort ready nodes: Order ASC, then name ASC for determinism.
 		slices.SortFunc(ready, func(a, b *node) int {
@@ -84,12 +101,33 @@ func topoSort(nodes map[string]*node) []*node {
 		}
 	}
 
-	return result
+	// Any node still carrying positive in-degree participates in a cycle.
+	if len(result) < len(nodes) {
+		members := make([]string, 0, len(nodes)-len(result))
+		for name, deg := range inDegree {
+			if deg > 0 {
+				members = append(members, name)
+			}
+		}
+
+		slices.Sort(members)
+
+		return result, &CycleError{Members: members}
+	}
+
+	return result, nil
 }
 
-// dependencyNames returns the deduped union of module names this node depends
-// on across the three buckets (Mandatory, Conditional, AnyOf members). Used as
-// topological predecessors.
+// dependencyNames returns the deduped union of names this node depends on for
+// topological ordering: Mandatory + Conditional only.
+//
+// AnyOf candidates are deliberately excluded. AnyOf is a soft cardinality
+// constraint ("≥1 of these satisfies"), so authors legitimately write mutual
+// anyOf references as fallback chains — those would be reported as cycles by
+// topoSort and silently dropped. The anyOf checker resolves group satisfaction
+// against the dep getter directly; topological precedence buys nothing for the
+// "≥1 satisfies" predicate beyond cascade speed, and a one-pass cascade lag is
+// acceptable for AnyOf (next pass converges).
 func dependencyNames(n *node) map[string]struct{} {
 	out := make(map[string]struct{}, len(n.dependencies.Mandatory)+len(n.dependencies.Conditional))
 	for name := range n.dependencies.Mandatory {
@@ -98,12 +136,6 @@ func dependencyNames(n *node) map[string]struct{} {
 
 	for name := range n.dependencies.Conditional {
 		out[name] = struct{}{}
-	}
-
-	for _, g := range n.dependencies.AnyOf {
-		for name := range g.Modules {
-			out[name] = struct{}{}
-		}
 	}
 
 	return out
