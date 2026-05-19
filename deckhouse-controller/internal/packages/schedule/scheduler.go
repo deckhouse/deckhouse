@@ -377,10 +377,11 @@ func (s *Scheduler) schedule() {
 // on followee state, so one node's status change cannot invalidate another
 // node's schedulability beyond the live order-tier check.
 func (s *Scheduler) compute() []*node {
-	// CheckConstraints gates cycles upfront; the error here is best-effort
-	// defensive. If a cycle slips through, partial `sorted` is returned and
-	// the disabled-mark-active loop below (walking s.nodes) marks the cycle
-	// members active so they don't freeze higher-tier nodes via canSchedule.
+	// AddNode is the authoritative cycle gate, so topoSort should never
+	// return an error here. The disabled-mark-active loop below walks `sorted`
+	// and relies on that invariant; a cycle slipping through (gate bug) would
+	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
+	// higher-tier nodes via canSchedule's order-tier gate.
 	sorted, _ := topoSort(s.nodes)
 	for _, n := range sorted {
 		current := n.status.Enabled

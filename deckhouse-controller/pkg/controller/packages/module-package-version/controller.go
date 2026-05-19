@@ -444,7 +444,13 @@ func setParentModulesRequirement(mpv *v1alpha1.ModulePackageVersion, parents map
 	mpv.Status.PackageMetadata.Requirements.Modules = &v1alpha1.PackageModulesRequirement{}
 
 	for name, constraint := range parents {
+		// Real-world module.yaml writes the optional flag as " !optional"
+		// (with a separator space) or "!optional" suffixed without a space.
+		// Strip the suffix and any surrounding whitespace so the stored raw
+		// value is a clean semver constraint.
 		raw, optional := strings.CutSuffix(constraint, "!optional")
+		raw = strings.TrimSpace(raw)
+
 		entry := v1alpha1.PackageModuleDependency{Name: name, Constraint: raw}
 
 		if optional {

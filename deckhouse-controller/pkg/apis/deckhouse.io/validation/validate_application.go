@@ -193,7 +193,7 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	// Delegate to the manager which checks the parsed constraints against the
 	// actual cluster state and rejects on dependency cycles. The name is the
 	// scheduler-side identifier (namespace.name) used by the cycle simulation.
-	return manager.CheckConstraints(name, constraints)
+	return manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints)
 }
 
 // validateAppSettings validates Application.spec.settings against the OpenAPI settings

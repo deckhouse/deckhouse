@@ -421,7 +421,13 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 				continue
 			}
 
+			// Real-world module.yaml writes the optional flag as " !optional"
+			// (with a separator space) or "!optional" suffixed without a space.
+			// Strip the suffix and any surrounding whitespace so the remaining
+			// raw value is a clean semver constraint.
 			raw, optional := strings.CutSuffix(constraint, "!optional")
+			raw = strings.TrimSpace(raw)
+
 			entry := dto.ModuleDependency{Name: dep, Constraint: raw}
 
 			if optional {

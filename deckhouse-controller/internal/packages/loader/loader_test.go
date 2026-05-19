@@ -200,6 +200,42 @@ func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 	s.Contains(string(cfg.ConfigSchema), "type: object")
 }
 
+// TestLoadModuleConfLegacyFallback verifies the package.yaml→module.yaml fallback:
+// when a module package directory contains only legacy module.yaml, the loader
+// reads it, splits the flat parentModules map into Mandatory / Conditional via
+// the "!optional" suffix, and strips any whitespace separator from the
+// resulting raw constraint so it parses as clean semver.
+func (s *LoaderTestSuite) TestLoadModuleConfLegacyFallback() {
+	packageDir := filepath.Join(s.testdataDir, "modules", "legacy-module")
+
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+
+	s.Equal("legacy-module", cfg.Definition.Name)
+
+	mods := cfg.Definition.Requirements.Modules
+
+	// No-suffix entry → Mandatory bucket with the constraint preserved.
+	s.Contains(mods.Mandatory, "prometheus")
+	s.NotNil(mods.Mandatory["prometheus"], "prometheus constraint must parse as non-nil semver")
+
+	// " !optional" with a space separator → Conditional, raw stripped to ">= 1.10.0".
+	// Without TrimSpace the trailing " " would have caused semver.NewConstraint to fail.
+	s.Contains(mods.Conditional, "cert-manager")
+	s.NotNil(mods.Conditional["cert-manager"], "cert-manager constraint must parse after whitespace trim")
+
+	// "!optional" alone → Conditional with empty constraint (any version satisfies).
+	s.Contains(mods.Conditional, "observability")
+	s.Nil(mods.Conditional["observability"], "no version constraint should leave the entry nil")
+
+	// Cross-bucket leakage guard.
+	s.NotContains(mods.Mandatory, "cert-manager")
+	s.NotContains(mods.Mandatory, "observability")
+	s.NotContains(mods.Conditional, "prometheus")
+}
+
 // TestLoadModuleConfMinimalPackage tests loading a module with only required files.
 func (s *LoaderTestSuite) TestLoadModuleConfMinimalPackage() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "minimal-module")
