@@ -539,9 +539,11 @@ function main() {
 
   # Extract `# bashible: parallel-group=<NAME>` from the head of a step (looks past
   # the copyright block). Empty result = step has no group annotation = run
-  # sequentially (legacy behaviour).
+  # sequentially (legacy behaviour). Most steps have no annotation, so the inner
+  # grep exits 1; the trailing `|| true` keeps the function from poisoning the
+  # outer `set -Eeo pipefail` shell.
   bb-step-parallel-group() {
-    head -n 25 "$1" 2>/dev/null | grep -m1 '^# bashible: parallel-group=' | sed 's/^# bashible: parallel-group=//' | tr -d '[:space:]'
+    head -n 25 "$1" 2>/dev/null | grep -m1 '^# bashible: parallel-group=' | sed 's/^# bashible: parallel-group=//' | tr -d '[:space:]' || true
   }
 
   # Run a group of adjacent steps. Empty group_name = sequential, otherwise
