@@ -15,6 +15,12 @@ You need to create a service account so that Deckhouse Kubernetes Platform can m
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
+{% alert level="warning" %}
+Starting with DKP version 1.77, GCP uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
+
+New clusters require Linux kernel version `5.8` or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
+{% endalert %}
+
 ## Setup using Google Cloud Console
 
 Follow this [link](https://console.cloud.google.com/iam-admin/serviceaccounts), select your project and create a new service account or select an existing one.
