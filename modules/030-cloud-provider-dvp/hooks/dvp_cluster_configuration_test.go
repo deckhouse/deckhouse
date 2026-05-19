@@ -93,6 +93,9 @@ data:
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
 	a := HookExecutionConfigInit(emptyValues, `{}`)
+	a.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	a.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+	a.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	Context("Cluster without module configuration", func() {
 		BeforeEach(func() {
 			a.BindingContexts.Set(a.KubeStateSet(notEmptyProviderClusterConfigurationState))
@@ -103,6 +106,112 @@ data:
 			Expect(a).To(ExecuteSuccessfully())
 			Expect(a.ValuesGet("cloudProviderDvp.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration1))
 			Expect(a.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
+
+			moduleConfig := a.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
+			Expect(moduleConfig.Exists()).To(BeFalse())
+
+			credentialSecret := a.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-cloud-provider-dvp-credentials")
+			Expect(credentialSecret.Exists()).To(BeFalse())
+
+			masterInstanceClass := a.KubernetesGlobalResource("DVPInstanceClass", "master-dvp")
+			Expect(masterInstanceClass.Exists()).To(BeFalse())
+
+			masterNodeGroup := a.KubernetesGlobalResource("NodeGroup", "master")
+			Expect(masterNodeGroup.Exists()).To(BeFalse())
+
+			migrationResourcesSecret := a.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationResourcesSecret.Exists()).To(BeTrue())
+			resourcesManifest, err := base64.StdEncoding.DecodeString(migrationResourcesSecret.Field(`data.resources\.yaml`).String())
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(resourcesManifest)).To(MatchYAML(`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 1
+  settings:
+    provider:
+      parameters:
+        namespace: cloud-provider01
+    storage:
+      enabled: true
+      parameters: {}
+    nodes:
+      enabled: true
+      parameters:
+        layout: Standard
+        sshPublicKey: ssh-rsa AAAAB3N
+        region: ru-msk-1
+        zones:
+        - default
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-provider-dvp-credentials
+  namespace: d8-cloud-provider-dvp
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+data:
+  authScheme: S3ViZWNvbmZpZw==
+  secret: YXBpVmV=
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master-dvp
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+spec:
+  etcdDisk:
+    size: 15Gi
+    storageClass: ceph-pool-r2-csi-rbd-immediate
+  rootDisk:
+    image:
+      kind: ClusterVirtualImage
+      name: ubuntu-2204
+    size: 50Gi
+    storageClass: ceph-pool-r2-csi-rbd-immediate
+  virtualMachine:
+    virtualMachineClassName: superbe-class
+    bootloader: EFI
+    cpu:
+      coreFraction: 100%
+      cores: 4
+    liveMigrationPolicy: PreferForced
+    runPolicy: AlwaysOnUnlessStoppedManually
+    ipAddresses:
+    - Auto
+    memory:
+      size: 8Gi
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    zones:
+    - default
+    minPerZone: 3
+    maxPerZone: 3
+    classReference:
+      kind: DVPInstanceClass
+      name: master-dvp
+  nodeTemplate:
+    labels:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+`))
 		})
 	})
 })
