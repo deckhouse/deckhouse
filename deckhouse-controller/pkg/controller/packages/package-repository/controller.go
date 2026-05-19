@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -77,6 +78,12 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.PackageRepository{}).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			predicate.NewPredicateFuncs(func(obj client.Object) bool {
+				return !obj.GetDeletionTimestamp().IsZero()
+			}),
+		)).
 		Complete(packageRepositoryController)
 }
 
