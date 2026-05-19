@@ -158,7 +158,16 @@ document.addEventListener('DOMContentLoaded', () => {
       let isAvailable = true;
 
       if (container?.classList.contains('filter__container--tags')) {
-        isAvailable = availableTags.has(checkbox.value);
+        const tagValue = (checkbox.value || '').trim();
+        if (tagValue === 'critical') {
+          isAvailable = Array.from(articles).some(article => {
+            return Array.from(
+              article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
+            ).some(badge => (badge.textContent || '').trim() === 'critical');
+          });
+        } else {
+          isAvailable = availableTags.has(checkbox.value);
+        }
       } else if (container?.classList.contains('filter__container--editions')) {
         isAvailable = availableEditions.has((checkbox.value || '').trim().toLowerCase());
       } else if (container?.classList.contains('filter__container--stages')) {
@@ -215,14 +224,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function createCheckboxes(tag) {
     if (!filterCheckboxesTags) return;
 
+    const normalizedTag = (tag || '').trim();
     const input = document.createElement('input');
     input.type = 'checkbox';
-    input.id = tag;
-    input.value = tag;
+    input.value = normalizedTag;
+    input.id = normalizedTag === 'critical' ? 'filter-tag-critical' : normalizedTag;
 
     const label = document.createElement('label');
-    label.htmlFor = tag;
-    label.textContent = capitalizeWords(tag);
+    label.htmlFor = input.id;
+    label.textContent = capitalizeWords(normalizedTag);
 
 
     filterCheckboxesTags.appendChild(input);

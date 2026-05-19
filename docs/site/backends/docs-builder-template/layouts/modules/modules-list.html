@@ -142,6 +142,12 @@
         {{- end }}
 
         {{- $tags := .tags }}
+        {{- $isCritical := false }}
+        {{- if .metadata }}
+          {{- if or (eq (index .metadata "critical") true) (eq (index .metadata "critical") "true") }}
+            {{- $isCritical = true }}
+          {{- end }}
+        {{- end }}
 
         {{- $moduleEditionsData := slice }}
         {{- $moduleEditionsString := "" }}
@@ -217,6 +223,9 @@
                   {{ continue }}
                 {{ end }}
                 <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
+              {{- end }}
+              {{- if $isCritical }}
+                <span class="sidebar__badge--container"><span class="sidebar__badge_v2">critical</span></span>
               {{- end }}
 
             </div>
