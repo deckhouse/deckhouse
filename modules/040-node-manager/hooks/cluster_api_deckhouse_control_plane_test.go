@@ -42,6 +42,8 @@ metadata:
   namespace: d8-cloud-instance-manager
 status:
   externalManagedControlPlane: true
+  initialization:
+    controlPlaneInitialized: true
   initialized: true
   ready: true
 `

@@ -11,9 +11,11 @@ instanceClassKind: {{ b64enc "DynamixInstanceClass" | quote }}
 machineClassKind: {{ b64enc "" | quote }}
 capiClusterKind: {{ b64enc "DynamixCluster" | quote }}
 capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
 capiClusterName: {{ b64enc "dynamix" | quote }}
 capiMachineTemplateKind: {{ b64enc "DynamixMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
 sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
 
 {{- $dynamixValues := dict }}

@@ -12,6 +12,7 @@ instanceClassKind: {{ b64enc "HuaweiCloudInstanceClass" | quote }}
 machineClassKind: {{ b64enc "" | quote }}
 capiClusterKind: {{ b64enc "HuaweiCloudCluster" | quote }}
 capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
 capiClusterName: {{ b64enc "huaweicloud" | quote }}
 capiMachineTemplateKind: {{ b64enc "HuaweiCloudMachineTemplate" | quote }}
 capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}

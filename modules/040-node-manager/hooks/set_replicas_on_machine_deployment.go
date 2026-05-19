@@ -30,7 +30,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta2"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 		{
 			Name:                   "capi_mds",
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "MachineDeployment",
 			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
@@ -131,7 +131,7 @@ func setReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func capiSetReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var md v1beta1.MachineDeployment
+	var md v1beta2.MachineDeployment
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
@@ -211,7 +211,7 @@ func handleSetReplicas(_ context.Context, input *go_hook.HookInput) error {
 		return err
 	}
 
-	err = calculateReplicasAndPatchMachineDeployment(input, input.Snapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
+	err = calculateReplicasAndPatchMachineDeployment(input, input.Snapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta2")
 	if err != nil {
 		return err
 	}

@@ -31,7 +31,7 @@ import (
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta2"
 )
 
 const (
@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "machinedeployment_status",
-			ApiVersion:             "cluster.x-k8s.io/v1beta1",
+			ApiVersion:             "cluster.x-k8s.io/v1beta2",
 			Kind:                   "MachineDeployment",
 			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
@@ -82,7 +82,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleMachineDeploymentStatus)
 
 func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var md v1beta1.MachineDeployment
+	var md v1beta2.MachineDeployment
 
 	err := sdk.FromUnstructured(obj, &md)
 	if err != nil {
@@ -108,12 +108,28 @@ func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.Filt
 		Phase = 5
 	}
 
+	var statusReplicas, readyReplicas, availableReplicas int32
+	if md.Status.Replicas != nil {
+		statusReplicas = *md.Status.Replicas
+	}
+	if md.Status.ReadyReplicas != nil {
+		readyReplicas = *md.Status.ReadyReplicas
+	}
+	if md.Status.AvailableReplicas != nil {
+		availableReplicas = *md.Status.AvailableReplicas
+	}
+
+	var unavailable int32
+	if statusReplicas > availableReplicas {
+		unavailable = statusReplicas - availableReplicas
+	}
+
 	return machineDeploymentStatus{
 		Name:        md.Name,
-		Replicas:    float64(md.Status.Replicas),
+		Replicas:    float64(statusReplicas),
 		Desired:     float64(replicas),
-		Ready:       float64(md.Status.ReadyReplicas),
-		Unavailable: float64(md.Status.UnavailableReplicas),
+		Ready:       float64(readyReplicas),
+		Unavailable: float64(unavailable),
 		Phase:       Phase,
 	}, nil
 }

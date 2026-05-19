@@ -695,7 +695,7 @@ spec:
           node-group: worker
 `
 	nodeManagerStaticInstancesMachineDeployment = `
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
@@ -708,11 +708,12 @@ metadata:
 spec:
   clusterName: static
   replicas: 0
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+  rollout:
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
   template:
     metadata:
       labels:
@@ -723,9 +724,8 @@ spec:
         dataSecretName: manual-bootstrap-for-worker
       clusterName: static
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiGroup: infrastructure.cluster.x-k8s.io
         kind: StaticMachineTemplate
-        namespace: d8-cloud-instance-manager
         name: worker
   selector:
     matchLabels:
@@ -1771,9 +1771,8 @@ ccc: ddd
 			Expect(cluster.Field("spec.clusterNetwork.services.cidrBlocks.0").String()).To(Equal("10.222.0.0/16"))
 			Expect(cluster.Field("spec.clusterNetwork.serviceDomain").String()).To(Equal("cluster.local"))
 
-			Expect(cluster.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(cluster.Field("spec.controlPlaneRef.apiGroup").String()).To(Equal("infrastructure.cluster.x-k8s.io"))
 			Expect(cluster.Field("spec.controlPlaneRef.kind").String()).To(Equal("DeckhouseControlPlane"))
-			Expect(cluster.Field("spec.controlPlaneRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
 			Expect(cluster.Field("spec.controlPlaneRef.name").String()).To(Equal(fmt.Sprintf("%s-control-plane", clusterName)))
 
 			controlPlane := f.KubernetesResource("DeckhouseControlPlane", "d8-cloud-instance-manager", fmt.Sprintf("%s-control-plane", clusterName))
