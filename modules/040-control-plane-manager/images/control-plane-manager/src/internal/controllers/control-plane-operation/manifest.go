@@ -61,11 +61,11 @@ func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, sec
 }
 
 // applyComponentOverrides applies node-specific post-processing to a rendered manifest.
-// Return the input unchanged when no override applies.
+// Returns the input unchanged when no override applies.
 func applyComponentOverrides(component controlplanev1alpha1.OperationComponent, manifest []byte, node NodeIdentity) ([]byte, error) {
 	if component == controlplanev1alpha1.OperationComponentEtcd {
-		if params, ok := etcdPerformanceParamsForNode(node); ok {
-			patched, err := applyEtcdPerformanceTuning(manifest, params)
+		if params := etcdPerformanceParamsForNode(node); params != nil {
+			patched, err := applyEtcdPerformanceTuning(manifest, *params)
 			if err != nil {
 				return nil, fmt.Errorf("apply etcd performance tuning: %w", err)
 			}
@@ -75,14 +75,19 @@ func applyComponentOverrides(component controlplanev1alpha1.OperationComponent, 
 	return manifest, nil
 }
 
-// writeStaticPodManifestIfChanged renders the template, applies node-specific overrides and writes the manifest to manifestDir/<component>.yaml atomically.
-func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string, node NodeIdentity) (fileWriteResult, error) {
+// prepareManifestWithOverrides renders the template and applies node-specific overrides,
+// Returns the final manifest bytes ready to be written to disk or handed to JoinCluster.
+func prepareManifestWithOverrides(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, node NodeIdentity) ([]byte, error) {
 	manifest, err := prepareManifestBytes(component, secretData, annotations)
 	if err != nil {
-		return fileWriteResult{}, err
+		return nil, err
 	}
+	return applyComponentOverrides(component, manifest, node)
+}
 
-	manifest, err = applyComponentOverrides(component, manifest, node)
+// writeStaticPodManifestIfChanged renders the template, applies node-specific overrides and writes the manifest to manifestDir/<component>.yaml atomically.
+func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string, node NodeIdentity) (fileWriteResult, error) {
+	manifest, err := prepareManifestWithOverrides(component, secretData, annotations, node)
 	if err != nil {
 		return fileWriteResult{}, err
 	}

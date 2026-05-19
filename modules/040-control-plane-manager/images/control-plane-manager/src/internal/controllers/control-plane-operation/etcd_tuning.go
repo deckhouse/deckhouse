@@ -32,16 +32,16 @@ type etcdPerformanceParams struct {
 }
 
 // etcdPerformanceParamsForNode resolves etcd performance parameters for a node.
-// Return (params, true) when a non-default profile applies
-// Return (zero, false) when the default profile should be used
-func etcdPerformanceParamsForNode(node NodeIdentity) (etcdPerformanceParams, bool) {
+// Returns a non-nil pointer when a non-default profile applies
+// Returns nil when the default profile should be used
+func etcdPerformanceParamsForNode(node NodeIdentity) *etcdPerformanceParams {
 	if node.EtcdArbiter {
-		return etcdPerformanceParams{
+		return &etcdPerformanceParams{
 			HeartbeatIntervalMs: 500,
 			ElectionTimeoutMs:   5000,
-		}, true
+		}
 	}
-	return etcdPerformanceParams{}, false
+	return nil
 }
 
 // applyEtcdPerformanceTuning rewrites ETCD_HEARTBEAT_INTERVAL and ETCD_ELECTION_TIMEOUT
