@@ -1,0 +1,6 @@
+version: 3
+conversions:
+  - if .vpa.updateMode == "Auto" then .vpa.updateMode = "InPlaceOrRecreate" else . end
+description:
+  en: "Replace deprecated VPA updateMode `Auto` with `InPlaceOrRecreate`."
+  ru: "Заменить устаревший режим VPA `Auto` на `InPlaceOrRecreate`."
