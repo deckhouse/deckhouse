@@ -51,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -69,14 +70,15 @@ type ModulePreparator interface {
 }
 
 type BashiblePipelineParams struct {
-	Node           libcon.Interface
-	NodeIP         string
-	MetaConfig     *config.MetaConfig
-	DevicePath     string
-	CommanderMode  bool
-	IsDebug        bool
-	GlobalOpts     *options.GlobalOptions
-	LoggerProvider dhctllog.LoggerProvider
+	Node                   libcon.Interface
+	NodeIP                 string
+	MetaConfig             *config.MetaConfig
+	DevicePath             string
+	CommanderMode          bool
+	IsDebug                bool
+	GlobalOpts             *options.GlobalOptions
+	LoggerProvider         dhctllog.LoggerProvider
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
 func (p *BashiblePipelineParams) Validate() error {
@@ -143,6 +145,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if err != nil {
 		return err
 	}
+	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseBundlePreparation)
 
 	ready, err := bashible.AlreadyRun(ctx)
 	if err != nil {
@@ -180,6 +183,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	defer registryPackagesProxyCleanup()
+	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
 
 	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, params.GlobalOpts); err != nil {
 		return err
@@ -211,10 +215,17 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		}
 	}
 
-	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
+	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseNodePreparation)
+
+	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
-	})
+	}); err != nil {
+		return err
+	}
+
+	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseExecuteBashibleBundle)
+	return nil
 }
 
 func getModulesPreparators(params *BashiblePipelineParams) []ModulePreparator {

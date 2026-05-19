@@ -75,8 +75,7 @@ func TestProgressTracker(t *testing.T) {
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.RegistryPackagesProxyPhase, "", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.ExecuteBashibleBundlePhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.InstallKubernetesPhase, "", "", opts))
 	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseConnect, opts))
 	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseInstall, opts))
 	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseWait, opts))
@@ -217,7 +216,6 @@ func TestProgressTracker_Complete(t *testing.T) {
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
-	require.NoError(t, progressTracker.Complete(phases.RegistryPackagesProxyPhase))
 
 	lastPhases := phases.BootstrapPhases()
 	for i := range lastPhases {
@@ -402,9 +400,6 @@ func TestProgressTracker_Progress_ExcludesPhase(t *testing.T) {
 
 	assert.NotContains(t, phaseNames, string(phases.BaseInfraPhase),
 		"BaseInfraPhase must not appear in progress for Bootstrap Static",
-	)
-	assert.Equal(t, string(phases.RegistryPackagesProxyPhase), string(result[0].CurrentPhase),
-		"first phase for Bootstrap Static should be RegistryPackagesProxy",
 	)
 }
 

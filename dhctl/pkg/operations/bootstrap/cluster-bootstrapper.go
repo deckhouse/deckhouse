@@ -315,14 +315,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	if shouldStop, err := b.PhasedExecutionContext.StartPhase(ctx, phases.BaseInfraPhase, true, stateCache); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.StartPhase(ctx, phases.PreInfraPreflightsPhase, true, stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
 
-	_, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
-	defer baseInfraSpan.End()
+	_, preflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.PreInfraPreflights")
+	defer preflightSpan.End()
 
 	var nodeIP string
 	var devicePath string
@@ -340,6 +340,15 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		InstallConfig: deckhouseInstallConfig,
 		BuildInfo:     b.Options.BuildInfo,
 	})
+
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.BaseInfraPhase, false, stateCache, nil); err != nil {
+		return err
+	} else if shouldStop {
+		return nil
+	}
+
+	_, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
+	defer baseInfraSpan.End()
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		_, cloudPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudPreflight")
@@ -387,6 +396,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			log.DebugLn("Base infrastructure was created")
+			b.PhasedExecutionContext.CompleteSubPhase(phases.BaseInfraSubPhaseBaseInfra)
 
 			var cloudDiscoveryData map[string]interface{}
 			err = json.Unmarshal(baseOutputs.CloudDiscovery, &cloudDiscoveryData)
@@ -417,6 +427,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			log.DebugLn("First control-plane node was created")
+			b.PhasedExecutionContext.CompleteSubPhase(phases.BaseInfraSubPhaseFirstMaster)
 
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
 			deckhouseInstallConfig.InfrastructureState = baseOutputs.InfrastructureState
@@ -454,10 +465,21 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.PostInfraPreflightsPhase, false, stateCache, nil); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+
 		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
 	} else {
+		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.PostInfraPreflightsPhase, false, stateCache, nil); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
 		_, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
 		defer staticPreflightSpan.End()
 
@@ -523,14 +545,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	baseInfraSpan.End()
 
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
-		return err
-	} else if shouldStop {
-		return nil
-	}
-	_, registryPackagesProxySpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.RegistryPackagesProxy")
-	defer registryPackagesProxySpan.End()
-
 	if b.SSHProviderInitializer.CheckHosts() {
 		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -547,9 +561,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 	}
 
-	registryPackagesProxySpan.End()
-
-	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
+	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallKubernetesPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -564,13 +576,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
-		Node:           nodeInterface,
-		NodeIP:         nodeIP,
-		DevicePath:     devicePath,
-		MetaConfig:     metaConfig,
-		CommanderMode:  b.CommanderMode,
-		GlobalOpts:     &b.Options.Global,
-		LoggerProvider: b.loggerProvider,
+		Node:                   nodeInterface,
+		NodeIP:                 nodeIP,
+		DevicePath:             devicePath,
+		MetaConfig:             metaConfig,
+		CommanderMode:          b.CommanderMode,
+		GlobalOpts:             &b.Options.Global,
+		LoggerProvider:         b.loggerProvider,
+		PhasedExecutionContext: b.PhasedExecutionContext,
 	})
 
 	if err != nil {
@@ -657,6 +670,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				masterAddressesForSSH,
 				b.InfrastructureContext,
 				&b.Options.Global,
+				b.PhasedExecutionContext,
 			)
 		})
 		if err != nil {
@@ -666,14 +680,15 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		additionalNodesSpan.End()
 	}
 
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl})).IsReadyAll(ctx); err != nil {
+		return err
+	}
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait)
+
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.CreateResourcesPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
-	}
-
-	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl})).IsReadyAll(ctx); err != nil {
-		return err
 	}
 
 	err = createResources(
@@ -834,6 +849,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 	masterAddressesForSSH map[string]string,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
@@ -847,6 +863,8 @@ func bootstrapAdditionalNodesForCloudCluster(
 	if operations.IsSequentialNodesBootstrap(metaConfig) {
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
+
+	PhasedExecutionContext.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
 
 	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions); err != nil {
 		return err
@@ -865,6 +883,8 @@ func bootstrapAdditionalNodesForCloudCluster(
 		if err := entity.WaitForNodesBecomeReady(ctx, kubeCl, ngs); err != nil {
 			return err
 		}
+
+		PhasedExecutionContext.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes)
 
 		return nil
 	})
