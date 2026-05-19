@@ -987,7 +987,6 @@ func getBaseTemplateData(k8sVersion string) map[string]interface{} {
 				"patch": 1,
 			},
 		},
-		"extraArgs": map[string]interface{}{},
 		"registry": map[string]interface{}{
 			"address": "registry.deckhouse.io",
 			"path":    "/deckhouse/ce",

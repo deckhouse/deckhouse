@@ -133,7 +133,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 		return bashible.Prepare(ctx)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -169,7 +168,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		DirsConfig:     dc,
 		Interactive:    input.IsTerminal(),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -266,7 +264,6 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -299,7 +296,7 @@ func PrepareControlPlaneArtifacts(
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
-		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return fmt.Errorf("get control-plane template data: %w", err)
 		}
@@ -308,11 +305,11 @@ func PrepareControlPlaneArtifacts(
 		// control-plane endpoint that goes into the apiserver SAN list.
 		// Multi-master installations re-issue certificates later via
 		// control-plane-manager once additional master endpoints are known.
-		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneConfig); err != nil {
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneConfig, dc); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
