@@ -732,8 +732,7 @@ To see traces in the UI, keep configuring [`tracing.kiali`](configuration.html#p
 #### Example — Zipkin provider + mesh-wide `Telemetry`
 
 1. Ensure your collector accepts Zipkin spans (e.g. Jaeger with port `9411`).
-
-2. Apply a [`ModuleConfig`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) for the `istio` module. **Telemetry API** for mesh metrics is enabled with [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled); for a **Telemetry API–centric** trace exporter (named extension provider + `Telemetry` below), turn off the module’s **classic** [`tracing.enabled`](configuration.html#parameters-tracing-enabled) path so the operator does not keep filling `defaultConfig.tracing.zipkin` while you switch to the provider-based flow:
+1. Apply a [`ModuleConfig`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) for the `istio` module. **Telemetry API** for mesh metrics is enabled with [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled); for a **Telemetry API–centric** trace exporter (named extension provider + `Telemetry` below), turn off the module’s **classic** [`tracing.enabled`](configuration.html#parameters-tracing-enabled) path so the operator does not keep filling `defaultConfig.tracing.zipkin` while you switch to the provider-based flow:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -765,7 +764,7 @@ defaultConfig:
   tracing: {}
 ```
 
-3. Apply tracing policy (root namespace `d8-istio` matches other module telemetry objects):
+1. Apply tracing policy (root namespace `d8-istio` matches other module telemetry objects):
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -843,12 +842,14 @@ Provider name must match an entry in `meshConfig.extensionProviders`.
 
 #### Example — disable span export for ingress-only namespaces
 
+In Deckhouse, when the `ingress-nginx` module is enabled, the Istio chart creates `Telemetry` `ingress-nginx-disable-span-reporting` in **`d8-ingress-nginx`** with `tracing.disableSpanReporting` so Ingress controller pods with `istio-proxy` stop exporting spans. For other namespaces:
+
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
 kind: Telemetry
 metadata:
-  name: no-tracing-ingress
-  namespace: ingress-nginx
+  name: no-tracing-example
+  namespace: my-namespace
 spec:
   tracing:
   - disableSpanReporting: true

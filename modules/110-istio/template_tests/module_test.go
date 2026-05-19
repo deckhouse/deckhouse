@@ -251,6 +251,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Telemetry", "d8-istio", "main-prometheus-metrics").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting").Exists()).To(BeFalse())
 		})
 
 		It("creates bundled access log and Prometheus metrics Telemetry when Telemetry API mode is enabled", func() {
@@ -264,6 +265,15 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			mt := f.KubernetesResource("Telemetry", "d8-istio", "main-prometheus-metrics")
 			Expect(mt.Exists()).To(BeTrue())
 			Expect(mt.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		})
+
+		It("creates ingress-nginx span-disable Telemetry when ingress-nginx module is enabled", func() {
+			f.ValuesSet("global.enabledModules", []string{"operator-prometheus", "cert-manager", "vertical-pod-autoscaler", "cni-cilium", "ingress-nginx"})
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingressNg := f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting")
+			Expect(ingressNg.Exists()).To(BeTrue())
+			Expect(ingressNg.Field("spec.tracing.0.disableSpanReporting").Bool()).To(BeTrue())
 		})
 	})
 

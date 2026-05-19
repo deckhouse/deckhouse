@@ -735,8 +735,7 @@ spec:
 #### Пример — провайдер Zipkin и mesh-wide `Telemetry`
 
 1. Убедитесь, что коллектор принимает Zipkin (например, Jaeger, порт `9411`).
-
-2. Задайте параметры модуля через [`ModuleConfig`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) ресурса `istio`. Режим **Telemetry API** для метрик включается параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled); для сценария с **именованным** провайдером трассировки и ресурсом `Telemetry` ниже отключите **классический** путь [`tracing.enabled`](configuration.html#parameters-tracing-enabled), чтобы модуль не продолжал заполнять `defaultConfig.tracing.zipkin` параллельно провайдеру:
+1. Задайте параметры модуля через [`ModuleConfig`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) ресурса `istio`. Режим **Telemetry API** для метрик включается параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled); для сценария с **именованным** провайдером трассировки и ресурсом `Telemetry` ниже отключите **классический** путь [`tracing.enabled`](configuration.html#parameters-tracing-enabled), чтобы модуль не продолжал заполнять `defaultConfig.tracing.zipkin` параллельно провайдеру:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -767,7 +766,7 @@ defaultConfig:
   tracing: {}
 ```
 
-3. Политика трассировки в корневом пространстве имён mesh (как у прочих `Telemetry`, создаваемых модулем):
+1. Политика трассировки в корневом пространстве имён mesh (как у прочих `Telemetry`, создаваемых модулем):
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -839,14 +838,16 @@ spec:
 
 Имя провайдера должно совпадать с записью в `meshConfig.extensionProviders`.
 
-#### Пример — отключить отправку спанов (например, у ingress-nginx)
+#### Пример — отключить отправку спанов (например, у ingress)
+
+В Deckhouse при включённом модуле `ingress-nginx` модуль Istio дополнительно создаёт `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе **`d8-ingress-nginx`** и выставляет `tracing.disableSpanReporting`, чтобы контроллер с `istio-proxy` не отправлял span'ы в бэкенд трассировки. Другие случаи — своим объектом:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
 kind: Telemetry
 metadata:
-  name: no-tracing-ingress
-  namespace: ingress-nginx
+  name: no-tracing-example
+  namespace: my-namespace
 spec:
   tracing:
   - disableSpanReporting: true

@@ -59,7 +59,10 @@ properties:
 
               Структура, аналогичная `spec.tolerations` пода Kubernetes.
   tracing:
-    description: Параметры трассировки.
+    description: |
+      Параметры трассировки.
+
+      Если включён модуль [`ingress-nginx`](/modules/ingress-nginx/) (в `global.enabledModules` присутствует `ingress-nginx`), дополнительно создаётся ресурс Telemetry `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx`, чтобы поды встроенного Ingress-контроллера с сайдкаром Istio не отправляли span'ы в бэкенд трассировки (меньше шума при сохранении маршрутизации и mesh).
     properties:
       enabled:
         description: Включить отправку трейсов в коллектор и интегрировать их отображение в Kiali.

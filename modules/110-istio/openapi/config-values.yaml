@@ -174,7 +174,10 @@ properties:
             - [{"operator": "Exists"}]
   tracing:
     type: object
-    description: Tracing parameters.
+    description: |
+      Tracing parameters.
+
+      If the [`ingress-nginx`](/modules/ingress-nginx/) module is enabled (`global.enabledModules` contains `ingress-nginx`), Istio Telemetry resource `ingress-nginx-disable-span-reporting` is created in namespace `d8-ingress-nginx` so built-in Ingress controller pods with an Istio sidecar do not export spans to the tracing backend (reduces noise while keeping meshes functional).
     default: {}
     properties:
       enabled:
