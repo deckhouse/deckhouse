@@ -1,0 +1,113 @@
+diff --git a/manifest/provider/clients.go b/manifest/provider/clients.go
+index 0924497..0559d81 100644
+--- a/manifest/provider/clients.go
++++ b/manifest/provider/clients.go
+@@ -13,11 +13,13 @@ import (
+ 	"path/filepath"
+ 	"time"
+ 
++	"github.com/hashicorp/terraform-plugin-go/tftypes"
+ 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
+ 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/api/meta"
++	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	"k8s.io/client-go/discovery"
+ 	"k8s.io/client-go/discovery/cached/memory"
+ 	"k8s.io/client-go/dynamic"
+@@ -28,6 +30,81 @@ import (
+ 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+ )
+ 
++// bypassFoundry implements openapi.Foundry by returning a generic Kubernetes object
++// shape — apiVersion/kind as String, metadata as Object with the standard subset, and
++// spec/status as DynamicPseudoType. This satisfies type assertions like t.(tftypes.Object)
++// inside the provider while still skipping the /openapi/v2 fetch (~10 MB transfer,
++// 15-17 s under load against a parent DKP cluster). Acceptable for dhctl bootstrap where
++// manifests are well-known and validated upstream; downstream schema-driven validation
++// is loose by design.
++//
++// Activated via KUBE_PROVIDER_SKIP_OPENAPI=1.
++type bypassFoundry struct{}
++
++func bypassMetadataType() tftypes.Type {
++	mapStr := tftypes.Map{ElementType: tftypes.String}
++	return tftypes.Object{
++		AttributeTypes: map[string]tftypes.Type{
++			"name":              tftypes.String,
++			"generateName":      tftypes.String,
++			"namespace":         tftypes.String,
++			"labels":            mapStr,
++			"annotations":       mapStr,
++			"finalizers":        tftypes.List{ElementType: tftypes.String},
++			"ownerReferences":   tftypes.DynamicPseudoType,
++			"resourceVersion":   tftypes.String,
++			"uid":               tftypes.String,
++			"generation":        tftypes.Number,
++			"creationTimestamp": tftypes.String,
++		},
++		OptionalAttributes: map[string]struct{}{
++			"generateName":      {},
++			"namespace":         {},
++			"labels":            {},
++			"annotations":       {},
++			"finalizers":        {},
++			"ownerReferences":   {},
++			"resourceVersion":   {},
++			"uid":               {},
++			"generation":        {},
++			"creationTimestamp": {},
++		},
++	}
++}
++
++func (bypassFoundry) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[string]string, error) {
++	return tftypes.Object{
++		AttributeTypes: map[string]tftypes.Type{
++			"apiVersion": tftypes.String,
++			"kind":       tftypes.String,
++			"metadata":   bypassMetadataType(),
++			"spec":       tftypes.DynamicPseudoType,
++			"status":     tftypes.DynamicPseudoType,
++			"data":       tftypes.DynamicPseudoType,
++			"stringData": tftypes.DynamicPseudoType,
++			"type":       tftypes.String,
++		},
++		OptionalAttributes: map[string]struct{}{
++			"metadata":   {},
++			"spec":       {},
++			"status":     {},
++			"data":       {},
++			"stringData": {},
++			"type":       {},
++		},
++	}, map[string]string{}, nil
++}
++
++func skipOpenAPI() bool {
++	v := os.Getenv("KUBE_PROVIDER_SKIP_OPENAPI")
++	switch v {
++	case "1", "true", "yes", "on":
++		return true
++	default:
++		return false
++	}
++}
++
+ // keys into the global state storage
+ const (
+ 	OAPIFoundry string = "OPENAPIFOUNDRY"
+@@ -91,6 +168,12 @@ func (ps *RawProviderServer) getRestClient() (rest.Interface, error) {
+ // Setting KUBE_PROVIDER_OPENAPI_CACHE_DIR=off disables caching entirely.
+ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
+ 	return ps.OAPIFoundry.Get(func() (openapi.Foundry, error) {
++		// Deckhouse patch: KUBE_PROVIDER_SKIP_OPENAPI bypass — return DynamicPseudoType
++		// foundry without hitting the apiserver at all. Saves 15-17 s per tofu plan.
++		if skipOpenAPI() {
++			return bypassFoundry{}, nil
++		}
++
+ 		rc, err := ps.getRestClient()
+ 		if err != nil {
+ 			return nil, fmt.Errorf("failed get OpenAPI spec: %s", err)

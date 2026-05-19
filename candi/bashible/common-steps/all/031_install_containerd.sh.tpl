@@ -72,5 +72,11 @@ fi
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 
+# Block on the packages this step needs (prefetched by 001_prefetch_registry_packages).
+# If the prefetch never ran or timed out, bb-package-install below will fetch inline.
+bb-rpp-wait-fetched "containerd" "{{ index $.images.registrypackages $containerd }}" || true
+bb-rpp-wait-fetched "crictl" "{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" || true
+bb-rpp-wait-fetched "toml-merge" "{{ .images.registrypackages.tomlMerge01 }}" || true
+
 bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
 {{- end }}

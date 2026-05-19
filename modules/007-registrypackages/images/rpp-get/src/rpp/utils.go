@@ -51,21 +51,22 @@ func formatSize(size int64) string {
 	return fmt.Sprintf("%d bytes", size)
 }
 
-func writeResponseBody(outputPath string, body io.Reader) error {
+func writeResponseBody(outputPath string, body io.Reader) (int64, error) {
 	tmpPath := outputPath + ".part"
 	defer os.Remove(tmpPath)
 
-	if err := writeFile(tmpPath, body); err != nil {
-		return err
+	n, err := writeFile(tmpPath, body)
+	if err != nil {
+		return n, err
 	}
 
-	return os.Rename(tmpPath, outputPath)
+	return n, os.Rename(tmpPath, outputPath)
 }
 
-func writeFile(path string, body io.Reader) (err error) {
+func writeFile(path string, body io.Reader) (n int64, err error) {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer func() {
 		if closeErr := file.Close(); err == nil {
@@ -73,8 +74,8 @@ func writeFile(path string, body io.Reader) (err error) {
 		}
 	}()
 
-	_, err = io.Copy(file, body)
-	return err
+	n, err = io.Copy(file, body)
+	return n, err
 }
 
 func waitRetry(ctx context.Context, delay time.Duration) error {

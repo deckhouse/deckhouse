@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -39,32 +40,28 @@ import (
 
 var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
 
-// apiResourceListGetter discovery and cache APIResources list for group version kind
+// apiResourceListGetter discovers APIResources for a group/version. It does NOT cache
+// across calls: CRDs can be installed by Deckhouse modules mid-bootstrap, and a cached
+// empty result for the GroupVersion would mask the new CRD forever. The underlying
+// k8s discovery client has its own short-lived cache that handles repeated calls fine.
 type apiResourceListGetter struct {
-	kubeCl             *client.KubernetesClient
-	gvkToResourcesList map[string]*metav1.APIResourceList
+	kubeCl *client.KubernetesClient
 }
 
 func newAPIResourceListGetter(kubeCl *client.KubernetesClient) *apiResourceListGetter {
-	return &apiResourceListGetter{
-		kubeCl:             kubeCl,
-		gvkToResourcesList: make(map[string]*metav1.APIResourceList),
-	}
+	return &apiResourceListGetter{kubeCl: kubeCl}
 }
 
 func (g *apiResourceListGetter) Get(ctx context.Context, gvk *schema.GroupVersionKind) (*metav1.APIResourceList, error) {
 	key := gvk.GroupVersion().String()
-	if resourcesList, ok := g.gvkToResourcesList[key]; ok {
-		return resourcesList, nil
-	}
 
 	var resourcesList *metav1.APIResourceList
-	var err error
-	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).RunContext(ctx, func() error {
+	err := retry.NewSilentLoop("Get resources list", 3, 1*time.Second).RunContext(ctx, func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
-		resourcesList, err = g.kubeCl.Discovery().ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+		var err error
+		resourcesList, err = g.kubeCl.Discovery().ServerResourcesForGroupVersion(key)
 		if err != nil {
 			return fmt.Errorf("can't get preferred resources '%s': %w", key, err)
 		}
@@ -132,6 +129,7 @@ func (c *Creator) createAll(ctx context.Context) error {
 			continue
 		}
 
+		foundKind := false
 		for _, discoveredResource := range resourcesList.APIResources {
 			if discoveredResource.Kind != resource.GVK.Kind {
 				continue
@@ -141,11 +139,68 @@ func (c *Creator) createAll(ctx context.Context) error {
 			}
 
 			addedResourcesIndexes[indx] = struct{}{}
+			foundKind = true
 			break
+		}
+
+		if !foundKind {
+			// Kind not served at the requested version. Check if it's served at a different
+			// version of the same Group: if so, the user's apiVersion is wrong — fail fast
+			// instead of retrying silently for the entire createResources timeout.
+			otherVersions, discErr := c.discoverKindVersions(ctx, resource.GVK.Group, resource.GVK.Kind, resource.GVK.Version)
+			if discErr != nil {
+				log.DebugF("cannot probe other versions for %s: %v\n", resource.GVK.String(), discErr)
+				continue
+			}
+			if len(otherVersions) > 0 {
+				return fmt.Errorf(
+					"resource %s/%s of kind %q uses apiVersion %s/%s which is not served by the cluster; "+
+						"available versions for this kind in group %q: [%s]. Fix the apiVersion in your config",
+					resource.Object.GetNamespace(), resource.Object.GetName(), resource.GVK.Kind,
+					resource.GVK.Group, resource.GVK.Version,
+					resource.GVK.Group, strings.Join(otherVersions, ", "),
+				)
+			}
+			// Kind not served anywhere yet — CRD likely will be installed by a later module.
+			// Keep retrying silently as before.
 		}
 	}
 
 	return nil
+}
+
+// discoverKindVersions returns versions of `group` (other than `excludeVersion`) that serve the given `kind`.
+// Used to detect apiVersion mismatches early — if the kind exists at some version, the config is wrong.
+func (c *Creator) discoverKindVersions(ctx context.Context, group, kind, excludeVersion string) ([]string, error) {
+	groups, err := c.kubeCl.Discovery().ServerGroups()
+	if err != nil {
+		return nil, fmt.Errorf("discover server groups: %w", err)
+	}
+
+	var versions []string
+	for _, g := range groups.Groups {
+		if g.Name != group {
+			continue
+		}
+		for _, v := range g.Versions {
+			if v.Version == excludeVersion {
+				continue
+			}
+			list, err := c.kubeCl.Discovery().ServerResourcesForGroupVersion(v.GroupVersion)
+			if err != nil {
+				log.DebugF("discoverKindVersions: skip %s: %v\n", v.GroupVersion, err)
+				continue
+			}
+			for _, r := range list.APIResources {
+				if r.Kind == kind {
+					versions = append(versions, v.Version)
+					break
+				}
+			}
+		}
+		break
+	}
+	return versions, nil
 }
 
 func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]struct{}, error) {
@@ -294,6 +349,12 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 	})
 }
 
+// invalidateDiscovery refreshes the underlying k8s discovery cache. Called between
+// createAll iterations so that newly-installed CRDs become visible.
+func (c *Creator) invalidateDiscovery() {
+	c.kubeCl.InvalidateDiscoveryCache()
+}
+
 func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
 	return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
@@ -339,13 +400,24 @@ func CreateResourcesLoop(
 	attempt := 0
 	createdResources := make([]string, 0, len(resourceCreator.resources))
 	for {
-		err := resourceCreator.TryToCreate(ctx)
+		iterCtx, iterSpan := telemetry.StartSpan(ctx, "createResources.iteration")
+		iterSpan.SetAttributes(otattribute.Int("attempt", attempt))
+
+		// New CRDs may be installed by Deckhouse modules between iterations. Drop the
+		// k8s client-go discovery cache so they become visible to TryToCreate below.
+		if attempt > 0 {
+			resourceCreator.invalidateDiscovery()
+		}
+
+		err := resourceCreator.TryToCreate(iterCtx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
+			iterSpan.End()
 			return err
 		}
 
-		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(ctx)
+		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(iterCtx)
 		if errWaiter != nil {
+			iterSpan.End()
 			return errWaiter
 		}
 
@@ -353,14 +425,21 @@ func CreateResourcesLoop(
 			createdResources = append(createdResources, res...)
 		}
 
+		iterSpan.SetAttributes(
+			otattribute.Int("pending_count", len(remained)),
+			otattribute.Int("created_count", len(createdResources)),
+			otattribute.Bool("all_ready", ready),
+		)
+
 		if len(remained) > 0 && attempt%10 == 0 {
 			msg := make(map[string][]string)
 			msg["remained"] = remained
 			if len(createdResources) > 0 {
 				msg["created"] = createdResources
 			}
-			logResources(ctx, msg)
+			logResources(iterCtx, msg)
 		}
+		iterSpan.End()
 		if ready && err == nil {
 			return nil
 		}

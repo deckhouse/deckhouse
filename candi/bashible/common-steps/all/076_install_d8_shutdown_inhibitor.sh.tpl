@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=install-systemd-units
+
 {{- $moduleKey := "nodeManager" }}
 {{- $inhibitorImageKey := "d8ShutdownInhibitor" }}
 {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}

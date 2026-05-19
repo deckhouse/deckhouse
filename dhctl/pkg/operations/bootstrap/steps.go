@@ -374,9 +374,11 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 
+		// Poll every 2s instead of 5s — VM SSH typically comes up within ~10s after
+		// cloud-init finishes. Total timeout preserved at ~250s via larger attempt count.
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
-			retry.WithWait(5*time.Second),
-			retry.WithAttempts(50),
+			retry.WithWait(2*time.Second),
+			retry.WithAttempts(125),
 			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
@@ -412,7 +414,9 @@ func InstallDeckhouse(
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
+		resManifests, err := withSpan(ctx, "InstallDeckhouse.CreateManifests", func(ctx context.Context) (*deckhouse.ManifestsResult, error) {
+			return deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
+		})
 		if err != nil {
 			return fmt.Errorf("Deckhouse create manifests: %w", err)
 		}
@@ -423,21 +427,35 @@ func InstallDeckhouse(
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
-		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
-		if err != nil {
+		if err := withSpanErr(ctx, "InstallDeckhouse.WaitDeckhouseReady", func(ctx context.Context) error {
+			return deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
+		}); err != nil {
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
 		// Warning! This function must be called at the end of the Deckhouse installation phase.
 		// At the end of this function, the registry-init secret is deleted,
 		// which is used during DeckhouseInstall for certain registry operation modes.
-		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
-		if err != nil {
+		if err := withSpanErr(ctx, "InstallDeckhouse.WaitRegistryReady", func(ctx context.Context) error {
+			return registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		}); err != nil {
 			return fmt.Errorf("registry initialization: %v", err)
 		}
 
 		return nil
 	})
+}
+
+func withSpan[T any](ctx context.Context, name string, fn func(ctx context.Context) (T, error)) (T, error) {
+	ctx, span := telemetry.StartSpan(ctx, name)
+	defer span.End()
+	return fn(ctx)
+}
+
+func withSpanErr(ctx context.Context, name string, fn func(ctx context.Context) error) error {
+	ctx, span := telemetry.StartSpan(ctx, name)
+	defer span.End()
+	return fn(ctx)
 }
 
 func BootstrapTerraNodes(
