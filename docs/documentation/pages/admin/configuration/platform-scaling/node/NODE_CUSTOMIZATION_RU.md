@@ -400,28 +400,15 @@ d8 k logs job/nvidia-cuda-test
 
 Пример вывода:
 
-```console
 Tue Jan 24 11:36:18 2023
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla T4            Off  | 00000000:8B:00.0 Off |                    0 |
-| N/A   45C    P0    25W /  70W |      0MiB / 15360MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
 
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-```
+NVIDIA-SMI 525.60.13, Driver Version: 525.60.13, CUDA Version: 12.0
+
+| GPU | Name | Persistence-M | Bus-Id | Disp.A | Volatile Uncorr. ECC | Fan | Temp | Perf | Pwr:Usage/Cap | Memory-Usage | GPU-Util | Compute M. | MIG M. |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | Tesla T4 | Off | `00000000:8B:00.0` | Off | 0 | N/A | 45C | P0 | 25W / 70W | 0MiB / 15360MiB | 0% | Default | N/A |
+
+**Processes:** запущенных процессов не найдено.
 
 Создайте в кластере Job:
 
