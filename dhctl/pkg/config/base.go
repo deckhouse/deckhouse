@@ -140,7 +140,7 @@ func numerateManifestLines(manifest []byte) string {
 	builder := strings.Builder{}
 
 	for index, line := range manifestLines {
-		builder.WriteString(fmt.Sprintf("%d\t%s\n", index+1, line))
+		fmt.Fprintf(&builder, "%d\t%s\n", index+1, line)
 	}
 
 	return builder.String()
