@@ -57,6 +57,7 @@ spec:
     metadata:
       labels:
         app: node-controller
+        security.deckhouse.io/security-policy-exception: node-controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -65,6 +66,10 @@ spec:
       automountServiceAccountToken: true
       serviceAccountName: node-controller
       terminationGracePeriodSeconds: 10
+{{- if not .Values.global.clusterIsBootstrapped }}
+      hostNetwork: true
+      dnsPolicy: Default
+{{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
@@ -97,6 +102,16 @@ spec:
             {{- include "node_controller_resources" . | nindent 12 }}
 {{- end }}
         env:
+      # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make node-controller work without kube-proxy
+  {{- if not .Values.global.clusterIsBootstrapped }}
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
+  {{- end }}
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:
