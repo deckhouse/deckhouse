@@ -6,21 +6,21 @@ description: Architecture of the CDI component of virtualization module in Deckh
 ---
 
 {% alert level="info" %}
-[CDI fork](https://github.com/deckhouse/3p-containerized-data-importer) is used in [`virtualization`](/modules/virtualization/) module. [Original CDI](https://github.com/kubevirt/containerized-data-importer) is a KubeVirt subproject. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage virtual machines using Kubernetes as an orchestration platform.
+A [fork](https://github.com/deckhouse/3p-containerized-data-importer) of CDI is used in the [`virtualization`](/modules/virtualization/) module. The [original CDI](https://github.com/kubevirt/containerized-data-importer) is a KubeVirt subproject. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage virtual machines using Kubernetes as an orchestration platform.
 {% endalert %}
 
-Containerized Data Importer (CDI) component of [`virtualization`](/modules/virtualization/) module is a persistent storage management add-on for Kubernetes. It's primary goal is to provide a declarative way to build Virtual Machine Disks on PVCs for KubeVirt VMs. CDI provides the ability to populate PVCs with VM images to use them in KubeVirt managed VMs. The data can come from different sources:
+Containerized Data Importer (CDI) component of the [`virtualization`](/modules/virtualization/) module is a persistent storage management add-on for Kubernetes. It's primary goal is to provide a declarative way to build virtual machine disks based on PersistentVolumeClaim (PVC) resources. CDI provides the ability to import virtual machine images and disks into PVC volumes for use in KubeVirt-managed virtual machines. The data can come from different sources:
 
-- a URL address;
-- a container registry;
-- another PVC (clone);
-- a snapshot;
-- an upload from a client.
+- A URL address
+- A container registry
+- Another PVC (clone)
+- A snapshot
+- An upload from a client
 
-CDI features specialized handling for two types of content:
+CDI supports import of two types of data:
 
-- The kubevirt content type indicates that the data being imported should be treated as a KubeVirt VM disk. CDI will automatically decompress and convert the file from the supported format to `raw` or `qcow2` format (depending on the volumeMode type). It will also resize the disk to use all available space.
-- The archive content type indicates that the data is a tar archive. Compression is not yet supported for archives. CDI will extract the contents of the archive into the volume; which can then be used with either a regular pod, or a VM using KubeVirt's filesystem feature.
+- **KubeVirt data**: Indicates that the file being imported should be treated as a KubeVirt VM disk. CDI will automatically decompress and convert the file from the supported format to `raw` or `qcow2` format (depending on the volume mode). It will also resize the disk to use all available space.
+- **Archive data**: Indicates that the data is a TAR archive. Compression is not supported for archives. CDI will extract the contents of the archive into the volume, which can then be used with either a regular pod, or a VM using KubeVirt's filesystem feature.
 
 CDI uses custom resources for disk management. The InternalVirtualizationDataVolume custom resource is an abstraction on top of the standard Kubernetes PVC and can be used to automate creation and population of a PVC with data.
 
@@ -47,12 +47,13 @@ CDI consists of the following components:
    It consists of the following containers:
 
    - **cdi-operator**:  Main container.
-   - **proxy** (aka **kube-api-rewriter**): Sidecar container that performs modification of API requests passing through it, namely renaming the metadata of custom resources. This is necessary because KubeVirt components use API groups like `*.kubervirt.io`, and other components of the [`virtualization`] module(/modules/virtualization/) use similar resources, but with API groups like `*.virtualization.deckhouse.io`. Kube-api-rewriter is a gateway that proxies requests between controllers that manage resources from different API groups.
+   - **proxy** (aka **kube-api-rewriter**): Sidecar container that performs modification of API requests passing through it, namely renaming the metadata of custom resources. This is necessary because KubeVirt components use API groups like `*.kubervirt.io`, and other components of the [`virtualization`](/modules/virtualization/) module use similar resources, but with API groups like `*.virtualization.deckhouse.io`. Kube-api-rewriter is a gateway that proxies requests between controllers that manage resources from different API groups.
+   - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the metrics of the proxy container. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
 
 1. **Cdi-apiserver**: [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), which is used to validate and mutate Kubernetes API resources through the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanisms. Cdi-apiserver implements validating and mutating webhooks for the following types of resources:
 
    - PersistentVolumeClaim: A standard Kubernetes API resource.
-   - InternalVirtualizationDataVolume: An abstraction on top of the standard Kubernetes PVC.
+   - InternalVirtualizationDataVolume: An abstraction on top of the standard Kubernetes PVC for creating VM disks.
    - InternalVirtualizationCDI: A custom resource used by the cdi-operator to install and configure CDI components.
    - InternalVirtualizationDataImportCron: It defines a cron task for importing disk images as PVCs.
    - VolumeImportSource: It defines the sources for importing disks.
@@ -61,7 +62,7 @@ CDI consists of the following components:
 
    - **cdi-apiserver**: Main container.
    - **proxy** (aka **kube-api-rewriter**): Sidecar container that performs modification of API requests passing through it (described above).
-   - **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
+   - **kube-rbac-proxy**: Sidecar container providing authorized access to the metrics of the cdi-apiserver and proxy containers (described above).
 
 1. **Cdi-deployment** (aka **cdi-controller**): A controller that performs the following operations with InternalVirtualizationDataVolumes:
 
@@ -73,16 +74,16 @@ CDI consists of the following components:
 
    - **cdi-importer**: For importing images and VM disks. Cdi-importer also converts images depending on the type of target PVC:
 
-     - To `raw` format, if PVC volumeMode = Block.
-     - To `qcow2` format, if PVC volumeMode = Filesystem.
+     - To `raw` format, if the `Block` volume mode is set for the PVC.
+     - To `qcow2` format, if the `Filesystem` volume mode is set for the PVC.
 
    - **cdi-cloner**: For disks and snapshots cloning.
 
    It consists of the following containers:
 
-   - **cdi-deployment**: Main container, build upon the [cdi-controller](https://github.com/deckhouse/3p-containerized-data-importer/blob/main/cmd/cdi-controller/controller.go);
-   - **proxy** (aka **kube-api-rewriter**): Sidecar container that performs modification of API requests passing through it (described above).
-   - **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
+   - **cdi-deployment**: Main container, built upon the [cdi-controller](https://github.com/deckhouse/3p-containerized-data-importer/blob/main/cmd/cdi-controller/controller.go);
+   - **proxy** (aka **kube-api-rewriter**): Described above.
+   - **kube-rbac-proxy**: Sidecar container providing authorized access to the metrics of the cdi-deployment and proxy containers (described above).
 
 ## CDI interactions
 
