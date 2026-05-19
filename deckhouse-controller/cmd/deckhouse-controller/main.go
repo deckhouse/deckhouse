@@ -131,7 +131,7 @@ func main() {
 		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
 
 		editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
-		dhctlcli.DefineEditCommands(editCmd, dhctlOpts /* wConnFlags */, false)
+		dhctlcli.DefineEditCommands(editCmd, dhctlOpts /* wConnFlags */, true)
 
 		dhctlcli.DefineCommandParseClusterConfiguration(kpApp.Command("cluster-configuration", "Parse configuration and print it."), dhctlOpts)
 		dhctlcli.DefineCommandParseCloudDiscoveryData(kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."), dhctlOpts)

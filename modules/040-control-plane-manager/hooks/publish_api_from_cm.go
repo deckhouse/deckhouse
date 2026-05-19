@@ -59,6 +59,33 @@ type Config struct {
 	AddKubeconfigGeneratorEntry *bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
 }
 
+func (c *Config) UnmarshalJSON(data []byte) error {
+	type configAlias struct {
+		Enabled                     *bool        `json:"enabled,omitempty"`
+		LegacyEnable                *bool        `json:"enable,omitempty"`
+		IngressClass                *string      `json:"ingressClass,omitempty"`
+		WhitelistSourceRanges       []string     `json:"whitelistSourceRanges,omitempty"`
+		HTTPS                       *HTTPSConfig `json:"https,omitempty"`
+		AddKubeconfigGeneratorEntry *bool        `json:"addKubeconfigGeneratorEntry,omitempty"`
+	}
+
+	var decoded configAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	c.Enabled = decoded.Enabled
+	if c.Enabled == nil {
+		c.Enabled = decoded.LegacyEnable
+	}
+	c.IngressClass = decoded.IngressClass
+	c.WhitelistSourceRanges = decoded.WhitelistSourceRanges
+	c.HTTPS = decoded.HTTPS
+	c.AddKubeconfigGeneratorEntry = decoded.AddKubeconfigGeneratorEntry
+
+	return nil
+}
+
 type HTTPSConfig struct {
 	Mode   *string      `json:"mode,omitempty"`
 	Global *GlobalHTTPS `json:"global,omitempty"`
