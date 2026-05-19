@@ -15,7 +15,8 @@
 locals {
   zone_to_subnet_id_map_a = merge({}, (length(data.yandex_vpc_subnet.kube_a) > 0 ? {(data.yandex_vpc_subnet.kube_a[0].zone): data.yandex_vpc_subnet.kube_a[0].id } : {} ))
   zone_to_subnet_id_map_b = merge(local.zone_to_subnet_id_map_a, (length(data.yandex_vpc_subnet.kube_b) > 0 ?{(data.yandex_vpc_subnet.kube_b[0].zone): data.yandex_vpc_subnet.kube_b[0].id } : {} ))
-  zone_to_subnet_id_map_d_final = merge(local.zone_to_subnet_id_map_b, (length(data.yandex_vpc_subnet.kube_d) > 0 ? {(data.yandex_vpc_subnet.kube_d[0].zone): data.yandex_vpc_subnet.kube_d[0].id } : {} ))
+  zone_to_subnet_id_map_e = merge(local.zone_to_subnet_id_map_b, (length(data.yandex_vpc_subnet.kube_e) > 0 ? {(data.yandex_vpc_subnet.kube_e[0].zone): data.yandex_vpc_subnet.kube_e[0].id } : {} ))
+  zone_to_subnet_id_map_d_final = merge(local.zone_to_subnet_id_map_e, (length(data.yandex_vpc_subnet.kube_d) > 0 ? {(data.yandex_vpc_subnet.kube_d[0].zone): data.yandex_vpc_subnet.kube_d[0].id } : {} ))
 }
 
 output "route_table_id" {
@@ -26,6 +27,7 @@ output "zone_to_subnet_id_map" {
     value = local.should_create_subnets ? {
       (yandex_vpc_subnet.kube_a[0].zone): yandex_vpc_subnet.kube_a[0].id
       (yandex_vpc_subnet.kube_b[0].zone): yandex_vpc_subnet.kube_b[0].id
+      (yandex_vpc_subnet.kube_e[0].zone): yandex_vpc_subnet.kube_e[0].id
       (yandex_vpc_subnet.kube_d[0].zone): yandex_vpc_subnet.kube_d[0].id
     } : local.zone_to_subnet_id_map_d_final
 }
