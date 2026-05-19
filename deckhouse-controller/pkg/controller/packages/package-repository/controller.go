@@ -133,7 +133,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 		if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("add finalizer: %w", err)
 		}
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	if err := r.syncRegistrySettings(ctx, repo); err != nil {
