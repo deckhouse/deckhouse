@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allow-privileged
+spec:
+  testDirectory: allow-privileged
+  suite:
+    expectedTestBlockNames:
+      - pss-baseline
+      - pss-baseline-with-exception
+      - pss-baseline-spe-container

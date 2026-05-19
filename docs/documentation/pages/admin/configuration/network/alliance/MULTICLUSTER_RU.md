@@ -9,7 +9,7 @@ lang: ru
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%BC%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 -->
 
 {% alert level="info" %}
-Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro 1.67+).
+Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro).
 {% endalert %}
 
 ### Требования к кластерам

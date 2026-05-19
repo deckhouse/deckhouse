@@ -1,3 +1,5 @@
+{{- $version := include "get_oss_version_by_id" (list "terraform-provider-azure" $) }}
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
 git:
@@ -32,7 +34,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ .TF.azure.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-azurerm.git /src
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-azurerm.git /src
   - cd /src
   - rm -rf vendor/
   - rm -rf examples/

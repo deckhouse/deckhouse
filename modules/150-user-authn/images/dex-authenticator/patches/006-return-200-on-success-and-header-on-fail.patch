@@ -1,0 +1,21 @@
+diff --git a/oauthproxy.go b/oauthproxy.go
+index 10a69b31..cfe0f0ec 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -931,6 +931,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
+ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	session, err := p.getAuthenticatedSession(rw, req)
+ 	if err != nil {
++		rw.Header().Set("X-Auth-Request-Result", "Denied")
+ 		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+ 		return
+ 	}
+@@ -945,7 +946,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 	// we are authenticated
+ 	p.addHeadersForProxying(rw, session)
+ 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+-		rw.WriteHeader(http.StatusAccepted)
++		rw.WriteHeader(http.StatusOK)
+ 	})).ServeHTTP(rw, req)
+ }
+ 

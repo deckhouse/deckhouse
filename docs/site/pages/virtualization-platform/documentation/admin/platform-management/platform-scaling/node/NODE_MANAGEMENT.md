@@ -72,7 +72,7 @@ When nodes are created and joined to the cluster, DVP automatically performs a s
 
 These actions are performed automatically when using `bootstrap.sh` or when connecting nodes via [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resources.
 
-### Updates that require node downtime
+### Disruptive updates
 
 Some updates — for example, upgrading `containerd` or kubelet across multiple versions — require node downtime and may cause short-term disruption of system components (*disruptive updates*).  
 The application mode for such updates is configured via the `disruptions.approvalMode` parameter:
@@ -83,7 +83,7 @@ The application mode for such updates is configured via the `disruptions.approva
   To approve the update, add the annotation `update.node.deckhouse.io/disruption-approved=` to each node in the group. Example:
 
   ```shell
-  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=
   ```
 
   > **Important**: In this mode, the node is not drained automatically.  

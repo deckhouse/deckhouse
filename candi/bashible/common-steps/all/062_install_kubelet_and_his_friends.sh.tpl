@@ -14,19 +14,20 @@
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+
+bb-event-on 'bb-package-installed' 'post-install-kubelet'
+
+post-install-kubelet() {
+  local package="$1"
+
+  if [[ "${package}" == "kubelet" ]]; then
+    bb-flag-set kubelet-need-restart
+  fi
+}
+
 bb-package-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}"
 
-old_kubelet_hash=""
-if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest" ]; then
-  old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
-fi
-
 bb-package-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
-
-new_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
-if [[ "${old_kubelet_hash}" != "${new_kubelet_hash}" ]]; then
-  bb-flag-set kubelet-need-restart
-fi
 
 if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
   sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc
@@ -46,9 +47,6 @@ completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bas
 if ! grep -qF -- "$completion"  /root/.bashrc; then
   echo "$completion" >> /root/.bashrc
 fi
-
-# Install d8 with completion
-bb-package-install "d8:{{ .images.registrypackages.d8 }}"
 
 if [ ! -f "/etc/bash_completion.d/d8" ]; then
   mkdir -p /etc/bash_completion.d

@@ -23,6 +23,9 @@ data:
         - '*'
     external_services:
       istio:
+        gateway_api_classes:
+        - name: d8-alb
+          class_name: d8-alb
         component_status:
           enabled: false
         root_namespace: d8-{{ $.Chart.Name }}
@@ -61,7 +64,8 @@ data:
       namespaces:
         exclude:
         # https://www.formauri.es/personal/pgimeno/misc/non-match-regex/?word=ingress
-        - ^d8-([^i]|i(i|n(i|g(i|r(i|e(i|si)))))*([^in]|n([^gi]|g([^ir]|r([^ei]|e([^is]|s[^is]))))))*(i(i|n(i|g(i|r(i|e(i|si)))))*(n(g?|gr(e?|es)))?)?$
+        # excludes any d8-.* namespace except for d8-ingress-nginx and d8-alb
+        - ^d8-(?:.{0,2}|(?:[^a]..|a[^l].|al[^b])|.{4,12}|(?:[^i].{12}|i[^n].{11}|in[^g].{10}|ing[^r].{9}|ingr[^e].{8}|ingre[^s].{7}|ingres[^s].{6}|ingress[^-].{5}|ingress-[^n].{4}|ingress-n[^g].{3}|ingress-ng[^i].{2}|ingress-ngi[^n].|ingress-ngin[^x])|.{14,})$
         - ^kube-system$
         - ^upmeter-probe-namespace-.+$
     server:

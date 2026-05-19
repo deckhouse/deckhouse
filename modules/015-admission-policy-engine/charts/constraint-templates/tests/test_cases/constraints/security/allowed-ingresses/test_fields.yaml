@@ -1,0 +1,16 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-ingresses
+spec:
+  objectKind: Ingress
+  objectFields:
+    - path: spec.rules[].host
+      level: pod
+      description: Ingress host must not contain wildcard
+      requiredScenarios: [positive, negative, absent]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

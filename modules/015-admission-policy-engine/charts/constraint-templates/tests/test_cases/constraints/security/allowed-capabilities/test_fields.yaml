@@ -1,0 +1,30 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-capabilities
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.capabilities.add[]
+      level: container
+      description: Added Linux capabilities must be within allowedCapabilities
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+
+    - path: spec.containers[].securityContext.capabilities.drop[]
+      level: container
+      description: Required drop capabilities must be present
+      requiredScenarios: [negative, absent]
+
+  speFields:
+    - path: spec.securityContext.capabilities.allowedValues.add
+      level: container
+      description: SPE override for allowed added capabilities
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+    - path: spec.securityContext.capabilities.allowedValues.drop
+      level: container
+      description: SPE override for required dropped capabilities
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

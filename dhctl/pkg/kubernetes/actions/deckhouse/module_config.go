@@ -50,10 +50,11 @@ func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.Kubernet
 		Manifest: func() interface{} {
 			return mcUnstruct
 		},
-		CreateFunc: func(manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
 			if createMsg != "" {
 				log.InfoLn(createMsg)
 			}
+
 			// fake client does not support cache
 			if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
 				// need for invalidate cache
@@ -76,7 +77,7 @@ func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.Kubernet
 
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 			// fake client does not support cache
 			if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
 				// need for invalidate cache
@@ -88,14 +89,17 @@ func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.Kubernet
 
 			newManifest := manifest.(*unstructured.Unstructured)
 
-			oldManifest, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, newManifest.GetName(), metav1.GetOptions{})
+			oldManifest, err := kubeCl.
+				Dynamic().Resource(config.ModuleConfigGVR).
+				Get(ctx, newManifest.GetName(), metav1.GetOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
 				log.DebugF("Error getting mc: %v\n", err)
 			} else {
 				newManifest.SetResourceVersion(oldManifest.GetResourceVersion())
 			}
 
-			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+			_, err = kubeCl.
+				Dynamic().Resource(config.ModuleConfigGVR).
 				Update(ctx, newManifest, metav1.UpdateOptions{})
 			if err != nil {
 				log.InfoF("Do not updating mc: %v\n", err)

@@ -15,6 +15,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -270,7 +271,13 @@ clusterType: Static
 }
 
 func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
+	// CI builds candi/cloud-providers from modules/030-cloud-provider-*
+	// (see tools/build_includes/candi-cloud-providers-CE.yaml); skip locally
+	// when the prepared tree is not materialised.
 	const schemasDir = "./../../../candi/cloud-providers"
+	if info, err := os.Stat(schemasDir); err != nil || !info.IsDir() {
+		t.Skipf("%s not present; run `make test` after werf bundles cloud-providers, or skip", schemasDir)
+	}
 	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	tests := map[string]struct {

@@ -19,7 +19,7 @@ package main
 import (
 	"log"
 	"os"
-	"strings"
+	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	"golang.org/x/sys/unix"
@@ -32,23 +32,55 @@ func main() {
 	}
 	c, err := semver.NewConstraint(kernelConstraint)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to parse KERNEL_CONSTRAINT=%q as a semver constraint: %v", kernelConstraint, err)
 	}
 
 	utsname := unix.Utsname{}
-	_ = unix.Uname(&utsname)
-	kernelVersion := string(utsname.Release[:])
+	err = unix.Uname(&utsname)
+	if err != nil {
+		log.Fatalf("failed to read kernel version via uname(2): %v", err)
+	}
+	kernelVersion := unix.ByteSliceToString(utsname.Release[:])
 	/* Kernel version should be splitted to parts because versions `5.15.0-52-generic`
 	parses by semver as prerelease version. Prerelease versions by default come before stable versions
 	in the order of precedence, so in semver terms `5.15.0-52-generic` less than `5.15`.
 	More info - https://github.com/Masterminds/semver#working-with-prerelease-versions */
-	v, err := semver.NewVersion(strings.Split(kernelVersion, "-")[0])
+	semverVersion := toSemver(kernelVersion)
+	v, err := semver.NewVersion(semverVersion)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to parse kernel version %q (normalized to %q) as semver: %v", kernelVersion, semverVersion, err)
 	}
 
 	if !c.Check(v) {
 		log.Fatalf("the kernel %s does not meet the requirements: %s", kernelVersion, kernelConstraint)
 	}
 	log.Printf("the kernel %s meets the requirements: %s", kernelVersion, kernelConstraint)
+}
+
+func toSemver(version string) string {
+	if version == "" {
+		return "0.0.0"
+	}
+
+	var mmp [3]int
+	c := 0
+
+loop:
+	for _, b := range version {
+		switch {
+		case b >= '0' && b <= '9':
+			mmp[c] = 10*mmp[c] + int(b-'0')
+
+		case b == '.':
+			c++
+			if c > 2 {
+				break loop
+			}
+
+		default:
+			break loop
+		}
+	}
+
+	return strconv.Itoa(mmp[0]) + "." + strconv.Itoa(mmp[1]) + "." + strconv.Itoa(mmp[2])
 }

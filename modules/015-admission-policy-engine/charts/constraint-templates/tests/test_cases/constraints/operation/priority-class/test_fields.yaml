@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: priority-class
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.priorityClassName
+      level: pod
+      description: Pod priorityClassName must be in allowed priorityClassNames list.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

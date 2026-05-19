@@ -99,6 +99,10 @@ spec:
           - --ca-bundle
           - /.aws/s3-root.crt
           - --delete
+          - --exclude
+          - "en/pdf/*"
+          - --exclude
+          - "ru/pdf/*"
           - --endpoint-url
           - https://{{ .Values.global.doc_s3_ep }}
           - --region

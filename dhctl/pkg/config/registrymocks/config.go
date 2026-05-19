@@ -70,6 +70,11 @@ func ConfigBuilder(opts ...any) registry.Config {
 			},
 		}
 
+	case constant.ModeLocal:
+		userSettings = module_config.DeckhouseSettings{
+			Mode: constant.ModeLocal,
+		}
+
 	default:
 		userSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
@@ -147,6 +152,12 @@ func WithModeUnmanaged() updateMode {
 func WithModeProxy() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeProxy
+	}
+}
+
+func WithModeLocal() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeLocal
 	}
 }
 

@@ -679,6 +679,28 @@ spec:
                           description: |-
                             If set to `true`, the strategy will consider whether the pods can fit on other nodes
                             when balancing topology domains.
+                    removePodsHavingTooManyRestarts:
+                      type: object
+                      description: |-
+                        The strategy evicts pods having too many restarts from nodes.
+
+                        Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the `podRestartThreshold` threshold.
+                        
+                        This strategy is useful for evicting pods in the `CrashLoopBackOff` state or with repeated failures, as well as for freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        podRestartThreshold:
+                          type: integer
+                          format: int32
+                          minimum: 1
+                          default: 100
+                          description: |-
+                            Threshold for the total number of restarts across all pod containers, including init containers.
+
+                            If the number of restarts exceeds this value, the pod is considered unhealthy and becomes a candidate for eviction.
                   anyOf:
                     - required: ["lowNodeUtilization"]
                     - required: ["highNodeUtilization"]
@@ -686,6 +708,7 @@ spec:
                     - required: ["removePodsViolatingNodeAffinity"]
                     - required: ["removePodsViolatingInterPodAntiAffinity"]
                     - required: ["removePodsViolatingTopologySpreadConstraint"]
+                    - required: ["removePodsHavingTooManyRestarts"]
               required:
                 - strategies
           required:

@@ -30,9 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
@@ -47,6 +50,7 @@ const (
 type reconciler struct {
 	client client.Client
 	dc     dependency.Container
+	psm    registryService.ServiceManagerInterface[registryService.PackagesService]
 	logger *log.Logger
 }
 
@@ -58,6 +62,7 @@ func RegisterController(
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
 		dc:     dc,
+		psm:    registryService.NewPackageServiceManager(logger.Named("packages_manager")),
 		logger: logger,
 	}
 
@@ -76,103 +81,91 @@ func RegisterController(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	logger := r.logger.With(slog.String("name", req.Name))
 
-	logger.Debug("reconciling PackageRepository")
+	logger.Debug("reconcile resource")
 
-	packageRepository := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, req.NamespacedName, packageRepository); err != nil {
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, req.NamespacedName, repo); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Debug("package repository not found")
+			logger.Debug("resource not found")
 
-			return res, nil
+			return ctrl.Result{}, nil
 		}
 
-		logger.Warn("failed to get package repository", log.Err(err))
+		logger.Warn("failed to get resource", log.Err(err))
 
-		return res, err
+		return ctrl.Result{}, err
 	}
 
 	// handle delete event
-	if !packageRepository.DeletionTimestamp.IsZero() {
-		logger.Debug("deleting package repository")
+	if !repo.DeletionTimestamp.IsZero() {
+		logger.Debug("delete resource")
 
-		err := r.delete(ctx, packageRepository)
-		if err != nil {
-			logger.Warn("failed to delete package repository", log.Err(err))
+		if err := r.delete(ctx, repo); err != nil {
+			logger.Warn("failed to delete resource", log.Err(err))
 
-			return res, err
+			return ctrl.Result{}, err
 		}
 
-		return res, nil
+		return ctrl.Result{}, nil
 	}
 
 	// handle create/update events
-	res, err := r.handle(ctx, packageRepository)
+	res, err := r.handleCreateOrUpdate(ctx, repo)
 	if err != nil {
 		logger.Warn("failed to handle package repository", log.Err(err))
 
-		return res, err
+		return ctrl.Result{}, err
 	}
 
 	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.PackageRepository) (ctrl.Result, error) {
-	logger := r.logger.With(slog.String("name", packageRepository.Name))
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
+	logger := r.logger.With(slog.String("name", repo.Name))
 
-	logger.Debug("handling PackageRepository")
+	logger.Debug("handle resource")
 
-	if err := r.syncRegistrySettings(ctx, packageRepository); err != nil {
+	if err := r.syncRegistrySettings(ctx, repo); err != nil {
 		return ctrl.Result{}, fmt.Errorf("sync registry settings: %w", err)
 	}
 
+	if r.psm != nil {
+		if err := r.checkPaginationSupport(ctx, repo); err != nil {
+			logger.Warn("failed to check pagination support", log.Err(err))
+		}
+	}
+
 	scanInterval := defaultScanInterval
-	if interval := packageRepository.Spec.ScanInterval; interval != nil {
+	if interval := repo.Spec.ScanInterval; interval != nil {
 		scanInterval = max(interval.Duration, minScanInterval)
 	}
 
 	// Check if there are any existing PackageRepositoryOperations for this repository
-	operationList := &v1alpha1.PackageRepositoryOperationList{}
-	err := r.client.List(ctx, operationList, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: packageRepository.Name,
+	operations := new(v1alpha1.PackageRepositoryOperationList)
+	err := r.client.List(ctx, operations, client.MatchingLabels{
+		v1alpha1.PackagesRepositoryOperationLabelRepository: repo.Name,
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
 	}
 
-	// Check if there is an active operation (Pending or Processing)
-	hasActiveOperation := false
-	for _, op := range operationList.Items {
-		if op.Status.Phase == "" ||
-			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhasePending ||
-			op.Status.Phase == v1alpha1.PackageRepositoryOperationPhaseProcessing {
-			hasActiveOperation = true
-
-			logger.Debug("active operation exists, skipping creation",
-				slog.String("operation", op.Name),
-				slog.String("phase", op.Status.Phase))
-
-			break
+	// Check if there is an active operation
+	for _, op := range operations.Items {
+		if !op.IsCompleted() {
+			logger.Debug("active operation exists, skipping creation", slog.String("operation", op.Name))
+			// Requeue to check again later
+			return ctrl.Result{RequeueAfter: scanInterval}, nil
 		}
-	}
-
-	// Only create a new operation if there is no active operation
-	if hasActiveOperation {
-		logger.Debug("skipping operation creation, active operation in progress")
-
-		// Requeue to check again later
-		return ctrl.Result{RequeueAfter: scanInterval}, nil
 	}
 
 	// Determine if we should do a full scan or incremental scan
 	// fullScan = true if this is the first operation ever (no operations at all)
-	fullScan := len(operationList.Items) == 0
+	fullScan := len(operations.Items) == 0
 
 	// Create a new PackageRepositoryOperation
-	operationName := fmt.Sprintf("%s-scan-%d", packageRepository.Name, r.dc.GetClock().Now().Unix())
+	operationName := fmt.Sprintf("%s-scan-%d", repo.Name, r.dc.GetClock().Now().Unix())
 
 	logger.With(slog.String("operation", operationName), slog.Bool("full_scan", fullScan))
 
@@ -184,7 +177,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		ObjectMeta: metav1.ObjectMeta{
 			Name: operationName,
 			Labels: map[string]string{
-				v1alpha1.PackagesRepositoryOperationLabelRepository:       packageRepository.Name,
+				v1alpha1.PackagesRepositoryOperationLabelRepository:       repo.Name,
 				v1alpha1.PackagesRepositoryOperationLabelOperationTrigger: v1alpha1.PackagesRepositoryTriggerAuto,
 				v1alpha1.PackagesRepositoryOperationLabelOperationType:    v1alpha1.PackageRepositoryOperationTypeUpdate,
 			},
@@ -192,14 +185,14 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 				{
 					APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
 					Kind:       v1alpha1.PackageRepositoryGVK.Kind,
-					Name:       packageRepository.Name,
-					UID:        packageRepository.UID,
+					Name:       repo.Name,
+					UID:        repo.UID,
 					Controller: &[]bool{true}[0],
 				},
 			},
 		},
 		Spec: v1alpha1.PackageRepositoryOperationSpec{
-			PackageRepositoryName: packageRepository.Name,
+			PackageRepositoryName: repo.Name,
 			Type:                  v1alpha1.PackageRepositoryOperationTypeUpdate,
 			Update: &v1alpha1.PackageRepositoryOperationUpdate{
 				FullScan: fullScan,
@@ -208,8 +201,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		},
 	}
 
-	err = r.client.Create(ctx, operation)
-	if err != nil {
+	if err = r.client.Create(ctx, operation); err != nil {
 		// If operation already exists (race condition), that's fine - just requeue
 		if apierrors.IsAlreadyExists(err) {
 			logger.Debug("operation already exists, skipping creation")
@@ -224,6 +216,47 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 	logger.Debug("package repository reconciled", slog.String("interval", scanInterval.String()))
 
 	return ctrl.Result{RequeueAfter: scanInterval}, nil
+}
+
+// checkPaginationSupport checks if the container registry supports pagination for tag listing.
+// It compares a full tag listing with a limited one; if the results differ, pagination is supported.
+func (r *reconciler) checkPaginationSupport(ctx context.Context, repo *v1alpha1.PackageRepository) error {
+	svc, err := r.psm.Service(repo.Spec.Registry.Repo, utils.RegistryConfig{
+		DockerConfig: repo.Spec.Registry.DockerCFG,
+		Login:        repo.Spec.Registry.Login,
+		Password:     repo.Spec.Registry.Password,
+		CA:           repo.Spec.Registry.CA,
+		Scheme:       repo.Spec.Registry.Scheme,
+		UserAgent:    "deckhouse-package-controller",
+	})
+	if err != nil {
+		return fmt.Errorf("create package service: %w", err)
+	}
+
+	// Request 1: full tag list (all applications)
+	allTags, err := svc.ListTags(ctx)
+	if err != nil {
+		return fmt.Errorf("list all tags: %w", err)
+	}
+
+	// Request 2: limited tag list (with pagination)
+	pagedTags, err := svc.ListTags(ctx, regClient.WithTagsLimit(1))
+	if err != nil {
+		return fmt.Errorf("list tags with limit: %w", err)
+	}
+
+	// If the lists differ in length, the registry supports pagination
+	partialScanAvailable := len(allTags) != len(pagedTags)
+
+	if repo.Status.PartialScanAvailable != partialScanAvailable {
+		original := repo.DeepCopy()
+		repo.Status.PartialScanAvailable = partialScanAvailable
+		if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("update PartialScanAvailable status: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) error {

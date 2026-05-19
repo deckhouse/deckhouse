@@ -131,4 +131,8 @@ The progress of the process can be observed in events using the command `d8 k de
 
    Apply this policy in `Amazon ECR` > `Private registry` > `Repositories` > `{{ name }}` > `Permissions`.
 
-2. Add `ecr:GetAuthorizationToken` to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
+1. Add `ecr:GetAuthorizationToken` to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
+
+## What to do if switching to nodes in lower-priority groups takes a long time?
+
+If switching to nodes in lower-priority groups takes a long time (for example, when node groups with spot instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

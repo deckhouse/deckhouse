@@ -2,21 +2,26 @@ diff --git a/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go b/pkg/cloudprov
 index 3a52f0b8..37a6efb1 100644
 --- a/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go
 +++ b/pkg/cloudprovider/huaweicloud/sharedloadbalancer.go
-@@ -319,12 +319,13 @@ func (l *SharedLoadBalancer) createLoadbalancer(clusterName, subnetID string, se
+@@ -319,12 +319,16 @@ func (l *SharedLoadBalancer) createLoadbalancer(clusterName, subnetID string, se
  	provider := elbmodel.GetCreateLoadbalancerReqProviderEnum().VLB
  	desc := fmt.Sprintf("Created by the ELB service(%s/%s) of the k8s cluster(%s).",
  		service.Namespace, service.Name, clusterName)
- 	loadbalancer, err := l.sharedELBClient.CreateInstanceCompleted(&elbmodel.CreateLoadbalancerReq{
+-	loadbalancer, err := l.sharedELBClient.CreateInstanceCompleted(&elbmodel.CreateLoadbalancerReq{
 -		Name:        &name,
 -		VipSubnetId: subnetID,
 -		Provider:    &provider,
 -		Description: &desc,
-+		Name:                &name,
-+		VipSubnetId:         subnetID,
-+		Provider:            &provider,
-+		Description:         &desc,
-+		EnterpriseProjectId: &l.cloudConfig.AuthOpts.EnterpriseProjectID,
- 	})
+-	})
++	req := &elbmodel.CreateLoadbalancerReq{
++		Name:        &name,
++		VipSubnetId: subnetID,
++		Provider:    &provider,
++		Description: &desc,
++	}
++	if l.cloudConfig.AuthOpts.EnterpriseProjectID != "" {
++		req.EnterpriseProjectId = &l.cloudConfig.AuthOpts.EnterpriseProjectID
++	}
++	loadbalancer, err := l.sharedELBClient.CreateInstanceCompleted(req)
  	if err != nil {
  		return nil, err
  	}

@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-sysctls
+spec:
+  testDirectory: allowed-sysctls
+  suite:
+    expectedTestBlockNames:
+      - pss-baseline
+      - security-policy
+      - pss-baseline-with-exception
+      - security-policy-with-exception

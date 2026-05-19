@@ -32,6 +32,42 @@ type Context struct {
 	provider                   CloudProviderGetter
 	stateChecker               StateChecker
 	logger                     log.Logger
+
+	// useTfCache and isDebug are propagated to every Runner this Context
+	// constructs (see applyRunnerDefaults). Empty/false means "use Runner
+	// defaults" — interactive prompt for cache, no extra debug output.
+	useTfCache string
+	isDebug    bool
+}
+
+// WithUseTfCache sets how Runners constructed via this Context react to a
+// cached infrastructure state. Pass options.UseStateCacheYes/No/Ask.
+func (f *Context) WithUseTfCache(useTfCache string) *Context {
+	f.useTfCache = useTfCache
+	return f
+}
+
+// WithDebug toggles debug-mode side effects (e.g. state file backups) on
+// every Runner this Context constructs.
+func (f *Context) WithDebug(isDebug bool) *Context {
+	f.isDebug = isDebug
+	return f
+}
+
+// newRunner wraps NewRunnerFromConfig with per-Context defaults
+// (useTfCache, isDebug).
+func (f *Context) newRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, executor Executor) *Runner {
+	return NewRunnerFromConfig(metaConfig, stateCache, executor).
+		WithUseTfCache(f.useTfCache).
+		WithDebug(f.isDebug)
+}
+
+// newImmutableRunner wraps NewImmutableRunnerFromConfig with per-Context
+// defaults (useTfCache, isDebug).
+func (f *Context) newImmutableRunner(metaConfig *config.MetaConfig, executor Executor) *Runner {
+	return NewImmutableRunnerFromConfig(metaConfig, executor).
+		WithUseTfCache(f.useTfCache).
+		WithDebug(f.isDebug)
 }
 
 func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Context {
@@ -156,7 +192,7 @@ func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *confi
 	}
 
 	if opts.CommanderMode {
-		r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+		r := f.newRunner(metaConfig, opts.StateCache, executor).
 			WithVariables(metaConfig.MarshalConfig())
 
 		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
@@ -165,7 +201,7 @@ func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *confi
 		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 	}
 
-	r := NewImmutableRunnerFromConfig(metaConfig, executor).
+	r := f.newImmutableRunner(metaConfig, executor).
 		WithVariables(metaConfig.MarshalConfig())
 	if opts.ClusterState != nil {
 		r.WithState(opts.ClusterState)
@@ -189,7 +225,7 @@ func (f *Context) GetCheckNodeRunner(ctx context.Context, metaConfig *config.Met
 	group := opts.NodeName
 
 	if opts.CommanderMode {
-		r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+		r := f.newRunner(metaConfig, opts.StateCache, executor).
 			WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 			WithName(opts.NodeName).
 			WithHook(opts.Hook)
@@ -200,7 +236,7 @@ func (f *Context) GetCheckNodeRunner(ctx context.Context, metaConfig *config.Met
 		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 	}
 
-	r := NewImmutableRunnerFromConfig(metaConfig, executor).
+	r := f.newImmutableRunner(metaConfig, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 		WithState(opts.NodeState).
 		WithName(opts.NodeName)
@@ -223,7 +259,7 @@ func (f *Context) GetCheckNodeDeleteRunner(ctx context.Context, metaConfig *conf
 	group := opts.NodeName
 
 	if opts.CommanderMode {
-		r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+		r := f.newRunner(metaConfig, opts.StateCache, executor).
 			WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 			WithName(opts.NodeName).
 			WithAllowedCachedState(true)
@@ -234,7 +270,7 @@ func (f *Context) GetCheckNodeDeleteRunner(ctx context.Context, metaConfig *conf
 		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 	}
 
-	r := NewImmutableRunnerFromConfig(metaConfig, executor).
+	r := f.newImmutableRunner(metaConfig, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 		WithName(opts.NodeName).
 		WithState(opts.NodeState)
@@ -261,7 +297,7 @@ func (f *Context) GetConvergeBaseInfraRunner(ctx context.Context, metaConfig *co
 		return nil, err
 	}
 
-	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+	r := f.newRunner(metaConfig, opts.StateCache, executor).
 		WithSkipChangesOnDeny(true).
 		WithVariables(metaConfig.MarshalConfig())
 	if opts.ClusterState != nil {
@@ -299,7 +335,7 @@ func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.
 		return nil, err
 	}
 
-	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+	r := f.newRunner(metaConfig, opts.StateCache, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 		WithSkipChangesOnDeny(true).
 		WithName(opts.NodeName).
@@ -340,7 +376,7 @@ func (f *Context) GetConvergeNodeDeleteRunner(ctx context.Context, metaConfig *c
 		return nil, err
 	}
 
-	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+	r := f.newRunner(metaConfig, opts.StateCache, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 		WithName(opts.NodeName).
 		WithAllowedCachedState(true).
@@ -368,7 +404,7 @@ func (f *Context) GetBootstrapBaseInfraRunner(ctx context.Context, metaConfig *c
 		return nil, err
 	}
 
-	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
+	r := f.newRunner(metaConfig, stateCache, executor).
 		WithVariables(metaConfig.MarshalConfig())
 
 	addProviderAfterCleanupFuncForRunner(cloudProvider, "base-infrastructure", r)
@@ -400,7 +436,7 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 
 	nodeConfig := metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)
 
-	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
+	r := f.newRunner(metaConfig, stateCache, executor).
 		WithVariables(nodeConfig).
 		WithName(opts.NodeName).
 		WithLogger(opts.RunnerLogger).
@@ -430,7 +466,7 @@ func (f *Context) GetDestroyBaseInfraRunner(ctx context.Context, metaConfig *con
 		return nil, err
 	}
 
-	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
+	r := f.newRunner(metaConfig, stateCache, executor).
 		WithVariables(metaConfig.MarshalConfig()).
 		WithAllowedCachedState(true)
 
@@ -458,7 +494,7 @@ func (f *Context) GetDestroyNodeRunner(ctx context.Context, metaConfig *config.M
 		return nil, err
 	}
 
-	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
+	r := f.newRunner(metaConfig, stateCache, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, "")).
 		WithName(opts.NodeName).
 		WithAllowedCachedState(true)

@@ -1,0 +1,68 @@
+diff --git a/internal/ingress/controller/store/store.go b/internal/ingress/controller/store/store.go
+index a7023de89..22039e34c 100644
+--- a/internal/ingress/controller/store/store.go
++++ b/internal/ingress/controller/store/store.go
+@@ -138,6 +138,12 @@ type Informer struct {
+ 	Secret        cache.SharedIndexInformer
+ 	ConfigMap     cache.SharedIndexInformer
+ 	Namespace     cache.SharedIndexInformer
++
++	// ingressHandlerReg is set when the ingress ResourceEventHandler is registered.
++	// WaitForCacheSync must use its HasSynced (not Ingress.HasSynced alone): the shared
++	// informer's HasSynced only reflects the DeltaFIFO/indexer, while handler callbacks
++	// run asynchronously and may still be draining the initial list.
++	ingressHandlerReg cache.ResourceEventHandlerRegistration
+ }
+ 
+ // Lister contains object listers (stores).
+@@ -200,10 +206,12 @@ func (i *Informer) Run(stopCh chan struct{}) {
+ 	// ready, because ingress rules require content from other listers, and
+ 	// 'add' events get triggered in the handlers during caches population.
+ 	go i.Ingress.Run(stopCh)
+-	if !cache.WaitForCacheSync(stopCh,
+-		i.Ingress.HasSynced,
+-	) {
+-		runtime.HandleError(fmt.Errorf("timed out waiting for caches to sync"))
++	ingressSynced := i.Ingress.HasSynced
++	if i.ingressHandlerReg != nil {
++		ingressSynced = i.ingressHandlerReg.HasSynced
++	}
++	if !cache.WaitForCacheSync(stopCh, ingressSynced) {
++		runtime.HandleError(fmt.Errorf("timed out waiting for ingress caches to sync"))
+ 	}
+ }
+ 
+@@ -860,8 +868,11 @@ func New(
+ 		},
+ 	}
+ 
+-	if _, err := store.informers.Ingress.AddEventHandler(ingEventHandler); err != nil {
++	reg, err := store.informers.Ingress.AddEventHandler(ingEventHandler)
++	if err != nil {
+ 		klog.Errorf("Error adding ingress event handler: %v", err)
++	} else {
++		store.informers.ingressHandlerReg = reg
+ 	}
+ 	if !icConfig.IgnoreIngressClass {
+ 		if _, err := store.informers.IngressClass.AddEventHandler(ingressClassEventHandler); err != nil {
+@@ -892,6 +903,7 @@ func New(
+ 	}
+ 
+ 	store.setConfig(cm)
++
+ 	return store
+ }
+ 
+diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
+index 7a0ca2da8..203efcdb6 100644
+--- a/internal/ingress/controller/template/template.go
++++ b/internal/ingress/controller/template/template.go
+@@ -1028,7 +1028,7 @@ func isValidByteSize(input interface{}, isOffset bool) bool {
+ 
+ 	s = strings.TrimSpace(s)
+ 	if s == "" {
+-		klog.V(2).Info("empty byte size, hence it will not be set")
++		klog.V(3).Info("empty byte size, hence it will not be set")
+ 		return false
+ 	}
+ 

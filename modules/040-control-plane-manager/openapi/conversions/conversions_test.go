@@ -72,6 +72,75 @@ apiserver:
 			currentVersion:  1,
 			expectedVersion: 2,
 		},
+		{
+			name: "should convert from 2 to 3 version: full publishAPI.loadbalancer {}",
+			settings: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  loadBalancer:
+    sourceRanges:
+    - 192.168.0.0/24
+    port: 2533
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+`,
+			expected: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  publishAPI:
+    loadBalancer:
+      enabled: true
+      sourceRanges:
+        - 192.168.0.0/24
+      port: 2533
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
+		{
+			name: "should convert from 2 to 3 version: only publishAPI.loadbalancer.port",
+			settings: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  loadBalancer:
+    port: 2533
+`,
+			expected: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  publishAPI:
+    loadBalancer:
+      enabled: true
+      port: 2533
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
+		{
+			name: "should convert from 2 to 3 version: only publishAPI.loadbalancer",
+			settings: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  loadBalancer: {}
+`,
+			expected: `
+apiserver:
+  auditPolicyEnabled: true
+  basicAuditPolicyEnabled: true
+  publishAPI:
+    loadBalancer:
+      enabled: true
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
+		},
 	}
 
 	for _, c := range cases {

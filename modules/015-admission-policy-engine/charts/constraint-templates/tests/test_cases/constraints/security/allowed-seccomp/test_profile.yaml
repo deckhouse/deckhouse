@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-seccomp
+spec:
+  testDirectory: allowed-seccomp
+  suite:
+    expectedTestBlockNames:
+    - pss-baseline
+    - pss-restricted
+    - security-policy
+    - pss-baseline-with-exception

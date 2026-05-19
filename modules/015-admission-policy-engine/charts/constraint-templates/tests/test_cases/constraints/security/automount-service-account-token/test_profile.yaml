@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: automount-service-account-token
+spec:
+  testDirectory: automount-service-account-token
+  suite:
+    expectedTestBlockNames:
+      - security-policy

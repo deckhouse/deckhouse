@@ -33,7 +33,7 @@ spec:
     - loki-storage
     - test-es-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: loki-storage
@@ -44,7 +44,7 @@ spec:
   extraLabels:
     foo: bar
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-es-dest

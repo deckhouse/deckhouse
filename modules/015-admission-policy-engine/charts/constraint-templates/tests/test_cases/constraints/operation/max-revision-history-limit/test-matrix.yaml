@@ -1,0 +1,69 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: max-revision-history-limit
+spec:
+  suiteName: d8-revision-history-limit
+  outputTestDirectory: rendered
+  defaultObjectBase: deployment
+  defaultInventory: []
+  bases:
+    deployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: default
+        spec:
+          revisionHistoryLimit: 3
+          selector:
+            matchLabels:
+              app: demo
+          template:
+            metadata:
+              labels:
+                app: demo
+            spec:
+              containers:
+                - name: nginx
+                  image: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8-revision-history-limit
+      gatorBlock: d8-revision-history-limit
+      defaultObjectBase: ""
+      template: ../../templates/operation/max-revision-history-limit.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.revisionHistoryLimit
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: deployment
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                revisionHistoryLimit: 3
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: 'Deployment <disallowed> has .spec.revisionHistoryLimit: 10, required: 3'
+          fields:
+            - path: spec.revisionHistoryLimit
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: deployment
+            merge:
+              metadata:
+                name: disallowed
+              spec:
+                revisionHistoryLimit: 10

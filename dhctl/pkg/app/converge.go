@@ -16,49 +16,48 @@ package app
 
 import (
 	"os"
-	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var (
-	MetricsPath   = "/metrics"
-	ListenAddress = ":9101"
-	CheckInterval = time.Minute
-	OutputFormat  = "yaml"
-
-	CheckHasTerraformStateBeforeMigrateToTofu = false
-)
-
-func DefineConvergeExporterFlags(cmd *kingpin.CmdClause) {
+// DefineConvergeExporterFlags registers the converge-exporter metrics flags.
+func DefineConvergeExporterFlags(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
 	cmd.Flag("metrics-path", "Path to export metrics").
 		Envar(configEnvName("METRICS_PATH")).
-		StringVar(&MetricsPath)
+		StringVar(&o.MetricsPath)
 	cmd.Flag("listen-address", "Address to expose metrics").
 		Envar(configEnvName("LISTEN_ADDRESS")).
-		StringVar(&ListenAddress)
+		StringVar(&o.ListenAddress)
 	cmd.Flag("check-interval", "Period to check infrastructure state converge").
 		Envar(configEnvName("CHECK_INTERVAL")).
-		DurationVar(&CheckInterval)
+		DurationVar(&o.CheckInterval)
 }
 
-func DefineOutputFlag(cmd *kingpin.CmdClause) {
+// DefineOutputFlag registers --output / -o for the check-style commands.
+func DefineOutputFlag(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
 	cmd.Flag("output", "Output format").
 		Envar(configEnvName("OUTPUT")).
 		Short('o').
-		EnumVar(&OutputFormat, "yaml", "json")
+		EnumVar(&o.OutputFormat, "yaml", "json")
 }
 
-func DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd *kingpin.CmdClause) {
+// DefineCheckHasTerraformStateBeforeMigrateToTofu registers the migration guard flag.
+func DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd *kingpin.CmdClause, o *options.ConvergeOptions) {
 	cmd.Flag("check-has-terraform-state-before-migrate-to-tofu", "Check cluster has terraform state before migrate state to tofu.").
 		Default("false").
-		BoolVar(&CheckHasTerraformStateBeforeMigrateToTofu)
+		BoolVar(&o.CheckHasTerraformStateBeforeMigrateToTofu)
 }
 
+// ForceNoSwitchToNodeUser reports whether DHCTL_CLI_NO_SWITCH_TO_NODE_USER=true.
+// It reads the environment directly and does not depend on parsed options.
 func ForceNoSwitchToNodeUser() bool {
 	return getEnvBool("NO_SWITCH_TO_NODE_USER")
 }
 
+// SkipDrainingNodes reports whether DHCTL_CLI_SKIP_DRAINING_NO_NODES=true.
+// It reads the environment directly and does not depend on parsed options.
 func SkipDrainingNodes() bool {
 	return getEnvBool("SKIP_DRAINING_NO_NODES")
 }
@@ -68,6 +67,5 @@ func getEnvBool(name string) bool {
 	if val, ok := os.LookupEnv(envName); ok && val == "true" {
 		return true
 	}
-
 	return false
 }

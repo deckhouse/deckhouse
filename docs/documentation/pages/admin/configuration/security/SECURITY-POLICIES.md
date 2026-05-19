@@ -600,7 +600,7 @@ Key data and checks for `CONNECT` validation:
 ## Image signature verification
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Available in the following DKP editions: SE+, EE.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}

@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.29.20",
+  "version": "v0.29.29",
   "aliases": null,
   "flags": {
     "help": {
@@ -43778,6 +43778,11 @@
               "shorthand": "",
               "global": false
             },
+            "dry-run": {
+              "description": "Print what would be pulled without downloading any images. Useful for fast validation of flags and filters.",
+              "shorthand": "",
+              "global": false
+            },
             "exclude-module": {
               "description": "Blacklist specific modules from downloading. Format is \"module-name[@version]\". Use one flag per each module. Overridden by use of --include-module.\"",
               "shorthand": "e",
@@ -44004,7 +44009,817 @@
       "description": "Deckhouse Stronghold commands",
       "aliases": null,
       "flags": {},
-      "subcommands": null
+      "subcommands": [
+        {
+          "name": "audit",
+          "description": "Interact with audit devices",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "disable",
+              "description": "Disables an audit device",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "enable",
+              "description": "Enables an audit device",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "Lists enabled audit devices",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "auth",
+          "description": "Interact with auth methods",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "disable",
+              "description": "Disables an auth method",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "enable",
+              "description": "Enables a new auth method",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "help",
+              "description": "Prints usage for an auth method",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "Lists enabled auth methods",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "move",
+              "description": "Move an auth method to a new path",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "tune",
+              "description": "Tunes an auth method configuration",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "debug",
+          "description": "Runs the debug command",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "delete",
+          "description": "Delete secrets and configuration",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "events",
+          "description": "",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "subscribe",
+              "description": "Subscribe to events",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "kv",
+          "description": "Interact with Stronghold's Key-Value storage",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "delete",
+              "description": "Deletes versions in the KV store",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "destroy",
+              "description": "Permanently removes one or more versions in the KV store",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "enable-versioning",
+              "description": "Turns on versioning for a KV store",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "get",
+              "description": "Retrieves data from the KV store",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "List data or secrets",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "metadata",
+              "description": "Interact with Stronghold's Key-Value storage",
+              "aliases": null,
+              "flags": {},
+              "subcommands": [
+                {
+                  "name": "delete",
+                  "description": "Deletes all versions and metadata for a key in the KV store",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "get",
+                  "description": "Retrieves key metadata from the KV store",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "patch",
+                  "description": "Patches key settings in the KV store",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "put",
+                  "description": "Sets or updates key settings in the KV store",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                }
+              ]
+            },
+            {
+              "name": "patch",
+              "description": "Sets or updates data in the KV store without overwriting",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "put",
+              "description": "Sets or updates data in the KV store",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "rollback",
+              "description": "Rolls back to a previous version of data",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "undelete",
+              "description": "Undeletes versions in the KV store",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "lease",
+          "description": "Interact with leases",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "lookup",
+              "description": "Lookup the lease of a secret",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "renew",
+              "description": "Renews the lease of a secret",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "revoke",
+              "description": "Revokes leases and secrets",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "list",
+          "description": "List data or secrets",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "login",
+          "description": "Authenticate locally",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "monitor",
+          "description": "Stream log messages from a Stronghold server",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "namespace",
+          "description": "Interact with namespaces",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "create",
+              "description": "Create a new namespace",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "delete",
+              "description": "Delete an existing namespace",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "List child namespaces",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "lock",
+              "description": "Lock the API for particular namespaces",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "lookup",
+              "description": "Look up an existing namespace",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "patch",
+              "description": "Patch an existing namespace",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "unlock",
+              "description": "Unlock the API for particular namespaces",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "operator",
+          "description": "Perform operator-specific tasks",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "generate-root",
+              "description": "Generates a new root, DR operation, or recovery token",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "init",
+              "description": "Initializes a server",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "key-status",
+              "description": "Provides information about the active encryption key",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "members",
+              "description": "Returns the list of nodes in the cluster",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "raft",
+              "description": "Interact with Vault's raft storage backend",
+              "aliases": null,
+              "flags": {},
+              "subcommands": [
+                {
+                  "name": "autopilot",
+                  "description": "",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": [
+                    {
+                      "name": "get-config",
+                      "description": "Returns the configuration of the autopilot subsystem under integrated storage",
+                      "aliases": null,
+                      "flags": {},
+                      "subcommands": null
+                    },
+                    {
+                      "name": "set-config",
+                      "description": "Modify the configuration of the autopilot subsystem under integrated storage",
+                      "aliases": null,
+                      "flags": {},
+                      "subcommands": null
+                    },
+                    {
+                      "name": "state",
+                      "description": "Displays the state of the raft cluster under integrated storage as seen by autopilot",
+                      "aliases": null,
+                      "flags": {},
+                      "subcommands": null
+                    }
+                  ]
+                },
+                {
+                  "name": "demote",
+                  "description": "Demotes a voter to a permanent non-voter",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "join",
+                  "description": "Joins a node to the Raft cluster",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "list-peers",
+                  "description": "Returns the Raft peer set",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "promote",
+                  "description": "Promotes a permanent non-voter to a voter",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "remove-peer",
+                  "description": "Removes a node from the Raft cluster",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": null
+                },
+                {
+                  "name": "snapshot",
+                  "description": "Restores and saves snapshots from the Raft cluster",
+                  "aliases": null,
+                  "flags": {},
+                  "subcommands": [
+                    {
+                      "name": "restore",
+                      "description": "Installs the provided snapshot, returning the cluster to the state defined in it",
+                      "aliases": null,
+                      "flags": {},
+                      "subcommands": null
+                    },
+                    {
+                      "name": "save",
+                      "description": "Saves a snapshot of the current state of the Raft cluster into a file",
+                      "aliases": null,
+                      "flags": {},
+                      "subcommands": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "rekey",
+              "description": "Generates new unseal keys",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "rotate",
+              "description": "Rotates the underlying encryption key",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "seal",
+              "description": "Seals the Stronghold server",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "step-down",
+              "description": "Forces Stronghold to resign active duty",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "unseal",
+              "description": "Unseals the Stronghold server",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "usage",
+              "description": "Lists historical client counts",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "patch",
+          "description": "Patch data, configuration, and secrets",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "path-help",
+          "description": "Retrieve API help for paths",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "pki",
+          "description": "Interact with Stronghold's PKI Secrets Engine",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "health-check",
+              "description": "Check a PKI Secrets Engine mount's health and operational status",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "issue",
+              "description": "Given a parent certificate, and a list of generation parameters, creates an issuer on a specified mount",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list-intermediates",
+              "description": "Determine which of a list of certificates, were issued by a given parent certificate",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "reissue",
+              "description": "Uses a parent certificate and a template certificate to create a new issuer on a child mount",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "verify-sign",
+              "description": "Check whether one certificate validates another specified certificate",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "plugin",
+          "description": "Interact with Stronghold plugins and catalog",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "deregister",
+              "description": "Deregister an existing plugin in the catalog",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "info",
+              "description": "Read information about a plugin in the catalog",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "Lists available plugins",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "register",
+              "description": "Registers a new plugin in the catalog",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "reload",
+              "description": "Reload mounted plugin backend",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "reload-status",
+              "description": "Get the status of an active or recently completed global plugin reload",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "policy",
+          "description": "Interact with policies",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "delete",
+              "description": "Deletes a policy by name",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "Lists the installed policies",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "read",
+              "description": "Prints the contents of a policy",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "write",
+              "description": "Uploads a named policy from a file",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "print",
+          "description": "Prints runtime configurations",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "token",
+              "description": "Prints token currently in use",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "read",
+          "description": "Read data and retrieves secrets",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "secrets",
+          "description": "Interact with secrets engines",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "disable",
+              "description": "Disable a secret engine",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "enable",
+              "description": "Enable a secrets engine",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "List enabled secrets engines",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "move",
+              "description": "Move a secrets engine to a new path",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "tune",
+              "description": "Tune a secrets engine configuration",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "ssh",
+          "description": "Initiate an SSH session",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "status",
+          "description": "Print seal and HA status",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "token",
+          "description": "Interact with tokens",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "capabilities",
+              "description": "Print capabilities of a token on a path",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "create",
+              "description": "Create a new token",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "lookup",
+              "description": "Display information about a token",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "renew",
+              "description": "Renew a token lease",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "revoke",
+              "description": "Revoke a token and its children",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "transit",
+          "description": "Interact with Stronghold's Transit Secrets Engine",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "import",
+              "description": "Import a key into the Transit secrets engines.",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            },
+            {
+              "name": "import-version",
+              "description": "Import key material into a new key version in the Transit secrets engines.",
+              "aliases": null,
+              "flags": {},
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "unwrap",
+          "description": "Unwrap a wrapped secret",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "version",
+          "description": "Prints the Stronghold CLI version",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "version-history",
+          "description": "Prints the version history of the target Stronghold server",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "write",
+          "description": "Write data, configuration, and secrets",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        }
+      ]
     },
     {
       "name": "system",
@@ -44709,6 +45524,11 @@
             },
             "log-level": {
               "description": "Set the log level (INFO, DEBUG, TRACE). Defaults to DEBUG.",
+              "shorthand": "",
+              "global": false
+            },
+            "object": {
+              "description": "Scan only a specific object in format \u003cnamespace\u003e/\u003cname\u003e/\u003ckind\u003e. Use 'clusterwide' namespace for cluster-scoped resources.",
               "shorthand": "",
               "global": false
             },

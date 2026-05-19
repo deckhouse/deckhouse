@@ -1,0 +1,253 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 42b4a25d3..41780e0d9 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -390,6 +390,10 @@ type Configuration struct {
+ 	DisableSyncEvents bool
+ 
+ 	EnableTopologyAwareRouting bool
++
++	ValidationIsolationMode string
++
++	KubeDNSIP string
+ }
+ 
+ func getIngressPodZone(svc *apiv1.Service) string {
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index d05307838..ddf8eb31b 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -70,8 +70,17 @@ import (
+ )
+ 
+ const (
+-	tempNginxPattern = "nginx-cfg"
+-	emptyUID         = "-1"
++	tempNginxPattern    = "nginx-cfg"
++	nginxTestConfigPath = "/tmp/nginx"
++	emptyUID            = "-1"
++)
++
++var (
++	writeNginxConfigPath = map[string]string{
++		"NoIsolation":        "/tmp/nginx",
++		"IsolatedFilesystem": "/validation-chroot/tmp/nginx",
++		"IsolatedProcess":    "/validation-chroot/tmp/nginx",
++	}
+ )
+ 
+ // NewNGINXController creates a new NGINX Ingress controller.
+@@ -112,7 +121,7 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
+ 
+ 		metricCollector: mc,
+ 
+-		command: NewNginxCommand(),
++		command: NewNginxCommand(config.ValidationIsolationMode, config.KubeDNSIP),
+ 	}
+ 
+ 	if n.cfg.ValidationWebhook != "" {
+@@ -333,7 +342,7 @@ func (n *NGINXController) Start() {
+ 	go func() {
+ 		for {
+ 			time.Sleep(5 * time.Minute)
+-			err := cleanTempNginxCfg()
++			err := n.cleanTempNginxCfg()
+ 			if err != nil {
+ 				klog.ErrorS(err, "Unexpected error removing temporal configuration files")
+ 			}
+@@ -650,7 +659,8 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+ 	if len(cfg) == 0 {
+ 		return fmt.Errorf("invalid NGINX configuration (empty)")
+ 	}
+-	tmpfile, err := os.CreateTemp(filepath.Join(os.TempDir(), "nginx"), tempNginxPattern)
++	tmpDir := writeNginxConfigPath[n.cfg.ValidationIsolationMode]
++	tmpfile, err := os.CreateTemp(tmpDir, tempNginxPattern)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -659,7 +669,8 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+ 	if err != nil {
+ 		return err
+ 	}
+-	out, err := n.command.Test(tmpfile.Name())
++
++	out, err := n.command.Test(filepath.Join(nginxTestConfigPath, filepath.Base(tmpfile.Name())))
+ 	if err != nil {
+ 		// this error is different from the rest because it must be clear why nginx is not working
+ 		oe := fmt.Sprintf(`
+@@ -1130,14 +1141,15 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+ 	return os.WriteFile(luaCfgPath, jsonCfg, file.ReadWriteByUser)
+ }
+ 
+-func cleanTempNginxCfg() error {
++func (n *NGINXController) cleanTempNginxCfg() error {
+ 	var files []string
+ 
+-	err := filepath.Walk(filepath.Join(os.TempDir(), "nginx"), func(path string, info os.FileInfo, err error) error {
++	tempDir := writeNginxConfigPath[n.cfg.ValidationIsolationMode]
++	err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+ 		if err != nil {
+ 			return err
+ 		}
+-		if info.IsDir() && path != filepath.Join(os.TempDir(), "nginx") {
++		if info.IsDir() && path != tempDir {
+ 			return filepath.SkipDir
+ 		}
+ 
+diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
+index 776440658..6f1b8f5b7 100644
+--- a/internal/ingress/controller/util.go
++++ b/internal/ingress/controller/util.go
+@@ -98,9 +98,10 @@ func rlimitMaxNumFiles() int {
+ }
+ 
+ const (
+-	defBinary  = "/usr/bin/nginx"
+-	cfgPath    = "/etc/nginx/nginx.conf"
+-	luaCfgPath = "/etc/nginx/lua/cfg.json"
++	defBinary        = "/usr/bin/nginx"
++	defSandboxBinary = "/usr/bin/sandbox"
++	cfgPath          = "/etc/nginx/nginx.conf"
++	luaCfgPath       = "/etc/nginx/lua/cfg.json"
+ )
+ 
+ // NginxExecTester defines the interface to execute
+@@ -112,14 +113,20 @@ type NginxExecTester interface {
+ 
+ // NginxCommand stores context around a given nginx executable path
+ type NginxCommand struct {
+-	Binary string
++	Binary                  string
++	SandboxBinary           string
++	ValidationIsolationMode string
++	KubeDNSIP               string
+ }
+ 
+ // NewNginxCommand returns a new NginxCommand from which path
+ // has been detected from environment variable NGINX_BINARY or default
+-func NewNginxCommand() NginxCommand {
++func NewNginxCommand(validationIsolationMode, kubeDNSIP string) NginxCommand {
+ 	command := NginxCommand{
+-		Binary: defBinary,
++		Binary:                  defBinary,
++		SandboxBinary:           defSandboxBinary,
++		ValidationIsolationMode: validationIsolationMode,
++		KubeDNSIP:               kubeDNSIP,
+ 	}
+ 
+ 	binary := os.Getenv("NGINX_BINARY")
+@@ -142,8 +149,19 @@ func (nc NginxCommand) ExecCommand(args ...string) *exec.Cmd {
+ 
+ // Test checks if config file is a syntax valid nginx configuration
+ func (nc NginxCommand) Test(cfg string) ([]byte, error) {
+-	//nolint:gosec // Ignore G204 error
+-	return exec.Command(nc.Binary, "-c", cfg, "-t", "-e", "/dev/null").CombinedOutput()
++	cmdArgs := []string{"-c", cfg, "-t", "-e", "/dev/null"}
++	switch nc.ValidationIsolationMode {
++	case "IsolatedProcess":
++		sandboxArgs := append([]string{"--allow-dns-to", fmt.Sprintf("%s:53", nc.KubeDNSIP), "--", "/usr/bin/unshare", "--map-current-user", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		klog.InfoS("Running config test with process isolation", "dir", cfg)
++		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
++	case "IsolatedFilesystem":
++		standardArgs := append([]string{"-S", "64535", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		klog.InfoS("Running config test with filesystem isolation", "dir", cfg)
++		return exec.Command("/usr/bin/unshare", standardArgs...).CombinedOutput()
++	}
++	klog.InfoS("Running config test without isolation", "dir", cfg)
++	return exec.Command(nc.Binary, cmdArgs...).CombinedOutput()
+ }
+ 
+ // getSysctl returns the value for the specified sysctl setting
+diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
+index e8d7d7c1b..9fdf68bdd 100644
+--- a/pkg/flags/flags.go
++++ b/pkg/flags/flags.go
+@@ -17,11 +17,13 @@ limitations under the License.
+ package flags
+ 
+ import (
++	"bufio"
+ 	"errors"
+ 	"flag"
+ 	"fmt"
+ 	"net"
+ 	"os"
++	"strings"
+ 	"time"
+ 
+ 	"github.com/prometheus/client_golang/prometheus"
+@@ -39,6 +41,11 @@ import (
+ 	klog "k8s.io/klog/v2"
+ )
+ 
++const (
++	validationModeEnv = "VALIDATION_ISOLATION_MODE"
++	noIsolationMode   = "NoIsolation"
++)
++
+ // TODO: We should split the flags functions between common for all programs
+ // and specific for each component (like webhook, controller and configurer)
+ // ParseFlags generates a configuration for Ingress Controller based on the flags
+@@ -341,6 +348,16 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
+ 
+ 	ngx_config.EnableSSLChainCompletion = *enableSSLChainCompletion
+ 
++	isolationMode := os.Getenv(validationModeEnv)
++	if len(isolationMode) == 0 {
++		isolationMode = noIsolationMode
++	}
++
++	kubeDNSIP, kerr := getKubeDNSIP()
++	if kerr != nil {
++		return false, nil, kerr
++	}
++
+ 	config := &controller.Configuration{
+ 		APIServerHost:               *apiserverHost,
+ 		KubeConfigFile:              *kubeConfigFile,
+@@ -400,6 +417,8 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
+ 		ValidationWebhookKeyPath:  *validationWebhookKey,
+ 		InternalLoggerAddress:     *internalLoggerAddress,
+ 		DisableSyncEvents:         *disableSyncEvents,
++		ValidationIsolationMode:   isolationMode,
++		KubeDNSIP:                 kubeDNSIP,
+ 	}
+ 
+ 	if *apiserverHost != "" {
+@@ -431,3 +450,36 @@ func ResetForTesting(usage func()) {
+ 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+ 	flag.Usage = usage
+ }
++
++func getKubeDNSIP() (string, error) {
++	file, err := os.Open("/etc/resolv.conf")
++	if err != nil {
++		return "", err
++	}
++
++	defer file.Close()
++	var kubeDNSIP string
++
++	scanner := bufio.NewScanner(file)
++	for scanner.Scan() {
++		line := scanner.Text()
++		if strings.HasPrefix(strings.TrimSpace(line), "nameserver") {
++			fields := strings.Fields(line)
++			if len(fields) >= 2 {
++				if ip := net.ParseIP(fields[1]); ip != nil {
++					kubeDNSIP = fields[1]
++				}
++			}
++		}
++	}
++
++	if err := scanner.Err(); err != nil {
++		return "", err
++	}
++
++	if len(kubeDNSIP) == 0 {
++		return "", fmt.Errorf("failed to get a valid kube dns ip")
++	}
++
++	return kubeDNSIP, nil
++}

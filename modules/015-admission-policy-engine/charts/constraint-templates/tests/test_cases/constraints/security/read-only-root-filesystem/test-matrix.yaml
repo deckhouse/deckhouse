@@ -1,0 +1,371 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: read-only-root-filesystem
+spec:
+  suiteName: d8-read-only-root-filesystem
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 012-disallowed-readonlyrootfilesystem-true-pod-only
+          violations: "yes"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-readonlyrootfilesystem-true-pod-only
+              spec:
+                securityContext:
+                  readOnlyRootFilesystem: true
+        - name: 011-disallowed-readonlyrootfilesystem-false-container
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.readOnlyRootFilesystem
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-readonlyrootfilesystem-false-container
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: false
+        - name: 010-disallowed-no-readonlyrootfilesystem-container
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.readOnlyRootFilesystem
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-readonlyrootfilesystem-container
+        - name: 009-disallowed-multiple-containers-one-not-readonly
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.readOnlyRootFilesystem
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-containers-one-not-readonly
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: true
+                  - image: redis
+                    name: redis
+                    securityContext:
+                      readOnlyRootFilesystem: false
+        - name: 008-disallowed-init-container-not-readonly
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.readOnlyRootFilesystem
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-init-container-not-readonly
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: true
+                initContainers:
+                  - image: busybox
+                    name: init
+                    securityContext:
+                      readOnlyRootFilesystem: false
+        - name: 007-disallowed-ephemeral-container-not-readonly
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.readOnlyRootFilesystem
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-ephemeral-container-not-readonly
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: true
+                ephemeralContainers:
+                  - image: busybox
+                    name: eph
+                    securityContext:
+                      readOnlyRootFilesystem: false
+    - name: security-policy-with-exception
+      gatorBlock: security-policy-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 022-disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.readOnlyRootFilesystem.allowedValue
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: false
+        - name: 015-023-disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.readOnlyRootFilesystem.allowedValue
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: false
+        - name: 001-allowed-daemonset-readonlyrootfilesystem-true-container
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.readOnlyRootFilesystem
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: allowed-daemonset-readonlyrootfilesystem-true-container
+              spec:
+                selector:
+                  matchLabels:
+                    app: nginx
+                template:
+                  metadata:
+                    labels:
+                      app: nginx
+                  spec:
+                    containers:
+                      - image: nginx
+                        name: nginx
+                        securityContext:
+                          readOnlyRootFilesystem: true
+        - name: 017-allowed-by-exception-writable-global
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.readOnlyRootFilesystem.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-writable-root-filesystem
+                spec:
+                  securityContext:
+                    readOnlyRootFilesystem:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
+                name: allowed-by-exception-writable-global
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: false
+        - name: 016-allowed-by-exception-mismatch-but-constraint-allows
+          violations: "no"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-writable-root-filesystem
+                spec:
+                  securityContext:
+                    readOnlyRootFilesystem:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
+                name: allowed-by-exception-mismatch-but-constraint-allows
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: true
+    - name: security-policy-spe-container
+      gatorBlock: security-policy-spe-container
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 024-025-allowed-by-container-exception-writable
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.readOnlyRootFilesystem.allowedValue
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-writable-container
+                spec:
+                  securityContext:
+                    readOnlyRootFilesystem:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-writable-container
+                name: allowed-by-container-exception-writable
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: false
+                  - image: redis
+                    name: redis
+                    securityContext:
+                      readOnlyRootFilesystem: true
+        - name: 014+015-027-disallowed-by-container-label-over-global-valid
+          violations: "yes"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-writable-root-filesystem
+                spec:
+                  securityContext:
+                    readOnlyRootFilesystem:
+                      allowedValue: false
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
+                  security.deckhouse.io/security-policy-exception/nginx: empty-spec
+                name: disallowed-by-container-label-over-global-valid
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      readOnlyRootFilesystem: false
+                  - image: redis
+                    name: redis
+                    securityContext:
+                      readOnlyRootFilesystem: true

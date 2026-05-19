@@ -1,0 +1,89 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $context := . }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not .spec.applications }}
+    {{- continue }}
+  {{- end }}
+  {{- range $idx, $app := $crd.spec.applications }}
+  {{- if and $moduleGateway $app.gatewayAPI (include "helm_lib_kind_exists" (list $context "HTTPRoute")) }}
+  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- $nameSuffix := "" }}
+  {{- if ne $idx 0 }}
+    {{- $nameSuffix = printf "-%s" $hashedDomain }}
+  {{- end }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $svcName := $info.name }}
+  {{- $ingInfo := (index $info.ingressNames (printf "%d" $idx)) }}
+  {{- $routeName := (default (printf "%s%s-dex-authenticator" $crd.name $nameSuffix) (index $ingInfo "name")) }}
+  {{- $ingTruncated := (index $ingInfo "truncated") }}
+  {{- $ingHash := (index $ingInfo "hash") }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
+  {{- if and (include "helm_lib_module_https_route_tls_enabled" $context) $app.gatewayAPI.httpRouteCertificateSecretName }}
+    alb.network.deckhouse.io/tls-secrets: {{ $crd.namespace }}/{{ $app.gatewayAPI.httpRouteCertificateSecretName }}
+  {{- end }}
+  {{- if $app.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
+  {{- end }}
+  name: {{ $routeName }}
+  namespace: {{ $crd.namespace }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $ingTruncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $ingHash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $labels) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $app.domain }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: {{ $app.gatewayAPI.httpRouteListenerSetName }}
+    {{- if $app.gatewayAPI.httpRouteListenerSetNamespace }}
+    namespace: {{ $app.gatewayAPI.httpRouteListenerSetNamespace }}
+    {{- else }}
+    namespace: {{ $crd.namespace }}
+    {{- end }}
+  {{- if $app.gatewayAPI.httpRouteListenerSetSectionName }}
+    sectionName: {{ $app.gatewayAPI.httpRouteListenerSetSectionName }}
+  {{- end }}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /dex-authenticator
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ $svcName }}
+      port: 443
+      weight: 1
+  {{- if $app.signOutURL }}
+  - matches:
+    - path:
+        type: PathPrefix
+        value: {{ $app.signOutURL }}
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ $svcName }}
+      port: 443
+      weight: 1
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /dex-authenticator/sign_out
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -153,6 +155,29 @@ status:
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
+	expectClusterMasterValues := func(clusterMasterAddresses, clusterMasterEndpoints string) {
+		Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(clusterMasterAddresses))
+		Expect(f.ValuesGet("nodeManager.internal.clusterMasterEndpoints").String()).To(MatchJSON(clusterMasterEndpoints))
+	}
+	type expectedClusterMasterEndpoint struct {
+		Address                string `json:"address"`
+		KubeAPIPort            int    `json:"kubeApiPort"`
+		RPPServerPort          int    `json:"rppServerPort"`
+		RPPBootstrapServerPort int    `json:"rppBootstrapServerPort"`
+	}
+	expectedEndpoint := func(address string, kubeAPIPort int) expectedClusterMasterEndpoint {
+		return expectedClusterMasterEndpoint{
+			Address:                address,
+			KubeAPIPort:            kubeAPIPort,
+			RPPServerPort:          packagesProxyPort,
+			RPPBootstrapServerPort: packagesProxyBootstrapPort,
+		}
+	}
+	expectedClusterMasterEndpoints := func(endpoints ...expectedClusterMasterEndpoint) string {
+		data, err := json.Marshal(endpoints)
+		Expect(err).NotTo(HaveOccurred())
+		return string(data)
+	}
 
 	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
 		BeforeEach(func() {
@@ -162,7 +187,10 @@ status:
 
 		It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
+			expectClusterMasterValues(
+				`["10.0.3.192:6443"]`,
+				expectedClusterMasterEndpoints(expectedEndpoint("10.0.3.192", 6443)),
+			)
 		})
 
 		Context("Someone added additional addresses to .subsets[]", func() {
@@ -173,7 +201,14 @@ status:
 
 			It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+				expectClusterMasterValues(
+					`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`,
+					expectedClusterMasterEndpoints(
+						expectedEndpoint("10.0.3.192", 6443),
+						expectedEndpoint("10.0.3.193", 6443),
+						expectedEndpoint("10.0.3.194", 6443),
+					),
+				)
 			})
 
 			Context("Someone added address with different port", func() {
@@ -184,7 +219,14 @@ status:
 
 				It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444']", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`))
+					expectClusterMasterValues(
+						`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`,
+						expectedClusterMasterEndpoints(
+							expectedEndpoint("10.0.3.192", 6443),
+							expectedEndpoint("10.0.3.193", 6443),
+							expectedEndpoint("10.0.3.194", 6444),
+						),
+					)
 				})
 
 				Context("Kube-apiserver pod is present", func() {
@@ -195,7 +237,15 @@ status:
 
 					It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444','192.168.199.233:6443']", func() {
 						Expect(f).To(ExecuteSuccessfully())
-						Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443"]`))
+						expectClusterMasterValues(
+							`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443"]`,
+							expectedClusterMasterEndpoints(
+								expectedEndpoint("10.0.3.192", 6443),
+								expectedEndpoint("10.0.3.193", 6443),
+								expectedEndpoint("10.0.3.194", 6444),
+								expectedEndpoint("192.168.199.233", 6443),
+							),
+						)
 					})
 
 					Context("Second kube-apiserver pod is present", func() {
@@ -206,7 +256,16 @@ status:
 
 						It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444','192.168.199.233:6443','192.168.199.244:6443']", func() {
 							Expect(f).To(ExecuteSuccessfully())
-							Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443","192.168.199.244:6443"]`))
+							expectClusterMasterValues(
+								`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443","192.168.199.244:6443"]`,
+								expectedClusterMasterEndpoints(
+									expectedEndpoint("10.0.3.192", 6443),
+									expectedEndpoint("10.0.3.193", 6443),
+									expectedEndpoint("10.0.3.194", 6444),
+									expectedEndpoint("192.168.199.233", 6443),
+									expectedEndpoint("192.168.199.244", 6443),
+								),
+							)
 						})
 					})
 
@@ -223,7 +282,14 @@ status:
 
 		It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+			expectClusterMasterValues(
+				`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`,
+				expectedClusterMasterEndpoints(
+					expectedEndpoint("10.0.3.192", 6443),
+					expectedEndpoint("10.0.3.193", 6443),
+					expectedEndpoint("10.0.3.194", 6443),
+				),
+			)
 		})
 
 		Context("Someone set number of addresses in .subsets[] to one", func() {
@@ -234,7 +300,10 @@ status:
 
 			It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
+				expectClusterMasterValues(
+					`["10.0.3.192:6443"]`,
+					expectedClusterMasterEndpoints(expectedEndpoint("10.0.3.192", 6443)),
+				)
 			})
 		})
 	})

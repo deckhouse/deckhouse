@@ -25,7 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
@@ -104,8 +104,55 @@ func decodeB64(input string) string {
 	return string(res)
 }
 
-func ComposeName(n string) string {
-	return "destination/cluster/" + n
+func commonTLSFromSpec(spec v1alpha2.CommonTLSSpec) CommonTLS {
+	tls := CommonTLS{
+		CAFile:            decodeB64(spec.CAFile),
+		CertFile:          decodeB64(spec.CertFile),
+		KeyFile:           decodeB64(spec.KeyFile),
+		KeyPass:           decodeB64(spec.KeyPass),
+		VerifyCertificate: true,
+		VerifyHostname:    true,
+	}
+	if spec.VerifyCertificate != nil {
+		tls.VerifyCertificate = *spec.VerifyCertificate
+	}
+	if spec.VerifyHostname != nil {
+		tls.VerifyHostname = *spec.VerifyHostname
+	}
+	return tls
+}
+
+func commonTLSFromSpecWithClientEnabled(spec v1alpha2.CommonTLSSpec) CommonTLS {
+	tls := commonTLSFromSpec(spec)
+	if len(tls.CAFile) > 0 || len(tls.CertFile) > 0 {
+		tls.Enabled = true
+	}
+	return tls
+}
+
+func cefEncodingFromCRD(cef v1alpha2.CEFEncoding, extensions map[string]string) CEFEncoding {
+	deviceVendor := "Deckhouse"
+	if cef.DeviceVendor != "" {
+		deviceVendor = cef.DeviceVendor
+	}
+	deviceProduct := "log-shipper-agent"
+	if cef.DeviceProduct != "" {
+		deviceProduct = cef.DeviceProduct
+	}
+	deviceVersion := "1"
+	if cef.DeviceVersion != "" {
+		deviceVersion = cef.DeviceVersion
+	}
+	return CEFEncoding{
+		Version:            "V1",
+		DeviceVendor:       deviceVendor,
+		DeviceProduct:      deviceProduct,
+		DeviceVersion:      deviceVersion,
+		DeviceEventClassID: "Log event",
+		Name:               "cef.name",
+		Severity:           "cef.severity",
+		Extensions:         extensions,
+	}
 }
 
 // ComposeNameWithSourceType creates a unique sink name by including the source type.
@@ -115,7 +162,7 @@ func ComposeNameWithSourceType(n string, sourceType string) string {
 }
 
 // buildVectorBuffer generates buffer config for vector if CRD buffer config is set
-func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
+func buildVectorBuffer(buffer *v1alpha2.Buffer) *Buffer {
 	if buffer != nil {
 		return buildVectorBufferNotNil(buffer)
 	}
@@ -124,21 +171,21 @@ func buildVectorBuffer(buffer *v1alpha1.Buffer) *Buffer {
 
 // buildVectorBufferNotNil generates buffer config for vector
 // There is no need to validation, because there is already validation on CRD site
-func buildVectorBufferNotNil(buffer *v1alpha1.Buffer) *Buffer {
+func buildVectorBufferNotNil(buffer *v1alpha2.Buffer) *Buffer {
 	switch buffer.Type {
-	case v1alpha1.BufferTypeDisk:
+	case v1alpha2.BufferTypeDisk:
 		maxBytes := uint32(buffer.Disk.MaxSize.Value())
 		if maxBytes < bufferMaxBytesMinimumValue {
 			maxBytes = bufferMaxBytesMinimumValue
 		}
 		return &Buffer{
-			Type:     toVectorValue(v1alpha1.BufferTypeDisk),
+			Type:     toVectorValue(v1alpha2.BufferTypeDisk),
 			MaxSize:  maxBytes,
 			WhenFull: toVectorValue(buffer.WhenFull),
 		}
-	case v1alpha1.BufferTypeMemory:
+	case v1alpha2.BufferTypeMemory:
 		return &Buffer{
-			Type:      toVectorValue(v1alpha1.BufferTypeMemory),
+			Type:      toVectorValue(v1alpha2.BufferTypeMemory),
 			MaxEvents: buffer.Memory.MaxEvents,
 			WhenFull:  toVectorValue(buffer.WhenFull),
 		}

@@ -9,7 +9,7 @@ layout: sidebar-guides
 This guide describes how to deploy a Deckhouse Kubernetes Platform cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 {% alert level="warning" %}
-Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE.
 {% endalert %}
 
 ## Private environment specifics

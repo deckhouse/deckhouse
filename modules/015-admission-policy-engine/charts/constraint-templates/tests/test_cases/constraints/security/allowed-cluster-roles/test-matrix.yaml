@@ -1,0 +1,90 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-cluster-roles
+spec:
+  suiteName: allowed-cluster-roles
+  outputTestDirectory: rendered
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    roleBinding:
+      document:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        metadata:
+          name: test
+          namespace: default
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: admin
+        subjects:
+          - kind: ServiceAccount
+            name: default
+            namespace: default
+  namedExceptions: {}
+  blocks:
+    - name: policy_1
+      gatorBlock: policy_1
+      defaultObjectBase: roleBinding
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: positive
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: roleRef.kind
+              scenario: positive
+            - path: roleRef.name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: roleBinding
+            merge:
+              metadata:
+                name: positive
+              roleRef:
+                kind: ClusterRole
+                name: admin
+        - name: negative
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: roleRef.kind
+              scenario: negative
+            - path: roleRef.name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: roleBinding
+            merge:
+              metadata:
+                name: negative
+              roleRef:
+                kind: ClusterRole
+                name: cluster-admin
+        - name: absent
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: roleRef.kind
+              scenario: absent
+            - path: roleRef.name
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: roleBinding
+            merge:
+              metadata:
+                name: absent
+              roleRef:
+                kind: Role
+                name: some-role

@@ -20,21 +20,24 @@ import (
 	"fmt"
 	"time"
 
-	flantkubeclient "github.com/flant/kube-client/client"
 	"github.com/name212/govalue"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -44,7 +47,8 @@ type ClientSwitcher interface {
 
 type HookForUpdatePipeline struct {
 	*Checker
-	kubeGetter        kubernetes.KubeClientProvider
+	kubeGetter        kubernetes.KubeClientProviderWithCtx
+	sshProvider       libcon.SSHProvider
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
@@ -52,7 +56,9 @@ type HookForUpdatePipeline struct {
 }
 
 func NewHookForUpdatePipeline(
-	kubeGetter kubernetes.KubeClientProvider,
+	kubeGetter kubernetes.KubeClientProviderWithCtx,
+	sshProvider libcon.SSHProvider,
+	providerSettings *settings.BaseProviders,
 	nodeToHostForChecks map[string]string,
 	clusterUUID string,
 	commanderMode bool,
@@ -63,33 +69,22 @@ func NewHookForUpdatePipeline(
 	}
 
 	if !commanderMode && !skipChecks {
-		cl := kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
-		if cl == nil {
-			panic("Node interface is not ssh")
-		}
-
 		checkers = append(
 			checkers,
 			NewKubeProxyChecker().
 				WithExternalIPs(nodeToHostForChecks).
 				WithClusterUUID(clusterUUID).
-				WithSSHCredentials(session.Input{
-					User:        cl.Session().User,
-					Port:        cl.Session().Port,
-					BastionHost: cl.Session().BastionHost,
-					BastionPort: cl.Session().BastionPort,
-					BastionUser: cl.Session().BastionUser,
-					ExtraArgs:   cl.Session().ExtraArgs,
-					BecomePass:  cl.Session().BecomePass,
-				}, cl.PrivateKeys()...))
+				WithSSHProvider(sshProvider, providerSettings))
 	}
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
+	checkers = append(checkers, NewStrongholdReadinessChecker(kubeGetter))
 	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 
 	return &HookForUpdatePipeline{
 		Checker:       checker,
 		kubeGetter:    kubeGetter,
+		sshProvider:   sshProvider,
 		commanderMode: commanderMode,
 	}
 }
@@ -158,12 +153,17 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 
 	h.oldMasterIPForSSH = masterIP
 
-	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
+	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
 
-	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
@@ -183,12 +183,16 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
 	if err != nil {
-		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
+		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
+	}
+	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	if !h.commanderMode {
-		cl := h.kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
-		if cl == nil {
+		cl, err := h.sshProvider.Client(context.Background())
+		if err != nil {
 			panic("Node interface is not ssh")
 		}
 
@@ -202,18 +206,28 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	// we need to store the path to the Kubernetes data device to avoid deadlock.
 	err = h.saveKubernetesDataDevicePath(ctx, outputs.KubeDataDevicePath)
 	if err != nil {
-		return fmt.Errorf("failed to save kubernetes data device path: %v", err)
+		return fmt.Errorf("failed to save kubernetes data device path: %w", err)
 	}
 
-	err = waitEtcdHasMember(ctx, h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
+	kubeCl, err := h.kubeGetter.KubeClientCtx(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %v", h.nodeToConverge, err)
+		return err
 	}
 
-	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
-		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
+	err = entity.WaitForSingleNodeBecomeReady(ctx, kubeCl, h.nodeToConverge)
+	if err != nil {
+		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
+	}
+
+	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(libcon.KubeClient), h.nodeToConverge)
+	if err != nil {
+		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
+	}
+
+	err = retry.NewLoop("Check Stronghold readiness after node converge", 45, 10*time.Second).RunContext(ctx, func() error {
+		ready, err := NewStrongholdReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
-			return fmt.Errorf("failed to check the master node '%s' readiness: %v", h.nodeToConverge, err)
+			return fmt.Errorf("failed to check Stronghold readiness: %w", err)
 		}
 
 		if !ready {
@@ -226,7 +240,18 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return err
 	}
 
-	return nil
+	return retry.NewLoop(fmt.Sprintf("Check control-plane is ready on node '%s'", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
+		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
+		if err != nil {
+			return fmt.Errorf("failed to check the master node '%s' readiness: %w", h.nodeToConverge, err)
+		}
+
+		if !ready {
+			return hook.ErrNotReady
+		}
+
+		return nil
+	})
 }
 
 func (h *HookForUpdatePipeline) IsReady() error {
@@ -238,24 +263,29 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 		return manifests.SecretMasterDevicePath(h.nodeToConverge, []byte(devicePath))
 	}
 
+	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
-		CreateFunc: func(manifest interface{}) error {
-			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
 
 			return nil
 		},
-		UpdateFunc: func(manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 			data, err := json.Marshal(manifest.(*apiv1.Secret))
 			if err != nil {
 				return err
 			}
 
-			_, err = h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Patch(
+			_, err = kubeClient.CoreV1().Secrets("d8-system").Patch(
 				ctx,
 				"d8-masters-kubernetes-data-device-path",
 				types.MergePatchType,
@@ -272,11 +302,6 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).
 		RunContext(ctx, func() error {
-			err := task.CreateOrUpdate()
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return task.CreateOrUpdate(ctx)
 		})
 }

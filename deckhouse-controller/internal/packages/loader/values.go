@@ -26,7 +26,9 @@ import (
 const (
 	// openAPIDir is the subdirectory containing OpenAPI schema files.
 	openAPIDir = "openapi"
-	// configValuesFile is the OpenAPI schema for user-configurable values.
+	// settingsFile is the OpenAPI schema for user-configurable values.
+	settingsFile = "settings.yaml"
+	// configValuesFile is the legacy name for settingsFile, kept for backward compatibility.
 	configValuesFile = "config-values.yaml"
 	// valuesFile is the OpenAPI schema for all values including internal ones.
 	valuesFile = "values.yaml"
@@ -35,7 +37,7 @@ const (
 // loadValues loads all values-related files for a package.
 // It loads:
 //  1. Static values from values.yaml
-//  2. Config schema from openapi/config-values.yaml
+//  2. Config schema from openapi/settings.yaml (with openapi/config-values.yaml fallback)
 //  3. Values schema from openapi/values.yaml
 //
 // The static values are scoped to the package name if they contain a matching key.
@@ -63,7 +65,7 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 		static = static.GetKeySection(valuesPackageName)
 	}
 
-	// Load OpenAPI schemas (config-values.yaml and values.yaml)
+	// Load OpenAPI schemas (settings.yaml and values.yaml)
 	// Returns raw YAML bytes for schema validation
 	config, values, err := loadPackageSchemas(path)
 	if err != nil {
@@ -73,21 +75,29 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 	return static, config, values, nil
 }
 
-// loadPackageSchemas reads config-values.yaml and values.yaml from the specified directory.
-// Package schemas:
+// loadPackageSchemas reads settings.yaml (or legacy config-values.yaml) and
+// values.yaml from the specified directory. Package schemas:
 //
-//	/modules/XXX-module-name/openapi/config-values.yaml
+//	/modules/XXX-module-name/openapi/settings.yaml      (preferred)
+//	/modules/XXX-module-name/openapi/config-values.yaml (legacy fallback)
 //	/modules/XXX-module-name/openapi/values.yaml
 func loadPackageSchemas(packageDir string) ([]byte, []byte, error) {
 	schemasDir := filepath.Join(packageDir, openAPIDir)
 
-	configPath := filepath.Join(schemasDir, configValuesFile)
-	configValues, err := os.ReadFile(configPath)
+	settingsPath := filepath.Join(schemasDir, settingsFile)
+	configValues, err := os.ReadFile(settingsPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("read file '%s': %w", configPath, err)
+			return nil, nil, fmt.Errorf("read file '%s': %w", settingsPath, err)
 		}
-		configValues = nil
+		legacyPath := filepath.Join(schemasDir, configValuesFile)
+		configValues, err = os.ReadFile(legacyPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return nil, nil, fmt.Errorf("read file '%s': %w", legacyPath, err)
+			}
+			configValues = nil
+		}
 	}
 
 	valuesPath := filepath.Join(schemasDir, valuesFile)

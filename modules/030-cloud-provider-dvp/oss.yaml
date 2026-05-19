@@ -1,0 +1,7 @@
+- name: Deckhouse Virtualization Platform Terraform provider
+  link: https://github.com/hashicorp/terraform-provider-kubernetes
+  description: Terraform provider for Kubernetes API resources used with Deckhouse Virtualization Platform.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-kubernetes
+  version: "2.38.0"

@@ -1,3 +1,5 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if .Values.istio.internal.deployDexAuthenticator }}
 ---
 apiVersion: deckhouse.io/v1
@@ -11,7 +13,11 @@ metadata:
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "istio") }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
-  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+  applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "istio-ingress-tls") }}
+    {{- if $moduleGateway }}
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: "istio"
+    {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   sendAuthorizationHeader: true

@@ -29,22 +29,27 @@ spec:
 
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.str" . | nindent 16 }}
+            rego: |
+              package d8.security_policies
 
-        violation [{"msg": msg, "details": {}}] {
-          not input.review.operation == "DELETE"
-          ingress_name := input.review.object.metadata.name
-          some i
-          host := input.review.object.spec.rules[i].host
-          contains_wildcard(host)          
-          msg := sprintf("Ingress '%s' contains a wildcard '*' in host '%s', which is not allowed.", [ingress_name, host])
+              import data.lib.str.has_wildcard
 
-        }
-
-        contains_wildcard(host) {
-          host != ""
-          pattern := `^.*\*.*$`
-          is_wildcard := regex.match(pattern, host)
-          is_wildcard
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                object.get(input.parameters, "blockWildcardDomains", true)
+                ingress_name := input.review.object.metadata.name
+                some i
+                host := input.review.object.spec.rules[i].host
+                host != ""
+                has_wildcard(host)
+                msg := sprintf("Ingress '%s' contains a wildcard '*' in host '%s', which is not allowed.", [ingress_name, host])
+              }

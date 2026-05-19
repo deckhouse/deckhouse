@@ -1,0 +1,88 @@
+admission-policy-engine:
+  fixes:
+    - summary: cve fixes for ratify
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19274
+cloud-provider-azure:
+  fixes:
+    - summary: fix disk discovery for Ubuntu 22.04 Gen2 VMs with NVMe controllers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19330
+cloud-provider-openstack:
+  fixes:
+    - summary: Increase interval and timeout for health monitor
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19308
+cloud-provider-vsphere:
+  fixes:
+    - summary: >-
+        Fix vSphere privilege matrix and describe instructions for setting up environment via
+        vSphere Client
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18725
+cni-simple-bridge:
+  fixes:
+    - summary: Updated base image reference to support new Werf import format.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19314
+common:
+  fixes:
+    - summary: Fixed an issue where Trivy could not detect VEX files in coredns images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19317
+    - summary: >-
+        Removed Python completely from the debug-container image as it is no longer needed,
+        resolving corresponding CVEs, and silenced false positives for etcd binaries via VEX.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18843
+deckhouse:
+  fixes:
+    - summary: >-
+        Remove notified=false annotation reset from runReleaseDeploy in the module release
+        controller.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19176
+    - summary: Fix webhook-handler CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19078
+dhctl:
+  fixes:
+    - summary: Added validation of the command execution status code
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18128
+docs:
+  features:
+    - summary: Image zooming and mobile view.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18926
+    - summary: Add sds-node-configurator module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18709
+    - summary: Add cloud-provider-vcd module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18602
+  fixes:
+    - summary: >-
+        Fix vSphere privilege matrix and describe instructions for setting up environment via
+        vSphere Client
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18725
+documentation:
+  fixes:
+    - summary: Fix search.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18835
+ingress-nginx:
+  fixes:
+    - summary: CVE-2025-15566 is backported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19208
+      impact: All pods of Ingress-NGINX controller will be restarted.
+    - summary: CVE-2026-4342 fix is backported to Dechkouse 1.74.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18946
+      impact: All Ingress-NGINX controller pods will be restarted.
+istio:
+  fixes:
+    - summary: fixed CVEs in module images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19363
+      impact: module pods will be restarted
+    - summary: fixed CVE-2026-39882, CVE-2026-39883 and CVE-2026-35206
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19091
+      impact: istio module pods will be restarted
+    - summary: fixed CVE-2026-34986
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18973
+      impact: istio module pods will be restarted
+kube-proxy:
+  fixes:
+    - summary: Fixed CVE-2026-33186 and CVE-2026-24051 in kube-proxy dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19119
+      impact: This update triggers a rolling update of the kube-proxy pods.
+network-gateway:
+  fixes:
+    - summary: Fixed werf import syntax for compatibility with older werf versions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19276
+

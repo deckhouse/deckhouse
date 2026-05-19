@@ -583,9 +583,12 @@ spec:
   enforcementAction: deny
   match:
     kinds:
-      - apiGroups: ["*"]
-        kinds: ["*"]
+      - apiGroups: [""]
+        kinds: ["PodExecOptions", "PodAttachOptions"]
     scope: Namespaced
+    namespaces:
+      - "d8-*"
+      - "kube-*"
   {{- end }}
 {{- end }}
 

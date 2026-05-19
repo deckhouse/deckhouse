@@ -1,8 +1,8 @@
 diff --git a/cmd/kubeadm/app/cmd/join.go b/cmd/kubeadm/app/cmd/join.go
-index 67353120b5f..1ad7dd91881 100644
+index 12fce4a1cc5..b32f03c96f3 100644
 --- a/cmd/kubeadm/app/cmd/join.go
 +++ b/cmd/kubeadm/app/cmd/join.go
-@@ -434,6 +434,13 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
+@@ -444,6 +444,13 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
  		return nil, err
  	}
  
@@ -16,7 +16,7 @@ index 67353120b5f..1ad7dd91881 100644
  	ignorePreflightErrorsSet, err := validation.ValidateIgnorePreflightErrors(opt.ignorePreflightErrors, cfg.NodeRegistration.IgnorePreflightErrors)
  	if err != nil {
  		return nil, err
-@@ -465,6 +472,7 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
+@@ -475,6 +482,7 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri
  
  	return &joinData{
  		cfg:                   cfg,

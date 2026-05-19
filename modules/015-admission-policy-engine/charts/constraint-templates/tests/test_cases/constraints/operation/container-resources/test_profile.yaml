@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: container-resources
+spec:
+  testDirectory: container-resources
+  suite:
+    expectedTestBlockNames:
+      - operation-policy

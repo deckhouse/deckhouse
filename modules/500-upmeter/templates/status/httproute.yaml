@@ -1,0 +1,125 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- $statusHost := include "helm_lib_module_public_domain" (list . "status") }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: status
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    web.deckhouse.io/export-name: "status"
+    web.deckhouse.io/export-icon: "/public/img/heart.ico"
+  {{- if not .Values.upmeter.statusPageAuthDisabled }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL | quote }}
+    {{- else }}
+    alb.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-status
+    {{- end }}
+  {{- end }}
+  {{- if .Values.upmeter.auth.status.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $statusHost }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: upmeter
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: status
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: status
+      port: 80
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: upmeter-api-status
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+  {{- if not .Values.upmeter.statusPageAuthDisabled }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" $statusHost .Values.upmeter.auth.status.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL | quote }}
+    {{- else }}
+    alb.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-status
+    {{- end }}
+  {{- end }}
+  {{- if .Values.upmeter.auth.status.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
+  {{- end }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $statusHost }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: upmeter
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: status
+  rules:
+  - filters:
+    - type: CORS
+      cors:
+        allowMethods:
+        - GET
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: upmeter
+      port: 443
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /public/api
+{{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: status-redirect
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "status")) | nindent 2 }}
+spec:
+  hostnames:
+  - {{ $statusHost }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: upmeter
+    namespace: d8-{{ .Chart.Name }}
+    sectionName: status-redirect
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+{{- end }}
+{{- end }}

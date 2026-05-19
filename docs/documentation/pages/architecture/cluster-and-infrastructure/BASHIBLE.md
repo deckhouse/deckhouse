@@ -13,7 +13,7 @@ Node management functions are implemented using specially prepared bash scripts 
 
 * [Bashible installation scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bootstrap)
 * [Bootstrap scripts for the first node](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/cluster-bootstrap)
-* Node configuration scripts for a specific cloud provider (for example, [AWS](https://github.com/deckhouse/deckhouse/tree/main/candi/cloud-providers/aws/bashible))
+* Node configuration scripts for a specific cloud provider (for example, [AWS](https://github.com/deckhouse/deckhouse/tree/main/modules/030-cloud-provider-aws/candi/bashible))
 * [Common scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all)
 
 The scripts are implemented as *gotemplate* templates, which allows flexible node configuration depending on the node group. The scripts must be written in such a manner so that they can be safely re-executed in case of failure or repeated runs. An individual script is referred to as a step.
@@ -26,7 +26,7 @@ Main node configuration stages:
 * Downloading required packages from `registrypackages`.
 * Installing and configuring the containerd CRI.
 * Downloading and configuring **kubernetes-api-proxy**. This component provides access to the Kubernetes API and is implemented as an NGINX instance with upstream servers pointing to master nodes. This ensures high availability of the API in case one master node is unavailable, as well as load balancing.
-* Installing, configuring, and starting [kubelet](../kubernetes-and-scheduling/kubelet.html).
+* Installing, configuring, and starting [kubelet](../../kubernetes-and-scheduling/kubelet.html).
 * Starting the bashible service, which runs `bashible.sh` every minute.
 * Rebooting the node if required.
 

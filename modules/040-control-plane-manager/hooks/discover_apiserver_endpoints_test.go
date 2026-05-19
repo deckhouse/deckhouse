@@ -1,0 +1,151 @@
+/*
+Copyright 2021 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package hooks
+
+import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
+)
+
+var _ = Describe("Control Plane Manager hooks :: discover apiserver endpoints ::", func() {
+	f := HookExecutionConfigInit(`{"controlPlaneManager":{"apiserver":{"publishAPI":{"ingress":{"enabled": true}}},"internal": {}}}`, "")
+
+	Context("Fresh cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes
+  namespace: default
+spec:
+  ports:
+  - targetPort: 6443
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+endpoints:
+- addresses:
+  - 192.168.1.1
+`))
+			f.RunHook()
+		})
+
+		It("Should fill internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverTargetPort").String()).To(Equal("6443"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverAddresses").String()).To(Equal(`["192.168.1.1"]`))
+		})
+
+		Context("Change to multi-master and change apiserver targetPort", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes
+  namespace: default
+spec:
+  ports:
+  - targetPort: 443
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+endpoints:
+- addresses:
+  - 192.168.1.1
+- addresses:
+  - 192.168.1.2
+- addresses:
+  - 192.168.1.3
+`))
+				f.RunHook()
+			})
+
+			It("Should update internal values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+				Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverTargetPort").String()).To(Equal("443"))
+				Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverAddresses").String()).To(MatchJSON(`["192.168.1.1","192.168.1.2","192.168.1.3"]`))
+			})
+			Context("Test before helm ", func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				})
+				It("Should update internal values", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+					Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverTargetPort").String()).To(Equal("443"))
+					Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverAddresses").String()).To(MatchJSON(`["192.168.1.1","192.168.1.2","192.168.1.3"]`))
+				})
+			})
+		})
+	})
+
+	Context("No APIServer endpoints", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubernetes
+  namespace: default
+spec:
+  ports:
+  - targetPort: 6443
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+endpoints: []
+`))
+			f.RunHook()
+		})
+
+		It("Should not generate an error", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverTargetPort").String()).To(Equal("6443"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.kubernetesApiserverAddresses").String()).To(Equal(`[]`))
+		})
+	})
+
+})

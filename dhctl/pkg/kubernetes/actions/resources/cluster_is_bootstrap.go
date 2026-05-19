@@ -261,7 +261,7 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	if len(n.outputNodeGroups(ctx)) > 0 {
-		_ = logger.LogProcess("Create Resources", "NodeGroups status", func() error {
+		_ = logger.LogProcessCtx(ctx, "Create Resources", "NodeGroups status", func(ctx context.Context) error {
 			logger.LogInfoLn(n.outputNodeGroups(ctx))
 			return nil
 		})

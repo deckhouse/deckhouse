@@ -17,3 +17,7 @@ Add supported enterprise-project-id
 ### 004-fix_providerid_and_exclude_loopback_in_node_IP_selection.patch
 
 Fix providerID format and exclude 127.0.0.0/8 in node IP selections
+
+### 005-default-lb-class-and-algorithm.patch
+
+Add default values for `elb.class` (`shared`) and `lb-algorithm` (`ROUND_ROBIN`) so that LoadBalancer services work without requiring these annotations to be set explicitly.

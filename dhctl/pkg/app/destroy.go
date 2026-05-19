@@ -14,13 +14,16 @@
 
 package app
 
-import "gopkg.in/alecthomas/kingpin.v2"
+import (
+	"gopkg.in/alecthomas/kingpin.v2"
 
-var SkipResources = false
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+)
 
-func DefineDestroyResourcesFlags(cmd *kingpin.CmdClause) {
+// DefineDestroyResourcesFlags registers --skip-resources.
+func DefineDestroyResourcesFlags(cmd *kingpin.CmdClause, o *options.DestroyOptions) {
 	cmd.Flag("skip-resources", "Do not wait resources deletion (pv, loadbalancers, machines) from the cluster.").
 		Default("false").
 		Envar(configEnvName("SKIP_RESOURCES")).
-		BoolVar(&SkipResources)
+		BoolVar(&o.SkipResources)
 }

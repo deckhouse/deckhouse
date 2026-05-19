@@ -1,3 +1,6 @@
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 {{- $description := "" }}
 {{- if .Description }}
   {{- $description = .Description }}
@@ -5,22 +8,52 @@
   {{- $description = partial "get-description-from-content" (dict "content" .RawContent) }}
 {{- end }}
 {{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
+
 {{- $canonicalURL := strings.TrimSuffix "readme.html" .RelPermalink }}
 {{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/(alpha|beta|early-access|stable|rock-solid)/(.*)$" "$1/$3" $canonicalURL 1 }}
 {{- if ne site.Params.mode "module" -}}
   {{- $canonicalURL = printf "%s%s" site.BaseURL (strings.TrimLeft "/" $canonicalURL) -}}
 {{- end -}}
 
-<title>{{ .Title }} | {{ .Site.Title }}</title>
-<link rel="canonical" href="{{ $canonicalURL }}" />
-<meta name="description" content="{{  $description }}">
-<meta name="title" content="{{ .Title }} | {{ .Site.Title }}">
+{{- $pageTitleForHead := .Title -}}
+{{- if eq (strings.ToLower .File.TranslationBaseName) "readme" -}}
+  {{- $pageTitleForHead = T "moduleLinkTitleREADME" -}}
+{{- else if strings.Contains $pageTitleForHead ":" -}}
+  {{- $parts := split $pageTitleForHead ":" -}}
+  {{- if gt (len $parts) 1 -}}
+    {{- $suffix := strings.TrimSpace (delimit (after 1 $parts) ":") -}}
+    {{- if $suffix -}}
+      {{- $pageTitleForHead = strings.FirstUpper $suffix -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $metaTitle := printf "%s | %s" $pageTitleForHead .Site.Title }}
+{{- $modulePathMatch := findRESubmatch `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 }}
+{{- if $modulePathMatch }}
+  {{- $captures := index $modulePathMatch 0 }}
+  {{- if ge (len $captures) 2 }}
+    {{- $moduleKebabName := index $captures 1 }}
+    {{- $metaTitle = printf "%s | %s | Deckhouse" $pageTitleForHead $moduleKebabName }}
+  {{- end }}
+{{- end }}
+
+{{- $escapedCanonicalURL := $canonicalURL | htmlEscape }}
+{{- $escapedDescription := $description | htmlEscape }}
+{{- $escapedMetaTitle := $metaTitle | htmlEscape }}
+{{- $ogURL := strings.TrimSuffix "readme.html" .Permalink }}
+{{- $escapedOGURL := $ogURL | htmlEscape }}
+
+<title>{{ $metaTitle }}</title>
+<link rel="canonical" {{ printf "href=\"%s\"" $escapedCanonicalURL | safeHTMLAttr }} />
+<meta name="description" {{ printf "content=\"%s\"" $escapedDescription | safeHTMLAttr }}>
+<meta name="title" {{ printf "content=\"%s\"" $escapedMetaTitle | safeHTMLAttr }}>
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="article">
-<meta property="og:url" content="{{ strings.TrimSuffix "readme.html" .Permalink  }}">
-<meta property="og:title" content="{{ .Title }} | {{ .Site.Title }}">
-<meta property="og:description" content="{{ $description }}">
+<meta property="og:url" {{ printf "content=\"%s\"" $escapedOGURL | safeHTMLAttr }}>
+<meta property="og:title" {{ printf "content=\"%s\"" $escapedMetaTitle | safeHTMLAttr }}>
+<meta property="og:description" {{ printf "content=\"%s\"" $escapedDescription | safeHTMLAttr }}>
 <meta property="og:image" content="{{ if eq site.Params.mode "module" }}/{{ else }}{{ site.BaseURL }}{{ end }}images/og/kubernetes-platform.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">

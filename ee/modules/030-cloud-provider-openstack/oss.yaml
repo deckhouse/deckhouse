@@ -1,0 +1,53 @@
+- name: OpenStack Cloud provider
+  link: https://github.com/kubernetes/cloud-provider-openstack
+  description: Cloud Controller Manager for OpenStack.
+  logo: /images/logos/openstack.svg
+  license: Apache License 2.0
+  id: ccm-openstack
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.4
+    - condition:
+        k8s: "1.32"
+      version: v1.32.1
+    - condition:
+        k8s: "1.33"
+      version: v1.33.1
+    - condition:
+        k8s: "1.34"
+      version: v1.34.1
+    - condition:
+        k8s: "1.35"
+      version: v1.35.0
+
+- name: OpenStack CSI driver
+  link: https://github.com/kubernetes/cloud-provider-openstack
+  description: CSI driver for OpenStack Cinder.
+  logo: /images/logos/openstack.svg
+  license: Apache License 2.0
+  id: csi-openstack
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.2
+    - condition:
+        k8s: "1.32"
+      version: v1.32.1
+    - condition:
+        k8s: "1.33"
+      version: v1.33.1
+    - condition:
+        k8s: "1.34"
+      version: v1.34.1
+    - condition:
+        k8s: "1.35"
+      version: v1.34.1
+
+- name: OpenStack Terraform provider
+  link: https://github.com/terraform-provider-openstack/terraform-provider-openstack
+  description: Terraform provider for OpenStack.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-openstack
+  version: "1.54.1"

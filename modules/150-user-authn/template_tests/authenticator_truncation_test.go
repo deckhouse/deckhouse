@@ -42,6 +42,7 @@ var _ = Describe("Module :: user-authn :: helm template :: truncation", func() {
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 	})
 
 	It("should render truncated name with labels and ingress backend references it", func() {

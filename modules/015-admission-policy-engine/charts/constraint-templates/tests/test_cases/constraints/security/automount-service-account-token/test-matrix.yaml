@@ -1,0 +1,250 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: automount-service-account-token
+spec:
+  suiteName: d8-automount-service-account-token-pod
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: security-policy
+      gatorBlock: security-policy
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: 001-disallowed-automount-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.automountServiceAccountToken
+              scenario: negative
+            - path: spec.containers[].volumeMounts[].mountPath
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  app: nginx
+                name: nginx
+              spec:
+                automountServiceAccountToken: true
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                  - command:
+                      - sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                initContainers:
+                  - command:
+                      - sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init-bootstrap
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                volumes:
+                  - name: serviceaccount-token
+                    secret:
+                      secretName: default-token
+        - name: 002-allowed-automount-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.automountServiceAccountToken
+              scenario: positive
+            - path: spec.containers[].volumeMounts[].mountPath
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  app: nginx
+                name: nginx
+              spec:
+                automountServiceAccountToken: false
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /var/lib/nginx
+                        name: data
+                volumes:
+                  - emptyDir: {}
+                    name: data
+        - name: 003-allowed-automount-absent
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.automountServiceAccountToken
+              scenario: absent
+            - path: spec.containers[].volumeMounts[].mountPath
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  app: nginx
+                name: nginx
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /etc/nginx
+                        name: config
+                volumes:
+                  - configMap:
+                      name: nginx-config
+                    name: config
+        - name: 004-disallowed-multi-container-mountpath
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].volumeMounts[].mountPath
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  app: nginx
+                name: nginx
+              spec:
+                automountServiceAccountToken: true
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                  - command:
+                      - sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                initContainers:
+                  - command:
+                      - sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init-bootstrap
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                volumes:
+                  - name: serviceaccount-token
+                    secret:
+                      secretName: default-token
+        - name: 005-disallowed-init-container-mountpath
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].volumeMounts[].mountPath
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  app: nginx
+                name: nginx
+              spec:
+                automountServiceAccountToken: true
+                containers:
+                  - image: nginx
+                    name: nginx
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                  - command:
+                      - sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                initContainers:
+                  - command:
+                      - sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init-bootstrap
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                volumes:
+                  - name: serviceaccount-token
+                    secret:
+                      secretName: default-token
+        - name: 006-allowed-ephemeral-container-mountpath
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].volumeMounts[].mountPath
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  app: nginx
+                name: nginx-ephemeral
+              spec:
+                automountServiceAccountToken: false
+                containers:
+                  - image: nginx
+                    name: nginx
+                ephemeralContainers:
+                  - command:
+                      - sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: debugger
+                    volumeMounts:
+                      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+                        name: serviceaccount-token
+                volumes:
+                  - name: serviceaccount-token
+                    secret:
+                      secretName: default-token

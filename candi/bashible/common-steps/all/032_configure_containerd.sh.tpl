@@ -24,7 +24,7 @@ migrate() {
   bb-flag-set kubelet-need-restart
   crictl ps -q | xargs -r crictl stop -t 0 && crictl ps -a -q | xargs -r crictl rm -f
   systemctl stop containerd-deckhouse.service
-  for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
+  for i in $(mount | grep -E '/var/lib/containerd/[^[:space:]]+' | cut -d " " -f3); do umount $i; done
   if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
     chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
   fi
@@ -50,7 +50,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
   {{- end }}
 
   {{- $default_runtime := "runc" }}
-  {{- if .nodeGroup.gpu }}
+  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
     {{ $default_runtime = "nvidia" }}
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.d/99-sysctl.conf # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.conf # REDOS
@@ -67,6 +67,7 @@ fi
 # generated using `containerd config migrate` by containerd version `containerd containerd.io 2.0.4 1a43cb6a1035441f9aca8f5666a9b3ef9e70ab20`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 3
+imports = ['/etc/containerd/conf2.d/*.toml']
 root = "/var/lib/containerd"
 state = "/run/containerd"
 plugin_dir = ""
@@ -141,7 +142,7 @@ oom_score = 0
       default_runtime_name = {{ $default_runtime | quote }}
       ignore_blockio_not_enabled_errors = false
       ignore_rdt_not_enabled_errors = false
-  {{- if .nodeGroup.gpu }}
+  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
       [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes]
         [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.nvidia]
           privileged_without_host_devices = false
@@ -354,7 +355,7 @@ oom_score = 0
           base_runtime_spec = ""
           [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
             SystemdCgroup = ${systemd_cgroup}
-  {{- if .nodeGroup.gpu }}
+  {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
         [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
           privileged_without_host_devices = false
           runtime_engine = ""
@@ -443,11 +444,8 @@ EOF
 
 additional_configs() {
   local conf_dir="$1"
-  local unusable_conf_dir="$2"
   local root_path="/etc/containerd"
   local full_conf_path="$root_path/$conf_dir"
-
-  rm -rf "$root_path/$unusable_conf_dir/"
 
   if ls "${full_conf_path}/"*.toml >/dev/null 2>/dev/null; then
     toml-merge "$root_path/deckhouse.toml" "${full_conf_path}/"*.toml -
@@ -478,18 +476,19 @@ check_additional_configs() {
   fi
 }
 
-# Check additional configs
+# Check additional configs and write final config
 {{- if eq .cri "ContainerdV2" }}
 check_additional_configs /etc/containerd/conf2.d "v2"
-containerd_toml=$(additional_configs conf2.d conf.d)
+rm -rf /etc/containerd/conf.d/
+bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed < /etc/containerd/deckhouse.toml
 {{- else if eq .cri "Containerd" }}
   {{- if .registry.registryModuleEnable }}
 check_additional_configs /etc/containerd/conf.d "v1"
   {{- end }}
-containerd_toml=$(additional_configs conf.d conf2.d)
-{{- end }}
-
+rm -rf /etc/containerd/conf2.d/
+containerd_toml=$(additional_configs conf.d)
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
+{{- end }}
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
 runtime-endpoint: unix:/var/run/containerd/containerd.sock

@@ -5,6 +5,7 @@ import (
 	_ "github.com/flant/addon-operator/sdk"
 
 	_ "github.com/deckhouse/deckhouse/ee/be/modules/350-node-local-dns/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/cse/modules/040-node-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
@@ -60,6 +61,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/secrets"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/users"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/migration"

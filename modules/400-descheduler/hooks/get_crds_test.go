@@ -147,6 +147,19 @@ spec:
       topologyBalanceNodeFit: true
 `
 
+	deschedulerCR7 = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test7
+spec:
+  strategies:
+    removePodsHavingTooManyRestarts:
+      enabled: true
+      podRestartThreshold: 50
+`
+
 	// Simulates a Descheduler CR that was converted from v1alpha1
 	// with only deprecated strategies (e.g. removePodsViolatingNodeTaints).
 	// After conversion, all deprecated strategies are stripped and spec.strategies is empty.
@@ -393,6 +406,26 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
       constraints:
         - DoNotSchedule
       topologyBalanceNodeFit: true
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with RemovePodsHavingTooManyRestarts strategy", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR7)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and include the strategy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test7
+  evictLocalStoragePods: false
+  strategies:
+    removePodsHavingTooManyRestarts:
+      enabled: true
+      podRestartThreshold: 50
 `))
 		})
 	})

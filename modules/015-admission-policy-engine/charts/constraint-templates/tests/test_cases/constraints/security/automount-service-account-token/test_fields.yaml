@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: automount-service-account-token
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.automountServiceAccountToken
+      level: pod
+      description: Controls whether the pod automounts a service account token
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.containers[].volumeMounts[].mountPath
+      level: container
+      description: Container volume mount path; service account token mount is disallowed
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

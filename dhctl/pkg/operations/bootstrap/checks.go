@@ -1,4 +1,4 @@
-// Copyright 2022 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -63,6 +64,9 @@ Please check hostname.`, uuidInCluster, config.UUID)
 }
 
 func WaitForFirstMasterNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	ctx, span := telemetry.StartSpan(ctx, "WaitForFirstMasterNodeBecomeReady")
+	defer span.End()
+
 	var nodeName string
 	err := retry.NewSilentLoop("Get master node name", 45, 3*time.Second).RunContext(ctx, func() error {
 		nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{})

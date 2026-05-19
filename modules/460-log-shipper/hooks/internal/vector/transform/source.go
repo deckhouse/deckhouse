@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func CleanUpForKubernetesSourceTransform() *DynamicTransform {
+func cleanUpForKubernetesSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "clean_up_kubernetes",
@@ -39,7 +39,7 @@ func CleanUpForKubernetesSourceTransform() *DynamicTransform {
 	}
 }
 
-func CleanUpForFileSourceTransform() *DynamicTransform {
+func cleanUpForFileSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "clean_up_file",
@@ -53,7 +53,7 @@ func CleanUpForFileSourceTransform() *DynamicTransform {
 	}
 }
 
-func OwnerReferenceSourceTransform() *DynamicTransform {
+func ownerReferenceSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "owner_ref",
@@ -67,7 +67,7 @@ func OwnerReferenceSourceTransform() *DynamicTransform {
 	}
 }
 
-func FileSourceHostTransform() *DynamicTransform {
+func fileSourceHostTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "file_host",
@@ -81,7 +81,7 @@ func FileSourceHostTransform() *DynamicTransform {
 	}
 }
 
-func LocalTimezoneAfterSourceTransform() *DynamicTransform {
+func localTimezoneAfterSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "local_timezone",
@@ -108,29 +108,29 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 	var transforms []apis.LogTransform
 
 	if cfg.SourceType == v1alpha1.SourceKubernetesPods {
-		transforms = append(transforms, OwnerReferenceSourceTransform())
+		transforms = append(transforms, ownerReferenceSourceTransform())
 	}
 
 	if cfg.SourceType == v1alpha1.SourceFile {
-		transforms = append(transforms, FileSourceHostTransform())
+		transforms = append(transforms, fileSourceHostTransform())
 	}
 
-	transforms = append(transforms, LocalTimezoneAfterSourceTransform())
+	transforms = append(transforms, localTimezoneAfterSourceTransform())
 
-	multilineTransforms, err := CreateMultiLineTransforms(cfg.MultilineType, cfg.MultilineCustomConfig)
+	multilineTransforms, err := createMultiLineTransforms(cfg.MultilineType, cfg.MultilineCustomConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error rendering multi line transforms: %v", err)
 	}
 
 	transforms = append(transforms, multilineTransforms...)
 
-	labelFilterTransforms, err := CreateLabelFilterTransforms(cfg.LabelFilter)
+	labelFilterTransforms, err := createLabelFilterTransforms(cfg.LabelFilter)
 	if err != nil {
 		return nil, err
 	}
 	transforms = append(transforms, labelFilterTransforms...)
 
-	logFilterTransforms, err := CreateLogFilterTransforms(cfg.LogFilter)
+	logFilterTransforms, err := createLogFilterTransforms(cfg.LogFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -138,15 +138,11 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 
 	switch cfg.SourceType {
 	case v1alpha1.SourceKubernetesPods:
-		transforms = append(transforms, CleanUpForKubernetesSourceTransform())
+		transforms = append(transforms, cleanUpForKubernetesSourceTransform())
 	case v1alpha1.SourceFile:
-		transforms = append(transforms, CleanUpForFileSourceTransform())
+		transforms = append(transforms, cleanUpForFileSourceTransform())
 	}
 
-	sTransforms, err := BuildFromMapSlice("source", name, cfg.SourceType, transforms)
-	if err != nil {
-		return nil, fmt.Errorf("add source transforms: %v", err)
-	}
-
-	return sTransforms, nil
+	srcTransformBase := fmt.Sprintf("transform/%s/source/%s", cfg.SourceType, name)
+	return buildFromMapSlice(srcTransformBase, transforms), nil
 }

@@ -15,24 +15,27 @@
 package state
 
 import (
+	"context"
 	"sort"
 
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 const (
 	MasterHostsCacheKey = "cluster-hosts"
 )
 
-func SaveMasterHostsToCache(cache Cache, hosts map[string]string) {
-	if err := cache.SaveStruct(MasterHostsCacheKey, hosts); err != nil {
+func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]string) {
+	if err := cache.SaveStruct(ctx, MasterHostsCacheKey, hosts); err != nil {
 		log.WarnF("Cannot save ssh hosts %v\n", err)
 	}
 }
 
-func GetMasterHostsIPs(cache Cache) ([]session.Host, error) {
-	inCache, err := cache.InCache(MasterHostsCacheKey)
+func GetMasterHostsIPs(ctx context.Context, cache Cache) ([]session.Host, error) {
+	inCache, err := cache.InCache(ctx, MasterHostsCacheKey)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +44,7 @@ func GetMasterHostsIPs(cache Cache) ([]session.Host, error) {
 		return make([]session.Host, 0), nil
 	}
 	var hosts map[string]string
-	err = cache.LoadStruct(MasterHostsCacheKey, &hosts)
+	err = cache.LoadStruct(ctx, MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}
@@ -53,4 +56,18 @@ func GetMasterHostsIPs(cache Cache) ([]session.Host, error) {
 	sort.Sort(session.SortByName(mastersIPs))
 
 	return mastersIPs, nil
+}
+
+func GetMasterHosts(ctx context.Context, cache Cache) ([]sshconfig.Host, error) {
+	hostsToReturn := make([]sshconfig.Host, 0)
+	hosts, err := GetMasterHostsIPs(ctx, cache)
+	if err != nil {
+		return hostsToReturn, err
+	}
+
+	for _, h := range hosts {
+		hostsToReturn = append(hostsToReturn, sshconfig.Host{Host: h.Host})
+	}
+
+	return hostsToReturn, nil
 }
