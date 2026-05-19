@@ -140,7 +140,9 @@ spec:
                       type: boolean
                     minimumTTL:
                       description: |-
-                        The minimum TTL value for received BFD packets.
+                        For multi hop sessions only: configure the minimum expected TTL for an incoming BFD control packet.
+
+                        The TTL is measured in network hops.
                       type: integer
             status:
               type: object
