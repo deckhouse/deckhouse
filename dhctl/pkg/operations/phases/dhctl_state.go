@@ -23,7 +23,8 @@ import (
 type DhctlState map[string][]byte
 
 func ExtractDhctlState(ctx context.Context, stateCache state.Cache) (DhctlState, error) {
-	res := DhctlState{}
+	var res DhctlState
+
 	err := stateCache.Iterate(ctx, func(k string, v []byte) error {
 		if res == nil {
 			res = make(map[string][]byte)
