@@ -1,0 +1,9 @@
+platform_management:
+  en: Platform management
+  ru: Управление платформой
+vm_operations:
+  en: Working with virtual machines
+  ru: Работа с виртуальными машинами
+vm_configuration:
+  en: Configuring virtual machines
+  ru: Конфигурирование виртуальных машин

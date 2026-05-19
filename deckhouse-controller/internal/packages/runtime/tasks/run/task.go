@@ -60,12 +60,6 @@ type nelmI interface {
 	Upgrade(ctx context.Context, namespace string, pkg nelm.Package) error
 }
 
-// statusService provides condition updates and error handling.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 // task executes the main package lifecycle: hooks and Helm release management.
 // On success, sets HelmApplied, HooksProcessed, ReadyInRuntime, and ReadyInCluster.
 type task struct {
@@ -73,14 +67,14 @@ type task struct {
 	namespace string
 
 	nelm   nelmI
-	status statusService
+	status *status.Service
 
 	logger *log.Logger
 }
 
 // NewTask creates a run task for executing the package's Helm lifecycle.
 // This is the final task in the installation flow after Startup.
-func NewTask(pkg packageI, ns string, nelm nelmI, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, ns string, nelm nelmI, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:       pkg,
 		namespace: ns,
@@ -99,13 +93,11 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("run package")
 	if err := t.runPackage(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
 		return fmt.Errorf("run package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHelmApplied)
+	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionManifestsApplied)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHooksProcessed)
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInCluster)
 
 	return nil
 }
@@ -137,13 +129,15 @@ func (t *task) runPackage(ctx context.Context) error {
 
 	if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeHelm); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newBeforeHelmHookErr(err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, status.NewError("BeforeHelmHookFailed", err))
+		return err
 	}
 
 	t.logger.Debug("run nelm upgrade")
 	if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
-		return newHelmUpgradeErr(err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
+		return err
 	}
 
 	t.logger.Debug("run after helm hooks")
@@ -152,13 +146,15 @@ func (t *task) runPackage(ctx context.Context) error {
 	oldChecksum := t.pkg.GetValuesChecksum()
 	if err := t.pkg.RunHooksByBinding(ctx, addontypes.AfterHelm); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newAfterHelmHookErr(err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, status.NewError("AfterHelmHookFailed", err))
+		return err
 	}
 
 	if oldChecksum != t.pkg.GetValuesChecksum() {
 		if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
-			return newHelmUpgradeErr(err)
+			t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
+			return err
 		}
 	}
 

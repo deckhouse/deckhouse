@@ -68,7 +68,7 @@
 ---
 image: common-base-python-artifact
 final: false
-from: {{ index $.Images "base/python" }}
+from: {{ index $.Images "base/python-3.12" }}
 import:
 - image: common/wheel-artifact
   add: /wheels
@@ -89,8 +89,11 @@ import:
   includePaths:
   - usr/bin/python*
   - usr/lib/python*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so*
   - lib/ld-musl-x86_64.so.1
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test
 {{ include "base components imports" (dict "Images" $context.Images "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl

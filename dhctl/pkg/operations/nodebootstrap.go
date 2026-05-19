@@ -109,7 +109,7 @@ func BootstrapAdditionalNode(
 
 func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
 	for _, ng := range terraNodeGroups {
-		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
+		err := log.ProcessCtx(ctx, "bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func(ctx context.Context) error {
 			err := entity.CreateNodeGroup(ctx, kubeCl, ng.Name, log.GetDefaultLogger(), metaConfig.NodeGroupManifest(ng))
 			if err != nil {
 				return err
@@ -128,6 +128,7 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 			}
 			return nil
 		})
+
 		if err != nil {
 			return err
 		}
@@ -315,7 +316,7 @@ func ParallelCreateNodeGroup(
 		msg += fmt.Sprintf("%s (replicas: %v)️; ", group.Name, group.Replicas)
 	}
 
-	return log.Process("converge", msg, func() error {
+	return log.ProcessCtx(ctx, "converge", msg, func(ctx context.Context) error {
 		var (
 			mu sync.Mutex
 			wg sync.WaitGroup

@@ -94,6 +94,10 @@ Context:
 <h2>{{ T "parameters" | humanize  }}</h2>
 <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>
 
+{{- if or (isset $data "x-doc-examples") (isset $data "x-doc-example") (isset $data "example") (isset $data "x-examples") }}
+  {{- template "format-example" ( dict "attributes" $data "linkAnchor" "parameters-settings" "name" "" ) }}
+{{- end }}
+
 <ul class="resources">
   <li>
     <div class="resources__prop_wrap"><div id="parameters-settings" data-anchor-id="parameters-settings" class="resources__prop_name anchored">

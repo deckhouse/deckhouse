@@ -56,7 +56,17 @@ spec:
                     - cse-pro
                   description: |
                     HTTPS endpoint with remote cluster metadata.
-                  pattern: '^https://[0-9a-zA-Z._/-]+$'
+                  x-kubernetes-validations:
+                    - rule: "isURL(self)"
+                      message: "must be a valid URL"
+                    - rule: "url(self).getScheme() == 'https'"
+                      message: "must use https"
+                    - rule: "url(self).getHost() != ''"
+                      message: "must include a host"
+                    - rule: "url(self).getQuery().size() == 0"
+                      message: "query parameters are not allowed"
+                    - rule: "!self.contains('#')"
+                      message: "fragments are not allowed"
                   x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                 metadata:
                   type: object
@@ -80,6 +90,45 @@ spec:
             status:
               type: object
               properties:
+                conditions:
+                  type: array
+                  description: |
+                    Readiness of metadata exchange with the remote cluster.
+
+                    - `PublicMetadataExchangeReady` — remote `public.json` is reachable and valid.
+                    - `PrivateMetadataExchangeReady` — remote private metadata is reachable and valid.
+                    - `RemoteAPIServerReady` — remote multicluster API host (`apiHost`) serves the authenticated `/api` endpoint.
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - reason
+                      - message
+                      - lastTransitionTime
+                      - lastProbeTime
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - "Unknown"
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      lastProbeTime:
+                        type: string
+                        format: date-time
                 metadataCache:
                   type: object
                   properties:
@@ -92,9 +141,6 @@ spec:
                           type: string
                         clusterUUID:
                           type: string
-                    publicLastFetchTimestamp:
-                      type: string
-                      format: date-time
                     private:
                       type: object
                       properties:
@@ -113,6 +159,3 @@ spec:
                                 type: integer
                         ca:
                           type: string
-                    privateLastFetchTimestamp:
-                      format: date-time
-                      type: string

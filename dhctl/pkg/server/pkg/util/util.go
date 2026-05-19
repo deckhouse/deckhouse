@@ -60,6 +60,16 @@ func PortToString(p *int32) string {
 	return strconv.Itoa(int(*p))
 }
 
+func PortToInt(p *int32) *int {
+	if p == nil {
+		port := 22
+		return &port
+	}
+	port := *p
+	portInt := int(port)
+	return &portInt
+}
+
 func StringToBytes(data string) []byte {
 	if data == "" {
 		return nil

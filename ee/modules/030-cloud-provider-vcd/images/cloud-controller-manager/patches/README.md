@@ -23,3 +23,7 @@ Update klog to klog/v2 in other files
 ### 005-add-vapptemplate-search-by-org.patch
 
 Add support for searching vAppTemplates in a given org
+
+### 006-fix-lb-health-monitor.patch
+
+Fixes TCP health monitors removal during an update of the pool

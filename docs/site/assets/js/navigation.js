@@ -81,15 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tocLink = target.closest('.toc-sidebar__item-link');
         const anchorLink = target.closest('.anchorjs-link');
-        if (!tocLink && !anchorLink) {
-            return;
-        }
+        const faqHeading = target.closest('.docs.faq__container h3');
 
-        isScroll = false;
-        hideNavigation();
-        setTimeout(() => {
-            isScroll = true;
-        }, 500);
+        if (tocLink || anchorLink || faqHeading) {
+            isScroll = false;
+            hideNavigation();
+            setTimeout(() => {
+                isScroll = true;
+            }, 500);
+        }
     });
 
     const initTop = updateTop();

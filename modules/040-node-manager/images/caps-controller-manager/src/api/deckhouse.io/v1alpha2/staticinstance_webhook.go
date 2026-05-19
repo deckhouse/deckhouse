@@ -46,7 +46,7 @@ func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=mstaticinstance.deckhouse.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha2-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha2,name=mstaticinstancev1alpha2.deckhouse.io,admissionReviewVersions=v1
 
 type StaticInstanceCustomDefaulter struct{}
 
@@ -62,8 +62,7 @@ func (r *StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.O
 	return nil
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=update;delete,versions=v1alpha1,name=vstaticinstance.deckhouse.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha2-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update;delete,versions=v1alpha2,name=vstaticinstancev1alpha2.deckhouse.io,admissionReviewVersions=v1
 
 var _ webhook.CustomValidator = &StaticInstanceCustomValidator{}
 

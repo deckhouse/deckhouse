@@ -12,18 +12,12 @@ toc: false
 
 <div class="main-tabs-container">
   <div class="main-tabs">
-    <button id="tab-button-manual-install" class="main-tab active" onclick="openInstallTab(event, 'tab-manual-install');">Вручную из командной строки</button>
-    <button id="tab-button-gui-install" class="main-tab" onclick="openInstallTab(event, 'tab-gui-install');">
-      C помощью графического установщика
-    </button>
+    <a class="main-tab" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
+    <a class="main-tab active" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
   </div>
 </div>
-<div id="tab-gui-install" class="tab-content">
-{% include getting_started/global/partials/installer/installer_block.html %}
-</div>
-<div id="tab-manual-install" class="tab-content active">
 <p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
-  Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
+  Kubernetes Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
 
 <p>Установка платформы Deckhouse Kubernetes Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
   из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
@@ -70,40 +64,3 @@ toc: false
     </div>
   </div>
 </div>
-</div>
-
-<script>
-  function openInstallTab(evt, installTabName) {
-      const url = new URL(window.location.href);
-      if (installTabName == 'tab-manual-install') {
-        url.hash = '';
-      }
-      if (installTabName == 'tab-gui-install') {
-        url.hash = 'gui-install';
-      }
-      window.history.replaceState(null, '', url.toString());
-      document.getElementById("tab-manual-install").classList.remove("active");
-      document.getElementById("tab-gui-install").classList.remove("active");
-
-      document.getElementById("tab-button-manual-install").classList.remove("active");
-      document.getElementById("tab-button-gui-install").classList.remove("active");
-
-      document.getElementById(installTabName).classList.add("active");
-      evt.currentTarget.classList.add("active");
-  }
-
-  function getHashValue() {
-      const hash = window.location.hash;
-      return hash.substring(1);
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-      const hashValue = getHashValue();
-      if (hashValue == "gui-install") {
-        document.getElementById("tab-manual-install").classList.remove("active");
-        document.getElementById("tab-gui-install").classList.add("active");
-        document.getElementById("tab-button-manual-install").classList.remove("active");
-        document.getElementById("tab-button-gui-install").classList.add("active");
-      }
-  });
-</script>

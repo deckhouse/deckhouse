@@ -31,6 +31,8 @@ spec:
           x-doc-d8Editions:
             - se+
             - ee
+            - cse-lite
+            - cse-pro
           properties:
             spec:
               type: object
@@ -39,8 +41,12 @@ spec:
                   x-doc-d8Editions:
                     - se+
                     - ee
+                    - cse-lite
+                    - cse-pro
                   description: |-
-                    The selector for a group of nodes that will transfer network requests to external services. Among these nodes, eligible nodes will be detected and one of them will be assigned as the active one. Signs of an eligible node:
+                    The selector for a group of nodes that will transfer network requests to external services.
+                    
+                    Among these nodes, eligible nodes will be detected and one of them will be assigned as the active one. Signs of an eligible node:
                     * The node is in Ready state.
                     * Node is not cordoned.
                     * The cilium-agent on the node is in the Ready state.
@@ -56,6 +62,8 @@ spec:
                       x-doc-d8Editions:
                         - se+
                         - ee
+                        - cse-lite
+                        - cse-pro
                       description: |-
                         A method for determining the source IP address to be assigned to requests through this gateway.
 
@@ -86,12 +94,16 @@ spec:
                           x-doc-d8Editions:
                             - se+
                             - ee
+                            - cse-lite
+                            - cse-pro
                           description: The _virtual_ source IP address to be assigned to outgoing requests through the egress gateway.
                           type: string
                         interfaces:
                           x-doc-d8Editions:
                             - se+
                             - ee
+                            - cse-lite
+                            - cse-pro
                           description: The list of network interfaces to which the _virtual_ IP will be simulated.
                           type: array
                           default: []
@@ -106,6 +118,8 @@ spec:
                           x-doc-d8Editions:
                             - se+
                             - ee
+                            - cse-lite
+                            - cse-pro
                           description: The interface name on the egress nodes through which external requests are processed.
                           type: string
                       type: object
@@ -183,8 +197,8 @@ spec:
                         type: string
                       type:
                         description: |-
-                          type of condition in CamelCase or in foo.example.com/CamelCase.
-                          ---
+                          Type of condition in CamelCase or in foo.example.com/CamelCase.
+                          
                           Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
                           useful (see .node.status.conditions), the ability to deconflict is important.
                           The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)

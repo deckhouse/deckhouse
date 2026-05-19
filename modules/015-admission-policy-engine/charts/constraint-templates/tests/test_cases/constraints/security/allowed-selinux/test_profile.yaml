@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-selinux
+spec:
+  testDirectory: allowed-selinux
+  suite:
+    expectedTestBlockNames:
+    - pss-baseline
+    - security-policy
+    - pss-baseline-with-exception

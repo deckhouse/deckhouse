@@ -26,6 +26,7 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
 status:
+  lastAppliedConfiguration: null
   tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -92,4 +93,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
+  partialScanAvailable: false
   syncTime: null

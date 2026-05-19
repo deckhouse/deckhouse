@@ -22,23 +22,25 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/kube"
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type KubeProxyChecker struct {
-	input            *session.Input
-	privateKeys      []session.AgentPrivateKey
-	initParams       *client.KubernetesInitParams
-	logCheckResult   bool
-	askPassword      bool
-	stopProxy        bool
-	nodesExternalIPs map[string]string
-	clusterUUID      string
+	initParams           *client.KubernetesInitParams
+	logCheckResult       bool
+	askPassword          bool
+	stopProxy            bool
+	nodesExternalIPs     map[string]string
+	clusterUUID          string
+	sshProvider          libcon.SSHProvider
+	baseProviderSettings *settings.BaseProviders
 }
 
 func NewKubeProxyChecker() *KubeProxyChecker {
@@ -77,22 +79,16 @@ func (c *KubeProxyChecker) WithExternalIPs(ips map[string]string) *KubeProxyChec
 	return c
 }
 
-func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys ...session.AgentPrivateKey) *KubeProxyChecker {
-	c.input = &input
-	c.privateKeys = privateKeys
+func (c *KubeProxyChecker) WithSSHProvider(s libcon.SSHProvider, sett *settings.BaseProviders) *KubeProxyChecker {
+	c.sshProvider = s
+	c.baseProviderSettings = sett
 	return c
 }
 
 func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
-	var sshClient node.SSHClient
-	var err error
-
-	if c.input != nil {
-		sshClient = sshclient.NewClient(ctx, session.NewSession(*c.input), c.privateKeys)
-	} else {
-		if sshClient, err = sshclient.NewClientFromFlags(ctx); err != nil {
-			return false, err
-		}
+	sshClient, err := c.sshProvider.Client(ctx)
+	if err != nil {
+		return false, err
 	}
 
 	if len(c.nodesExternalIPs) > 0 {
@@ -104,13 +100,15 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		sshClient.Session().SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
-	err = sshClient.Start()
-	if err != nil {
-		return false, err
+	kubeCl := kube.NewKubernetesClient(c.baseProviderSettings).WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient, c.baseProviderSettings))
+	params := &kube.Config{
+		KubeConfig:          c.initParams.KubeConfig,
+		KubeConfigContext:   c.initParams.KubeConfigContext,
+		KubeConfigInCluster: c.initParams.KubeConfigInCluster,
+		RestConfig:          c.initParams.RestConfig,
 	}
 
-	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-	err = kubeCl.InitContext(ctx, client.AppKubernetesInitParams())
+	err = kubeCl.InitContext(ctx, params)
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
 	}

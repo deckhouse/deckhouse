@@ -1,4 +1,5 @@
 ---
+{{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-gcp"))) }}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "gcp") }}'
 git:
@@ -11,3 +12,4 @@ import:
   before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}
+{{- end }}

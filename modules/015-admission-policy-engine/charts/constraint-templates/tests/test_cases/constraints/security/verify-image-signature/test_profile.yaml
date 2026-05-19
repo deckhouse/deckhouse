@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: verify-image-signature
+spec:
+  testDirectory: verify-image-signature
+  suite:
+    expectedTestBlockNames:
+      - security-policy

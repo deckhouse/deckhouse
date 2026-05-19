@@ -2,6 +2,22 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
+  creationTimestamp: "2025-10-31T12:00:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
   creationTimestamp: "2025-10-31T12:18:00Z"
   labels:
     packages.deckhouse.io/operation-trigger: manual
@@ -15,8 +31,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -34,8 +49,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -53,8 +67,23 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: "2025-10-31T12:03:00Z"
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-2
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -70,8 +99,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -87,8 +115,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -104,8 +131,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -121,8 +147,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -133,7 +158,7 @@ metadata:
     packages.deckhouse.io/operation-type: Update
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-7
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -141,7 +166,13 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Discover
+    status: "False"
+    type: Completed
+  startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -159,8 +190,7 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -178,5 +208,4 @@ spec:
   update:
     fullScan: true
     timeout: 5m
-status:
-  phase: Completed
+status: {}

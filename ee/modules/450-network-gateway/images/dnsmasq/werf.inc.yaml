@@ -1,3 +1,8 @@
+{{- define "alt change repos" }}
+{{- $new_date := "2026/05/17" }}
+- sed -i "s|/archive/p11/date/[^/]*/[^/]*/[^/]*/|/archive/p11/date/{{ $new_date }}/|g" /etc/apt/sources.list.d/alt.list
+{{- end }}
+
 {{- $binaries := "/usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -5,12 +10,16 @@ fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
+  {{- include "alt change repos" . | nindent 2 }}
+  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
+  - apt-get update
   - apt-get install -y dnsmasq libsqlite3
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-from: {{ index $.Images "base/python" }}
+from: {{ index $.Images "base/python-3.12" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
@@ -54,4 +63,7 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so*
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test

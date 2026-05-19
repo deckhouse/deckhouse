@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-container-exception-unconfined
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception/nginx: allow-unconfined-container
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        appArmorProfile:
+          type: Unconfined
+    - name: sidecar
+      image: busybox
+      command: ["/bin/sh", "-c", "sleep 3600"]
+      securityContext:
+        appArmorProfile:
+          type: RuntimeDefault

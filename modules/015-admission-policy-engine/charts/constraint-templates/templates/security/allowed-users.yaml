@@ -130,45 +130,31 @@ spec:
         - engine: Rego
           source:
             version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.check_range" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.range" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
             rego: |
               package d8.security_policies
+
+              import data.lib.check_range.check_container_in_range
+              import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.path_value_resolved
+              import data.lib.exception.resolve_spe_for_container
+              import data.lib.exception.resolve_spe_from_labels
+              import data.lib.range.is_in_any_range
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 fields := ["runAsUser", "runAsGroup", "supplementalGroups", "fsGroup"]
                 field := fields[_]
-                container := input_containers[_]
-                not allowed_by_securitypolicyexception(container)
+                container := review_containers[_]
                 msg := get_type_violation(field, container)
-              }
-
-              allowed_by_securitypolicyexception(container) if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsUser")
-                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
-                not has_field(exception.spec.securityContext, "runAsNonRoot")
-                allowed_users := exception.spec.securityContext.runAsUser.allowedValues
-                container_user := get_field_value("runAsUser", container, input.review)
-                container_user in allowed_users
-              }
-
-              allowed_by_securitypolicyexception(container) if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsUser")
-                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
-                has_field(exception.spec.securityContext, "runAsNonRoot")
-                allowed_users := exception.spec.securityContext.runAsUser.allowedValues
-                run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
-                container_user := get_field_value("runAsUser", container, input.review)
-                container_run_as_non_root := get_field_value("runAsNonRoot", container, input.review)
-                container_user in allowed_users
-                run_as_non_root == container_run_as_non_root
               }
 
               get_type_violation(field, container) := msg if {
@@ -180,143 +166,98 @@ spec:
               get_type_violation(field, container) := msg if {
                 field != "runAsUser"
                 params := input.parameters[field]
-                msg := get_violation(field, params, container)
+                msg := get_group_violation(field, params, container)
               }
 
-              # RunAsUser (separate due to "MustRunAsNonRoot")
+              # RunAsUser
               get_user_violation(params, container) := msg if {
                 rule := params.rule
-                provided_user := get_field_value("runAsUser", container, input.review)
+                provided_user := get_field_value("runAsUser", container, review_pod_spec)
                 not accept_users(rule, provided_user)
-                exception_has_mismatched_runAsNonRoot(container, provided_user)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := sprintf("Actual runAsUser: %v", [provided_user])
-                exception_allowed := exception_allowed_users_value
-                msg := build_user_message(container.name, actual_value, allowed_by_policy, exception_allowed)
-              }
-
-              # RunAsUser (separate due to "MustRunAsNonRoot")
-              get_user_violation(params, container) := msg if {
-                rule := params.rule
-                provided_user := get_field_value("runAsUser", container, input.review)
-                not accept_users(rule, provided_user)
-                not exception_has_mismatched_runAsNonRoot(container, provided_user)
-                allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
-                actual_value := sprintf("Actual runAsUser: %v", [provided_user])
-                exception_allowed := exception_allowed_users_value
-                msg := build_user_message(container.name, actual_value, allowed_by_policy, exception_allowed)
-              }
-
-              exception_has_mismatched_runAsNonRoot(container, provided_user) if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsUser")
-                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
-                has_field(exception.spec.securityContext, "runAsNonRoot")
-                allowed_users := exception.spec.securityContext.runAsUser.allowedValues
-                provided_user in allowed_users
-                run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
-                container_run_as_non_root := get_field_value("runAsNonRoot", container, input.review)
-                run_as_non_root != container_run_as_non_root
+                labels := object.get(input.review.object.metadata, "labels", {})
+                namespace := object.get(input.review.object.metadata, "namespace", "")
+                spe := resolve_spe_for_container(container, labels, namespace)
+                run_as_non_root := get_field_value_or_default("runAsNonRoot", container, review_pod_spec, false)
+                not allow_user_by_spe(rule, provided_user, run_as_non_root, spe)
+                spe_ctx := run_as_user_spe_ctx(spe, provided_user, params)
+                msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
 
               get_user_violation(params, container) := msg if {
-                not get_field_value("runAsUser", container, input.review)
+                not get_field_value("runAsUser", container, review_pod_spec)
                 params.rule == "MustRunAs"
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set"
-                exception_allowed := exception_allowed_users_value
-                msg := build_user_message(container.name, actual_value, allowed_by_policy, exception_allowed)
+                labels := object.get(input.review.object.metadata, "labels", {})
+                namespace := object.get(input.review.object.metadata, "namespace", "")
+                spe := resolve_spe_for_container(container, labels, namespace)
+                spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
+                msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
 
               get_user_violation(params, container) := msg if {
                 params.rule == "MustRunAsNonRoot"
-                not get_field_value("runAsUser", container, input.review)
-                not get_field_value("runAsNonRoot", container, input.review)
+                not get_field_value("runAsUser", container, review_pod_spec)
+                not get_field_value("runAsNonRoot", container, review_pod_spec)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set, runAsNonRoot: not set"
-                exception_allowed := exception_allowed_users_value
-                msg := build_user_message(container.name, actual_value, allowed_by_policy, exception_allowed)
+                labels := object.get(input.review.object.metadata, "labels", {})
+                namespace := object.get(input.review.object.metadata, "namespace", "")
+                spe := resolve_spe_for_container(container, labels, namespace)
+                spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
+                msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
 
-              exception_allowed_users_value := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsUser")
-                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
-                has_field(exception.spec.securityContext, "runAsNonRoot")
-                allowed_users := exception.spec.securityContext.runAsUser.allowedValues
-                run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
-                out := sprintf("SecurityPolicyException allowed: runAsUser: %v, runAsNonRoot: %v", [allowed_users, run_as_non_root])
+              build_user_violation_message(container_name, actual_value, allowed_by_policy, "") := msg if {
+                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [container_name, actual_value, allowed_by_policy])
               }
 
-              exception_allowed_users_value := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              build_user_violation_message(container_name, actual_value, allowed_by_policy, spe_ctx) := msg if {
+                spe_ctx != ""
+                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v | %v", [container_name, actual_value, allowed_by_policy, spe_ctx])
               }
 
-              exception_allowed_users_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              run_as_user_spe_ctx(spe, actual, params) := out if {
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                non_root_path := ["spec", "securityContext", "runAsNonRoot", "allowedValue"]
+                has_run_as_user_spe_ctx(spe, user_path, non_root_path)
+                spe_user := allowed_values_or_empty(spe, user_path)
+                spe_non_root := allowed_values_or_empty(spe, non_root_path)
+                out := sprintf("forbidden: %v; policy allows: %v; SPE allows runAsUser: %v; SPE allows runAsNonRoot: %v", [actual, params, spe_user, spe_non_root])
+              } else := "" if {
+                true
               }
 
-              exception_allowed_users_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                not has_field(exception.spec, "securityContext")
+              has_run_as_user_spe_ctx(spe, user_path, _) if {
+                path_value_resolved(spe, user_path)
               }
 
-              exception_allowed_users_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                not has_field(exception.spec.securityContext, "runAsUser")
-              }
-
-              exception_allowed_users_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsUser")
-                not has_field(exception.spec.securityContext.runAsUser, "allowedValues")
-              }
-
-              exception_allowed_users_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                not has_field(exception.spec.securityContext, "runAsNonRoot")
-              }
-
-              exception_allowed_users_value := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsNonRoot")
-                not exception.spec.securityContext.runAsNonRoot.allowedValue
-                exception.spec.securityContext.runAsNonRoot.allowedValue != false
-              }
-
-              build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
-                exception_allowed != ""
-                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
-              }
-
-              build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
-                exception_allowed == ""
-                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [name, actual_value, allowed_by_policy])
+              has_run_as_user_spe_ctx(spe, _, non_root_path) if {
+                path_value_resolved(spe, non_root_path)
               }
 
               accept_users("RunAsAny", _) := true
+
+              allow_user_by_spe("MustRunAsNonRoot", provided_user, run_as_non_root, spe) if {
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                non_root_path := ["spec", "securityContext", "runAsNonRoot", "allowedValue"]
+                path_value_resolved(spe, user_path)
+                path_value_resolved(spe, non_root_path)
+                spe_user := allowed_values_or_empty(spe, user_path)
+                spe_non_root := allowed_values_or_empty(spe, non_root_path)
+                provided_user in spe_user
+                run_as_non_root in spe_non_root
+              }
+
+              allow_user_by_spe(rule, provided_user, _, spe) if {
+                rule != "MustRunAsNonRoot"
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                path_value_resolved(spe, user_path)
+                spe_user := allowed_values_or_empty(spe, user_path)
+                provided_user in spe_user
+              }
 
               accept_users("MustRunAsNonRoot", provided_user) := res if res := provided_user != 0
 
@@ -326,157 +267,34 @@ spec:
               }
 
               # Group Options
-              get_violation(field, params, container) := msg if {
+              get_group_violation(field, params, container) := msg if {
                 rule := params.rule
-                provided_value := get_field_value(field, container, input.review)
+                provided_value := get_field_value(field, container, review_pod_spec)
                 not is_array(provided_value)
                 not accept_value(rule, provided_value, params.ranges)
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: %v", [field, provided_value])
-                exception_allowed := get_exception_allowed_group(field)
-                msg := build_group_message(container.name, field, actual_value, allowed_by_policy, exception_allowed)
+                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
               }
 
               # SupplementalGroups is array value
-              get_violation(field, params, container) := msg if {
+              get_group_violation(field, params, container) := msg if {
                 rule := params.rule
-                array_value := get_field_value(field, container, input.review)
+                array_value := get_field_value(field, container, review_pod_spec)
                 is_array(array_value)
                 provided_value := array_value[_]
                 not accept_value(rule, provided_value, params.ranges)
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: %v", [field, array_value])
-                exception_allowed := get_exception_allowed_group(field)
-                msg := build_group_message(container.name, field, actual_value, allowed_by_policy, exception_allowed)
+                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
               }
 
-              get_violation(field, params, container) := msg if {
-                not get_field_value(field, container, input.review)
+              get_group_violation(field, params, container) := msg if {
+                not get_field_value(field, container, review_pod_spec)
                 params.rule == "MustRunAs"
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: not set", [field])
-                exception_allowed := get_exception_allowed_group(field)
-                msg := build_group_message(container.name, field, actual_value, allowed_by_policy, exception_allowed)
-              }
-
-              get_exception_allowed_group(field) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "runAsGroup")
-                has_field(exception.spec.securityContext.runAsGroup, "allowedValues")
-                field == "runAsGroup"
-                allowed := exception.spec.securityContext.runAsGroup.allowedValues
-                out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
-              }
-
-              get_exception_allowed_group(field) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "supplementalGroups")
-                has_field(exception.spec.securityContext.supplementalGroups, "allowedValues")
-                field == "supplementalGroups"
-                allowed := exception.spec.securityContext.supplementalGroups.allowedValues
-                out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
-              }
-
-              get_exception_allowed_group(field) := out if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                has_field(exception.spec.securityContext, "fsGroup")
-                has_field(exception.spec.securityContext.fsGroup, "allowedValues")
-                field == "fsGroup"
-                allowed := exception.spec.securityContext.fsGroup.allowedValues
-                out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
-              }
-
-              get_exception_allowed_group(_) := "" if {
-                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-              }
-
-              get_exception_allowed_group(_) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                not has_field(exception.spec, "securityContext")
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                field == "runAsGroup"
-                not has_field(exception.spec.securityContext, "runAsGroup")
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                field == "runAsGroup"
-                has_field(exception.spec.securityContext, "runAsGroup")
-                not has_field(exception.spec.securityContext.runAsGroup, "allowedValues")
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                field == "supplementalGroups"
-                not has_field(exception.spec.securityContext, "supplementalGroups")
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                field == "supplementalGroups"
-                has_field(exception.spec.securityContext, "supplementalGroups")
-                not has_field(exception.spec.securityContext.supplementalGroups, "allowedValues")
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                field == "fsGroup"
-                not has_field(exception.spec.securityContext, "fsGroup")
-              }
-
-              get_exception_allowed_group(field) := "" if {
-                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := input.review.object.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "securityContext")
-                field == "fsGroup"
-                has_field(exception.spec.securityContext, "fsGroup")
-                not has_field(exception.spec.securityContext.fsGroup, "allowedValues")
-              }
-
-              build_group_message(name, field, actual_value, allowed_by_policy, exception_allowed) := msg if {
-                exception_allowed != ""
-                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v | %v", [name, field, actual_value, allowed_by_policy, exception_allowed])
-              }
-
-              build_group_message(name, field, actual_value, allowed_by_policy, exception_allowed) := msg if {
-                exception_allowed == ""
-                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [name, field, actual_value, allowed_by_policy])
+                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
               }
 
               accept_value("RunAsAny", _, _) := true
@@ -492,17 +310,14 @@ spec:
               }
 
               # If no container level exists, use pod level
-              get_field_value(field, container, review) := out if {
+              get_field_value(field, container, pod_spec) := out if {
                 not has_seccontext_field(field, container)
-                review.kind.kind == "Pod"
-                pod_value := get_seccontext_field(field, review.object.spec)
+                pod_value := get_seccontext_field(field, pod_spec)
                 out := pod_value
               }
 
-              # Helper Functions
               is_in_range(val, ranges) := res if {
-                matching := {1 | val >= ranges[j].min; val <= ranges[j].max}
-                res := count(matching) > 0
+                res := is_in_any_range(val, ranges)
               }
 
               has_seccontext_field(field, obj) if {
@@ -517,23 +332,31 @@ spec:
                 out = obj.securityContext[field]
               }
 
-              input_containers contains c if {
-                c := input.review.object.spec.containers[_]
+              get_field_value_or_default(field, container, pod_spec, default_val) := out if {
+                has_seccontext_field(field, container)
+                sec_ctx := object.get(container, "securityContext", {})
+                out := object.get(sec_ctx, field, default_val)
+              } else := out if {
+                not has_seccontext_field(field, container)
+                pod_ctx := object.get(pod_spec, "securityContext", {})
+                out := object.get(pod_ctx, field, default_val)
               }
 
-              input_containers contains c if {
-                c := input.review.object.spec.initContainers[_]
-              }
+              review_pod_spec := object.get(
+                object.get(
+                  object.get(input.review.object, "spec", {}),
+                  "template",
+                  {},
+                ),
+                "spec",
+                input.review.object.spec,
+              )
 
-              input_containers contains c if {
-                c := input.review.object.spec.ephemeralContainers[_]
-              }
+              review_containers := array.concat(
+                array.concat(
+                  object.get(review_pod_spec, "containers", []),
+                  object.get(review_pod_spec, "initContainers", []),
+                ),
+                object.get(review_pod_spec, "ephemeralContainers", []),
+              )
 
-              # has_field returns whether an object has a field
-              has_field(object, field) if {
-                object[field]
-              }
-
-              has_field(object, field) := false if {
-                not object[field]
-              }

@@ -1,0 +1,3225 @@
+diff --git a/promql/engine.go b/promql/engine.go
+index 400fd739f..95d3aa75d 100644
+--- a/promql/engine.go
++++ b/promql/engine.go
+@@ -194,6 +194,8 @@ type query struct {
+ 	// Cancellation function for the query.
+ 	cancel func()
+ 
++	resultModifier func(matrix Matrix) Matrix // OP_FUNCTIONS
++
+ 	// The engine against which the query is executed.
+ 	ng *Engine
+ }
+@@ -484,6 +486,10 @@ func (ng *Engine) NewInstantQuery(ctx context.Context, q storage.Queryable, opts
+ 		return nil, err
+ 	}
+ 	*pExpr = PreprocessExpr(expr, ts, ts)
++	*pExpr, qry.resultModifier, err = ExtractOptTop(*pExpr, ts.UnixMilli(), ts.UnixMilli(), 0)
++	if err != nil {
++		return nil, fmt.Errorf("failed to extract op function: %w", err)
++	}
+ 
+ 	return qry, nil
+ }
+@@ -508,7 +514,10 @@ func (ng *Engine) NewRangeQuery(ctx context.Context, q storage.Queryable, opts Q
+ 		return nil, fmt.Errorf("invalid expression type %q for range query, must be Scalar or instant Vector", parser.DocumentedType(expr.Type()))
+ 	}
+ 	*pExpr = PreprocessExpr(expr, start, end)
+-
++	*pExpr, qry.resultModifier, err = ExtractOptTop(*pExpr, start.UnixMilli(), end.UnixMilli(), interval.Milliseconds())
++	if err != nil {
++		return nil, fmt.Errorf("failed to extract op function: %w", err)
++	}
+ 	return qry, nil
+ }
+ 
+@@ -776,6 +785,12 @@ func (ng *Engine) execEvalStmt(ctx context.Context, query *query, s *parser.Eval
+ 			return Scalar{V: mat[0].Floats[0].F, T: start}, warnings, nil
+ 		case parser.ValueTypeMatrix:
+ 			ng.sortMatrixResult(ctx, query, mat)
++
++			// OP_FUNCTIONS
++			if query.resultModifier != nil {
++				mat = query.resultModifier(mat)
++			}
++
+ 			return mat, warnings, nil
+ 		default:
+ 			panic(fmt.Errorf("promql.Engine.exec: unexpected expression type %q", s.Expr.Type()))
+@@ -817,6 +832,11 @@ func (ng *Engine) execEvalStmt(ctx context.Context, query *query, s *parser.Eval
+ 	// TODO(fabxc): where to ensure metric labels are a copy from the storage internals.
+ 	ng.sortMatrixResult(ctx, query, mat)
+ 
++	// OP_FUNCTIONS
++	if query.resultModifier != nil {
++		mat = query.resultModifier(mat)
++	}
++
+ 	return mat, warnings, nil
+ }
+ 
+@@ -1711,7 +1731,7 @@ func (ev *evaluator) eval(ctx context.Context, expr parser.Expr) (parser.Value,
+ 		// should keep the metric name.  For all the other range
+ 		// vector functions, the only change needed is to drop the
+ 		// metric name in the output.
+-		dropName := e.Func.Name != "last_over_time"
++		dropName := e.Func.Name != "last_over_time" && e.Func.Name != "op_smoothie" // OP_FUNCTIONS avoid import cycle
+ 
+ 		for i, s := range selVS.Series {
+ 			if err := contextDone(ctx, "expression evaluation"); err != nil {
+diff --git a/promql/op_func.go b/promql/op_func.go
+new file mode 100644
+index 000000000..b2df956e1
+--- /dev/null
++++ b/promql/op_func.go
+@@ -0,0 +1,207 @@
++package promql
++
++import (
++	"math"
++	"time"
++
++	"github.com/prometheus/prometheus/model/value"
++	"github.com/prometheus/prometheus/promql/parser"
++	"github.com/prometheus/prometheus/util/annotations"
++)
++
++const (
++	opDefined = "op_defined"
++)
++
++// RegisterOPDefined registers promql `op_defined` function.
++func RegisterOPDefined() {
++	parser.Functions[opDefined] = &parser.Function{
++		Name:       opDefined,
++		ArgTypes:   []parser.ValueType{parser.ValueTypeMatrix},
++		ReturnType: parser.ValueTypeVector,
++	}
++	FunctionCalls[opDefined] = funcOPDefined
++}
++
++// === op_defined(Matrix parser.ValueTypeMatrix) Vector ===
++// `op_defined` is a window function that replaces vector component value with 0
++// (if value is outdated e.q older than ActualInterval + 1 minute) or 1 otherwise.
++func funcOPDefined(vals []parser.Value, args parser.Expressions, enh *EvalNodeHelper) (Vector, annotations.Annotations) {
++	vec := vals[0].(Matrix)
++	for _, el := range vec {
++		var value float64 = 1
++		if isNone(takeLast(el), enh) {
++			value = 0
++		}
++		enh.Out = append(enh.Out, Sample{
++			Metric: el.Metric.DropMetricName(),
++			F:      value,
++		})
++	}
++	return enh.Out, nil
++}
++
++const (
++	opReplaceNaN = "op_replace_nan"
++)
++
++// RegisterOPReplaceNaN registers promql `op_replace_nan` function.
++func RegisterOPReplaceNaN() {
++	parser.Functions[opReplaceNaN] = &parser.Function{
++		Name:       opReplaceNaN,
++		ArgTypes:   []parser.ValueType{parser.ValueTypeMatrix, parser.ValueTypeScalar, parser.ValueTypeScalar},
++		Variadic:   1,
++		ReturnType: parser.ValueTypeVector,
++	}
++	FunctionCalls[opReplaceNaN] = funcOPReplaceNaN
++}
++
++// === op_replace_nan(Matrix parser.ValueTypeMatrix, Value parser.ValueTypeScalar, Ms parser.ValueTypeScalar) Vector ===
++// `op_replace_nan` is a window function that replaces vector component value with the second parameter `Value`
++// if value is outdated (older than ActualInterval + 1 minute), third parameter is used to cut off values before now-`Ms` (milliseconds).
++func funcOPReplaceNaN(vals []parser.Value, args parser.Expressions, enh *EvalNodeHelper) (Vector, annotations.Annotations) {
++	vec := vals[0].(Matrix)
++	val := vals[1].(Vector)[0].F
++	var ms int64 = math.MinInt64
++	if len(vals) > 2 {
++		ms = int64(vals[2].(Vector)[0].F)
++	}
++	for _, el := range vec {
++		p := takeLast(el)
++		if p.T < ms {
++			continue
++		}
++		value := p.F
++		if isNone(p, enh) || math.IsNaN(value) {
++			value = val
++		}
++		enh.Out = append(enh.Out, Sample{
++			Metric: el.Metric.DropMetricName(),
++			F:      value,
++		})
++	}
++	return enh.Out, nil
++}
++
++const (
++	OpSmoothie = "op_smoothie"
++)
++
++// RegisterOPSmoothie registers promql `op_smoothie` function.
++func RegisterOPSmoothie() {
++	parser.Functions[OpSmoothie] = &parser.Function{
++		Name:       OpSmoothie,
++		ArgTypes:   []parser.ValueType{parser.ValueTypeMatrix},
++		ReturnType: parser.ValueTypeVector,
++	}
++	FunctionCalls[OpSmoothie] = funcOPSmoothie
++}
++
++// === op_smoothie(Matrix parser.ValueTypeMatrix) Vector ===
++// `op_smoothie` is a window function that replaces vector component value with the average one over the interval.
++func funcOPSmoothie(vals []parser.Value, args parser.Expressions, enh *EvalNodeHelper) (Vector, annotations.Annotations) {
++	return opAggrOverTime(vals, enh, func(values []FPoint) float64 {
++		var mean, count, c float64
++		if len(values) == 0 {
++			return math.NaN()
++		}
++		v := values[len(values)-1]
++		if math.IsNaN(v.F) {
++			return v.F
++		}
++		if enh.Ts != v.T {
++			return math.Float64frombits(value.StaleNaN)
++		}
++		for _, v := range values {
++			count++
++			if math.IsInf(mean, 0) {
++				if math.IsInf(v.F, 0) && (mean > 0) == (v.F > 0) {
++					// The `mean` and `v.V` values are `Inf` of the same sign.  They
++					// can't be subtracted, but the value of `mean` is correct
++					// already.
++					continue
++				}
++				if !math.IsInf(v.F, 0) && !math.IsNaN(v.F) {
++					// At this stage, the mean is an infinite. If the added
++					// value is neither an Inf or a Nan, we can keep that mean
++					// value.
++					// This is required because our calculation below removes
++					// the mean value, which would look like Inf += x - Inf and
++					// end up as a NaN.
++					continue
++				}
++			}
++			mean, c = kahanSumInc(v.F/count-mean/count, mean, c)
++		}
++
++		if math.IsInf(mean, 0) {
++			return mean
++		}
++		return mean + c
++	}), nil
++}
++
++func opAggrOverTime(vals []parser.Value, enh *EvalNodeHelper, aggrFn func([]FPoint) float64) Vector {
++	el := vals[0].(Matrix)[0]
++	v := aggrFn(el.Floats)
++	if value.IsStaleNaN(v) {
++		return enh.Out
++	}
++
++	return append(enh.Out, Sample{
++		F: v,
++	})
++}
++
++const (
++	opZeroIfNone = "op_zero_if_none"
++)
++
++// RegisterOPZeroIfNone registers promql `op_zero_if_none` function.
++func RegisterOPZeroIfNone() {
++	parser.Functions[opZeroIfNone] = &parser.Function{
++		Name:       opZeroIfNone,
++		ArgTypes:   []parser.ValueType{parser.ValueTypeMatrix, parser.ValueTypeScalar},
++		Variadic:   1,
++		ReturnType: parser.ValueTypeVector,
++	}
++	FunctionCalls[opZeroIfNone] = funcOPZeroIfNone
++}
++
++// === op_zero_if_none(Matrix parser.ValueTypeMatrix, Ms parser.ValueTypeScalar) Vector ===
++// `op_zero_if_none` is a window function that replaces vector component value with 0 if empty.
++func funcOPZeroIfNone(vals []parser.Value, args parser.Expressions, enh *EvalNodeHelper) (Vector, annotations.Annotations) {
++	vec := vals[0].(Matrix)
++	var ms int64 = math.MinInt64
++	if len(vals) > 1 {
++		ms = int64(vals[1].(Vector)[0].F)
++	}
++	for _, el := range vec {
++		p := takeLast(el)
++		if p.T < ms {
++			continue
++		}
++		value := p.F
++		if isNone(p, enh) || math.IsNaN(value) {
++			value = 0
++		}
++		enh.Out = append(enh.Out, Sample{
++			Metric: el.Metric.DropMetricName(),
++			F:      value,
++		})
++	}
++	return enh.Out, nil
++}
++
++// ActualInterval period in which series is not lost.
++const ActualInterval = int64(time.Minute / time.Millisecond)
++
++// takeLast select last point in series.
++func takeLast(series Series) FPoint {
++	return series.Floats[len(series.Floats)-1]
++}
++
++// isNone check absence in current slice.
++func isNone(p FPoint, enh *EvalNodeHelper) bool {
++	return enh.Ts-p.T > ActualInterval
++}
+diff --git a/promql/op_func_test.go b/promql/op_func_test.go
+new file mode 100644
+index 000000000..95c513c29
+--- /dev/null
++++ b/promql/op_func_test.go
+@@ -0,0 +1,513 @@
++package promql_test
++
++import (
++	"context"
++	"fmt"
++	"math"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/prometheus/prometheus/model/labels"
++	"github.com/prometheus/prometheus/model/timestamp"
++	"github.com/prometheus/prometheus/model/value"
++	"github.com/prometheus/prometheus/promql"
++	"github.com/prometheus/prometheus/util/teststorage"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"github.com/stretchr/testify/suite"
++)
++
++// OP_FUNCTIONS
++
++type BaseSuite struct {
++	suite.Suite
++
++	engine  *promql.Engine
++	storage *teststorage.TestStorage
++}
++
++func (s *BaseSuite) SetupSuite() {
++	opts := promql.EngineOpts{
++		Logger:        nil,
++		Reg:           nil,
++		MaxSamples:    10000,
++		Timeout:       10 * time.Second,
++		LookbackDelta: 59 * time.Second,
++	}
++	s.engine = promql.NewEngine(opts)
++}
++
++func (s *BaseSuite) SetupTest() {
++	s.storage = teststorage.New(s.T())
++}
++
++func (s *BaseSuite) TearDownTest() {
++	_ = s.storage.Close()
++}
++
++func (s *BaseSuite) fillStorageByStrings(records ...string) {
++	a := s.storage.Appender(context.Background())
++	var (
++		ts       int64
++		value    float64
++		labelSet string
++	)
++	for i := range records {
++		_, err := fmt.Sscanf(records[i], "%d %f %s", &ts, &value, &labelSet)
++		s.Require().NoError(err)
++		var labelPairs []string
++		for _, pair := range strings.Split(labelSet, ",") {
++			labelPairs = append(labelPairs, strings.Split(pair, "=")...)
++		}
++		_, _ = a.Append(0, labels.FromStrings(labelPairs...), ts*60*1000, value)
++	}
++	s.Require().NoError(a.Commit())
++}
++
++func (s *BaseSuite) time(duration string) time.Time {
++	d, err := time.ParseDuration(duration)
++	s.Require().NoError(err)
++	return timestamp.Time(int64(d / time.Millisecond))
++}
++
++func (s *BaseSuite) checkMatrix(res *promql.Result, expected map[string][]float64) {
++	actual, err := res.Matrix()
++	s.Require().NoError(err)
++	for _, series := range actual {
++		values := make([]float64, len(series.Floats))
++		for i := range values {
++			values[i] = series.Floats[i].F
++		}
++		key := series.Metric.String()
++		s.Equalf(expected[key], values, "series %s mismatch", key)
++		delete(expected, key)
++	}
++	s.Empty(expected)
++}
++
++func TestDefined(t *testing.T) {
++	suite.Run(t, new(DefinedSuite))
++}
++
++type DefinedSuite struct {
++	BaseSuite
++}
++
++func (s *DefinedSuite) SetupSuite() {
++	promql.RegisterOPDefined()
++	s.BaseSuite.SetupSuite()
++}
++
++func (s *DefinedSuite) TestSingle() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"1 5 __name__=foo,server=foo",
++	)
++	expected := `{server="foo"} => 0 @[180000]`
++
++	query, err := s.engine.NewInstantQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_defined(foo[3m])",
++		s.time("3m"),
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.Equal(expected, result.String())
++}
++
++func (s *DefinedSuite) TestMultiple() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"0 5 __name__=foo,server=apple",
++		"0 5 __name__=foo,server=orange",
++		// "1 5 __name__=foo,server=apple",
++		"1 5 __name__=foo,server=orange",
++		// "2 5 __name__=foo,server=apple",
++		"2 5 __name__=foo,server=orange",
++		// "3 5 __name__=foo,server=apple",
++		"3 5 __name__=foo,server=orange",
++		"4 5 __name__=foo,server=apple",
++	)
++	query, err := s.engine.NewRangeQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_defined(foo[10m])",
++		s.time("2m"),
++		s.time("6m"),
++		time.Minute,
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.checkMatrix(result, map[string][]float64{
++		// Minutest           2  3  4  5  6
++		`{server="apple"}`:  {0, 0, 1, 1, 0},
++		`{server="orange"}`: {1, 1, 1, 0, 0},
++	})
++}
++
++func (s *DefinedSuite) TestBackwardCompatibility() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"0 5 __name__=foo,server=apple",
++		"0 5 __name__=foo,server=orange",
++		"1 5 __name__=foo,server=orange",
++		"2 5 __name__=foo,server=orange",
++		"3 5 __name__=foo,server=orange",
++		"4 5 __name__=foo,server=apple",
++	)
++
++	opQuery, opErr := s.engine.NewRangeQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_defined(foo[10m])",
++		s.time("2m"),
++		s.time("6m"),
++		time.Minute,
++	)
++	opResult := opQuery.Exec(context.Background())
++	s.Require().NoError(opErr)
++	s.Require().NoError(opResult.Err)
++}
++
++func TestReplaceNaN(t *testing.T) {
++	suite.Run(t, new(ReplaceNaNSuite))
++}
++
++type ReplaceNaNSuite struct {
++	BaseSuite
++}
++
++func (s *ReplaceNaNSuite) SetupSuite() {
++	promql.RegisterOPReplaceNaN()
++	s.BaseSuite.SetupSuite()
++}
++
++func (s *ReplaceNaNSuite) TestSingle() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"1 5 __name__=foo,server=foo",
++	)
++	expected := `{server="foo"} => 17 @[180000]`
++
++	query, err := s.engine.NewInstantQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_replace_nan(foo[3m], 17)",
++		s.time("3m"),
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.Equal(expected, result.String())
++}
++
++func (s *ReplaceNaNSuite) TestMinimal() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"1 5 __name__=foo,server=foo",
++	)
++
++	query, err := s.engine.NewInstantQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_replace_nan(foo[3m], 17, 60001)",
++		s.time("3m"),
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.Zero(result.String())
++}
++
++func (s *ReplaceNaNSuite) TestMultiple() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"0 5 __name__=foo,server=apple",
++		"0 5 __name__=foo,server=orange",
++		// "1 5 __name__=foo,server=apple",
++		"1 0 __name__=foo,server=orange",
++		// "2 5 __name__=foo,server=apple",
++		"2 -42 __name__=foo,server=orange",
++		// "3 5 __name__=foo,server=apple",
++		"3 5 __name__=foo,server=orange",
++		"4 3 __name__=foo,server=apple",
++	)
++	query, err := s.engine.NewRangeQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_replace_nan(foo[10m], 17)",
++		s.time("2m"),
++		s.time("6m"),
++		time.Minute,
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.checkMatrix(result, map[string][]float64{
++		// Minutes             2   3  4  5  6
++		`{server="apple"}`:  {17, 17, 3, 3, 17},
++		`{server="orange"}`: {-42, 5, 5, 17, 17},
++	})
++}
++
++func (s *ReplaceNaNSuite) TestBackwardCompatibility() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"0 5 __name__=foo,server=apple",
++		"0 5 __name__=foo,server=orange",
++		"1 0 __name__=foo,server=orange",
++		"2 -42 __name__=foo,server=orange",
++		"3 5 __name__=foo,server=orange",
++		"4 3 __name__=foo,server=apple",
++	)
++
++	opQuery, opErr := s.engine.NewRangeQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_replace_nan(foo[10m], 17)",
++		s.time("2m"),
++		s.time("6m"),
++		time.Minute,
++	)
++
++	opResult := opQuery.Exec(context.Background())
++
++	s.Require().NoError(opErr)
++	s.Require().NoError(opResult.Err)
++}
++
++func TestSmoothie(t *testing.T) {
++	ctx := context.Background()
++
++	storage := teststorage.New(t)
++	a := storage.Appender(context.Background())
++	ls := labels.FromStrings(labels.MetricName, "should_be_kept", "key", "value")
++	minute := int64(time.Minute / time.Millisecond)
++	_, _ = a.Append(0, ls, 0*minute, 0)
++	_, _ = a.Append(0, ls, 1*minute, 1)
++	_, _ = a.Append(0, ls, 2*minute, 2)
++	_, _ = a.Append(0, ls, 3*minute, 3)
++	_, _ = a.Append(0, ls, 4*minute, 4)
++	_, _ = a.Append(0, ls, 5*minute, math.Float64frombits(value.StaleNaN))
++	_ = a.Commit()
++
++	promql.RegisterOPSmoothie()
++	opts := promql.EngineOpts{
++		Logger:        nil,
++		Reg:           nil,
++		MaxSamples:    10000,
++		Timeout:       10 * time.Second,
++		LookbackDelta: 5 * time.Minute,
++	}
++	engine := promql.NewEngine(opts)
++
++	query, err := engine.NewRangeQuery(
++		ctx,
++		storage,
++		nil,
++		"op_smoothie(should_be_kept[5m])",
++		timestamp.Time(0),
++		timestamp.Time(10*minute),
++		time.Minute,
++	)
++	require.NoError(t, err)
++
++	result := query.Exec(context.Background())
++	require.NoError(t, result.Err)
++	m := result.Value.(promql.Matrix)
++	require.Len(t, m, 1)
++	assert.Equal(t, ls, m[0].Metric)
++	assert.Len(t, m[0].Floats, 5)
++	assert.EqualValues(t, 0, m[0].Floats[0].T)
++	assert.EqualValues(t, 0, m[0].Floats[0].F)
++	assert.EqualValues(t, 1*minute, m[0].Floats[1].T)
++	assert.EqualValues(t, 0.5, m[0].Floats[1].F)
++	assert.EqualValues(t, 2*minute, m[0].Floats[2].T)
++	assert.EqualValues(t, 1, m[0].Floats[2].F)
++	assert.EqualValues(t, 3*minute, m[0].Floats[3].T)
++	assert.EqualValues(t, 1.5, m[0].Floats[3].F)
++	assert.EqualValues(t, 4*minute, m[0].Floats[4].T)
++	assert.EqualValues(t, 2, m[0].Floats[4].F)
++}
++
++func TestSmoothieBackwardCompatibility(t *testing.T) {
++	ctx := context.Background()
++
++	storage := teststorage.New(t)
++	a := storage.Appender(context.Background())
++	ls := labels.FromStrings(labels.MetricName, "should_be_kept", "key", "value")
++	minute := int64(time.Minute / time.Millisecond)
++	_, _ = a.Append(0, ls, 0*minute, 0)
++	_, _ = a.Append(0, ls, 1*minute, 1)
++	_, _ = a.Append(0, ls, 2*minute, 2)
++	_, _ = a.Append(0, ls, 3*minute, 3)
++	_, _ = a.Append(0, ls, 4*minute, 4)
++	_, _ = a.Append(0, ls, 5*minute, math.Float64frombits(value.StaleNaN))
++	_ = a.Commit()
++
++	promql.RegisterOPSmoothie()
++	opts := promql.EngineOpts{
++		Logger:        nil,
++		Reg:           nil,
++		MaxSamples:    10000,
++		Timeout:       10 * time.Second,
++		LookbackDelta: 5 * time.Minute,
++	}
++	engine := promql.NewEngine(opts)
++
++	opQuery, opErr := engine.NewRangeQuery(
++		ctx,
++		storage,
++		nil,
++		"op_smoothie(should_be_kept[5m])",
++		timestamp.Time(0),
++		timestamp.Time(10*minute),
++		time.Minute,
++	)
++
++	opResult := opQuery.Exec(context.Background())
++	require.NoError(t, opErr)
++	require.NoError(t, opResult.Err)
++}
++
++func TestZeroIfNone(t *testing.T) {
++	suite.Run(t, new(ZeroIfNoneSuite))
++}
++
++type ZeroIfNoneSuite struct {
++	BaseSuite
++}
++
++func (s *ZeroIfNoneSuite) SetupSuite() {
++	promql.RegisterOPZeroIfNone()
++	s.BaseSuite.SetupSuite()
++}
++
++func (s *ZeroIfNoneSuite) TestSingle() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"1 5 __name__=foo,server=foo",
++	)
++	expected := `{server="foo"} => 0 @[180000]`
++
++	query, err := s.engine.NewInstantQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_zero_if_none(foo[3m])",
++		s.time("3m"),
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.Equal(expected, result.String())
++}
++
++func (s *ZeroIfNoneSuite) TestMinimal() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"1 5 __name__=foo,server=foo",
++	)
++
++	query, err := s.engine.NewInstantQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_zero_if_none(foo[3m], 60001)",
++		s.time("3m"),
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.Zero(result.String())
++}
++
++func (s *ZeroIfNoneSuite) TestMultiple() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"0 5 __name__=foo,server=apple",
++		"0 5 __name__=foo,server=orange",
++		// "1 5 __name__=foo,server=apple",
++		"1 0 __name__=foo,server=orange",
++		// "2 5 __name__=foo,server=apple",
++		"2 -42 __name__=foo,server=orange",
++		// "3 5 __name__=foo,server=apple",
++		"3 5 __name__=foo,server=orange",
++		"4 3 __name__=foo,server=apple",
++	)
++	query, err := s.engine.NewRangeQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_zero_if_none(foo[10m])",
++		s.time("2m"),
++		s.time("6m"),
++		time.Minute,
++	)
++	s.Require().NoError(err)
++
++	result := query.Exec(context.Background())
++	s.Require().NoError(result.Err)
++	s.checkMatrix(result, map[string][]float64{
++		// Minutest           2  3  4  5  6
++		`{server="apple"}`:  {0, 0, 3, 3, 0},
++		`{server="orange"}`: {-42, 5, 5, 0, 0},
++	})
++}
++
++func (s *ZeroIfNoneSuite) TestBackwardCompatibility() {
++	ctx := context.Background()
++
++	s.fillStorageByStrings(
++		"0 5 __name__=foo,server=apple",
++		"0 5 __name__=foo,server=orange",
++		"1 0 __name__=foo,server=orange",
++		"2 -42 __name__=foo,server=orange",
++		"3 5 __name__=foo,server=orange",
++		"4 3 __name__=foo,server=apple",
++	)
++
++	opQuery, opErr := s.engine.NewRangeQuery(
++		ctx,
++		s.storage,
++		nil,
++		"op_zero_if_none(foo[10m])",
++		s.time("2m"),
++		s.time("6m"),
++		time.Minute,
++	)
++
++	opResult := opQuery.Exec(context.Background())
++
++	s.Require().NoError(opErr)
++	s.Require().NoError(opResult.Err)
++}
+diff --git a/promql/op_top.go b/promql/op_top.go
+new file mode 100644
+index 000000000..4bde9317b
+--- /dev/null
++++ b/promql/op_top.go
+@@ -0,0 +1,355 @@
++package promql
++
++import (
++	"errors"
++	"fmt"
++	"math"
++	"sort"
++	"strconv"
++	"strings"
++
++	"github.com/prometheus/prometheus/model/labels"
++	"github.com/prometheus/prometheus/promql/parser"
++)
++
++func init() {
++	RegisterOPDefined()
++	RegisterOPZeroIfNone()
++	RegisterOPReplaceNaN()
++	RegisterOPSmoothie()
++}
++
++// OP_FUNCTIONS
++
++func isOPTop(expr *parser.AggregateExpr) bool {
++	if expr == nil {
++		return false
++	}
++	return expr.Op == parser.OP_TOP
++}
++
++func parseAggExpr(node parser.Node) *parser.AggregateExpr {
++	n, ok := node.(*parser.AggregateExpr)
++	if !ok {
++		return nil
++	}
++	return n
++}
++
++// ExtractOptTop checks op_top if it is top level aggregate expr and returns new expression without op_top and result modifier.
++func ExtractOptTop(expr parser.Expr, start, end, step int64) (parser.Expr, func(matrix Matrix) Matrix, error) {
++	// return values
++	var (
++		opTopResultModifier func(matrix Matrix) Matrix
++		internalQuery       parser.Expr
++		err                 error
++	)
++
++	// auxiliary variables
++	var (
++		opFuncFound bool
++	)
++
++	parser.Inspect(expr, func(node parser.Node, path []parser.Node) error {
++		aggExpr := parseAggExpr(node)
++		if isOPTop(aggExpr) {
++			if len(path) == 0 {
++				opFuncFound = true
++				internalQuery = aggExpr.Expr
++				var optoperr error
++				opTopResultModifier, optoperr = newOPTop(aggExpr, start, end, step)
++				if optoperr != nil {
++					err = optoperr
++					return nil
++				}
++			} else {
++				err = errors.New("invalid op_top placement in query")
++			}
++		}
++		return nil
++	})
++	if err != nil {
++		return nil, nil, err
++	}
++
++	if !opFuncFound {
++		return expr, nil, nil
++	}
++
++	return internalQuery, opTopResultModifier, nil
++}
++
++func newOPTop(node *parser.AggregateExpr, start, stop, step int64) (func(Matrix) Matrix, error) {
++	var (
++		weightFunc   weightFuncKind
++		limit        int
++		includeOther bool
++	)
++	// parse limit
++	limit, _ = strconv.Atoi(node.Param.String())
++	// parse op_top arguments
++	switch len(node.Grouping) {
++	case 0: // op_top($expr) or op_top($limit, $expr)
++		// includeOther = false
++		// weightFunc = weightFuncEws
++	case 1: // op_top($includeOther, $expr) or op_top($limit, $includeOther, $expr)
++		includeOther, _ = strconv.ParseBool(strings.ToLower(node.Grouping[0]))
++		// weightFunc = weightFuncEws
++	case 2: // op_top($includeOther, $weightFunc, $expr) or op_top($limit, $includeOther, $weightFunc, $expr)
++		includeOther, _ = strconv.ParseBool(strings.ToLower(node.Grouping[0]))
++		weightFunc = weightFuncKind(node.Grouping[1])
++	}
++	params := &OPTopQueryParams{
++		weightFunc:   weightFunc,
++		includeOther: includeOther,
++		limit:        limit,
++	}
++	if limit <= 0 {
++		return nil, fmt.Errorf("limit value must be set")
++	}
++	return func(initial Matrix) Matrix {
++		return OPTop(params, initial, start, stop, step)
++	}, nil
++}
++
++type OPTopQueryParams struct {
++	weightFunc   weightFuncKind
++	includeOther bool
++	limit        int
++}
++
++// calculatePointsRequired returns required amount of data-points for current start, stop, and end
++// ex:
++//
++//	step = 10
++//	---------
++//	[start=0]       1
++//	[start+step=10] 2
++//	[start+step=20] 3
++//	[start+step=30] 4
++//	[stop=40]       5
++func calculatePointsRequired(start, stop, step int64) int {
++	if step == 0 {
++		return 1
++	}
++	req := (stop - start) / step
++	return int(req) + 1
++}
++
++// calculatePointInd returns point index in series by given timestamp
++// ex:
++//
++//	    timestamp = 30
++//	    step      = 10
++//		---------
++//		[start=0]       1 ind=0
++//		[start+step=10] 2 ind=1
++//		[start+step=20] 3 ind=2
++//		[start+step=30] 4 ind=3 <- at timestamp = 30
++//		[stop=40]       5 ind=3
++//
++// so (30-0)/10 = 3.
++func calculatePointInd(start, step, timestamp int64) int {
++	if step == 0 {
++		return 0
++	}
++	return int((timestamp - start) / step)
++}
++
++func markedAsOtherSeries(ls labels.Labels) bool {
++	marked := false
++	ls.Range(func(l labels.Label) {
++		if l.Value == "~other" {
++			marked = true
++		}
++	})
++	return marked
++}
++
++type weightFuncKind string
++
++const (
++	weightFuncSum weightFuncKind = "sum"
++	weightFuncMax weightFuncKind = "max"
++	weightFuncExp weightFuncKind = "exp"
++	weightFuncEws weightFuncKind = "ews"
++	weightFuncEwm weightFuncKind = "ewn"
++)
++
++func nonEmptyValue(val float64) float64 {
++	if math.IsNaN(val) || math.IsInf(val, 0) {
++		return 0
++	}
++	return val
++}
++
++func weightBySum(samples []FPoint) (res float64) {
++	for _, sample := range samples {
++		res += nonEmptyValue(sample.F)
++	}
++	return
++}
++
++func weightByMax(samples []FPoint) (res float64) {
++	for _, sample := range samples {
++		if sample.F > res {
++			res = nonEmptyValue(sample.F)
++		}
++	}
++	return
++}
++
++const magicExp = 1.001 // avoid too high values from older logic
++
++func weightByExp(samples []FPoint) (res float64) {
++	for sampleInd := range samples {
++		res += nonEmptyValue(samples[sampleInd].F) * math.Pow(magicExp, float64(sampleInd))
++	}
++	res = nonEmptyValue(res / float64(len(samples)))
++	return
++}
++
++func weightByEws(samples []FPoint) (res float64) {
++	for sampleInd := range samples {
++		res += nonEmptyValue(samples[sampleInd].F) * math.Pow(magicExp, float64(sampleInd))
++	}
++	return
++}
++
++func weightByEwm(samples []FPoint) (res float64) {
++	for sampleInd := range samples {
++		val := nonEmptyValue(samples[sampleInd].F) * math.Pow(magicExp, float64(sampleInd))
++		if val > res {
++			res = val
++		}
++	}
++	return
++}
++
++type member struct {
++	index  int
++	weight float64
++}
++
++type memberData struct {
++	members []member
++}
++
++func (m memberData) Len() int {
++	return len(m.members)
++}
++
++func (m memberData) Less(i, j int) bool {
++	return m.members[i].weight < m.members[j].weight
++}
++
++func (m memberData) Swap(i, j int) {
++	m.members[i], m.members[j] = m.members[j], m.members[i]
++}
++
++func OPTop(params *OPTopQueryParams, initial Matrix, start, stop, step int64) Matrix {
++	// 0. ignore empty series collections
++	if len(initial) == 0 {
++		return initial
++	}
++	// 1. evaluate weight evaluation function
++	var weightFunc func([]FPoint) float64
++	switch params.weightFunc {
++	case weightFuncSum:
++		weightFunc = weightBySum
++	case weightFuncMax:
++		weightFunc = weightByMax
++	case weightFuncExp:
++		weightFunc = weightByExp
++	case weightFuncEws:
++		weightFunc = weightByEws
++	case weightFuncEwm:
++		weightFunc = weightByEwm
++	default:
++		weightFunc = weightByEws
++	}
++	// 2. collect array of pairs initial Ind: weightFunc(initial.samples)
++	m := memberData{members: make([]member, 0, len(initial))}
++	for streamInd := range initial {
++		m.members = append(m.members, member{
++			index:  streamInd,
++			weight: weightFunc(initial[streamInd].Floats),
++		})
++	}
++	// 3. recalculate the limit to avoid out of bounds panic
++	limit := params.limit
++	if limit <= 0 || len(m.members) < limit {
++		// limit <= 0 : [invalid limit, limit hasn't been set, limit equal to zero] but request already made
++		// len(m.members) < limit : we've received less time series than limit was set
++		limit = len(m.members)
++	}
++	// 4. evaluate if we need to add our own ~other series
++	otherSeriesRequired := params.includeOther && limit < len(m.members)
++	// 5. set zero weight for initial ~other metric if otherSeriesRequired is true
++	// it has to be done before we sort the time-series collection
++	for memberInd := range m.members {
++		initialLookupInd := m.members[memberInd].index
++		if markedAsOtherSeries(initial[initialLookupInd].Metric) && otherSeriesRequired {
++			m.members[memberInd].weight = 0
++		}
++	}
++	// 6. sort the array in descending order
++	sort.Sort(sort.Reverse(m))
++	// 7. fill main K series using their indies from pt. 2
++	res := make(Matrix, 0, limit+1)
++	mainIndices := m.members[:limit]
++	for _, index := range mainIndices {
++		res = append(res, initial[index.index])
++	}
++	// 8. append (if required) "~other" series using indices left
++	if otherSeriesRequired {
++		auxiliaryIndices := m.members[limit:]
++		otherSamplesCount := calculatePointsRequired(start, stop, step)
++		// prepare otherSamples and otherLabels collection
++		var (
++			otherSamples   = make([]FPoint, otherSamplesCount)
++			otherLabelsRaw = map[string]string{}
++		)
++		currentTimestamp := start
++		for i := 0; i < otherSamplesCount; i++ {
++			otherSamples[i].T = currentTimestamp
++			currentTimestamp += step
++		}
++		// fill the prepared collections
++		var labelsFilled bool
++		for _, index := range auxiliaryIndices {
++			// increment every datapoint in otherSamples
++			for _, sample := range initial[index.index].Floats {
++				otherSampleInd := calculatePointInd(start, step, sample.T)
++				otherSamples[otherSampleInd].F += nonEmptyValue(sample.F)
++			}
++			// copy all the label values once
++			if labelsFilled {
++				continue
++			}
++
++			initial[index.index].Metric.Range(func(l labels.Label) {
++				if l.Name == "__name__" {
++					otherLabelsRaw[l.Name] = l.Value
++				} else {
++					otherLabelsRaw[l.Name] = "~other"
++				}
++			})
++			labelsFilled = true
++		}
++		// create and append other series into response
++
++		lsb := labels.NewScratchBuilder(len(otherLabelsRaw))
++		for label, labelValue := range otherLabelsRaw {
++			lsb.Add(label, labelValue)
++		}
++
++		otherSeries := Series{
++			Metric: lsb.Labels(),
++			Floats: otherSamples,
++		}
++
++		res = append(res, otherSeries)
++	}
++	return res
++}
+diff --git a/promql/op_top_test.go b/promql/op_top_test.go
+new file mode 100644
+index 000000000..a581df8c5
+--- /dev/null
++++ b/promql/op_top_test.go
+@@ -0,0 +1,50 @@
++package promql_test
++
++import (
++	"testing"
++	"time"
++
++	"github.com/prometheus/prometheus/promql"
++	"github.com/prometheus/prometheus/promql/parser"
++	"github.com/prometheus/prometheus/promql/promqltest"
++	"github.com/prometheus/prometheus/util/teststorage"
++
++	"github.com/stretchr/testify/require"
++)
++
++// OP_FUNCTIONS
++
++func TestExtractOptTop(t *testing.T) {
++	query := "sum without (l)(rate(a_X[1m])) / sum without (l)(rate(b_X[1m]))"
++	opTopQuery := "op_top(5, max by(database, user) (op_zero_if_none(postgresql__connections__max_transaction_age{instance=\"pg\", conf=\"cfg\"}[1m])))"
++	invalidOpTopQuery := "op_top(5, max by(database, user) (op_top(postgresql__connections__max_transaction_age{instance=\"pg\", conf=\"cfg\"}[1m])))"
++
++	stor := teststorage.New(t)
++	defer stor.Close()
++	opts := promql.EngineOpts{
++		Logger:     nil,
++		Reg:        nil,
++		MaxSamples: 50000000,
++		Timeout:    100 * time.Second,
++	}
++	// Enable experimental functions testing
++	parser.EnableExperimentalFunctions = true
++	engine := promqltest.NewTestEngineWithOpts(t, opts)
++
++	const interval = 10000 // 10s interval.
++	// A day of data plus 10k steps.
++	numIntervals := 8640 + 10000
++	err := setupRangeQueryTestData(stor, engine, interval, numIntervals)
++	require.NoError(t, err)
++
++	q, err := engine.NewRangeQuery(t.Context(), stor, nil, query, time.Now(), time.Now().Add(time.Minute), time.Second*10)
++	require.NoError(t, err)
++	q.Close()
++
++	q, err = engine.NewRangeQuery(t.Context(), stor, nil, opTopQuery, time.Now(), time.Now().Add(time.Minute), time.Second*10)
++	require.NoError(t, err)
++	q.Close()
++
++	_, err = engine.NewRangeQuery(t.Context(), stor, nil, invalidOpTopQuery, time.Now(), time.Now().Add(time.Minute), time.Second*10)
++	require.Error(t, err)
++}
+diff --git a/promql/parser/generated_parser.y b/promql/parser/generated_parser.y
+index 38ae9ec92..125e0afc2 100644
+--- a/promql/parser/generated_parser.y
++++ b/promql/parser/generated_parser.y
+@@ -128,6 +128,7 @@ STDDEV
+ STDVAR
+ SUM
+ TOPK
++OP_TOP
+ LIMITK
+ LIMIT_RATIO
+ %token	aggregatorsEnd
+@@ -644,7 +645,7 @@ metric          : metric_identifier label_set
+                 ;
+ 
+ 
+-metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | WITHOUT | START | END | LIMITK | LIMIT_RATIO;
++metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | WITHOUT | START | END | LIMITK | LIMIT_RATIO;
+ 
+ label_set       : LEFT_BRACE label_set_list RIGHT_BRACE
+                         { $$ = labels.New($2...) }
+@@ -892,10 +893,10 @@ counter_reset_hint : UNKNOWN_COUNTER_RESET | COUNTER_RESET | NOT_COUNTER_RESET |
+  * Keyword lists.
+  */
+ 
+-aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | LIMITK | LIMIT_RATIO;
++aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | LIMITK | LIMIT_RATIO;
+ 
+ // Inside of grouping options label names can be recognized as keywords by the lexer. This is a list of keywords that could also be a label name.
+-maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | START | END | ATAN2 | LIMITK | LIMIT_RATIO;
++maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | START | END | ATAN2 | LIMITK | LIMIT_RATIO;
+ 
+ unary_op        : ADD | SUB;
+ 
+diff --git a/promql/parser/generated_parser.y.go b/promql/parser/generated_parser.y.go
+index 621b8b196..d3f42ba85 100644
+--- a/promql/parser/generated_parser.y.go
++++ b/promql/parser/generated_parser.y.go
+@@ -1,21 +1,23 @@
+-// Code generated by goyacc -l -o promql/parser/generated_parser.y.go promql/parser/generated_parser.y. DO NOT EDIT.
+-package parser
++// Code generated by goyacc -o promql/parser/generated_parser.y.go promql/parser/generated_parser.y. DO NOT EDIT.
+ 
+-import __yyfmt__ "fmt"
++//line promql/parser/generated_parser.y:15
++package parser
+ 
+ import (
++	__yyfmt__ "fmt"
+ 	"math"
+ 	"strconv"
+ 	"time"
+ 
++	"github.com/prometheus/common/model" //line promql/parser/generated_parser.y:15
++
+ 	"github.com/prometheus/prometheus/model/histogram"
+ 	"github.com/prometheus/prometheus/model/labels"
+ 	"github.com/prometheus/prometheus/model/value"
+ 	"github.com/prometheus/prometheus/promql/parser/posrange"
+-
+-	"github.com/prometheus/common/model"
+ )
+ 
++//line promql/parser/generated_parser.y:32
+ type yySymType struct {
+ 	yys         int
+ 	node        Node
+@@ -105,35 +107,36 @@ const STDDEV = 57412
+ const STDVAR = 57413
+ const SUM = 57414
+ const TOPK = 57415
+-const LIMITK = 57416
+-const LIMIT_RATIO = 57417
+-const aggregatorsEnd = 57418
+-const keywordsStart = 57419
+-const BOOL = 57420
+-const BY = 57421
+-const GROUP_LEFT = 57422
+-const GROUP_RIGHT = 57423
+-const IGNORING = 57424
+-const OFFSET = 57425
+-const ON = 57426
+-const WITHOUT = 57427
+-const keywordsEnd = 57428
+-const preprocessorStart = 57429
+-const START = 57430
+-const END = 57431
+-const preprocessorEnd = 57432
+-const counterResetHintsStart = 57433
+-const UNKNOWN_COUNTER_RESET = 57434
+-const COUNTER_RESET = 57435
+-const NOT_COUNTER_RESET = 57436
+-const GAUGE_TYPE = 57437
+-const counterResetHintsEnd = 57438
+-const startSymbolsStart = 57439
+-const START_METRIC = 57440
+-const START_SERIES_DESCRIPTION = 57441
+-const START_EXPRESSION = 57442
+-const START_METRIC_SELECTOR = 57443
+-const startSymbolsEnd = 57444
++const OP_TOP = 57416
++const LIMITK = 57417
++const LIMIT_RATIO = 57418
++const aggregatorsEnd = 57419
++const keywordsStart = 57420
++const BOOL = 57421
++const BY = 57422
++const GROUP_LEFT = 57423
++const GROUP_RIGHT = 57424
++const IGNORING = 57425
++const OFFSET = 57426
++const ON = 57427
++const WITHOUT = 57428
++const keywordsEnd = 57429
++const preprocessorStart = 57430
++const START = 57431
++const END = 57432
++const preprocessorEnd = 57433
++const counterResetHintsStart = 57434
++const UNKNOWN_COUNTER_RESET = 57435
++const COUNTER_RESET = 57436
++const NOT_COUNTER_RESET = 57437
++const GAUGE_TYPE = 57438
++const counterResetHintsEnd = 57439
++const startSymbolsStart = 57440
++const START_METRIC = 57441
++const START_SERIES_DESCRIPTION = 57442
++const START_EXPRESSION = 57443
++const START_METRIC_SELECTOR = 57444
++const startSymbolsEnd = 57445
+ 
+ var yyToknames = [...]string{
+ 	"$end",
+@@ -209,6 +212,7 @@ var yyToknames = [...]string{
+ 	"STDVAR",
+ 	"SUM",
+ 	"TOPK",
++	"OP_TOP",
+ 	"LIMITK",
+ 	"LIMIT_RATIO",
+ 	"aggregatorsEnd",
+@@ -246,298 +250,312 @@ const yyEofCode = 1
+ const yyErrCode = 2
+ const yyInitialStackSize = 16
+ 
++//line promql/parser/generated_parser.y:994
++
++//line yacctab:1
+ var yyExca = [...]int16{
+ 	-1, 1,
+ 	1, -1,
+ 	-2, 0,
+-	-1, 37,
+-	1, 138,
+-	10, 138,
+-	24, 138,
++	-1, 38,
++	1, 139,
++	10, 139,
++	24, 139,
+ 	-2, 0,
+-	-1, 61,
+-	2, 181,
+-	15, 181,
+-	79, 181,
+-	85, 181,
+-	-2, 102,
+ 	-1, 62,
+ 	2, 182,
+ 	15, 182,
+-	79, 182,
+-	85, 182,
+-	-2, 103,
++	80, 182,
++	86, 182,
++	-2, 102,
+ 	-1, 63,
+ 	2, 183,
+ 	15, 183,
+-	79, 183,
+-	85, 183,
+-	-2, 105,
++	80, 183,
++	86, 183,
++	-2, 103,
+ 	-1, 64,
+ 	2, 184,
+ 	15, 184,
+-	79, 184,
+-	85, 184,
+-	-2, 106,
++	80, 184,
++	86, 184,
++	-2, 105,
+ 	-1, 65,
+ 	2, 185,
+ 	15, 185,
+-	79, 185,
+-	85, 185,
+-	-2, 107,
++	80, 185,
++	86, 185,
++	-2, 106,
+ 	-1, 66,
+ 	2, 186,
+ 	15, 186,
+-	79, 186,
+-	85, 186,
+-	-2, 112,
++	80, 186,
++	86, 186,
++	-2, 107,
+ 	-1, 67,
+ 	2, 187,
+ 	15, 187,
+-	79, 187,
+-	85, 187,
+-	-2, 114,
++	80, 187,
++	86, 187,
++	-2, 112,
+ 	-1, 68,
+ 	2, 188,
+ 	15, 188,
+-	79, 188,
+-	85, 188,
+-	-2, 116,
++	80, 188,
++	86, 188,
++	-2, 114,
+ 	-1, 69,
+ 	2, 189,
+ 	15, 189,
+-	79, 189,
+-	85, 189,
+-	-2, 117,
++	80, 189,
++	86, 189,
++	-2, 116,
+ 	-1, 70,
+ 	2, 190,
+ 	15, 190,
+-	79, 190,
+-	85, 190,
+-	-2, 118,
++	80, 190,
++	86, 190,
++	-2, 117,
+ 	-1, 71,
+ 	2, 191,
+ 	15, 191,
+-	79, 191,
+-	85, 191,
+-	-2, 119,
++	80, 191,
++	86, 191,
++	-2, 118,
+ 	-1, 72,
+ 	2, 192,
+ 	15, 192,
+-	79, 192,
+-	85, 192,
+-	-2, 120,
++	80, 192,
++	86, 192,
++	-2, 119,
+ 	-1, 73,
+ 	2, 193,
+ 	15, 193,
+-	79, 193,
+-	85, 193,
+-	-2, 124,
++	80, 193,
++	86, 193,
++	-2, 120,
+ 	-1, 74,
+ 	2, 194,
+ 	15, 194,
+-	79, 194,
+-	85, 194,
++	80, 194,
++	86, 194,
++	-2, 121,
++	-1, 75,
++	2, 195,
++	15, 195,
++	80, 195,
++	86, 195,
+ 	-2, 125,
+-	-1, 200,
+-	9, 243,
+-	12, 243,
+-	13, 243,
+-	18, 243,
+-	19, 243,
+-	25, 243,
+-	41, 243,
+-	47, 243,
+-	48, 243,
+-	51, 243,
+-	57, 243,
+-	62, 243,
+-	63, 243,
+-	64, 243,
+-	65, 243,
+-	66, 243,
+-	67, 243,
+-	68, 243,
+-	69, 243,
+-	70, 243,
+-	71, 243,
+-	72, 243,
+-	73, 243,
+-	74, 243,
+-	75, 243,
+-	79, 243,
+-	83, 243,
+-	85, 243,
+-	88, 243,
+-	89, 243,
++	-1, 76,
++	2, 196,
++	15, 196,
++	80, 196,
++	86, 196,
++	-2, 126,
++	-1, 202,
++	9, 246,
++	12, 246,
++	13, 246,
++	18, 246,
++	19, 246,
++	25, 246,
++	41, 246,
++	47, 246,
++	48, 246,
++	51, 246,
++	57, 246,
++	62, 246,
++	63, 246,
++	64, 246,
++	65, 246,
++	66, 246,
++	67, 246,
++	68, 246,
++	69, 246,
++	70, 246,
++	71, 246,
++	72, 246,
++	73, 246,
++	74, 246,
++	75, 246,
++	76, 246,
++	80, 246,
++	84, 246,
++	86, 246,
++	89, 246,
++	90, 246,
+ 	-2, 0,
+-	-1, 201,
+-	9, 243,
+-	12, 243,
+-	13, 243,
+-	18, 243,
+-	19, 243,
+-	25, 243,
+-	41, 243,
+-	47, 243,
+-	48, 243,
+-	51, 243,
+-	57, 243,
+-	62, 243,
+-	63, 243,
+-	64, 243,
+-	65, 243,
+-	66, 243,
+-	67, 243,
+-	68, 243,
+-	69, 243,
+-	70, 243,
+-	71, 243,
+-	72, 243,
+-	73, 243,
+-	74, 243,
+-	75, 243,
+-	79, 243,
+-	83, 243,
+-	85, 243,
+-	88, 243,
+-	89, 243,
++	-1, 203,
++	9, 246,
++	12, 246,
++	13, 246,
++	18, 246,
++	19, 246,
++	25, 246,
++	41, 246,
++	47, 246,
++	48, 246,
++	51, 246,
++	57, 246,
++	62, 246,
++	63, 246,
++	64, 246,
++	65, 246,
++	66, 246,
++	67, 246,
++	68, 246,
++	69, 246,
++	70, 246,
++	71, 246,
++	72, 246,
++	73, 246,
++	74, 246,
++	75, 246,
++	76, 246,
++	80, 246,
++	84, 246,
++	86, 246,
++	89, 246,
++	90, 246,
+ 	-2, 0,
+ }
+ 
+ const yyPrivate = 57344
+ 
+-const yyLast = 799
++const yyLast = 816
+ 
+ var yyAct = [...]int16{
+-	152, 334, 332, 155, 339, 226, 39, 192, 276, 44,
+-	291, 290, 118, 82, 178, 229, 107, 106, 346, 347,
+-	348, 349, 109, 108, 198, 239, 199, 156, 110, 105,
+-	6, 245, 200, 201, 133, 325, 111, 329, 228, 60,
+-	357, 293, 328, 304, 267, 160, 266, 128, 55, 151,
+-	302, 311, 302, 196, 340, 159, 55, 89, 54, 356,
+-	241, 242, 355, 113, 243, 114, 54, 98, 99, 265,
+-	112, 101, 256, 104, 88, 230, 232, 234, 235, 236,
+-	244, 246, 249, 250, 251, 252, 253, 257, 258, 105,
+-	333, 231, 233, 237, 238, 240, 247, 248, 103, 115,
+-	109, 254, 255, 324, 150, 218, 110, 264, 111, 270,
+-	77, 35, 7, 149, 188, 163, 322, 321, 173, 320,
+-	167, 170, 323, 165, 271, 166, 2, 3, 4, 5,
+-	263, 101, 194, 104, 180, 184, 197, 187, 186, 319,
+-	272, 202, 203, 204, 205, 206, 207, 208, 209, 210,
+-	211, 212, 213, 214, 215, 216, 195, 299, 103, 318,
+-	217, 36, 298, 1, 190, 219, 220, 317, 160, 160,
+-	316, 193, 160, 154, 182, 196, 229, 297, 159, 159,
+-	160, 358, 159, 268, 181, 183, 239, 260, 296, 262,
+-	159, 315, 245, 129, 314, 55, 225, 313, 161, 228,
+-	161, 161, 259, 312, 161, 54, 86, 295, 310, 288,
+-	289, 8, 161, 292, 162, 37, 162, 162, 49, 269,
+-	162, 241, 242, 309, 179, 243, 180, 127, 162, 126,
+-	308, 223, 294, 256, 48, 222, 230, 232, 234, 235,
+-	236, 244, 246, 249, 250, 251, 252, 253, 257, 258,
+-	221, 169, 231, 233, 237, 238, 240, 247, 248, 157,
+-	158, 164, 254, 255, 168, 10, 182, 300, 55, 301,
+-	303, 47, 305, 46, 132, 79, 181, 183, 54, 306,
+-	307, 45, 134, 135, 136, 137, 138, 139, 140, 141,
+-	142, 143, 144, 145, 146, 147, 148, 43, 59, 50,
+-	84, 9, 9, 121, 326, 78, 327, 130, 171, 121,
+-	83, 42, 131, 119, 335, 336, 337, 331, 185, 119,
+-	338, 261, 342, 341, 344, 343, 122, 117, 41, 177,
+-	350, 351, 122, 55, 176, 352, 53, 77, 40, 56,
+-	125, 354, 22, 54, 84, 124, 172, 175, 51, 57,
+-	191, 353, 273, 85, 83, 189, 359, 224, 123, 80,
+-	345, 120, 81, 153, 58, 75, 227, 52, 116, 0,
+-	0, 18, 19, 0, 0, 20, 0, 0, 0, 0,
+-	0, 76, 0, 0, 0, 0, 61, 62, 63, 64,
+-	65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
+-	0, 0, 0, 13, 0, 0, 0, 24, 0, 30,
+-	0, 0, 31, 32, 55, 38, 105, 53, 77, 0,
+-	56, 275, 0, 22, 54, 0, 0, 0, 274, 0,
+-	57, 0, 278, 279, 277, 284, 286, 283, 285, 280,
+-	281, 282, 287, 87, 89, 0, 75, 0, 0, 0,
+-	0, 0, 18, 19, 98, 99, 20, 0, 101, 102,
+-	104, 88, 76, 0, 0, 0, 0, 61, 62, 63,
+-	64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
+-	74, 0, 0, 0, 13, 103, 0, 0, 24, 0,
+-	30, 0, 55, 31, 32, 53, 77, 0, 56, 330,
+-	0, 22, 54, 0, 0, 0, 0, 0, 57, 0,
+-	278, 279, 277, 284, 286, 283, 285, 280, 281, 282,
+-	287, 0, 0, 0, 75, 0, 0, 0, 0, 0,
+-	18, 19, 0, 0, 20, 0, 0, 0, 17, 77,
+-	76, 0, 0, 0, 22, 61, 62, 63, 64, 65,
+-	66, 67, 68, 69, 70, 71, 72, 73, 74, 0,
+-	0, 0, 13, 0, 0, 0, 24, 0, 30, 0,
+-	0, 31, 32, 18, 19, 0, 0, 20, 0, 0,
+-	0, 17, 35, 0, 0, 0, 0, 22, 11, 12,
+-	14, 15, 16, 21, 23, 25, 26, 27, 28, 29,
+-	33, 34, 0, 0, 0, 13, 0, 0, 0, 24,
+-	0, 30, 0, 0, 31, 32, 18, 19, 0, 0,
+-	20, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++	154, 337, 335, 157, 342, 228, 40, 194, 279, 45,
++	294, 293, 120, 84, 180, 109, 231, 108, 349, 350,
++	351, 352, 111, 200, 110, 201, 241, 158, 112, 135,
++	107, 6, 247, 202, 203, 360, 328, 113, 332, 230,
++	61, 331, 296, 307, 270, 313, 162, 130, 269, 56,
++	305, 220, 314, 305, 359, 198, 161, 358, 91, 55,
++	312, 243, 244, 107, 115, 245, 116, 311, 100, 101,
++	114, 268, 103, 259, 106, 90, 232, 234, 236, 237,
++	238, 246, 248, 251, 252, 253, 254, 255, 256, 260,
++	261, 336, 327, 233, 235, 239, 240, 242, 249, 250,
++	105, 117, 111, 257, 258, 103, 263, 106, 112, 153,
++	273, 326, 267, 113, 343, 151, 56, 165, 79, 190,
++	175, 262, 169, 172, 167, 274, 55, 168, 2, 3,
++	4, 5, 36, 105, 196, 266, 182, 186, 199, 7,
++	188, 275, 189, 204, 205, 206, 207, 208, 209, 210,
++	211, 212, 213, 214, 215, 216, 217, 218, 197, 171,
++	325, 324, 219, 37, 152, 1, 192, 221, 222, 323,
++	162, 162, 170, 195, 162, 156, 184, 198, 231, 86,
++	161, 161, 162, 361, 161, 271, 183, 185, 241, 85,
++	302, 265, 161, 131, 247, 301, 322, 187, 227, 10,
++	163, 230, 163, 163, 321, 320, 163, 319, 318, 81,
++	300, 291, 292, 225, 163, 295, 164, 224, 164, 164,
++	317, 272, 164, 243, 244, 316, 181, 245, 182, 315,
++	164, 51, 223, 88, 297, 259, 50, 80, 232, 234,
++	236, 237, 238, 246, 248, 251, 252, 253, 254, 255,
++	256, 260, 261, 49, 48, 233, 235, 239, 240, 242,
++	249, 250, 159, 160, 166, 257, 258, 129, 184, 128,
++	303, 56, 304, 306, 47, 308, 8, 134, 183, 185,
++	38, 55, 309, 310, 136, 137, 138, 139, 140, 141,
++	142, 143, 144, 145, 146, 147, 148, 149, 150, 46,
++	44, 60, 132, 179, 9, 9, 123, 329, 178, 330,
++	173, 43, 123, 133, 42, 41, 121, 338, 339, 340,
++	334, 177, 121, 341, 264, 345, 344, 347, 346, 124,
++	119, 52, 127, 353, 354, 124, 56, 126, 355, 54,
++	79, 299, 57, 86, 357, 22, 55, 193, 56, 174,
++	125, 356, 58, 85, 276, 87, 191, 226, 55, 362,
++	298, 83, 82, 348, 122, 155, 59, 229, 77, 53,
++	118, 0, 0, 0, 18, 19, 0, 0, 20, 0,
++	0, 0, 0, 0, 78, 0, 0, 0, 0, 62,
++	63, 64, 65, 66, 67, 68, 69, 70, 71, 72,
++	73, 74, 75, 76, 0, 0, 0, 13, 0, 0,
++	0, 24, 0, 31, 0, 0, 32, 33, 56, 39,
++	107, 54, 79, 0, 57, 278, 0, 22, 55, 0,
++	0, 0, 277, 0, 58, 0, 281, 282, 280, 287,
++	289, 286, 288, 283, 284, 285, 290, 89, 91, 0,
++	77, 0, 0, 0, 0, 0, 18, 19, 100, 101,
++	20, 0, 103, 104, 106, 90, 78, 0, 0, 0,
++	0, 62, 63, 64, 65, 66, 67, 68, 69, 70,
++	71, 72, 73, 74, 75, 76, 0, 0, 0, 13,
++	105, 0, 0, 24, 0, 31, 0, 56, 32, 33,
++	54, 79, 0, 57, 333, 0, 22, 55, 0, 0,
++	0, 0, 0, 58, 0, 281, 282, 280, 287, 289,
++	286, 288, 283, 284, 285, 290, 0, 0, 0, 77,
++	0, 17, 79, 0, 0, 18, 19, 22, 0, 20,
++	0, 0, 0, 0, 0, 78, 0, 0, 0, 0,
++	62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
++	72, 73, 74, 75, 76, 0, 18, 19, 13, 0,
++	20, 0, 24, 0, 31, 0, 0, 32, 33, 0,
+ 	0, 11, 12, 14, 15, 16, 21, 23, 25, 26,
+-	27, 28, 29, 33, 34, 105, 0, 0, 13, 0,
+-	0, 0, 24, 174, 30, 0, 0, 31, 32, 0,
+-	0, 0, 0, 0, 105, 0, 0, 0, 0, 0,
+-	0, 0, 87, 89, 90, 0, 91, 92, 93, 94,
+-	95, 96, 97, 98, 99, 100, 0, 101, 102, 104,
+-	88, 87, 89, 90, 0, 91, 92, 93, 94, 95,
+-	96, 97, 98, 99, 100, 0, 101, 102, 104, 88,
+-	105, 0, 0, 0, 103, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 105,
+-	0, 0, 0, 103, 0, 0, 0, 87, 89, 90,
+-	0, 91, 92, 93, 0, 95, 96, 97, 98, 99,
+-	100, 0, 101, 102, 104, 88, 87, 89, 90, 0,
+-	91, 92, 0, 0, 95, 96, 0, 98, 99, 100,
+-	0, 101, 102, 104, 88, 0, 0, 0, 0, 103,
++	27, 28, 29, 30, 34, 35, 17, 36, 0, 13,
++	0, 0, 22, 24, 0, 31, 0, 0, 32, 33,
+ 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 103,
++	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++	0, 18, 19, 0, 0, 20, 0, 0, 0, 0,
++	0, 0, 0, 0, 0, 0, 11, 12, 14, 15,
++	16, 21, 23, 25, 26, 27, 28, 29, 30, 34,
++	35, 107, 0, 0, 13, 0, 0, 0, 24, 176,
++	31, 0, 0, 32, 33, 0, 0, 0, 0, 0,
++	107, 0, 0, 0, 0, 0, 0, 0, 89, 91,
++	92, 0, 93, 94, 95, 96, 97, 98, 99, 100,
++	101, 102, 0, 103, 104, 106, 90, 89, 91, 92,
++	0, 93, 94, 95, 96, 97, 98, 99, 100, 101,
++	102, 0, 103, 104, 106, 90, 107, 0, 0, 0,
++	0, 105, 0, 0, 0, 0, 0, 0, 0, 0,
++	0, 0, 0, 0, 0, 107, 0, 0, 0, 0,
++	105, 0, 0, 89, 91, 92, 0, 93, 94, 95,
++	0, 97, 98, 99, 100, 101, 102, 0, 103, 104,
++	106, 90, 89, 91, 92, 0, 93, 94, 0, 0,
++	97, 98, 0, 100, 101, 102, 0, 103, 104, 106,
++	90, 0, 0, 0, 0, 0, 105, 0, 0, 0,
++	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++	0, 0, 0, 0, 0, 105,
+ }
+ 
+ var yyPact = [...]int16{
+-	28, 102, 569, 569, 405, 526, -1000, -1000, -1000, 98,
+-	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
++	29, 129, 584, 584, 409, 519, -1000, -1000, -1000, 119,
+ 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+-	-1000, -1000, -1000, -1000, -1000, 342, -1000, 204, -1000, 650,
+ 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+-	-1000, -1000, 21, 93, -1000, -1000, 483, -1000, 483, 97,
++	-1000, -1000, -1000, -1000, -1000, -1000, 341, -1000, 231, -1000,
++	666, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
++	-1000, -1000, -1000, 22, 98, -1000, -1000, 488, -1000, 488,
++	105, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
++	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, 310,
++	-1000, -1000, 330, -1000, -1000, 265, -1000, 23, -1000, -50,
++	-50, -50, -50, -50, -50, -50, -50, -50, -50, -50,
++	-50, -50, -50, -50, -50, 107, 173, 262, 98, -58,
++	-1000, 157, 157, 327, -1000, 647, 49, -1000, 301, -1000,
++	-1000, 224, 132, -1000, -1000, -1000, 177, -1000, 117, -1000,
++	161, 488, -1000, -60, -48, -1000, 488, 488, 488, 488,
++	488, 488, 488, 488, 488, 488, 488, 488, 488, 488,
++	488, -1000, 40, -1000, -1000, 36, -1000, -1000, -1000, -1000,
++	-1000, -1000, -1000, 37, 37, 211, -1000, -1000, -1000, -1000,
++	176, -1000, -1000, 99, -1000, 666, -1000, -1000, 304, -1000,
++	110, -1000, -1000, -1000, -1000, -1000, 46, -1000, -1000, -1000,
++	-1000, -1000, 18, 159, 84, -1000, -1000, -1000, 408, 16,
++	157, 157, 157, 157, 49, 49, 406, 406, 406, 731,
++	712, 406, 406, 731, 49, 49, 406, 49, 16, -1000,
++	20, -1000, -1000, -1000, 339, -1000, 188, -1000, -1000, -1000,
+ 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+-	-1000, -1000, -1000, -1000, -1000, -1000, -1000, 307, -1000, -1000,
+-	338, -1000, -1000, 225, -1000, 23, -1000, -44, -44, -44,
+-	-44, -44, -44, -44, -44, -44, -44, -44, -44, -44,
+-	-44, -44, -44, 47, 171, 259, 93, -57, -1000, 249,
+-	249, 324, -1000, 631, 75, -1000, 327, -1000, -1000, 222,
+-	130, -1000, -1000, -1000, 298, -1000, 112, -1000, 159, 483,
+-	-1000, -58, -48, -1000, 483, 483, 483, 483, 483, 483,
+-	483, 483, 483, 483, 483, 483, 483, 483, 483, -1000,
+-	39, -1000, -1000, 90, -1000, -1000, -1000, -1000, -1000, -1000,
+-	-1000, 36, 36, 229, -1000, -1000, -1000, -1000, 174, -1000,
+-	-1000, 180, -1000, 650, -1000, -1000, 301, -1000, 105, -1000,
+-	-1000, -1000, -1000, -1000, 44, -1000, -1000, -1000, -1000, -1000,
+-	18, 157, 83, -1000, -1000, -1000, 404, 15, 249, 249,
+-	249, 249, 75, 75, 402, 402, 402, 715, 696, 402,
+-	402, 715, 75, 75, 402, 75, 15, -1000, 19, -1000,
+-	-1000, -1000, 186, -1000, 155, -1000, -1000, -1000, -1000, -1000,
+ 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+ 	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+-	-1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+-	483, -1000, -1000, -1000, -1000, -1000, -1000, 31, 31, 17,
+-	31, 37, 37, 206, 34, -1000, -1000, 197, 191, 188,
+-	185, 164, 161, 153, 133, 113, 111, 110, -1000, -1000,
+-	-1000, -1000, -1000, -1000, 101, -1000, -1000, -1000, 13, -1000,
+-	650, -1000, -1000, -1000, 31, -1000, 16, 11, 482, -1000,
+-	-1000, -1000, 33, 163, 163, 163, 36, 40, 40, 33,
+-	40, 33, -74, -1000, -1000, -1000, -1000, -1000, 31, 31,
+-	-1000, -1000, -1000, 31, -1000, -1000, -1000, -1000, -1000, -1000,
+-	163, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+-	-1000, -1000, -1000, 38, -1000, 160, -1000, -1000, -1000, -1000,
++	-1000, -1000, -1000, 488, -1000, -1000, -1000, -1000, -1000, -1000,
++	31, 31, 17, 31, 39, 39, 43, 35, -1000, -1000,
++	223, 219, 214, 202, 201, 199, 198, 190, 163, 155,
++	154, -1000, -1000, -1000, -1000, -1000, -1000, 90, -1000, -1000,
++	-1000, 14, -1000, 666, -1000, -1000, -1000, 31, -1000, 15,
++	12, 487, -1000, -1000, -1000, 34, 165, 165, 165, 37,
++	100, 100, 34, 100, 34, -75, -1000, -1000, -1000, -1000,
++	-1000, 31, 31, -1000, -1000, -1000, 31, -1000, -1000, -1000,
++	-1000, -1000, -1000, 165, -1000, -1000, -1000, -1000, -1000, -1000,
++	-1000, -1000, -1000, -1000, -1000, -1000, 33, -1000, 162, -1000,
++	-1000, -1000, -1000,
+ }
+ 
+ var yyPgo = [...]int16{
+-	0, 368, 12, 367, 5, 14, 366, 298, 364, 363,
+-	361, 360, 265, 211, 359, 13, 357, 10, 11, 355,
+-	353, 7, 352, 8, 4, 351, 2, 1, 3, 350,
+-	27, 0, 348, 338, 17, 193, 328, 312, 6, 311,
+-	308, 16, 307, 39, 297, 9, 281, 274, 273, 271,
+-	234, 218, 299, 163, 161,
++	0, 370, 12, 369, 5, 14, 367, 301, 366, 365,
++	364, 363, 199, 276, 362, 13, 357, 10, 11, 356,
++	355, 7, 354, 8, 4, 351, 2, 1, 3, 347,
++	27, 0, 331, 315, 17, 193, 314, 313, 6, 311,
++	310, 15, 302, 40, 300, 9, 299, 277, 274, 254,
++	253, 236, 231, 165, 163,
+ }
+ 
+ var yyR1 = [...]int8{
+@@ -553,19 +571,19 @@ var yyR1 = [...]int8{
+ 	1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
+ 	13, 13, 7, 7, 7, 7, 7, 7, 7, 7,
+ 	7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+-	7, 7, 7, 7, 7, 7, 12, 12, 12, 12,
+-	14, 14, 14, 15, 15, 15, 15, 54, 20, 20,
+-	20, 20, 19, 19, 19, 19, 19, 19, 19, 19,
+-	19, 29, 29, 29, 21, 21, 21, 21, 22, 22,
+-	22, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+-	23, 23, 24, 24, 25, 25, 25, 11, 11, 11,
+-	11, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+-	3, 3, 3, 3, 3, 6, 6, 6, 6, 6,
++	7, 7, 7, 7, 7, 7, 7, 12, 12, 12,
++	12, 14, 14, 14, 15, 15, 15, 15, 54, 20,
++	20, 20, 20, 19, 19, 19, 19, 19, 19, 19,
++	19, 19, 29, 29, 29, 21, 21, 21, 21, 22,
++	22, 22, 23, 23, 23, 23, 23, 23, 23, 23,
++	23, 23, 23, 24, 24, 25, 25, 25, 11, 11,
++	11, 11, 3, 3, 3, 3, 3, 3, 3, 3,
++	3, 3, 3, 3, 3, 3, 3, 6, 6, 6,
+ 	6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+ 	6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+-	6, 6, 6, 6, 8, 8, 5, 5, 5, 5,
+-	45, 45, 28, 28, 30, 30, 31, 31, 27, 26,
+-	26, 49, 10, 18, 18,
++	6, 6, 6, 6, 6, 6, 6, 8, 8, 5,
++	5, 5, 5, 45, 45, 28, 28, 30, 30, 31,
++	31, 27, 26, 26, 49, 10, 18, 18,
+ }
+ 
+ var yyR2 = [...]int8{
+@@ -581,97 +599,99 @@ var yyR2 = [...]int8{
+ 	3, 1, 2, 3, 3, 1, 3, 3, 2, 1,
+ 	2, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 1, 1, 3, 4, 2, 0,
+-	3, 1, 2, 3, 3, 2, 1, 2, 0, 3,
+-	2, 1, 1, 3, 1, 3, 4, 1, 3, 5,
+-	5, 1, 1, 1, 4, 3, 3, 2, 3, 1,
+-	2, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+-	3, 3, 4, 3, 3, 1, 2, 1, 1, 1,
++	1, 1, 1, 1, 1, 1, 1, 3, 4, 2,
++	0, 3, 1, 2, 3, 3, 2, 1, 2, 0,
++	3, 2, 1, 1, 3, 1, 3, 4, 1, 3,
++	5, 5, 1, 1, 1, 4, 3, 3, 2, 3,
++	1, 2, 3, 3, 3, 3, 3, 3, 3, 3,
++	3, 3, 3, 4, 3, 3, 1, 2, 1, 1,
+ 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+ 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+-	1, 1, 1, 1, 2, 2, 1, 1, 1, 2,
+-	1, 1, 1, 0, 1,
++	1, 1, 1, 1, 1, 1, 1, 2, 2, 1,
++	1, 1, 2, 1, 1, 1, 0, 1,
+ }
+ 
+ var yyChk = [...]int16{
+-	-1000, -53, 98, 99, 100, 101, 2, 10, -13, -7,
+-	-12, 62, 63, 79, 64, 65, 66, 12, 47, 48,
+-	51, 67, 18, 68, 83, 69, 70, 71, 72, 73,
+-	85, 88, 89, 74, 75, 13, -54, -13, 10, -38,
+-	-33, -36, -39, -44, -45, -46, -48, -49, -50, -51,
+-	-52, -32, -3, 12, 19, 9, 15, 25, -8, -7,
+-	-43, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+-	71, 72, 73, 74, 75, 41, 57, 13, -52, -12,
+-	-14, 20, -15, 12, 2, -20, 2, 41, 59, 42,
+-	43, 45, 46, 47, 48, 49, 50, 51, 52, 53,
+-	54, 56, 57, 83, 58, 14, -34, -41, 2, 79,
+-	85, 15, -41, -38, -38, -43, -1, 20, -2, 12,
+-	-10, 2, 25, 20, 7, 2, 4, 2, 24, -35,
+-	-42, -37, -47, 78, -35, -35, -35, -35, -35, -35,
+-	-35, -35, -35, -35, -35, -35, -35, -35, -35, -45,
+-	57, 2, -31, -9, 2, -28, -30, 88, 89, 19,
+-	9, 41, 57, -45, 2, -41, -34, -17, 15, 2,
+-	-17, -40, 22, -38, 22, 20, 7, 2, -5, 2,
+-	4, 54, 44, 55, -5, 20, -15, 25, 2, -19,
+-	5, -29, -21, 12, -28, -30, 16, -38, 82, 84,
+-	80, 81, -38, -38, -38, -38, -38, -38, -38, -38,
+-	-38, -38, -38, -38, -38, -38, -38, -45, 15, -28,
+-	-28, 21, 6, 2, -16, 22, -4, -6, 25, 2,
+-	62, 78, 63, 79, 64, 65, 66, 80, 81, 12,
+-	82, 47, 48, 51, 67, 18, 68, 83, 84, 69,
+-	70, 71, 72, 73, 88, 89, 59, 74, 75, 22,
+-	7, 20, -2, 25, 2, 25, 2, 26, 26, -30,
+-	26, 41, 57, -22, 24, 17, -23, 30, 28, 29,
+-	35, 36, 37, 33, 31, 34, 32, 38, -17, -17,
+-	-18, -17, -18, 22, -45, 21, 2, 22, 7, 2,
+-	-38, -27, 19, -27, 26, -27, -21, -21, 24, 17,
+-	2, 17, 6, 6, 6, 6, 6, 6, 6, 6,
+-	6, 6, 6, 21, 2, 22, -4, -27, 26, 26,
+-	17, -23, -26, 57, -27, -31, -31, -31, -28, -24,
+-	14, -24, -26, -24, -26, -11, 92, 93, 94, 95,
+-	-27, -27, -27, -25, -31, 24, 21, 2, 21, -31,
++	-1000, -53, 99, 100, 101, 102, 2, 10, -13, -7,
++	-12, 62, 63, 80, 64, 65, 66, 12, 47, 48,
++	51, 67, 18, 68, 84, 69, 70, 71, 72, 73,
++	74, 86, 89, 90, 75, 76, 13, -54, -13, 10,
++	-38, -33, -36, -39, -44, -45, -46, -48, -49, -50,
++	-51, -52, -32, -3, 12, 19, 9, 15, 25, -8,
++	-7, -43, 62, 63, 64, 65, 66, 67, 68, 69,
++	70, 71, 72, 73, 74, 75, 76, 41, 57, 13,
++	-52, -12, -14, 20, -15, 12, 2, -20, 2, 41,
++	59, 42, 43, 45, 46, 47, 48, 49, 50, 51,
++	52, 53, 54, 56, 57, 84, 58, 14, -34, -41,
++	2, 80, 86, 15, -41, -38, -38, -43, -1, 20,
++	-2, 12, -10, 2, 25, 20, 7, 2, 4, 2,
++	24, -35, -42, -37, -47, 79, -35, -35, -35, -35,
++	-35, -35, -35, -35, -35, -35, -35, -35, -35, -35,
++	-35, -45, 57, 2, -31, -9, 2, -28, -30, 89,
++	90, 19, 9, 41, 57, -45, 2, -41, -34, -17,
++	15, 2, -17, -40, 22, -38, 22, 20, 7, 2,
++	-5, 2, 4, 54, 44, 55, -5, 20, -15, 25,
++	2, -19, 5, -29, -21, 12, -28, -30, 16, -38,
++	83, 85, 81, 82, -38, -38, -38, -38, -38, -38,
++	-38, -38, -38, -38, -38, -38, -38, -38, -38, -45,
++	15, -28, -28, 21, 6, 2, -16, 22, -4, -6,
++	25, 2, 62, 79, 63, 80, 64, 65, 66, 81,
++	82, 12, 83, 47, 48, 51, 67, 18, 68, 84,
++	85, 69, 70, 71, 72, 73, 74, 89, 90, 59,
++	75, 76, 22, 7, 20, -2, 25, 2, 25, 2,
++	26, 26, -30, 26, 41, 57, -22, 24, 17, -23,
++	30, 28, 29, 35, 36, 37, 33, 31, 34, 32,
++	38, -17, -17, -18, -17, -18, 22, -45, 21, 2,
++	22, 7, 2, -38, -27, 19, -27, 26, -27, -21,
++	-21, 24, 17, 2, 17, 6, 6, 6, 6, 6,
++	6, 6, 6, 6, 6, 6, 21, 2, 22, -4,
++	-27, 26, 26, 17, -23, -26, 57, -27, -31, -31,
++	-31, -28, -24, 14, -24, -26, -24, -26, -11, 93,
++	94, 95, 96, -27, -27, -27, -25, -31, 24, 21,
++	2, 21, -31,
+ }
+ 
+ var yyDef = [...]int16{
+-	0, -2, 129, 129, 0, 0, 7, 6, 1, 129,
++	0, -2, 130, 130, 0, 0, 7, 6, 1, 130,
+ 	101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
+ 	111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
+-	121, 122, 123, 124, 125, 0, 2, -2, 3, 4,
+-	8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+-	18, 19, 0, 108, 230, 231, 0, 241, 0, 85,
+-	86, -2, -2, -2, -2, -2, -2, -2, -2, -2,
+-	-2, -2, -2, -2, -2, 224, 225, 0, 5, 100,
+-	0, 128, 131, 0, 136, 137, 141, 43, 43, 43,
++	121, 122, 123, 124, 125, 126, 0, 2, -2, 3,
++	4, 8, 9, 10, 11, 12, 13, 14, 15, 16,
++	17, 18, 19, 0, 108, 233, 234, 0, 244, 0,
++	85, 86, -2, -2, -2, -2, -2, -2, -2, -2,
++	-2, -2, -2, -2, -2, -2, -2, 227, 228, 0,
++	5, 100, 0, 129, 132, 0, 137, 138, 142, 43,
+ 	43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
+-	43, 43, 43, 0, 0, 0, 0, 22, 23, 0,
+-	0, 0, 61, 0, 83, 84, 0, 89, 91, 0,
+-	95, 99, 242, 126, 0, 132, 0, 135, 140, 0,
+-	42, 47, 48, 44, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 0, 68,
+-	0, 70, 71, 0, 73, 236, 237, 74, 75, 232,
+-	233, 0, 0, 0, 82, 20, 21, 24, 0, 54,
+-	25, 0, 63, 65, 67, 87, 0, 92, 0, 98,
+-	226, 227, 228, 229, 0, 127, 130, 133, 134, 139,
+-	142, 144, 147, 151, 152, 153, 0, 26, 0, 0,
+-	-2, -2, 27, 28, 29, 30, 31, 32, 33, 34,
+-	35, 36, 37, 38, 39, 40, 41, 69, 0, 234,
+-	235, 76, 0, 81, 0, 53, 56, 58, 59, 60,
+-	195, 196, 197, 198, 199, 200, 201, 202, 203, 204,
++	43, 43, 43, 43, 43, 0, 0, 0, 0, 22,
++	23, 0, 0, 0, 61, 0, 83, 84, 0, 89,
++	91, 0, 95, 99, 245, 127, 0, 133, 0, 136,
++	141, 0, 42, 47, 48, 44, 0, 0, 0, 0,
++	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++	0, 68, 0, 70, 71, 0, 73, 239, 240, 74,
++	75, 235, 236, 0, 0, 0, 82, 20, 21, 24,
++	0, 54, 25, 0, 63, 65, 67, 87, 0, 92,
++	0, 98, 229, 230, 231, 232, 0, 128, 131, 134,
++	135, 140, 143, 145, 148, 152, 153, 154, 0, 26,
++	0, 0, -2, -2, 27, 28, 29, 30, 31, 32,
++	33, 34, 35, 36, 37, 38, 39, 40, 41, 69,
++	0, 237, 238, 76, 0, 81, 0, 53, 56, 58,
++	59, 60, 197, 198, 199, 200, 201, 202, 203, 204,
+ 	205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
+-	215, 216, 217, 218, 219, 220, 221, 222, 223, 62,
+-	66, 88, 90, 93, 97, 94, 96, 0, 0, 0,
+-	0, 0, 0, 0, 0, 157, 159, 0, 0, 0,
+-	0, 0, 0, 0, 0, 0, 0, 0, 45, 46,
+-	49, 244, 50, 72, 0, 78, 80, 51, 0, 57,
+-	64, 143, 238, 145, 0, 148, 0, 0, 0, 155,
+-	160, 156, 0, 0, 0, 0, 0, 0, 0, 0,
+-	0, 0, 0, 77, 79, 52, 55, 146, 0, 0,
+-	154, 158, 161, 0, 240, 162, 163, 164, 165, 166,
+-	0, 167, 168, 169, 170, 171, 177, 178, 179, 180,
+-	149, 150, 239, 0, 175, 0, 173, 176, 172, 174,
++	215, 216, 217, 218, 219, 220, 221, 222, 223, 224,
++	225, 226, 62, 66, 88, 90, 93, 97, 94, 96,
++	0, 0, 0, 0, 0, 0, 0, 0, 158, 160,
++	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++	0, 45, 46, 49, 247, 50, 72, 0, 78, 80,
++	51, 0, 57, 64, 144, 241, 146, 0, 149, 0,
++	0, 0, 156, 161, 157, 0, 0, 0, 0, 0,
++	0, 0, 0, 0, 0, 0, 77, 79, 52, 55,
++	147, 0, 0, 155, 159, 162, 0, 243, 163, 164,
++	165, 166, 167, 0, 168, 169, 170, 171, 172, 178,
++	179, 180, 181, 150, 151, 242, 0, 176, 0, 174,
++	177, 173, 175,
+ }
+ 
+ var yyTok1 = [...]int8{
+@@ -689,7 +709,7 @@ var yyTok2 = [...]int8{
+ 	72, 73, 74, 75, 76, 77, 78, 79, 80, 81,
+ 	82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
+ 	92, 93, 94, 95, 96, 97, 98, 99, 100, 101,
+-	102,
++	102, 103,
+ }
+ 
+ var yyTok3 = [...]int8{
+@@ -702,6 +722,8 @@ var yyErrorMessages = [...]struct {
+ 	msg   string
+ }{}
+ 
++//line yaccpar:1
++
+ /*	parser for yacc output	*/
+ 
+ var (
+@@ -1033,52 +1055,62 @@ yydefault:
+ 
+ 	case 1:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:213
+ 		{
+ 			yylex.(*parser).generatedParserResult = yyDollar[2].labels
+ 		}
+ 	case 3:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:216
+ 		{
+ 			yylex.(*parser).addParseErrf(posrange.PositionRange{}, "no expression found in input")
+ 		}
+ 	case 4:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:218
+ 		{
+ 			yylex.(*parser).generatedParserResult = yyDollar[2].node
+ 		}
+ 	case 5:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:220
+ 		{
+ 			yylex.(*parser).generatedParserResult = yyDollar[2].node
+ 		}
+ 	case 7:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:223
+ 		{
+ 			yylex.(*parser).unexpected("", "")
+ 		}
+ 	case 20:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:246
+ 		{
+ 			yyVAL.node = yylex.(*parser).newAggregateExpr(yyDollar[1].item, yyDollar[2].node, yyDollar[3].node)
+ 		}
+ 	case 21:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:248
+ 		{
+ 			yyVAL.node = yylex.(*parser).newAggregateExpr(yyDollar[1].item, yyDollar[3].node, yyDollar[2].node)
+ 		}
+ 	case 22:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:250
+ 		{
+ 			yyVAL.node = yylex.(*parser).newAggregateExpr(yyDollar[1].item, &AggregateExpr{}, yyDollar[2].node)
+ 		}
+ 	case 23:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:252
+ 		{
+ 			yylex.(*parser).unexpected("aggregation", "")
+ 			yyVAL.node = yylex.(*parser).newAggregateExpr(yyDollar[1].item, &AggregateExpr{}, Expressions{})
+ 		}
+ 	case 24:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:260
+ 		{
+ 			yyVAL.node = &AggregateExpr{
+ 				Grouping: yyDollar[2].strings,
+@@ -1086,6 +1118,7 @@ yydefault:
+ 		}
+ 	case 25:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:266
+ 		{
+ 			yyVAL.node = &AggregateExpr{
+ 				Grouping: yyDollar[2].strings,
+@@ -1094,86 +1127,103 @@ yydefault:
+ 		}
+ 	case 26:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:279
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 27:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:280
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 28:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:281
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 29:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:282
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 30:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:283
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 31:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:284
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 32:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:285
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 33:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:286
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 34:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:287
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 35:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:288
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 36:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:289
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 37:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:290
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 38:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:291
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 39:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:292
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 40:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:293
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 41:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:294
+ 		{
+ 			yyVAL.node = yylex.(*parser).newBinaryExpression(yyDollar[1].node, yyDollar[2].item, yyDollar[3].node, yyDollar[4].node)
+ 		}
+ 	case 43:
+ 		yyDollar = yyS[yypt-0 : yypt+1]
++//line promql/parser/generated_parser.y:302
+ 		{
+ 			yyVAL.node = &BinaryExpr{
+ 				VectorMatching: &VectorMatching{Card: CardOneToOne},
+@@ -1181,6 +1231,7 @@ yydefault:
+ 		}
+ 	case 44:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:307
+ 		{
+ 			yyVAL.node = &BinaryExpr{
+ 				VectorMatching: &VectorMatching{Card: CardOneToOne},
+@@ -1189,12 +1240,14 @@ yydefault:
+ 		}
+ 	case 45:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:315
+ 		{
+ 			yyVAL.node = yyDollar[1].node
+ 			yyVAL.node.(*BinaryExpr).VectorMatching.MatchingLabels = yyDollar[3].strings
+ 		}
+ 	case 46:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:320
+ 		{
+ 			yyVAL.node = yyDollar[1].node
+ 			yyVAL.node.(*BinaryExpr).VectorMatching.MatchingLabels = yyDollar[3].strings
+@@ -1202,6 +1255,7 @@ yydefault:
+ 		}
+ 	case 49:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:330
+ 		{
+ 			yyVAL.node = yyDollar[1].node
+ 			yyVAL.node.(*BinaryExpr).VectorMatching.Card = CardManyToOne
+@@ -1209,6 +1263,7 @@ yydefault:
+ 		}
+ 	case 50:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:336
+ 		{
+ 			yyVAL.node = yyDollar[1].node
+ 			yyVAL.node.(*BinaryExpr).VectorMatching.Card = CardOneToMany
+@@ -1216,43 +1271,51 @@ yydefault:
+ 		}
+ 	case 51:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:345
+ 		{
+ 			yyVAL.strings = yyDollar[2].strings
+ 		}
+ 	case 52:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:347
+ 		{
+ 			yyVAL.strings = yyDollar[2].strings
+ 		}
+ 	case 53:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:349
+ 		{
+ 			yyVAL.strings = []string{}
+ 		}
+ 	case 54:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:351
+ 		{
+ 			yylex.(*parser).unexpected("grouping opts", "\"(\"")
+ 			yyVAL.strings = nil
+ 		}
+ 	case 55:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:357
+ 		{
+ 			yyVAL.strings = append(yyDollar[1].strings, yyDollar[3].item.Val)
+ 		}
+ 	case 56:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:359
+ 		{
+ 			yyVAL.strings = []string{yyDollar[1].item.Val}
+ 		}
+ 	case 57:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:361
+ 		{
+ 			yylex.(*parser).unexpected("grouping opts", "\",\" or \")\"")
+ 			yyVAL.strings = yyDollar[1].strings
+ 		}
+ 	case 58:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:365
+ 		{
+ 			if !model.LabelName(yyDollar[1].item.Val).IsValid() {
+ 				yylex.(*parser).unexpected("grouping opts", "label")
+@@ -1261,6 +1324,7 @@ yydefault:
+ 		}
+ 	case 59:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:371
+ 		{
+ 			if !model.LabelName(yylex.(*parser).unquoteString(yyDollar[1].item.Val)).IsValid() {
+ 				yylex.(*parser).unexpected("grouping opts", "label")
+@@ -1271,12 +1335,14 @@ yydefault:
+ 		}
+ 	case 60:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:380
+ 		{
+ 			yylex.(*parser).unexpected("grouping opts", "label")
+ 			yyVAL.item = Item{}
+ 		}
+ 	case 61:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:388
+ 		{
+ 			fn, exist := getFunction(yyDollar[1].item.Val, yylex.(*parser).functions)
+ 			if !exist {
+@@ -1296,37 +1362,44 @@ yydefault:
+ 		}
+ 	case 62:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:408
+ 		{
+ 			yyVAL.node = yyDollar[2].node
+ 		}
+ 	case 63:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:410
+ 		{
+ 			yyVAL.node = Expressions{}
+ 		}
+ 	case 64:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:414
+ 		{
+ 			yyVAL.node = append(yyDollar[1].node.(Expressions), yyDollar[3].node.(Expr))
+ 		}
+ 	case 65:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:416
+ 		{
+ 			yyVAL.node = Expressions{yyDollar[1].node.(Expr)}
+ 		}
+ 	case 66:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:418
+ 		{
+ 			yylex.(*parser).addParseErrf(yyDollar[2].item.PositionRange(), "trailing commas not allowed in function call args")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 67:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:429
+ 		{
+ 			yyVAL.node = &ParenExpr{Expr: yyDollar[2].node.(Expr), PosRange: mergeRanges(&yyDollar[1].item, &yyDollar[3].item)}
+ 		}
+ 	case 68:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:437
+ 		{
+ 			numLit, _ := yyDollar[3].node.(*NumberLiteral)
+ 			dur := time.Duration(numLit.Val*1000) * time.Millisecond
+@@ -1335,6 +1408,7 @@ yydefault:
+ 		}
+ 	case 69:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:444
+ 		{
+ 			numLit, _ := yyDollar[4].node.(*NumberLiteral)
+ 			dur := time.Duration(numLit.Val*1000) * time.Millisecond
+@@ -1343,30 +1417,35 @@ yydefault:
+ 		}
+ 	case 70:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:451
+ 		{
+ 			yylex.(*parser).unexpected("offset", "number or duration")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 71:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:458
+ 		{
+ 			yylex.(*parser).setTimestamp(yyDollar[1].node, yyDollar[3].float)
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 72:
+ 		yyDollar = yyS[yypt-5 : yypt+1]
++//line promql/parser/generated_parser.y:463
+ 		{
+ 			yylex.(*parser).setAtModifierPreprocessor(yyDollar[1].node, yyDollar[3].item)
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 73:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:468
+ 		{
+ 			yylex.(*parser).unexpected("@", "timestamp")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 76:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:478
+ 		{
+ 			var errMsg string
+ 			vs, ok := yyDollar[1].node.(*VectorSelector)
+@@ -1392,6 +1471,7 @@ yydefault:
+ 		}
+ 	case 77:
+ 		yyDollar = yyS[yypt-6 : yypt+1]
++//line promql/parser/generated_parser.y:504
+ 		{
+ 			numLitRange, _ := yyDollar[3].node.(*NumberLiteral)
+ 			numLitStep, _ := yyDollar[5].node.(*NumberLiteral)
+@@ -1404,6 +1484,7 @@ yydefault:
+ 		}
+ 	case 78:
+ 		yyDollar = yyS[yypt-5 : yypt+1]
++//line promql/parser/generated_parser.y:515
+ 		{
+ 			numLitRange, _ := yyDollar[3].node.(*NumberLiteral)
+ 			yyVAL.node = &SubqueryExpr{
+@@ -1415,30 +1496,35 @@ yydefault:
+ 		}
+ 	case 79:
+ 		yyDollar = yyS[yypt-6 : yypt+1]
++//line promql/parser/generated_parser.y:525
+ 		{
+ 			yylex.(*parser).unexpected("subquery selector", "\"]\"")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 80:
+ 		yyDollar = yyS[yypt-5 : yypt+1]
++//line promql/parser/generated_parser.y:527
+ 		{
+ 			yylex.(*parser).unexpected("subquery selector", "number or duration or \"]\"")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 81:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:529
+ 		{
+ 			yylex.(*parser).unexpected("subquery or range", "\":\" or \"]\"")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 82:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:531
+ 		{
+ 			yylex.(*parser).unexpected("subquery selector", "number or duration")
+ 			yyVAL.node = yyDollar[1].node
+ 		}
+ 	case 83:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:541
+ 		{
+ 			if nl, ok := yyDollar[2].node.(*NumberLiteral); ok {
+ 				if yyDollar[1].item.Typ == SUB {
+@@ -1452,6 +1538,7 @@ yydefault:
+ 		}
+ 	case 84:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:559
+ 		{
+ 			vs := yyDollar[2].node.(*VectorSelector)
+ 			vs.PosRange = mergeRanges(&yyDollar[1].item, vs)
+@@ -1461,6 +1548,7 @@ yydefault:
+ 		}
+ 	case 85:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:567
+ 		{
+ 			vs := &VectorSelector{
+ 				Name:          yyDollar[1].item.Val,
+@@ -1472,6 +1560,7 @@ yydefault:
+ 		}
+ 	case 86:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:577
+ 		{
+ 			vs := yyDollar[1].node.(*VectorSelector)
+ 			yylex.(*parser).assembleVectorSelector(vs)
+@@ -1479,6 +1568,7 @@ yydefault:
+ 		}
+ 	case 87:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:585
+ 		{
+ 			yyVAL.node = &VectorSelector{
+ 				LabelMatchers: yyDollar[2].matchers,
+@@ -1487,6 +1577,7 @@ yydefault:
+ 		}
+ 	case 88:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:592
+ 		{
+ 			yyVAL.node = &VectorSelector{
+ 				LabelMatchers: yyDollar[2].matchers,
+@@ -1495,6 +1586,7 @@ yydefault:
+ 		}
+ 	case 89:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:599
+ 		{
+ 			yyVAL.node = &VectorSelector{
+ 				LabelMatchers: []*labels.Matcher{},
+@@ -1503,6 +1595,7 @@ yydefault:
+ 		}
+ 	case 90:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:608
+ 		{
+ 			if yyDollar[1].matchers != nil {
+ 				yyVAL.matchers = append(yyDollar[1].matchers, yyDollar[3].matcher)
+@@ -1512,56 +1605,66 @@ yydefault:
+ 		}
+ 	case 91:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:616
+ 		{
+ 			yyVAL.matchers = []*labels.Matcher{yyDollar[1].matcher}
+ 		}
+ 	case 92:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:618
+ 		{
+ 			yylex.(*parser).unexpected("label matching", "\",\" or \"}\"")
+ 			yyVAL.matchers = yyDollar[1].matchers
+ 		}
+ 	case 93:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:622
+ 		{
+ 			yyVAL.matcher = yylex.(*parser).newLabelMatcher(yyDollar[1].item, yyDollar[2].item, yyDollar[3].item)
+ 		}
+ 	case 94:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:624
+ 		{
+ 			yyVAL.matcher = yylex.(*parser).newLabelMatcher(yyDollar[1].item, yyDollar[2].item, yyDollar[3].item)
+ 		}
+ 	case 95:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:626
+ 		{
+ 			yyVAL.matcher = yylex.(*parser).newMetricNameMatcher(yyDollar[1].item)
+ 		}
+ 	case 96:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:628
+ 		{
+ 			yylex.(*parser).unexpected("label matching", "string")
+ 			yyVAL.matcher = nil
+ 		}
+ 	case 97:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:630
+ 		{
+ 			yylex.(*parser).unexpected("label matching", "string")
+ 			yyVAL.matcher = nil
+ 		}
+ 	case 98:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:632
+ 		{
+ 			yylex.(*parser).unexpected("label matching", "label matching operator")
+ 			yyVAL.matcher = nil
+ 		}
+ 	case 99:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:634
+ 		{
+ 			yylex.(*parser).unexpected("label matching", "identifier or \"}\"")
+ 			yyVAL.matcher = nil
+ 		}
+ 	case 100:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:642
+ 		{
+ 			b := labels.NewBuilder(yyDollar[2].labels)
+ 			b.Set(labels.MetricName, yyDollar[1].item.Val)
+@@ -1569,117 +1672,138 @@ yydefault:
+ 		}
+ 	case 101:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:644
+ 		{
+ 			yyVAL.labels = yyDollar[1].labels
+ 		}
+-	case 126:
++	case 127:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:651
+ 		{
+ 			yyVAL.labels = labels.New(yyDollar[2].lblList...)
+ 		}
+-	case 127:
++	case 128:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:653
+ 		{
+ 			yyVAL.labels = labels.New(yyDollar[2].lblList...)
+ 		}
+-	case 128:
++	case 129:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:655
+ 		{
+ 			yyVAL.labels = labels.New()
+ 		}
+-	case 129:
++	case 130:
+ 		yyDollar = yyS[yypt-0 : yypt+1]
++//line promql/parser/generated_parser.y:657
+ 		{
+ 			yyVAL.labels = labels.New()
+ 		}
+-	case 130:
++	case 131:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:661
+ 		{
+ 			yyVAL.lblList = append(yyDollar[1].lblList, yyDollar[3].label)
+ 		}
+-	case 131:
++	case 132:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:663
+ 		{
+ 			yyVAL.lblList = []labels.Label{yyDollar[1].label}
+ 		}
+-	case 132:
++	case 133:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:665
+ 		{
+ 			yylex.(*parser).unexpected("label set", "\",\" or \"}\"")
+ 			yyVAL.lblList = yyDollar[1].lblList
+ 		}
+-	case 133:
++	case 134:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:670
+ 		{
+ 			yyVAL.label = labels.Label{Name: yyDollar[1].item.Val, Value: yylex.(*parser).unquoteString(yyDollar[3].item.Val)}
+ 		}
+-	case 134:
++	case 135:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:672
+ 		{
+ 			yylex.(*parser).unexpected("label set", "string")
+ 			yyVAL.label = labels.Label{}
+ 		}
+-	case 135:
++	case 136:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:674
+ 		{
+ 			yylex.(*parser).unexpected("label set", "\"=\"")
+ 			yyVAL.label = labels.Label{}
+ 		}
+-	case 136:
++	case 137:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:676
+ 		{
+ 			yylex.(*parser).unexpected("label set", "identifier or \"}\"")
+ 			yyVAL.label = labels.Label{}
+ 		}
+-	case 137:
++	case 138:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:687
+ 		{
+ 			yylex.(*parser).generatedParserResult = &seriesDescription{
+ 				labels: yyDollar[1].labels,
+ 				values: yyDollar[2].series,
+ 			}
+ 		}
+-	case 138:
++	case 139:
+ 		yyDollar = yyS[yypt-0 : yypt+1]
++//line promql/parser/generated_parser.y:696
+ 		{
+ 			yyVAL.series = []SequenceValue{}
+ 		}
+-	case 139:
++	case 140:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:698
+ 		{
+ 			yyVAL.series = append(yyDollar[1].series, yyDollar[3].series...)
+ 		}
+-	case 140:
++	case 141:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:700
+ 		{
+ 			yyVAL.series = yyDollar[1].series
+ 		}
+-	case 141:
++	case 142:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:702
+ 		{
+ 			yylex.(*parser).unexpected("series values", "")
+ 			yyVAL.series = nil
+ 		}
+-	case 142:
++	case 143:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:706
+ 		{
+ 			yyVAL.series = []SequenceValue{{Omitted: true}}
+ 		}
+-	case 143:
++	case 144:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:708
+ 		{
+ 			yyVAL.series = []SequenceValue{}
+ 			for i := uint64(0); i < yyDollar[3].uint; i++ {
+ 				yyVAL.series = append(yyVAL.series, SequenceValue{Omitted: true})
+ 			}
+ 		}
+-	case 144:
++	case 145:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:715
+ 		{
+ 			yyVAL.series = []SequenceValue{{Value: yyDollar[1].float}}
+ 		}
+-	case 145:
++	case 146:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:717
+ 		{
+ 			yyVAL.series = []SequenceValue{}
+ 			// Add an additional value for time 0, which we ignore in tests.
+@@ -1687,8 +1811,9 @@ yydefault:
+ 				yyVAL.series = append(yyVAL.series, SequenceValue{Value: yyDollar[1].float})
+ 			}
+ 		}
+-	case 146:
++	case 147:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:725
+ 		{
+ 			yyVAL.series = []SequenceValue{}
+ 			// Add an additional value for time 0, which we ignore in tests.
+@@ -1697,13 +1822,15 @@ yydefault:
+ 				yyDollar[1].float += yyDollar[2].float
+ 			}
+ 		}
+-	case 147:
++	case 148:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:735
+ 		{
+ 			yyVAL.series = []SequenceValue{{Histogram: yyDollar[1].histogram}}
+ 		}
+-	case 148:
++	case 149:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:739
+ 		{
+ 			yyVAL.series = []SequenceValue{}
+ 			// Add an additional value for time 0, which we ignore in tests.
+@@ -1712,8 +1839,9 @@ yydefault:
+ 				//$1 += $2
+ 			}
+ 		}
+-	case 149:
++	case 150:
+ 		yyDollar = yyS[yypt-5 : yypt+1]
++//line promql/parser/generated_parser.y:748
+ 		{
+ 			val, err := yylex.(*parser).histogramsIncreaseSeries(yyDollar[1].histogram, yyDollar[3].histogram, yyDollar[5].uint)
+ 			if err != nil {
+@@ -1721,8 +1849,9 @@ yydefault:
+ 			}
+ 			yyVAL.series = val
+ 		}
+-	case 150:
++	case 151:
+ 		yyDollar = yyS[yypt-5 : yypt+1]
++//line promql/parser/generated_parser.y:756
+ 		{
+ 			val, err := yylex.(*parser).histogramsDecreaseSeries(yyDollar[1].histogram, yyDollar[3].histogram, yyDollar[5].uint)
+ 			if err != nil {
+@@ -1730,147 +1859,172 @@ yydefault:
+ 			}
+ 			yyVAL.series = val
+ 		}
+-	case 151:
++	case 152:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:766
+ 		{
+ 			if yyDollar[1].item.Val != "stale" {
+ 				yylex.(*parser).unexpected("series values", "number or \"stale\"")
+ 			}
+ 			yyVAL.float = math.Float64frombits(value.StaleNaN)
+ 		}
+-	case 154:
++	case 155:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:778
+ 		{
+ 			yyVAL.histogram = yylex.(*parser).buildHistogramFromMap(&yyDollar[2].descriptors)
+ 		}
+-	case 155:
++	case 156:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:782
+ 		{
+ 			yyVAL.histogram = yylex.(*parser).buildHistogramFromMap(&yyDollar[2].descriptors)
+ 		}
+-	case 156:
++	case 157:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:786
+ 		{
+ 			m := yylex.(*parser).newMap()
+ 			yyVAL.histogram = yylex.(*parser).buildHistogramFromMap(&m)
+ 		}
+-	case 157:
++	case 158:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:791
+ 		{
+ 			m := yylex.(*parser).newMap()
+ 			yyVAL.histogram = yylex.(*parser).buildHistogramFromMap(&m)
+ 		}
+-	case 158:
++	case 159:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:799
+ 		{
+ 			yyVAL.descriptors = *(yylex.(*parser).mergeMaps(&yyDollar[1].descriptors, &yyDollar[3].descriptors))
+ 		}
+-	case 159:
++	case 160:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:803
+ 		{
+ 			yyVAL.descriptors = yyDollar[1].descriptors
+ 		}
+-	case 160:
++	case 161:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:806
+ 		{
+ 			yylex.(*parser).unexpected("histogram description", "histogram description key, e.g. buckets:[5 10 7]")
+ 		}
+-	case 161:
++	case 162:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:813
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["schema"] = yyDollar[3].int
+ 		}
+-	case 162:
++	case 163:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:818
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["sum"] = yyDollar[3].float
+ 		}
+-	case 163:
++	case 164:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:823
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["count"] = yyDollar[3].float
+ 		}
+-	case 164:
++	case 165:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:828
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["z_bucket"] = yyDollar[3].float
+ 		}
+-	case 165:
++	case 166:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:833
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["z_bucket_w"] = yyDollar[3].float
+ 		}
+-	case 166:
++	case 167:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:838
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["custom_values"] = yyDollar[3].bucket_set
+ 		}
+-	case 167:
++	case 168:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:843
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["buckets"] = yyDollar[3].bucket_set
+ 		}
+-	case 168:
++	case 169:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:848
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["offset"] = yyDollar[3].int
+ 		}
+-	case 169:
++	case 170:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:853
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["n_buckets"] = yyDollar[3].bucket_set
+ 		}
+-	case 170:
++	case 171:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:858
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["n_offset"] = yyDollar[3].int
+ 		}
+-	case 171:
++	case 172:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:863
+ 		{
+ 			yyVAL.descriptors = yylex.(*parser).newMap()
+ 			yyVAL.descriptors["counter_reset_hint"] = yyDollar[3].item
+ 		}
+-	case 172:
++	case 173:
+ 		yyDollar = yyS[yypt-4 : yypt+1]
++//line promql/parser/generated_parser.y:870
+ 		{
+ 			yyVAL.bucket_set = yyDollar[2].bucket_set
+ 		}
+-	case 173:
++	case 174:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:874
+ 		{
+ 			yyVAL.bucket_set = yyDollar[2].bucket_set
+ 		}
+-	case 174:
++	case 175:
+ 		yyDollar = yyS[yypt-3 : yypt+1]
++//line promql/parser/generated_parser.y:880
+ 		{
+ 			yyVAL.bucket_set = append(yyDollar[1].bucket_set, yyDollar[3].float)
+ 		}
+-	case 175:
++	case 176:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:884
+ 		{
+ 			yyVAL.bucket_set = []float64{yyDollar[1].float}
+ 		}
+-	case 230:
++	case 233:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:910
+ 		{
+ 			yyVAL.node = &NumberLiteral{
+ 				Val:      yylex.(*parser).number(yyDollar[1].item.Val),
+ 				PosRange: yyDollar[1].item.PositionRange(),
+ 			}
+ 		}
+-	case 231:
++	case 234:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:917
+ 		{
+ 			var err error
+ 			var dur time.Duration
+@@ -1883,13 +2037,15 @@ yydefault:
+ 				PosRange: yyDollar[1].item.PositionRange(),
+ 			}
+ 		}
+-	case 232:
++	case 235:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:932
+ 		{
+ 			yyVAL.float = yylex.(*parser).number(yyDollar[1].item.Val)
+ 		}
+-	case 233:
++	case 236:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:936
+ 		{
+ 			var err error
+ 			var dur time.Duration
+@@ -1899,18 +2055,21 @@ yydefault:
+ 			}
+ 			yyVAL.float = dur.Seconds()
+ 		}
+-	case 234:
++	case 237:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:947
+ 		{
+ 			yyVAL.float = yyDollar[2].float
+ 		}
+-	case 235:
++	case 238:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:948
+ 		{
+ 			yyVAL.float = -yyDollar[2].float
+ 		}
+-	case 238:
++	case 241:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:954
+ 		{
+ 			var err error
+ 			yyVAL.uint, err = strconv.ParseUint(yyDollar[1].item.Val, 10, 64)
+@@ -1918,26 +2077,30 @@ yydefault:
+ 				yylex.(*parser).addParseErrf(yyDollar[1].item.PositionRange(), "invalid repetition in series values: %s", err)
+ 			}
+ 		}
+-	case 239:
++	case 242:
+ 		yyDollar = yyS[yypt-2 : yypt+1]
++//line promql/parser/generated_parser.y:963
+ 		{
+ 			yyVAL.int = -int64(yyDollar[2].uint)
+ 		}
+-	case 240:
++	case 243:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:964
+ 		{
+ 			yyVAL.int = int64(yyDollar[1].uint)
+ 		}
+-	case 241:
++	case 244:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:968
+ 		{
+ 			yyVAL.node = &StringLiteral{
+ 				Val:      yylex.(*parser).unquoteString(yyDollar[1].item.Val),
+ 				PosRange: yyDollar[1].item.PositionRange(),
+ 			}
+ 		}
+-	case 242:
++	case 245:
+ 		yyDollar = yyS[yypt-1 : yypt+1]
++//line promql/parser/generated_parser.y:977
+ 		{
+ 			yyVAL.item = Item{
+ 				Typ: METRIC_IDENTIFIER,
+@@ -1945,8 +2108,9 @@ yydefault:
+ 				Val: yylex.(*parser).unquoteString(yyDollar[1].item.Val),
+ 			}
+ 		}
+-	case 243:
++	case 246:
+ 		yyDollar = yyS[yypt-0 : yypt+1]
++//line promql/parser/generated_parser.y:990
+ 		{
+ 			yyVAL.strings = nil
+ 		}
+diff --git a/promql/parser/lex.go b/promql/parser/lex.go
+index 82bf0367b..f124323d4 100644
+--- a/promql/parser/lex.go
++++ b/promql/parser/lex.go
+@@ -68,6 +68,13 @@ func (i ItemType) IsAggregatorWithParam() bool {
+ 	return i == TOPK || i == BOTTOMK || i == COUNT_VALUES || i == QUANTILE || i == LIMITK || i == LIMIT_RATIO
+ }
+ 
++// OP_FUNCTIONS
++
++// IsOPTop is an ad-hoc checker function to pass any number of arguments to IsOPTop.
++func (i ItemType) IsOPTop() bool {
++	return i == OP_TOP
++}
++
+ // IsKeyword returns true if the Item corresponds to a keyword.
+ // Returns false otherwise.
+ func (i ItemType) IsKeyword() bool { return i > keywordsStart && i < keywordsEnd }
+@@ -116,6 +123,7 @@ var key = map[string]ItemType{
+ 	"stdvar":       STDVAR,
+ 	"topk":         TOPK,
+ 	"bottomk":      BOTTOMK,
++	"op_top":       OP_TOP, // OP_FUNCTIONS
+ 	"count_values": COUNT_VALUES,
+ 	"quantile":     QUANTILE,
+ 	"limitk":       LIMITK,
+diff --git a/promql/parser/parse.go b/promql/parser/parse.go
+index 04b42e919..e58aecd06 100644
+--- a/promql/parser/parse.go
++++ b/promql/parser/parse.go
+@@ -445,6 +445,20 @@ func (p *parser) newAggregateExpr(op Item, modifier, args Node) (ret *AggregateE
+ 		return
+ 	}
+ 
++	// OP_FUNCTIONS
++	if ret.Op.IsOPTop() {
++		ret.Expr = arguments[len(arguments)-1]
++		ret.Param = &NumberLiteral{Val: 0}
++		if len(arguments) > 1 {
++			ret.Param = arguments[0]
++			ret.Grouping = make([]string, len(arguments)-2)
++			for i, argument := range arguments[1 : len(arguments)-1] {
++				ret.Grouping[i] = argument.String()
++			}
++		}
++		return ret
++	}
++
+ 	desiredArgs := 1
+ 	if ret.Op.IsAggregatorWithParam() {
+ 		if !EnableExperimentalFunctions && (ret.Op == LIMITK || ret.Op == LIMIT_RATIO) {

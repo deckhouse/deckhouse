@@ -67,6 +67,9 @@ const globalValues = `
 
 const moduleValuesA = `
 internal:
+  discoveryData:
+    loadBalancer:
+      enabled: false
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: DVPClusterConfiguration
@@ -178,10 +181,32 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(csiNode.Exists()).To(BeTrue())
 			Expect(csiNode.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmVPA.Exists()).To(BeTrue())
+
+			ccmPDB := f.KubernetesResource("PodDisruptionBudget", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmPDB.Exists()).To(BeTrue())
+
+			capdvpDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpDeployment.Exists()).To(BeTrue())
+			Expect(capdvpDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(capdvpDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+
+			capdvpVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpVPA.Exists()).To(BeTrue())
+
 			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
+			cddVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddVPA.Exists()).To(BeTrue())
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())

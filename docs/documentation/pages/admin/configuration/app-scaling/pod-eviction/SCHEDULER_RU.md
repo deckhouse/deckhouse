@@ -369,6 +369,22 @@ spec:
       enabled: true
 ```
 
+**RemovePodsHavingTooManyRestarts** — вытесняет с узлов поды со слишком большим количеством перезапусков.
+Кандидатами на вытеснение становятся поды, у которых суммарное число перезапусков всех контейнеров, включая init-контейнеры, превышает порог [`podRestartThreshold`](cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold).
+Полезна для вытеснения подов в состоянии `CrashLoopBackOff` или с постоянными сбоями,
+а также для освобождения ресурсов и возможности планирования новых подов на потенциально более здоровых узлах.
+
+Стратегия включается параметром `strategies.removePodsHavingTooManyRestarts.enabled`.
+
+Пример:
+
+```yaml
+spec:
+  strategies:
+    removePodsHavingTooManyRestarts:
+      enabled: true
+```
+
 **RemovePodsViolatingInterPodAntiAffinity** — вытесняет любые поды, нарушающие правила [`inter-pod affinity/anti-affinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/). Например, если под2 и под3 имеют `anti-affinity` по отношению к под1, но все трое по каким-то причинам оказались на одном узле, модуль вытеснит под1, чтобы под2 и под3 могли продолжать работу в соответствии со своими правилами.
 
 Стратегия включается параметром `strategies.removePodsViolatingNodeAffinity.enabled`.
@@ -406,4 +422,18 @@ spec:
       nodeAffinityType:
         - requiredDuringSchedulingIgnoredDuringExecution
         - preferredDuringSchedulingIgnoredDuringExecution
+```
+
+**RemovePodsViolatingTopologySpreadConstraint** — гарантирует, что поды, нарушающие [ограничения распределения по топологии](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов. Вытесняется минимальное количество подов, необходимое для приведения доменов топологии в соответствие с `maxSkew` каждого ограничения.
+Стратеги полезна для перебалансировки подов между зонами доступности после восстановления зоны из аварии.
+
+Стратегия включается параметром `strategies.removePodsViolatingTopologySpreadConstraint.enabled`.
+
+Пример:
+
+```yaml
+spec:
+  strategies:
+    removePodsViolatingTopologySpreadConstraint:
+      enabled: true
 ```

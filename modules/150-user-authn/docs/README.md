@@ -62,18 +62,6 @@ The authentication mechanism for kubeconfig uses an OIDC token. The OIDC session
 
 On top of that, you can configure multiple `kube-apiserver` addresses and CA certificates for each of them. This may come in handy, e. g., if access to the Kubernetes cluster is via VPN or direct connection.
 
-## Exposing the Kubernetes API over Ingress
-
-The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
-
-When configuring, you can:
-
-* list network addresses from which connection is allowed;
-* list groups that are allowed to access the API server;
-* specify Ingress-controller to authenticate on.
-
-By default, a special CA certificate will be generated and the kubeconfig generator will be automatically configured.
-
 ## Extensions by Flant
 
 The module uses a modified version of Dex to support:

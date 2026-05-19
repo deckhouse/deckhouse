@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 75f05158bf87157bb787e2c8cb81a77686c625ae745ed10ef04069935288049f
+    ingress-nginx-controller.deckhouse.io/checksum: ec379fe360aa5b98893e5b47f8ead26232fa99bd144bd112324c3d56d6d74f9e
   labels:
     app: proxy-failover
     heritage: deckhouse

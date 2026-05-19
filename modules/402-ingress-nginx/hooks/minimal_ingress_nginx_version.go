@@ -37,7 +37,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "ingressControllers",
-			ApiVersion:                   "deckhouse.io/v1",
+			ApiVersion:                   "deckhouse.io/v2",
 			Kind:                         "IngressNginxController",
 			WaitForSynchronization:       ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(true),

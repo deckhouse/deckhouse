@@ -41,12 +41,13 @@ whitelist = [
     "kube-proxy/kube-proxy.*",
     "node-manager/bashible-apiserver",
     "prometheus/grafana-dashboard-provisioner",
-    "registrypackages/kubeadm.*",
     "registrypackages/kubectl.*",
     "registrypackages/kubelet.*",
     "release-channel-version-prebuild",
     "tests-prebuild",
     "tests",
+    "dev/candi",
+    "common/candi",
 ]
 
 # Find and read build reports

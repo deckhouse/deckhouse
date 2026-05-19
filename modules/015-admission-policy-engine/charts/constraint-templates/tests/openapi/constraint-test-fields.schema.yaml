@@ -1,0 +1,153 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: ConstraintTestFields
+description: Schema for test_fields.yaml consumed by constraint_testgen for field/scenario coverage checks.
+type: object
+required:
+  - apiVersion
+  - kind
+  - metadata
+  - spec
+properties:
+  apiVersion:
+    type: string
+    description: API version of the document.
+    minLength: 1
+  kind:
+    type: string
+    description: Document kind. Must be ConstraintTestFields.
+    const: ConstraintTestFields
+  metadata:
+    type: object
+    description: Standard Kubernetes-style metadata.
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        description: Constraint name, usually equal to constraint directory name.
+        minLength: 1
+    additionalProperties: true
+  spec:
+    type: object
+    description: Constraint field/scenario model used by coverage logic.
+    required:
+      - objectKind
+      - objectFields
+      - applicableTracks
+    properties:
+      objectKind:
+        type: string
+        description: Kubernetes object kind under test (for example Pod).
+        minLength: 1
+      objectFields:
+        type: array
+        description: Functional fields from target object and their required scenarios.
+        minItems: 1
+        items:
+          $ref: "#/definitions/objectField"
+      speFields:
+        type: array
+        description: Optional SecurityPolicyException fields and required SPE scenarios.
+        items:
+          $ref: "#/definitions/speField"
+      applicableTracks:
+        type: object
+        description: Enabled test tracks. At least one track must be explicitly true.
+        properties:
+          functional:
+            type: boolean
+            description: Enables functional track coverage.
+          spePod:
+            type: boolean
+            description: Enables SPE pod-level track coverage.
+          speContainer:
+            type: boolean
+            description: Enables SPE container-level track coverage.
+        additionalProperties: false
+        anyOf:
+          - required: [functional]
+            properties:
+              functional:
+                const: true
+          - required: [spePod]
+            properties:
+              spePod:
+                const: true
+          - required: [speContainer]
+            properties:
+              speContainer:
+                const: true
+    additionalProperties: false
+additionalProperties: false
+definitions:
+  objectField:
+    type: object
+    description: Functional field specification.
+    required:
+      - path
+    properties:
+      path:
+        type: string
+        description: Field path in tested object (for example spec.containers[].image).
+        minLength: 1
+      level:
+        type: string
+        description: Field level used by default scenario expansion/validation.
+        enum:
+          - pod
+          - container
+          - initContainer
+      defaultBehavior:
+        type: string
+        description: Optional textual note about policy behavior when field is absent/default.
+      description:
+        type: string
+        description: Human-readable explanation of why this field matters.
+      requiredScenarios:
+        type: array
+        description: Scenarios that must be covered by matrix cases for this field.
+        items:
+          type: string
+          enum:
+            - positive
+            - negative
+            - absent
+            - multiContainer
+            - initContainer
+            - ephemeralContainer
+        uniqueItems: true
+    additionalProperties: false
+  speField:
+    type: object
+    description: SecurityPolicyException field specification.
+    required:
+      - path
+    properties:
+      path:
+        type: string
+        description: SPE path used to override/permit specific behavior.
+        minLength: 1
+      level:
+        type: string
+        description: SPE field level.
+        enum:
+          - pod
+          - container
+      defaultBehavior:
+        type: string
+        description: Optional textual note about default SPE handling.
+      description:
+        type: string
+        description: Human-readable explanation of this SPE field role.
+      requiredScenarios:
+        type: array
+        description: SPE scenarios that must be covered by matrix cases.
+        items:
+          type: string
+          enum:
+            - speMatch
+            - speMismatch
+            - speAbsent
+            - speContainerSpecific
+        uniqueItems: true
+    additionalProperties: false

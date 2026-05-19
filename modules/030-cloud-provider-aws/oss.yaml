@@ -1,0 +1,61 @@
+- name: Amazon Web Services Cloud provider
+  link: https://github.com/kubernetes/cloud-provider-aws
+  description: Cloud Controller Manager for Amazon Web Services.
+  logo: /images/logos/aws.svg
+  license: Apache License 2.0
+  id: ccm-aws
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.6
+    - condition:
+        k8s: "1.32"
+      version: v1.32.3
+    - condition:
+        k8s: "1.33"
+      version: v1.33.2
+    - condition:
+        k8s: "1.34"
+      version: v1.34.1
+    - condition:
+        k8s: "1.35"
+      version: v1.35.0
+
+- name: Amazon Web Services CSI driver
+  link: https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+  description: CSI driver for Amazon EBS.
+  logo: /images/logos/aws.svg
+  license: Apache License 2.0
+  id: csi-aws
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.54.0
+    - condition:
+        k8s: "1.32"
+      version: v1.54.0
+    - condition:
+        k8s: "1.33"
+      version: v1.54.0
+    - condition:
+        k8s: "1.34"
+      version: v1.54.0
+    - condition:
+        k8s: "1.35"
+      version: v1.54.0
+
+- name: Amazon Web Services Terraform provider
+  link: https://github.com/hashicorp/terraform-provider-aws
+  description: Terraform provider for Amazon Web Services.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-aws
+  version: "5.83.1"
+
+- name: Amazon Web Services Node termination handler
+  link: https://github.com/aws/aws-node-termination-handler
+  description: Gracefully handle instance shutdown within Kubernetes for Amazon EC2.
+  logo: /images/logos/aws.svg
+  license: Apache License 2.0
+  id: node-termination-handler-aws
+  version: v1.25.3

@@ -20,17 +20,31 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/lib-connection/pkg/kube"
+	"github.com/deckhouse/lib-connection/pkg/provider"
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
-	sshProvider := sshclient.NewDefaultSSHProviderWithFunc(func() (node.SSHClient, error) {
-		return gossh.NewClientFromFlags(context.Background())
-	})
+	logger := libdhctl_log.NewDummyLogger(false)
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger)
+	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: false, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: options.DefaultTmpDir()}
+	baseProviderSettings := settings.NewBaseProviders(params)
 
-	provider := newKubeClientProvider(sshProvider)
+	sshProvider := testCreateDefaultTestSSHProvider(session.Host{Host: "host"}, false)
+	providerInitializer := provider.NewSimpleSSHProviderInitializer(sshProvider)
+	cfg := &kube.Config{}
+	runnerInterface, err := provider.GetRunnerInterface(context.Background(), cfg, baseProviderSettings, providerInitializer)
+	require.NoError(t, err)
+	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
+	require.NoError(t, err)
+
+	provider := newKubeClientProvider(kubeProvider)
 
 	cleanupTest := func() {
 		provider.Cleanup(true)

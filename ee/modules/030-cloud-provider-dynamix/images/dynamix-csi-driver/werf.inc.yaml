@@ -1,3 +1,5 @@
+{{- $version := "v0.4.0" }}
+{{- $version_common := "v0.5.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -39,10 +41,8 @@ secrets:
   value: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
 shell:
   install:
-  - export VERSION="v0.4.0"
-  - export VERSION_COMMON="v0.5.0"
-  - git clone --depth 1 --branch ${VERSION} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
-  - git clone --depth 1 --branch ${VERSION_COMMON} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-csi-driver.git /src
+  - git clone --depth 1 --branch {{ $version_common }} $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/dynamix/dynamix-common.git /src/dynamix-common
   - cd /src
   - rm -rf .git vendor
   - sed -i -e 's# ../../dynamix-common# /src/dynamix-common#g' go.mod
@@ -66,7 +66,7 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version={{ $version }}" -o /dynamix-csi-driver cmd/dynamix-csi-driver/main.go
   - chown 64535:64535 /dynamix-csi-driver
   - chmod 0755 /dynamix-csi-driver
 ---

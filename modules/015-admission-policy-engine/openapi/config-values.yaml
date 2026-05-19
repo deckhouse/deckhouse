@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/015-admission-policy-engine/openapi/config-values.yaml
+# /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
 type: object
 properties:
   podSecurityStandards:

@@ -56,6 +56,12 @@ func TestModeNoError(t *testing.T) {
 				WithLegacyMode(),
 			).DeckhouseSettings,
 		},
+		{
+			name: "mode local",
+			input: ConfigBuilder(
+				WithModeLocal(),
+			).DeckhouseSettings,
+		},
 	}
 
 	for _, tt := range tests {
@@ -308,6 +314,109 @@ func TestModeProxy(t *testing.T) {
 	})
 }
 
+func TestModeLocal(t *testing.T) {
+	pki, err := GeneratePKI()
+	require.NoError(t, err)
+
+	t.Run("Local mode", func(t *testing.T) {
+		config := ConfigBuilder(
+			WithModeLocal(),
+		)
+
+		t.Run("modeSettings", func(t *testing.T) {
+			expect := ModeSettings{
+				Mode: constant.ModeLocal,
+				RemoteData: Data{
+					ImagesRepo: "127.0.0.1:5511/system/deckhouse",
+					Scheme:     "HTTP",
+				},
+			}
+
+			require.EqualValues(t, expect, config.Settings)
+		})
+
+		t.Run("modeModel", func(t *testing.T) {
+			actual := config.
+				Settings.
+				ToModel()
+
+			expect := ModeModel{
+				Mode:                constant.ModeLocal,
+				InClusterImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
+				RemoteImagesRepo:    "127.0.0.1:5511/system/deckhouse",
+				RemoteData: Data{
+					ImagesRepo: "127.0.0.1:5511/system/deckhouse",
+					Scheme:     "HTTP",
+				},
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("InclusterData", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				InClusterData(pki)
+
+			require.NoError(t, err)
+
+			expect := Data{
+				ImagesRepo: "registry.d8-system.svc:5001/system/deckhouse",
+				Scheme:     "HTTPS",
+				CA:         pki.CA.Cert,
+				Username:   pki.ROUser.Name,
+				Password:   pki.ROUser.Password,
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("BashibleConfig", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				BashibleConfig(pki)
+
+			require.NoError(t, err)
+
+			expect := bashible.Config{
+				Mode:           string(constant.ModeLocal),
+				Version:        actual.Version,
+				ImagesBase:     "registry.d8-system.svc:5001/system/deckhouse",
+				ProxyEndpoints: []string{"${discovered_node_ip}:5001"},
+				Hosts: map[string]bashible.ConfigHosts{
+					"registry.d8-system.svc:5001": {
+						Mirrors: []bashible.ConfigMirrorHost{
+							{
+								Host:   "127.0.0.1:5001",
+								Scheme: "https",
+								CA:     pki.CA.Cert,
+								Auth: bashible.ConfigAuth{
+									Username: pki.ROUser.Name,
+									Password: pki.ROUser.Password,
+								},
+							},
+							{
+								Host:   "${discovered_node_ip}:5001",
+								Scheme: "https",
+								CA:     pki.CA.Cert,
+								Auth: bashible.ConfigAuth{
+									Username: pki.ROUser.Name,
+									Password: pki.ROUser.Password,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			require.NotEmpty(t, actual.Version)
+			require.EqualValues(t, expect, actual)
+		})
+	})
+}
+
 func TestModeUnmanaged(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
@@ -432,6 +541,13 @@ func TestModeSettings_DeepCopy(t *testing.T) {
 				name: "Unmanaged ModeSettings",
 				settings: func() *ModeSettings {
 					cfg := ConfigBuilder(WithModeUnmanaged())
+					return &cfg.Settings
+				}(),
+			},
+			{
+				name: "Local ModeSettings",
+				settings: func() *ModeSettings {
+					cfg := ConfigBuilder(WithModeLocal())
 					return &cfg.Settings
 				}(),
 			},

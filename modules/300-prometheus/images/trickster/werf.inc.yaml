@@ -73,7 +73,7 @@ shell:
     -X main.applicationGoVersion=$(shell go version | awk '{print $$3}') \
     -X main.applicationGoArch=${GOARCH}
     -extldflags '-static' -w -s"
-  - go mod tidy
+  - go mod download
   - go mod vendor
   - |
     {{- $buildContext := deepCopy $ -}}

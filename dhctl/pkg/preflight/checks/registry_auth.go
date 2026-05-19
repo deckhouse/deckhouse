@@ -16,8 +16,6 @@ package checks
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,36 +24,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/registryutil"
 )
 
 func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
 	registry := metaConfig.Registry.Settings.RemoteData
-
-	client := &http.Client{}
-	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
-
-	if strings.ToLower(string(registry.Scheme)) == "http" {
-		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	}
-
-	if len(registry.CA) == 0 {
-		client.Transport = httpTransport
-		return client, nil
-	}
-
-	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(registry.CA)); !ok {
-		return nil, fmt.Errorf("invalid cert in CA PEM")
-	}
-
-	httpTransport.TLSClientConfig = &tls.Config{
-		RootCAs: certPool,
-	}
-
-	client.Transport = httpTransport
-	return client, nil
+	return registryutil.NewRegistryClient(string(registry.Scheme), registry.CA)
 }
 
 type registryAuthCheck struct {

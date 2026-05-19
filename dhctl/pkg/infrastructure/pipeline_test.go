@@ -23,9 +23,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -99,8 +99,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 }
 
 func TestCheckBaseInfrastructurePipeline(t *testing.T) {
-	app.TmpDirName = "/tmp"
-
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	okPlan, err := os.ReadFile("./mocks/pipeline/base_infra_ok_plan.json")
 	require.NoError(t, err)
 

@@ -95,6 +95,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 		// We are forced to keep such a variable as a workaround in order to pass the tests during the build stage
 		// This variable (and this package) will be removed after the cloud provider modules are externalized
 		additionalOpenAPISchemasPaths := []string{
+			"/deckhouse/modules/030-cloud-provider-dvp/candi/openapi",
 			"/deckhouse/modules/030-cloud-provider-yandex/candi/openapi",
 			"/deckhouse/modules/030-cloud-provider-gcp/candi/openapi",
 			"/deckhouse/modules/030-cloud-provider-azure/candi/openapi",
