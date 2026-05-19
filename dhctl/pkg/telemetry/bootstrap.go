@@ -83,9 +83,9 @@ func Bootstrap(ctx context.Context) error {
 		log.WarnF("failed to initialize OTel resource completely: %v", err)
 	}
 
-	tracesShutdown, _ := initTraces(tracesExporter, otelResource)
+	tracesShutdown := initTraces(tracesExporter, otelResource)
 	metricsShutdown, _ := initMetrics(metricsExporter, otelResource)
-	logsShutdown, _ := initLogs(logsExporter, otelResource)
+	logsShutdown := initLogs(logsExporter, otelResource)
 
 	tomb.RegisterOnShutdown("OTel: traces", func() {
 		err := tracesShutdown(ctx)
@@ -109,7 +109,7 @@ func Bootstrap(ctx context.Context) error {
 	return nil
 }
 
-func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) (ShutdownFunc, error) {
+func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) ShutdownFunc {
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(r),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -126,7 +126,7 @@ func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) (ShutdownF
 			return fmt.Errorf("failed to shutdown traces: %v", err)
 		}
 		return nil
-	}, nil
+	}
 }
 
 func initMetrics(exporter sdkmetric.Exporter, r *resource.Resource) (ShutdownFunc, error) {
@@ -152,7 +152,7 @@ func initMetrics(exporter sdkmetric.Exporter, r *resource.Resource) (ShutdownFun
 	}, nil
 }
 
-func initLogs(exporter sdklog.Exporter, r *resource.Resource) (ShutdownFunc, error) {
+func initLogs(exporter sdklog.Exporter, r *resource.Resource) ShutdownFunc {
 	provider := sdklog.NewLoggerProvider(
 		sdklog.WithResource(r),
 		sdklog.WithProcessor(
@@ -185,5 +185,5 @@ func initLogs(exporter sdklog.Exporter, r *resource.Resource) (ShutdownFunc, err
 			return fmt.Errorf("failed to shutdown traces: %v", err)
 		}
 		return nil
-	}, nil
+	}
 }
