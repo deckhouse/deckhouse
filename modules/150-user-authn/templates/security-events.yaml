@@ -16,7 +16,7 @@ spec:
             app: dex
 
     parser:
-      - name: dex-json
+      - name: dex
         parser:
           type: JSON
         drop_raw: false
