@@ -32,7 +32,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $version }} https://github.com/yandex-cloud/cluster-api-provider-yandex.git /src
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p/yandex-cloud/cluster-api-provider-yandex /src
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose

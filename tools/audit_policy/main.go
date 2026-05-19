@@ -326,7 +326,6 @@ func processModule(workDir, moduleYamlPath, moduleDirName string, sas, namespace
 
 	if name == "node-manager" && namespace == "d8-cloud-instance-manager" {
 		sas["system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler"] = struct{}{}
-		sas["system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler-mcm"] = struct{}{}
 	}
 
 	if strings.HasPrefix(namespace, "d8-") || namespace == "kube-system" {
