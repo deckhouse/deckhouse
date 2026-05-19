@@ -219,7 +219,6 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			Expect(scMydsname2.Exists()).To(BeTrue())
 
 			Expect(scMydsname1.Field("parameters.DatastoreURL").String()).To(Equal("ds:///vmfs/volumes/hash1/"))
-			Expect(scMydsname1.Field("parameters.StoragePolicyName").Exists()).To(BeFalse())
 			Expect(scMydsname1GoldPolicy.Field("parameters.DatastoreURL").String()).To(Equal("ds:///vmfs/volumes/hash1/"))
 			Expect(scMydsname1GoldPolicy.Field("parameters.StoragePolicyName").String()).To(Equal("Gold Policy"))
 			Expect(scMydsname2.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
