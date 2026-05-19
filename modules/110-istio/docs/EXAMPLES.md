@@ -652,7 +652,7 @@ The module can run in two modes, controlled by [`telemetryAPI.enabled`](configur
 | Mode | Behaviour |
 |------|-----------|
 | **`false` (default)** | Classic path: full `telemetry.v2` in the Istio Operator / `Istio` resource (including Sail’s `telemetry.v2.prometheus`). The module does **not** deploy the bundled `Telemetry` objects `main-prometheus-metrics` and `main-access-log-format`. |
-| **`true`** | Telemetry API path: `meshConfig.defaultProviders.metrics` is set to the builtin `prometheus` provider, `telemetry.v2` is turned off, and the module creates `Telemetry` resources `main-prometheus-metrics` (standard `istio_*` series for Prometheus/Grafana/Kiali) and `main-access-log-format` (stdout access logs via the `main-access-log-format` extension provider). The log line format still comes from [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+| **`true`** | Telemetry API path: `meshConfig.defaultProviders.metrics` is set to the built-in `prometheus` provider, `telemetry.v2` is turned off, and the module creates `Telemetry` resources `main-prometheus-metrics` (standard `istio_*` series for Prometheus/Grafana/Kiali) and `main-access-log-format` (stdout access logs via the `main-access-log-format` extension provider). The log line format still comes from [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
 
 ### Enabling Telemetry API mode
 
@@ -717,13 +717,13 @@ For tag removal, disabling specific metrics or modes, follow [Customizing Istio 
 
 ### Tracing with Telemetry API
 
-Distributed tracing uses the same `Telemetry` resource with `spec.tracing`. The trace exporter is always a named **extension provider** declared in `meshConfig.extensionProviders` (Zipkin, OpenTelemetry/OTLP, SkyWalking, etc.). See the [Istio tracing overview](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) and [Configure tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Distributed tracing uses the same `Telemetry` resource with `spec.tracing`. The trace exporter is always a named **extension provider** declared in `meshConfig.extensionProviders` (for example, `Zipkin`, `OpenTelemetry` exporters over `OTLP`, or `SkyWalking`). See the [Istio tracing overview](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) and [Configure tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### How this relates to the `istio` module’s `tracing` settings
 
 When [`tracing.enabled`](configuration.html#parameters-tracing-enabled) is `true`, the module fills in `meshConfig.defaultConfig.tracing` with the Zipkin endpoint and sampling (Jaeger’s Zipkin port is typical). That is the **classic** proxy bootstrap path and works for many clusters.
 
-A **Telemetry API–centric** setup instead registers a provider under `extensionProviders` and selects it with a `Telemetry` object (and often clears legacy `defaultConfig.tracing` in favour of the provider), as in the upstream task. You can use both styles during migration; avoid duplicating two exporters to the same backend without meaning to.
+A **Telemetry API–centric** setup instead registers a provider under `extensionProviders` and selects it with a `Telemetry` object (and often clears legacy `defaultConfig.tracing` in favor of the provider), as in the upstream task. You can use both styles during migration; avoid duplicating two exporters to the same backend without meaning to.
 
 #### Kiali
 
@@ -782,11 +782,11 @@ spec:
 
 Adjust `randomSamplingPercentage` (defaults in Istio are low; high values increase backend load).
 
-#### Example — OTLP (OpenTelemetry) provider + mesh-wide `Telemetry`
+#### Example — OTLP provider + mesh-wide `Telemetry`
 
-{% alert level="info" %}The [Istio OpenTelemetry task](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (Collector layout, `meshConfig.extensionProviders.opentelemetry`, and related steps) matches **Istio version 1.25 and above**—the revision installed by default in current module releases. On **Istio 1.21** that upstream recipe and some YAML shapes are not applicable; use the Zipkin-based module [`tracing`](configuration.html#parameters-tracing) settings or the Zipkin extension-provider example above, or follow the docs for your installed revision.{% endalert %}
+{% alert level="info" %}The Istio guide [Distributed tracing with OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (Collector layout, `meshConfig.extensionProviders.opentelemetry`, and related steps) matches **Istio version 1.25 and above**—the revision installed by default in current module releases. On **Istio 1.21** that upstream recipe and some YAML shapes are not applicable; use the Zipkin-based module [`tracing`](configuration.html#parameters-tracing) settings or the Zipkin extension-provider example above, or follow the docs for your installed revision.{% endalert %}
 
-After you deploy an OpenTelemetry Collector reachable from the mesh (see the task linked above), use the same [`ModuleConfig`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) pattern as for Zipkin (`telemetryAPI.enabled: true`, `tracing.enabled: false` when you rely on a named OTLP provider). Then **merge** the OTLP provider into `meshConfig` in the `Istio` / `IstioOperator` resource as for Zipkin:
+After you deploy an OpenTelemetry-compatible Collector reachable from the mesh (see the task linked above), use the same [`ModuleConfig`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) pattern as for Zipkin (`telemetryAPI.enabled: true`, `tracing.enabled: false` when you rely on a named OTLP provider). Then **merge** the OTLP provider into `meshConfig` in the `Istio` / `IstioOperator` resource as for Zipkin:
 
 ```yaml
 # Merge into meshConfig (Istio CR / IstioOperator), together with existing module fields
@@ -817,11 +817,11 @@ spec:
           value: production
 ```
 
-HTTP OTLP uses `opentelemetry.http` with `path` (see upstream doc).
+HTTP transport for trace export uses `opentelemetry.http` with `path` (see upstream doc).
 
 #### Example — tracing only for selected workloads
 
-Use a label selector (or a namespace-scoped `Telemetry` without selector for all pods in that namespace):
+Use a label selector, or bind `Telemetry` to the whole namespace by omitting a selector so it applies to all pods there:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -888,7 +888,7 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 * Upgrade algorithm (i.e. from `1.21` to `1.25`):
   * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
 * Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
-* For every application namespase with istio enabled:
+* For every application namespace with istio enabled:
   * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
   * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
 * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.

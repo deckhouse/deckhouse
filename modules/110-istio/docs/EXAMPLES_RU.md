@@ -693,12 +693,12 @@ kubectl exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
 
 ### Prometheus и Grafana
 
-При включённом модуле [`operator-prometheus`](../../modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](../../modules/prometheus/). Набор неймспейсов под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы **не попадать** в скрейп, на `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
+При включённом модуле [`operator-prometheus`](../../modules/operator-prometheus/) для метрик сайдкаров создаётся [`PodMonitor`](../../modules/prometheus/). Набор пространств имён под мониторинг вычисляется автоматически по членству в mesh (инъекция Istio); чтобы **исключить** пространство имён из сборщика метрик, на объект `Namespace` можно выставить лейбл `istio.deckhouse.io/discard-metrics: "true"`.
 
 Если в Grafana пустые панели «workload», а control plane в порядке, проверьте:
 
 - у подов есть сайдкар и лейбл `service.istio.io/canonical-name`;
-- на неймспейсе приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
+- на пространстве имён приложения нет `istio.deckhouse.io/discard-metrics: "true"`.
 
 ### Дополнительные политики `Telemetry` (по желанию)
 
@@ -720,7 +720,7 @@ spec:
 
 ### Трассировка через Telemetry API
 
-Распределённая трассировка настраивается тем же ресурсом `Telemetry`, блок `spec.tracing`. Экспорт спанов всегда идёт в **именованный extension provider** из `meshConfig.extensionProviders` (Zipkin, OpenTelemetry/OTLP, SkyWalking и т.д.). Общая картина — в [обзоре трассировки Istio](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) и в задаче [Configure tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Распределённая трассировка настраивается тем же ресурсом `Telemetry`, блок `spec.tracing`. Отправка записей трассировки (`span`) всегда идёт в **именованный extension provider** из `meshConfig.extensionProviders` (например, `Zipkin`, провайдер `OpenTelemetry` по протоколу `OTLP` или `SkyWalking`). Общая картина — в [обзоре трассировки Istio](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) и в задаче [Configure tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### Связь с параметром `tracing` модуля `istio`
 
@@ -753,7 +753,7 @@ spec:
       enabled: false
 ```
 
-   Отдельных полей `settings` для `meshConfig.enableTracing` и `meshConfig.extensionProviders` в модуле пока нет. Описание экспортёра трассировки нужно **дополнительно внести** в контрол-плейн-ресурс, который формирует модуль: для **Istio 1.25** (Sail) — CR `Istio` в `d8-istio`, `spec.values.meshConfig`; для **старых ревизий** — `IstioOperator`, `spec.meshConfig`. Сохраните уже сгенерированные модулем поля и **допишите** ещё один элемент в `extensionProviders` и ключи ниже — не заменяя весь `meshConfig`.
+   Отдельных полей `settings` для `meshConfig.enableTracing` и `meshConfig.extensionProviders` в модуле пока нет. Описание экспортёра трассировки нужно **дополнительно внести** в CR `Istio` или `IstioOperator`, который формирует модуль для плоскости управления (**control plane**): для **Istio 1.25** (Sail) — CR `Istio` в `d8-istio`, `spec.values.meshConfig`; для **старых ревизий** — `IstioOperator`, `spec.meshConfig`. Сохраните уже сгенерированные модулем поля и **допишите** ещё один элемент в `extensionProviders` и ключи ниже — не заменяя весь `meshConfig`.
 
 ```yaml
 # Объединить с meshConfig (CR Istio / IstioOperator), вместе с полями модуля
@@ -767,7 +767,7 @@ defaultConfig:
   tracing: {}
 ```
 
-3. Политика трассировки в корневом неймспейсе mesh (как у прочих Telemetry модуля):
+3. Политика трассировки в корневом пространстве имён mesh (как у прочих `Telemetry`, создаваемых модулем):
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -784,9 +784,9 @@ spec:
 
 #### Пример — OTLP и mesh-wide `Telemetry`
 
-{% alert level="info" %}Задача Istio [Распределённая трассировка с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (развёртывание Collector, `meshConfig.extensionProviders.opentelemetry` и смежные шаги) рассчитана на **Istio версии 1.25 и выше** — ту ревизию, которая по умолчанию в актуальных релизах модуля. На **Istio 1.21** эта инструкция и часть YAML могут быть недоступны или отличаться; используйте классический параметр модуля [`tracing`](configuration.html#parameters-tracing) / пример с Zipkin-провайдером выше либо документацию для вашей версии.{% endalert %}
+{% alert level="info" %}Задача Istio [Распределённая трассировка с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (развёртывание Collector, фрагмент `meshConfig.extensionProviders.opentelemetry` и смежные шаги) рассчитана на **Istio версии 1.25 и выше** — ту ревизию, которая по умолчанию в актуальных релизах модуля. На **Istio 1.21** эта инструкция и часть YAML могут быть недоступны или отличаться; используйте классический параметр модуля [`tracing`](configuration.html#parameters-tracing) / пример с Zipkin-провайдером выше либо документацию для вашей версии.{% endalert %}
 
-После развёртывания OpenTelemetry Collector, доступного из mesh (см. ссылку выше), задайте модуль тем же примером `ModuleConfig`, что и для Zipkin (`telemetryAPI.enabled: true`, `tracing.enabled: false`, если опираетесь на именованный OTLP-провайдер). Затем **объедините** OTLP-провайдер с `meshConfig` в ресурсе `Istio` / `IstioOperator`, как для Zipkin:
+После развёртывания коллектора трассировки (см. ссылку выше), доступного из mesh, задайте модуль тем же примером `ModuleConfig`, что и для Zipkin (`telemetryAPI.enabled: true`, `tracing.enabled: false`, если опираетесь на именованный OTLP-провайдер). Затем **объедините** OTLP-провайдер с `meshConfig` в ресурсе `Istio` / `IstioOperator`, как для Zipkin:
 
 ```yaml
 # Объединить с meshConfig (CR Istio / IstioOperator), вместе с полями модуля
@@ -817,7 +817,7 @@ spec:
           value: production
 ```
 
-Для OTLP по HTTP задаётся `opentelemetry.http` и `path` — см. документацию Istio.
+Для передачи по HTTP задаётся `opentelemetry.http` и `path` — см. документацию Istio.
 
 #### Пример — трассировка только для части приложений
 
