@@ -44,11 +44,17 @@ type SpiffeEndpoint struct {
 }
 
 // TODO import from hooks package
-// Warning! These structs are duplicated in hooks/private/crd
+// Warning! These two structs below are duplicated in hooks/ee/lib/crd
 type AlliancePublicMetadata struct {
-	ClusterUUID string `json:"clusterUUID,omitempty"`
-	AuthnKeyPub string `json:"authnKeyPub,omitempty"`
-	RootCA      string `json:"rootCA,omitempty"`
+	ClusterUUID string                     `json:"clusterUUID"`
+	AuthnKeyPub string                     `json:"authnKeyPub"`
+	RootCA      string                     `json:"rootCA"`
+	AllianceRef *PublicMetadataAllianceRef `json:"allianceRef,omitempty"`
+}
+
+type PublicMetadataAllianceRef struct {
+	Kind string `json:"kind,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 type FederationPrivateMetadata struct {
@@ -62,7 +68,7 @@ type MulticlusterPrivateMetadata struct {
 	NetworkName     string            `json:"networkName,omitempty"`
 }
 
-// map[custerUUID]pubilcMetadata
+// map[custerUUID]publicMetadata
 type RemotePublicMetadata map[string]AlliancePublicMetadata
 
 type JwtPayload struct {

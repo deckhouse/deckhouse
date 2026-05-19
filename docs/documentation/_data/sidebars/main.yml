@@ -554,6 +554,10 @@ entries:
                             ru: ALB средствами Ingress NGINX Controller
                           url: /admin/configuration/network/ingress/alb/nginx.html
                         - title:
+                            en: ALB with Kubernetes Gateway API
+                            ru: ALB средствами Kubernetes Gateway API
+                          url: /admin/configuration/network/ingress/alb/alb-gateway-api.html
+                        - title:
                             en: ALB with Istio
                             ru: ALB средствами Istio
                           url: /admin/configuration/network/ingress/alb/istio.html

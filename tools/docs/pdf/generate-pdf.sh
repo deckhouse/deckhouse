@@ -108,6 +108,7 @@ docker run --rm \
   -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
   -e DOC_VERSION="${DOC_VERSION}" \
   -e BUILD_LANG="${BUILD_LANG:-}" \
+  -e EXCLUDE_SECTIONS="Using" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
   -v "${SIDEBAR_YAML}:/app/main.yml:ro" \

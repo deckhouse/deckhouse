@@ -47,7 +47,7 @@ func Serve(ctx context.Context, params settings.ServerParams) error {
 		return err
 	}
 
-	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
+	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{}, false)
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "server"))

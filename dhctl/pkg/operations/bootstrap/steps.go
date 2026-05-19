@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,10 +48,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -99,6 +102,9 @@ func (p *BashiblePipelineParams) errIsNil(c string) error {
 }
 
 func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "RunBashiblePipeline")
+	defer span.End()
+
 	if err := params.Validate(); err != nil {
 		return err
 	}
@@ -142,12 +148,26 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return nil
 	}
 
+	// Bundle registry tunnel
+	bundleRegistryTunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
+		MetaConfig: cfg,
+		Node:       params.Node,
+		Logger:     params.LoggerProvider(),
+		DirsConfig: dc,
+	})
+	if err != nil {
+		return err
+	}
+	defer bundleRegistryTunnelStop()
+
+	// RPP + RPP tunnel
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
 		MetaConfig:     cfg,
 		Node:           nodeInterface,
 		LoggerProvider: params.LoggerProvider,
 		SignCheck:      config.GetRPPSignCheck(),
 		DirsConfig:     dc,
+		Interactive:    input.IsTerminal(),
 	})
 
 	if err != nil {
@@ -190,7 +210,13 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
+	ctx, span := telemetry.StartSpan(ctx, "prepareMasterNode")
+	defer span.End()
+
 	upload := func(ctx context.Context, scriptPath string) error {
+		ctx, span := telemetry.StartSpan(ctx, "upload script")
+		defer span.End()
+
 		if _, err := os.Stat(scriptPath); err != nil {
 			if os.IsNotExist(err) {
 				log.InfoF("Script %s wasn't found\n", scriptPath)
@@ -198,25 +224,30 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			}
 			return fmt.Errorf("script path: %v", err)
 		}
+
 		logs := make([]string, 0)
+
 		cmd := nodeInterface.UploadScript(scriptPath)
 		cmd.WithStdoutHandler(func(l string) {
 			logs = append(logs, l)
 			log.DebugLn(l)
 		})
-
 		cmd.Sudo()
 
 		_, err := cmd.Execute(ctx)
 		if err != nil {
 			stderr := ""
+
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) {
 				stderr = string(exitErr.Stderr)
 			}
+
 			log.ErrorF("%s\nstderr:\n%s\n", strings.Join(logs, "\n"), stderr)
+
 			return fmt.Errorf("run %s: %w", scriptPath, err)
 		}
+
 		return nil
 	}
 
@@ -225,7 +256,14 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			name := fmt.Sprintf("Execute %s", bootstrapScript)
-			err := retry.NewLoop(name, 30, 5*time.Second).RunContext(ctx, func() error {
+			extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+			p := retry.NewEmptyParams(
+				retry.WithName("%s", name),
+				retry.WithAttempts(30),
+				retry.WithWait(5*time.Second),
+				retry.WithLogger(extLogger()),
+			)
+			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
 
@@ -306,13 +344,15 @@ func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path st
 
 // readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
 func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	const (
-		attempts = 5
-		wait     = 3 * time.Second
+	extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+	p := retry.NewEmptyParams(
+		retry.WithName("Read remote file %s", path),
+		retry.WithAttempts(5),
+		retry.WithWait(3*time.Second),
+		retry.WithLogger(extLogger()),
 	)
-
 	var value string
-	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
+	err := retry.NewLoopWithParams(p).
 		RunContext(ctx, func() error {
 			v, err := readRemoteFile(ctx, nodeInterface, path)
 			if err != nil {
@@ -335,9 +375,12 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 			return nil
 		})
 
+		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
 			retry.WithWait(5*time.Second),
 			retry.WithAttempts(50),
+			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
@@ -364,6 +407,9 @@ func InstallDeckhouse(
 	res := &InstallDeckhouseResult{}
 
 	return res, log.ProcessCtx(ctx, "bootstrap", "Install Deckhouse", func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, "InstallDeckhouse")
+		defer span.End()
+
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
 		if err != nil {
 			return err
@@ -507,7 +553,14 @@ func applyPostBootstrapModuleConfigs(
 	tasks []actions.ModuleConfigTask,
 ) error {
 	for _, task := range tasks {
-		err := retry.NewLoop(task.Title, 15, 5*time.Second).
+		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+		p := retry.NewEmptyParams(
+			retry.WithName("%s", task.Title),
+			retry.WithAttempts(15),
+			retry.WithWait(5*time.Second),
+			retry.WithLogger(extLogger()),
+		)
+		err := retry.NewLoopWithParams(p).
 			Run(func() error {
 				return task.Do(kubeCl)
 			})
@@ -520,6 +573,9 @@ func applyPostBootstrapModuleConfigs(
 }
 
 func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+	ctx, span := telemetry.StartSpan(ctx, "RunPostInstallTasks")
+	defer span.End()
+
 	if result == nil {
 		log.DebugF("Skip post install tasks because result is nil\n")
 		return nil

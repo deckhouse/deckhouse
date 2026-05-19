@@ -6,6 +6,8 @@ memory: 100Mi
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
+{{- $cniLegacyTmpRunDir := semverCompare "< 1.25.0" $fullVersion }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
@@ -72,6 +74,14 @@ spec:
         - name: install-cni
           args:
             - --log_output_level=default:info
+            {{- if $cniLegacyTmpRunDir }}
+            # Before Istio 1.25: hostPath mounted under /tmp for readOnlyRootFilesystem + containerd v2.
+            # CNI JSON on the node still lists /var/run/istio-cni/*.sock.
+            - --log-uds-address=/tmp/istio-cni/log.sock
+            {{- if ($.Values.istio.internal.enableAmbientMode) }}
+            - --cni-event-address=/tmp/istio-cni/pluginevent.sock
+            {{- end }}
+            {{- end }}
           command:
             - install-cni
           {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
@@ -154,8 +164,12 @@ spec:
               name: cni-bin-dir
             - mountPath: /host/etc/cni/net.d
               name: cni-net-dir
-            - mountPath: /var/run/istio-cni
+            - mountPath: {{ ternary "/tmp/istio-cni" "/var/run/istio-cni" $cniLegacyTmpRunDir }}
               name: cni-log-dir
+            {{- if $cniLegacyTmpRunDir }}
+            - mountPath: /run/istio-cni
+              name: cni-log-dir
+            {{- end }}
             - mountPath: /tmp
               name: install-cni-tmp
             {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}

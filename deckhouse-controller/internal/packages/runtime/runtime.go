@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
@@ -86,6 +87,7 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
+	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
 
@@ -159,6 +161,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build Health service with its own client
+	if err := r.buildHealthService(); err != nil {
+		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations
@@ -381,6 +388,35 @@ func (r *Runtime) buildNelmService() error {
 	return nil
 }
 
+// buildHealthService creates the workload-health service that drives ConditionScaled.
+//
+// The service watches workloads tagged with the health.LabelKey package label and
+// reduces their per-workload statuses into a single State per package — Scaled,
+// Reconciling, Degraded, or Unknown. Transitions are pushed back into the status
+// service via r.status.UpdateHealth, which encodes them on ConditionScaled.
+//
+// Construction is I/O-free apart from client.Init; informers and the reconcile
+// goroutine start later via r.healthService.Start, paired with Stop on shutdown.
+func (r *Runtime) buildHealthService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
+	client.WithContextName(shapp.KubeContext)
+	client.WithConfigPath(shapp.KubeConfig)
+	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize health service client: %w", err)
+	}
+
+	healthService, err := health.NewService(client, r.status.UpdateHealth, r.logger)
+	if err != nil {
+		return fmt.Errorf("create health service failed: %w", err)
+	}
+
+	r.healthService = healthService
+
+	return nil
+}
+
 // buildScheduler creates the package scheduler with version checks and lifecycle callbacks.
 //
 // The scheduler controls package enable/disable based on:
@@ -397,12 +433,7 @@ func (r *Runtime) buildNelmService() error {
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
-		if len(discovery) == 0 {
-			return nil, fmt.Errorf("discovery section not found in global values")
-		}
-
-		value, ok := discovery[deckhouseVersionValue]
+		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -493,6 +524,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // appropriate handler, driving the enable/disable lifecycle for all packages.
 func (r *Runtime) Run() {
 	r.hookEventHandler.Start()
+	r.healthService.Start()
 
 	go func() {
 		for event := range r.scheduler.Ch() {
@@ -591,6 +623,9 @@ func (r *Runtime) Stop() {
 	// Clean up resource monitors
 	r.nelmService.StopMonitors()
 
+	// Stop health monitoring
+	r.healthService.Stop()
+
 	// Stop generating new events
 	r.scheduleManager.Stop()
 	r.kubeEventsManager.Stop()
@@ -603,34 +638,41 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// PreservePackage identifies one downloaded package version to preserve during cleanup.
+// PreservePackage identifies one installed Package instance to preserve during Cleanup.
 type PreservePackage struct {
-	// Name is the downloaded package directory name.
-	Name string
-	// Version is the downloaded package version name.
-	Version string
-	// Repository is the downloaded repository directory name.
-	Repository string
+	PackageName string
+	Repository  string
+	Version     string
+
+	ReleaseName      string
+	ReleaseNamespace string
 }
 
-// Cleanup removes deployed packages that are not listed in preserve from both app and module deployers.
-func (r *Runtime) Cleanup(ctx context.Context, preserve []PreservePackage) {
+// Cleanup removes downloaded application packages on disk and orphan nelm
+// releases in the cluster that are not in preserves. Runs once during preflight.
+func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	converted := make([]deployer.PreservePackage, 0, len(preserve))
-	for _, packageVersion := range preserve {
-		converted = append(converted, deployer.PreservePackage{
-			Name:       packageVersion.Name,
-			Repository: packageVersion.Repository,
-			Version:    packageVersion.Version,
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
+	keepReleases := make(map[string]struct{}, len(preserves))
+	for _, preserve := range preserves {
+		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
 		})
+
+		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
 	}
 
-	if err := r.appDeployer.Cleanup(ctx, converted); err != nil {
+	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
 		r.logger.Warn("cleanup apps failed", log.Err(err))
 		return
 	}
+
+	// do not cleanup modules namespace
+	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
 }
 
 // Status returns package status service for external access

@@ -543,9 +543,9 @@ alerts:
       description: |
         Deckhouse has detected that CronJob `{{$labels.namespace}}/{{$labels.cronjob}}` failed to schedule on time.
 
-        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | label "schedule" }}`
-        - Last scheduled time: `{{ printf "kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
-        - Next projected schedule time: `{{ printf "kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%`
+        - Current schedule: `{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"} or vector(0)" $labels.namespace $labels.cronjob | query | first | label "schedule" | reReplaceAll "^$" "unknown" }}`
+        - Last scheduled time: `{{ printf "clamp(kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}, 0, 2147483647) or vector(0)" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp | reReplaceAll "^1970.+" "unknown" }}`
+        - Next projected schedule time: `{{ printf "clamp(kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}, 0, 2147483647) or vector(0)" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp | reReplaceAll "^1970.+" "unknown" }}`
       summary: |
         CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
       severity: "6"
@@ -1699,6 +1699,25 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}`, (UUID: `{{$labels.remote_uuid}}`) requests private metadata from hostname `{{$labels.requested_to_hostname}}`, that hostname uses the deprecated `istio` subdomain.
+
+        Update the remote cluster {{$labels.alliance_kind}} resource: set `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+
+        Migration steps on the remote cluster:
+
+        1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
+        2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
+        3. Verify remote metadata fetch and alliance health after the change.
+      summary: |
+        A peer cluster requests private metadata using a deprecated subdomain.
+      severity: "5"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -2805,7 +2824,10 @@ alerts:
 
         **To complete the migration, follow the steps below:**
 
-        1. Review current settings for `publishAPI` in the resource `moduleconfig user-authn` resource.
+        1. Review current settings for `publishAPI` in the `moduleconfig user-authn` resource.
+
+           Note that legacy `user-authn` `spec.version: 1` uses `publishAPI.enable` instead of `publishAPI.enabled`.
+           No manual rewrite is required: the command in step 4 uses the normalized payload from the temporary ConfigMap.
 
         2. If the `moduleconfig control-plane-manager` resource exists, update its spec to `spec.version: 3`. If `settings.apiserver.loadBalancer` is set, migrate it to `settings.apiserver.publishAPI.loadBalancer`. If the resource does not exist, proceed to step 3.
 

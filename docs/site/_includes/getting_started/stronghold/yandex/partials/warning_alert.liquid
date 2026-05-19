@@ -1,0 +1,19 @@
+
+{% assign revision=include.revision %}
+
+{% if revision != "ce" %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+<div class="warning alert__wrap">
+    <svg class="alert__icon icon--warning">
+      <use xlink:href="/images/sprite.svg#warning-icon"></use>
+    </svg>
+    <div>
+        <p>The subnet specified in <code>nodeNetworkCIDR</code> will be automatically split into three equal parts for use in three Yandex Cloud zones.<br>Make sure that the selected subnet dimension is sufficient for your cluster.</p>
+    </div>
+</div>
+
+{% if revision != "ce" %}
+</div>
+{% endif %}
