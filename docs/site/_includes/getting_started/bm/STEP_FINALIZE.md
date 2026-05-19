@@ -342,7 +342,12 @@ sudo -i d8 k create -f $PWD/user.yml
 ```
 </div>
 </li>
-<li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
+<li><strong>Create DNS records</strong> to organize access to the cluster web interfaces.
+
+{% alert type="info" %}
+If you use `sslip.io` or a similar wildcard DNS service as the cluster DNS name template, there is no need to create DNS records manually.
+{% endalert %}
+
   <ul><li>Identify the public IP address of the node where the Ingress Controller is running.</li>
   <li>If you have the DNS server and you can add a DNS records:
   <ul>
