@@ -78,17 +78,13 @@ shell:
   setup:
   - |
     env | grep '^MODULE_IMAGE_DIGEST_' | jq -Rn '
-      reduce inputs as $line (
+      reduce inputs as $i (
         {};
-        ($line | capture("^(?<key>MODULE_IMAGE_DIGEST_(?<digestKey>[^=]+))=(?<value>.*)$")) as $m
+        ($i | capture("^(?<key>MODULE_IMAGE_DIGEST_(?<digestKey>[^=]+))=(?<value>.*)$")) as $m
         | ($m.digestKey | split("_")) as $parts
         | ($m.value | capture("(?<digest>sha256:[a-f0-9]+)")? | .digest) as $digest
         | if ($parts | length) >= 2 and $digest then
-            . * {
-              ($parts[0]): {
-                (($parts[1:] | join("_"))): $digest
-              }
-            }
+            . * { ($parts[0]): { (($parts[1:] | join("_"))): $digest } }
           else
             .
           end
