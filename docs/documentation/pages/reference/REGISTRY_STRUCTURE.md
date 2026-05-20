@@ -5,9 +5,15 @@ toc: false
 search: container registry, image registry
 ---
 
+This page provides a general overview of the container image repositories used to install the Deckhouse Kubernetes Platform.
+
 ## Commercial editions container registry
 
-The registry for commercial DKP editions is available at `registry.deckhouse.io/deckhouse/ee`, `registry.deckhouse.io/deckhouse/se`, and `registry.deckhouse.io/deckhouse/ce`. It contains modules and components available in the EE, SE, and CE editions.
+The registry contains modules and components available in the commercial DKP editions:
+
+- EE (address `registry.deckhouse.io/deckhouse/ee`).
+- SE (address `registry.deckhouse.io/deckhouse/se`).
+- CE (address `registry.deckhouse.io/deckhouse/ce`).
 
 Key features:
 

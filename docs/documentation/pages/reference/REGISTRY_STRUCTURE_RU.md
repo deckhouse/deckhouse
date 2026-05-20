@@ -10,7 +10,7 @@ search: хранилище контейнеров, container registry
 
 ## Хранилище образов сертифицированной версии
 
-Хранилище образов сертифицированной ФСТЭК России версии расположено по адресу `registry-cse.deckhouse.ru/deckhouse/cse`. Оно одержит все [модули и компоненты](https://deckhouse.ru/products/kubernetes-platform/features/), включенные в сертифицированный комплект поставки.
+Хранилище образов сертифицированной ФСТЭК России версии расположено по адресу `registry-cse.deckhouse.ru/deckhouse/cse`. Оно одержит все [модули и компоненты](/products/kubernetes-platform/features/), включенные в сертифицированный комплект поставки.
 
 Ключевые особенности:
 
@@ -35,7 +35,11 @@ search: хранилище контейнеров, container registry
 
 ## Хранилище образов коммерческих версий
 
-Хранилище коммерческих редакций DKP доступно по адресам `registry.deckhouse.ru/deckhouse/ee`, `registry.deckhouse.ru/deckhouse/se` и `registry.deckhouse.ru/deckhouse/ce`. Оно содержит [модули и компоненты](https://deckhouse.ru/products/kubernetes-platform/features/), доступные в редакциях ЕЕ, SE, CE.
+Хранилище содержит [модули и компоненты](/products/kubernetes-platform/features/), доступные в коммерческих редакциях DKP:
+
+ - EE (адрес `registry.deckhouse.ru/deckhouse/ee`);
+ - SE (адрес `registry.deckhouse.ru/deckhouse/se`);
+ - CE (адрес `registry.deckhouse.ru/deckhouse/ce`).
 
 Ключевые особенности:
 
