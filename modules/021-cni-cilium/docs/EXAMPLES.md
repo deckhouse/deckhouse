@@ -1,6 +1,6 @@
 ---
 title: "The cni-cilium module: examples"
-description: Examples of configuring Egress Gateway and Hubble data export for the cni-cilium module.
+description: Examples of configuring Egress Gateway, Hubble data export, and per-node BPF trace events for the cni-cilium module.
 ---
 
 ## Egress Gateway
@@ -180,3 +180,76 @@ spec:
     include:
       - /var/log/cilium/hubble/flow.log
 ```
+
+## Enabling BPF trace events on demand
+
+BPF trace events (`bpf-events-trace-enabled`) are disabled cluster-wide by
+default. They are the dominant source of `cilium-agent` CPU and memory on nodes
+with high pod density: each forwarded packet (subject to `monitor-aggregation`)
+produces a perf-ring entry that the agent has to parse, label and feed into
+Hubble. `drop` and `policy verdict` events are not affected by this setting and
+remain available in Hubble.
+
+When forwarded-flow visibility is required (for example, to debug a
+connectivity issue), enable trace events with a
+[CiliumNodeConfig](https://docs.cilium.io/en/stable/configuration/per-node-config/)
+resource. The same resource can target a single node, a group of nodes, or all
+nodes in the cluster — depending on `spec.nodeSelector`.
+
+### Enable trace events on a single node
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNodeConfig
+metadata:
+  name: trace-debug-node-1
+  namespace: d8-cni-cilium
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: <node-name>
+  defaults:
+    bpf-events-trace-enabled: "true"
+    # Optional: disable monitor aggregation for the full per-packet picture.
+    # Without this override, the cluster default ("medium") still aggregates
+    # consecutive packets of the same flow.
+    monitor-aggregation: "none"
+```
+
+### Enable trace events cluster-wide
+
+An empty `matchLabels` selects all nodes:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNodeConfig
+metadata:
+  name: trace-debug-all-nodes
+  namespace: d8-cni-cilium
+spec:
+  nodeSelector:
+    matchLabels: {}
+  defaults:
+    bpf-events-trace-enabled: "true"
+```
+
+### Applying the change
+
+Cilium reads the merged configuration once at agent startup, so the affected
+`cilium-agent` pods must be restarted after the `CiliumNodeConfig` is created
+or modified (Deckhouse does not restart agents automatically on such changes):
+
+```bash
+# single node
+d8 k -n d8-cni-cilium delete pod \
+  -l app=agent --field-selector spec.nodeName=<node-name>
+
+# all nodes (rolling restart)
+d8 k -n d8-cni-cilium rollout restart daemonset/agent
+```
+
+To revert, delete the `CiliumNodeConfig` resource and restart the same pods.
+
+> **Note.** On Cilium 1.17.x the `cilium_vxlan` BPF program is not recompiled at
+> runtime when `bpf-events-trace-enabled` changes via `cilium config set`.
+> Restarting the agent pod is the reliable way to apply the change.

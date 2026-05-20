@@ -1,6 +1,6 @@
 ---
 title: "Модуль cni-cilium: примеры"
-description: Примеры настройки Egress Gateway и экспорта данных Hubble для модуля cni-cilium.
+description: Примеры настройки Egress Gateway, экспорта данных Hubble и точечного включения BPF-трейсов для модуля cni-cilium.
 ---
 
 ## Egress Gateway
@@ -182,3 +182,77 @@ spec:
     include:
       - /var/log/cilium/hubble/flow.log
 ```
+
+## Включение BPF-трейсов по требованию
+
+BPF-трейс-события (`bpf-events-trace-enabled`) отключены во всём кластере по
+умолчанию. На нагруженных узлах с высокой плотностью подов они являются основным
+источником потребления CPU и памяти `cilium-agent`: каждый пересланный пакет
+(с учётом `monitor-aggregation`) генерирует запись в perf-ring, которую агент
+должен распарсить, навесить лейблы и передать в Hubble. События `drop` и
+`policy verdict` не зависят от этой опции и остаются доступными в Hubble.
+
+Если требуется увидеть forwarded-flow (например, для диагностики проблемы со
+связностью) — включите трейсы через ресурс
+[CiliumNodeConfig](https://docs.cilium.io/en/stable/configuration/per-node-config/).
+Один и тот же ресурс может покрывать один узел, группу узлов или весь кластер
+— в зависимости от `spec.nodeSelector`.
+
+### Включение трейсов на одном узле
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNodeConfig
+metadata:
+  name: trace-debug-node-1
+  namespace: d8-cni-cilium
+spec:
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: <node-name>
+  defaults:
+    bpf-events-trace-enabled: "true"
+    # Опционально: отключить агрегацию монитора для полной попакетной картины.
+    # Без этого переопределения кластерное значение по умолчанию ("medium")
+    # продолжит объединять последовательные пакеты одного и того же flow.
+    monitor-aggregation: "none"
+```
+
+### Включение трейсов на всех узлах кластера
+
+Пустой `matchLabels` выбирает все узлы:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNodeConfig
+metadata:
+  name: trace-debug-all-nodes
+  namespace: d8-cni-cilium
+spec:
+  nodeSelector:
+    matchLabels: {}
+  defaults:
+    bpf-events-trace-enabled: "true"
+```
+
+### Применение изменений
+
+Cilium читает итоговую конфигурацию один раз при старте агента, поэтому после
+создания или изменения `CiliumNodeConfig` нужно перезапустить соответствующие
+поды `cilium-agent` (Deckhouse не делает это автоматически):
+
+```bash
+# один узел
+d8 k -n d8-cni-cilium delete pod \
+  -l app=agent --field-selector spec.nodeName=<node-name>
+
+# весь кластер (rolling restart)
+d8 k -n d8-cni-cilium rollout restart daemonset/agent
+```
+
+Чтобы откатить изменения, удалите ресурс `CiliumNodeConfig` и перезапустите те же
+поды.
+
+> **Внимание.** В Cilium 1.17.x BPF-программа `cilium_vxlan` не перекомпилируется
+> на лету при изменении `bpf-events-trace-enabled` через `cilium config set`.
+> Рестарт пода агента — надёжный способ применить новое значение.
