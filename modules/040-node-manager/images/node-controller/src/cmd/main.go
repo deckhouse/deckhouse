@@ -69,7 +69,7 @@ func main() {
 	var disabledControllers string
 	var maxConcurrentReconcilesRaw string
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":4205", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":4208", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":4206", "The address the probe endpoint binds to.")
 	flag.IntVar(&webhookPort, "webhook-port", 4207, "The port the webhook server binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")

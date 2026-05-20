@@ -14,10 +14,6 @@ spec:
         description: |
           Allow the node-controller to run on the host network during the bootstrap phase, when CNI is not yet available
     hostPorts:
-      - port: 4205
-        protocol: TCP
-        metadata:
-          description: Node controller metrics endpoint.
       - port: 4206
         protocol: TCP
         metadata:
