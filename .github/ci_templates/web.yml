@@ -411,6 +411,8 @@ steps:
   env:
 {!{- if eq $env "production" }!}
     WERF_REQUIRE_BUILT_IMAGES: "true"
+    WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{ secrets.DOCS_WATCHER_DOP_URL }}"
+    WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "dop.authToken=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
 {!{- end }!}
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/site"
