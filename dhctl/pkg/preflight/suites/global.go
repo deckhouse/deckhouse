@@ -15,6 +15,7 @@
 package suites
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
@@ -23,13 +24,14 @@ import (
 type GlobalDeps struct {
 	MetaConfig    *config.MetaConfig
 	InstallConfig *config.DeckhouseInstaller
+	BuildInfo     options.BuildInfo
 }
 
 func NewGlobalSuite(deps GlobalDeps) preflight.Suite {
 	return preflight.NewSuite(
 		checks.PublicDomainTemplate(deps.MetaConfig),
 		checks.RegistryCredentials(deps.MetaConfig, deps.InstallConfig),
-		checks.DhctlEdition(deps.MetaConfig, deps.InstallConfig),
+		checks.DhctlEdition(deps.MetaConfig, deps.InstallConfig, deps.BuildInfo),
 		checks.CidrIntersection(deps.MetaConfig),
 	)
 }

@@ -1,3 +1,4 @@
+{{- $version := include "get_oss_version_by_id" (list "terraform-provider-gcp" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/scratch" }}
@@ -34,7 +35,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v{{ .TF.gcp.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-google.git .
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-google.git .
   - git apply /patches/*.patch --verbose
   - rm -rf .git scripts/diff.go google/test-fixtures/appengine/hello-world-flask
 ---
@@ -55,7 +56,7 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ .TF.gcp.version }}"
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o terraform-provider-gcp -ldflags="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-google/version.ProviderVersion={{ $version }}"
   - mv terraform-provider-gcp /terraform-provider-gcp
   - strip /terraform-provider-gcp
   - chmod -R 755 /terraform-provider-gcp

@@ -1,0 +1,37 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allow-rbac-wildcards
+spec:
+  objectKind: RoleBinding
+  objectFields:
+    - path: rules[].apiGroups[]
+      level: pod
+
+      description: Wildcards are forbidden in Role rules apiGroups
+      requiredScenarios: [positive, negative, absent]
+    - path: rules[].resources[]
+      level: pod
+
+      description: Wildcards are forbidden in Role rules resources
+      requiredScenarios: [positive, negative, absent]
+    - path: rules[].verbs[]
+      level: pod
+
+      description: Wildcards are forbidden in Role rules verbs
+      requiredScenarios: [positive, negative, absent]
+    - path: roleRef.name
+      level: pod
+
+      description: Wildcards are forbidden in RoleBinding roleRef.name
+      requiredScenarios: [positive, negative, absent]
+    - path: subjects[].name
+      level: pod
+
+      description: Wildcards are forbidden in RoleBinding subjects name
+      requiredScenarios: [positive, negative, absent]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

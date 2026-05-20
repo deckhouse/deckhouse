@@ -834,10 +834,10 @@ index e88fad7fa8a..72c54d36816 100644
  }
  
 diff --git a/pkg/registry/core/rest/storage_core_generic.go b/pkg/registry/core/rest/storage_core_generic.go
-index 664724f3bc0..bc6414fd1ba 100644
+index 9d82ca85633..f1fa9f6e904 100644
 --- a/pkg/registry/core/rest/storage_core_generic.go
 +++ b/pkg/registry/core/rest/storage_core_generic.go
-@@ -96,7 +96,11 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
+@@ -106,7 +106,11 @@ func (c *GenericConfig) NewRESTStorage(apiResourceConfigSource serverstorage.API
  		return genericapiserver.APIGroupInfo{}, err
  	}
  
@@ -851,7 +851,7 @@ index 664724f3bc0..bc6414fd1ba 100644
  		return genericapiserver.APIGroupInfo{}, err
  	}
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index eec02e5722f..d001f27b898 100644
+index 29acc428688..79f2e4c1445 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 @@ -47,6 +47,37 @@ const (
@@ -892,7 +892,7 @@ index eec02e5722f..d001f27b898 100644
  type recordAuthorizationMetricsFunc func(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time)
  
  // WithAuthorization passes all authorized requests on to handler, and returns a forbidden error otherwise.
-@@ -89,6 +120,21 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -90,6 +121,21 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			return
  		}
  
@@ -914,4 +914,3 @@ index eec02e5722f..d001f27b898 100644
  		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
  		audit.AddAuditAnnotations(ctx,
  			decisionAnnotationKey, decisionForbid,
-

@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+)
+
+const (
+	masterSSHIPOutputKey    = "master_ip_address_for_ssh"
+	nodeInternalIPOutputKey = "node_internal_ip_address"
+	kubeDataPathOutputKey   = "kubernetes_data_device_path"
 )
 
 type PipelineOutputs struct {
@@ -54,29 +61,49 @@ func equalArray(a, b []string) bool {
 	return true
 }
 
-func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (string, error) {
-	result, err := executor.Output(ctx, OutputOpts{
-		StatePath: statePath,
-		OutFields: []string{"master_ip_address_for_ssh"},
-	})
+type OutputMasterIPs struct {
+	SSH      string
+	Internal string
+}
 
-	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
-			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (*OutputMasterIPs, error) {
+	res := OutputMasterIPs{}
+
+	outputs := map[string]*string{
+		masterSSHIPOutputKey:    &res.SSH,
+		nodeInternalIPOutputKey: &res.Internal,
+	}
+
+	for k, v := range outputs {
+		result, err := executor.Output(ctx, OutputOpts{
+			StatePath: statePath,
+			OutFields: []string{k},
+		})
+
+		if err != nil {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
+				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+			}
+			if matchNoOutput(err.Error()) {
+				*v = ""
+				continue
+			}
+
+			return nil, fmt.Errorf("Cannot extract infrastructure output for '%s': %w", k, err)
 		}
 
-		return "", fmt.Errorf("failed to get infrastructure output for 'master_ip_address_for_ssh'\n%v", err)
+		var output string
+
+		err = json.Unmarshal(result, &output)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal infrastructure output for '%s': %w", k, err)
+		}
+
+		*v = output
 	}
 
-	var output string
-
-	err = json.Unmarshal(result, &output)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal infrastructure output for 'master_ip_address_for_ssh'\n%v", err)
-	}
-
-	return output, nil
+	return &res, nil
 }
 
 func ApplyPipeline(
@@ -86,30 +113,37 @@ func ApplyPipeline(
 	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
 ) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
-	pipelineFunc := func() error {
-		err := r.Init(ctx)
-		if err != nil {
-			return err
-		}
 
-		err = r.Plan(ctx, false, false)
-		if err != nil {
+	pipelineFunc := func(ctx context.Context) (err error) {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - ApplyPipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
+		if err := r.Init(ctx); err != nil {
 			return err
 		}
+		span.AddEvent("Runner inited")
+
+		if err := r.Plan(ctx, false, false); err != nil {
+			return err
+		}
+		span.AddEvent("Plan done")
 
 		defer func() { extractedData, err = extractFn(ctx, r) }()
 
-		err = r.Apply(ctx)
-		if err != nil {
+		if err := r.Apply(ctx); err != nil {
 			return err
 		}
+		span.AddEvent("Apply done")
 
 		extractedData, err = extractFn(ctx, r)
+		span.AddEvent("Extracted data")
+
 		return err
 	}
 
 	logger := r.GetLogger()
-	err := logger.LogProcess("infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+	err := logger.LogProcessCtx(ctx, "infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+
 	return extractedData, err
 }
 
@@ -124,7 +158,7 @@ func CheckPipeline(
 	var destructiveChanges *plan.DestructiveChanges
 	var infrastructurePlan map[string]any
 
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -153,7 +187,13 @@ func CheckPipeline(
 
 		return nil
 	}
-	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+
+	err := log.ProcessCtx(
+		ctx,
+		"infrastructure",
+		fmt.Sprintf("Check state %s for %s", r.GetStep(), name),
+		pipelineFunc,
+	)
 
 	logDebugPlanIfNeed(ctx, r, name, destroy)
 
@@ -182,7 +222,7 @@ func CheckBaseInfrastructurePipeline(
 	}
 	var pl map[string]any
 
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -255,7 +295,7 @@ func CheckBaseInfrastructurePipeline(
 
 		return nil
 	}
-	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+	err := log.ProcessCtx(ctx, "infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
 
 	logDebugPlanIfNeed(ctx, r, name, false)
 
@@ -263,7 +303,7 @@ func CheckBaseInfrastructurePipeline(
 }
 
 func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error {
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -274,13 +314,15 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 			return nil
 		}
 
-		err = r.Destroy(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
+		return r.Destroy(ctx)
 	}
-	return log.Process("infrastructure", fmt.Sprintf("Destroy %s for %s", r.GetStep(), name), pipelineFunc)
+
+	return log.ProcessCtx(
+		ctx,
+		"infrastructure",
+		fmt.Sprintf("Destroy %s for %s", r.GetStep(), name),
+		pipelineFunc,
+	)
 }
 
 func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
@@ -311,17 +353,17 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutput
 }
 
 func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
-	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, "master_ip_address_for_ssh")
+	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, masterSSHIPOutputKey)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeInternalIP, err := getStringOrIntOutput(ctx, r, "node_internal_ip_address")
+	nodeInternalIP, err := getStringOrIntOutput(ctx, r, nodeInternalIPOutputKey)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesDataDevicePath, err := getStringOrIntOutput(ctx, r, "kubernetes_data_device_path")
+	kubernetesDataDevicePath, err := getStringOrIntOutput(ctx, r, kubeDataPathOutputKey)
 	if err != nil {
 		return nil, err
 	}
@@ -346,9 +388,9 @@ func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutpu
 func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
 	res := &PipelineOutputs{}
 	toReceive := map[string]*string{
-		"master_ip_address_for_ssh":   &res.MasterIPForSSH,
-		"node_internal_ip_address":    &res.NodeInternalIP,
-		"kubernetes_data_device_path": &res.KubeDataDevicePath,
+		masterSSHIPOutputKey:    &res.MasterIPForSSH,
+		nodeInternalIPOutputKey: &res.NodeInternalIP,
+		kubeDataPathOutputKey:   &res.KubeDataDevicePath,
 	}
 
 	for k, dest := range toReceive {
@@ -498,7 +540,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	resultsErrs := make(map[string]error, len(targets))
 
 	// always return nil
-	_ = log.Process("infrastructure", "Getting debug plans", func() error {
+	_ = log.ProcessCtx(ctx, "infrastructure", "Getting debug plans", func(ctx context.Context) error {
 		for _, target := range targets {
 			res, err := r.DebugPlanTarget(ctx, destroy, debugPlanStep, target)
 			if err != nil {

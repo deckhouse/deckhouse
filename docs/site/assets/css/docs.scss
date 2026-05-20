@@ -105,6 +105,7 @@
     display: flex;
     justify-content: start;
     min-width: 297px;
+    min-height: 25px;
     margin-right: 64px;
     padding-top: 20px;
     padding-bottom: 25px;
@@ -1416,6 +1417,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     color: #00122C;
 }
 
+.docs .resources__prop_description code {
+    overflow-wrap: break-word;
+}
+
 .docs:not(.docs--modules) h1,
 .docs:not(.docs--modules) h2,
 .docs:not(.docs--modules) h3,
@@ -1649,11 +1654,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     .code__transfer {
       scrollbar-color: #CFD2D8 #f1f1f1;
       padding-right: 70px;
-      margin-left: 48px;
+      margin-left: 37px;
 
       @include breakpoints.max-w(xl) {
         padding-right: 50px;
-        margin-left: 40px;
       }
     }
 }
@@ -1763,11 +1767,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     transform: rotate(0deg);
 }
 
-.docs .details .details__content {
+.docs .details > .details__content {
     display: none;
 }
 
-.docs .details.active .details__content {
+.docs .details.active > .details__content {
     display: block;
 }
 
@@ -1793,6 +1797,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     .table-wrapper {
         position: relative;
         overflow: auto;
+        margin-bottom: 30px;
 
         &.table-wrapper__small,
         &.table-wrapper__versions {
@@ -2018,6 +2023,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: normal;
     line-height: 1;
     padding-left: 0.375em;
+
+    &::after {
+      display: inline-block;
+    }
 }
 
 .docs .btn {
@@ -2633,6 +2642,14 @@ select#contact-select {
       transform: rotate(180deg);
     }
   }
+
+  &[data-placement^='bottom'] .tippy-svg-arrow {
+    top: -12px;
+
+    svg {
+      transform: rotate(-90deg);
+    }
+  }
 }
 
 .layout-sidebar__content--guides {
@@ -2715,6 +2732,10 @@ select#contact-select {
       user-select: none;
       list-style-type: none;
       color: #9e9e9e;
+
+      @include breakpoints.max-w(s) {
+        line-height: 16px;
+      }
 
       li {
         padding: 0;

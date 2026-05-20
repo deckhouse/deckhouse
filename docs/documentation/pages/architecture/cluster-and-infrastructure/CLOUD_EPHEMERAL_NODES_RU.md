@@ -51,21 +51,9 @@ Bashible — это ключевой компонент подсистемы Clu
    * **psi-monitor** — основной контейнер, который отслеживает метрику *PSI (Pressure Stall Information)*, отражающую время, в течение которого процессы ожидают освобождения определённых ресурсов, таких как CPU, память или I/O;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **early-oom**.
 
-5. **Fencing-agent** (DaemonSet) — разворачивается на определенной группе узлов при включённом параметре [`spec.fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) кастомного ресурса NodeGroup.
+5. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
-   После запуска агент активирует сторожевой таймер Watchdog и устанавливает специальный лейбл `node-manager.deckhouse.io/fencing-enabled` на узле, где он функционирует. Агент регулярно проверяет доступность API Kubernetes. Если API доступен, агент отправляет сигнал в Watchdog, сбрасывая сторожевой таймер. Также агент отслеживает специальные лейблы обслуживания на узле и, в зависимости от их наличия, включает или отключает Watchdog.
-
-   В качестве Watchdog используется модуль ядра *softdog* с параметрами `soft_margin=60` и `soft_panic=1`. Это означает, что время таймаута сторожевого таймера составляет 60 секунд. По истечении этого времени происходит kernel panic, и узел остается в этом состоянии до ручной перезагрузки.
-
-   Состоит из одного контейнера:
-
-   * **fencing-agent** — выполняет описанные выше проверки. Сигнал в Watchdog отправляется посредством записи в файл `/dev/watchdog` на хосте.
-
-6. **Fencing-controller** — контроллер, который отслеживает все узлы с установленным лейблом `node-manager.deckhouse.io/fencing-enabled`.
-
-   Если какой-либо из узлов недоступен более 60 секунд, контроллер удаляет с него все поды и затем удаляет сам узел.
-
-7. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
+6. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
 
    Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster-autoscaler не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
 

@@ -30,8 +30,10 @@ permissions:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.57.1"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -137,8 +139,6 @@ jobs:
     env:
       WERF_ENV: "FE"
       SVACE_ENABLED: "true"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
@@ -159,7 +159,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -181,6 +186,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -211,7 +220,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -219,16 +227,25 @@ jobs:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
 
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
+
       # <template: add_ssh_keys>
       - name: Start ssh-agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -246,7 +263,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -280,6 +297,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -298,6 +316,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -351,8 +371,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -398,19 +418,6 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
-
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
@@ -422,20 +429,19 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm images_tags_werf.json
 
-    # </template: build_template>
-
-
       # <template: send_fail_report>
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
+    # </template: build_template>
+
 
 
   analyze_deckhouse:
@@ -449,7 +455,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -466,6 +477,7 @@ jobs:
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACER_IMPORT_USER | SVACER_IMPORT_USER ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACER_IMPORT_PASSWORD | SVACER_IMPORT_PASSWORD ;
             projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
       - uses: deckhouse/modules-actions/svace_analyze@v7
@@ -484,7 +496,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/

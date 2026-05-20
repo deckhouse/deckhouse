@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "ingressNginxControllers",
-			ApiVersion:                   "deckhouse.io/v1",
+			ApiVersion:                   "deckhouse.io/v2",
 			Kind:                         "IngressNginxController",
 			ExecuteHookOnSynchronization: ptr.To(true),
 			FilterFunc:                   setAnnotationValidationSuspendedFilterIngressNginxController,
@@ -115,7 +115,7 @@ func setValidationSuspendedAnnotationToAll(controllers []pkg.Snapshot, input *go
 				},
 			},
 		}
-		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController", ctrl.Namespace, ctrl.Name)
+		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v2", "IngressNginxController", ctrl.Namespace, ctrl.Name)
 	}
 }
 

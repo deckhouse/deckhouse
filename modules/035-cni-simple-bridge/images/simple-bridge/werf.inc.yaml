@@ -6,14 +6,17 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: common-base-python-artifact
+- from: {{ index $.Images "base/python-3.12" }}
   add: /
   to: /
   includePaths:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so*
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test
   before: install
 - image: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl

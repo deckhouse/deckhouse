@@ -62,7 +62,7 @@ apiVersions:
               mainNetwork: net3-k8s
         provider:
           server: '<SERVER>'
-          username: '<USERNAME>'
+          username: '<USERNAME@DOMAIN.LOCAL>'
           password: '<PASSWORD>'
           insecure: true
     required: [apiVersion, kind, masterNodeGroup, regionTagCategory, zoneTagCategory, sshPublicKey, vmFolderPath, region, zones, layout, provider]
@@ -415,7 +415,12 @@ apiVersions:
             description: The host or the IP address of the vCenter server.
           username:
             type: string
-            description: The login ID.
+            description: |
+              Username.
+
+              > **Warning.** Make sure to specify the username together with the domain, for example: `username@domain.local`.
+              >
+              > You can find the correct domain in the vCenter control panel.
           password:
             type: string
             description: The user's password.

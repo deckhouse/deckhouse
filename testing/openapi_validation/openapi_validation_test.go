@@ -31,6 +31,10 @@ import (
 
 var ignoredEnum = []string{
 	"properties.license.properties.edition",
+	// Real Kubernetes ClusterRole names ("cluster-admin", "user-authz:cluster-admin"); set by the
+	// reconcile_kubeadm_cluster_admins_binding hook in 040-control-plane-manager. RBAC ClusterRole
+	// names are lowercase by convention and cannot be capitalized.
+	"properties.internal.properties.kubeadmClusterAdminsTargetRoleName",
 }
 
 func TestValidationOpenAPI(t *testing.T) {

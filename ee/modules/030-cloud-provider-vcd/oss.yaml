@@ -1,0 +1,55 @@
+- name: VMware Cloud Director Cluster API provider
+  link: https://github.com/vmware/cluster-api-provider-cloud-director
+  description: Cluster API provider for VMware Cloud Director.
+  logo: /images/logos/vcd.svg
+  license: Apache License 2.0
+  id: capi-vcd
+  versions:
+    - condition:
+        mode: "new"
+      version: v1.3.2
+    - condition:
+        mode: "legacy"
+      version: v1.2.0
+
+- name: VMware Cloud Director Cloud provider
+  link: https://github.com/vmware/cloud-provider-for-cloud-director
+  description: Cloud Controller Manager for VMware Cloud Director.
+  logo: /images/logos/vcd.svg
+  license: Apache License 2.0
+  id: ccm-vcd
+  versions:
+    - condition:
+        mode: "legacy"
+      version: "1.5.0"
+    - condition:
+        mode: "new"
+      version: "1.6.1"
+
+- name: VMware Cloud Director CSI driver
+  link: https://github.com/vmware/cloud-director-named-disk-csi-driver
+  description: CSI driver for VMware Cloud Director Named Disks.
+  logo: /images/logos/vcd.svg
+  license: Apache License 2.0
+  id: csi-vcd
+  versions:
+    - condition:
+        mode: "legacy"
+      version: "1.4.1"
+    - condition:
+        mode: "new"
+      version: "1.6.0"
+
+- name: VMware Cloud Director Terraform provider
+  link: https://github.com/vmware/terraform-provider-vcd
+  description: Terraform provider for VMware Cloud Director.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-vcd
+  versions:
+    - condition:
+        mode: "legacy"
+      version: "3.10.0"
+    - condition:
+        mode: "new"
+      version: "3.14.1"

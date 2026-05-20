@@ -16,6 +16,8 @@ package template
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -56,8 +58,16 @@ func TestRenderBashBooster(t *testing.T) {
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	if err := os.WriteFile(mingetPath, []byte("test-minget"), 0o600); err != nil {
+		t.Fatalf("WriteFile error: %v", err)
+	}
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	bashibleData, _ := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	if err != nil {
+		t.Fatalf("ConfigForBashibleBundleTemplate error: %v", err)
+	}
 	data, err := RenderBashBooster("/deckhouse/candi/bashible/bashbooster/", bashibleData)
 	if err != nil {
 		t.Errorf("Rendering bash booster error: %v", err)

@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 5b1f2f5aa05..c998a2663d9 100644
+index 5b1f2f5aa05..e9adac6ca57 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -22,6 +22,7 @@ package nodeshutdown

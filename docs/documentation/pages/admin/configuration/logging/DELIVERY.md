@@ -14,7 +14,7 @@ DKP allows you to:
 - Enrich logs with Kubernetes metadata.
 - Use log buffering to improve performance.
 
-The general mechanism of log collection, delivery, and filtering is described in detail in the [Architecture](../../../architecture/logging/delivery.html) section.
+The general mechanism of log collection, delivery, and filtering is described in detail in the [Architecture](../../../architecture/observability/logging.html) section.
 
 DKP administrators can configure log collection and delivery using three custom resources:
 

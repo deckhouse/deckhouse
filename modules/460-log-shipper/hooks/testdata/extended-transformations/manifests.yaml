@@ -1,0 +1,53 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: test-ext-tf
+spec:
+  type: File
+  file:
+    include: ["/var/log/kube-audit/audit.log"]
+  destinationRefs:
+    - test-ext-loki
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLogDestination
+metadata:
+  name: test-ext-loki
+spec:
+  type: Loki
+  loki:
+    endpoint: http://192.168.1.1:9000
+    tenantID: "{{ test }}"
+  extraLabels:
+    extra_from_spec: "static"
+  transformations:
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+      json:
+        depth: 1
+  - action: AddLabels
+    addLabels:
+      when:
+      - ".message.user_id == '123'"
+      setLabels:
+        ".from_addlabels": "yes"
+        ".from_path": "{{ .message.user_id }}"
+  - action: AddLabels
+    addLabels:
+      setLabels:
+        ".from_static": "static"
+        ".message.user_id": "123"
+  - action: ReplaceValue
+    replaceValue:
+      source: "token[0-9]+"
+      target: "[REDACTED]"
+      labels:
+      - .message
+  - action: DropLabels
+    dropLabels:
+      labels:
+      - label: .pod_labels
+        keepKeys:
+        - app

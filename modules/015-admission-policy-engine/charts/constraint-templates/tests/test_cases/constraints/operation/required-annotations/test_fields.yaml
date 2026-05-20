@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: required-annotations
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: metadata.annotations.foo
+      level: pod
+      description: Required annotation key foo must be present.
+      requiredScenarios: [positive, negative]
+    - path: metadata.annotations.bar
+      level: pod
+      description: Annotation key bar must be present and match allowedRegex when configured.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

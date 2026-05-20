@@ -174,25 +174,8 @@ cat /dev/shm/caps-id.pub
   </li>
   <li>
     <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
-{% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
-В операционных системах на базе RHEL (Red Hat Enterprise Linux) пользователя caps нужно добавлять в группу wheel. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
-<div markdown="1">
-```bash
-# Укажите публичную часть SSH-ключа пользователя.
-export KEY='<SSH-PUBLIC-KEY>'
-useradd -m -s /bin/bash caps
-usermod -aG wheel caps
-echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/caps/.ssh
-echo $KEY >> /home/caps/.ssh/authorized_keys
-chown -R caps:caps /home/caps
-chmod 700 /home/caps/.ssh
-chmod 600 /home/caps/.ssh/authorized_keys
-```
-</div>
-Далее перейдите к следующему шагу, **выполнять команду ниже не нужно**.
-{% endofftopic %}
-<div markdown="1">
+{% tabs os %}
+{% tab "ОС на базе Ubuntu" %}
 ```bash
 # Укажите публичную часть SSH-ключа пользователя.
 export KEY='<SSH-PUBLIC-KEY>'
@@ -205,7 +188,22 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
-</div>
+{% endtab %}
+{% tab "Для CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС, МОС ОС" %}
+```bash
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+{% endtab %}
+{% endtabs %}
   </li>
   <li>
     <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
@@ -353,11 +351,12 @@ sudo -i d8 k create -f $PWD/user.yml
 </div>
 </li>
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
-  <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер:
-  <div class="highlight">
-  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
-  </div>
-  </li>
+
+{% alert type="info" %}
+Если в качестве шаблона DNS-имён кластера вы используете `sslip.io` или аналогичный wildcard-DNS-сервис, создавать DNS-записи вручную не требуется.
+{% endalert %}
+
+  <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
     <ul>
       <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard

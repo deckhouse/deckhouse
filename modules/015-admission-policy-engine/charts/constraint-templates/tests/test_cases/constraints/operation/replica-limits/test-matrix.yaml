@@ -1,0 +1,88 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: replica-limits
+spec:
+  suiteName: d8replicalimits
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8replicalimits
+      gatorBlock: d8replicalimits
+      defaultObjectBase: ""
+      template: ../../templates/operation/replica-limits.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed-replicas-in-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.replicas
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                replicas: 2
+                selector:
+                  matchLabels:
+                    app: demo
+                template:
+                  metadata:
+                    labels:
+                      app: demo
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx
+        - name: disallowed-replicas-out-of-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.replicas
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                replicas: 5
+                selector:
+                  matchLabels:
+                    app: demo
+                template:
+                  metadata:
+                    labels:
+                      app: demo
+                  spec:
+                    containers:
+                      - name: nginx
+                        image: nginx

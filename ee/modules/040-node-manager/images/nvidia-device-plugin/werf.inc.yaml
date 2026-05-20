@@ -1,4 +1,5 @@
 {{ $version := "0.17.4" }}
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -87,3 +88,4 @@ imageSpec:
       "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
       "NVIDIA_DISABLE_REQUIRE":"true"
       }
+{{- end }}

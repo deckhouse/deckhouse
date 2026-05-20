@@ -5,6 +5,12 @@ properties:
       Enables query logging for node-local-dns instances.
     type: boolean
     default: false
+  disableIPv6:
+    description: |
+      Disables DNS resolution over IPv6 by returning empty responses for `AAAA` queries
+      and `NXDOMAIN` for reverse IPv6 lookup requests in the `ip6.arpa` zone.
+    type: boolean
+    default: false
   highAvailability:
     type: boolean
     x-examples: [true]

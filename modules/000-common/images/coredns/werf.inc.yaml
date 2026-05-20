@@ -60,3 +60,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/coredns"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

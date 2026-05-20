@@ -11,23 +11,18 @@ package_update: false
 package_upgrade: false
 manage_etc_hosts: localhost
 write_files:
-
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   content: |
     {{- include "bootstrap_script" (list $context $ng) | indent 4 }}
-
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
   content: |
     {{- $context.Values.nodeManager.internal.kubernetesCA | nindent 4 }}
-
 - path: /var/lib/bashible/bootstrap-token
   content: {{ $bootstrap_token }}
   permissions: '0600'
-
 - path: /var/lib/bashible/first_run
-
 runcmd:
 - /var/lib/bashible/bootstrap.sh
 {{ end }}
@@ -44,23 +39,18 @@ package_update: false
 package_upgrade: false
 manage_etc_hosts: localhost
 write_files:
-
 - path: '/var/lib/bashible/bootstrap.sh'
   permissions: '0700'
   content: |
     {{- include "bootstrap_script" (list $context $ng) | indent 4 }}
-
 - path: '/var/lib/bashible/ca.crt'
   permissions: '0644'
   content: |
     {{- $context.Values.nodeManager.internal.kubernetesCA | nindent 4 }}
-
 - path: /var/lib/bashible/bootstrap-token
   content: {{ $bootstrap_token }}
   permissions: '0600'
-
 - path: /var/lib/bashible/first_run
-
 runcmd:
 - /var/lib/bashible/bootstrap.sh
 {{ end }}

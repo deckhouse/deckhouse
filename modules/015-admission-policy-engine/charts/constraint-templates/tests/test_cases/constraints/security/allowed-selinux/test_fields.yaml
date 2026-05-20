@@ -1,0 +1,26 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-selinux
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.seLinuxOptions
+      level: container
+
+      description: SELinux options configured in container securityContext
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.securityContext.seLinuxOptions
+      level: pod
+
+      description: SELinux options configured in pod securityContext
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.securityContext.seLinuxOptions.allowedValues
+      level: container
+      description: SPE override for allowed SELinux options
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

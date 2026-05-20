@@ -1,5 +1,12 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $gatewayKindExists := or (include "helm_lib_kind_exists" (list . "Gateway")) ((.Values.global.discovery.apiVersions | default list) | has "gateway.networking.k8s.io/v1/Gateway") }}
+{{- $httpRouteKindExists := or (include "helm_lib_kind_exists" (list . "HTTPRoute")) ((.Values.global.discovery.apiVersions | default list) | has "gateway.networking.k8s.io/v1/HTTPRoute") }}
+{{- $gatewayAPIEnabled := and $moduleGateway $gatewayKindExists $httpRouteKindExists }}
+{{- $featureGates := list "ACMEHTTP01IngressPathTypeExact=false" }}
+{{- if .Values.certManager.enableListenerSet }}
+  {{- $featureGates = append $featureGates "ListenerSets=true" }}
+{{- end }}
 {{- define "cert_manager_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -65,7 +72,7 @@ spec:
           - --v=1
           - --cluster-resource-namespace=$(POD_NAMESPACE)
           - --leader-election-namespace=$(POD_NAMESPACE)
-          - --feature-gates=ACMEHTTP01IngressPathTypeExact=false # TODO: Remove after update ingress-nginx up to v1.13.2+ and v1.12.6+
+          - --feature-gates={{ join "," $featureGates }} # TODO: Remove ACMEHTTP01IngressPathTypeExact after update ingress-nginx up to v1.13.2+ and v1.12.6+
           - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
           {{- if $.Values.certManager.maxConcurrentChallenges }}
           - --max-concurrent-challenges={{ $.Values.certManager.maxConcurrentChallenges }}
@@ -87,8 +94,11 @@ spec:
           {{- end }}
 {{- end }}
 {{- end }}
-{{- if and $moduleGateway (include "helm_lib_kind_exists" (list . "Gateway")) (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if $gatewayAPIEnabled }}
           - --enable-gateway-api=true
+{{- end }}
+{{- if and $.Values.certManager.enableListenerSet $gatewayAPIEnabled }}
+          - --enable-gateway-api-listenerset=true
 {{- end }}
           ports:
             - containerPort: 9402

@@ -28,12 +28,6 @@ editions:
   buildIncludes:
     # skipping write build includes candi-%s.yaml file for edition
     skipCandi: true
-    # skipping write build includes files:
-    #   modules-%s.yaml
-    #   modules-with-exclude-%s.yaml
-    #	modules-with-dependencies-%s.yaml
-    # for edition
-    skipModules: true
 
 - name: BE
   modulesDir: "ee/be/modules"

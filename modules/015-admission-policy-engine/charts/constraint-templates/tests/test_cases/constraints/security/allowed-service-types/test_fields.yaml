@@ -1,0 +1,17 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-service-types
+spec:
+  objectKind: Service
+  objectFields:
+    - path: spec.type
+      level: pod
+
+      description: Service type must be in allowed list
+      requiredScenarios: [positive, negative, absent]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

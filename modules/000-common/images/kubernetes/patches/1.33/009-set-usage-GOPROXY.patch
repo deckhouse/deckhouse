@@ -1,7 +1,7 @@
-diff --git c/hack/lib/golang.sh w/hack/lib/golang.sh
-index 3a20da92e42..3b29ed6effd 100755
---- c/hack/lib/golang.sh
-+++ w/hack/lib/golang.sh
+diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
+index b2e202e70e7..908b475e2ab 100755
+--- a/hack/lib/golang.sh
++++ b/hack/lib/golang.sh
 @@ -788,13 +788,13 @@ kube::golang::build_some_binaries() {
      done
      if [[ "${#uncovered[@]}" != 0 ]]; then

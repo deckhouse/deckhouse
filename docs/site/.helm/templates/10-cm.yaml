@@ -55,7 +55,7 @@ data:
         --retry-connrefused \
         --connect-timeout 10 \
         --max-time 30 \
-        "https://deckhouse.ru/downloads/deckhouse-installer-trdl/targets/channels/0/ea")
+        "https://deckhouse.ru/downloads/deckhouse-installer-trdl/targets/channels/1/ea")
 
     if [ -z "$VERSION" ]; then
       echo "Failed to retrieve version."

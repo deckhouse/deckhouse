@@ -52,6 +52,9 @@ const (
 	magicVeritySalt = "dc0f616e4bf75776061d5ffb7a6f45e1313b7cc86f3aa49b68de4f6d187bad2b"
 
 	saltArg = "--salt=" + magicVeritySalt
+
+	// imageHashTimeout bounds veritysetup format because it can hang.
+	imageHashTimeout = time.Minute
 )
 
 var (
@@ -141,6 +144,9 @@ func CloseMapper(ctx context.Context, name string) error {
 // Equivalent shell command:
 // veritysetup format --data-block-size=4096 --hash-block-size=4096 --salt=<salt> <imagePath> <hashPath>
 func CreateImageHash(ctx context.Context, imagePath string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, imageHashTimeout)
+	defer cancel()
+
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CreateImageHash")
 	defer span.End()
 
@@ -254,7 +260,19 @@ func extractRootHash(output string) string {
 // Equivalent shell command:
 // veritysetup status <name>
 func GetVersionByDevice(ctx context.Context, name string) (string, error) {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetVersionByDevice")
+	imagePath, err := GetImagePathByDevice(ctx, name)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSuffix(filepath.Base(imagePath), filepath.Ext(imagePath)), nil
+}
+
+// GetImagePathByDevice retrieves the backing image path from an active dm-verity device.
+// Equivalent shell command:
+// veritysetup status <name>
+func GetImagePathByDevice(ctx context.Context, name string) (string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetImagePathByDevice")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
@@ -272,16 +290,15 @@ func GetVersionByDevice(ctx context.Context, name string) (string, error) {
 		return "", fmt.Errorf("veritysetup status: %w (output: %s)", err, string(output))
 	}
 
-	if version := parseImageVersion(string(output)); version != "" {
-		return version, nil
+	if imagePath := parseImagePath(string(output)); imagePath != "" {
+		return imagePath, nil
 	}
 
 	return "", ErrVersionNotFound
 }
 
-// parseImageVersion extracts version from veritysetup status output.
-// Parses "data loop: /path/to/v0.6.22.erofs" and returns "v0.6.22".
-func parseImageVersion(output string) string {
+// parseImagePath extracts the backing image path from veritysetup status output.
+func parseImagePath(output string) string {
 	_, after, found := strings.Cut(output, "data loop:")
 	if !found {
 		return ""
@@ -293,5 +310,5 @@ func parseImageVersion(output string) string {
 		return ""
 	}
 
-	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	return path
 }

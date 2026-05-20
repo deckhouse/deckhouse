@@ -1,0 +1,399 @@
+#
+# config/crd/bases/control-plane.deckhouse.io_controlplanenodes.yaml
+#
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+  name: controlplanenodes.control-plane.deckhouse.io
+spec:
+  group: control-plane.deckhouse.io
+  names:
+    kind: ControlPlaneNode
+    listKind: ControlPlaneNodeList
+    plural: controlplanenodes
+    shortNames:
+    - cpn
+    singular: controlplanenode
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Etcd ready
+      jsonPath: .status.conditions[?(@.type=='EtcdReady')].status
+      name: ETCD
+      type: string
+    - description: API server ready
+      jsonPath: .status.conditions[?(@.type=='APIServerReady')].status
+      name: APISERVER
+      type: string
+    - description: Controller manager ready
+      jsonPath: .status.conditions[?(@.type=='ControllerManagerReady')].status
+      name: CONTROLLERMANAGER
+      type: string
+    - description: Scheduler ready
+      jsonPath: .status.conditions[?(@.type=='SchedulerReady')].status
+      name: SCHEDULER
+      type: string
+    - description: Certificates healthy
+      jsonPath: .status.conditions[?(@.type=='CertificatesHealthy')].status
+      name: CERTIFICATES
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Describes the desired and observed state of control plane components on a single node:
+          etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+
+          The resource is created and updated by the `control-plane-manager` module automatically. Users do not need to create or edit it.
+
+          Useful for diagnosing the health of the control plane on the node:
+
+          - `ETCD`, `APISERVER`, `CONTROLLERMANAGER` and `SCHEDULER` columns of `kubectl get cpn` show component readiness.
+          - `CERTIFICATES` column shows overall certificate health.
+          - `spec.components` contains desired fingerprints, while `status.components` contains the actually applied ones.
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Describes the desired state of control plane components on the node.
+            properties:
+              caChecksum:
+                description: Checksum of the `d8-pki` Secret containing CA certificates that must be applied to all components on the node.
+                type: string
+              components:
+                description: |-
+                  Contains the desired configuration and PKI checksums for each control plane component.
+
+                  If a value in `spec.components.<component>.checksums` differs from the corresponding value in `status.components.<component>.checksums`, the module starts a
+                  ControlPlaneOperation to bring the component to the desired state.
+                properties:
+                  etcd:
+                    description: Desired state of the etcd component.
+                    properties:
+                      checksums:
+                        description: Desired checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                    type: object
+                  kube-apiserver:
+                    description: Desired state of the kube-apiserver
+                      component.
+                    properties:
+                      checksums:
+                        description: Desired checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                    type: object
+                  kube-controller-manager:
+                    description: Desired state of the
+                      kube-controller-manager component.
+                    properties:
+                      checksums:
+                        description: Desired checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                    type: object
+                  kube-scheduler:
+                    description: Desired state of the kube-scheduler
+                      component.
+                    properties:
+                      checksums:
+                        description: Desired checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                    type: object
+                type: object
+            type: object
+          status:
+            description: Describes the observed state of control
+              plane components on the node.
+            properties:
+              caChecksum:
+                description: Actually applied checksum of CA
+                  certificates.
+                type: string
+              components:
+                description: |
+                  Contains the observed state for each component: applied checksums and certificate expiration dates.
+                properties:
+                  etcd:
+                    description: Observed state of the etcd component.
+                    properties:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
+                        type: object
+                      checksums:
+                        description: Applied checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                      lastCertObserveTime:
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
+                        format: date-time
+                        type: string
+                    type: object
+                  kube-apiserver:
+                    description: Observed state of the kube-apiserver
+                      component.
+                    properties:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
+                        type: object
+                      checksums:
+                        description: Applied checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                      lastCertObserveTime:
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
+                        format: date-time
+                        type: string
+                    type: object
+                  kube-controller-manager:
+                    description: Observed state of the
+                      kube-controller-manager component.
+                    properties:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
+                        type: object
+                      checksums:
+                        description: Applied checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                      lastCertObserveTime:
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
+                        format: date-time
+                        type: string
+                    type: object
+                  kube-scheduler:
+                    description: Observed state of the kube-scheduler
+                      component.
+                    properties:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
+                        type: object
+                      checksums:
+                        description: Applied checksums for the component.
+                        properties:
+                          ca:
+                            description: |-
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
+                            type: string
+                          config:
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
+                            type: string
+                          pki:
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
+                            type: string
+                        type: object
+                      lastCertObserveTime:
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
+                        format: date-time
+                        type: string
+                    type: object
+                type: object
+              conditions:
+                description: |-
+                  List of conditions reflecting the readiness of control plane components on the node.
+
+                  Possible condition types:
+
+                  - `EtcdReady`: etcd is running and accepting requests (`ETCD` column).
+                  - `APIServerReady`: kube-apiserver is running and accepting requests (`APISERVER` column).
+                  - `ControllerManagerReady`: kube-controller-manager is running (`CONTROLLERMANAGER` column).
+                  - `SchedulerReady`: kube-scheduler is running (`SCHEDULER` column).
+                  - `CertificatesHealthy`: All component certificates are valid and have enough lifetime left (`CERTIFICATES` column).
+
+                  When `status` is `False`, the cause is described in `reason` and `message`.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Time of the last condition status transition.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        Human-readable description of the current condition state.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        The `.metadata.generation` value used to calculate the current condition state.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        Machine-readable reason for the current condition state.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: Status of the condition.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: Type of the condition in CamelCase or in the `foo.example.com/CamelCase` format.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

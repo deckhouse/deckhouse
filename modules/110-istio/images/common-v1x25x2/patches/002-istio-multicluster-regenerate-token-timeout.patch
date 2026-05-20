@@ -1,0 +1,61 @@
+diff --git a/pkg/kube/multicluster/secretcontroller.go b/pkg/kube/multicluster/secretcontroller.go
+index 824ac68268..664776fcbb 100644
+--- a/pkg/kube/multicluster/secretcontroller.go
++++ b/pkg/kube/multicluster/secretcontroller.go
+@@ -258,6 +258,26 @@ func (c *Controller) createRemoteCluster(kubeConfig []byte, clusterID string) (*
+ 	}, nil
+ }
+ 
++// stopPreviousClusterAfterReplacementReady closes prev after newCluster reports initial sync (or after
++// a bounded wait), so rotating istio-remote-secret does not tear down the old kube client before the
++// replacement is usable.
++func (c *Controller) stopPreviousClusterAfterReplacementReady(newCluster, prev *Cluster, logger *log.Scope) {
++	wait := features.RemoteClusterTimeout
++	if wait == 0 {
++		wait = 2 * time.Minute
++	} else {
++		wait += 2 * time.Second
++	}
++	deadline := time.Now().Add(wait)
++	for !newCluster.HasSynced() && time.Now().Before(deadline) {
++		time.Sleep(20 * time.Millisecond)
++	}
++	if !newCluster.HasSynced() {
++		logger.Warnf("replacement cluster did not become ready within %v; stopping previous kubeconfig anyway", wait)
++	}
++	prev.Stop()
++}
++
+ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) error {
+ 	secretKey := name.String()
+ 	// First delete clusters
+@@ -277,6 +297,7 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 		}
+ 
+ 		action := Add
++		var prevCluster *Cluster
+ 		if prev := c.cs.Get(secretKey, cluster.ID(clusterID)); prev != nil {
+ 			action = Update
+ 			// clusterID must be unique even across multiple secrets
+@@ -285,8 +306,8 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 				logger.Infof("skipping update (kubeconfig are identical)")
+ 				continue
+ 			}
+-			// stop previous remote cluster
+-			prev.Stop()
++			// Keep the previous cluster alive until the replacement is ready.
++			prevCluster = prev
+ 		} else if c.cs.Contains(cluster.ID(clusterID)) {
+ 			// if the cluster has been registered before by another secret, ignore the new one.
+ 			logger.Warnf("cluster has already been registered")
+@@ -305,6 +326,10 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 		go func() {
+ 			remoteCluster.Run(c.meshWatcher, c.handlers, action)
+ 		}()
++		if prevCluster != nil {
++			// Do not block the work queue while waiting for replacement readiness.
++			go c.stopPreviousClusterAfterReplacementReady(remoteCluster, prevCluster, logger)
++		}
+ 	}
+ 
+ 	log.Infof("Number of remote clusters: %d", c.cs.Len())

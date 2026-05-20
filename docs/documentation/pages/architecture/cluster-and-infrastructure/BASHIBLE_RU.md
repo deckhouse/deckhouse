@@ -14,7 +14,7 @@ description: Архитектура bashible в Deckhouse Kubernetes Platform �
 
 * [скрипты установки bashible](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bootstrap);
 * [скрипты бутстрапа первого узла](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/cluster-bootstrap);
-* скрипты настройки узла для определенного облачного провайдера (например, [AWS](https://github.com/deckhouse/deckhouse/tree/main/candi/cloud-providers/aws/bashible));
+* скрипты настройки узла для определенного облачного провайдера (например, [AWS](https://github.com/deckhouse/deckhouse/tree/main/modules/030-cloud-provider-aws/candi/bashible));
 * [основные (common) скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all).
 
 Скрипты представляют собой *gotemplate*-шаблоны, что позволяет гибко настраивать узел в зависимости от группы. Сами скрипты должны быть написаны так, чтобы они могли корректно выполняться при повторном запуске в случае ошибки и при повторном прогоне. Отдельный скрипт называется степом (шагом).
@@ -27,7 +27,7 @@ description: Архитектура bashible в Deckhouse Kubernetes Platform �
 * Скачивание необходимых пакетов из `registrypackages`.
 * Установка и настройка CRI containerd.
 * Скачивание и настройка **kubernetes-api-proxy**. Компонент отвечает за доступ к API Kubernetes, представляет собой NGINX с набором upstream-серверов к master-узлам. Это обеспечивает HA-доступ к API на случай, если один master-узел недоступен, а также балансировку нагрузки к API.
-* Установка, настройка и запуск [kubelet](../kubernetes-and-scheduling/kubelet.html).
+* Установка, настройка и запуск [kubelet](../../kubernetes-and-scheduling/kubelet.html).
 * Запуск службы bashible, которая выполняет `bashible.sh` каждую минуту.
 * Перезагрузка узла при необходимости.
 

@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: max-revision-history-limit
+spec:
+  objectKind: Deployment
+  objectFields:
+    - path: spec.revisionHistoryLimit
+      level: pod
+      description: Deployment revisionHistoryLimit must not exceed configured limit.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

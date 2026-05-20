@@ -6,7 +6,7 @@ title: "The istio module: configuration"
 
 ## Authentication
 
-[user-authn](../user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
+[user-authn](/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
 If these options are disabled, the module will use basic auth with the auto-generated password.
 
 Use d8 k to see password:
@@ -21,4 +21,6 @@ Delete the Secret to re-generate password:
 d8 k -n d8-istio delete secret/kiali-basic-auth
 ```
 
-> **Note!** The `auth.password` parameter is deprecated.
+{% alert level="warning" %}
+The `auth.password` parameter is deprecated.
+{% endalert %}

@@ -1,0 +1,127 @@
+{{- define "user_api_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if .Values.userAuthn.internal.dexUsersCRDs }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: user-api
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: user-api
+  updatePolicy:
+    updateMode: "InPlaceOrRecreate"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "user-api"
+      minAllowed:
+        {{- include "user_api_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 50Mi
+  {{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-api
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: user-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-api
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: user-api
+  template:
+    metadata:
+      labels:
+        app: user-api
+    spec:
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "user-api")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      serviceAccountName: user-api
+      automountServiceAccountToken: true
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: self-signed-generator
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "selfSignedGenerator") }}
+        args:
+        - user-api.d8-{{ .Chart.Name }}
+        - user-api.d8-{{ .Chart.Name }}.svc
+        volumeMounts:
+        - name: tls
+          mountPath: /certs
+        resources:
+          requests:
+            cpu: 10m
+            memory: 10Mi
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+          limits:
+            memory: 10Mi
+      containers:
+      - name: user-api
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "userApi") }}
+        args:
+        - --listen=:8443
+        - --dex-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
+        - --tls-cert-file=/certs/tls.crt
+        - --tls-key-file=/certs/tls.key
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        volumeMounts:
+        - name: tls
+          mountPath: /certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "user_api_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: tls
+        emptyDir: {}
+{{- end }}

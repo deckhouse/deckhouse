@@ -8,6 +8,8 @@ metadata:
   name: "cilium-hubble"
   namespace: "d8-cni-cilium"
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex-authenticator" "name" "cilium-hubble" )) | nindent 2 }}
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "hubble") }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
@@ -18,6 +20,8 @@ spec:
     {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  signOutURL: "/logout"
+  sendAuthorizationHeader: true
   {{- with .Values.ciliumHubble.auth.allowedUserEmails }}
   allowedEmails:
   {{- . | toYaml | nindent 2 }}

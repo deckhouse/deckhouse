@@ -57,6 +57,7 @@ periodSeconds: 10
 {{- /* + vpaEnabled (optional, default: `false`) — enables VerticalPodAutoscaler rendering. */ -}}
 {{- /* + vpaUpdateMode (optional, default: `"InPlaceOrRecreate"`) — VPA update mode. */ -}}
 {{- /* + vpaMaxAllowed (optional, default: `{cpu: 50m, memory: 50Mi}`) — maximum resource values used in VPA policy. */ -}}
+{{- /* + securityPolicyExceptionEnabled (optional, default: `false`) — enables SecurityPolicyException rendering and adds the related pod label. */ -}}
 {{- define "helm_lib_capi_controller_manager_manifests" -}}
   {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc. */ -}}
   {{- $config := index . 1 -}} {{- /* Configuration dict for the CAPI Controller Manager. */ -}}
@@ -90,6 +91,7 @@ periodSeconds: 10
   {{- $vpaEnabled := dig "vpaEnabled" false $config -}}
   {{- $vpaUpdateMode := dig "vpaUpdateMode" "InPlaceOrRecreate" $config -}}
   {{- $vpaMaxAllowed := dig "vpaMaxAllowed" (include "capi_controller_manager_max_allowed_resources" $context | fromYaml) $config -}}
+  {{- $securityPolicyExceptionEnabled := dig "securityPolicyExceptionEnabled" false $config }}
 
 {{- if and $vpaEnabled ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -217,4 +219,26 @@ spec:
       volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
+{{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+{{- if $hostNetwork }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ $namespace }}
+spec:
+  {{- if $hostNetwork }}
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for CAPI infrastructure controller manager.
+          The CAPI infrastructure controller manager requires host network access to continue infrastructure reconciliation even if the CNI or pod network is unavailable.
+  {{- end }}
+{{- end }}
+{{- end }}
+
 {{- end -}}

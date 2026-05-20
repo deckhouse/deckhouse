@@ -43,7 +43,34 @@ jobs:
   start_release_build_workflow:
     name: Start build for release
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
+      id-token: write
     steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
 
       # <template: checkout_step>
       - name: Checkout sources
@@ -62,7 +89,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/

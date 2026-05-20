@@ -19,6 +19,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestCheckCommand(t *testing.T) {
@@ -120,7 +122,7 @@ func TestGetParentIndex(t *testing.T) {
 	commands := []Command{
 		{Name: "bootstrap", Help: "Bootstrap cluster"},
 		{Name: "converge", Help: "Converge cluster"},
-		{Name: "install", Help: "Install component", Parrent: "bootstrap"},
+		{Name: "install", Help: "Install component", Parent: "bootstrap"},
 	}
 
 	tests := []struct {
@@ -169,9 +171,9 @@ func TestGetNestingDepth(t *testing.T) {
 	commands := []Command{
 		{Name: "bootstrap", Help: "Bootstrap cluster"},
 		{Name: "converge", Help: "Converge cluster"},
-		{Name: "install", Help: "Install component", Parrent: "bootstrap"},
-		{Name: "phase", Help: "Run phase", Parrent: "install"},
-		{Name: "step", Help: "Run step", Parrent: "phase"},
+		{Name: "install", Help: "Install component", Parent: "bootstrap"},
+		{Name: "phase", Help: "Run phase", Parent: "install"},
+		{Name: "step", Help: "Run step", Parent: "phase"},
 	}
 
 	tests := []struct {
@@ -188,25 +190,25 @@ func TestGetNestingDepth(t *testing.T) {
 		},
 		{
 			name:          "one level deep",
-			cmd:           Command{Name: "install", Help: "Install component", Parrent: "bootstrap"},
+			cmd:           Command{Name: "install", Help: "Install component", Parent: "bootstrap"},
 			expectedTop:   "bootstrap",
 			expectedDepth: 1,
 		},
 		{
 			name:          "two levels deep",
-			cmd:           Command{Name: "phase", Help: "Run phase", Parrent: "install"},
+			cmd:           Command{Name: "phase", Help: "Run phase", Parent: "install"},
 			expectedTop:   "bootstrap",
 			expectedDepth: 2,
 		},
 		{
 			name:          "three levels deep",
-			cmd:           Command{Name: "step", Help: "Run step", Parrent: "phase"},
+			cmd:           Command{Name: "step", Help: "Run step", Parent: "phase"},
 			expectedTop:   "bootstrap",
 			expectedDepth: 3,
 		},
 		{
 			name:          "orphaned command",
-			cmd:           Command{Name: "orphan", Help: "Orphaned command", Parrent: "nonexistent"},
+			cmd:           Command{Name: "orphan", Help: "Orphaned command", Parent: "nonexistent"},
 			expectedTop:   "orphan",
 			expectedDepth: 0,
 		},
@@ -267,8 +269,16 @@ func TestRegisterCommands(t *testing.T) {
 		{
 			name: "register top level commands",
 			commands: []Command{
-				{Name: "bootstrap", Help: "Bootstrap cluster", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
-				{Name: "converge", Help: "Converge cluster", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+				{
+					Name:       "bootstrap",
+					Help:       "Bootstrap cluster",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd },
+				},
+				{
+					Name:       "converge",
+					Help:       "Converge cluster",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd },
+				},
 			},
 			allowedCommands: []string{},
 			expectError:     false,
@@ -276,8 +286,15 @@ func TestRegisterCommands(t *testing.T) {
 		{
 			name: "register nested commands",
 			commands: []Command{
-				{Name: "bootstrap", Help: "Bootstrap cluster", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
-				{Name: "install", Help: "Install component", Parrent: "bootstrap", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+				{
+					Name:       "bootstrap",
+					Help:       "Bootstrap cluster",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
+				{
+					Name:       "install",
+					Help:       "Install component",
+					Parent:     "bootstrap",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 			},
 			allowedCommands: []string{},
 			expectError:     false,
@@ -285,7 +302,11 @@ func TestRegisterCommands(t *testing.T) {
 		{
 			name: "error on missing parent",
 			commands: []Command{
-				{Name: "install", Help: "Install component", Parrent: "nonexistent", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+				{
+					Name:       "install",
+					Help:       "Install component",
+					Parent:     "nonexistent",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 			},
 			allowedCommands: []string{"nonexistent install"},
 			expectError:     true,
@@ -293,8 +314,14 @@ func TestRegisterCommands(t *testing.T) {
 		{
 			name: "filtered commands by allowed list",
 			commands: []Command{
-				{Name: "bootstrap", Help: "Bootstrap cluster", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
-				{Name: "converge", Help: "Converge cluster", DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+				{
+					Name:       "bootstrap",
+					Help:       "Bootstrap cluster",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
+				{
+					Name:       "converge",
+					Help:       "Converge cluster",
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 			},
 			allowedCommands: []string{"bootstrap"},
 			expectError:     false,
@@ -319,7 +346,7 @@ func TestRegisterCommands(t *testing.T) {
 				allowedCommands = originalAllowedCommands
 			}()
 
-			err := registerCommands(app)
+			err := registerCommands(app, &options.Options{})
 
 			if tt.expectError {
 				require.Error(t, err)

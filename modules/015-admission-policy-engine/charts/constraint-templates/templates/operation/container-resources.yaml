@@ -41,33 +41,34 @@ spec:
                   - memory
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          general_violation[{"msg": msg, "field": "containers"}]
-        }
+              import data.lib.common.input_containers
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          general_violation[{"msg": msg, "field": "initContainers"}]
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                provided := {resource_type | container.resources.limits[resource_type]}
+                required := {resource_type | resource_type := input.parameters.limits[_]}
+                missing := required - provided
+                count(missing) > 0
+                msg := sprintf("container <%v> does not have <%v> limits defined", [container.name, missing])
+              }
 
-        general_violation[{"msg": msg, "field": field}] {
-          container := input.review.object.spec[field][_]
-          provided := {resource_type | container.resources.limits[resource_type]}
-          required := {resource_type | resource_type := input.parameters.limits[_]}
-          missing := required - provided
-          count(missing) > 0
-          msg := sprintf("container <%v> does not have <%v> limits defined", [container.name, missing])
-        }
-
-        general_violation[{"msg": msg, "field": field}] {
-          container := input.review.object.spec[field][_]
-          provided := {resource_type | container.resources.requests[resource_type]}
-          required := {resource_type | resource_type := input.parameters.requests[_]}
-          missing := required - provided
-          count(missing) > 0
-          msg := sprintf("container <%v> does not have <%v> requests defined", [container.name, missing])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                provided := {resource_type | container.resources.requests[resource_type]}
+                required := {resource_type | resource_type := input.parameters.requests[_]}
+                missing := required - provided
+                count(missing) > 0
+                msg := sprintf("container <%v> does not have <%v> requests defined", [container.name, missing])
+              }

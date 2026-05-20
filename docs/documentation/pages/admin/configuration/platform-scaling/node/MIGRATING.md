@@ -10,6 +10,7 @@ You can configure containerd v2 as the primary container runtime either at the c
 Migration to containerd v2 is possible under the following conditions:
 
 - Nodes meet the requirements described in the [cluster-wide parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+- The node kernel version is not in the range 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS).
 - There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
 
 If any of the requirements described in the [general cluster parameters](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config=custom` is added to it.
@@ -32,6 +33,12 @@ ls -l /etc/containerd/conf.d
 ```
 
 ## How to enable containerd v2
+
+{% alert level="info" %}
+During migration the directory `/var/lib/containerd` will be cleared, causing all pod images to be re-pulled, and the node will reboot.
+
+Also note that this is a [disruptive update](./node-management.html#disruptive-updates). If [`spec.disruptions.approvalMode: Manual`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) is set for a node group, approve the update on the respective nodes with the annotation: `d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=`.
+{% endalert %}
 
 You can enable containerd v2 in two ways:
 
@@ -60,8 +67,4 @@ You can enable containerd v2 in two ways:
        type: ContainerdV2
    ```
 
-When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequentially updating the nodes. Updating a node results in the disruption of the workload hosted on it (disruptive update). The node update process is managed by the parameters for applying disruptive updates to the node group ([spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
-
-{% alert level="info" %}
-At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
-{% endalert %}
+   When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequentially updating the nodes.

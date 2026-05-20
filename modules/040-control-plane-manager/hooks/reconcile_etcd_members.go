@@ -137,8 +137,6 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
 	}
 
-	input.Values.Set("controlPlaneManager.internal.etcdServers", etcdServersEndpoints)
-
 	// etcd
 	etcdcli, err := getETCDClient(input, dc, etcdServersEndpoints)
 	if err != nil {
@@ -153,6 +151,18 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	if err != nil {
 		return errors.Wrap(err, "list etcd members failed")
 	}
+
+	etcdVotingMembers := make([]string, 0, len(etcdMembersResp.Members))
+	for _, mem := range etcdMembersResp.Members {
+		if mem.IsLearner {
+			input.Logger.Warn("found learner etcd member, will be skipped", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
+			continue
+		}
+		if ip, ok := discoveredEtcdNodesMap[mem.Name]; ok {
+			etcdVotingMembers = append(etcdVotingMembers, fmt.Sprintf("https://%s:2379", ip))
+		}
+	}
+	input.Values.Set("controlPlaneManager.internal.etcdServers", etcdVotingMembers)
 
 	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {

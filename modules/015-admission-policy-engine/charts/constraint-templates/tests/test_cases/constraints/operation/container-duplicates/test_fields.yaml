@@ -1,0 +1,27 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: container-duplicates
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].name
+      level: container
+      description: Container names in spec.containers must be unique within the pod.
+      requiredScenarios: [positive, negative]
+    - path: spec.containers[].env[].name
+      level: container
+      description: Environment variable names must be unique within each regular container.
+      requiredScenarios: [positive, negative]
+    - path: spec.initContainers[].name
+      level: container
+      description: Container names in spec.initContainers must be unique within the pod.
+      requiredScenarios: [positive, negative]
+    - path: spec.initContainers[].env[].name
+      level: container
+      description: Environment variable names must be unique within each init container.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

@@ -59,8 +59,8 @@ func NewK8sStateCache(client *KubernetesClient, namespace, secretName, tmpDir st
 	}
 }
 
-func (c *StateCache) Init() error {
-	_, err := c.populateSecret()
+func (c *StateCache) Init(ctx context.Context) error {
+	_, err := c.populateSecret(ctx)
 	return err
 }
 
@@ -69,8 +69,8 @@ func (c *StateCache) WithLabels(labels map[string]string) *StateCache {
 	return c
 }
 
-func (c *StateCache) getSecret() (*v1.Secret, error) {
-	s, err := c.populateSecret()
+func (c *StateCache) getSecret(ctx context.Context) (*v1.Secret, error) {
+	s, err := c.populateSecret(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -82,12 +82,14 @@ func (c *StateCache) getSecret() (*v1.Secret, error) {
 	return s, nil
 }
 
-func (c *StateCache) populateSecret() (*v1.Secret, error) {
+func (c *StateCache) populateSecret(ctx context.Context) (*v1.Secret, error) {
 	var secret *v1.Secret
 	var lastError error
+
 	err := retry.NewSilentLoop("get cache secret", 3, 2*time.Second).Run(func() error {
 		var err error
-		secret, err = c.secretsAPI.Get(context.TODO(), c.secretName, metav1.GetOptions{})
+
+		secret, err = c.secretsAPI.Get(ctx, c.secretName, metav1.GetOptions{})
 		if err == nil {
 			return nil
 		}
@@ -133,7 +135,7 @@ func (c *StateCache) populateSecret() (*v1.Secret, error) {
 			Data: map[string][]byte{},
 		}
 
-		secret, err = c.secretsAPI.Create(context.TODO(), secretToCreate, metav1.CreateOptions{})
+		secret, err = c.secretsAPI.Create(ctx, secretToCreate, metav1.CreateOptions{})
 		if err == nil || apierrors.IsAlreadyExists(err) {
 			return nil
 		}
@@ -149,16 +151,16 @@ func (c *StateCache) populateSecret() (*v1.Secret, error) {
 	return secret, nil
 }
 
-func (c *StateCache) update(action func(map[string][]byte) map[string][]byte) error {
+func (c *StateCache) update(ctx context.Context, action func(map[string][]byte) map[string][]byte) error {
 	return kuberetry.RetryOnConflict(kuberetry.DefaultBackoff, func() error {
-		s, err := c.getSecret()
+		s, err := c.getSecret(ctx)
 		if err != nil {
 			return err
 		}
 
 		s.Data = action(s.Data)
 
-		_, err = c.secretsAPI.Update(context.TODO(), s, metav1.UpdateOptions{})
+		_, err = c.secretsAPI.Update(ctx, s, metav1.UpdateOptions{})
 
 		return err
 	})
@@ -183,27 +185,30 @@ func (c *StateCache) prepareContent(content []byte) []byte {
 	return buf
 }
 
-func (c *StateCache) Save(name string, content []byte) error {
+func (c *StateCache) Save(ctx context.Context, name string, content []byte) error {
 	buf := c.prepareContent(content)
 
-	return c.update(func(curState map[string][]byte) map[string][]byte {
-		curState[name] = buf
-		return curState
-	})
+	return c.update(
+		ctx,
+		func(curState map[string][]byte) map[string][]byte {
+			curState[name] = buf
+			return curState
+		},
+	)
 }
 
-func (c *StateCache) SaveStruct(name string, v interface{}) error {
+func (c *StateCache) SaveStruct(ctx context.Context, name string, v interface{}) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
 		return err
 	}
 
-	return c.Save(name, b.Bytes())
+	return c.Save(ctx, name, b.Bytes())
 }
 
-func (c *StateCache) Load(name string) ([]byte, error) {
-	s, err := c.getSecret()
+func (c *StateCache) Load(ctx context.Context, name string) ([]byte, error) {
+	s, err := c.getSecret(ctx)
 	if err != nil {
 		log.ErrorF("Cannot get secret %s val %v\n", name, err)
 		return nil, err
@@ -212,8 +217,8 @@ func (c *StateCache) Load(name string) ([]byte, error) {
 	return c.get(s, name)
 }
 
-func (c *StateCache) LoadStruct(name string, v interface{}) error {
-	d, err := c.Load(name)
+func (c *StateCache) LoadStruct(ctx context.Context, name string, v interface{}) error {
+	d, err := c.Load(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -221,49 +226,55 @@ func (c *StateCache) LoadStruct(name string, v interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(d)).Decode(v)
 }
 
-func (c *StateCache) Delete(name string) {
-	err := c.update(func(curState map[string][]byte) map[string][]byte {
-		delete(curState, name)
+func (c *StateCache) Delete(ctx context.Context, name string) {
+	err := c.update(
+		ctx,
+		func(curState map[string][]byte) map[string][]byte {
+			delete(curState, name)
 
-		return curState
-	})
+			return curState
+		},
+	)
 	if err != nil {
 		log.ErrorF("Cannot delete cache %s val %v\n", name, err)
 	}
 }
 
-func (c *StateCache) CleanWithExceptions(excludeKeys ...string) {
-	err := c.update(func(curState map[string][]byte) map[string][]byte {
-		newState := map[string][]byte{
-			state.TombstoneKey: c.prepareContent([]byte("yes")),
-		}
-
-		for _, k := range excludeKeys {
-			v, ok := curState[k]
-			if !ok {
-				continue
+func (c *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...string) {
+	err := c.update(
+		ctx,
+		func(curState map[string][]byte) map[string][]byte {
+			newState := map[string][]byte{
+				state.TombstoneKey: c.prepareContent([]byte("yes")),
 			}
 
-			newState[k] = v
-		}
+			for _, k := range excludeKeys {
+				v, ok := curState[k]
+				if !ok {
+					continue
+				}
 
-		return newState
-	})
+				newState[k] = v
+			}
+
+			return newState
+		},
+	)
 	if err != nil {
 		log.ErrorF("Cannot clean cache %v\n", err)
 	}
 }
 
-func (c *StateCache) Clean() {
-	c.CleanWithExceptions()
+func (c *StateCache) Clean(ctx context.Context) {
+	c.CleanWithExceptions(ctx)
 }
 
 func (c *StateCache) GetPath(name string) string {
 	return filepath.Join(c.tmpDir, name)
 }
 
-func (c *StateCache) Iterate(action func(string, []byte) error) error {
-	s, err := c.getSecret()
+func (c *StateCache) Iterate(ctx context.Context, action func(string, []byte) error) error {
+	s, err := c.getSecret(ctx)
 	if err != nil {
 		return err
 	}
@@ -296,8 +307,8 @@ func (c *StateCache) Iterate(action func(string, []byte) error) error {
 	return nil
 }
 
-func (c *StateCache) InCache(name string) (bool, error) {
-	s, err := c.getSecret()
+func (c *StateCache) InCache(ctx context.Context, name string) (bool, error) {
+	s, err := c.getSecret(ctx)
 	if err != nil {
 		return false, err
 	}

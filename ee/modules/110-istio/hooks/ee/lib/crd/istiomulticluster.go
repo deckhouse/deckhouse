@@ -22,7 +22,7 @@ type IstioMulticluster struct {
 type IstioMulticlusterSpec struct {
 	MetadataEndpoint string `json:"metadataEndpoint"`
 	Metadata         struct {
-		ClusterCA                string `json:"ca"`
+		CA                       string `json:"ca"`
 		EnableInsecureConnection bool   `json:"insecureSkipVerify"`
 	} `json:"metadata,omitempty"`
 	EnableIngressGateway bool `json:"enableIngressGateway"`
@@ -30,11 +30,10 @@ type IstioMulticlusterSpec struct {
 
 type IstioMulticlusterStatus struct {
 	MetadataCache struct {
-		Public                    *AlliancePublicMetadata      `json:"public"`
-		Private                   *MulticlusterPrivateMetadata `json:"private"`
-		PublicLastFetchTimestamp  string                       `json:"publicLastFetchTimestamp"`
-		PrivateLastFetchTimestamp string                       `json:"privateLastFetchTimestamp"`
+		Public  *AlliancePublicMetadata      `json:"public,omitempty"`
+		Private *MulticlusterPrivateMetadata `json:"private,omitempty"`
 	} `json:"metadataCache,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // Warning! This struct is duplicated in images/metadata-exporter
