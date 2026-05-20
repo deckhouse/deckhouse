@@ -520,6 +520,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -532,6 +533,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -846,6 +848,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -858,6 +861,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1172,6 +1176,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1184,6 +1189,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1486,6 +1492,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1498,6 +1505,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1800,6 +1808,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1812,6 +1821,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -2114,6 +2124,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -2126,6 +2137,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
