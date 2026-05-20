@@ -43,7 +43,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 		})
 	})
 
@@ -57,7 +57,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing and does not set metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 		})
 	})
 
@@ -81,8 +81,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 				Expect(has).To(BeTrue(), "controller %s is missing the suspended annotation", item.GetName())
 			}
 
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeTrue())
-			Expect(hasMetricWithGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
 		})
 	})
 
@@ -96,7 +95,7 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 		It("does nothing because ConfigMap exists", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).To(BeEmpty())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 		})
 	})
 
@@ -115,26 +114,16 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 
 		It("expires the validation suspended metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+			Expect(hasMetricInGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeFalse())
 			Expect(hasExpireForGroup(f.MetricsCollector.CollectedMetrics(), validationSuspendMetricName)).To(BeTrue())
 		})
 	})
 })
 
-func hasMetric(metrics []operation.MetricOperation) bool {
+func hasMetricInGroup(metrics []operation.MetricOperation, group string) bool {
 	const metricName = "ingress_nginx_validation_suspended"
 	for _, m := range metrics {
-		if m.Name == metricName {
-			return true
-		}
-	}
-	return false
-}
-
-func hasMetricWithGroup(metrics []operation.MetricOperation, group string) bool {
-	const metricName = "ingress_nginx_validation_suspended"
-	for _, m := range metrics {
-		if m.Name == metricName && m.Group == group {
+		if m.Name == metricName && m.Group == group && m.Action != operation.ActionExpireMetrics {
 			return true
 		}
 	}
