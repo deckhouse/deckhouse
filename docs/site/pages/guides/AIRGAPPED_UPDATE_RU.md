@@ -27,6 +27,7 @@ d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
 ```console
 Stable
 ```
+{: .nowrap-default }
 
 Технически обновление DKP выглядит следующим образом: в хранилище образов находится образ с именем `release-channel` и тегом по названию канала обновлений, который указывает на образ уже конкретной версии DKP (при выпуске новой версии этот образ заменяется на новый).
 
@@ -37,7 +38,6 @@ Stable
 ```bash
 crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -tf -
 ```
-
 В результате будет выведен список файлов и директорий, содержащихся внутри образа:
 
 ```console
@@ -48,6 +48,7 @@ version.json
 .werf/tmp
 .werf/tmp/ssh-auth-sock
 ```
+{: .nowrap-default }
 
 В образе содержатся два основных файла:
 
@@ -59,7 +60,6 @@ version.json
   ```bash
   crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - version.json | jq
   ```
-
   Пример содержимого `version.json`:
 
   ```json
@@ -112,7 +112,6 @@ version.json
     "version": "v1.71.5"
   }
   ```
-
 При изменении значения в поле версии (`version`) в файле `version.json` в хранилище образов DKP в кластере применяет новый релиз: создаётся `deckhouserelease` и начинается процесс обновления.
 
 {% alert level="info" %}
@@ -139,19 +138,18 @@ version.json
 ```bash
 d8 k get ms deckhouse -o jsonpath='{.spec.registry.repo}'
 ```
-
 Пример вывода:
 
 ```console
 registry.deckhouse.ru/deckhouse/ee/modules
 ```
+{: .nowrap-default }
 
 Посмотреть содержимое репозитория можно с помощью команды:
 
 ```bash
 crane ls registry.deckhouse.ru/deckhouse/ee/modules
 ```
-
 Пример вывода:
 
 ```console
@@ -171,6 +169,7 @@ snapshot-controller
 stronghold
 virtualization
 ```
+{: .nowrap-default }
 
 В качестве примера рассмотрим содержимое образа модуля `console`. В хранилище образов лежит образ с неизменным именем `release` и тегом по имени канала, указывающим на образ уже конкретной версии модуля `console` (при выпуске новой версии модуля этот образ заменяется на новый).
 
@@ -179,13 +178,13 @@ virtualization
 ```bash
 crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | tar -tf -
 ```
-
 Пример вывода:
 
 ```console
 changelog.yaml
 version.json
 ```
+{: .nowrap-default }
 
 Образ модуля, аналогично образу самой платформы DKP, содержит файлы `changelog.yaml` и `version.json`.
 
@@ -194,7 +193,6 @@ version.json
 ```bash
 crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | tar -xOf - version.json | jq
 ```
-
 Пример содержимого `version.json`:
 
 ```json
@@ -202,7 +200,6 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
   "version": "v1.39.4"
 }
 ```
-
 В поле `version` содержится версия модуля. При её изменении DKP применяет новый релиз (создаётся `modulerelease` и начинается процесс обновления).
 
 {% alert level="warning" %}
@@ -232,13 +229,11 @@ registry.deckhouse.ru/deckhouse/ee/security/trivy-java-db:1
 registry.deckhouse.ru/deckhouse/ee/security/trivy-checks:0
 registry.deckhouse.ru/deckhouse/ee/security/trivy-bdu:1
 ```
-
 Для настройки периодического обновления образов баз данных уязвимостей используйте конструкцию вида:
 
 ```bash
 d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --no-platform --no-modules $(pwd)/d8-bundle-security-db && d8 mirror push $(pwd)/d8-bundle-security-db YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
 ```
-
 ## Пример сценария обновления платформы, модулей и баз данных уязвимостей
 
 Чтобы выполнить в закрытом окружении обновление DKP, используемых модулей и баз данных уязвимостей до актуальных версий, скачайте последние патч-релизы всех минорных версий платформы и указанных модулей и загрузите их в ваше хранилище образов.
@@ -252,28 +247,28 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    ```bash
    d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
    ```
-
    Пример вывода:
 
-   ```console
+```console
    {
      "core.deckhouse.io/edition": "EE",
      "core.deckhouse.io/version": "v1.68.13"
    }
    ```
+   {: .nowrap-default }
 
 1. Получите список установленных модулей в кластере:
 
    ```bash
    d8 k get mr | grep Deployed
    ```
-
    Пример вывода:
 
-   ```console
+```console
    commander-agent-v1.2.4             Deployed                     13d
    console-v1.35.1                    Deployed                     7d4h
    ```
+   {: .nowrap-default }
 
    Добавьте полученный список к команде `d8 mirror pull` в виде ключей: `--include-module='commander-agent@v1.2.4' --include-module='console@v1.35.1'`.
 
@@ -282,13 +277,11 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    ```bash
    d8 k get mr -o json | jq -r '.items[] | select(.status.phase == "Deployed") | "--include-module='\''\(.spec.moduleName)@\(.spec.version)'\''"' | paste -sd " " -
    ```
-
 1. Сформируйте финальную команду для скачивания образов, используя полученные ранее параметры:
 
    ```bash
    d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
    ```
-
    > Если вы настроили периодическое скачивание и загрузку в ваш registry баз данных уязвимостей, то можно добавить флаг `--no-security-db` для исключения их из процесса перекачивания образов.
 
    В результате выполнения команды будут скачаны последние патч-релизы всех минорных версий платформы и указанных модулей, начиная с последних патч-версий минорных версий релиза до актуальных версий, находящихся [на релизных каналах](https://releases.deckhouse.ru/ee).
@@ -298,7 +291,6 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    ```bash
    d8 mirror push $(pwd)/d8-bundle YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
    ```
-
 1. Проверьте состояние обновления в кластере с помощью команд:
 
    ```bash
@@ -306,7 +298,6 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    d8 k get modulereleases.deckhouse.io
    d8 system queue list
    ```
-
 ## Возможные проблемы
 
 ### Release is suspended
@@ -318,6 +309,7 @@ Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Kubernetes Platform
 Sep  9 00:11:01.532 ERROR Pull Deckhouse Kubernetes Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
 Error: pull failed, see the log for details
 ```
+{: .nowrap-default }
 
 Это значит, что на одном из каналов обновлений развертывание релиза остановлено. Такая ситуация возникает, если в образ канала обновлений поступает версия, на которую нужно обновляться, но случилась ситуация, при которой дальнейшее развертывание релиза на канал остановлено — образ канала обновлений патчится, и в него добавляется флаг `suspend`.
 
@@ -326,7 +318,6 @@ Error: pull failed, see the log for details
 ```bash
 d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY' --deckhouse-tag='v1.71.3'
 ```
-
 Пример вывода:
 
 ```console
@@ -342,6 +333,7 @@ Sep 16 12:56:27.087 INFO  ║║ Beginning to pull installers
 Sep 16 12:56:27.087 INFO  ║║ [1 / 1] Pulling registry.deckhouse.ru/deckhouse/ee/install:v1.71.3
 ...
 ```
+{: .nowrap-default }
 
 ## Особенности при работе с сертифицированной редакцией платформы
 

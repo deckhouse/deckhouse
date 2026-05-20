@@ -82,13 +82,12 @@ spec:
 
     Пример вывода команды:
 
-    ```console
+```console
     NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
     ...
     kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
     ...
     ```
-
     {: .nowrap-default }
 
 1. Перейдите по предоставленному адресу и используйте в качестве учетных данных email и пароль, которые вы указали при создании пользователя.
@@ -113,7 +112,6 @@ spec:
     clientID: plainstring
     clientSecret: plainstring
 ```
-
 В [организации GitHub](https://docs.github.com/ru/organizations) необходимо создать новое приложение. Для этого выполните следующие шаги:
 
 1. Перейдите в «Settings» → «Developer settings» → «OAuth Apps» → «Register a new OAuth application».
@@ -150,7 +148,6 @@ spec:
     - administrators
     - users
 ```
-
 Для того чтобы создать приложение в GitLab, выполните следующие шаги:
 
 Для GitLab, размещённого на собственном сервере:
@@ -199,7 +196,6 @@ spec:
     - administrators
     - users
 ```
-
 Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
 1. Перейдите в раздел «Applications» → «Add application».
@@ -226,7 +222,6 @@ spec:
     - administrators
     - users
 ```
-
 Для настройки аутентификации в Bitbucket выполните следующие шаги:
 
 1. В меню команды создайте новый OAuth-consumer.
@@ -271,7 +266,6 @@ spec:
         groupAttr: member
       nameAttr: cn
 ```
-
 Для настройки аутентификации в LDAP выполните следующие шаги:
 
 1. Создайте в LDAP read-only-пользователя (service account).
@@ -306,7 +300,6 @@ spec:
     insecureSkipEmailVerified: true
     getUserInfo: true
 ```
-
 #### Blitz Identity Provider
 
 На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
@@ -339,7 +332,6 @@ spec:
     userNameKey: email
   type: OIDC
 ```
-
 Чтобы корректно работал выход из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
 
 Для обеспечения детализированного доступа пользователя к приложениям необходимо:

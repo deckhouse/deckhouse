@@ -25,9 +25,10 @@ To configure access, follow these steps:
    The kubeconfig generation interface in DKP is automatically activated after enabling the `publishAPI` parameter in the `user-authn` module.  
    This web interface is available at the following URL:
 
-   ```console
+```console
    https://kubeconfig.<publicDomainTemplate>
    ```
+   {: .nowrap-default }
 
    For example, if `publicDomainTemplate` is `%s.kube.my`, the URL will be `https://kubeconfig.kube.my`.
 
@@ -48,7 +49,6 @@ To configure access, follow these steps:
        masterURI: https://159.89.5.247:6443
        description: "Direct access to kubernetes API"
    ```
-
 ## How API access protection works in Kubernetes
 
 In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
@@ -111,7 +111,6 @@ contexts:
     user: ldap-user
 current-context: default
 ```
-
 ## Kerberos (SPNEGO) SSO for LDAP
 
 Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. The mechanism works as follows:
@@ -168,7 +167,6 @@ spec:
       usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
       fallbackToPassword: false               # The default is false; if true, a login/password form is rendered when the `Authorization: Negotiate` header is missing or invalid.
 ```
-
 Notes:
 
 - The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.

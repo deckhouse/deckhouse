@@ -66,29 +66,30 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example output:
 
-   ```console
+```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
 
 1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
 
    ```bash
    d8 k get nodes
    ```
-
    Example output:
 
-   ```console
+```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
    ```
+   {: .nowrap-default }
 
    Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
 
-   ```console
+```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
@@ -101,15 +102,15 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    ```shell
    d8 system queue list
    ```
-
    Example output:
 
-   ```console
+```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
    - no tasks to handle.
    ```
+   {: .nowrap-default }
 
 1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
@@ -131,7 +132,6 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
            scheme: HTTPS
            license: <LICENSE_KEY> # Replace with your license key
    ```
-
 1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status).
 
    Example output:
@@ -148,7 +148,6 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    mode: Direct
    target_mode: Direct
    ```
-
 ### Switching to Unmanaged Mode
 
 To switch an already running cluster to `Unmanaged` mode, follow these steps:
@@ -164,28 +163,28 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    ```bash
    d8 k get module registry -o wide
    ```
-
    Example output:
 
-   ```console
+```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
 
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 
    ```shell
    d8 system queue list
    ```
-
    Example output:
 
-   ```console
+```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
    - no tasks to handle.
    ```
+   {: .nowrap-default }
 
 1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
@@ -207,7 +206,6 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
            scheme: HTTPS
            license: <LICENSE_KEY> # Replace with your license key
    ```
-
 1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status).
 
    Example output:
@@ -224,7 +222,6 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. If you need to switch back to the old registry management method, refer to the [instruction](#migration-back-from-the-registry-module).
 
 {% alert level="warning" %}
@@ -245,7 +242,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    ```bash
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
-
    Specify this configuration when setting up the `Unmanaged` mode:
 
    ```yaml
@@ -264,7 +260,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
            scheme: HTTPS
            license: <LICENSE_KEY> # Replace with your license key
    ```
-
 1. Wait for the switch to complete. Example [status output](#check-registry-mode-switch-status):
 
    ```yaml
@@ -279,7 +274,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 ### For Containerd v1
 
 {% alert level="danger" %}
@@ -331,7 +325,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
              password = "password"
        EOF
    ```
-
 1. Apply the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Wait until the configuration files appear in the `/etc/containerd/registry.d` directory on all nodes.
 
 1. Verify that the configurations are working correctly. To do this, use the following command:
@@ -343,7 +336,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    # For HTTP:
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
-
 1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
@@ -351,7 +343,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    ```bash
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
-
    Specify this configuration when setting up the `Unmanaged` mode:
 
    ```yaml
@@ -370,7 +361,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
            scheme: HTTPS
            license: <LICENSE_KEY> # Replace with your license key
    ```
-
 1. After applying, wait for the following message to appear in the [switch status](#check-registry-mode-switch-status):
 
    Example output:
@@ -388,7 +378,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
      status: "False"
      type: ContainerdConfigPreflightReady
    ```
-
    This message means that there are old registry configurations on the nodes located in the `/etc/containerd/conf.d` directory. The switch to the new containerd configuration is currently blocked. To allow the switch, you need to remove the old configuration files.
 
 1. Remove the old configuration files to allow switching to the `registry` module. To do this, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Example of a NodeGroupConfiguration manifest:
@@ -424,7 +413,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
        [ -f "$file" ] && rm -f "$file"
    ```
-
 1. After removing the old configurations, make sure that the switch has resumed. Example of the [switch status](#check-registry-mode-switch-status):
 
    ```yaml
@@ -436,7 +424,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
      status: "True"
      type: ContainerdConfigPreflightReady
    ```
-
 1. Wait for the switch to complete. Example of the [switch status](#check-registry-mode-switch-status):
 
    ```yaml
@@ -451,19 +438,16 @@ Containerd v2 uses the new format by default. For more details, see the section 
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. Delete the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) created in the step for deleting old configuration files:
 
    ```shell
    d8 k delete nodegroupconfiguration containerd-additional-config-auth-delete.sh
    ```
-
    To verify that NodeGroupConfiguration has been deleted, use the command:
 
    ```shell
    d8 k get nodegroupconfiguration
    ```
-
    The list should not contain the NodeGroupConfiguration to be deleted (for this example, `containerd-additional-config-auth-delete.sh`).
 
 ## Migration back from the registry module
@@ -495,7 +479,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
            scheme: HTTPS
            license: <LICENSE_KEY>
    ```
-
 1. Check the switch status using the [instruction](#check-registry-mode-switch-status). Example output:
 
    ```yaml
@@ -510,7 +493,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. Switch the registry to the non-configurable `Unmanaged` mode. Example configuration:
 
    ```yaml
@@ -525,7 +507,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
        registry:
          mode: Unmanaged
    ```
-
 1. Check the switch status using the [instruction](#check-registry-mode-switch-status). Example output:
 
    ```yaml
@@ -540,7 +521,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. If containerd v1 is used and [custom registry configurations](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry) are applied in the cluster, they must be replaced with the old format. To do this, prepare the registry configurations in the old format. These configurations do not need to be applied at this stage. Example configuration:
 
    ```yaml
@@ -588,13 +568,11 @@ Containerd v2 uses the new format by default. For more details, see the section 
                  auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
        EOF
    ```
-
 1. Delete the `registry-bashible-config` secret. This will trigger containerd v1 to switch back to the legacy registry format:
 
    ```bash
    d8 k -n d8-system delete secret registry-bashible-config
    ```
-
 1. After deletion, wait for the switch to complete. Use the [instruction](#check-registry-mode-switch-status) to track the progress. Example output:
 
    ```yaml
@@ -609,7 +587,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. If containerd v1 is used, apply the previously prepared `NodeGroupConfiguration` with custom registry configurations.
 
 1. Disable the `registry` module. Example:
@@ -624,7 +601,6 @@ Containerd v2 uses the new format by default. For more details, see the section 
      settings: {}
      version: 1
    ```
-
 ## Check registry mode switch status
 
 The status of the registry mode switch can be retrieved using the following command:
@@ -632,7 +608,6 @@ The status of the registry mode switch can be retrieved using the following comm
 ```bash
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
 ```
-
 Example output:
 
 ```yaml
@@ -675,7 +650,6 @@ conditions:
 mode: Direct
 target_mode: Direct
 ```
-
 The output displays the status of the switch process. Each condition can have a status of `True` or `False`, and may contain a `message` field with additional details.
 
 Description of conditions:

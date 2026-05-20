@@ -174,7 +174,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    Example output:
 
-   ```console
+```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
    #
@@ -191,10 +191,9 @@ Example of creating a virtual machine with Ubuntu 22.04.
    ```bash
    d8 v console linux-vm
    ```
-
    Example output:
 
-   ```console
+```console
    Successfully connected to linux-vm console. The escape sequence is ^]
    #
    linux-vm login: cloud
@@ -202,6 +201,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
    ...
    cloud@linux-vm:~$
    ```
+   {: .nowrap-default }
 
    How to connect to a virtual machine using the console in the web interface:
 
@@ -218,7 +218,6 @@ Example of creating a virtual machine with Ubuntu 22.04.
    d8 k delete vd linux-disk
    d8 k delete vi ubuntu
    ```
-
 ## Virtual machines
 
 The `VirtualMachine` resource is used to create a virtual machine, its parameters allow you to configure:
@@ -288,19 +287,18 @@ spec:
       name: linux-vm-root
 EOF
 ```
-
 Check the state of the virtual machine after creation:
 
 ```bash
 d8 k get vm linux-vm
 ```
-
 Example output:
 
 ```console
 NAME        PHASE     NODE           IPADDRESS     AGE
 linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
+{: .nowrap-default }
 
 After creation, the virtual machine will automatically get an IP address from the range specified in the module settings (`virtualMachineCIDRs` block).
 
@@ -339,7 +337,6 @@ How to create a virtual machine in the web interface:
       lock_passwd: False
   final_message: "The system is finally up, after $UPTIME seconds"
   ```
-
 - Click the "Create" button.
 - The VM status is displayed at the top left, under its name.
 
@@ -359,7 +356,6 @@ A virtual machine (VM) goes through several phases in its existence, from creati
     ```bash
     d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type | test(".*Ready"))'
     ```
-
 - `Starting`: Starting the virtual machine
 
   All dependent VM resources are ready and the system is attempting to start the VM on one of the cluster nodes.
@@ -373,7 +369,6 @@ A virtual machine (VM) goes through several phases in its existence, from creati
       ```bash
       d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type=="Running")'
       ```
-
 - `Running`: The virtual machine is running
 
   The VM is successfully started and running.
@@ -391,7 +386,6 @@ A virtual machine (VM) goes through several phases in its existence, from creati
         ```bash
         d8 k get vm <vm-name> -o json | jq '.status.conditions[] | select(.type=="Running")'
         ```
-
 - `Stopping`: The VM is stopped or rebooted.
 
 - `Stopped`: The VM is stopped and is not consuming computational resources
@@ -416,7 +410,6 @@ A virtual machine (VM) goes through several phases in its existence, from creati
       ```bash
       d8 k get vm <vm-name> -o json | jq '.status | {condition: .conditions[] | select(.type=="Migrating"), migrationState}'
       ```
-
 The `type: SizingPolicyMatched, status: False` condition indicates that the resource configuration does not comply with the sizing policy of the VirtualMachineClass being used. If the policy is violated, it is impossible to save VM parameters without making the resources conform to the policy.
 
 Conditions display information about the state of the VM, as well as on problems that arise. You can understand what is wrong with the VM by analyzing them:
@@ -424,7 +417,6 @@ Conditions display information about the state of the VM, as well as on problems
 ```bash
 d8 k get vm fedora -o json | jq '.status.conditions[] | select(.message != "")'
 ```
-
 ### Configuring CPU and coreFraction
 
 When creating a virtual machine, you can configure how much CPU resources it will use using the `cores` and `coreFraction` parameters.
@@ -451,7 +443,6 @@ spec:
     cores: 2
     coreFraction: 10%
 ```
-
 {% alert level="info" %}
 This approach allows for stable VM performance even under high load under conditions of CPU resource oversubscription, where more cores are allocated to virtual machines than are available on the hypervisor.
 {% endalert %}
@@ -468,7 +459,6 @@ spec:
     cores: 1
     coreFraction: 20%
 ```
-
 VM2:
 
 ```yaml
@@ -477,7 +467,6 @@ spec:
     cores: 1
     coreFraction: 80%
 ```
-
 ![vm-corefraction](/images/virtualization-platform/vm-corefraction.png)
 
 ### Virtual machine resource configuration and sizing policy
@@ -510,7 +499,6 @@ spec:
         max: 16Gi
       coreFractions: [20, 50, 100]
 ```
-
 If the VM uses 2 cores, it falls in the range of 1-4 cores. Then memory can be selected from 1 GB to 8 GB, and coreFraction is only 5%, 10%, 20%, 50%, or 100%. For 6 cores, the range is 5-8 cores, where memory is from 5GB to 16GB and coreFraction is 20%, 50% or 100%.
 
 In addition to VM sizing, the policy also allows you to implement the desired maximum oversubscription for VMs.
@@ -527,7 +515,6 @@ spec:
   cpu:
     cores: 1
 ```
-
 Next, the system automatically determines the topology depending on the specified number of cores. The calculation rules depend on the range of the number of cores and are described below.
 
 - If the number of cores is between 1 and 16 (1 ≤ `.spec.cpu.cores` ≤ 16):
@@ -587,7 +574,6 @@ status:
         coresPerSocket: 10
         sockets: 2
 ```
-
 The current VM topology (number of sockets and cores in each socket) is displayed in the VM status in the following format:
 
 ```yaml
@@ -602,7 +588,6 @@ status:
         sockets: 1
         coresPerSocket: 1
 ```
-
 ### OS type and bootloader configuration
 
 The `osType` parameter determines the operating system type and applies an optimal set of virtual devices and parameters for correct VM operation.
@@ -630,7 +615,6 @@ spec:
   bootloader: EFI
   # other parameters...
 ```
-
 Example configuration for a Linux virtual machine (default values can be omitted):
 
 ```yaml
@@ -639,7 +623,6 @@ spec:
   bootloader: BIOS
   # other parameters...
 ```
-
 {% alert level="info" %}
 For most modern Linux distributions, it is recommended to use `bootloader: EFI`. For Windows, `bootloader: EFI` or `bootloader: EFIWithSecureBoot` is usually required.
 {% endalert %}
@@ -660,7 +643,6 @@ spec:
   enableParavirtualization: false
   # other parameters...
 ```
-
 ### Initialization scripts
 
 Initialization scripts are used for the initial configuration of a virtual machine when it is started.
@@ -694,7 +676,6 @@ The main capabilities of Cloud-Init include:
    ssh_authorized_keys:
      - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ```
-
 1. Creating a user with a password and SSH key:
 
    ```yaml
@@ -709,7 +690,6 @@ The main capabilities of Cloud-Init include:
          - ssh-ed25519 AAAAB3NzaC1yc2EAAAADAQABAAABAQD... your-public-key ...
    ssh_pwauth: True
    ```
-
    To generate a password hash, use the command `mkpasswd --method=SHA-512 --rounds=4096`.
 
 1. Installing packages and services:
@@ -725,7 +705,6 @@ The main capabilities of Cloud-Init include:
      - systemctl enable --now nginx.service
      - systemctl enable --now qemu-guest-agent.service
    ```
-
 ##### Using Cloud-Init
 
 The Cloud-Init script can be embedded directly into the virtual machine specification, but its size is limited to a maximum of 2048 bytes:
@@ -739,7 +718,6 @@ spec:
       package_update: true
       ...
 ```
-
 For longer scenarios and/or when private data is involved, the script for initial initialization of the virtual machine can be created in a Secret resource. An example of a Secret with a Cloud-Init script is shown below:
 
 ```yaml
@@ -751,7 +729,6 @@ data:
   userData: <base64 data>
 type: provisioning.virtualization.deckhouse.io/cloud-init
 ```
-
 A fragment of the virtual machine configuration when using the Cloud-Init initialization script stored in a Secret:
 
 ```yaml
@@ -762,7 +739,6 @@ spec:
       kind: Secret
       name: cloud-init-example
 ```
-
 {% alert level="info" %}
 The value of the `.data.userData` field must be Base64 encoded. To encode it, you can use the `base64 -w 0` command or `echo -n "content" | base64`.
 {% endalert %}
@@ -782,7 +758,6 @@ data:
   unattend.xml: <base64 data>
 type: provisioning.virtualization.deckhouse.io/sysprep
 ```
-
 {% alert level="info" %}
 The value of the `.data.unattend.xml` field must be Base64 encoded. To encode, you can use the command `base64 -w 0` or `echo -n "content" | base64`.
 {% endalert %}
@@ -797,7 +772,6 @@ spec:
       kind: Secret
       name: sysprep-example
 ```
-
 ### Guest OS agent
 
 To improve VM management efficiency, it is recommended to install the QEMU Guest Agent, a tool that enables communication between the hypervisor and the operating system inside the VM.
@@ -820,20 +794,17 @@ How will the agent help?
       version: 41 (Cloud Edition)
       versionId: "41"
   ```
-
 - Will allow tracking that the OS has actually booted:
 
   ```bash
   d8 k get vm -o wide
   ```
-
   Example output (see `AGENT` column):
 
-  ```console
+```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
-
   {: .nowrap-default }
 
 How to install QEMU Guest Agent:
@@ -843,19 +814,16 @@ For Debian-based OS:
 ```bash
 sudo apt install qemu-guest-agent
 ```
-
 For CentOS-based OS:
 
 ```bash
 sudo yum install qemu-guest-agent
 ```
-
 Starting the agent service:
 
 ```bash
 sudo systemctl enable --now qemu-guest-agent
 ```
-
 You can automate the installation of the agent for Linux OS using a cloud-init initialization script. Below is an example snippet of such a script to install qemu-guest-agent:
 
 ```yaml
@@ -866,7 +834,6 @@ You can automate the installation of the agent for Linux OS using a cloud-init i
   runcmd:
     - systemctl enable --now qemu-guest-agent.service
 ```
-
 QEMU Guest Agent does not require additional configuration after installation. However, to ensure application-level snapshot consistency (without stopping services), you can add scripts that are executed automatically in the guest OS before and after filesystem `freeze` and `thaw` operations. The scripts must be executable and placed in a special directory, whose path depends on the Linux distribution in use:
 
 ### Connecting to a virtual machine
@@ -882,7 +849,6 @@ An example of connecting to a virtual machine using a serial console:
 ```bash
 d8 v console linux-vm
 ```
-
 Example output:
 
 ```console
@@ -891,6 +857,7 @@ Successfully connected to linux-vm console. The escape sequence is ^]
 linux-vm login: cloud
 Password: cloud
 ```
+{: .nowrap-default }
 
 Press `Ctrl+]` to finalize the serial console.
 
@@ -900,7 +867,6 @@ The serial console does not support automatic terminal resizing. If full-screen 
 ```bash
 stty rows <number_of_rows> cols <number_of_columns>
 ```
-
 For example: `stty rows 50 cols 200`
 
 If the `xterm` package is installed on the system, you can also use the `resize` command.
@@ -911,13 +877,11 @@ Example command for connecting via VNC:
 ```bash
 d8 v vnc linux-vm
 ```
-
 Example command for connecting via SSH.
 
 ```bash
 d8 v ssh cloud@linux-vm --local-ssh
 ```
-
 How to connect to a virtual machine in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -964,7 +928,6 @@ spec:
   type: Restart
 EOF
 ```
-
 You can view the result of the action using the command:
 
 ```bash
@@ -972,13 +935,11 @@ d8 k get virtualmachineoperation
 # or
 d8 k get vmop
 ```
-
 The same action can be performed using the `d8` utility:
 
 ```bash
 d8 v restart  linux-vm
 ```
-
 A list of possible operations is given in the table below:
 
 | d8             | vmop type | Action                         |
@@ -1004,7 +965,6 @@ Changes to the virtual machine configuration can be made using the following com
 ```bash
 d8 k edit vm linux-vm
 ```
-
 If the virtual machine is in a shutdown state (`.status.phase: Stopped`), the changes made will take effect immediately after the virtual machine is started.
 
 If the virtual machine is running (`.status.phase: Running`), the way the changes are applied depends on the type of change:
@@ -1036,12 +996,12 @@ Suppose we want to change the number of processor cores. The virtual machine is 
 ```bash
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 ```
-
 Example output:
 
 ```console
 1
 ```
+{: .nowrap-default }
 
 Apply the following patch to the virtual machine to change the number of cores from 1 to 2.
 
@@ -1052,31 +1012,30 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
 
 d8 k edit vm linux-vm
 ```
-
 Example output:
 
 ```console
 # virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
+{: .nowrap-default }
 
 Configuration changes have been made but not yet applied to the virtual machine. Check this by re-executing:
 
 ```bash
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 ```
-
 Example output:
 
 ```console
 1
 ```
+{: .nowrap-default }
 
 A restart of the virtual machine is required to apply this change. Run the following command to see the changes waiting to be applied (requiring a restart):
 
 ```bash
 d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 ```
-
 Example output:
 
 ```json
@@ -1089,13 +1048,11 @@ Example output:
   }
 ]
 ```
-
 Run the command:
 
 ```bash
 d8 k get vm linux-vm -o wide
 ```
-
 Example output:
 
 ```console
@@ -1111,7 +1068,6 @@ Let's reboot the virtual machine:
 ```bash
 d8 v restart linux-vm
 ```
-
 After a reboot, the changes will be applied and the `.status.restartAwaitingChanges` block will be empty.
 
 Execute the command to verify:
@@ -1119,12 +1075,12 @@ Execute the command to verify:
 ```bash
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 ```
-
 Example output:
 
 ```console
 2
 ```
+{: .nowrap-default }
 
 The default behavior is to apply changes to the virtual machine through a "manual" restart. If you want to apply the changes immediately and automatically, you need to change the change application policy:
 
@@ -1133,7 +1089,6 @@ spec:
   disruptions:
     restartApprovalMode: Automatic
 ```
-
 How to perform the operation in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -1160,7 +1115,6 @@ spec:
     featureGates:
     - HotplugCPUWithLiveMigration
 ```
-
 If the new `.spec.cpu.cores` value falls within the hotplug range for the current topology and the VM is migratable, the change is applied through live migration. If the new value requires a different CPU topology or the VM cannot be migrated, a VM restart is required. The need for restart is reflected by the `AwaitingRestartToApplyConfiguration` condition.
 
 Topology calculation rules and allowed change steps for `spec.cpu.cores` are described in [Automatic CPU topology configuration](#automatic-cpu-topology-configuration).
@@ -1173,7 +1127,6 @@ Guest OS specifics:
   ```bash
   echo 1 > /sys/devices/system/cpu/cpu1/online
   ```
-
 - To automatically enable new CPUs on Linux, configure a `udev` rule. After that, added CPUs become visible in `cat /proc/cpuinfo` and `top`:
 
   ```bash
@@ -1181,7 +1134,6 @@ Guest OS specifics:
   SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
   EOF
   ```
-
 Limitations:
 
 - Changing `spec.cpu.cores` without restart is possible only within the hotplug range of the current CPU topology.
@@ -1241,7 +1193,6 @@ spec:
       operator: "Exists"
       effect: "NoSchedule"
 ```
-
 Each entry in `tolerations` must match a node `taint` for the VM to be scheduled onto that node.
 
 {% alert level="warning" %}
@@ -1253,13 +1204,11 @@ To view `taints` on cluster nodes, run:
 ```bash
 d8 k get nodes -o custom-columns=NAME:.metadata.name,TAINTS:.spec.taints
 ```
-
 For more details:
 
 ```bash
 d8 k describe node <node-name>
 ```
-
 #### Simple label binding (nodeSelector)
 
 A `nodeSelector` is the simplest way to control the placement of virtual machines using a set of labels. It allows you to specify on which nodes virtual machines can run by selecting nodes with the desired labels.
@@ -1269,7 +1218,6 @@ spec:
   nodeSelector:
     disktype: ssd
 ```
-
 ![nodeSelector](/images/virtualization-platform/placement-nodeselector.png)
 
 In this example, there are three nodes in the cluster: two with fast disks (`disktype=ssd`) and one with slow disks (`disktype=hdd`). The virtual machine will only be placed on nodes that have the `disktype` label with the value `ssd`.
@@ -1304,7 +1252,6 @@ spec:
                 values:
                   - ssd
 ```
-
 ![Node Affinity](/images/virtualization-platform/placement-node-affinity.png)
 
 In this example, there are three nodes in the cluster, two with fast disks (`disktype=ssd`) and one with slow disks (`disktype=hdd`). The virtual machine will only be deployed on nodes that have the `disktype` label with the value `ssd`.
@@ -1327,7 +1274,6 @@ spec:
                 server: database
             topologyKey: "kubernetes.io/hostname"
 ```
-
 ![VM Affinity](/images/virtualization-platform/placement-vm-affinity.png)
 
 In this example, the virtual machine will be placed, if possible (since preferred is used) only on hosts that have a virtual machine with the server label and database value.
@@ -1368,7 +1314,6 @@ spec:
               server: database
           topologyKey: "kubernetes.io/hostname"
 ```
-
 ![VM AntiAffinity](/images/virtualization-platform/placement-vm-antiaffinity.png)
 
 In this example, the virtual machine being created will not be placed on the same host as the virtual machine labeled server: database.
@@ -1401,7 +1346,6 @@ To view availability zones on cluster nodes (if these zones are configured), run
 ```bash
 d8 k get nodes -o custom-columns=NAME:.metadata.name,ZONE:.metadata.labels.topology\.kubernetes\.io/zone
 ```
-
 ### Attaching block devices (disks and images)
 
 Block devices can be divided into two types based on how they are connected: static and dynamic (hotplug).
@@ -1430,7 +1374,6 @@ spec:
     - kind: VirtualImage
       name: <virtual-image-name>
 ```
-
 How to work with bootable block devices in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -1465,7 +1408,6 @@ spec:
   virtualMachineName: linux-vm
 EOF
 ```
-
 After creation, `VirtualMachineBlockDeviceAttachment` can be in the following states (phases):
 
 - `Pending`: Waiting for all dependent resources to be ready.
@@ -1479,20 +1421,19 @@ Check the state of your resource::
 ```bash
 d8 k get vmbda attach-blank-disk
 ```
-
 Example output:
 
 ```console
 NAME              PHASE      VIRTUAL MACHINE NAME   AGE
 attach-blank-disk   Attached   linux-vm              3m7s
 ```
+{: .nowrap-default }
 
 Connect to the virtual machine and make sure the disk is connected:
 
 ```bash
 d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 ```
-
 Example output:
 
 ```console
@@ -1511,7 +1452,6 @@ To detach the disk from the virtual machine, delete the previously created resou
 ```bash
 d8 k delete vmbda attach-blank-disk
 ```
-
 Attaching images is done by analogy. To do this, specify `VirtualImage` or `ClusterVirtualImage` and the image name as `kind`:
 
 ```yaml
@@ -1527,7 +1467,6 @@ spec:
   virtualMachineName: linux-vm
 EOF
 ```
-
 How to work with additional block devices in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -1557,6 +1496,7 @@ $ lsscsi
 [0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sda
 [0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sdb
 ```
+{: .nowrap-default }
 
 After VM reboot:
 
@@ -1565,6 +1505,7 @@ $ lsscsi
 [0:0:0:1]  disk    QEMU     QEMU HARDDISK   /dev/sdb
 [0:0:0:2]  disk    QEMU     QEMU HARDDISK   /dev/sda
 ```
+{: .nowrap-default }
 
 SCSI addresses (`0:0:0:1`, `0:0:0:2`) remain unchanged, but device names (`/dev/sda`, `/dev/sdb`) are swapped.
 
@@ -1596,6 +1537,7 @@ $ ip link show
 2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
 3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
 ```
+{: .nowrap-default }
 
 After adding a new interface at the beginning of the `.spec.networks` list and rebooting the VM:
 
@@ -1606,6 +1548,7 @@ $ ip link show
 3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Old eth0
 4: eth2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Old eth1
 ```
+{: .nowrap-default }
 
 MAC addresses remain unchanged, but interface names (`eth0`, `eth1`) shift, which can lead to IP addresses being assigned to the wrong interfaces.
 
@@ -1641,18 +1584,17 @@ The VM's membership in the service is determined by a set of labels. To set labe
 ```bash
 d8 k label vm <vm-name> label-name=label-value
 ```
-
 Example:
 
 ```bash
 d8 k label vm linux-vm app=nginx
 ```
-
 Example output:
 
 ```console
 virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 ```
+{: .nowrap-default }
 
 How to add labels and annotations to VMs in the web interface:
 
@@ -1689,7 +1631,6 @@ spec:
     app: nginx
 EOF
 ```
-
 After creation, the VM or VM group can be accessed by name: `http.default.svc`
 
 #### ClusterIP service
@@ -1710,7 +1651,6 @@ spec:
     app: nginx
 EOF
 ```
-
 How to perform the operation in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -1744,7 +1684,6 @@ spec:
       nodePort: 31880
 EOF
 ```
-
 ![NodePort](/images/virtualization-platform/lb-nodeport.png)
 
 In this example, a service with the type `NodePort` will be created that opens external port 31880 on all nodes in your cluster. This port will forward incoming traffic to internal port 80 on the virtual machine where the Nginx application is running.
@@ -1772,7 +1711,6 @@ spec:
       targetPort: 80
 EOF
 ```
-
 ![LoadBalancer](/images/virtualization-platform/lb-loadbalancer.png)
 
 #### Publish virtual machine services using Ingress
@@ -1799,7 +1737,6 @@ spec:
       targetPort: 80
 EOF
 ```
-
 And an `Ingress` resource for publishing. Example:
 
 ```yaml
@@ -1822,7 +1759,6 @@ spec:
                   number: 80
 EOF
 ```
-
 ![Ingress](/images/virtualization-platform/lb-ingress.png)
 
 How to publish a VM service using Ingress in the web interface:
@@ -1893,13 +1829,13 @@ Let's look at an example. Before starting the migration, view the current status
 ```bash
 d8 k get vm
 ```
-
 Example output:
 
 ```console
 NAME                                   PHASE     NODE           IPADDRESS     AGE
 linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
+{: .nowrap-default }
 
 We can see that it is currently running on the `virtlab-pt-1` node.
 
@@ -1908,7 +1844,6 @@ To migrate a virtual machine from one node to another while taking into account 
 ```bash
 d8 v evict -n <namespace> <vm-name> [--force]
 ```
-
 Running this command creates a VirtualMachineOperations resource.
 
 When used during virtual machine migration, the `--force` flag activates a special mechanism called AutoConverge (for more details, see the [Migration with insufficient network bandwidth](#migration-with-insufficient-network-bandwidth) section). This mechanism automatically reduces the CPU load of the virtual machine (slows down its CPU) when it is necessary to speed up the completion of migration and help it complete successfully, even when the virtual machine memory transfer is too slow. Use this flag if a standard migration cannot complete due to high virtual machine activity.
@@ -1930,13 +1865,11 @@ spec:
   force: true
 EOF
 ```
-
 To track the migration of a virtual machine immediately after the `vmop` resource is created, run the command:
 
 ```bash
 d8 k get vm -w
 ```
-
 Example output:
 
 ```console
@@ -2010,7 +1943,6 @@ If the network limits the migration speed, you can:
    ```bash
    d8 k delete vmop <operation-name>
    ```
-
    Then restart the migration using the `--force` flag to enable the AutoConverge mechanism. Using the `--force` flag must comply with the current [virtual machine migration policy](#configuring-migration-policy).
 
 #### System-initiated migrations
@@ -2046,14 +1978,12 @@ You can view active operations using the command:
 ```bash
 d8 k get vmop
 ```
-
 Example output:
 
 ```txt
 NAME                    PHASE       TYPE    VIRTUALMACHINE      AGE
 firmware-update-fnbk2   Completed   Evict   linux-vm            148m
 ```
-
 To cancel the migration, delete the corresponding resource.
 
 How to view active operations in the web interface:
@@ -2075,7 +2005,6 @@ spec:
   nodeSelector:
     node.deckhouse.io/group: green
 ```
-
 After saving the changes, the VM will continue to run on the current node, since the `nodeSelector` condition is already met.
 
 Step 2: Change the placement parameter
@@ -2086,7 +2015,6 @@ spec:
   nodeSelector:
     node.deckhouse.io/group: blue
 ```
-
 Now the current node (groups green) does not match the new conditions. The system will automatically create a `VirtualMachineOperations` object of type Evict, which will initiate a live migration of the VM to an available node in group blue .
 
 ### Collecting debug information
@@ -2122,7 +2050,6 @@ d8 v collect-debug-info linux-vm -n mynamespace > debug-info.tar.gz
 # Collect debug information for VM with full name specified (name.namespace)
 d8 v collect-debug-info linux-vm.mynamespace > debug-info.tar.gz
 ```
-
 {% alert level="warning" %}
 The command cannot output data directly to the terminal. You must redirect the output to a file, otherwise the command will fail with an error.
 {% endalert %}
@@ -2144,13 +2071,13 @@ To see a list of IP address leases (`vmipl`), use the command:
 ```bash
 d8 k get vmipl
 ```
-
 Example output:
 
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                              STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
+{: .nowrap-default }
 
 [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
 
@@ -2165,13 +2092,13 @@ By default, an ip address is automatically assigned to a virtual machine from th
 ```bash
 d8 k get vmip
 ```
-
 Example output:
 
 ```console
 NAME              ADDRESS       STATUS     VM          AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
+{: .nowrap-default }
 
 The algorithm for automatically assigning an ip address to a virtual machine is as follows:
 
@@ -2204,14 +2131,12 @@ spec:
   type: Static
 EOF
 ```
-
 Create a new or modify an existing virtual machine and specify the required `vmip` resource explicitly in the specification:
 
 ```yaml
 spec:
   virtualMachineIPAddressName: linux-vm-custom-ip
 ```
-
 #### How to save the ip address assigned to the virtual machine?
 
 Objective: to save the ip address issued to a virtual machine for reuse after the virtual machine is deleted.
@@ -2225,7 +2150,6 @@ d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 
 # linux-vm-7prpx
 ```
-
 Remove the `.metadata.ownerReferences` blocks from the resource found:
 
 ```bash
@@ -2235,14 +2159,12 @@ d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferenc
 
 d8 k edit vmip linux-vm-7prpx
 ```
-
 After the virtual machine is deleted, the `vmip` resource is preserved and can be reused again in the newly created virtual machine:
 
 ```yaml
 spec:
   virtualMachineIPAddressName: linux-vm-7prpx
 ```
-
 Even if the `vmip` resource is deleted, IP address remains rented for the current project/namespace for another 10 minutes. Therefore, it is possible to reoccupy it on request:
 
 ```yaml
@@ -2256,7 +2178,6 @@ spec:
   type: Static
 EOF
 ```
-
 ### Additional network interfaces
 
 {% alert level="warning" %}
@@ -2294,7 +2215,6 @@ To resolve this, set the following parameters to force the system to respond to 
 sysctl -w net.ipv4.conf.all.arp_ignore=1
 sysctl -w net.ipv4.conf.all.arp_announce=2
 ```
-
 Cloud-init example:
 
 ```yaml
@@ -2304,7 +2224,6 @@ write_files:
       net.ipv4.conf.all.arp_ignore=1
       net.ipv4.conf.all.arp_announce=2
 ```
-
 For more details, see the [IP sysctl](https://docs.kernel.org/networking/ip-sysctl.html) documentation.
 {% endalert %}
 
@@ -2317,7 +2236,6 @@ spec:
     - type: Network # Network type (Network \ ClusterNetwork)
       name: user-net # Network name
 ```
-
 Example of connecting to multiple networks, including the cluster network `corp-net`:
 
 ```yaml
@@ -2329,7 +2247,6 @@ spec:
     - type: ClusterNetwork
       name: corp-net # Network name
 ```
-
 Example of connecting a VM only to additional networks (without the main cluster network):
 
 ```yaml
@@ -2340,7 +2257,6 @@ spec:
     - type: ClusterNetwork
       name: corp-net
 ```
-
 You can view information about connected networks and their MAC addresses in the VM status:
 
 ```yaml
@@ -2354,7 +2270,6 @@ status:
       name: corp-net
       macAddress: aa:bb:cc:dd:ee:02
 ```
-
 For each additional network interface, a unique MAC address is automatically generated and reserved to avoid collisions. The following resources are used for this: `VirtualMachineMACAddress` (`vmmac`) and `VirtualMachineMACAddressLease` (`vmmacl`).
 
 The MAC address is generated randomly from the allowed ranges:
@@ -2369,7 +2284,6 @@ To see the list of MAC address leases (`vmmacl`), use the command:
 ```bash
 d8 k get vmmacl
 ```
-
 Example output:
 
 ```console
@@ -2389,7 +2303,6 @@ You can check the assigned MAC addresses using the command:
 ```bash
 d8 k get vmmac
 ```
-
 Example output:
 
 ```console

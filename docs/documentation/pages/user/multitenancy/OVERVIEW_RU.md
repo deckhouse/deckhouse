@@ -95,7 +95,7 @@ lang: ru
 
    В списке проектов появится новый проект, соответствующий пространству имён:
 
-   ```console
+```console
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d

@@ -49,9 +49,10 @@ To disable the built-in time synchronization mechanism and use your own NTP daem
 
    If the command is successful, you should see the message confirming that the module has been disabled:
 
-   ```console
+```console
    Module chrony disabled
    ```
+   {: .nowrap-default }
 
 1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource
    to enable the NTP daemons on the nodes.

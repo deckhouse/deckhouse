@@ -56,6 +56,7 @@ The output will display information about the `csi-vsphere` module:
 NAME         WEIGHT    STATE     SOURCE     STAGE   STATUS
 csi-vsphere   910      Enabled   Embedded           Ready
 ```
+{: .nowrap-default }
 
 ## Environment preparation
 
@@ -79,7 +80,6 @@ export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
-
 ### Creating tags and tag categories
 
 In `csi-vsphere`, there are no concepts of "region" and "zone". In `csi-vsphere`, the Datacenter is treated as the "region", and the Cluster is treated as the "zone". Tags are used to create this association.
@@ -90,7 +90,6 @@ Create tag categories using the following commands:
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
-
 Create tags within each category. If you plan to use multiple "zones" (`Cluster`), create a tag for each one:
 
 ```shell
@@ -98,20 +97,17 @@ govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
-
 Assign the "region" tag to the `Datacenter`:
 
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
-
 Assign the "zone" tags to the `Cluster` objects:
 
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
-
 ### Datastore configuration
 
 {% alert level="warning" %}
@@ -127,7 +123,6 @@ govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreN
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
-
 ### Creating and assigning roles
 
 {% alert %}
@@ -145,13 +140,11 @@ govc role.create deckhouse \
    Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
    $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
 ```
-
 Assign the role to the user on the `vCenter` object:
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
-
 ## Creating StorageClass
 
 The module automatically creates a StorageClass for each Datastore and DatastoreCluster from zones.

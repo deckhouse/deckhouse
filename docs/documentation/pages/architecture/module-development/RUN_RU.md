@@ -60,6 +60,7 @@ $ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
+{: .nowrap-default }
 
 Подробную информацию об ошибках можно получить в поле `pullError` в статусе ресурса ModuleSource.
 
@@ -72,6 +73,7 @@ module-1 module error:
 module-2 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-2/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 ```
+{: .nowrap-default }
 
 В случае успешной синхронизации, поле `.status.modules` ресурса ModuleSource будет содержать список модулей, доступных для включения в кластере.
 
@@ -81,20 +83,19 @@ module-2 module error:
 $ d8 k get ms example -o jsonpath='{.status.modules[*].name}'
 module-1 module-2
 ```
+{: .nowrap-default }
 
 Полный список модулей, доступных из всех созданных в кластере источников модулей, можно получить с помощью следующей команды:
 
 ```shell
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
-
 После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) (DKP создает их автоматически, создавать их не нужно).
 Посмотреть список модулей можно с помощью следующей команды:
 
 ```shell
 d8 k get module
 ```
-
 Пример получения списка модулей:
 
 ```console
@@ -103,13 +104,13 @@ NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
 ```
+{: .nowrap-default }
 
 Чтобы получить дополнительную информацию о модуле, выполните следующую команду:
 
 ```shell
 d8 k get module module-one -oyaml
 ```
-
 Пример вывода:
 
 ```yaml
@@ -144,7 +145,6 @@ status:
     type: IsReady
   phase: Available
 ```
-
 В Module указаны доступные источники из которых его можно скачать (в примере он только один).
 
 Далее нужно включить модуль. Для этого нужно создать ModuleConfig с названием модуля.
@@ -164,7 +164,6 @@ spec:
   enabled: true
   source: example
 ```
-
 {% alert level="warning" %}
 Если в конфигурации модуля есть обязательные параметры, и модуль включён без их указания, произойдёт ошибка валидации конфигурации. В этом случае сработает [алерт `D8DeckhouseModuleValidationError`](../../../reference/alerts.html#monitoring-deckhouse-d8deckhousemodulevalidationerror), а модуль не будет успешно активирован.
 
@@ -173,7 +172,6 @@ spec:
 ```shell
 d8 k get mr -l module=<MODULE_NAME>
 ```
-
 Убедитесь, что вы указываете необходимые параметры конфигурации в `ModuleConfig` согласно документации модуля.
 {% endalert %}
 
@@ -184,7 +182,6 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
-
 {% alert level="warning" %}
 Если модуль не перешел в фазу скачивания, проверьте источник модуля (ModuleSource), возможно модуль не может скачаться.
 {% endalert %}
@@ -196,7 +193,6 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Installing    False     False
 ```
-
 Если модуль успешно установился, то он перейдет в фазу готовности (`Ready`):
 
 ```shell
@@ -204,7 +200,6 @@ $ d8 k get module module-one
 NAME        STAGE   SOURCE   PHASE  ENABLED  READY
 module-one          example  Ready  True     True
 ```
-
 Пример объекта Module в кластере, когда модуль успешно установился:
 
 ```yaml
@@ -247,7 +242,6 @@ status:
   hooksState: 'v0.7.24/hooks/moduleVersion.py: ok'
   phase: Ready
 ```
-
 В Module можно увидеть текущую установленную версию модуля, его вес, источник откуда он скачался, зависимости и релизный канал.
 
 При возникновении каких либо ошибок, модуль перейдет в фазу ошибки (`Error`):
@@ -257,6 +251,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE  ENABLED  READY
 module-one           example  Error  True     Error
 ```
+{: .nowrap-default }
 
 Если у включенного модуля есть несколько доступных источников, и в его ModuleConfig явно не выбран источник модуля, модуль перейдет в фазу конфликта (`Conflict`):
 
@@ -265,6 +260,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
+{: .nowrap-default }
 
 Чтобы разрешить конфликт, укажите источник модуля (имя ModuleSource) явно в ModuleConfig.
 
@@ -275,7 +271,6 @@ module-one                    Conflict  False    False
 ```shell
 d8 k get mr
 ```
-
 Пример получения списка релизов модулей:
 
 ```console
@@ -289,6 +284,7 @@ module-two-v1.2.3          Deployed     deckhouse       48d
 module-two-v1.2.4          Superseded   deckhouse       44d              
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
+{: .nowrap-default }
 
 Если релиз модуля находится в статусе `Superseded`, это значит что релиз модуля устарел, и есть более новый релиз, который его заменил.
 
@@ -298,13 +294,11 @@ module-two-v1.2.5          Pending      deckhouse       44d              Waiting
 ```shell
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
-
 Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
 
 ```shell
 d8 system module approve <module-name> <version>
 ```
-
 {% endalert %}
 
 ### Переключение модуля на другой источник модулей
@@ -320,7 +314,6 @@ d8 system module approve <module-name> <version>
    ```shell
    d8 k get mr
    ```
-
 ### Политика обновления модуля
 
 Политика обновления модуля — это правила, по которым DKP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), в котором можно настроить:
@@ -348,7 +341,6 @@ spec:
       from: "13:30"
       to: "14:00"
 ```
-
 Политика обновления указывается в поле `updatePolicy` в ModuleConfig.
 
 ### Включение модуля в кластере
@@ -358,7 +350,6 @@ spec:
 ```shell
 d8 k get modules
 ```
-
 Модуль должен быть в списке.
 
 Пример вывода:
@@ -371,6 +362,7 @@ module-one                   Available   False     False
 module-two                   Available   False     False     
 ...
 ```
+{: .nowrap-default }
 
 Вывод показывает, что модуль `module-one` доступен для включения.
 
@@ -382,7 +374,6 @@ module-two                   Available   False     False
   ```shell
   d8 system module enable <MODULE_NAME>
   ```
-
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
 
   Пример [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig), для включения и настройки модуля `module-one` в кластере:
@@ -398,7 +389,6 @@ module-two                   Available   False     False
       parameter: value
     version: 1
   ```
-
 ### Если что-то пошло не так
 
 Если при включении модуля в кластере возникли ошибки, то получить информацию о них можно следующими способами:
@@ -407,32 +397,35 @@ module-two                   Available   False     False
   ```shell
   d8 k -n d8-system logs -l app=deckhouse
   ```
-
 - Посмотреть объект Module подробнее:
 
-  ```console
+```console
   d8 k get module module-one -oyaml
   ```
+  {: .nowrap-default }
+
   
 - Посмотреть объект ModuleConfig модуля:
 
   Пример вывода информации об ошибке модуля `module-one`:
 
-  ```console
+```console
   $ d8 k get moduleconfig module-one
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
   ```
+  {: .nowrap-default }
 
 - Посмотреть объект ModuleSource:
 
   Пример вывода если у источника модуля есть проблемы со скачиванием модуля:
 
-  ```console
+```console
   $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details
   ```
+  {: .nowrap-default }
 
 По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в хранилище образов.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
@@ -440,7 +433,6 @@ module-two                   Available   False     False
 ```shell
 d8 k get mr
 ```
-
 Пример вывода:
 
 ```console
@@ -448,19 +440,18 @@ $ d8 k get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
+{: .nowrap-default }
 
 В примере вывода показан ModuleRelease, когда режим обновления (параметр [update.mode](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) ModuleUpdatePolicy установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на ModuleRelease аннотацию `modules.deckhouse.io/approved="true"`:
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
-
 Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
 
 ```shell
 d8 system module approve module-1 v1.23.2
 ```
-
 ## Подключение Deckhouse Module Tools для проверки модуля
 
 Для автоматической проверки структуры модуля и, при необходимости, отправки статистики, в сборку можно подключить Deckhouse Module Tools (DMT).
@@ -486,7 +477,6 @@ jobs:
          DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
          DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
-
 {% endraw %}
 
 Переменные `DMT_METRICS_URL` и `DMT_METRICS_TOKEN` – необязательные. При их наличии DMT будет отправлять телеметрию на указанный адрес.
@@ -513,7 +503,6 @@ jobs:
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Setup.gitlab-ci.yml
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
     ```
-
     Пример добавления ссылок расположен в [GitLab](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2).
 
 1. После подключения шаблонов, в той же конфигурации `.gitlab-ci.yml` добавьте шаг для выполнения проверки:
@@ -522,7 +511,6 @@ jobs:
     Lint:
       extends: .lint
     ```
-
     Пример добавления шага проверки расположен в [GitLab](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
 
 > Если проект находится в группе [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse), переменные для отправки метрик уже заданы. Дополнительно ничего конфигурировать не требуется.

@@ -204,6 +204,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 🎉 Deckhouse cluster was created successfully!
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -262,7 +263,6 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
     --config=/config.yml \
     --preflight-skip-all-checks 
 ```
-
 > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 {% endofftopic %}

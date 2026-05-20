@@ -551,7 +551,7 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
 
    Example output:
 
-   ```console
+```console
    +--------------------------------------+---------------+-----------+
    | ID                                   | Name          | Is Public |
    +--------------------------------------+---------------+-----------+
@@ -573,16 +573,14 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
    ```
-
 1. Ensure the image has been created:
 
    ```shell
    openstack image show ubuntu-18-04-cloud-amd64
    ```
-
    Example output:
 
-   ```console
+```console
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Field            | Value                                                                                                                                                                                                                                                                                     |
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -637,7 +635,6 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
-
 {% endraw %}
 
 For more details, see the [OpenStack-Ansible bug report](https://bugs.launchpad.net/openstack-ansible/+bug/1902914).
@@ -709,7 +706,6 @@ Run the following command:
 ```shell
 openstack flavor show m1.medium-50g -c disk
 ```
-
 Example output:
 
 ```console
@@ -735,7 +731,6 @@ Example:
 openstack volume type list
 openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
 ```
-
 {% if page.cloud_type != 'vk-private' and page.cloud_type != 'vk' %}
 
 ### Offline disk resizing
@@ -752,5 +747,4 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
-
 {% endif %}

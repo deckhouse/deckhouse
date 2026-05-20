@@ -40,10 +40,11 @@ To change the release channel for a module from a source, follow these steps:
 
    Output example:
 
-   ```console
+```console
    NAME               RELEASE CHANNEL   UPDATE MODE
    my-module-policy   Alpha             AutoPatch
    ```
+   {: .nowrap-default }
 
 1. Link the update policy to the module.
 
@@ -54,7 +55,6 @@ To change the release channel for a module from a source, follow these steps:
    ```shell
    d8 k edit mc my-module
    ```
-
    Example ModuleConfig:
 
    ```yaml
@@ -67,7 +67,6 @@ To change the release channel for a module from a source, follow these steps:
      # ModuleUpdatePolicy name.
      updatePolicy: my-module-policy
    ```
-
 When you change the module's release channel, its version will change according to the configured update mode.
 
 To view the current release channel of the module and other information about the module's state in the cluster, use the corresponding [Module](reference/api/cr.html#module) object.
@@ -77,7 +76,6 @@ Example command to get information about the module:
 ```shell
 d8 k get module my-module -o yaml
 ```
-
 The update policy used will be specified in the `properties.updatePolicy` field, and the current release channel in the `properties.releaseChannel` field. Example output:
 
 ```yaml

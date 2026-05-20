@@ -63,6 +63,7 @@ global                    1         12h
 prometheus      true      2         12h
 upmeter         false     2         12h
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -73,7 +74,6 @@ For example, this command allows you to configure the [`upmeter`](/modules/upmet
 ```shell
 d8 k edit moduleconfig/upmeter
 ```
-
 Changes are applied automatically once the resource configuration is saved.
 
 ### Modifying cluster configuration
@@ -90,7 +90,6 @@ To modify these parameters, run the following command:
 ```shell
 d8 system edit cluster-configuration
 ```
-
 After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.
 Depending on the cluster size, this process may take some time.
 
@@ -139,14 +138,12 @@ It will automatically:
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
    ```
-
 1. Run the DKP installer container (adjust the registry address if needed):
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
-
    Where `<MOUNT_OPTIONS>` — mounting parameters for files in the installer container, such as:
     - SSH access keys;
     - Configuration file;
@@ -161,7 +158,6 @@ It will automatically:
      --ssh-host=<MASTER-NODE-HOST> \
      --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
-
    Where:
    - `<SSH_KEY_FILENAME>`: Your SSH private key filename;
    - `<USERNAME>`: SSH user with sudo privileges on the target master node of the cluster;
@@ -178,39 +174,33 @@ Manually edit the configuration:
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    ```
-
 1. Get the current configuration, decode it, and save to a file:
 
    ```shell
    d8 k -n kube-system get secret d8-cluster-configuration \
      -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d > cluster-config.yaml
    ```
-
 1. Edit the `cluster-config.yaml` file with your preferred editor:
 
    ```shell
    vi cluster-config.yaml
    ```
-
 1. Encode the edited configuration and update the Secret:
 
    ```shell
    d8 k -n kube-system patch secret d8-cluster-configuration \
      --patch="{\"data\":{\"cluster-configuration.yaml\":\"$(base64 -w0 < cluster-config.yaml)\"}}"
    ```
-
 1. Remove the annotation after applying the changes:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
-
 1. Delete the temporary file:
 
    ```shell
    rm cluster-config.yaml
    ```
-
 {% alert level="warning" %}
 If you forget to remove the `deckhouse.io/allow-unsafe` annotation, this protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
 {% endalert %}
@@ -224,19 +214,16 @@ DKP is managed through global settings, module configurations, and various custo
    ```shell
    d8 k get mc global -o yaml
    ```
-
 1. To view the status of all modules (available in Deckhouse version 1.47+):
 
    ```shell
    d8 k get modules
    ```
-
 1. To view the configuration of the [`user-authn`](/modules/user-authn/) module:
 
    ```shell
    d8 k get moduleconfigs user-authn -o yaml
    ```
-
 ## Configuring the module
 
 The module is configured using the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) custom resource , whose name is the same as the module name (in kebab-case). The ModuleConfig custom resource has the following fields:
@@ -268,7 +255,6 @@ spec:
     - 10.2.100.55
     - 10.2.200.55
 ```
-
 Some modules can also be configured using custom resources. Use the search bar at the top of the page or select a module in the left menu to see a detailed description of its settings and the custom resources used.
 
 ### Enabling and disabling the module
@@ -287,7 +273,6 @@ metadata:
 spec:
   enabled: false
 ```
-
 To check the status of the module, run the `d8 k get moduleconfig <MODULE_NAME>` command:
 
 Example:
@@ -297,7 +282,6 @@ $ d8 k get moduleconfig user-authn
 NAME         ENABLED   VERSION   AGE   MESSAGE
 user-authn   false     1         12h
 ```
-
 ## Module bundles
 
 Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.

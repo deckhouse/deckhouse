@@ -176,10 +176,11 @@ To remove the lock:
 1. Connect to Redis using the databases specified in `config/redis.shared_state.yml` and `config/redis.queues.yml`.
 2. Delete the key `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` using the following commands:
 
-   ```console
+```console
    keys *ldap*
    del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"
    ```
+   {: .nowrap-default }
 
 ### Manual synchronization run
 

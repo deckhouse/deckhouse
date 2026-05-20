@@ -22,6 +22,7 @@ v1.46.9    Superseded   11d
 v1.47.0    Superseded   4h12m
 v1.47.1    Deployed     4h12m
 ```
+{: .nowrap-default }
 
 The `Deployed` status means the cluster has switched to the corresponding version,
 but it doesn’t guarantee that the update has been successful.
@@ -31,13 +32,13 @@ To ensure the update completed successfully, check the state of the `deckhouse` 
 ```shell
 d8 k -n d8-system get pods -l app=deckhouse
 ```
-
 Example output:
 
 ```console
 NAME                   READY  STATUS   RESTARTS  AGE
 deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 ```
+{: .nowrap-default }
 
 - If the Pod is `Running` and shows `1/1` under `READY`, it means the update completed successfully.
 - If the Pod is `Running` but shows `0/1` under `READY`, it means the update is still in progress.
@@ -51,5 +52,4 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   ```shell
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
-
 - Collect debug information and contact [DKP technical support](/tech-support/).

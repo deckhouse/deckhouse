@@ -40,10 +40,11 @@ lang: ru
 
    Пример ответа:
 
-   ```console
+```console
    NAME               RELEASE CHANNEL   UPDATE MODE
    my-module-policy   Alpha             AutoPatch
    ```
+   {: .nowrap-default }
 
 1. Свяжите политику обновления с модулем.
 
@@ -54,7 +55,6 @@ lang: ru
    ```shell
    d8 k edit mc my-module
    ```
-
    Пример ModuleConfig:
 
    ```yaml
@@ -67,7 +67,6 @@ lang: ru
      # Имя ModuleUpdatePolicy.
      updatePolicy: my-module-policy
    ```
-
 При изменении канала обновлений модуля, его установленная версия изменится согласно настроенному режиму обновления.
 
 Чтобы посмотреть текущий канал обновлений модуля и другую информацию о его состоянии в кластере, используйте соответствующий объект [Module](reference/api/cr.html#module).
@@ -77,7 +76,6 @@ lang: ru
 ```shell
 d8 k get module my-module -o yaml
 ```
-
 Используемая политика обновления будет указана в поле `properties.updatePolicy`, текущий канал обновлений — в поле `properties.releaseChannel`. Пример вывода:
 
 ```yaml

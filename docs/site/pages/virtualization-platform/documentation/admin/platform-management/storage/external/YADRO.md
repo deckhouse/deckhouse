@@ -36,6 +36,7 @@ In the output, you should see information about the module:
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 si-yadro-tatlin-unified            Embedded  Available   True       True
 ```
+{: .nowrap-default }
 
 ## Connecting to the TATLIN.UNIFIED storage system
 
@@ -60,7 +61,6 @@ spec:
       volumeExportPort: "p50,p51,p60,p61"
 EOF
 ```
-
 ## Creating a StorageClass
 
 To create a StorageClass, use the [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass) resource. Creating a StorageClass resource manually without using [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass) can lead to errors.
@@ -80,7 +80,6 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
-
 ## Ensuring the module works
 
 To make sure the `csi-yadro-tatlin-unified` is working properly, check the pod status in the `d8-csi-yadro-tatlin-unified` namespace. All pods must have the `Running` or `Completed` status. The `csi-yadro-tatlin-unified` pods must be running on all nodes.

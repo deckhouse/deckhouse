@@ -106,19 +106,18 @@ spec:
     - name: vg-on-dvp-worker
 EOF
 ```
-
 Wait for the created resource ReplicatedStoragePool to enter the `Completed` state:
 
 ```shell
 sudo -i d8 k get rsp sds-pool -w
 ```
-
 Example of the output:
 
 ```console
 NAME         PHASE       TYPE   AGE
 sds-pool     Completed   LVM    87d
 ```
+{: .nowrap-default }
 
 Create a StorageClass:
 
@@ -135,13 +134,11 @@ spec:
   topology: Ignored
 EOF
 ```
-
 Check that the StorageClasses have been created:
 
 ```bash
 sudo -i d8 k get storageclass
 ```
-
 Set the StorageClass as the default StorageClass (specify the name of the StorageClass):
 
 ```shell

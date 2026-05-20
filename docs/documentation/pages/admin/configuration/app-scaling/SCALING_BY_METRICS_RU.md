@@ -147,24 +147,28 @@ spec:
 ```console
 d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
 ```
+{: .nowrap-default }
 
 Для получения значений метрик, привязанных к объектам используйте команду:
 
 ```console
 d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
 ```
+{: .nowrap-default }
 
 Для получения значений метрик, созданных через `NamespaceMetric` используйте команду:
 
 ```console
 d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
+{: .nowrap-default }
 
 Для получения внешних метрик используйте команду:
 
 ```console
 d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
 ```
+{: .nowrap-default }
 
 ### Настройка автомасштабирования в веб-интерфейсе Deckhouse
 

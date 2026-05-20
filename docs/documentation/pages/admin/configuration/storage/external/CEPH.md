@@ -129,21 +129,21 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
    This will output information about the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources:
 
-   ```console
+```console
    NAME          PHASE     AGE
    ceph-rbd-sc   Created   1h
    ceph-fs-sc    Created   1h
    ```
+   {: .nowrap-default }
 
 1. Verify the created StorageClass:
 
    ```shell
    d8 k get sc
    ```
-
    This will output information about the created StorageClass:
 
-   ```console
+```console
    NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
@@ -162,7 +162,6 @@ For monitoring and diagnostics, it's useful to know which RBD volumes are connec
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
-
 ### Which versions of Ceph clusters are supported
 
 The `csi-ceph` module has specific requirements for the Ceph cluster version to ensure compatibility and stable operation. Officially supported versions are >= 16.2.0. In practice, the current version works with clusters running versions >= 14.2.0, but it's recommended to update Ceph to the latest version.
@@ -189,7 +188,6 @@ For a single pool named `rbd`, the following permissions are required:
         caps mon = "profile rbd"
         caps osd = "profile rbd pool=rbd"
 ```
-
 #### CephFS
 
 Before configuring CephFS permissions, ensure that a subvolumegroup `csi` (or another one specified in `Custom resources`) is created in CephFS.
@@ -199,13 +197,11 @@ You can create a new subvolumegroup using the following command on the Ceph mana
 ```shell
 ceph fs subvolumegroup create <fs_name> <group_name>
 ```
-
 For example, to create a subvolumegroup `csi` for filesystem `myfs`:
 
 ```shell
 ceph fs subvolumegroup create myfs csi
 ```
-
 Required permissions for CephFS named `myfs`:
 
 ```ini
@@ -216,7 +212,6 @@ Required permissions for CephFS named `myfs`:
         caps mon = "allow r fsname=myfs"
         caps osd = "allow rw tag cephfs data=myfs, allow rw tag cephfs metadata=myfs"
 ```
-
 #### CephFS + RBD
 
 For a user that needs access to both CephFS `myfs` and RBD pool `rbd`, combine the permissions as follows:

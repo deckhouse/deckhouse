@@ -24,3 +24,5 @@ system-1               Ready    system                 118d   
 worker-0               Ready    worker                 37d    v1.31.9
 worker-1               Ready    worker                 19d    v1.31.9
 ```
+{: .nowrap-default }
+

@@ -19,6 +19,8 @@ folder_id: <folderID>
 created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
+{: .nowrap-default }
+
 {% endsnippetcut %}
 
 Assign the `editor` role to the newly created user:

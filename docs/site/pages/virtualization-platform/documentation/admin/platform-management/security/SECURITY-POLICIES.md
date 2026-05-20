@@ -547,6 +547,7 @@ Example error output when creating a Pod with an unverified container image:
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
+{: .nowrap-default }
 
 ## Using alternative security policy management tools
 

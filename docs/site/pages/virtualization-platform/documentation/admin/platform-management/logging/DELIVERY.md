@@ -741,8 +741,6 @@ Example diagram for one log delivery channel in ASCII format:
 | d8_cluster_sink_flant-integration-loki-storage |
 +------------------------------------------------+
 ```
-{: .nowrap-default }
-
 #### Monitoring Channel Load
 
 To view traffic volume at each log processing stage, use the `vector top` command.

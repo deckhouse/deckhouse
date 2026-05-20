@@ -53,6 +53,7 @@ folder_id: <folderID>
 created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
+{: .nowrap-default }
 
 {% alert level="warning" %}
 Save the `userID` and `folderID` as they will be needed in the following steps.
@@ -67,7 +68,6 @@ yc resource-manager folder add-access-binding --id <folderID> --role compute.edi
 yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
 ```
-
 ## Generating an authorization key
 
 Generate a JSON authorization file to use in your configuration:
@@ -75,7 +75,6 @@ Generate a JSON authorization file to use in your configuration:
 ```shell
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
-
 Use the contents of the `deckhouse-sa-key.json` file in the `provider.serviceAccountJSON` field
 when defining the cluster configuration.
 
@@ -98,7 +97,6 @@ If you are using the WithoutNAT or WithNATInstance deployment layout and need a 
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a
 ```
-
 Example output:
 
 ```console
@@ -111,6 +109,7 @@ external_ipv4_address:
   requirements: {}
 reserved: true
 ```
+{: .nowrap-default }
 
 After completing these steps, you will have all the necessary information to create a YandexClusterConfiguration resource
 that describes your cluster in Yandex Cloud.

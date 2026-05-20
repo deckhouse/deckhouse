@@ -538,7 +538,7 @@ spec:
 
    Пример вывода:
 
-   ```console
+```console
    +--------------------------------------+---------------+-----------+
    | ID                                   | Name          | Is Public |
    +--------------------------------------+---------------+-----------+
@@ -560,16 +560,14 @@ spec:
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
    ```
-
 7. Проверьте, что образ успешно создан:
 
    ```shell
    openstack image show ubuntu-18-04-cloud-amd64
    ```
-
    Пример вывода:
 
-   ```console
+```console
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | Field            | Value                                                                                                                                                                                                                                                                                     |
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -621,7 +619,6 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
-
 {% endraw %}
 
 Более подробная информация в [документации OpenStack-Ansible](https://bugs.launchpad.net/openstack-ansible/+bug/1902914)
@@ -677,7 +674,6 @@ username = {{ nova_service_user_name }}
 ```shell
 openstack flavor show m1.medium-50g -c disk
 ```
-
 Пример вывода:
 
 ```console
@@ -701,7 +697,6 @@ openstack flavor show m1.medium-50g -c disk
 openstack volume type list
 openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
 ```
-
 {% if page.cloud_type != 'vk-private' and page.cloud_type != 'vk' %}
 
 ### Оффлайн-изменение размера диска

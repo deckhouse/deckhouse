@@ -356,9 +356,10 @@ After each node reboot, perform the following steps:
 
    Successful configuration application is confirmed by a log entry similar to:
 
-   ```console
+```console
    Successfully updated to MIG config: <partedConfig>
    ```
+   {: .nowrap-default }
 
    where `<partedConfig>` is the value of the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in the NodeGroup resource (for example, `all-1g.10gb`).
 
@@ -367,7 +368,6 @@ After each node reboot, perform the following steps:
    ```bash
    d8 k uncordon <node_name>
    ```
-
 ### Verifying successful installation
 
 Create the following Job in your cluster:
@@ -392,13 +392,11 @@ spec:
           command:
             - nvidia-smi
 ```
-
 Check the logs with the following command:
 
 ```shell
 d8 k logs job/nvidia-cuda-test
 ```
-
 Example output:
 
 ```console
@@ -445,13 +443,11 @@ spec:
           image: nvidia/samples:vectoradd-cuda10.2
           imagePullPolicy: "IfNotPresent"
 ```
-
 Check the logs with the following command:
 
 ```shell
 d8 k logs job/gpu-operator-test
 ```
-
 Example output:
 
 ```console
@@ -462,6 +458,7 @@ Copy output data from the CUDA device to the host memory
 Test PASSED
 Done
 ```
+{: .nowrap-default }
 
 ## How to deploy a custom containerd configuration file
 
@@ -509,7 +506,6 @@ spec:
     - "worker"
   weight: 31
 ```
-
 ## Adding a configuration for an additional registry
 
 Containerd supports two methods for registry configuration: the **deprecated** method and the **actual** method.
@@ -520,7 +516,6 @@ To check for the presence of the **deprecated** configuration method, run the fo
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
 ```
-
 Example output:
 
 ```console
@@ -529,6 +524,7 @@ Example output:
 [plugins."io.containerd.grpc.v1.cri".registry.configs]
   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
+{: .nowrap-default }
 
 To check for the presence of the **actual** configuration method, run the following command on the cluster nodes:
 
@@ -538,7 +534,6 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 # Example output:
 # config_path = "/etc/containerd/registry.d"
 ```
-
 ### Old Method
 
 {% alert level="warning" %}
@@ -571,7 +566,6 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
           ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
           insecure_skip_verify = true
 ```
-
 {% alert level="danger" %}
 Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
@@ -625,7 +619,6 @@ spec:
               auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
-
 #### Configuring a certificate for an additional registry (deprecated method)
 
 Example of configuring a certificate for an additional registry when using the **deprecated** configuration method:
@@ -679,7 +672,6 @@ spec:
               ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
     EOF
 ```
-
 {% alert level="info" %}
 In addition to containerd, the certificate can be [added to the OS](./cloud-node.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
@@ -727,14 +719,12 @@ spec:
               insecure_skip_verify = true
     EOF
 ```
-
 After applying the configuration file, verify access to the registry from the nodes using the command:
 
 ```bash
 # Via the CRI interface
 crictl pull private.registry.example/image/repo:tag
 ```
-
 #### Configuring a mirror for access to public registries (deprecated method)
 
 Example of configuring a mirror for public image registries when using the **deprecated** configuration method:
@@ -778,7 +768,6 @@ spec:
               endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
     EOF
 ```
-
 ### New Method
 
 {% alert level="info" %}
@@ -799,7 +788,6 @@ Configuration is specified by creating subdirectories named after the registry a
     ├── ca.crt
     └── hosts.toml
 ```
-
 Example contents of the `hosts.toml` file:
 
 ```toml
@@ -818,7 +806,6 @@ Example contents of the `hosts.toml` file:
     capabilities = ["pull", "resolve"]
     skip_verify = true
 ```
-
 {% alert level="info" %}
 Configuration changes do not cause the containerd service to restart.
 {% endalert %}
@@ -866,7 +853,6 @@ spec:
           password = "password"
     EOF
 ```
-
 #### Configuring a certificate for an additional registry (actual method)
 
 Example of configuring a certificate for an additional registry when using the **actual** configuration method:
@@ -915,7 +901,6 @@ spec:
         ca = ["/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt"]
     EOF
 ```
-
 {% alert level="info" %}
 In addition to containerd, the certificate can be [added to the OS](./cloud-node.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
@@ -961,7 +946,6 @@ spec:
         skip_verify = true
     EOF
 ```
-
 After applying the configuration file, check access to the registry from the nodes using the following commands:
 
 ```bash
@@ -974,7 +958,6 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 # Via ctr for an HTTP registry.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
-
 #### Configuring a mirror for access to public registries (actual method)
 
 Example of configuring a mirror for public image registries when using the **actual** configuration method:
@@ -1020,7 +1003,6 @@ spec:
       override_path = true
     EOF
 ```
-
 ## How to automatically put custom labels on the node
 
 1. On the node, create the directory `/var/lib/node_labels`.
@@ -1029,9 +1011,10 @@ spec:
 
 1. Add the necessary labels to the files in the `key=value` format. For example:
 
-   ```console
+```console
    example-label=test
    ```
+   {: .nowrap-default }
 
 1. Save the files.
 

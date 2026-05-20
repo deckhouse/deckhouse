@@ -18,12 +18,13 @@ lang: ru
 
    Пример вывода (очереди пусты):
 
-   ```console
+```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.
    - no tasks to handle.
    ```
+   {: .nowrap-default }
 
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
@@ -33,14 +34,12 @@ lang: ru
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
-
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
 
    ```bash
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
-
    Ответ должен сообщить, что Terraform не нашел расхождений и изменений не требуется.
 
 1. **В контейнере с инсталлятором** выполните команду для редактирования конфигурации кластера (укажите адреса всех master-узлов в параметре `--ssh-host`):
@@ -49,7 +48,6 @@ lang: ru
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
-
 1. Отредактируйте параметр `instanceClass` нужной группы узлов, изменив тип инстанса, и сохраните изменения. Пример настроек для `masterNodeGroup` провайдера Yandex Cloud:
 
    ```yaml
@@ -64,7 +62,6 @@ lang: ru
       - "Auto"
       - "Auto"
    ```
-
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы провести обновление узлов:
 
    Внимательно изучите действия, которые планирует выполнить converge, когда запрашивает подтверждение.
@@ -75,7 +72,6 @@ lang: ru
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
-
    Следующие действия (п. 9-12) **выполняйте поочередно на каждом** master-узле, начиная с узла с наивысшим номером (с суффиксом 2) и заканчивая узлом с наименьшим номером (с суффиксом 0).
 
 1. **На созданном узле** откройте журнал systemd-юнита `bashible.service`. Дождитесь окончания настройки узла — в журнале должно появиться сообщение `nothing to do`:
@@ -83,7 +79,6 @@ lang: ru
    ```bash
    journalctl -fu bashible.service
    ```
-
 1. Проверьте, что узел etcd отобразился в списке узлов кластера:
 
    ```bash
@@ -96,12 +91,10 @@ lang: ru
      fi
    done
    ```
-
 1. Убедитесь, что `control-plane-manager` функционирует на узле.
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
      -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
-
 1. Перейдите к обновлению следующего узла.

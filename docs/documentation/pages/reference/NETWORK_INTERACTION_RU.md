@@ -28,6 +28,7 @@ routing-mode: tunnel
 tunnel-port: "4298"
 tunnel-protocol: vxlan
 ```
+{: .nowrap-default }
 
 {%- endofftopic %}
 

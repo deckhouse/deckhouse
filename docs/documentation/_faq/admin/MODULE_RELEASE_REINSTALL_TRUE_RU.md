@@ -28,6 +28,7 @@ d8 k -n d8-<module-name> describe pod <pod-name>
 ```console
 Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:a12b4f8de1d997005155d0ba0a7c968a015dd8d18bb5d54645ddb040ddab1ef4": rpc error: code = NotFound desc = failed to pull and unpack image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:a12b4f8de1d997005155d0ba0a7c968a015dd8d18bb5d54645ddb040ddab1ef4": failed to resolve reference ...
 ```
+{: .nowrap-default }
 
 Чтобы скачать образ и переустановить модуль, с которым возникла проблема:
 
@@ -36,10 +37,9 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
    ```shell
    d8 k get mr -l module=my-module
    ```
-
    Пример вывода:
 
-   ```console
+```console
    NAME               PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    my-module-v3.7.4   Superseded                   5d23h
    my-module-v3.7.5   Deployed                     5d23h
@@ -53,7 +53,6 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
    ```shell
    d8 k annotate mr my-module-v3.7.5 modules.deckhouse.io/reinstall=true
    ```
-
 После добавления аннотации образ модуля заново скачивается из хранилища образов, модуль валидируется с текущими настройками из `ModuleConfig` и устанавливается в кластер. После успешной переустановки аннотация автоматически удаляется из `ModuleRelease`.
 
 Чтобы убедиться, что переустановка модуля прошла успешно, и все поды работают, используйте команду:
@@ -61,7 +60,6 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
 ```shell
 d8 k -n d8-<module-name> get pods
 ```
-
 Все поды модуля должны иметь статус `Running`. Пример:
 
 ```console
@@ -70,4 +68,6 @@ backend-567d6c6cdc-g5qgt            1/1     Running   0          2d2h
 frontend-7c8b567759-h8jdf           1/1     Running   0          2d2h
 observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
+{: .nowrap-default }
+
 {: .nowrap-default }

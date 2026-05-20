@@ -56,6 +56,7 @@ d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -74,18 +75,19 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 ```shell
 d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
-
 Пример вывода, если использовался свой wildcard-домен:
 
 ```console
 %s.my-dvp-cluster.example.com
 ```
+{: .nowrap-default }
 
 Пример вывода, если использовался домен от сервиса sslip.io:
 
 ```console
 %s.54.43.32.21.sslip.io
 ```
+{: .nowrap-default }
 
 ### Использование отдельных доменов вместо wildcard-домена
 
@@ -109,6 +111,7 @@ prometheus.my-dvp-cluster.example.com
 status.my-dvp-cluster.example.com
 upmeter.my-dvp-cluster.example.com
 ```
+{: .nowrap-default }
 
 Для домена `my-dvp-cluster.example.com` и шаблона с индивидуальными доменами `%s-my-dvp-cluster.example.com`, записи будут выглядеть так:
 
@@ -128,6 +131,7 @@ prometheus-my-dvp-cluster.example.com
 status-my-dvp-cluster.example.com
 upmeter-my-dvp-cluster.example.com
 ```
+{: .nowrap-default }
 
 Для тестирования можно добавить необходимые записи в файл `/etc/hosts` на локальной машине (для Windows в файл `%SystemRoot%\system32\drivers\etc\hosts`).
 
@@ -154,7 +158,6 @@ $PUBLIC_IP upmeter.$CLUSTER_DOMAIN
 EOF
 "
 ```
-
 ## Создание пользователя
 
 Для доступа в веб-интерфейсы кластера можно создать статического пользователя:
@@ -164,7 +167,6 @@ EOF
    ```shell
    echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
-
    `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
 
 1. Создайте пользователя:
@@ -192,7 +194,6 @@ EOF
    
    EOF
    ```
-
 Теперь можно авторизоваться в веб-интерфейсах кластера, используя электронную почту и пароль. Для дальнейшей настройки рекомендуется ознакомиться с разделом [Разграничение доступа / Ролевая модель](../../platform-management/access-control/role-model.html).
 
 ## Включение модуля console

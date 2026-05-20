@@ -117,12 +117,13 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 
    Example output:
 
-   ```console
+```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
    - no tasks to handle.
    ```
+   {: .nowrap-default }
 
 {% alert level="warning" %}
 Before performing heavy operations (e.g., transitioning from single-master to multi-master or upgrading the Kubernetes version), it is recommended to wait until all tasks in the queues are completed.
@@ -179,13 +180,11 @@ To manually renew the control plane certificates, use the `kubeadm` utility on e
    ```shell
    ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
-
 1. Execute the following command:
 
    ```shell
    kubeadm certs renew all
    ```
-
    This command will regenerate the necessary certificates (for kube-apiserver, kube-controller-manager, kube-scheduler, etcd, and others).
 
 ## Speeding up pod restarts after losing connection to a node
@@ -210,7 +209,6 @@ spec:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
 ```
-
 {% alert level="warning" %}
 The shorter the timeouts, the more frequently system components check node status and plan pod rescheduling. This increases the load on the control plane, so choose values that match your requirements for high availability and performance.
 {% endalert %}
@@ -242,7 +240,6 @@ spec:
       bb-flag-set reboot
     fi
 ```
-
 {% alert level="warning" %}
 After applying the resource, the GRUB settings will be updated and the cluster nodes will begin a sequential reboot to apply the changes.
 {% endalert %}

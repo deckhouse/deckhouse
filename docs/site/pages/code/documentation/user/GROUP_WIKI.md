@@ -43,11 +43,12 @@ Access level is determined by the user's group membership:
 
    - Create a hierarchical page structure using the `/` symbol in names. Example:
 
-     ```console
+```console
      devops/ci-pipelines
      devops/kubernetes
      product/design
      ```
+     {: .nowrap-default }
 
 1. Markdown, rich text, attachments, and diagrams:
 
@@ -80,7 +81,6 @@ Access level is determined by the user's group membership:
      ```bash
      git clone git@code.example.com:groupname/wiki.git
      ```
-
    - Full access to `.md` files, branches, and history for local editing, backups, or automation.
 
 1. PDF export:

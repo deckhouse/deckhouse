@@ -89,7 +89,7 @@ lang: ru
 
    Пример вывода:
 
-   ```console
+```console
    Defaulted container "linstor-controller" out of: linstor-controller, kube-rbac-proxy
    +----------------------------------------------------------------+
    | ResourceName | Node | Port | Usage | Conns | State | CreatedOn |
@@ -104,7 +104,6 @@ lang: ru
    d8 k uncordon test-node-1
    node/test-node-1 uncordoned
    ```
-
 При необходимости перезагрузки еще одного узла повторите алгоритм.
 
 ## Перемещение ресурсов для освобождения места в Storage Pool
@@ -114,37 +113,31 @@ lang: ru
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor storage-pool list -n OLD_NODE
    ```
-
 1. Определите, какие тома находятся в переполненном Storage Pool, чтобы понять, какие из них можно перенести:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor volume list -n OLD_NODE
    ```
-
 1. Получите список ресурсов, к которым относятся эти тома, чтобы далее можно было инициировать их перенос:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource list-volumes
    ```
-
 1. Создайте копии выбранных ресурсов на другом узле (не более 1–2 ресурсов одновременно):
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource create NEW_NODE RESOURCE_NAME
    ```
-
 1. Дождитесь завершения синхронизации ресурсов между узлами, чтобы убедиться в корректности переноса:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor resource-definition wait-sync RESOURCE_NAME
    ```
-
 1. Удалите ресурсы с исходного узла, чтобы освободить место в переполненном Storage Pool:
 
    ```shell
    d8 k exec -n d8-sds-replicated-volume deploy/linstor-controller -- linstor --yes-i-am-sane-and-i-understand-what-i-am-doing resource delete OLD_NODE RESOURCE_NAME
    ```
-
 ## Автоматизированное управление репликами и мониторинг состояния LINSTOR
 
 Управление репликами и мониторинг состояния автоматизированы в скрипте `replicas_manager.sh`.
@@ -155,7 +148,6 @@ lang: ru
    ```shell
    ls -l /opt/deckhouse/sbin/replicas_manager.sh
    ```
-
 После запуска скрипт выполняет следующие действия:
 
 - проверяет доступность контроллера и соединение с сателлитами;
@@ -192,19 +184,16 @@ lang: ru
    ```shell
    ls -l /opt/deckhouse/sbin/evict.sh
    ```
-
 2. Исправьте ошибочные ресурсы:
 
    ```shell
    d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor resource list --faulty
    ```
-
 3. Проверьте, что все поды в пространстве имён `d8-sds-replicated-volume` находятся в состоянии `Running`:
 
    ```shell
    d8 k -n d8-sds-replicated-volume get pods | grep -v Running
    ```
-
 ### Пример удаления узла из LINSTOR и Kubernetes
 
 Запустите скрипт `evict.sh` на любом из master-узлов в интерактивном режиме, указав режим удаления `--delete-node`:
@@ -212,13 +201,11 @@ lang: ru
 ```shell
 /opt/deckhouse/sbin/evict.sh --delete-node
 ```
-
 Для неинтерактивного режима добавьте флаг `--non-interactive` и укажите имя узла. В этом режиме скрипт выполнит все действия без запроса подтверждения от пользователя:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --non-interactive --delete-node --node-name "worker-1"
 ```
-
 ### Пример удаления ресурсов с узла
 
 Запустите скрипт `evict.sh` на любом из master-узлов в интерактивном режиме, указав режим удаления `--delete-resources-only`:
@@ -226,13 +213,11 @@ lang: ru
 ```shell
 /opt/deckhouse/sbin/evict.sh --delete-resources-only
 ```
-
 Для неинтерактивного режима добавьте флаг `--non-interactive` и укажите имя узла. В этом режиме скрипт выполнит все действия без запроса подтверждения от пользователя:
 
 ```shell
 /opt/deckhouse/sbin/evict.sh --non-interactive --delete-resources-only --node-name "worker-1"
 ```
-
 {% alert level="warning" %}
 По окончании работы скрипта узел остаётся в статусе `SchedulingDisabled`, а в LINSTOR выставляется свойство `AutoplaceTarget=false`. Это блокирует автоматическое создание новых ресурсов на узле.
 {% endalert %}
@@ -244,14 +229,12 @@ alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controll
 linstor node set-property "worker-1" AutoplaceTarget
 d8 k uncordon "worker-1"
 ```
-
 Проверьте параметр `AutoplaceTarget` у всех узлов (поле `AutoplaceTarget` будет пустым у тех узлов, на которых разрешено размещать ресурсы LINSTOR):
 
 ```shell
 alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor node list -s AutoplaceTarget
 ```
-
 ### Параметры скрипта evict.sh
 
 - `--delete-node` — удаление узла из LINSTOR и Kubernetes с предварительным созданием дополнительных реплик для всех ресурсов, размещенных на узле.
@@ -276,14 +259,12 @@ linstor node list -s AutoplaceTarget
    ```shell
    d8 k get pod -n d8-sds-replicated-volume -l app=linstor-node
    ```
-
 1. Если некоторые поды находятся в состоянии `Init`, проверьте версию DRBD и логи bashible на узле:
 
    ```shell
    cat /proc/drbd
    journalctl -fu bashible
    ```
-
 Наиболее вероятные причины:
 
 - Загружена версия DRBDv8 вместо требуемой DRBDv9. Проверьте версию:
@@ -291,7 +272,6 @@ linstor node list -s AutoplaceTarget
   ```shell
   cat /proc/drbd
   ```
-  
   Если файл `/proc/drbd` отсутствует, значит модуль не загружен и проблема не в этом.
 
 - Включён Secure Boot. Поскольку DRBD компилируется динамически (аналог dkms) без цифровой подписи, модуль не поддерживается при включённом Secure Boot.
@@ -306,6 +286,7 @@ linstor node list -s AutoplaceTarget
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking
 for exclusive open failed: wrong medium type, check device health
 ```
+{: .nowrap-default }
 
 Проверьте, где используется устройство, с помощью следующей команды:
 
@@ -313,7 +294,6 @@ for exclusive open failed: wrong medium type, check device health
 alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```
-
 Флаг `InUse` покажет, на каком узле используется устройство. На этом узле потребуется вручную отмонтировать диск.
 
 #### Ошибки Input/output error
@@ -323,7 +303,6 @@ linstor resource list -r pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d
 ```shell
 dmesg | grep 'Remote failed to finish a request within'
 ```
-
 Если вывод содержит сообщения вида `Remote failed to finish a request within …`, возможно, скорость дисковой подсистемы недостаточна для корректной работы DRBD.
 
 ## После удаления ресурса ReplicatedStoragePool остаётся соответствующий ему Storage Pool
@@ -350,7 +329,6 @@ dmesg | grep 'Remote failed to finish a request within'
 alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
 linstor --help
 ```
-
 ## Восстановление БД из резервной копии
 
 Резервные копии ресурсов бэкенда хранятся в секретах в виде YAML-файлов, сегментированных для удобства восстановления. Резервное копирование происходит автоматически по расписанию.
@@ -363,6 +341,7 @@ linstor-20240425074718-backup-1              Opaque                           1 
 linstor-20240425074718-backup-2              Opaque                           1      28s     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
 linstor-20240425074718-backup-completed      Opaque                           0      28s     <none>
 ```
+{: .nowrap-default }
 
 Резервная копия хранится закодированными сегментами в секретах вида `linstor-%date_time%-backup-{0..2}`. Секрет вида `linstor-%date_time%-backup-completed` не содержит данных, и служит маркером корректно отработавшего процесса резервного копирования.
 
@@ -374,13 +353,11 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    NAMESPACE="d8-sds-replicated-volume"
    BACKUP_NAME="linstor_db_backup"
    ```
-
 1. Проверьте наличие резервных копий:
 
    ```shell
    d8 k -n $NAMESPACE get secrets --show-labels
    ```
-
    Пример вывода команды:
 
    ```shell
@@ -405,27 +382,23 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    linstor-20240425074718-backup-2              Opaque                           1      10m     sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718
    linstor-20240425074718-backup-completed      Opaque                           0      10m     <none>
    ```
-
 1. Каждая резервная копия имеет свой лейбл с временем создания. Выберите нужный и скопируйте лейбл в переменную окружения. В качестве примера используется лейбл самой актуальной копии из вывода выше:
 
    ```shell
    LABEL_SELECTOR="sds-replicated-volume.deckhouse.io/linstor-db-backup=20240425074718"
    ```
-
 1. Создайте временный каталог для хранения частей архива:
 
    ```shell
    TMPDIR=$(mktemp -d)
    echo "Временный каталог: $TMPDIR"
    ```
-
 1. Создайте пустой архив и объедините данные секретов в один файл:
 
    ```shell
    COMBINED="${BACKUP_NAME}_combined.tar"
    > "$COMBINED"
    ```
-
 1. Получите список секретов по лейблу, дешифруйте данные и поместите данные резервной копии в архив:
 
    ```shell
@@ -436,14 +409,12 @@ linstor-20240425074718-backup-completed      Opaque                           0 
      d8 k get rsmb "$MOBJECT" -o jsonpath="{.data}" | base64 --decode >> "$COMBINED"
    done
    ```
-
 1. Распакуйте архив, получив файлы резервной копии:
 
    ```shell
    mkdir -p "./backup"
    tar -xf "$COMBINED" -C "./backup --strip-components=2
    ```
-
 1. Проверьте содержимое резервной копии:
 
    ```shell
@@ -451,10 +422,9 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    TMPDIR=$(mktemp -d)
    echo "Временный каталог: $TMPDIR"
    ```
-
    Пример вывода:
 
-   ```console
+```console
    ebsremotes.yaml                    layerdrbdvolumedefinitions.yaml        layerwritecachevolumes.yaml  propscontainers.yaml      satellitescapacity.yaml  secidrolemap.yaml         trackingdate.yaml
    files.yaml                         layerdrbdvolumes.yaml                  linstorremotes.yaml          resourceconnections.yaml  schedules.yaml           secobjectprotection.yaml  volumeconnections.yaml
    keyvaluestore.yaml                 layerluksvolumes.yaml                  linstorversion.yaml          resourcedefinitions.yaml  secaccesstypes.yaml      secroles.yaml             volumedefinitions.yaml
@@ -463,19 +433,18 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    layerdrbdresourcedefinitions.yaml  layerresourceids.yaml                  nodes.yaml                   rollback.yaml             secdfltroles.yaml        spacehistory.yaml
    layerdrbdresources.yaml            layerstoragevolumes.yaml               nodestorpool.yaml            s3remotes.yaml            secidentities.yaml       storpooldefinitions.yaml
    ```
+   {: .nowrap-default }
 
 1. Восстановите необходимую сущность, применив соответствующий YAML-файл:
 
    ```shell
    d8 k apply -f %something%.yaml
    ```
-
    Либо примените bulk-apply, если нужно полное восстановление:
 
    ```shell
    d8 k apply -f ./backup/
    ```
-
 ## Отсутствие служебных подов sds-replicated-volume на выбранном узле
 
 С высокой вероятностью проблемы связаны с лейблами на узлах.
@@ -485,13 +454,11 @@ linstor-20240425074718-backup-completed      Opaque                           0 
   ```shell
   d8 k get mc sds-replicated-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
   ```
-
 - Проверьте селекторы, используемые `sds-replicated-volume-controller`:
 
   ```shell
   d8 k -n d8-sds-replicated-volume get secret d8-sds-replicated-volume-controller-config  -o jsonpath='{.data.config}' | base64 --decode
   ```
-
 - В секрете `d8-sds-replicated-volume-controller-config` должны быть селекторы, которые указаны в настройках модуля, а также дополнительно селектор `kubernetes.io/os: linux`.
 
 - Проверьте, что на нужном узле есть все указанные в секрете `d8-sds-replicated-volume-controller-config` лейблы:
@@ -499,7 +466,6 @@ linstor-20240425074718-backup-completed      Opaque                           0 
   ```shell
   d8 k get node worker-0 --show-labels
   ```
-
 - Если лейблов нет, их необходимо добавить через шаблоны в NodeGroup или на узел.
 
 - Если лейблы есть, необходимо проверить, есть ли на нужном узле лейбл `storage.deckhouse.io/sds-replicated-volume-node=`. Если его нет, проверьте, запущен ли `sds-replicated-volume-controller` и если запущен, то проверьте его логи:
@@ -508,7 +474,6 @@ linstor-20240425074718-backup-completed      Opaque                           0 
   d8 k -n d8-sds-replicated-volume get po -l app=sds-replicated-volume-controller
   d8 k -n d8-sds-replicated-volume logs -l app=sds-replicated-volume-controller
   ```
-
 ## Дополнительная поддержка
 
 Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) и [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
@@ -529,7 +494,6 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    alias linstor='d8 k -n d8-linstor exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
-
    > **Внимание.** Перед миграцией все ресурсы должны быть исправны.
 
 1. Выключите модуль `linstor`:
@@ -537,13 +501,11 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    ```shell
    d8 k patch moduleconfig linstor --type=merge -p '{"spec": {"enabled": false}}'
    ```
-
 1. Дождитесь, когда пространство имён `d8-linstor` будет удалено:
 
    ```shell
    d8 k get namespace d8-linstor
    ```
-
 1. Создайте ресурс ModuleConfig для `sds-node-configurator`:
 
    ```shell
@@ -557,13 +519,11 @@ linstor-20240425074718-backup-completed      Opaque                           0 
      version: 1
    EOF
    ```
-
 1. Дождитесь, когда модуль `sds-node-configurator` перейдет в состояние `Ready`:
 
    ```shell
    d8 k get moduleconfig sds-node-configurator
    ```
-
 1. Создайте ресурс ModuleConfig для `sds-replicated-volume`:
 
    > **Внимание.** Если в настройках модуля `sds-replicated-volume` не будет указан параметр `settings.dataNodes.nodeSelector`, то значение для этого параметра при установке модуля `sds-replicated-volume` будет взято из модуля `linstor`. Если этот параметр не указан и там, то только в этом случае он останется пустым и все узлы кластера будут считаться узлами для хранения данных.
@@ -579,33 +539,28 @@ linstor-20240425074718-backup-completed      Opaque                           0 
      version: 1
    EOF
    ```
-
 1. Дождитесь, когда модуль `sds-replicated-volume` перейдет в состояние `Ready`:
 
    ```shell
    d8 k get moduleconfig sds-replicated-volume
    ```
-
 1. Проверьте настройки модуля `sds-replicated-volume`:
 
    ```shell
    d8 k get moduleconfig sds-replicated-volume -oyaml
    ```
-
 1. Дождитесь, пока все поды в пространстве имён `d8-sds-replicated-volume` и `d8-sds-node-configurator` перейдут в состояние `Ready` или `Completed`:
 
    ```shell
    d8 k get po -n d8-sds-node-configurator
    d8 k get po -n d8-sds-replicated-volume
    ```
-
 1. Измените алиас к команде `linstor` и проверьте ресурсы:
 
    ```shell
    alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
-
 Если неисправные ресурсы не обнаружены, значит миграция была успешной.
 
 ### Миграция на ReplicatedStorageClass
@@ -651,7 +606,6 @@ StorageClass в данном модуле управляются через ре
    alias linstor='d8 k -n d8-sds-drbd exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
-
    > **Внимание.** Перед миграцией все DRBD-ресурсы должны работать корректно.
 
 1. Выключите модуль `sds-drbd`:
@@ -659,13 +613,11 @@ StorageClass в данном модуле управляются через ре
    ```shell
    d8 k patch moduleconfig sds-drbd --type=merge -p '{"spec": {"enabled": false}}'
    ```
-
 1. Дождитесь, когда пространство имён `d8-sds-drbd` будет удалено:
 
    ```shell
    d8 k get namespace d8-sds-drbd
    ```
-
 1. Создайте ресурс ModuleConfig для `sds-replicated-volume`:
 
    > **Внимание.** Если в настройках модуля `sds-replicated-volume` не будет указан параметр `settings.dataNodes.nodeSelector`, то значение для этого параметра при установке модуля `sds-replicated-volume` будет взято из модуля `sds-drbd`. Если этот параметр не указан и там, то только в этом случае он останется пустым и все узлы кластера будут считаться узлами для хранения данных.
@@ -681,32 +633,27 @@ StorageClass в данном модуле управляются через ре
      version: 1
    EOF
    ```
-
 1. Дождитесь, когда модуль `sds-replicated-volume` перейдет в состояние `Ready`:
 
    ```shell
    d8 k get moduleconfig sds-replicated-volume
    ```
-
 1. Проверьте настройки модуля `sds-replicated-volume`:
 
    ```shell
    d8 k get moduleconfig sds-replicated-volume -oyaml
    ```
-
 1. Дождитесь, пока все поды в пространстве имён `d8-sds-replicated-volume` перейдут в состояние `Ready` или `Completed`:
 
    ```shell
    d8 k get po -n d8-sds-replicated-volume
    ```
-
 1. Измените алиас к команде `linstor` и проверьте ресурсы DRBD:
 
    ```shell
    alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
    linstor resource list --faulty
    ```
-
 Если неисправные ресурсы не обнаружены, значит миграция была успешной.
 
 > **Внимание.** Ресурсы DRBDStoragePool и DRBDStorageClass в процессе будут автоматически мигрированы на ReplicatedStoragePool и ReplicatedStorageClass. Ручное вмешательство при этом не требуется.
@@ -738,7 +685,6 @@ metadata:
   name: manualcertrenewal-trigger
   namespace: d8-sds-replicated-volume
 ```
-
 Система остановит все необходимые объекты модуля, обновит сертификаты и затем снова их запустит.
 
 Статус операции можно определить с помощью команды:
@@ -746,7 +692,6 @@ metadata:
 ```shell
 d8 k -n d8-sds-replicated-volume get cm manualcertrenewal-trigger -ojsonpath='{.data.step}'
 ```
-
 Возможные статусы:
 
 - `Prepared` — проверки состояния успешно пройдены, начато время простоя;

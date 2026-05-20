@@ -34,6 +34,7 @@ Example output:
 ```console
 10.0.0.0/8 via 192.168.0.1 dev eth0 realm 216
 ```
+{: .nowrap-default }
 
 The `realm 216` instruction in the route is used as a marker to identify the route under module control (d8 hex = 216 dec).
 
@@ -53,18 +54,17 @@ spec:
 status:
   ipRoutingTableID: 10000 # If spec.ipRoutingTableID is not specified, it will be generated automatically and placed in status.
 ```
-
 According to this configuration, the route `10.0.0.0.0/8 via 192.168.0.1` will be created on the nodes falling under `nodeSelector` in the table `10000`:
 
 ```shell
 ip -4 route ls table 10000
 ```
-
 Example output:
 
 ```console
 default via 192.168.0.1 dev eth0 realm 216
 ```
+{: .nowrap-default }
 
 ### Creating an ip rule
 
@@ -96,13 +96,11 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 ```
-
 According to this configuration, an ip rule will be created on the nodes falling under `nodeSelector`. To view results, run:
 
 ```shell
 ip rule list
 ```
-
 Example output:
 
 ```console
@@ -113,3 +111,5 @@ Example output:
 50: from 192.168.111.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 ...
 ```
+{: .nowrap-default }
+

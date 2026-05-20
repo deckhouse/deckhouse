@@ -46,9 +46,10 @@ spec:
 
    При успешном выполнении команды будет выведено сообщение о том, что модуль был отключён:
 
-   ```console
+```console
    Module chrony disabled
    ```
+   {: .nowrap-default }
 
 2. Создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), чтобы включить NTP-демоны на узлах.
 

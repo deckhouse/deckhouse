@@ -123,7 +123,7 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
 
    Пример вывода:
 
-   ```console
+```console
    NAME                                                       MANAGEDBY   NODE                          TYPE     IFNAME      IFINDEX   STATE   AGE
    nni-node-0-bond0                                           Manual      node-0-b23d3a26-5fb4b-5s9fp   Bond     bond0       76        Up      7m48s
    ...
@@ -135,7 +135,6 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
    ```shell
    d8 k get nni nni-node-0-bond0 -o yaml
    ```
-
    Пример статуса интерфейса:
 
    ```yaml
@@ -168,7 +167,6 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
      permanentMAC: ""
    
    ```
-
 ## Настройка и подключение дополнительных виртуальных сетей для использования в прикладных подах
 
 В Deckhouse Kubernetes Platform можно декларативно управлять дополнительными сетями для прикладных нагрузок (поды, виртуальные машины). При этом предусмотрено следующее:
@@ -221,13 +219,11 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
            # Лейбл, установленный на ресурсы NodeNetworkInterface на этапе разметки интерфейсов под организацию дополнительных программно-определяемых сетей.
            nic-group: extra
    ```
-
 1. Проверьте состояние созданного ресурса командой:
 
    ```shell
    d8 k get clusternetworks.network.deckhouse.io my-cluster-network -o yaml
    ```
-
    Пример статуса ресурса ClusterNetwork:
 
    ```yaml
@@ -253,7 +249,6 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
      readyNodeAttachementsCount: 1
     
     ```
-
 1. Проверьте [присоединение дополнительной сети к интерфейсам на узлах](#проверка-присоединения-дополнительной-сети-к-интерфейсам-на-узлах).
 
 #### Создание сети, основанной на прямом доступе в интерфейс
@@ -275,7 +270,6 @@ spec:
         # Лейбл, установленный на ресурсы NodeNetworkInterface на этапе разметки интерфейсов под организацию дополнительных программно-определяемых сетей.
         nic-group: extra
 ```
-
 После создания сети проверьте ее [присоединение к интерфейсам на узлах](#проверка-присоединения-дополнительной-сети-к-интерфейсам-на-узлах).
 
 ### Создание сети проекта (пользовательской сети)
@@ -300,7 +294,6 @@ spec:
         matchLabels:
           nic-group: extra # Лейбл, установленный на ресурсы NodeNetworkInterface на этапе разметки интерфейсов под организацию дополнительных программно-определяемых сетей.
 ```
-
 По запросу пользователя администратор предоставляет ему название созданного NetworkClass, который используется при создании сети проекта.
 
 Пример создания пользовательской сети с использованием созданного административного ресурса NetworkClass описан в разделе [«Создание сети проекта (пользовательской сети)»](../../../../user/network/sdn/dedicated.html#создание-сети-проекта-пользовательской-сети).
@@ -315,7 +308,6 @@ spec:
 d8 k get nnia
 d8 k get nnia my-cluster-network-... -o yaml
 ```
-
 Пример ресурса NodeNetworkInterfaceAttachment:
 
 ```yaml
@@ -352,7 +344,6 @@ status:
   nodeName: right-worker-b23d3a26-5fb4b-h2bkv
   vlanNodeNetworkInterfaceName: right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc
 ```
-
 Статус NodeNetworkInterfaceAttachment изменится на `True` сразу после того как соответствующие NodeNetworkInterface появятся и перейдут в состояние `Up`.
 
 Для проверки статусов NodeNetworkInterface используйте команду:
@@ -360,7 +351,6 @@ status:
 ```shell
 d8 k get nni
 ```
-
 Пример вывода:
 
 ```console
@@ -415,7 +405,6 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
          ranges:
            - 203.0.113.10-203.0.113.200
    ```
-
    > Параметр [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) опционален. Если он не указан, доступным считается весь CIDR из [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) (за исключением network/broadcast адресов, см. поведение `/31` и `/32`).
 
 1. Включите IPAM в сети. Для этого в параметре [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) ресурса ClusterNetwork укажите параметры созданного на предыдущем шаге ClusterIPAddressPool.
@@ -438,7 +427,6 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
          kind: ClusterIPAddressPool
          name: public-net-pool
    ```
-
 После выделения пула IP-адресов для кластерной сети их можно назначать на сетевые интерфейсы подов, подключаемых к этой сети. Подробнее — в разделе [«Назначение IP-адресов на сетевые интерфейсы подов, подключаемых к дополнительной сети»](../../../../user/network/sdn/dedicated.html#назначение-ip-адресов-на-сетевые-интерфейсы-подов-подключаемых-к-дополнительной-сети).
 
 ## Настройка и подключение underlay-сетей для проброса аппаратных устройств
@@ -498,7 +486,6 @@ spec:
     echo "vm.nr_hugepages = 4096" > /etc/sysctl.d/99-hugepages.conf
     sysctl -p /etc/sysctl.d/99-hugepages.conf
 ```
-
 Эта конфигурация устанавливает `vm.nr_hugepages = 4096` на всех узлах, предоставляя 8 GiB hugepages (4096 страниц × 2 MiB на страницу).
 
 ##### Настройка Topology Manager
@@ -520,7 +507,6 @@ spec:
       scope: Container
   nodeType: Static
 ```
-
 Для получения дополнительной информации см.:
 
 * [topologyManager.enabled](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-enabled);
@@ -541,7 +527,6 @@ spec:
 ```shell
 d8 k get nni -l network.deckhouse.io/nic-pci-type=PF
 ```
-
 Пример вывода:
 
 ```console
@@ -561,14 +546,12 @@ d8 k label nni worker-01-nic-0000:17:00.1 nic-group=dpdk
 d8 k label nni worker-02-nic-0000:17:00.0 nic-group=dpdk
 d8 k label nni worker-02-nic-0000:17:00.1 nic-group=dpdk
 ```
-
 {% alert level="info" %}
 Вы можете проверить PCI-информацию и статус поддержки SR-IOV для каждого интерфейса с помощью команды:
 
 ```shell
 d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 ```
-
 В секции `status.nic.pci.pf.sriov.supported` можно найти информацию и поддержке SR-IOV.
 {% endalert %}
 
@@ -598,7 +581,6 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
            matchLabels:
              nic-group: dpdk # Лейбл, которым помечены интерфейсы на этапе проверки и настройки сетевых интерфейсов.
    ```
-
    Если `autoBonding` установлен в `true`, все совпавшие PF на узле группируются в одно DRA-устройство, предоставляя поду все PF как отдельные интерфейсы. Когда `false`, — каждый PF публикуется как отдельное DRA-устройство.
 
 1. Проверьте статус созданного UnderlayNetwork:
@@ -606,7 +588,6 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
    ```shell
    d8 k get underlaynetwork dpdk-dedicated-network -o yaml
    ```
-
    Пример статуса UnderlayNetwork в режиме Dedicated:
 
    ```yaml
@@ -624,7 +605,6 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
        status: "True"
        type: InterfacesAvailable
    ```
-
 #### Создание Underlay-сети в режиме Shared
 
 В режиме Shared создаются Virtual Functions (VF) из Physical Functions (PF) с использованием SR-IOV, позволяя нескольким подам совместно использовать одно и то же оборудование. Этот режим требует поддержки SR-IOV на сетевых картах.
@@ -652,7 +632,6 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
          enabled: true
          numVFs: 8
    ```
-
    В этом примере:
 
    * `mode: Shared` включает SR-IOV и создание VF;
@@ -667,7 +646,6 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
    ```shell
    d8 k get underlaynetwork dpdk-shared-network -o yaml
    ```
-
    Пример статуса UnderlayNetwork в режиме Shared:
 
    ```yaml
@@ -695,13 +673,11 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
        status: "True"
        type: InterfacesAvailable
    ```
-
 1. Убедитесь, что VF были созданы, проверив ресурс [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface):
 
    ```shell
    d8 k get nni -l network.deckhouse.io/nic-pci-type=VF
    ```
-
 ### Подготовка неймспейса для использования UnderlayNetwork
 
 Перед тем как пользователи смогут запрашивать устройства UnderlayNetwork в своих подах, неймспейс должен быть помечен для включения поддержки UnderlayNetwork. Это административная задача, которая должна быть выполнена для неймспейса, где будут запускаться DPDK-приложения.
@@ -711,7 +687,6 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 ```shell
 d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 ```
-
 ## Настройка и подключение системных сетей (сервисных сетей)
 
 Системные сети (сервисные сети) предназначены для служебного трафика на уровне узлов (например, для нужд хранилища, управления и т. д.) и не используются как дополнительные сети подов.
@@ -759,7 +734,6 @@ spec:
   ipam:
     clusterIPAddressPoolName: storage-pool
 ```
-
 Для проверки статуса сети после создания воспользуйтесь разделом [«Проверка статуса системной сети»](#проверка-статуса-системной-сети).
 
 #### Тип Access
@@ -779,7 +753,6 @@ spec:
   ipam:
     clusterIPAddressPoolName: mgmt-pool
 ```
-
 Для проверки статуса сети после создания воспользуйтесь разделом [«Проверка статуса системной сети»](#проверка-статуса-системной-сети).
 
 #### Тип SRIOVVirtualFunction
@@ -803,7 +776,6 @@ spec:
   ipam:
     clusterIPAddressPoolName: vf-pool
 ```
-
 Для проверки статуса сети после создания воспользуйтесь разделом [«Проверка статуса системной сети»](#проверка-статуса-системной-сети).
 
 ### Создание пула IP-адресов для настройки IPAM системной сети
@@ -822,7 +794,6 @@ spec:
       ranges:
         - 10.20.30.10-10.20.30.250
 ```
-
 При [создании системной сети](#создание-системной-сети) укажите этот пул в параметре [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) ресурса SystemNetwork.
 
 ### Проверка статуса системной сети
@@ -832,13 +803,11 @@ spec:
 ```shell
 d8 k get systemnetworks
 ```
-
 Для просмотра статуса конкретной системной сети используйте команду:
 
 ```shell
 d8 k get systemnetwork storage-network -o yaml
 ```
-
 В `status` отображаются:
 
 * `nodeAttachementsCount` — общее число привязок (по одной на совпавший интерфейс узла);
@@ -850,17 +819,14 @@ d8 k get systemnetwork storage-network -o yaml
 ```shell
 d8 k get systemnetworknodenetworkinterfaceattachments
 ```
-
 Для просмотра IP-адресов на уровне узла (включая IP системных сетей) для всех узлов используйте команду (на каждый узел назначается по одному NodeNetworkStatus):
 
 ```shell
 d8 k get nodenetworkstatus
 ```
-
 Для просмотра информации об IP-адресах на уровне узла (включая IP системных сетей) для конкретного узла используйте команду:
 
 ```shell
 d8 k get nodenetworkstatus -l network.deckhouse.io/node-name=worker-01 -o yaml
 ```
-
 В `status.addresses` ищите записи с `type: SystemNetworkIP` и полем `systemNetworkName`, значение которого равно имени вашей системной сети.

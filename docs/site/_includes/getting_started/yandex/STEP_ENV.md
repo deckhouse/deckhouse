@@ -10,12 +10,13 @@ You need to create a Yandex Cloud service account with the editor role to manage
 
    The command response will contain its parameters:
 
-   ```console
+```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
    name: deckhouse
    ```
+   {: .nowrap-default }
 
 1. Assign the required roles to the newly created user for your cloud:
 
@@ -24,7 +25,6 @@ You need to create a Yandex Cloud service account with the editor role to manage
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
-
 1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 
    ```shell

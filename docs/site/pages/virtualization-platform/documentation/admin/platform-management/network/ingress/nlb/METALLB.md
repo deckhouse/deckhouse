@@ -168,12 +168,12 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 ```
-
 Example output:
 
 ```console
 200
 ```
+{: .nowrap-default }
 
 ## BGP mode
 
@@ -255,5 +255,4 @@ Service IP addresses are announced directly to routers (or top-of-rack switches)
            node-role.deckhouse.io/metallb: ""
      version: 2
    ```
-
 1. Configure BGP peering on the network equipment.

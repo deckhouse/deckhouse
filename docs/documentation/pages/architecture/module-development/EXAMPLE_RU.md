@@ -176,13 +176,14 @@ description: Пошаговый пример создания модуля Deckh
 
 1. Посмотрите список доступных модулей:
 
-   ```console
+```console
    $ d8 k get module
    NAME       STAGE    SOURCE   PHASE       ENABLED   READY
    ...
    helloworld                   Available   False     False     
    ...
    ```
+   {: .nowrap-default }
 
 1. Создайте ресурс [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
 
@@ -200,7 +201,6 @@ description: Пошаговый пример создания модуля Deckh
        mode: Auto
    EOF
    ```
-
 1. Создайте ModuleConfig, где укажите источник модуля (параметр `source`), политику обновления (параметр `updatePolicy`) и установите параметр `enabled` в `true`:
 
    ```shell
@@ -214,33 +214,30 @@ description: Пошаговый пример создания модуля Deckh
          source: ghcr
          updatePolicy: helloworld-policy
    ```
-
 1. Проверьте ModuleSource (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
 
    ```shell
    d8 k get ms ghcr -o yaml
    ```
-
 1. Убедитесь, что были созданы новые объекты [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) для модуля:
 
    ```shell
    d8 k get mr
    ```
-
    Пример вывода:
 
-   ```console
+```console
    $ d8 k get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
    helloworld-v0.0.1                   Deployed     helloworld-policy    22m            
    ```
+   {: .nowrap-default }
 
 1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Kubernetes Platform.
 
    ```shell
    d8 k -n d8-system get pod -l app=deckhouse
    ```
-
    Через некоторое время объекты модуля появятся в кластере.
 
    Если при запуске модуля возникли ошибки, посмотрите журнал DKP:
@@ -248,13 +245,11 @@ description: Пошаговый пример создания модуля Deckh
    ```shell
    d8 k -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
    ```
-
    или проверьте состояние очереди DKP:
 
    ```shell
    d8 system queue list
    ```
-
 ## Миграция ModuleUpdatePolicy на версию v1alpha2
 
 Если в кластере существует ModuleUpdatePolicy версии v1alpha1, то необходимо выполнить следующие шаги по миграции на версию v1alpha2:
@@ -267,5 +262,4 @@ description: Пошаговый пример создания модуля Deckh
   d8 k patch moduleupdatepolicies.v1alpha1.deckhouse.io <MUP_NAME> --type='json' \
     -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
   ```
-
 {% endraw %}

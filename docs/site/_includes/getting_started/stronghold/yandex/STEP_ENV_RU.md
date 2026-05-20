@@ -18,6 +18,8 @@ folder_id: <folderID>
 created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
+{: .nowrap-default }
+
 {% endsnippetcut %}
 
 Назначьте роль `editor` вновь созданному пользователю для своего облака:

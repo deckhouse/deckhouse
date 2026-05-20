@@ -66,7 +66,7 @@ lang: ru
 
    {% offtopic title="Пример вывода с дополнительными дисками sda..." %}
 
-   ```console
+```console
    NAME                                           NODE           CONSUMABLE   SIZE          PATH        AGE
    dev-93640bc74158c6e491a2f257b5e0177309588db0   master-0       false        468851544Ki   /dev/sda    8m28s
    dev-40bf7a561aee502f20b81cf1eff873a0455a95cb   dvp-worker-1   false        468851544Ki   /dev/sda    8m17s
@@ -104,16 +104,14 @@ lang: ru
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
-
    Дождитесь, что все созданные ресурсы LVMVolumeGroup перейдут в состояние `Ready`:
 
    ```shell
    d8 k get lvg -w
    ```
-
    {% offtopic title="Пример вывода..." %}
 
-   ```console
+```console
    NAME                THINPOOLS  CONFIGURATION APPLIED   PHASE   NODE          SIZE       ALLOCATED SIZE VG   AGE
    vg-on-master-0      0/0        True                    Ready   master-0      360484Mi   30064Mi        vg-1 29s
    vg-on-dvp-worker-1  0/0        True                    Ready   dvp-worker-1  360484Mi   30064Mi        vg-1 58s
@@ -142,19 +140,18 @@ lang: ru
        - name: vg-on-master
    EOF
    ```
-
    Дождитесь, когда ресурс перейдет в состояние `Completed`:
 
    ```shell
    d8 k get rsp data -w
    ```
-
    {% offtopic title="Пример вывода..." %}
 
-   ```console
+```console
    NAME         PHASE       TYPE   AGE
    sds-pool     Completed   LVM    32s
    ```
+   {: .nowrap-default }
 
    {% endofftopic %}
 
@@ -180,16 +177,14 @@ lang: ru
      topology: Ignored
    EOF
    ```
-
    Проверьте, что в кластере появился соответствующий StorageClass:
 
    ```shell
    d8 k get sc
    ```
-
    {% offtopic title="Пример вывода..." %}
 
-   ```console
+```console
    NAME     PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    sds-r2   replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   6s
    ```

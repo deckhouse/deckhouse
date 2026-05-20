@@ -21,6 +21,7 @@ Summary:
 - 88 other queues (0 active, 88 empty): 0 tasks.
 - no tasks to handle.
 ```
+{: .nowrap-default }
 
 #### How to view the status of the main task queue?
 
@@ -29,15 +30,17 @@ To view the status of the Deckhouse `main` task queue, run the following command
 ```shell
 d8 s queue main
 ```
-
 Example output (38 tasks in the `main` queue):
 
 ```console
 Queue 'main': length 38, status: 'run first task'
 ```
+{: .nowrap-default }
 
 Example output (the `main` queue is empty):
 
 ```console
 Queue 'main': length 0, status: 'waiting for task 0s'
 ```
+{: .nowrap-default }
+

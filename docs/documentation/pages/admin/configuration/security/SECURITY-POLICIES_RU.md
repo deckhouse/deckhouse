@@ -718,6 +718,7 @@ DKP поддерживает проверку подписей образов к
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
+{: .nowrap-default }
 
 ## Использование альтернатив для управления политиками безопасности
 

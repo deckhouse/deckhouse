@@ -37,6 +37,7 @@ d8 k get module csi-yadro-tatlin-unified -w
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 si-yadro-tatlin-unified            Embedded  Available   True       True
 ```
+{: .nowrap-default }
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
@@ -61,7 +62,6 @@ spec:
       volumeExportPort: "p50,p51,p60,p61"
 EOF
 ```
-
 ## Создание StorageClass
 
 Для создания StorageClass необходимо использовать ресурс [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass). Ручное создание ресурса StorageClass без [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass) может привести к ошибкам.
@@ -81,7 +81,6 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
-
 ## Проверка работоспособности модуля
 
 Для того чтобы проверить работоспособность модуля `csi-yadro-tatlin-unified`, необходимо проверить состояние подов в пространстве имён `d8-csi-yadro-tatlin-unified`. Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-yadro-tatlin-unified` должны быть запущены на всех узлах.

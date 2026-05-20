@@ -123,17 +123,18 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 1. Настройте Zabbix-агент:
    - Скопируйте файл `d8alerts.conf` в директорию, указанную в параметре `Include` основного конфига Zabbix-агента (обычно расположен по пути `/etc/zabbix/zabbix_agentd.d/`):
 
-     ```console
+```console
      # LLD of deckhouse cluster alerts
      UserParameter=d8alerts.discovery,/etc/zabbix/scripts/clusteralerts.sh discovery
 
      # Severity of a specific alert by its ID
      UserParameter=d8alerts.severity[*],/etc/zabbix/scripts/clusteralerts.sh severity "$1"
      ```
+     {: .nowrap-default }
 
    - Скопируйте скрипт `clusteralerts.sh` в директорию `/etc/zabbix/scripts/`:
 
-     ```console
+```console
      #!/bin/bash
 
      MODE="$1"
@@ -168,42 +169,48 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
        exit 1
      fi
      ```
+     {: .nowrap-default }
 
    - Убедитесь, что скрипт имеет права на выполнение:
 
-     ```console
+```console
      chmod +x /etc/zabbix/scripts/clusteralerts.sh
      ```
+     {: .nowrap-default }
 
 1. Проверьте доступ:
    - Убедитесь, что скрипт имеет доступ к кластеру и может получать информацию об алертах:
 
-     ```console
+```console
      /etc/zabbix/scripts/clusteralerts.sh discovery
      ```
+     {: .nowrap-default }
 
      Вывод должен содержать список алертов с их статусами и уровнями критичности.
 
 1. Перезапустите Zabbix-агент для применения изменений:
 
-   ```console
+```console
    systemctl restart zabbix-agent
    ```
+   {: .nowrap-default }
 
 ### Устранение неполадок
 
 1. Проверьте логи Zabbix-агента:
 
-   ```console
+```console
    tail -f /var/log/zabbix/zabbix_agentd.log
    ```
+   {: .nowrap-default }
 
 1. Проверьте работу скрипта:
 
-   ```console
+```console
    /etc/zabbix/scripts/clusteralerts.sh discovery
    /etc/zabbix/scripts/clusteralerts.sh severity "ID_АЛЕРТА"
    ```
+   {: .nowrap-default }
 
    Убедитесь, что скрипт корректно выполняется и возвращает ожидаемые данные.
 
@@ -211,17 +218,19 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
    - Скрипт запускается от имени пользователя `zabbix`:
 
-     ```console
+```console
      sudo -u zabbix /etc/zabbix/scripts/clusteralerts.sh
      ```
+     {: .nowrap-default }
 
    - Переменная `KUBECONFIG` доступна пользователю:
 
      Если конфигурационный файл Kubernetes недоступен по умолчанию, укажите его явно. Для этого сохраните kubeconfig, например, в `/etc/zabbix/kubeconfig` и добавьте в конфигурацию агента:
 
-     ```console
+```console
      UserParameter=d8alerts.discovery,export KUBECONFIG=/etc/zabbix/kubeconfig;/etc/zabbix/scripts/clusteralerts.sh discovery
      ```
+     {: .nowrap-default }
 
 ## Отправка алертов в Telegram
 
@@ -238,7 +247,6 @@ metadata:
 stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
-
 Разверните кастомный ресурс `CustomAlertManager`:
 
 ```yaml
@@ -264,7 +272,6 @@ spec:
       receiver: telegram
       repeatInterval: 12h
 ```
-
 Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
 
 ## Пример отправки алертов в Slack с фильтром
@@ -314,7 +321,6 @@ spec:
       repeatInterval: 12h
   type: Internal
 ```
-
 ## Пример отправки алертов в Opsgenie
 
 ```yaml
@@ -332,7 +338,6 @@ spec:
               - id: team_id
                 type: team
 ```
-
 ## Пример отправки алертов по электронной почте
 
 Создайте секрет с паролем от аккаунта электронной почты. Пароль, закодированный в формате Base64, укажите в поле `password`:
@@ -346,7 +351,6 @@ metadata:
 data:
   password: BASE64_ENCODED_PASSWORD_HERE
 ```
-
 Измените значения в примере ресурса CustomAlertManager в соответствии с актуальными для вашей инфраструктуры значениями и примените его:
 
 ```yaml
@@ -392,5 +396,4 @@ spec:
             value: "^[1-4]$"
           receiver: mail
 ```
-
 {% endraw %}

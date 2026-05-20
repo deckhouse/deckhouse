@@ -59,6 +59,7 @@ $ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
+{: .nowrap-default }
 
 Detailed error information can be found in the `pullError` field in the status of the ModuleSource resource.
 
@@ -71,6 +72,7 @@ module-1 module error:
 module-2 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-2/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 ```
+{: .nowrap-default }
 
 If synchronization is successful, the `.status.modules` field of the ModuleSource resource will contain a list of modules ready to be enabled in the cluster.
 
@@ -80,19 +82,18 @@ Here is an example of how you can get a list of modules available from the `exam
 $ d8 k get ms example -o jsonpath='{.status.modules[*].name}'
 module-1 module-2
 ```
+{: .nowrap-default }
 
 The complete list of modules available from all module sources created in the cluster can be retrieved using the following command:
 
 ```shell
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
-
 After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
 
 ```shell
 d8 k get module
 ```
-
 Example of getting a list of modules:
 
 ```console
@@ -101,13 +102,13 @@ NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
 ```
+{: .nowrap-default }
 
 To get additional information about the module, use the following command:
 
 ```shell
 d8 k get module module-one -oyaml
 ```
-
 Example of output:
 
 ```yaml
@@ -142,7 +143,6 @@ status:
     type: IsReady
   phase: Available
 ```
-
 You can find available sources from which the module can be downloaded in the Module (there is only one in the example).
 
 Next, you need to enable the module. To do this, you need to create a ModuleConfig with the name of the module.
@@ -162,7 +162,6 @@ spec:
   enabled: true
   source: example
 ```
-
 {% alert level="warning" %}
 If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the [`D8DeckhouseModuleValidationError`](../../../reference/alerts.html#monitoring-deckhouse-d8deckhousemodulevalidationerror) alert will appear, and the module will not be successfully activated.
 
@@ -171,7 +170,6 @@ To get more details, use the following command:
 ```shell
 d8 k get mr -l module=<MODULE_NAME>
 ```
-
 Make sure to specify the required configuration parameters in `ModuleConfig` according to the module’s documentation.
 {% endalert %}
 
@@ -182,7 +180,6 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
-
 {% alert level="warning" %}
 If the module has not entered the download phase, check the module source (ModuleSource), as the module may not be able to download.
 {% endalert %}
@@ -194,7 +191,6 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Installing    False     False
 ```
-
 If the module was successfully installed, it will enter the `Ready` phase:
 
 ```shell
@@ -202,7 +198,6 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE  ENABLED  READY
 module-one           example  Ready  True     True
 ```
-
 Example of a Module object in the cluster when the module has been successfully installed:
 
 ```yaml
@@ -245,7 +240,6 @@ status:
   hooksState: 'v0.7.24/hooks/moduleVersion.py: ok'
   phase: Ready
 ```
-
 In the Module, you can see the current installed version of the module, its size, the source from which it was downloaded, its dependencies, and the release channel.
 
 In case of any errors, the module will enter the `Error` phase:
@@ -255,6 +249,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE  ENABLED  READY
 module-one           example  Error  True     Error
 ```
+{: .nowrap-default }
 
 If the enabled module has several available sources, and a source for the module is not explicitly selected in its ModuleConfig, the module will enter the `Conflict` phase:
 
@@ -263,6 +258,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
+{: .nowrap-default }
 
 To resolve the conflict, specify the source of the module (ModuleSource name) explicitly in ModuleConfig.
 
@@ -273,7 +269,6 @@ You can view the list of releases using the following command:
 ```shell
 d8 k get mr
 ```
-
 An example of retrieving the list of module releases:
 
 ```console
@@ -287,6 +282,7 @@ module-two-v1.2.3          Deployed     deckhouse       48d
 module-two-v1.2.4          Superseded   deckhouse       44d              
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
+{: .nowrap-default }
 
 If the module release is in the `Superseded` status, it means that the module release is outdated, and there is a newer release that has replaced it.
 
@@ -296,13 +292,11 @@ If a module release is `Pending`, it means that manual confirmation is required 
 ```shell
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
-
 This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve <module-name> <version>
 ```
-
 {% endalert %}
 
 ### Switching the module to a different module source
@@ -317,7 +311,6 @@ Follow these steps to deploy a module from a different module source:
    ```shell
    d8 k get mr
    ```
-
 ### Module update policy
 
 The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
@@ -345,7 +338,6 @@ spec:
       from: "13:30"
       to: "14:00"
 ```
-
 The update policy is specified in the `updatePolicy` field in ModuleConfig.
 
 ### Enabling the module
@@ -355,7 +347,6 @@ Before enabling the module, make sure that it can be enabled. Run the following 
 ```shell
 d8 k get modules
 ```
-
 The module must be in the list.
 
 Below is an example of the output:
@@ -368,6 +359,7 @@ module-one                   Available   False     False
 module-two                   Available   False     False     
 ...
 ```
+{: .nowrap-default }
 
 It shows that the `module-one` module can be enabled.
 
@@ -379,7 +371,6 @@ You can enable the module similarly to built-in DKP modules using any of the fol
   ```shell
   d8 system module enable <MODULE_NAME>
   ```
-
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
   Below is an example of a [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) that enables and configures the `module-one` module in the cluster:
@@ -395,7 +386,6 @@ You can enable the module similarly to built-in DKP modules using any of the fol
       parameter: value
     version: 1
   ```
-
 ### Troubleshooting
 
 If there were errors while enabling a module in the cluster, you can learn about them as follows:
@@ -404,39 +394,41 @@ If there were errors while enabling a module in the cluster, you can learn about
   ```shell
   d8 k -n d8-system logs -l app=deckhouse
   ```
-
 - View the Module object in more detail:
 
-  ```console
+```console
   d8 k get module module-one -oyaml
   ```
+  {: .nowrap-default }
+
   
 - View the ModuleConfig object of the module.
 
   Here is an example of the error message for `module-one`:
 
-  ```console
+```console
   $ d8 k get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
   ```
+  {: .nowrap-default }
 
 - View the ModuleSource object.
 
   Example output if the module source has problems with downloading the module:
 
-  ```console
+```console
   $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details
   ```
+  {: .nowrap-default }
 
 Similar to [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
 ```shell
 d8 k get mr
 ```
-
 Output example:
 
 ```console
@@ -444,19 +436,18 @@ $ d8 k get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
+{: .nowrap-default }
 
 The example output above illustrates ModuleRelease message when the update mode ([update.mode](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) of the ModuleUpdatePolicy is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the ModuleRelease:
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
-
 This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve module-1 v1.23.2
 ```
-
 ## Integrating Deckhouse Module Tools for Module Validation
 
 To enable automatic validation of the module structure and, if needed, metrics reporting, you can integrate Deckhouse Module Tools (DMT) into your build process.
@@ -482,7 +473,6 @@ jobs:
          DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
          DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
-
 {% endraw %}
 
 The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the DMT will send telemetry to the specified endpoint.
@@ -509,7 +499,6 @@ For GitLab projects, ready-to-use templates are available and can be included in
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Setup.gitlab-ci.yml
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
     ```
-
    Example of template inclusion:  
    [GitLab `.gitlab-ci.yml`, line 2](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2)
 
@@ -519,7 +508,6 @@ For GitLab projects, ready-to-use templates are available and can be included in
     Lint:
       extends: .lint
     ```
-
    For an example of how to add a check step, see [GitLab `.gitlab-ci.yml`, line 48](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
 
 > If your project is hosted in the [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse) group, the metrics variables are already configured. No additional setup is required.

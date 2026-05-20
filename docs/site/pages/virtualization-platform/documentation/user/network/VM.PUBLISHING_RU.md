@@ -21,6 +21,7 @@ d8 k label vm linux-vm app=nginx
 ```console
 virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 ```
+{: .nowrap-default }
 
 ### Использование сервиса NodePort
 
@@ -46,7 +47,6 @@ spec:
       nodePort: 31880
 EOF
 ```
-
 ![NodePort](/../../../../images/virtualization-platform/lb-nodeport.ru.png)
 
 ### Использование сервиса LoadBalancer
@@ -70,7 +70,6 @@ spec:
       targetPort: 80
 EOF
 ```
-
 ![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.ru.png)
 
 ### Использование сервисов с активными проверками
@@ -110,7 +109,6 @@ spec:
         path: /healthz
 EOF
 ```
-
 Пример сервиса с проверкой TCP:
 
 ```yaml
@@ -134,7 +132,6 @@ spec:
         targetPort: 2525
 EOF
 ```
-
 Пример сервиса с проверкой PostgreSQL для чтения:
 
 ```yaml
@@ -160,7 +157,6 @@ spec:
         query: "SELECT 1"
 EOF
 ```
-
 Пример сервиса с проверкой PostgreSQL для записи:
 
 ```yaml
@@ -186,7 +182,6 @@ spec:
         query: "SELECT NOT pg_is_in_recovery()"
 EOF
 ```
-
 где `authSecretName` – это название секрета (Secret) с учетными данными для доступа к PostgreSQL.
 
 Пример создания такого секрета:
@@ -194,7 +189,6 @@ EOF
 ```shell
 d8 k create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
-
 ## Предоставление публичного доступа к сервисам виртуальной машины с использованием Ingress
 
 Ingress позволяет управлять входящими HTTP/HTTPS-запросами и маршрутизировать их к различным серверам в рамках вашего кластера. Это наиболее подходящий метод, если вы хотите использовать доменные имена и SSL-терминацию для доступа к вашим виртуальным машинам.
@@ -219,7 +213,6 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
          targetPort: 80
    EOF
    ```
-
 1. Ingress-ресурс для публикации. Пример:
 
    ```yaml
@@ -242,7 +235,6 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
                      number: 80
    EOF
    ```
-
 ### Как защитить приложение опубликованное через Ingress
 
 Чтобы включить аутентификацию через `Dex` для приложения, выполните следующие шаги:
@@ -280,7 +272,6 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
        - 1.1.1.1/32
        - 192.168.0.0/24
    ```
-
 1. Подключите приложение к `Dex`. Для этого добавьте в Ingress-ресурс приложения аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
@@ -298,7 +289,6 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
-
 ### Настройка ограничений на основе CIDR
 
 В DexAuthenticator нет встроенной системы управления разрешением аутентификации на основе IP-адреса пользователя. Вместо этого вы можете воспользоваться аннотациями для Ingress-ресурсов:
@@ -308,11 +298,9 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
   ```yaml
   nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
-
 - Если необходимо, чтобы пользователи из указанных сетей освобождались от прохождения аутентификации в Dex, а пользователи из остальных сетей обязательно аутентифицировались в Dex, добавьте аннотацию:
 
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
-
 {% endraw %}

@@ -22,6 +22,7 @@ v1.46.9    Superseded   11d
 v1.47.0    Superseded   4h12m
 v1.47.1    Deployed     4h12m
 ```
+{: .nowrap-default }
 
 Статус `Deployed` говорит о том, что произошло переключение на соответствующую версию, но не гарантирует успешное завершение обновления.
 
@@ -30,13 +31,13 @@ v1.47.1    Deployed     4h12m
 ```shell
 d8 k -n d8-system get pods -l app=deckhouse
 ```
-
 Пример вывода:
 
 ```console
 NAME                   READY  STATUS   RESTARTS  AGE
 deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 ```
+{: .nowrap-default }
 
 - Если под находится в статусе `Running` и в колонке `READY` указано `1/1`, это означает, что обновление завершилось успешно.
 - Если под находится в статусе `Running`, но в колонке `READY` указано `0/1`, это означает, что обновление еще не завершено. Если так продолжается более 20–30 минут, это может говорить о наличии проблем в работе DKP. Необходима диагностика.
@@ -49,5 +50,4 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   ```shell
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
-
 - Соберите отладочную информацию и свяжитесь с [технической поддержкой DKP](/tech-support/).

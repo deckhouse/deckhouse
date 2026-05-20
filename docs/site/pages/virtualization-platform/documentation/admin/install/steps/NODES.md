@@ -28,9 +28,10 @@ Alternatively, you can connect to the master node via SSH and run the command as
 
      Expected output:
 
-     ```console
+```console
      401 Unauthorized
      ```
+     {: .nowrap-default }
 
 ## Adding prepared nodes
 
@@ -51,13 +52,11 @@ spec:
        role: worker
 EOF
 ```
-
 Generate an SSH key with an empty passphrase. To do this, execute the following command on the **master node**:
 
 ```shell
 ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
-
 Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. To do this, execute the following command on the **master node**:
 
 ```yaml
@@ -71,13 +70,11 @@ spec:
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 EOF
 ```
-
 Retrieve the public part of the previously generated SSH key (it will be needed in the next step). To do this, execute the following command on the **master node**:
 
 ```shell
 cat /dev/shm/caps-id.pub
 ```
-
 **On the worker node**, create the user `caps`. To do this, run the following commands, replacing `<SSH-PUBLIC-KEY>` with the public part of the SSH key obtained in the previous step:
 
 ```shell
@@ -91,13 +88,11 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
-
 **In Astra Linux operating systems**, when using the mandatory integrity control module Parsec, configure the maximum integrity level for the user `caps`:
 
 ```shell
 sudo -i pdpl-user -i 63 caps
 ```
-
 Create the [StaticInstance](/modules/node-manager/cr.html#staticinstance) resources. Run the following commands on the **master node**, specifying the IP address and unique name of each node:
 
 ```yaml
@@ -117,7 +112,6 @@ spec:
     name: caps
 EOF
 ```
-
 Ensure that all nodes in the cluster are in the `Ready` status.
 
 Run the following command to get the list of cluster nodes:
@@ -125,7 +119,6 @@ Run the following command to get the list of cluster nodes:
 ```shell
 d8 k get no
 ```
-
 {% offtopic title="Example output..." %}
 
 ```console

@@ -177,10 +177,11 @@ Deckhouse Code поддерживает следующие атрибуты дл
 1. Подключитесь к Redis, используя базы, указанные в `config/redis.shared_state.yml` и `config/redis.queues.yml`.
 2. Удалите ключ `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` следующими командами:
 
-   ```console
+```console
    keys *ldap*
    del "sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}"
    ```
+   {: .nowrap-default }
 
 ### Ручной запуск синхронизации
 

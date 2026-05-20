@@ -123,17 +123,18 @@ The script requires:
 1. Configure the Zabbix agent:
    - Copy the `d8alerts.conf` file to the directory specified in the `Include` parameter of the main Zabbix agent config (usually located at `/etc/zabbix/zabbix_agentd.d/`):
 
-     ```console
+```console
      # LLD of deckhouse cluster alerts
      UserParameter=d8alerts.discovery,/etc/zabbix/scripts/clusteralerts.sh discovery
 
      # Severity of a specific alert by its ID
      UserParameter=d8alerts.severity[*],/etc/zabbix/scripts/clusteralerts.sh severity "$1"
      ```
+     {: .nowrap-default }
 
    - Copy the `clusteralerts.sh` script to the `/etc/zabbix/scripts/` directory:
 
-     ```console
+```console
      #!/bin/bash
 
      MODE="$1"
@@ -168,42 +169,48 @@ The script requires:
        exit 1
      fi
      ```
+     {: .nowrap-default }
 
    - Make sure the script has execute permissions:
 
-     ```console
+```console
      chmod +x /etc/zabbix/scripts/clusteralerts.sh
      ```
+     {: .nowrap-default }
 
 1. Check access:
    - Ensure the script has access to the cluster and can retrieve alert information:
 
-     ```console
+```console
      /etc/zabbix/scripts/clusteralerts.sh discovery
      ```
+     {: .nowrap-default }
 
      The output should contain a list of alerts with their statuses and severity levels.
 
 1. Restart the Zabbix agent to apply changes:
 
-   ```console
+```console
    systemctl restart zabbix-agent
    ```
+   {: .nowrap-default }
 
 ### Troubleshooting
 
 1. Check Zabbix agent logs:
 
-   ```console
+```console
    tail -f /var/log/zabbix/zabbix_agentd.log
    ```
+   {: .nowrap-default }
 
 1. Check script operation:
 
-   ```console
+```console
    /etc/zabbix/scripts/clusteralerts.sh discovery
    /etc/zabbix/scripts/clusteralerts.sh severity "ALERT_ID"
    ```
+   {: .nowrap-default }
 
    Make sure the script executes correctly and returns expected data.
 
@@ -211,17 +218,19 @@ The script requires:
 
    - The script runs as the `zabbix` user:
 
-     ```console
+```console
      sudo -u zabbix /etc/zabbix/scripts/clusteralerts.sh
      ```
+     {: .nowrap-default }
 
    - The `KUBECONFIG` variable is available to the user:
 
      If the Kubernetes configuration file is not available by default, specify it explicitly. To do this, save the kubeconfig, for example, in `/etc/zabbix/kubeconfig` and add to the agent configuration:
 
-     ```console
+```console
      UserParameter=d8alerts.discovery,export KUBECONFIG=/etc/zabbix/kubeconfig;/etc/zabbix/scripts/clusteralerts.sh discovery
      ```
+     {: .nowrap-default }
 
 ## Sending alerts to Telegram
 
@@ -238,7 +247,6 @@ metadata:
 stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
-
 Deploy the [CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) custom resource:
 
 ```yaml
@@ -264,7 +272,6 @@ spec:
       receiver: telegram
       repeatInterval: 12h
 ```
-
 The `token` field in the Secret and `chatID` in the `CustomAlertmanager` resource need to be set to your own values. [More details](https://core.telegram.org/bots) about the Telegram API.
 
 ## Example of sending alerts to Slack with filter
@@ -314,7 +321,6 @@ spec:
       repeatInterval: 12h
   type: Internal
 ```
-
 ## Example of sending alerts to Opsgenie
 
 ```yaml
@@ -332,7 +338,6 @@ spec:
               - id: team_id
                 type: team
 ```
-
 ## Example of sending alerts via email
 
 Create a secret with the email account password. Specify the password encoded in Base64 format in the `password` field:
@@ -346,7 +351,6 @@ metadata:
 data:
   password: BASE64_ENCODED_PASSWORD_HERE
 ```
-
 Modify the values in the [CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) resource example according to the values relevant to your infrastructure and apply it:
 
 ```yaml
@@ -392,5 +396,4 @@ spec:
             value: "^[1-4]$"
           receiver: mail
 ```
-
 {% endraw %}

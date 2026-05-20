@@ -28,9 +28,10 @@ lang: ru
 
      Ожидаемый ответ:
 
-     ```console
+```console
      401 Unauthorized
      ```
+     {: .nowrap-default }
 
 ## Добавление подготовленных узлов
 
@@ -51,13 +52,11 @@ spec:
        role: worker
 EOF
 ```
-
 Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на **master-узле** следующую команду:
 
 ```shell
 ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
-
 Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на **master-узле** следующую команду:
 
 ```yaml
@@ -71,13 +70,11 @@ spec:
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 EOF
 ```
-
 Получите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
 
 ```shell
 cat /dev/shm/caps-id.pub
 ```
-
 **На worker-узле** создайте пользователя `caps`. Для этого выполните следующие команды, указав публичную часть SSH-ключа, полученную на предыдущем шаге (выполните эти команды под пользователем `root`):
 
 ```shell
@@ -91,13 +88,11 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
-
 **В операционных системах семейства Astra Linux** при использовании модуля мандатного контроля целостности Parsec сконфигурируйте максимальный уровень целостности для пользователя `caps`:
 
 ```shell
 sudo -i pdpl-user -i 63 caps
 ```
-
 Создайте ресурсы [StaticInstance](/modules/node-manager/cr.html#staticinstance). Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
 
 ```yaml
@@ -117,7 +112,6 @@ spec:
     name: caps
 EOF
 ```
-
 Убедитесь, что все узлы кластера находятся в статусе `Ready`.
 
 Выполните следующую команду, чтобы получить список узлов кластера:
@@ -125,7 +119,6 @@ EOF
 ```shell
 d8 k get no
 ```
-
 {% offtopic title="Пример вывода..." %}
 
 ```console

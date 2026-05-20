@@ -49,7 +49,7 @@ lang: ru
 
    Пример вывода:
 
-   ```console
+```console
    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
 
    Change registry for deckhouse images.
@@ -70,6 +70,7 @@ lang: ru
                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
                      http - provide '--scheme' flag with http value
    ```
+   {: .nowrap-default }
 
 1. Дождитесь перехода пода registry в статус `Ready`. Если под находится в статусе `ImagePullBackoff`, перезапустите его.
 1. Дождитесь применения новых настроек на master-узле.
@@ -79,12 +80,11 @@ lang: ru
    ```shell
    journalctl -u bashible -n 20
    ```
-
    В журнале должно появится сообщение `Configuration is in sync, nothing to do`.
 
    Пример вывода при просмотре журнала сервиса bashible:
 
-   ```console
+```console
    $ journalctl -u bashible -n 20
    ...
    Aug 13 05:03:08 kube-master-0 systemd[1]: Started Bashible service.
@@ -92,6 +92,7 @@ lang: ru
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Deactivated successfully.
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
    ```
+   {: .nowrap-default }
 
 1. Если необходимо отключить автоматическое обновление registry через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
 

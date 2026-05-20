@@ -168,12 +168,12 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 ```
-
 Пример вывода:
 
 ```console
 200
 ```
+{: .nowrap-default }
 
 ## Режим BGP
 
@@ -253,5 +253,4 @@ IP-адреса сервисов анонсируются напрямую в м
            node-role.deckhouse.io/metallb: ""
      version: 2
    ```
-
 1. Настройте BGP-пиринг на сетевом оборудовании.

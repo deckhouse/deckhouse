@@ -19,24 +19,25 @@ lang: en
 
   Example output:
 
-  ```console
+```console
   185.193.90.38    STREAM registry.deckhouse.io
   185.193.90.38    DGRAM
   185.193.90.38    RAW
   ```
+  {: .nowrap-default }
 
   Example of obtaining an IP of `registry.deckhouse.io` from the `deckhouse` Pod:
 
   ```shell
   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   ```
-
   Example output:
 
-  ```console
+```console
   185.193.90.38    STREAM registry.deckhouse.io
   185.193.90.38    DGRAM  registry.deckhouse.io
   ```
+  {: .nowrap-default }
 
   If the resulted IPs do not match, check DNS settings on the node.
   Pay attention to the `search` domain list in `/etc/resolv.conf`, which affects name resolution in the `deckhouse` Pod.
@@ -53,7 +54,6 @@ Below is an example of how DNS settings may result in different resolution behav
   nameserver 10.0.0.10
   search company.my
   ```
-
   > On nodes, the default `ndot` setting is **1** (`options ndots:1`), while in Kubernetes Pods, it’s **5**.
   > This causes different resolution logic for DNS names with 5 or fewer dots on a node and on the Pod.
 

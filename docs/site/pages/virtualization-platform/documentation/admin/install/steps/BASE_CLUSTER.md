@@ -199,6 +199,7 @@ The installation time may range from 5 to 30 minutes, depending on the connectio
 
 🎉 Deckhouse cluster was created successfully!
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -257,5 +258,4 @@ Example of using the preflight skip flag:
       --config=/config.yml \
       --preflight-skip-all-checks 
   ```
-
 {% endofftopic %}

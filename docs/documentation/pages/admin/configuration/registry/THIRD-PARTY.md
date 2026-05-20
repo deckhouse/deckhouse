@@ -48,7 +48,7 @@ To switch the cluster to use an external registry, follow these steps:
 
    Example output:
 
-   ```console
+```console
    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
    Change registry for deckhouse images.
    Flags:
@@ -66,6 +66,7 @@ To switch the cluster to use an external registry, follow these steps:
                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
                      http - provide '--scheme' flag with http value
    ```
+   {: .nowrap-default }
 
 1. Wait until the registry pod reaches the `Ready` status. If the pod is in the `ImagePullBackoff` state, restart it.
 1. Wait for bashible to apply the new settings on the master node.
@@ -75,12 +76,11 @@ To switch the cluster to use an external registry, follow these steps:
    ```shell
    journalctl -u bashible -n 20
    ```
-
    The log should contain the message `Configuration is in sync, nothing to do`.
 
    Example of output when viewing the bashible service log:
 
-   ```console
+```console
    $ journalctl -u bashible -n 20
    ...
    Aug 13 05:03:08 kube-master-0 systemd[1]: Started Bashible service.
@@ -88,6 +88,7 @@ To switch the cluster to use an external registry, follow these steps:
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Deactivated successfully.
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
    ```
+   {: .nowrap-default }
 
 1. If you need to disable automatic registry updates via the external registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
 1. Check if any pods in the cluster are still using the original registry address:

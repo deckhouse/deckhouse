@@ -20,6 +20,7 @@ Example output:
 ```console
 virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 ```
+{: .nowrap-default }
 
 ### Using NodePort service
 
@@ -45,7 +46,6 @@ spec:
       nodePort: 31880
 EOF
 ```
-
 ![NodePort](/../../../../images/virtualization-platform/lb-nodeport.png)
 
 ### Using a LoadBalancer service
@@ -69,7 +69,6 @@ spec:
       targetPort: 80
 EOF
 ```
-
 ![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.png)
 
 ### Using services with active health checks
@@ -109,7 +108,6 @@ spec:
         path: /healthz
 EOF
 ```
-
 Example of a service with a TCP health check:
 
 ```yaml
@@ -133,7 +131,6 @@ spec:
         targetPort: 2525
 EOF
 ```
-
 Example of a service with a PostgreSQL health check:
 
 ```yaml
@@ -159,7 +156,6 @@ spec:
         query: "SELECT 1"
 EOF
 ```
-
 Example of a service with a PostgreSQL health check for write operations:
 
 ```yaml
@@ -185,7 +181,6 @@ spec:
         query: "SELECT NOT pg_is_in_recovery()"
 EOF
 ```
-
 Where `authSecretName` refers to the name of the Secret that contains the credentials for accessing PostgreSQL.
 
 Example of creating a Secret:
@@ -193,7 +188,6 @@ Example of creating a Secret:
 ```shell
 d8 k create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
-
 ## Providing public access to virtual machine services using Ingress
 
 Ingress allows managing incoming HTTP/HTTPS requests and routing them to different servers within your cluster. This is the most suitable method if you want to use domain names and SSL termination for accessing your virtual machines.
@@ -218,7 +212,6 @@ To publish a virtual machine service via Ingress, you need to create the followi
          targetPort: 80
    EOF
    ```
-
 1. Ingress resource for publishing. Example:
 
    ```yaml
@@ -241,7 +234,6 @@ To publish a virtual machine service via Ingress, you need to create the followi
                      number: 80
    EOF
    ```
-
 ### How to secure an application published via Ingress
 
 To enable authentication through `Dex` for your application, follow these steps:
@@ -279,7 +271,6 @@ To enable authentication through `Dex` for your application, follow these steps:
         - 1.1.1.1/32
         - 192.168.0.0/24
    ```
-
 1. Connect the application to `Dex`. To do this, add the following annotations to the application's Ingress resource:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
@@ -297,7 +288,6 @@ To enable authentication through `Dex` for your application, follow these steps:
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
-
 ### Configuring CIDR-based restrictions
 
 DexAuthenticator does not have a built-in system for managing authentication permissions based on the user's IP address. Instead, you can use annotations for Ingress resources:
@@ -307,11 +297,9 @@ DexAuthenticator does not have a built-in system for managing authentication per
   ```yaml
   nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
-
 - If you need users from the specified networks to be exempt from authentication in Dex, while users from other networks must authenticate through Dex, add the following annotation:
 
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
-
 {% endraw %}

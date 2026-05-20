@@ -22,10 +22,11 @@ lang: ru
 
    Пример вывода:
 
-   ```console
+```console
    NAME                               CPU(cores)   MEMORY(bytes)
    kube-apiserver-sandbox1-master-0   251m         1476Mi
    ```
+   {: .nowrap-default }
 
 1. Проверьте метрики в Grafana.
 

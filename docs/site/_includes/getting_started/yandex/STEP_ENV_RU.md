@@ -10,12 +10,13 @@
 
    В ответ вернутся параметры пользователя:
 
-   ```console
+```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
    name: deckhouse
    ```
+   {: .nowrap-default }
 
 1. Назначьте необходимые роли вновь созданному пользователю для своего облака:
 
@@ -24,7 +25,6 @@
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
-
 1. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
 
    ```shell

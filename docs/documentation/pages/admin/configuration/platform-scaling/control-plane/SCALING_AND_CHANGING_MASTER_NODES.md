@@ -407,3 +407,5 @@ In clusters with multiple master nodes, DKP runs in high-availability mode (with
 ```console
 d8 system queue list
 ```
+{: .nowrap-default }
+

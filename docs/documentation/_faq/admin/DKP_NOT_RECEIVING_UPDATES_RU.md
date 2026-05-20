@@ -18,24 +18,25 @@ lang: ru
 
   Пример вывода:
 
-  ```console
+```console
   185.193.90.38    STREAM registry.deckhouse.ru
   185.193.90.38    DGRAM
   185.193.90.38    RAW
   ```
+  {: .nowrap-default }
 
   Пример получения IP-адреса хранилища образов Deckhouse в поде `deckhouse`:
 
   ```shell
   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.ru
   ```
-
   Пример вывода:
 
-  ```console
+```console
   185.193.90.38    STREAM registry.deckhouse.ru
   185.193.90.38    DGRAM  registry.deckhouse.ru
   ```
+  {: .nowrap-default }
 
   Если полученные IP-адреса не совпадают, проверьте настройки DNS на узле. В частности, обратите внимание на список доменов в параметре `search` файла `/etc/resolv.conf` (он влияет на разрешение имен в поде `deckhouse`). Если в параметре `search` файла `/etc/resolv.conf` указан домен, в котором настроено разрешение wildcard-записей, это может привести к неверному разрешению IP-адреса хранилища образов Deckhouse (см. пример).
 
@@ -49,7 +50,6 @@ lang: ru
   nameserver 10.0.0.10
   search company.my
   ```
-
   > Обратите внимание, что по умолчанию на узле параметр `ndot` равен **1** (`options ndots:1`). Но в подах Kubernetes параметр `ndot` равен **5**. Таким образом, логика разрешения DNS-имен, имеющих в имени 5 точек и менее, различается на узле и в поде.
 
 - В DNS-зоне `company.my` настроено разрешение wildcard-записей `*.company.my` в адрес `10.0.0.100`. То есть любое DNS-имя в зоне `company.my`, для которого нет конкретной записи в DNS, разрешается в адрес `10.0.0.100`.

@@ -398,7 +398,6 @@ spec:
                 port:
                   number: 80
 ```
-
 With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy), the backend can rely on the `x-forwarded-host` header when making authorization decisions. In the example above, it is possible to reach the administrative zone through the Ingress resource that serves public traffic by using `x-forwarded-host`. Therefore, when using this option you must be sure that requests to the Ingress controller come only from trusted sources.
 
 #### Using separate Ingress controllers
@@ -450,7 +449,6 @@ spec:
                 port:
                   number: 80
 ```
-
 Example of an Ingress controller that serves administrative Ingress resources and accepts connections only from specified subnets:
 
 ```yaml
@@ -469,7 +467,6 @@ spec:
     httpsPort: 443
     behindL7Proxy: true
 ```
-
 In this example:
 
 - The Ingress controller is exposed on node ports through the `HostPort` inlet.
@@ -492,7 +489,6 @@ spec:
     httpsPort: 8443
     behindL7Proxy: true
 ```
-
 ## Module support and security
 
 The `ingress-nginx` module is covered by Deckhouse Kubernetes Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. Among other things, vulnerability management processes and the release of security updates.

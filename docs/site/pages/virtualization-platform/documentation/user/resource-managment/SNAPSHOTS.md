@@ -75,6 +75,7 @@ Example output:
 NAME                       PHASE     CONSISTENT   AGE
 linux-vm-root-1728027905   Ready     true         3m2s
 ```
+{: .nowrap-default }
 
 The `CONSISTENT` field indicates whether the snapshot is consistent (`true`) or not (`false`). This value is determined automatically based on the snapshot creation conditions and cannot be changed.
 
@@ -123,7 +124,6 @@ spec:
       name: linux-vm-root-1728027905
 EOF
 ```
-
 How to restore a disk from a previously created snapshot in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -164,7 +164,6 @@ If you do not want to convert and use the old IP address of the virtual machine,
 spec:
   keepIPAddress: Never
 ```
-
 An example manifest to create a snapshot of a virtual machine:
 
 ```yaml
@@ -179,7 +178,6 @@ spec:
   keepIPAddress: Never
 EOF
 ```
-
 After successfully creating a snapshot, its status will show the list of resources saved in the snapshot.
 
 Output example:
@@ -198,7 +196,6 @@ status:
     kind: VirtualDisk
     name: linux-vm-root
 ```
-
 How to create a VM snapshot in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -231,7 +228,6 @@ spec:
     mode: DryRun | Strict | BestEffort
     virtualMachineSnapshotName: <name of the VM snapshot from which to restore>
 ```
-
 One of three modes can be used for this operation:
 
 - `DryRun`: Idle run of the restore operation, used to check for possible conflicts, which will be displayed in the resource status (`status.resources`).
@@ -255,7 +251,6 @@ You can view information about conflicts when restoring a VM from a snapshot in 
 ```bash
 d8 k get vmop <vmop-name> -o json | jq “.status.resources”
 ```
-
 {% alert level="warning" %}
 It is not recommended to cancel the restore operation (delete the `VirtualMachineOperation` resource in the `InProgress` phase) from a snapshot, which can result in an inconsistent state of the restored virtual machine.
 {% endalert %}
@@ -278,7 +273,6 @@ Labels are not copied from the source VM to the clone. This prevents Service tra
 ```bash
 d8 k label vm <vm-name> label-name=label-value
 ```
-
 {% endalert %}
 
 Cloning creates a copy of a VM, so the resources of the new VM must have unique names. To do this, use the `nameReplacements` and/or `customization` parameters:
@@ -302,7 +296,6 @@ nameReplacements:
       name: <new-disk-name>
 # ...
 ```
-
 As a result, a VM named `<prefix><original-vm-name><suffix>` will be created, and all resources (disks, IP addresses, etc.) will receive the prefix and suffix.
 
 Example of adding a prefix or suffix to all resources:
@@ -312,7 +305,6 @@ customization:
   namePrefix: <prefix>
   nameSuffix: <suffix>
 ```
-
 As a result, a VM named <prefix><new name><suffix> will be created.
 
 One of three modes can be used for the cloning operation:
@@ -329,7 +321,6 @@ d8 k get vmop <vmop-name> -o json | jq '.status.resources'
 # For cloning from a VM snapshot.
 d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
 ```
-
 ### Creating a clone from an existing VM
 
 VM cloning is performed using the VirtualMachineOperation resource with the `Clone` operation type.
@@ -368,7 +359,6 @@ spec:
     nameReplacements: []
     customization: {}
 ```
-
 The `nameReplacements` and `customization` parameters are configured in the `.spec.clone` block (see [general description](#creating-a-vm-clone) above).
 
 {% alert level="info" %}
@@ -401,7 +391,6 @@ spec:
         to:
           name: database-clone-root
 ```
-
 As a result, a VM named `database-clone` and a disk named `database-clone-root` will be created.
 
 Example with using a prefix for all resources:
@@ -420,7 +409,6 @@ spec:
       namePrefix: clone-
       nameSuffix: -prod
 ```
-
 As a result, a VM named `clone-database-prod` and a disk named `clone-database-root-prod` will be created.
 
 ### Creating a clone from a VM snapshot
@@ -442,7 +430,6 @@ spec:
     nameReplacements: []
     customization: {}
 ```
-
 The `nameReplacements` and `customization` parameters are configured in the `.spec.createVirtualMachine` block (see [general description](#creating-a-vm-clone) above).
 
 To view the list of resources saved in a snapshot, use the command:
@@ -450,7 +437,6 @@ To view the list of resources saved in a snapshot, use the command:
 ```bash
 d8 k get vmsnapshot <snapshot-name> -o jsonpath='{.status.resources}' | jq
 ```
-
 {% alert level="info" %}
 When cloning a VM from a snapshot, the disks associated with it are also created from the corresponding snapshots, so the disk specification will contain a `dataSource` parameter with a reference to the required disk snapshot.
 {% endalert %}
@@ -481,7 +467,6 @@ spec:
         to:
           name: database-clone-root
 ```
-
 As a result, a VM named `database-clone` and a disk named `database-clone-root` will be created.
 
 Example with using a prefix for all resources:
@@ -500,7 +485,6 @@ spec:
       namePrefix: clone-
       nameSuffix: -prod
 ```
-
 As a result, a VM named `clone-database-prod` and a disk named `clone-database-root-prod` will be created.
 
 ## USB Devices
@@ -546,7 +530,6 @@ The following steps describe the minimal workflow for attaching a USB device to 
    ```bash
    d8 k get nodeusbdevice
    ```
-
 1. Assign a namespace to the [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) by setting `.spec.assignedNamespace`.
 
    ```bash
@@ -559,13 +542,11 @@ The following steps describe the minimal workflow for attaching a USB device to 
      assignedNamespace: my-project
    EOF
    ```
-
 1. Verify that a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource has been created in the target namespace:
 
    ```bash
    d8 k get usbdevice -n my-project
    ```
-
 1. Add the device to the `.spec.usbDevices` field of a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource and ensure that the VM is scheduled on the node where the USB device is physically connected.
 
    ```bash
@@ -580,7 +561,6 @@ The following steps describe the minimal workflow for attaching a USB device to 
        - name: logitech-webcam
    EOF
    ```
-
 ### NodeUSBDevice
 
 [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource reflects the state of a physical USB device detected on a cluster node. It is a cluster-scoped resource that represents a physical USB device on a node. It is created automatically by the DRA system.
@@ -590,7 +570,6 @@ Example of viewing all discovered USB devices:
 ```bash
 d8 k get nodeusbdevice
 ```
-
 Example output:
 
 ```console
@@ -628,7 +607,6 @@ spec:
   assignedNamespace: my-project
 EOF
 ```
-
 After assigning the namespace, a corresponding [USBDevice](/modules/virtualization/cr.html#usbdevice) resource is automatically created in the specified namespace.
 
 ### USBDevice
@@ -640,7 +618,6 @@ Example of viewing USB devices in a namespace:
 ```bash
 d8 k get usbdevice -n my-project
 ```
-
 Example output:
 
 ```console
@@ -692,7 +669,6 @@ spec:
     - name: logitech-webcam
 EOF
 ```
-
 After creating or updating the VM, the USB device will be attached to the specified virtual machine.
 
 {% alert level="info" %}
@@ -710,7 +686,6 @@ To view detailed information about a USB device:
 ```bash
 d8 k describe nodeusbdevice <device-name>
 ```
-
 Example output:
 
 ```console
@@ -748,6 +723,7 @@ Status:
     Message:           Namespace is assigned for the device
   Observed Generation: 1
 ```
+{: .nowrap-default }
 
 {% alert level="info" %}
 If a USB device is physically disconnected from the node, the `Attached` condition becomes `False`.  
@@ -778,13 +754,11 @@ Example: export a disk (run on a cluster node):
 ```bash
 d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
-
 Example: export a disk snapshot (run on a cluster node):
 
 ```bash
 d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
-
 If you are exporting data from a machine other than a cluster node (for example, from your local machine), use the `--publish` flag.
 
 {% alert level="warning" %}

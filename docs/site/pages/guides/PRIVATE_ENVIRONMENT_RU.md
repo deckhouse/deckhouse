@@ -89,6 +89,7 @@ DKP поддерживает только Bearer token-схему авториз
 ```console
 wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -98,6 +99,7 @@ wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline
 ```console
 curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -106,6 +108,7 @@ curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offl
 ```console
 tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 ```
+{: .nowrap-default }
 
 В полученной директории `harbor` расположены файлы, необходимые для установки.
 
@@ -125,17 +128,14 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 cd harbor/
 mkdir certs
 ```
-
 Перейдите в созданную директорию и сгенерируйте сертификаты для внешнего доступа следующими командами:
 
 ```bash
 openssl genrsa -out ca.key 4096
 ```
-
 ```bash
 openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
-
 Сгенерируйте сертификаты для внутреннего доменного имени `harbor.example`, чтобы внутри приватной сети обращаться к ВМ с Harbor по защищённому соединению.
 
 {% alert level="warning" %}
@@ -145,11 +145,9 @@ openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow
 ```bash
 openssl genrsa -out harbor.example.key 4096
 ```
-
 ```bash
 openssl req -sha512 -new -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
 ```
-
 ```bash
 cat > v3.ext <<-EOF
 authorityKeyIdentifier=keyid, issuer
@@ -163,21 +161,17 @@ IP.1=<INTERNAL_IP_ADDRESS>
 DNS.1=harbor.example
 EOF
 ```
-
 ```bash
 openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
 ```
-
 ```bash
 openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
 ```
-
 Проверьте, что все сертификаты созданы успешно:
 
 ```bash
 ls -la
 ```
-
 {% offtopic title="Пример вывода команды..." %}
 
 ```bash
@@ -194,7 +188,6 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 -rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
 -rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
 ```
-
 {% endofftopic %}
 
 Далее настройте Docker для работы с приватным container registry, доступ к которому выполняется по TLS. Для этого создайте директорию `harbor.example` в `/etc/docker/certs.d/`:
@@ -202,7 +195,6 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 ```bash
 sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
-
 > Параметр `-p` указывает утилите `mkdir` создать родительские директории, если они отсутствуют (в данном случае — директорию `certs.d`).
 
 Скопируйте в неё созданные сертификаты:
@@ -212,7 +204,6 @@ cp ca.crt /etc/docker/certs.d/harbor.example/
 cp harbor.example.cert /etc/docker/certs.d/harbor.example/
 cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```
-
 Эти сертификаты будут использоваться при обращении к registry по доменному имени `harbor.example`.
 
 Скопируйте шаблон конфигурационного файла, который поставляется вместе с установщиком:
@@ -220,7 +211,6 @@ cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```bash
 cp harbor.yml.tmpl harbor.yml
 ```
-
 Измените в `harbor.yml` следующие параметры:
 
 * `hostname` — укажите `harbor.example` (для него генерировались сертификаты);
@@ -560,7 +550,6 @@ cache:
 #   # the scenario of high concurrent pushing to same project, no improvement for other scenes.
 #   quota_update_provider: redis # Or db
 ```
-
 {% endofftopic %}
 
 Запустите скрипт установки:
@@ -568,7 +557,6 @@ cache:
 ```bash
 ./install.sh
 ```
-
 Начнётся установка Harbor — будут подготовлены необходимые образы и запущены контейнеры.
 
 {% offtopic title="Лог успешной установки..." %}
@@ -590,6 +578,7 @@ cache:
 ✔ ----Harbor has been installed and started successfully.----
 
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -598,7 +587,6 @@ cache:
 ```bash
 docker ps
 ```
-
 {% offtopic title="Пример вывода команды..." %}
 
 ```console
@@ -613,6 +601,7 @@ a78d9a1a5b0b   goharbor/harbor-db:v2.14.1            "/docker-entrypoint.…"   
 ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   3 minutes ago   Up 3 minutes (healthy)                                                                                        redis
 9330bcce48be   goharbor/harbor-log:v2.14.1           "/bin/sh -c /usr/loc…"   3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:1514->10514/tcp                                                            harbor-log
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -621,7 +610,6 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 ```bash
 127.0.0.1 localhost harbor.example
 ```
-
 {% alert level="warning" %}
 В некоторых облачных провайдерах (например, Yandex Cloud) изменения в `/etc/hosts` могут быть сброшены после перезагрузки виртуальной машины. Сообщение об этом обычно указано в начале файла `/etc/hosts`.
 
@@ -633,7 +621,6 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 # b.) change or remove the value of 'manage_etc_hosts' in
 #     /etc/cloud/cloud.cfg or cloud-config from user-data
 ```
-
 Если у вашего провайдера действует такая схема, внесите соответствующие изменения также в файл шаблона, указанный в комментарии, чтобы настройки сохранялись после перезагрузки.
 {% endalert %}
 
@@ -717,10 +704,11 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 * Отсоединитесь от сессии сочетанием клавиш `Ctrl + b`, затем `d`. Сессия продолжит работать, а запущенные в ней процессы не остановятся. Для выхода из сессии используйте `Ctrl + d`.
 * Просмотр запущенных сессий осуществляется командой `tmux ls`:
 
-  ```console
+```console
   $ tmux ls
   0: 1 windows (created Thu Dec 11 13:52:41 2025)
   ```
+  {: .nowrap-default }
 
 * Подключение к запущенной сессии: `tmux attach -t <ИДЕНТИФИКАТОР СЕССИИ>`. Для примера выше `<ИДЕНТИФИКАТОР СЕССИИ>` будет `0`.
 {% endofftopic %}
@@ -730,7 +718,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 * Отсоединитесь от сессии сочетанием клавиш `Ctrl + a`, затем `d` (не отпуская `Ctrl`). Сессия продолжит работать, а запущенные процессы не остановятся. Для выхода из сессии используйте `Ctrl + d`.
 * Просмотр запущенных сессий осуществляется командой `screen -r`:
 
-  ```console
+```console
   $ screen -r
   There are several suitable screens on:
           1166154.pts-0.guide-bastion     (12/11/25 14:00:26)     (Detached)
@@ -739,6 +727,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
           1165253.pts-0.guide-bastion     (12/11/25 13:58:16)     (Detached)
   Type "screen [-d] -r [pid.]tty.host" to resume one of them.
   ```
+  {: .nowrap-default }
 
 * Подключение к запущенной сессии: `screen -r <ИДЕНТИФИКАТОР СЕССИИ>`. Для примера выше `<ИДЕНТИФИКАТОР СЕССИИ>` будет `166154.pts-0.guide-bastion`.
 {% endofftopic %}
@@ -755,7 +744,6 @@ d8 mirror pull \
   --source='registry.deckhouse.ru/deckhouse/<EDITION>' \
   --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
-
 где:
 
 - `--source` — адрес хранилища образов Deckhouse;
@@ -779,7 +767,6 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.ru/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
-
 Пример вывода успешной загрузки модулей:
 
 ```text
@@ -826,7 +813,6 @@ Feb 26 18:31:08.441 INFO  ║ Packing module-observability-platform.tar
 Feb 26 18:31:17.443 INFO  ║ Packing module-state-snapshotter.tar
 Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```
-
 {% endofftopic %}
 
 Проверьте, что все архивы успешно созданы:
@@ -876,6 +862,7 @@ $ ls -lh
 -rw-rw-r-- 1 zhbert zhbert   26G фев 26 17:50 platform.tar
 -rw-rw-r-- 1 zhbert zhbert  1,3G фев 26 17:51 security.tar
 ```
+{: .nowrap-default }
 
 Загрузите скачанные образы в приватный registry. В команде подставьте редакцию DKP и учётные данные robot-аккаунта Harbor:
 
@@ -885,7 +872,6 @@ $ ls -lh
 ```bash
 d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
-
 > Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
 
 Архив будет распакован, после чего образы будут загружены в registry. Этот этап обычно выполняется быстрее, чем скачивание, так как работа идёт с локальным архивом. Как правило, он занимает около 15 минут.
@@ -906,7 +892,6 @@ Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
  payload-registry, pod-reloader, prompp, runtime-audit-engine, sdn, sds-local-volume, sds-node-configurator, sds-replicated-volume, secrets-store-integration, snapshot-controller, state-snapshotter, static-routing-manager, storage-volume-data-manager, stronghold, virtualization
 ```
-
 {% endofftopic %}
 
 Проверить, что образы загружены, можно в веб-интерфейсе Harbor: откройте проект `deckhouse` в веб-интерфейсе Harbor.
@@ -927,7 +912,6 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 ```bash
 docker login harbor.example
 ```
-
 {% offtopic title="Пример успешного выполнения команды..." %}
 
 ```text
@@ -941,7 +925,6 @@ https://docs.docker.com/go/credential-store/
 
 Login Succeeded
 ```
-
 {% endofftopic %}
 
 ## Подготовка ВМ для будущих узлов
@@ -997,14 +980,12 @@ Login Succeeded
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
-
    В этом режиме сначала выполняется подключение к серверу Bastion, затем через него к целевому серверу с использованием того же SSH-ключа.
 1. *Подключение в режиме агента.* Подключитесь к серверу Bastion командой:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
    ```
-
    > Обратите внимание: для успешного выполнения команды может понадобиться предварительно запустить ssh-agent, выполнив команду `ssh-add` на том компьютере, с которого будет запускаться команда.
 
    После этого выполните подключение к целевым серверам:
@@ -1012,12 +993,12 @@ Login Succeeded
    ```bash
    ssh ubuntu@<NODE_IP>
    ```
-
 {% endofftopic %}
 
 ```console
 <INTERNAL-IP-ADDRESS> harbor.example proxy.local
 ```
+{: .nowrap-default }
 
 > Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
 
@@ -1037,6 +1018,7 @@ chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
 chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
+{: .nowrap-default }
 
 {% offtopic title="Как узнать публичную часть ключа..." %}
 Узнать публичную часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
@@ -1053,7 +1035,6 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```bash
 ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ```
-
 Если вход выполнен успешно, пользователь создан корректно.
 
 ### Создание пользователя для worker-узла
@@ -1067,7 +1048,6 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ```bash
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
-
 На подготовленном сервере для worker-узла создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
 ```console
@@ -1082,6 +1062,7 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+{: .nowrap-default }
 
 {% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
 В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя `caps` в группу `wheel`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
@@ -1098,6 +1079,7 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -1107,7 +1089,6 @@ chmod 600 /home/caps/.ssh/authorized_keys
 ```bash
 pdpl-user -i 63 caps
 ```
-
 {% endofftopic %}
 
 ## Подготовка конфигурационного файла
@@ -1129,7 +1110,6 @@ pdpl-user -i 63 caps
 ```bash
 docker run -d --name squid -p 3128:3128 ubuntu/squid
 ```
-
 Пример успешного запуска:
 
 ```text
@@ -1143,12 +1123,12 @@ Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
 Status: Downloaded newer image for ubuntu/squid:latest
 059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
 ```
-
 Убедитесь, что контейнер запущен:
 
 ```console
 059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
 ```
+{: .nowrap-default }
 
 В списке запущенных контейнеров должен быть контейнер с соответствующим именем (`squid`).
 
@@ -1163,7 +1143,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
     httpsProxy: https://proxy.local:3128
     noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
-
   Здесь указываются следующие параметры:
   * адреса HTTP и HTTPS прокси-сервера;
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
@@ -1185,7 +1164,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
       ...
       -----END CERTIFICATE-----
   ```
-
   Здесь `<DOCKER_CFG_BASE64>` — строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
 
   Например, для доступа к container registry `harbor.example` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (строка `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}` в Base64).
@@ -1206,7 +1184,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
       certManager:
         clusterIssuerName: selfsigned
   ```
-
   Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в пространстве имён `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
 
 * В ModuleConfig `user-authn` измените значение параметра [`dexCAMode`](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
@@ -1216,7 +1193,6 @@ Status: Downloaded newer image for ubuntu/squid:latest
   controlPlaneConfigurator:
     dexCAMode: FromIngressSecret
   ```
-
 * Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
 
   ```yaml
@@ -1230,14 +1206,12 @@ Status: Downloaded newer image for ubuntu/squid:latest
     settings:
       disableLetsencrypt: true
   ```
-
 * В параметре [internalNetworkCIDRs](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) StaticClusterConfiguration укажите подсеть внутренних IP-адресов узлов кластера. Например:
 
   ```yaml
   internalNetworkCIDRs:
   - 10.128.0.0/24
   ```
-
 {% offtopic title="Пример полного конфигурационного файла..." %}
 
 ```yaml
@@ -1372,7 +1346,6 @@ kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - 10.128.0.0/24
 ```
-
 {% endofftopic %}
 
 Конфигурационный файл для установки подготовлен.
@@ -1384,7 +1357,6 @@ internalNetworkCIDRs:
 ```bash
 docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
 ```
-
 {% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
 Даже при наличии сертификатов в `/etc/docker/certs.d/harbor.example/` Docker может выдавать ошибку о неизвестном центре сертификации (это типично для самоподписанных сертификатов). В таком случае, как правило, помогает добавление `ca.crt` в системное хранилище доверенных сертификатов с последующим перезапуском Docker.
 {% endofftopic %}
@@ -1398,6 +1370,7 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 ```console
 [deckhouse] root@guide-bastion / # 
 ```
+{: .nowrap-default }
 
 Запустите установку DKP командой (укажите внутренний IP-адрес master-узла):
 
@@ -1406,7 +1379,6 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   --config=/config.yml \
   --ask-become-pass
 ```
-
 Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения.
 
 При успешном завершении установки вы увидите следующее сообщение:
@@ -1424,6 +1396,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 🎉 Deckhouse cluster was created successfully!
 ```
+{: .nowrap-default }
 
 ## Добавление узлов в кластер
 
@@ -1433,7 +1406,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Настройте StorageClass [локального хранилища](../../../modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
 
-  ```console
+```console
   sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
@@ -1444,6 +1417,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
     reclaimPolicy: Delete
   EOF
   ```
+  {: .nowrap-default }
 
 * Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на master-узле следующую команду:
 
@@ -1451,10 +1425,9 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   sudo -i d8 k patch mc global --type merge \
     -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
-
 * Создайте NodeGroup `worker` и добавьте узел с помощью Cluster API Provider Static (CAPS):
 
-  ```console
+```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
@@ -1469,10 +1442,11 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
           role: worker
   EOF
   ```
+  {: .nowrap-default }
 
 * Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
 
-  ```console
+```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: SSHCredentials
@@ -1483,16 +1457,18 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
     privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
   EOF
   ```
+  {: .nowrap-default }
 
 * Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на master-узле следующую команду:
 
-  ```console
+```console
   cat /dev/shm/caps-id.pub
   ```
+  {: .nowrap-default }
 
 * Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
-  ```console
+```console
   # Укажите IP-адрес узла, который нужно подключить к кластеру.
   export NODE=<NODE-IP-ADDRESS>
   sudo -i d8 k create -f - <<EOF
@@ -1509,15 +1485,17 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
       name: caps
   EOF
   ```
+  {: .nowrap-default }
 
 * Убедитесь, что все узлы кластера находятся в статусе `Ready`:
 
-  ```console
+```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
   d8cluster          Ready    control-plane,master   30m   v1.23.17
   d8cluster-worker   Ready    worker                 10m   v1.23.17
   ```
+  {: .nowrap-default }
 
   Запуск всех компонентов DKP после завершения установки может занять некоторое время.
 
@@ -1532,7 +1510,6 @@ $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
-
 Создайте на master-узле файл `ingress-nginx-controller.yml`, содержащий конфигурацию Ingress-контроллера:
 
 ```yaml
@@ -1559,13 +1536,11 @@ spec:
     key: node-role.kubernetes.io/control-plane
     operator: Exists
 ```
-
 Примените его, выполнив на master-узле следующую команду:
 
 ```bash
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
-
 Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
 
 ```console
@@ -1573,6 +1548,7 @@ $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
 
 ### Создание пользователя для доступа в веб-интерфейсы кластера
 
@@ -1610,12 +1586,12 @@ spec:
   # Возможно, захотите изменить.
   password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
 ```
-
 Примените его, выполнив на master-узле следующую команду:
 
 ```console
 sudo -i d8 k create -f $PWD/user.yml
 ```
+{: .nowrap-default }
 
 ## Настройка DNS-записей
 
@@ -1644,7 +1620,6 @@ $PUBLIC_IP upmeter.test.local
 EOF
 "
 ```
-
 Проверить, что кластер корректно развёрнут и работает, можно в веб-интерфейсе Grafana, где отображается состояние кластера. Адрес Grafana формируется по шаблону `publicDomainTemplate`. Например, при значении `%s.test.local` интерфейс будет доступен по адресу `grafana.test.local`. Для входа используйте учётные данные пользователя, созданного ранее.
 
 ## Куда двигаться дальше?

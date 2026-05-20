@@ -34,10 +34,11 @@ lang: ru
 
    Пример вывода:
 
-   ```console
+```console
    NAME                                   PHASE     NODE           IPADDRESS     AGE
    linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
    ```
+   {: .nowrap-default }
 
    Мы видим, что на данный момент ВМ запущена на узле `virtlab-pt-1`.
 
@@ -56,16 +57,14 @@ lang: ru
      type: Evict
    EOF
    ```
-
 1. Сразу после создания ресурса `vmop` выполните команду:
 
    ```bash
    d8 k get vm -w
    ```
-
    Пример вывода:
 
-   ```console
+```console
    NAME                                   PHASE       NODE           IPADDRESS     AGE
    linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
    linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
@@ -93,7 +92,6 @@ lang: ru
 ```bash
 d8 k drain <nodename> --ignore-daemonsets --delete-emptydir-data
 ```
-
 где `<nodename>` — узел, на котором предполагается выполнить работы и который должен быть освобождён от всех ресурсов (в том числе от системных).
 
 Если необходимо вытеснить с узла только виртуальные машины, выполните следующую команду:
@@ -101,7 +99,6 @@ d8 k drain <nodename> --ignore-daemonsets --delete-emptydir-data
 ```bash
 d8 k drain <nodename> --pod-selector vm.kubevirt.internal.virtualization.deckhouse.io/name --delete-emptydir-data
 ```
-
 После выполнения команды `d8 k drain` узел перейдёт в режим обслуживания, и виртуальные машины на нём запускаться не смогут.
 
 Чтобы вывести его из режима обслуживания, остановите выполнение команды `drain` (Ctrl+C), затем выполните:
@@ -109,7 +106,6 @@ d8 k drain <nodename> --pod-selector vm.kubevirt.internal.virtualization.deckhou
 ```bash
 d8 k uncordon <nodename>
 ```
-
 ![Схема миграции виртуальных машин на другой узел](/../../../../../images/virtualization-platform/drain.ru.png)
 
 Как выполнить операцию в веб-интерфейсе:

@@ -45,5 +45,6 @@ Microsoft.Storage
 Microsoft.Storage.Global
 Microsoft.Web
 ```
+{: .nowrap-default }
 
 Specify the required services using the [`serviceEndpoints`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-serviceendpoints) parameter in the AzureClusterConfiguration object.

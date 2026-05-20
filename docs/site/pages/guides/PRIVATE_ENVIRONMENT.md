@@ -89,6 +89,7 @@ Run the command (use the current URL):
 ```console
 wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -98,6 +99,7 @@ Run the command (use the current URL):
 ```console
 curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -106,6 +108,7 @@ Extract the downloaded archive (specify the archive name):
 ```console
 tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 ```
+{: .nowrap-default }
 
 The extracted `harbor` directory contains the files required for installation.
 
@@ -126,17 +129,14 @@ cd harbor/
 mkdir certs
 cd certs
 ```
-
 Generate certificates for external access:
 
 ```bash
 openssl genrsa -out ca.key 4096
 ```
-
 ```bash
 openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
-
 Generate certificates for the internal domain name `harbor.example` so clients can reach the Harbor VM securely inside the private network.
 
 {% alert level="warning" %}
@@ -146,11 +146,9 @@ In the commands below, replace `<INTERNAL_IP_ADDRESS>` with the Harbor VM’s in
 ```bash
 openssl genrsa -out harbor.example.key 4096
 ```
-
 ```bash
 openssl req -sha512 -new -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
 ```
-
 ```bash
 cat > v3.ext <<-EOF
 authorityKeyIdentifier=keyid, issuer
@@ -164,21 +162,17 @@ IP.1=<INTERNAL_IP_ADDRESS>
 DNS.1=harbor.example
 EOF
 ```
-
 ```bash
 openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
 ```
-
 ```bash
 openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
 ```
-
 Verify that all certificates were created successfully:
 
 ```bash
 ls -la
 ```
-
 {% offtopic title="Example command output..." %}
 
 ```bash
@@ -195,7 +189,6 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 -rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
 -rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
 ```
-
 {% endofftopic %}
 
 Next, configure Docker to work with the private container registry over TLS. Create the `harbor.example` directory under `/etc/docker/certs.d/`:
@@ -203,7 +196,6 @@ Next, configure Docker to work with the private container registry over TLS. Cre
 ```bash
 sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
-
 > The `-p` option tells `mkdir` to create parent directories if they do not exist (in this case, the `certs.d` directory).
 
 Copy the generated certificates into it:
@@ -213,7 +205,6 @@ cp ca.crt /etc/docker/certs.d/harbor.example/
 cp harbor.example.cert /etc/docker/certs.d/harbor.example/
 cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```
-
 These certificates will be used when accessing the registry via the `harbor.example` domain name.
 
 Return to the `harbor` directory (installer root):
@@ -221,13 +212,11 @@ Return to the `harbor` directory (installer root):
 ```bash
 cd ..
 ```
-
 Copy the configuration file template that comes with the installer:
 
 ```bash
 cp harbor.yml.tmpl harbor.yml
 ```
-
 Update the following parameters in `harbor.yml`:
 
 * `hostname`: set to `harbor.example` (the certificates were generated for this name)
@@ -567,7 +556,6 @@ cache:
 #   # the scenario of high concurrent pushing to same project, no improvement for other scenes.
 #   quota_update_provider: redis # Or db
 ```
-
 {% endofftopic %}
 
 Run the installation script:
@@ -575,7 +563,6 @@ Run the installation script:
 ```bash
 ./install.sh
 ```
-
 Harbor installation will start: the required images will be prepared and the containers will be started.
 
 {% offtopic title="Successful installation log..." %}
@@ -597,6 +584,7 @@ Harbor installation will start: the required images will be prepared and the con
 ✔ ----Harbor has been installed and started successfully.----
 
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -605,7 +593,6 @@ Verify that Harbor is running successfully:
 ```bash
 docker ps
 ```
-
 {% offtopic title="Example command output..." %}
 
 ```console
@@ -620,6 +607,7 @@ a78d9a1a5b0b   goharbor/harbor-db:v2.14.1            "/docker-entrypoint.…"   
 ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   3 minutes ago   Up 3 minutes (healthy)                                                                                        redis
 9330bcce48be   goharbor/harbor-log:v2.14.1           "/bin/sh -c /usr/loc…"   3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:1514->10514/tcp                                                            harbor-log
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -628,7 +616,6 @@ On the Harbor VM, add an entry to `/etc/hosts` that maps the `harbor.example` do
 ```bash
 127.0.0.1 localhost harbor.example
 ```
-
 {% alert level="warning" %}
 In some cloud providers (for example, Yandex Cloud), changes to `/etc/hosts` may be reverted after a virtual machine reboot. A note about this is typically shown at the beginning of the `/etc/hosts` file.
 
@@ -640,7 +627,6 @@ In some cloud providers (for example, Yandex Cloud), changes to `/etc/hosts` may
 # b.) change or remove the value of 'manage_etc_hosts' in
 #     /etc/cloud/cloud.cfg or cloud-config from user-data
 ```
-
 If your provider uses the same mechanism, apply the corresponding changes to the template file referenced in the comment so that the settings persist after reboot.
 {% endalert %}
 
@@ -724,10 +710,11 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 * Detach from the session by pressing `Ctrl + b`, then `d`. The session will keep running, and the processes started in it will continue to run. To exit the session, use `Ctrl + d`.
 * List running sessions with `tmux ls`:
 
-  ```console
+```console
   $ tmux ls
   0: 1 windows (created Thu Dec 11 13:52:41 2025)
   ```
+  {: .nowrap-default }
 
 * Reattach to a running session: `tmux attach -t <SESSION_ID>`. In the example above, the `<SESSION_ID>` is `0`.
 {% endofftopic %}
@@ -737,7 +724,7 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 * Detach from the session by pressing `Ctrl + a`, then `d` (while holding `Ctrl`). The session will keep running, and the processes started in it will continue to run. To exit the session, use `Ctrl + d`.
 * List running sessions with `screen -r`:
 
-  ```console
+```console
   $ screen -r
   There are several suitable screens on:
           1166154.pts-0.guide-bastion     (12/11/25 14:00:26)     (Detached)
@@ -746,6 +733,7 @@ Downloading images takes a significant amount of time. To avoid losing progress 
           1165253.pts-0.guide-bastion     (12/11/25 13:58:16)     (Detached)
   Type "screen [-d] -r [pid.]tty.host" to resume one of them.
   ```
+  {: .nowrap-default }
 
 * Reattach to a running session: `screen -r <SESSION_ID>`. In the example above, the `<SESSION_ID>` is `166154.pts-0.guide-bastion`.
 {% endofftopic %}
@@ -762,7 +750,6 @@ d8 mirror pull \
   --source='registry.deckhouse.io/deckhouse/<EDITION>' \
   --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
-
 where:
 
 - `--source` — DKP image registry address
@@ -786,7 +773,6 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.io/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
-
 Example log when modules are packed:
 
 ```text
@@ -833,7 +819,6 @@ Feb 26 18:31:08.441 INFO  ║ Packing module-observability-platform.tar
 Feb 26 18:31:17.443 INFO  ║ Packing module-state-snapshotter.tar
 Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```
-
 {% endofftopic %}
 
 Verify that the bundles were created (you should see `platform.tar`, `security.tar`, `deckhousereleases.yaml`, and multiple `module-*.tar` files):
@@ -846,6 +831,7 @@ total 51G
 -rw-rw-r-- 1 user user  26G Feb 26 17:50 platform.tar
 -rw-rw-r-- 1 user user 1.3G Feb 26 17:51 security.tar
 ```
+{: .nowrap-default }
 
 Push the downloaded images to the private registry. Substitute the DKP edition and Harbor robot account credentials:
 
@@ -855,7 +841,6 @@ Push the downloaded images to the private registry. Substitute the DKP edition a
 ```bash
 d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
-
 > The `--tls-skip-verify` flag tells the CLI to trust the registry certificate and skip verification.
 
 Images are read from the local bundles and pushed to the registry. This step is usually faster than download and often takes about 15 minutes.
@@ -876,7 +861,6 @@ Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
  payload-registry, pod-reloader, prompp, runtime-audit-engine, sdn, sds-local-volume, sds-node-configurator, sds-replicated-volume, secrets-store-integration, snapshot-controller, state-snapshotter, static-routing-manager, storage-volume-data-manager, stronghold, virtualization
 ```
-
 {% endofftopic %}
 
 To verify the push, open the `deckhouse` project in the Harbor web UI.
@@ -897,7 +881,6 @@ Sign in to Harbor so Docker can pull the [dhctl](../documentation/v1/installing/
 ```bash
 docker login harbor.example
 ```
-
 {% offtopic title="Example of a successful command execution..." %}
 
 ```text
@@ -911,7 +894,6 @@ https://docs.docker.com/go/credential-store/
 
 Login Succeeded
 ```
-
 {% endofftopic %}
 
 ## Preparing VMs for the future nodes
@@ -965,14 +947,12 @@ There are two ways to connect:
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
-
    In this mode, you first connect to the Bastion host, and then connect through it to the target server using the same SSH key.
 1. *Connect with agent forwarding.* Connect to the Bastion host using:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
    ```
-
    > Note: for this to work, you may need to start ssh-agent and add your key with `ssh-add` on the workstation from which you run the command.
 
    Then connect to the target servers:
@@ -980,12 +960,12 @@ There are two ways to connect:
    ```bash
    ssh ubuntu@<NODE_IP>
    ```
-
 {% endofftopic %}
 
 ```console
 <INTERNAL-IP-ADDRESS> harbor.example proxy.local
 ```
+{: .nowrap-default }
 
 > Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
 
@@ -1005,6 +985,7 @@ chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
 chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
+{: .nowrap-default }
 
 {% offtopic title="How to obtain the public part of the key..." %}
 Run `cat ~/.ssh/id_rsa.pub` to print the public key (or use the path to your key’s `.pub` file).
@@ -1021,7 +1002,6 @@ Verify that you can connect as the new user:
 ```bash
 ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ```
-
 If the login succeeds, the user has been created correctly.
 
 ### Creating a user for the worker node
@@ -1035,7 +1015,6 @@ On the **master node**, generate an SSH key with an empty passphrase:
 ```bash
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
-
 On the worker node server, create the `caps` user. Run the following commands and set the public key from the previous step:
 
 ```console
@@ -1050,6 +1029,7 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+{: .nowrap-default }
 
 {% offtopic title="If you are using CentOS or Rocky Linux..." %}
 On RHEL-based systems, add the `caps` user to the `wheel` group:
@@ -1066,6 +1046,7 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -1086,7 +1067,6 @@ You may use any suitable proxy. This example uses [Squid](https://www.squid-cach
 ```bash
 docker run -d --name squid -p 3128:3128 ubuntu/squid
 ```
-
 Example of a successful start:
 
 ```text
@@ -1100,12 +1080,12 @@ Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
 Status: Downloaded newer image for ubuntu/squid:latest
 059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
 ```
-
 Check that the container is running:
 
 ```console
 059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
 ```
+{: .nowrap-default }
 
 You should see a container named `squid` in the list.
 
@@ -1120,7 +1100,6 @@ You should see a container named `squid` in the list.
     httpsProxy: https://proxy.local:3128
     noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
-
   Here you specify:
   * HTTP and HTTPS proxy addresses
   * hostnames and IP addresses that **must not** use the proxy (internal names and internal IPs of your servers).
@@ -1142,7 +1121,6 @@ You should see a container named `squid` in the list.
       ...
       -----END CERTIFICATE-----
   ```
-
   `<DOCKER_CFG_BASE64>` is the contents of the Docker client config (on Linux, usually `$HOME/.docker/config.json`) for the third-party registry, encoded in Base64.
 
   For example, for registry `harbor.example` with user `user` and password `P@ssw0rd`, the value is `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (Base64 of `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}`).
@@ -1163,7 +1141,6 @@ You should see a container named `squid` in the list.
         certManager:
           clusterIssuerName: selfsigned
   ```
-
   The `settings.modules.https` block in ModuleConfig/global supports several [modes](../documentation/v1/reference/api/global.html): `CertManager` (certificate from the chosen `ClusterIssuer`— not necessarily `selfsigned`; can be corporate CA, HashiCorp Vault, Venafi, etc., see [the certificate overview](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` (TLS Secret in `d8-system`); with an external TLS terminator, `OnlyInURI` is possible. Using `selfsigned` together with disabling Let's Encrypt below is a simple pattern for isolated environments without ACME.
 
 * In the `user-authn` ModuleConfig, set [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) to `FromIngressSecret`:
@@ -1173,7 +1150,6 @@ You should see a container named `squid` in the list.
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
   ```
-
 * Enable [`cert-manager`](/modules/cert-manager/) and disable Let's Encrypt:
 
   ```yaml
@@ -1187,14 +1163,12 @@ You should see a container named `squid` in the list.
     settings:
       disableLetsencrypt: true
   ```
-
 * In StaticClusterConfiguration, set [`internalNetworkCIDRs`](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) to the subnet of the nodes’ internal IPs. For example:
 
   ```yaml
   internalNetworkCIDRs:
     - 10.128.0.0/24
   ```
-
 {% offtopic title="Full configuration file example..." %}
 
 ```yaml
@@ -1329,7 +1303,6 @@ kind: StaticClusterConfiguration
 internalNetworkCIDRs:
   - 10.128.0.0/24
 ```
-
 {% endofftopic %}
 
 The installation configuration file is ready.
@@ -1341,7 +1314,6 @@ Copy the prepared configuration file to the host from which you run the installa
 ```bash
 docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<EDITION>/install:stable bash
 ```
-
 {% offtopic title="If you get the `509: certificate signed by unknown authority` error..." %}
 Even if the certificates are present in `/etc/docker/certs.d/harbor.example/`, Docker may still report that the certificate is signed by an unknown certificate authority (which is typical for self-signed certificates). In most cases, adding `ca.crt` to the system trusted certificate store and restarting Docker resolves the issue.
 {% endofftopic %}
@@ -1355,6 +1327,7 @@ After the image is pulled and the container starts successfully, you will see a 
 ```console
 [deckhouse] root@guide-bastion / #
 ```
+{: .nowrap-default }
 
 Start the DKP installation with the following command (specify the master node’s internal IP address):
 
@@ -1363,7 +1336,6 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   --config=/config.yml \
   --ask-become-pass
 ```
-
 > Replace `id_rsa` with the name of your private key file if it differs.
 
 The installation process may take up to 30 minutes depending on the network speed.
@@ -1383,6 +1355,7 @@ If the installation completes successfully, you will see the following message:
 
 🎉 Deckhouse cluster was created successfully!
 ```
+{: .nowrap-default }
 
 ## Adding nodes to the cluster
 
@@ -1392,7 +1365,7 @@ Perform the following steps:
 
 * Configure a StorageClass for [local storage](../../../modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
 
-  ```console
+```console
   sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
@@ -1403,6 +1376,7 @@ Perform the following steps:
     reclaimPolicy: Delete
   EOF
   ```
+  {: .nowrap-default }
 
 * Set the created StorageClass as the default StorageClass. To do this, run the following command on the master node:
 
@@ -1410,10 +1384,9 @@ Perform the following steps:
   sudo -i d8 k patch mc global --type merge \
     -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
-
 * Create the `worker` NodeGroup and add a node using Cluster API Provider Static (CAPS):
 
-  ```console
+```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
@@ -1428,10 +1401,11 @@ Perform the following steps:
           role: worker
   EOF
   ```
+  {: .nowrap-default }
 
 * Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
 
-  ```console
+```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: SSHCredentials
@@ -1442,16 +1416,18 @@ Perform the following steps:
     privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
   EOF
   ```
+  {: .nowrap-default }
 
 * Print the public SSH key (needed for verification). On the master node:
 
-  ```console
+```console
   cat /dev/shm/caps-id.pub
   ```
+  {: .nowrap-default }
 
 * Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
-  ```console
+```console
   # Specify the IP address of the node to be added to the cluster.
   export NODE=<NODE-IP-ADDRESS>
   sudo -i d8 k create -f - <<EOF
@@ -1468,15 +1444,17 @@ Perform the following steps:
       name: caps
   EOF
   ```
+  {: .nowrap-default }
 
 * Make sure all cluster nodes are in the `Ready` status:
 
-  ```console
+```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
   d8cluster          Ready    control-plane,master   30m   v1.23.17
   d8cluster-worker   Ready    worker                 10m   v1.23.17
   ```
+  {: .nowrap-default }
 
   It may take some time for all DKP components to start after the installation completes.
 
@@ -1491,7 +1469,6 @@ $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
-
 Create the `ingress-nginx-controller.yml` file on the master node containing the Ingress controller configuration:
 
 ```yaml
@@ -1518,13 +1495,11 @@ spec:
       key: node-role.kubernetes.io/control-plane
       operator: Exists
 ```
-
 Apply it by running the following command on the master node:
 
 ```bash
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
-
 Starting the Ingress controller after DKP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
 
 ```console
@@ -1532,6 +1507,7 @@ $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
 
 ### Creating a user to access the cluster web-interface
 
@@ -1569,12 +1545,12 @@ spec:
   # You may want to change it.
   password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
 ```
-
 Apply it by running the following command on the master node:
 
 ```console
 sudo -i d8 k create -f $PWD/user.yml
 ```
+{: .nowrap-default }
 
 ## Configuring DNS records
 
@@ -1603,7 +1579,6 @@ $PUBLIC_IP upmeter.test.local
 EOF
 "
 ```
-
 To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplate`, e.g. `grafana.test.local` for `%s.test.local`) and sign in with the user you created earlier.
 
 ## Where to go next?

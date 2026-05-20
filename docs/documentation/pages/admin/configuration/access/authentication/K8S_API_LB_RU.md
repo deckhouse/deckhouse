@@ -24,9 +24,10 @@ lang: ru
 
 1. Откройте веб-интерфейс [kubeconfig](../../../../user/web/kubeconfig.html). Веб-интерфейс для генерации kubeconfig в DKP активируется автоматически после включения параметра `publishAPI` в модуле `user-authn`. Этот веб-интерфейс доступен по URL:
 
-   ```console
+```console
    https://kubeconfig.<publicDomainTemplate>
    ```
+   {: .nowrap-default }
 
    Например, если `publicDomainTemplate`: `%s.kube.my`, то URL будет `https://kubeconfig.kube.my`.
 
@@ -41,7 +42,6 @@ lang: ru
        masterURI: https://159.89.5.247:6443
        description: "Direct access to kubernetes API"
    ```
-
 ## Как работает защита доступа к Kubernetes API
 
 В Deckhouse Kubernetes Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
@@ -101,7 +101,6 @@ contexts:
     user: ldap-user
 current-context: default
 ```
-
 ## SSO по Kerberos (SPNEGO) для LDAP
 
 Dex поддерживает аутентификацию без отображения формы ввода логина/пароля, которая реализуется с помощью механизма Kerberos (SPNEGO) для LDAP‑коннектора. Механизм работает по следующему принципу:
@@ -158,7 +157,6 @@ spec:
       usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
       fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
 ```
-
 Примечания:
 
 - Секрет `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.

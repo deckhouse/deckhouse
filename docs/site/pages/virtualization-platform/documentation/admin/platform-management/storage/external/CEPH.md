@@ -117,13 +117,13 @@ NAME          PHASE     AGE
 ceph-rbd-sc   Created   1h
 ceph-fs-sc    Created   1h
 ```
+{: .nowrap-default }
 
 Check the created StorageClass using the following command:
 
 ```shell
 d8 k get sc
 ```
-
 In the output, you should see information about the created StorageClass:
 
 ```console
@@ -143,7 +143,6 @@ To get a list of RBD volumes mounted on each node of the cluster, run the follow
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
-
 ## Supported Ceph versions
 
 - Official support: Ceph version 16.2.0 and above.
@@ -172,13 +171,11 @@ spec:
   userID: admin
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 ```
-
 You can verify that the object has been created with the following command (`Phase` should be `Created`):
 
 ```shell
 d8 k get cephclusterconnection <name-of-cephclusterconnection>
 ```
-
 Example definition of a [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass):
 
 - For RBD:
@@ -196,7 +193,6 @@ Example definition of a [CephStorageClass](/modules/csi-ceph/stable/cr.html#ceph
       defaultFSType: ext4
       pool: ceph-rbd-pool  
   ```
-
 - For CephFS:
 
     ```yaml
@@ -211,7 +207,6 @@ Example definition of a [CephStorageClass](/modules/csi-ceph/stable/cr.html#ceph
     cephFS:
       fsName: cephfs
   ```
-
 You can verify that the object has been created with the following command (`Phase` should be `Created`):
 
 ```shell

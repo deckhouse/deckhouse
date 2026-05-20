@@ -29,9 +29,10 @@ You can enable VPA in the following ways:
 
 1. Via the `d8` command (run inside the `d8-system/deckhouse pod`):
 
-   ```console
+```console
    d8 system module enable vertical-pod-autoscaler
    ```
+   {: .nowrap-default }
 
 1. Through the [Deckhouse web interface](/modules/console/):
 
@@ -46,6 +47,7 @@ After creating a [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.htm
 ```console
 d8 k describe vpa my-app-vpa
 ```
+{: .nowrap-default }
 
 In the `status` section, you’ll see the following parameters:
 
@@ -76,7 +78,6 @@ In the `status` section, you’ll see the following parameters:
          operator: Equal
          value: system
     ```
-
 1. Apply the VPA configuration file using `d8 k apply -f <your-config-file-name>`.
 
 For more details on VPA resource limits configuration, see [the documentation](../../../user/configuration/app-scaling/vpa.html#how-vpa-interacts-with-limits).

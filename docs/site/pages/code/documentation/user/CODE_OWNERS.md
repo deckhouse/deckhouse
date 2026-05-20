@@ -63,6 +63,7 @@ Rule string:
 ```console
 <path or pattern> <list of owners>
 ```
+{: .nowrap-default }
 
 Owners:
 
@@ -89,6 +90,7 @@ Owners:
 # README.md anywhere.
 README.md @docs
 ```
+{: .nowrap-default }
 
 ## Path patterns
 
@@ -107,6 +109,7 @@ Deckhouse Code uses wildcards:
 /docs/**      @docs-two      # recursively
 /app/**/*.rb  @ruby-team
 ```
+{: .nowrap-default }
 
 ## CODEOWNERS sections
 
@@ -131,6 +134,7 @@ internal/README.md @user4
 [README other owners]
 README.md @user3
 ```
+{: .nowrap-default }
 
 Owners for `README.md` in the root directory:
 
@@ -198,6 +202,7 @@ frontend/critical_entry.vue @frontend-lead
 # Redefining: README always belongs to docs-lead.
 README.md @docs-lead
 ```
+{: .nowrap-default }
 
 Things to note about the example:
 
@@ -216,7 +221,6 @@ Used to exclude files within a section:
 !package-lock.json
 !**/generated/**
 ```
-
 After exclusion, the file **cannot be re-included** in the same section.
 
 ## Rule processing order
@@ -266,6 +270,7 @@ Format:
 @@maintainer
 @@owner
 ```
+{: .nowrap-default }
 
 Features:
 
@@ -278,6 +283,7 @@ You can specify multiple roles in one line:
 ```console
 file.md @@developer @@maintainer
 ```
+{: .nowrap-default }
 
 ## Interaction with approval rules
 
@@ -323,3 +329,5 @@ app/**/*.rb @backend-core
 [Critical Overrides]
 /config/production.yml @ops-lead
 ```
+{: .nowrap-default }
+

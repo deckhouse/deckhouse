@@ -26,10 +26,12 @@ subsystems:
 
    Пример вывода:
 
-   ```console
+```console
    NAME       TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
    frontend   Static   1       1       1                                                               118d   True
    master     Static   3       3       3                                                               118d   True
    system     Static   2       2       2                                                               118d   True
    worker     Static   2       2       2                                                               118d   True
    ```
+   {: .nowrap-default }
+

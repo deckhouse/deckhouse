@@ -102,19 +102,18 @@ spec:
     - name: vg-on-dvp-worker
 EOF
 ```
-
 Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние `Completed`:
 
 ```shell
 sudo -i d8 k get rsp sds-pool -w
 ```
-
 Пример вывода:
 
 ```console
 NAME         PHASE       TYPE   AGE
 sds-pool     Completed   LVM    87d
 ```
+{: .nowrap-default }
 
 Создайте StorageClass:
 
@@ -131,13 +130,11 @@ spec:
   topology: Ignored
 EOF
 ```
-
 Проверьте, что ресурсы StorageClass появились в кластере:
 
 ```bash
 sudo -i d8 k get storageclass
 ```
-
 Установите StorageClass как используемый в кластере по умолчанию (укажите имя StorageClass):
 
 ```shell

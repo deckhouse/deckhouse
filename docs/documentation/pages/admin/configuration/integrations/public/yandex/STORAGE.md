@@ -159,9 +159,10 @@ To manually connect a VM as a CloudStatic node, follow these steps:
 
    Expected output:
 
-   ```console
+```console
    nodeNetworkCIDR: 192.168.12.13/24
    ```
+   {: .nowrap-default }
 
    Copy this value and use it in the VM metadata as `value`.
 
@@ -171,5 +172,4 @@ To manually connect a VM as a CloudStatic node, follow these steps:
    key: node-network-cidr
    value: <nodeNetworkCIDR from the cluster>
    ```
-
    The `node-network-cidr` parameter must match the value specified in the YandexClusterConfiguration resource under [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr).

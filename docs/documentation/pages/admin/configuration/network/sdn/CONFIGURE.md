@@ -121,18 +121,18 @@ Example configuring a bond interface:
 
    Example output:
 
-   ```console
+```console
    NAME                                                          MANAGEDBY   NODE                             TYPE     IFNAME      IFINDEX   STATE   AGE
    nni-worker-01-bond0                                           Manual      worker-01-b23d3a26-5fb4b-5s9fp   Bond     bond0       76        Up      7m48s
    ...
    ```
+   {: .nowrap-default }
 
    Check the status of the desired interface:
 
    ```shell
    d8 k get nni nni-worker-01-bond0 -o yaml
    ```
-
    Example of interface status:
 
    ```yaml
@@ -165,10 +165,6 @@ Example configuring a bond interface:
      permanentMAC: ""
 
    ```
-
-
-   {: .nowrap-default }
-
 ## Configuring and connecting additional virtual networks for use in application pods
 
 The Deckhouse Kubernetes Platform provides the ability to declaratively manage additional networks for application workloads (pods, virtual machines). At the same time:
@@ -221,13 +217,11 @@ To create a network based on tagged traffic, follow these steps:
            # Manually applied label on NodeNetworkInterface resources.
            nic-group: extra
    ```
-
 1. Check the status of the created resource with the command:
 
    ```shell
    d8 k get clusternetworks.network.deckhouse.io my-cluster-network -o yaml
    ```
-
     Example of the status of a ClusterNetwork resource:
 
    ```yaml
@@ -253,7 +247,6 @@ To create a network based on tagged traffic, follow these steps:
      readyNodeAttachementsCount: 1
 
    ```
-
 1. Check [the connection of the additional network to the interfaces on the nodes](#checking-the-connection-of-an-additional-network-to-interfaces-on-nodes).
 
 #### Creating a network based on direct interface access
@@ -275,7 +268,6 @@ spec:
         # Manually applied label on NodeNetworkInterface resources.
         nic-group: extra
 ```
-
 After creating the network, check [the connection of the additional network to the interfaces on the nodes](#checking-the-connection-of-an-additional-network-to-interfaces-on-nodes).
 
 ### Creating a project network (user network)
@@ -300,7 +292,6 @@ spec:
         matchLabels:
           nic-group: extra
 ```
-
 Upon user request, the administrator provides them with the name of the created NetworkClass, which is used when creating the project network.
 
 An example of creating a custom network using the NetworkClass resource administrator is described in the section ["Creating a project network (user network)"](../../../../user/network/sdn/dedicated.html#creating-a-project-network-user-network).
@@ -315,7 +306,6 @@ To obtain a list of NodeNetworkInterfaceAttachment resources and information abo
 d8 k get nnia
 d8 k get nnia my-cluster-network-... -o yaml
 ```
-
 Example NodeNetworkInterfaceAttachment resource:
 
 ```yaml
@@ -352,7 +342,6 @@ status:
   nodeName: right-worker-b23d3a26-5fb4b-h2bkv
   vlanNodeNetworkInterfaceName: right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc
 ```
-
 The NodeNetworkInterfaceAttachment status will change to `True` immediately after the corresponding NodeNetworkInterface appears and transitions to the `Up` state.
 
 To check the status of NodeNetworkInterface, use the command:
@@ -360,7 +349,6 @@ To check the status of NodeNetworkInterface, use the command:
 ```shell
 d8 k get nni
 ```
-
 Example output:
 
 ```console
@@ -415,7 +403,6 @@ To allocate a pool of addresses and assign them to network interfaces of pods co
          ranges:
            - 203.0.113.10-203.0.113.200
    ```
-
    > The [`spec.pools[].ranges`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-ranges) parameter is optional. If it is not specified, the entire CIDR from [`spec.pools[].network`](/modules/sdn/cr.html#clusteripaddresspool-v1alpha1-spec-pools-network) is considered available (except for network/broadcast addresses, see the behavior of `/31` and `/32`).
 
 1. Enable IPAM on the network. To do this, specify the parameters of the lusterIPAddressPool created in the previous step in the [`spec.ipam.ipAddressPoolRef`](/modules/sdn/cr.html#clusternetwork-v1alpha1-spec-ipam-ipaddresspoolref) parameter of the ClusterNetwork resource:
@@ -438,7 +425,6 @@ To allocate a pool of addresses and assign them to network interfaces of pods co
          kind: ClusterIPAddressPool
          name: public-net-pool
    ```
-
 After allocating a pool of IP addresses for the cluster network, they can be assigned to the network interfaces of pods connected to this network. For more details, see the section [Assigning IP addresses to network interfaces of pods connected to an additional network](../../../../user/network/sdn/dedicated.html#assigning-ip-addresses-to-network-interfaces-of-pods-connected-to-an-additional-network).
 
 ## Configuring and connecting underlay networks for hardware device passthrough
@@ -498,7 +484,6 @@ spec:
     echo "vm.nr_hugepages = 4096" > /etc/sysctl.d/99-hugepages.conf
     sysctl -p /etc/sysctl.d/99-hugepages.conf
 ```
-
 This configuration sets `vm.nr_hugepages = 4096` on all nodes, providing 8 GiB of hugepages (4096 pages × 2 MiB per page).
 
 ##### Configuring Topology Manager
@@ -520,7 +505,6 @@ spec:
       scope: Container
   nodeType: Static
 ```
-
 For more information, see:
 
 * [topologyManager.enabled](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-enabled)
@@ -541,7 +525,6 @@ First, check which Physical Functions are available on your nodes:
 ```shell
 d8 k get nni -l network.deckhouse.io/nic-pci-type=PF
 ```
-
 Example output:
 
 ```console
@@ -561,14 +544,12 @@ d8 k label nni worker-01-nic-0000:17:00.1 nic-group=dpdk
 d8 k label nni worker-02-nic-0000:17:00.0 nic-group=dpdk
 d8 k label nni worker-02-nic-0000:17:00.1 nic-group=dpdk
 ```
-
 {% alert level="info" %}
 You can check the PCI information and SR-IOV support status for each interface:
 
 ```shell
 d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 ```
-
 The `status.nic.pci.pf.sriov.supported` section contains information about SR-IOV support.
 {% endalert %}
 
@@ -598,7 +579,6 @@ To create an Underlay network in Dedicated mode, follow these steps:
            matchLabels:
              nic-group: dpdk # Label used to mark interfaces during the verification and configuration of network interfaces.
    ```
-
    When `autoBonding` is set to `true`, all matched PFs on a node are grouped into a single DRA device, exposing all PFs to the pod as separate interfaces. When `false`, each PF is published as a separate DRA device.
 
 1. Check the status of the created UnderlayNetwork:
@@ -606,7 +586,6 @@ To create an Underlay network in Dedicated mode, follow these steps:
    ```shell
    d8 k get underlaynetwork dpdk-dedicated-network -o yaml
    ```
-
    Example status of UnderlayNetwork in `Dedicated` mode:
 
    ```yaml
@@ -624,7 +603,6 @@ To create an Underlay network in Dedicated mode, follow these steps:
        status: "True"
        type: InterfacesAvailable
    ```
-
 #### Creating UnderlayNetwork in Shared mode
 
 In `Shared` mode, Virtual Functions (VF) are created from Physical Functions (PF) using SR-IOV, allowing multiple pods to share the same hardware. This mode requires SR-IOV support on the NICs.
@@ -652,7 +630,6 @@ To create an Underlay network in `Shared` mode, follow these steps:
          enabled: true
          numVFs: 8
    ```
-
    In this example:
 
    * `mode: Shared` enables SR-IOV and VF creation.
@@ -667,7 +644,6 @@ To create an Underlay network in `Shared` mode, follow these steps:
    ```shell
    d8 k get underlaynetwork dpdk-shared-network -o yaml
    ```
-
    Example status of UnderlayNetwork in `Shared` mode:
 
    ```yaml
@@ -693,13 +669,11 @@ To create an Underlay network in `Shared` mode, follow these steps:
        status: "True"
        type: InterfacesAvailable
    ```
-
 1. Verify that VFs have been created by checking NodeNetworkInterface resources:
 
    ```shell
    d8 k get nni -l network.deckhouse.io/nic-pci-type=VF
    ```
-
 ### Preparing namespaces for UnderlayNetwork usage
 
 Before users can request UnderlayNetwork devices in their pods, the namespace must be labeled to enable UnderlayNetwork support. This is an administrative task that should be done for namespaces where DPDK applications will run:
@@ -707,7 +681,6 @@ Before users can request UnderlayNetwork devices in their pods, the namespace mu
 ```shell
 d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 ```
-
 ## Configuring and connecting system networks (service networks)
 
 System networks (service networks) are intended for internal traffic at the node level (e.g., for storage, management, etc.) and are not used as additional pod networks.
@@ -755,7 +728,6 @@ spec:
   ipam:
     clusterIPAddressPoolName: storage-pool
 ```
-
 To check the network status after creation, use the section [Checking system network status](#checking-system-network-status).
 
 #### Access type
@@ -775,7 +747,6 @@ spec:
   ipam:
     clusterIPAddressPoolName: mgmt-pool
 ```
-
 To check the network status after creation, use the section [Checking system network status](#checking-system-network-status).
 
 #### SRIOVVirtualFunction type
@@ -799,7 +770,6 @@ spec:
   ipam:
     clusterIPAddressPoolName: vf-pool
 ```
-
 To check the network status after creation, use the section [Checking system network status](#checking-system-network-status).
 
 ### Creating a pool of IP addresses for configuring the IPAM system network
@@ -818,7 +788,6 @@ spec:
       ranges:
         - 10.20.30.10-10.20.30.250
 ```
-
 When [creating a system network](#creating-a-system-network), specify this pool in the [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) parameter of the SystemNetwork resource.
 
 ### Checking system network status
@@ -828,13 +797,11 @@ To get a list of system networks, use the command:
 ```shell
 d8 k get systemnetworks
 ```
-
 To view the status of a specific system network, use the command:
 
 ```shell
 d8 k get systemnetwork storage-network -o yaml
 ```
-
 In `status` you will see:
 
 * `nodeAttachementsCount`: Total attachments (one per matched node interface).
@@ -846,17 +813,14 @@ To view internal attachments (one per a "system network + parent interface" pair
 ```shell
 d8 k get systemnetworknodenetworkinterfaceattachments
 ```
-
 To view IP addresses at the node level (including system network IPs) for all nodes, use the command (one NodeNetworkStatus is assigned to each node):
 
 ```shell
 d8 k get nodenetworkstatus
 ```
-
 To view information about IP addresses at the node level (including system network IPs) for a specific node, use the command:
 
 ```shell
 d8 k get nodenetworkstatus -l network.deckhouse.io/node-name=worker-01 -o yaml
 ```
-
 In `status.addresses` look for entries with `type: SystemNetworkIP` and `systemNetworkName` set to your system network name.

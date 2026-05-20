@@ -57,17 +57,17 @@ If the parameter is not specified, no group-based filtering will be applied.
 
    Example output:
 
-   ```console
+```console
    NAME         STAGE   SOURCE     PHASE       ENABLED   READY
    user-authn           Embedded   Available   True      True
    ```
+   {: .nowrap-default }
 
    Enable the module via CL:
 
    ```shell
    d8 system module enable user-authn
    ```
-
 1. Configure the [`user-authn`](/modules/user-authn/) module.
 
    - Open the `user-authn` module settings (create a ModuleConfig resource named `user-authn` if it doesn't exist):
@@ -75,7 +75,6 @@ If the parameter is not specified, no group-based filtering will be applied.
      ```shell
      d8 k edit mc user-authn
      ```
-
    - Specify the required module parameters in the `spec.settings` section.
      For more details about the `user-authn` module settings, refer to the [module reference](/modules/user-authn/).
 
@@ -97,7 +96,6 @@ If the parameter is not specified, no group-based filtering will be applied.
          publishAPI:
            enabled: true
      ```
-
 After setting up integration in the cluster with an external authentication provider, authentication through it will become possible in the platform's web interfaces. Information on setting up authentication for user applications can be found in the section [Usage → IAM → Authentication](../../../../user/access/authentication.html).
 
 ### OIDC (OpenID Connect) integration
@@ -151,7 +149,6 @@ spec:
       - email
       - groups
 ```
-
 If email verification is not enabled in Keycloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
 
 - Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
@@ -176,7 +173,6 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
    - email_dkp
    - groups
   ```
-
 #### Blitz Identity Provider
 
 Example configuration of a provider for integration with Blitz Identity Provider:
@@ -207,7 +203,6 @@ spec:
     userNameKey: email
   type: OIDC
 ```
-
 #### Okta
 
 Example configuration of a provider for integration with Okta:
@@ -227,7 +222,6 @@ spec:
     insecureSkipEmailVerified: true
     getUserInfo: true
 ```
-
 After enabling integration with Okta, you can use Okta user groups to manage access rights.
 For example, you can specify a list of groups whose members are allowed to access [Grafana](../../../../user/web/grafana.html).
 
@@ -244,7 +238,6 @@ spec:
         - adm-grafana-access
         - grafana-access
 ```
-
 ### SAML 2.0 integration
 
 The example shows the provider's settings for integration with a SAML 2.0 Identity Provider (e.g., [AD FS](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/ad-fs-overview), [Okta](https://help.okta.com/en-us/content/topics/apps/apps_app_integration_wizard_saml.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#_client-saml-configuration)).
@@ -270,7 +263,6 @@ spec:
     groupsAttr: groups
     nameIDPolicyFormat: persistent
 ```
-
 To configure the SAML Identity Provider:
 
 1. Register Dex as a Service Provider (SP) in your IdP with the following settings:
@@ -345,7 +337,6 @@ spec:
         groupAttr: member
       nameAttr: cn
 ```
-
 ### GitHub integration
 
 You need to create a new application in your GitHub organization.
@@ -376,7 +367,6 @@ spec:
     clientID: plainstring
     clientSecret: plainstring
 ```
-
 ### GitLab integration
 
 You need to create a new application in your GitLab project.
@@ -410,7 +400,6 @@ spec:
     - administrators
     - users
 ```
-
 ### Atlassian Crowd integration
 
 In the relevant Atlassian Crowd project, you need to create a new Generic application.
@@ -441,7 +430,6 @@ spec:
     - administrators
     - users
 ```
-
 ### Bitbucket Cloud Integration
 
 To configure authentication, you need to create a new OAuth consumer in the Bitbucket team menu.

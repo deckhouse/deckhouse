@@ -87,13 +87,12 @@ create a configuration file:
 
     Example output:
 
-    ```console
+```console
     NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
     ...
     kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
     ...
     ```
-
     {: .nowrap-default }
 
 1. Go to the provided address and log in using the email and password you specified when creating a user.
@@ -118,7 +117,6 @@ spec:
     clientID: plainstring
     clientSecret: plainstring
 ```
-
 In a [GitHub organization](https://docs.github.com/en/organizations), create a new application:
 
 1. Go to **Settings** → **Developer settings** → **OAuth Apps** → **Register a new OAuth application**.
@@ -155,7 +153,6 @@ spec:
     - administrators
     - users
 ```
-
 To create an application in GitLab, follow the steps below.
 
 For a self-managed GitLab instance:
@@ -203,7 +200,6 @@ spec:
     - administrators
     - users
 ```
-
 To create a generic application in Atlassian Crowd, follow these steps:
 
 1. Go to **Applications** → **Add application**.
@@ -230,7 +226,6 @@ spec:
     - administrators
     - users
 ```
-
 To set up authentication in Bitbucket, follow these steps:
 
 1. In the workspace menu, create a new OAuth consumer.
@@ -275,7 +270,6 @@ spec:
         groupAttr: member
       nameAttr: cn
 ```
-
 To set up authentication in LDAP, follow these steps:
 
 1. Create a read-only user (service account) in LDAP.
@@ -311,7 +305,6 @@ spec:
     insecureSkipEmailVerified: true
     getUserInfo: true
 ```
-
 #### Blitz Identity Provider
 
 When [registering an application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with Blitz Identity Provider, specify the URL to redirect users after authorization.
@@ -345,7 +338,6 @@ spec:
     userNameKey: email
   type: OIDC
 ```
-
 To ensure proper logout from applications, involving token callbacks and requiring re-authorization, set the `promptType` parameter to `login`.
 
 To ensure detailed user access to applications, do the following:

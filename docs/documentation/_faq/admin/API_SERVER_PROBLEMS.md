@@ -22,10 +22,11 @@ If these signs are present, perform the following actions:
 
    Example output:
 
-   ```console
+```console
    NAME                               CPU(cores)   MEMORY(bytes)
    kube-apiserver-sandbox1-master-0   251m         1476Mi
    ```
+   {: .nowrap-default }
 
 1. Check the metrics in Grafana.
 

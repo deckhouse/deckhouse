@@ -85,7 +85,6 @@ spec:
     size: 100Mi
 EOF
 ```
-
 After creation, the [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resource can be in the following phase:
 
 - `Pending`: Waiting for all dependent resources required for disk creation to be ready.
@@ -115,13 +114,13 @@ Check the status of the disk after creation with the command:
 ```bash
 d8 k get vd blank-disk
 ```
-
 Example output:
 
 ```console
 NAME       PHASE   CAPACITY   AGE
 blank-disk   Ready   100Mi      1m2s
 ```
+{: .nowrap-default }
 
 How to create an empty disk in the web interface (this step can be skipped and performed when creating a VM):
 
@@ -145,7 +144,6 @@ Using the example of the previously created image `VirtualImage`, let's consider
 ```bash
 d8 k get vi ubuntu-24-04 -o wide
 ```
-
 Example output:
 
 ```console
@@ -179,7 +177,6 @@ spec:
       name: ubuntu-24-04
 EOF
 ```
-
 Now create a disk, without explicitly specifying the size:
 
 ```yaml
@@ -201,13 +198,11 @@ spec:
       name: ubuntu-24-04
 EOF
 ```
-
 Check the status of the disks after creation:
 
 ```bash
 d8 k get vd
 ```
-
 Example output:
 
 ```console
@@ -215,6 +210,7 @@ NAME           PHASE   CAPACITY   AGE
 linux-vm-root    Ready   10Gi       7m52s
 linux-vm-root-2  Ready   2590Mi     7m15s
 ```
+{: .nowrap-default }
 
 How to create a disk from an image in the web interface (this step can be skipped and performed when creating a VM):
 
@@ -244,7 +240,6 @@ spec:
     type: Upload
 EOF
 ```
-
 Once created, the resource enters the `WaitForUserUpload` phase, which means it is ready to accept a disk upload.
 
 Two upload options are available: from a cluster node and from any node outside the cluster:
@@ -252,7 +247,6 @@ Two upload options are available: from a cluster node and from any node outside 
 ```bash
 d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```
-
 Example output:
 
 ```json
@@ -261,26 +255,22 @@ Example output:
   "inCluster": "http://10.222.165.239/upload"
 }
 ```
-
 Upload the disk using the following command:
 
 ```bash
 curl https://virtualization.example.com/upload/<secret-url> --progress-bar -T <image.name> | cat
 ```
-
 After the upload completes, the disk should be created and enter the `Ready` phase:
 
 ```bash
 d8 k get vd uploaded-disk
 ```
-
 Example output:
 
 ```txt
 NAMESPACE   NAME                  PHASE   CAPACITY    AGE
 default     uploaded-disk         Ready   3Gi         7d23h
 ```
-
 ## Change disk size
 
 You can increase the size of disks even if they are already attached to a running virtual machine. To do this, edit the `spec.persistentVolumeClaim.size` field:
@@ -290,13 +280,13 @@ Check the size before the change:
 ```bash
 d8 k get vd linux-vm-root
 ```
-
 Example output:
 
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   10Gi       10m
 ```
+{: .nowrap-default }
 
 Let's apply the changes:
 
@@ -307,19 +297,18 @@ d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"
 
 d8 k edit vd linux-vm-root
 ```
-
 Let's check the size after the change:
 
 ```bash
 d8 k get vd linux-vm-root
 ```
-
 Example output:
 
 ```console
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   11Gi       12m
 ```
+{: .nowrap-default }
 
 How to change the disk size in the web interface:
 
@@ -359,13 +348,11 @@ Example of migrating a disk to the `new-storage-class-name` StorageClass:
 ```bash
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```
-
 Alternatively, apply the changes by editing the resource:
 
 ```bash
 d8 k edit vd disk
 ```
-
 After the disk configuration is updated, a live migration of the VM is triggered, during which the VM disk is moved to the new storage.
 
 If a VM has multiple disks attached, and you need to change the storage class for several of them, this operation must be performed sequentially:
@@ -374,7 +361,6 @@ If a VM has multiple disks attached, and you need to change the storage class fo
 d8 k patch vd disk1 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 d8 k patch vd disk2 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```
-
 If migration fails, retry attempts are performed with increasing delays (exponential backoff algorithm). The maximum delay is 300 seconds (5 minutes). Delays are: 5 seconds (1st attempt), 10 seconds (2nd), then each delay doubles until it reaches 300 seconds (7th and subsequent attempts). The first attempt is performed without delay.
 
 To cancel migration, the StorageClass in the specification must be reverted to its original value.

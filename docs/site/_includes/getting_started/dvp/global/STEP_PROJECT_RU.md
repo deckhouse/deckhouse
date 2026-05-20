@@ -149,7 +149,6 @@ vm     Running   1       100%           1Gi      False          False   True    
 ```shell
 d8 v console -n test-project vm
 ```
-
 Для выхода из консоли нажмите `Ctrl+]`.
 
 Поздравляем! Вы создали виртуальную машину и подключились к ней.

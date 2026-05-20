@@ -118,13 +118,13 @@ NAME          PHASE     AGE
 ceph-rbd-sc   Created   1h
 ceph-fs-sc    Created   1h
 ```
+{: .nowrap-default }
 
 Проверьте созданный StorageClass с помощью следующей команды:
 
 ```shell
 d8 k get sc
 ```
-
 В результате будет выведена информация о созданном StorageClass:
 
 ```console
@@ -132,6 +132,7 @@ NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOL
 ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
+{: .nowrap-default }
 
 Если объекты StorageClass появились, значит настройка модуля `csi-ceph` завершена. Теперь пользователи могут создавать PersistentVolume, указывая созданные объекты StorageClass.
 
@@ -144,10 +145,6 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 
 ```
-
-
-{: .nowrap-default }
-
 ## Поддерживаемые версии Ceph
 
 - Официальная поддержка — Ceph версии 16.2.0 и выше.
@@ -176,13 +173,11 @@ spec:
   userID: admin
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 ```
-
 Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get cephclusterconnection <имя cephclusterconnection>
 ```
-
 Пример описания [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass):
 
 - Для RBD
@@ -200,7 +195,6 @@ d8 k get cephclusterconnection <имя cephclusterconnection>
       defaultFSType: ext4
       pool: ceph-rbd-pool  
   ```
-
 - Для CephFS:
 
   ```yaml
@@ -215,7 +209,6 @@ d8 k get cephclusterconnection <имя cephclusterconnection>
     cephFS:
       fsName: cephfs
   ```
-
 Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
 
 ```shell

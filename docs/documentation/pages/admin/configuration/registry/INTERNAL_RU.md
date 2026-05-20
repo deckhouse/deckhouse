@@ -65,29 +65,30 @@ lang: ru
 
    Пример вывода:
 
-   ```console
+```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
 
 1. Убедитесь, что все master-узлы находятся в состоянии `Ready` и не имеют статуса `SchedulingDisabled`. Для этого используйте следующую команду:
 
    ```bash
    d8 k get nodes
    ```
-
    Пример вывода:
 
-   ```console
+```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
    master-2   Ready    control-plane,master  ...
    ```
+   {: .nowrap-default }
 
    Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
 
-   ```console
+```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
@@ -100,15 +101,15 @@ lang: ru
    ```shell
    d8 system queue list
    ```
-
    Пример вывода:
 
-   ```console
+```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
    - no tasks to handle.
    ```
+   {: .nowrap-default }
 
 1. Установите настройки режима `Direct` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
 
@@ -130,7 +131,6 @@ lang: ru
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
-
 1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](#просмотр-статуса-переключения-режима-registry).
 
    Пример вывода:
@@ -147,7 +147,6 @@ lang: ru
    mode: Direct
    target_mode: Direct
    ```
-
 ### Переключение на режим Unmanaged
 
 Для переключения уже работающего кластера на режим `Unmanaged` выполните следующие шаги:
@@ -163,28 +162,28 @@ lang: ru
    ```bash
    d8 k get module registry -o wide
    ```
-
    Пример вывода:
 
-   ```console
+```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
+   {: .nowrap-default }
 
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell
    d8 system queue list
    ```
-
    Пример вывода:
 
-   ```console
+```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
    - no tasks to handle.
    ```
+   {: .nowrap-default }
 
 1. Установите настройки режима `Unmanaged` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
 
@@ -206,7 +205,6 @@ lang: ru
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
-
 1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](#просмотр-статуса-переключения-режима-registry).
 
    Пример вывода:
@@ -223,7 +221,6 @@ lang: ru
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. При необходимости переключения на старый метод управления registry, ознакомьтесь с [инструкцией](#миграция-обратно-с-модуля-registry).
 
 {% alert level="warning" %}
@@ -244,7 +241,6 @@ containerd v2 использует новую схему по умолчанию
    ```bash
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
-
    Данные настройки укажите при конфигурации `Unmanaged` режима:
 
    ```yaml
@@ -263,7 +259,6 @@ containerd v2 использует новую схему по умолчанию
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
-
 1. Дождитесь завершения переключения. Пример [статуса переключения](#просмотр-статуса-переключения-режима-registry):
 
    ```yaml
@@ -278,7 +273,6 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 ### Для containerd v1
 
 {% alert level="danger" %}
@@ -330,7 +324,6 @@ containerd v2 использует новую схему по умолчанию
              password = "password"
        EOF
    ```
-
 1. Примените [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Дождитесь появления конфигурационных файлов в директории `/etc/containerd/registry.d` на всех узлах.
 
 1. Проверьте корректность работы конфигураций. Для этого воспользуйтесь командой:
@@ -342,7 +335,6 @@ containerd v2 использует новую схему по умолчанию
    # Для http:
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
-
 1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](/modules/deckhouse/latest/configuration.html) для корректной настройки.
 
    Посмотреть текущие настройки registry можно с помощью команды:
@@ -350,7 +342,6 @@ containerd v2 использует новую схему по умолчанию
    ```bash
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
-
    Данные настройки укажите при конфигурации `Unmanaged` режима:
 
    ```yaml
@@ -369,7 +360,6 @@ containerd v2 использует новую схему по умолчанию
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
-
 1. После применения, дождитесь в [статусе переключения](#просмотр-статуса-переключения-режима-registry) сообщения:
 
    Пример вывода:
@@ -387,7 +377,6 @@ containerd v2 использует новую схему по умолчанию
      status: "False"
      type: ContainerdConfigPreflightReady
    ```
-
    Это сообщение означает, что на узлах имеются старые конфигурации registry, расположенные в директории `/etc/containerd/conf.d`. И в данный момент переключение на новую конфигурацию containerd заблокировано. Для того чтобы разрешить переключение, необходимо удалить старые конфигурационные файлы.
 
 1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Пример манифеста NodeGroupConfiguration:
@@ -423,7 +412,6 @@ containerd v2 использует новую схему по умолчанию
 
        [ -f "$file" ] && rm -f "$file"
    ```
-  
 1. После удаления старых конфигураций убедитесь, что переключение продолжается. Пример [статуса переключения](#просмотр-статуса-переключения-режима-registry):
 
    ```yaml
@@ -435,7 +423,6 @@ containerd v2 использует новую схему по умолчанию
      status: "True"
      type: ContainerdConfigPreflightReady
    ```
-
 1. Дождитесь завершения переключения. Пример [статуса переключения](#просмотр-статуса-переключения-режима-registry):
 
    ```yaml
@@ -450,19 +437,16 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. Удалите [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), созданный на шаге удаления старых конфигурационных файлов:
 
    ```shell
    d8 k delete nodegroupconfiguration containerd-additional-config-auth-delete.sh
    ```
-
    Чтобы убедиться, что NodeGroupConfiguration удалён, используйте команду:
 
    ```shell
    d8 k get nodegroupconfiguration
    ```
-
    В списке не должно быть NodeGroupConfiguration, подлежащего удалению (в этом примере — `containerd-additional-config-auth-delete.sh`).
 
 ## Миграция обратно с модуля registry
@@ -494,7 +478,6 @@ containerd v2 использует новую схему по умолчанию
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
-
 1. Проверьте статус переключения, используя [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
@@ -509,7 +492,6 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. Переведите registry в неконфигурируемый режим `Unmanaged`. Пример конфигурации:
 
    ```yaml
@@ -524,7 +506,6 @@ containerd v2 использует новую схему по умолчанию
        registry:
          mode: Unmanaged
    ```
-
 1. Проверьте статус переключения, используя [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
@@ -539,7 +520,6 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. Если используется containerd v1, и в кластере применены [пользовательские конфигурации реестра](/modules/node-manager/latest/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), их необходимо заменить на старый формат. Для этого подготовьте конфигурации registry старого формата. Данные конфигурации на данном этапе применять не нужно. Пример конфигурации:
 
    ```yaml
@@ -587,13 +567,11 @@ containerd v2 использует новую схему по умолчанию
                  auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
        EOF
    ```
-
 1. Удалите секрет `registry-bashible-config`. Во время удаления containerd v1 переключится на старый формат конфигурации containerd:
 
    ```bash
    d8 k -n d8-system delete secret registry-bashible-config
    ```
-
 1. После удаления дождитесь завершения переключения. Для отслеживания используйте [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
@@ -608,7 +586,6 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
-
 1. Если используется containerd v1, примените заготовленные на этапе ранее `NodeGroupConfiguration` с пользовательскими конфигурациями registry.
 
 1. Отключите модуль `registry`. Пример:
@@ -623,7 +600,6 @@ containerd v2 использует новую схему по умолчанию
      settings: {}
      version: 1
    ```
-
 ## Просмотр статуса переключения режима registry
 
 Статус переключения режима registry можно получить с помощью следующей команды:
@@ -631,7 +607,6 @@ containerd v2 использует новую схему по умолчанию
 ```bash
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
 ```
-
 Пример вывода:
 
 ```yaml
@@ -674,7 +649,6 @@ conditions:
 mode: Direct
 target_mode: Direct
 ```
-
 Вывод отображает состояние процесса переключения. Каждое условие может находиться в статусе `True` или `False`, а также содержать поле `message` с пояснением.
 
 Описание условий:

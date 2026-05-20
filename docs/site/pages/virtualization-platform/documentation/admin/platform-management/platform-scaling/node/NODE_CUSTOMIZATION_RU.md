@@ -381,13 +381,11 @@ spec:
           image: nvidia/samples:vectoradd-cuda10.2
           imagePullPolicy: "IfNotPresent"
 ```
-
 Проверьте логи командой:
 
 ```shell
 d8 k logs job/gpu-operator-test
 ```
-
 Пример вывода:
 
 ```console
@@ -398,6 +396,7 @@ Copy output data from the CUDA device to the host memory
 Test PASSED
 Done
 ```
+{: .nowrap-default }
 
 ## Как развернуть кастомный конфигурационный файл containerd
 
@@ -445,7 +444,6 @@ spec:
     - "worker"
   weight: 31
 ```
-
 ## Добавление конфигурации для дополнительного registry
 
 В containerd существует два способа описания конфигурации registry: **устаревший** и **актуальный**.
@@ -456,7 +454,6 @@ spec:
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
 ```
-
 Пример вывода:
 
 ```console
@@ -465,18 +462,19 @@ cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".regi
 [plugins."io.containerd.grpc.v1.cri".registry.configs]
   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
+{: .nowrap-default }
 
 Для проверки наличия **актуального** способа конфигурации выполните на узлах кластера следующую команду:
 
 ```bash
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 ```
-
 Пример вывода:
 
 ```console
 config_path = "/etc/containerd/registry.d"
 ```
+{: .nowrap-default }
 
 ### Устаревший способ добавления конфигурации для дополнительного registry
 
@@ -510,7 +508,6 @@ config_path = "/etc/containerd/registry.d"
           ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
           insecure_skip_verify = true
 ```
-
 {% alert level="danger" %}
 Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса containerd.
 {% endalert %}
@@ -547,7 +544,6 @@ spec:
               auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
-
 #### Настройка сертификата для дополнительного registry (устаревший способ)
 
 Пример настройки сертификата для дополнительного registry при использовании **устаревшего** способа конфигурации:
@@ -601,7 +597,6 @@ spec:
               ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
     EOF
 ```
-
 {% alert level="info" %}
 Помимо containerd, сертификат можно добавить в операционную систему.
 {% endalert %}
@@ -649,13 +644,11 @@ spec:
               insecure_skip_verify = true
     EOF
 ```
-
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
 
 ```bash
 crictl pull private.registry.example/image/repo:tag
 ```
-
 #### Настройка зеркала для доступа к публичным registries (устаревший способ)
 
 Пример настройки зеркала к публичным registries при использовании **устаревшего** способа конфигурации:
@@ -699,7 +692,6 @@ spec:
               endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
     EOF
 ```
-
 ### Новый способ добавления конфигурации для дополнительного registry
 
 {% alert level="info" %}
@@ -719,7 +711,6 @@ spec:
     ├── ca.crt
     └── hosts.toml
 ```
-
 Пример содержимого файла `hosts.toml`:
 
 ```toml
@@ -738,7 +729,6 @@ spec:
     capabilities = ["pull", "resolve"]
     skip_verify = true
 ```
-
 {% alert level="info" %}
 Изменения конфигураций не приводят к перезапуску сервиса containerd.
 {% endalert %}
@@ -780,7 +770,6 @@ spec:
           password = "password"
     EOF
 ```
-
 #### Настройка сертификата для дополнительного registry (актуальный способ)
 
 Пример настройки сертификата для дополнительного registry при использовании **актуального** способа конфигурации:
@@ -829,7 +818,6 @@ spec:
         ca = ["/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt"]
     EOF
 ```
-
 {% alert level="info" %}
 Помимо containerd, сертификат можно добавить в операционную систему.
 {% endalert %}
@@ -875,7 +863,6 @@ spec:
         skip_verify = true
     EOF
 ```
-
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
 
 - Через cri интерфейс:
@@ -883,19 +870,16 @@ spec:
   ```bash
   crictl pull private.registry.example/image/repo:tag
   ```
-
 - Через ctr с указанием директории с конфигурациями:
 
   ```bash
   ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
   ```
-
 - Через ctr для http репозитория:
 
   ```bash
   ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
   ```
-
 #### Настройка зеркала для доступа к публичным registries (актуальный способ)
 
 Пример настройки зеркала к публичным registries при использовании **актуального** способа конфигурации:
@@ -941,7 +925,6 @@ spec:
       override_path = true
     EOF
 ```
-
 ## Как автоматически проставить на узел кастомные лейблы
 
 1. На узле создайте каталог `/var/lib/node_labels`.
@@ -950,9 +933,10 @@ spec:
 
 1. Добавьте в файлы нужные лейблы в формате `key=value`. Например:
 
-   ```console
+```console
    example-label=test
    ```
+   {: .nowrap-default }
 
 1. Сохраните файлы.
 

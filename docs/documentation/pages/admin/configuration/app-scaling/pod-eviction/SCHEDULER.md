@@ -42,12 +42,14 @@ If the nodes are distributed across different availability zones, DKP alternates
 Zone 1: Node 1, Node 2, Node 3, Node 4
 Zone 2: Node 5, Node 6
 ```
+{: .nowrap-default }
 
 The selection will occur in the following order:
 
 ```console
 Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 ```
+{: .nowrap-default }
 
 It is important to note that the scheduler does not evaluate all nodes in the cluster — only a subset is considered to optimize the scheduling process. The number of nodes evaluated depends on the size of the cluster:
 
@@ -109,7 +111,6 @@ webhooks:
     caBundle: ABCD=
   timeoutSeconds: 5
 ```
-
 {% alert level="danger" %}
 If the `failurePolicy: Fail` parameter is used, any failure in the webhook will cause the scheduler to stop functioning entirely, preventing new pods from being scheduled. It is highly recommended to thoroughly test any custom scheduler plugins before deploying them in a production environment.
 {% endalert %}
@@ -133,9 +134,10 @@ Main placement configuration options:
 
    Suppose you have a node named `kube-system-1` that is intended for monitoring services. Label the node:
 
-   ```console
+```console
    d8 k label node kube-system-1 node-role/monitoring=""
    ```
+   {: .nowrap-default }
 
    Now, to deploy pods only on this node, add a `nodeSelector` to the Deployment:
 
@@ -143,14 +145,14 @@ Main placement configuration options:
    nodeSelector:
     node-role/monitoring: ""
    ```
-
 1. Using taints and tolerations — unlike `nodeSelector`, taints are used to prevent pods from being scheduled on a node unless they have a matching toleration. This ensures that only specific services run on a given node. Example:
 
    Suppose you have a node named `kube-frontend-1` that is dedicated exclusively to Ingress controllers. Apply a taint to the node:
 
-   ```console
+```console
    d8 k taint node kube-frontend-1 node-role/frontend="":NoExecute
    ```
+   {: .nowrap-default }
 
    Now, only pods with the appropriate toleration will be allowed to run on this node:
 
@@ -159,7 +161,6 @@ Main placement configuration options:
    - effect: NoExecute
      key: node-role/frontend
    ```
-
    This mechanism prevents unintended pods from being scheduled on nodes that are meant for specific purposes.
 
 1. Using [`customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys) — Deckhouse supports the `customTolerationKeys` mechanism, which explicitly defines allowed toleration keys. This is useful when you need to run system services (such as CNI, CSI, etc.) on specific nodes. Example:
@@ -169,7 +170,6 @@ Main placement configuration options:
    - dedicated.example.com
    - node-dedicated.example.com/master
    ```
-
    This mechanism allows:
 
    - Divide nodes into zones — for example, dedicating some for Ingress controllers and others for system services (Prometheus, VPN, CoreDNS).
@@ -197,7 +197,6 @@ spec:
   - name: example-pod
     image: registry.k8s.io/pause:2.0  
 ```
-
 ## Pod redistribution
 
 DKP analyzes the state of the cluster every 15 minutes and evicts pods that match the conditions described in active scheduling strategies. Evicted pods go through the standard scheduling process again, taking the current cluster state into account. This mechanism allows workloads to be redistributed based on the selected strategy and frees up resources on certain nodes when necessary.
@@ -230,7 +229,6 @@ spec:
   priorityClassThreshold:
     name: high-priority
 ```
-
 ### Which pods are not evicted
 
 - DKP does not evict a pod in the following cases:
@@ -272,14 +270,14 @@ You can do this in one of the following ways:
    spec:
      enabled: true    # or false to disable
    ```
-
 1. Using the `d8` command (in the `d8-system/deckhouse` pod):
 
-   ```console
+```console
    d8 system module enable descheduler
    # or to disable:
    d8 system module disable descheduler
    ```
+   {: .nowrap-default }
 
 1. Through the [Deckhouse web interface](/modules/console/):
 
@@ -320,7 +318,6 @@ spec:
         cpu: 50
         memory: 50
 ```
-
 If any of these resource types is not specified, all its thresholds default to 100 to avoid nodes going from underutilized to overutilized
 For example, If the memory threshold is not specified in thresholds, it defaults to 100.
 
@@ -328,7 +325,6 @@ For example, If the memory threshold is not specified in thresholds, it defaults
 thresholds:
   cpu: 50
 ```
-
 {% alert level="info" %}
 In GKE (Google Kubernetes Engine), it is not possible to configure `MostAllocated` by default, but you can use the `optimize-utilization` strategy instead.
 {% endalert %}
@@ -359,7 +355,6 @@ spec:
       targetThresholds:
         cpu: 50
 ```
-
 **RemoveDuplicates** — prevents multiple pods from the same controller (ReplicaSet/ReplicationController/StatefulSet/Job) from running on the same node simultaneously (DaemonSets are excluded). If, for any reason, 2 or more pods from the same controller end up on a single node, this strategy will evict the "extra" pods to redistribute them more evenly across the cluster.
 
 This situation can occur after temporary node failures — when pods are rescheduled to other nodes, and once the original node is back online, the pods remain concentrated on the fallback node.
@@ -374,7 +369,6 @@ spec:
     removeDuplicates:
       enabled: true
 ```
-
 **RemovePodsHavingTooManyRestarts** — evicts pods having too many restarts from nodes.
 Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the [`podRestartThreshold`](cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold) threshold.
 This strategy is useful for evicting pods in the `CrashLoopBackOff` state or with repeated failures, as well as for freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
@@ -389,7 +383,6 @@ spec:
     removePodsHavingTooManyRestarts:
       enabled: true
 ```
-
 **RemovePodsViolatingInterPodAntiAffinity** — evicts any pods that violate [`inter-pod affinity/anti-affinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) rules. For example, if `pod2` and `pod3` have an `anti-affinity` rule against `pod1`, but all three end up on the same node, this strategy will evict `pod1` so that `pod2` and `pod3` can continue operating according to their scheduling constraints.
 
 Enable the strategy using the `strategies.removePodsViolatingInterPodAntiAffinity.enabled` parameter.
@@ -402,7 +395,6 @@ spec:
     removePodsViolatingInterPodAntiAffinity:
       enabled: true
 ```
-
 **RemovePodsViolatingNodeAffinity** — this strategy evicts pods that no longer comply with their defined [`node affinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) rules. `Node affinity` defines which nodes are suitable for a pod at scheduling time:
 
 1. `requiredDuringSchedulingIgnoredDuringExecution`:
@@ -428,7 +420,6 @@ spec:
         - requiredDuringSchedulingIgnoredDuringExecution
         - preferredDuringSchedulingIgnoredDuringExecution
 ```
-
 **RemovePodsViolatingTopologySpreadConstraint** — ensures that pods violating [topology spread constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes. It evicts the minimum number of pods required to balance topology domains to within each constraint's `maxSkew`.
 This is useful for rebalancing pods across zones after a zone outage recovery.
 

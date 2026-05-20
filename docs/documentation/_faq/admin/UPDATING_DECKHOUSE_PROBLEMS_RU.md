@@ -44,11 +44,12 @@ lang: ru
 
    Пример вывода:
 
-   ```console
+```console
    Type     Reason     Age                      From     Message
    ----     ------     ----                     ----     -------
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500
    ```
+   {: .nowrap-default }
 
 #### Обновление DKP находится в статусе Release is suspended
 
@@ -59,7 +60,6 @@ lang: ru
 ```shell
 d8 k get deckhousereleases.deckhouse.io
 ```
-
 Пример вывода:
 
 ```console
@@ -76,3 +76,5 @@ v1.70.16   Skipped      19d
 v1.70.17   Deployed     160m
 v1.71.3    Suspended    14d              Release is suspended
 ```
+{: .nowrap-default }
+

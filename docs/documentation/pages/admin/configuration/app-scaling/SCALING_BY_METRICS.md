@@ -146,24 +146,28 @@ To get a list of available metrics, use the following command:
 ```console
 d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
 ```
+{: .nowrap-default }
 
 To retrieve metric values associated with specific objects, use:
 
 ```console
 d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
 ```
+{: .nowrap-default }
 
 To get values of metrics created via `NamespaceMetric`, use:
 
 ```console
 d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
+{: .nowrap-default }
 
 To retrieve external metrics, use:
 
 ```console
 d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
 ```
+{: .nowrap-default }
 
 ### Configuring autoscaling in the Deckhouse Web Interface
 

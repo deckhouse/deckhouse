@@ -117,7 +117,7 @@ For example:
 
    In the output list of projects, you should see the newly created project corresponding to the namespace:
 
-   ```console
+```console
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d

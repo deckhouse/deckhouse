@@ -366,10 +366,11 @@ Golden image — это предварительно настроенный об
 
     В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
 
-    ```console
+```console
     NAME           PHASE   CDROM   PROGRESS   AGE
     ubuntu-24-04   Ready   false   100%       23h
     ```
+    {: .nowrap-default }
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
 
@@ -390,7 +391,6 @@ Golden image — это предварительно настроенный об
 ```shell
 d8 k get cvi ubuntu-24-04 -w
 ```
-
 В результате будет выведена информация о прогрессе создания образа:
 
 ```console
@@ -403,13 +403,13 @@ ubuntu-24-04   Provisioning   false   100.0%     10s
 ubuntu-24-04   Provisioning   false   100.0%     16s
 ubuntu-24-04   Ready          false   100%       18s
 ```
+{: .nowrap-default }
 
 В описании ресурса `ClusterVirtualImage` можно получить дополнительную информацию о скачанном образе:
 
 ```shell
 d8 k describe cvi ubuntu-24-04
 ```
-
 Как создать образ с HTTP-сервера в веб-интерфейсе:
 
 - Перейдите на вкладку «Система», далее в раздел «Виртуализация» → «Кластерные образы».
@@ -428,20 +428,17 @@ d8 k describe cvi ubuntu-24-04
     ```shell
     curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
     ```
-
 1. Создайте `Dockerfile` со следующим содержимым:
 
     ```shell
     FROM scratch
     COPY ubuntu2204.img /disk/ubuntu2204.img
     ```
-
 1. Соберите образ и загрузите его в реестр контейнеров. В качестве реестра контейнеров в примере ниже использован `docker.io`. Для выполнения вам необходимо иметь учётную запись сервиса и настроенное окружение:
 
     ```shell
     docker build -t docker.io/<username>/ubuntu2204:latest
     ```
-
     где `username` — имя пользователя, указанное при регистрации [в docker.io](https://www.docker.com/).
 
 1. Загрузите созданный образ в container registry:
@@ -449,7 +446,6 @@ d8 k describe cvi ubuntu-24-04
     ```shell
     docker push docker.io/<username>/ubuntu2204:latest
     ```
-
 1. Чтобы использовать этот образ, создайте в качестве примера ресурс:
 
     ```yaml
@@ -465,7 +461,6 @@ d8 k describe cvi ubuntu-24-04
           image: docker.io/<username>/ubuntu2204:latest
     EOF
     ```
-
 Как создать образ из реестра контейнеров в веб-интерфейсе:
 
 - Перейдите на вкладку «Система», далее в раздел «Виртуализация» → «Кластерные образы».
@@ -491,7 +486,6 @@ spec:
     type: Upload
 EOF
 ```
-
 После создания ресурс перейдёт в фазу `WaitForUserUpload`, что говорит о готовности к загрузке образа.
 
 Существует два варианта загрузки — с узла кластера или с произвольного узла за пределами кластера:
@@ -499,7 +493,6 @@ EOF
 ```shell
 d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```
-
 Пример вывода:
 
 ```text
@@ -508,7 +501,6 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
   "inCluster":"http://10.222.165.239/upload"
 }
 ```
-
 Здесь:
 
 - `inCluster` — URL-адрес, который используется, если необходимо выполнить загрузку образа с одного из узлов кластера;
@@ -519,25 +511,23 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```shell
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
 ```
-
 Затем выполните загрузку образа с помощью следующей команды:
 
 ```shell
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
-
 После завершения загрузки образ должен быть создан и переведён в фазу `Ready`. Для проверки состояния образа выполните команду:
 
 ```shell
 d8 k get cvi some-image
 ```
-
 В результате будет выведена информация о состоянии образа:
 
 ```console
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+{: .nowrap-default }
 
 Как выполнить операцию в веб-интерфейсе:
 
@@ -572,7 +562,6 @@ spec:
         schedule: "0 20 * * *"
   # ...
 ```
-
 На время работы сборки мусора хранилище переводится в режим «только чтение». Все создаваемые в это время ресурсы будут ожидать окончания очистки.
 
 Для проверки наличия неактуальных образов в хранилище можно выполнить такую команду:
@@ -580,7 +569,6 @@ spec:
 ```bash
 d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
 ```
-
 На экран будут выведены сведения о состоянии хранилища и список неактуальных образов, которые могут быть удалены.
 
 ```console
@@ -594,3 +582,5 @@ ClusterVirtualImage                         debian-12
 VirtualDisk            default              debian-10-root
 VirtualImage           default              ubuntu-2204
 ```
+{: .nowrap-default }
+

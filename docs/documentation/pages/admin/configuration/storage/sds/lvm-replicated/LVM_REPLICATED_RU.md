@@ -39,6 +39,7 @@ d8 k get modules sds-node-configurator -w
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 sds-node-configurator              Embedded  Available   True       True
 ```
+{: .nowrap-default }
 
 ### Подключение DRBD
 
@@ -55,7 +56,6 @@ spec:
   version: 1
 EOF
 ```
-
 Это установит модуль ядра DRBD на всех узлах кластера, зарегистрирует CSI-драйвер и запустит служебные поды компонентов [`sds-replicated-volume`](/modules/sds-replicated-volume/).
 
 Дождитесь, когда модуль [`sds-replicated-volume`](/modules/sds-replicated-volume/) перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
@@ -63,13 +63,13 @@ EOF
 ```shell
 d8 k get modules sds-replicated-volume -w
 ```
-
 В результате будет выведена информация о модуле [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
 ```console
 NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 sds-replicated-volume              Embedded  Available   True       True
 ```
+{: .nowrap-default }
 
 Чтобы проверить, что в пространствах имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
 
@@ -77,7 +77,6 @@ sds-replicated-volume              Embedded  Available   True       True
 d8 k -n d8-sds-replicated-volume get pod -w
 d8 k -n d8-sds-node-configurator get pod -w
 ```
-
 {% alert level="info" %}
 Не рекомендуется настраивать бэкенд `LINSTOR` вручную, поскольку это может привести к ошибкам.
 {% endalert %}
@@ -91,7 +90,6 @@ d8 k -n d8-sds-node-configurator get pod -w
 ```shell
 d8 k get bd
 ```
-
 В результате будет выведен список доступных блочных устройств:
 
 ```console
@@ -136,13 +134,11 @@ spec:
   #     size: 70%
 EOF
 ```
-
 Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
 ```
-
 В результате будет выведена информация о состоянии ресурса:
 
 ```console
@@ -160,7 +156,6 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 ```shell
 d8 k get lvg -w
 ```
-
 В результате будет выведен список созданных групп томов:
 
 ```console
@@ -191,19 +186,18 @@ spec:
     - name: vg-1-on-worker-2
 EOF
 ```
-
 Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
 ```
-
 В результате будет выведена информация о состоянии созданного ресурса:
 
 ```console
 NAME         PHASE       TYPE   AGE
 thick-pool   Completed   LVM    87d
 ```
+{: .nowrap-default }
 
 ### Создание реплицированных thin pool
 
@@ -229,7 +223,6 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
   }
 ]'
 ```
-
 В обновленной версии [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
 
 Повторите добавление thin pool для оставшихся узлов (`worker-1` и `worker-2`). Пример создания реплицированного thin pool:
@@ -251,19 +244,18 @@ spec:
       thinPoolName: thin-pool-0
 EOF
 ```
-
 Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
 ```
-
 В результате будет выведена информация о состоянии созданного ресурса:
 
 ```console
 NAME        PHASE       TYPE      AGE
 thin-pool   Completed   LVMThin   87d
 ```
+{: .nowrap-default }
 
 ## Создание объектов StorageClass
 
@@ -292,26 +284,24 @@ spec:
   replication: ConsistencyAndAvailability
 EOF
 ```
-
 Проверьте, что созданный ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
-
 В результате будет выведена информация о созданном [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass):
 
 ```console
 NAME                       PHASE     AGE
 replicated-storage-class   Created   1h
 ```
+{: .nowrap-default }
 
 Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
 
 ```shell
 d8 k get sc replicated-storage-class
 ```
-
 В результате будет выведена информация о созданном StorageClass:
 
 ```console

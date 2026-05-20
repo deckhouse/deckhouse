@@ -29,6 +29,7 @@ Example output:
 ```console
     releaseChannel: Stable
 ```
+{: .nowrap-default }
 
 ## Switching release channels
 
@@ -46,7 +47,6 @@ spec:
   settings:
     releaseChannel: Stable
 ```
-
 ## Update modes
 
 DKP supports three update modes that determine how new versions are applied:
@@ -65,7 +65,6 @@ inspect the configuration of the [`deckhouse`](/modules/deckhouse/) module with 
 ```shell
 d8 k get mc deckhouse -o yaml
 ```
-
 Example output:
 
 ```console
@@ -81,6 +80,7 @@ spec:
         to: "20:00"
 ...
 ```
+{: .nowrap-default }
 
 ### Automatic update mode
 
@@ -99,7 +99,6 @@ To view the list and status of all releases in the cluster, run the following co
 ```shell
 d8 k get deckhousereleases
 ```
-
 {% alert level="warning" %}
 Starting from DKP 1.70 patch releases (for example, an update from version `1.70.1` to version `1.70.2`) are installed taking into account the update windows. Prior to DKP 1.70, patch version updates ignore update windows settings and apply as soon as they are available.
 {% endalert %}
@@ -121,13 +120,11 @@ There are three ways to restrict automatic updates in Deckhouse:
   ```shell
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"Manual"}}}}'
   ```
-
   To approve an update, run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
 
   ```shell
   d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
-
 - Enable automatic updates for patch versions only.
 
   In this mode, DKP will receive updates into the cluster,
@@ -145,14 +142,12 @@ There are three ways to restrict automatic updates in Deckhouse:
   ```shell
   d8 k patch mc deckhouse --type=merge -p='{"spec":{"settings":{"update":{"mode":"AutoPatch"}}}}'
   ```
-
   To approve a minor version update,
   run the following command, replacing `<DECKHOUSE-VERSION>` with the target DKP version:
 
   ```shell
   d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
-
 - Manually set the target DKP version tag for the `deckhouse` Deployment
   and remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the [`deckhouse`](/modules/deckhouse/) module configuration.
 
@@ -169,7 +164,6 @@ There are three ways to restrict automatic updates in Deckhouse:
   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- kubectl set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ee:v1.66.3
   d8 k patch mc deckhouse --type=json -p='[{"op": "remove", "path": "/spec/settings/releaseChannel"}]'
   ```
-
 ### Manual update approval
 
 Manual approval of DKP updates is required in the following cases:
@@ -185,7 +179,6 @@ Manual approval of DKP updates is required in the following cases:
   ```shell
   d8 k patch DeckhouseRelease <DECKHOUSE-VERSION> --type=merge -p='{"approved": true}'
   ```
-
 - Automatic update approval is disabled for a NodeGroup,
   for updates that might cause temporary downtime of system components.
 
@@ -198,7 +191,6 @@ Manual approval of DKP updates is required in the following cases:
   ```shell
   d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
-
 ## Update windows
 
 DKP allows you to define *update windows*, which are specific time intervals during which automatic updates are allowed.
@@ -239,7 +231,6 @@ You can manage DKP update windows in the following ways:
           - from: "20:00"
             to: "22:00"
   ```
-
 - Update windows on Tuesdays and Saturdays from 18:00 to 19:30 (UTC):
 
   ```yaml

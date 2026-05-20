@@ -56,6 +56,7 @@ d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -74,7 +75,6 @@ Ensure that the subdomains resolve to the IP address of the node where the Ingre
 ```shell
 d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
-
 {% offtopic title="Example outputs..." %}
 
 Example output if a custom Wildcard domain was used:
@@ -82,12 +82,14 @@ Example output if a custom Wildcard domain was used:
 ```console
 %s.my-dvp-cluster.example.com
 ```
+{: .nowrap-default }
 
 Example output if a domain from the sslip.io service was used:
 
 ```console
 %s.54.43.32.21.sslip.io
 ```
+{: .nowrap-default }
 
 {% endofftopic %}
 
@@ -113,6 +115,7 @@ prometheus.my-dvp-cluster.example.com
 status.my-dvp-cluster.example.com
 upmeter.my-dvp-cluster.example.com
 ```
+{: .nowrap-default }
 
 For the domain `my-dvp-cluster.example.com` and a template with individual domains `%s-my-dvp-cluster.example.com`, the records would look like this:
 
@@ -132,6 +135,7 @@ prometheus-my-dvp-cluster.example.com
 status-my-dvp-cluster.example.com
 upmeter-my-dvp-cluster.example.com
 ```
+{: .nowrap-default }
 
 For testing, you can add the necessary records to the `/etc/hosts` file on your local machine (for Windows, the file is located at `%SystemRoot%\system32\drivers\etc\hosts`).
 
@@ -158,7 +162,6 @@ $PUBLIC_IP upmeter.$CLUSTER_DOMAIN
 EOF
 "
 ```
-
 ## Creating a User
 
 To access the cluster's web interfaces, you can create a static user:
@@ -168,7 +171,6 @@ To access the cluster's web interfaces, you can create a static user:
    ```shell
    echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
-
    `<USER-PASSWORD>` — the password to be set for the user.
 
 1. Create the user:
@@ -197,7 +199,6 @@ To access the cluster's web interfaces, you can create a static user:
 
    EOF
    ```
-
 Now you can log in to the cluster web interfaces using your email and password. For further configuration, it is recommended to review the section [Access Control / Role Model](../../platform-management/access-control/role-model.html).
 
 ## Enable console module

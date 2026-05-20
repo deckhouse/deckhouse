@@ -43,11 +43,12 @@ weight: 50
 
    - Создание иерархической структуры страниц с помощью символа `/` в названиях. Пример:
 
-     ```console
+```console
      devops/ci-pipelines
      devops/kubernetes
      product/design
      ```
+     {: .nowrap-default }
 
 1. Markdown, Rich Text, вложения и диаграммы:
 
@@ -80,7 +81,6 @@ weight: 50
      ```bash
      git clone git@code.example.com:groupname/wiki.git
      ```
-
    - Полный доступ к `.md`-файлам, веткам, истории для локального редактирования, резервных копий или автоматизации.
 
 1. Экспорт в PDF:
