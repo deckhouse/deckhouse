@@ -79,12 +79,7 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.PackageRepository{}).
-		WithEventFilter(predicate.Or(
-			predicate.GenerationChangedPredicate{},
-			predicate.NewPredicateFuncs(func(obj client.Object) bool {
-				return !obj.GetDeletionTimestamp().IsZero()
-			}),
-		)).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(packageRepositoryController)
 }
 
