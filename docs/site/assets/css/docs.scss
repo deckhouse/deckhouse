@@ -1310,7 +1310,9 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
+  &:not(.tabs__item) {
     padding-bottom: 0;
+  }
 }
 
 .docs .resources ul li .resources__prop_description + p,

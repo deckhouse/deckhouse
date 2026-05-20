@@ -18,27 +18,24 @@
 #### Select the Deckhouse Stronghold revision
 {% endif %}
 
-<div class="tabs">
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
   {% for revision in revisions %}
     {% if platforms contains page.platform_code %}
       {% if revision == 'ee' %}
-        <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ee' %} active{% endif %}"
-          onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
-          toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
-          {{ site.data.i18n[revision] }}
-        </a>
+      <li id="tab_layout_{{ revision }}" class="tabs__item tabs__item--title tabs__item--revision--{{ revision }} tabs__btn_revision active" data-index="{{ forloop.index }}"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
+        toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');">{{ site.data.i18n[revision] }}</li>
       {% endif %}
     {% else %}
-      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if forloop.first %} active{% endif %}"
+      <li id="tab_layout_{{ revision }}" class="tabs__item tabs__item--title tabs__item--revision--{{ revision }} tabs__btn_revision{% if forloop.first %} active{% endif %}" data-index="{{ forloop.index }}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
-        toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
-        {{ site.data.i18n[revision] }}
-      </a>
+        toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');">{{ site.data.i18n[revision] }}</li>
     {% endif %}
   {% endfor %}
-</div>
+  </ul>
 
-
+<div class="tabs__container tabs__container--descr">
 {% for revision in revisions %}
   {%- assign layoutCode = '' | append: layout.code %}
   {% if platforms contains page.platform_code %}
@@ -89,6 +86,8 @@
 </div>
   {% endif %}
 {% endfor %}
+</div>
+</div>
 
 
 <script>

@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function () {
         panels.forEach(function (panel) {
           var panelId = panel.id;
           if (!panelId) return;
-          var btn = document.querySelector("a[onclick*=\"'" + panelId + "'\"]");
+          var btn = document.querySelector("a[onclick*=\"'" + panelId + "'\"], li[onclick*=\"'" + panelId + "'\"]");
           if (btn) activateTabBtn(btn);
         });
 
