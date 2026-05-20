@@ -18,19 +18,17 @@ instance create request. This is required for Deckhouse bootstrap metadata such 
 
 ## 003-support-capi-v1beta2-initialization-contract.patch
 
-Adds `status.initialization.provisioned` support for `YandexCluster` and
-`YandexMachine`, and sets it when the provider marks infrastructure ready. This
-is required for the CAPI v1beta2 Machine/Cluster controllers to treat
-infrastructure provisioning as completed.
-
-## 004-migrate-to-cluster-api-v1-11-phase-1.patch
-
 Pulls in the essential code changes from upstream PR
-`yandex-cloud/cluster-api-provider-yandex#46` to move CAPY to Cluster API 1.11:
+`yandex-cloud/cluster-api-provider-yandex#46` and the Deckhouse follow-up fixes
+required to run CAPY on Cluster API 1.11:
 - updates dependencies to `sigs.k8s.io/cluster-api v1.11.3`
 - switches typed imports to `api/core/v1beta2` and `api/core/v1beta1`
-- moves condition helpers to deprecated v1beta1 compatibility package
 - updates controller-runtime predicates, watches, and webhook decoder types
+- adds `status.initialization.provisioned` support for `YandexCluster` and
+  `YandexMachine`
+- migrates provider conditions to `[]metav1.Condition` with `conditions.Set(...)`
+- adds owned-conditions patching for cluster, machine, and identity scopes
+- normalizes legacy stored conditions before patching to preserve upgrade safety
 
 This patch intentionally excludes upstream CI, README, tests, and CRD churn. It
 only carries the runtime and API changes required by the Deckhouse CAPY fork.
