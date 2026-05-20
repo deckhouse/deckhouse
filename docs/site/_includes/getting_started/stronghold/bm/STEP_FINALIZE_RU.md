@@ -253,7 +253,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 </div>
 
-Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.
+<p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
 ```

@@ -236,7 +236,7 @@ sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
 </div>
 
-It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):
+<p>It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):</p>
 
 <div markdown="1">
 ```shell
@@ -244,7 +244,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 </div>
 
-Wait for the Ingress controller pods to switch to <code>Ready</code> state.
+<p>Wait for the Ingress controller pods to switch to <code>Ready</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
 ```
