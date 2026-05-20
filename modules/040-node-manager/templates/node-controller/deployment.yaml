@@ -80,7 +80,7 @@ spec:
         - /node-controller
         args:
         - --metrics-bind-address=127.0.0.1:4208
-        - --health-probe-bind-address=127.0.0.1:4206
+        - --health-probe-bind-address=127.0.0.1:4215
         - --webhook-port=4207
         - --max-concurrent-reconciles=10
         - -v=4
@@ -88,14 +88,14 @@ spec:
           httpGet:
             path: /healthz
             host: 127.0.0.1
-            port: 4206
+            port: 4215
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
             host: 127.0.0.1
-            port: 4206
+            port: 4215
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:

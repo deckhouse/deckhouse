@@ -14,7 +14,7 @@ spec:
         description: |
           Allow the node-controller to run on the host network during the bootstrap phase, when CNI is not yet available
     hostPorts:
-      - port: 4206
+      - port: 4215
         protocol: TCP
         metadata:
           description: Node controller health probe endpoint.
