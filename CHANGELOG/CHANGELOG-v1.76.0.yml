@@ -26,6 +26,8 @@ candi:
     - summary: Added multiversion parsing from `oss.yaml` in werf and tests.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17956
   fixes:
+    - summary: fix cve node-manager and opentofu.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19940
     - summary: Added deletion of webhook configurations before destroying a Deckhouse deployment.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19041
     - summary: Fixed internal node IP discovery for static nodes in DVP clusters.
@@ -51,6 +53,8 @@ ci:
     - summary: Added the ability to use a .trivyignore file when checking DKP components.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17793
   fixes:
+    - summary: Fix e2e EKS registry path & publish e2e-eks-opentofu image to registry-stage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20006
     - summary: >-
         Add shared deckhouse/common WERF cache to avoid per-edition rebuilds and whitelist dev/candi
         and common/candi images
@@ -319,6 +323,8 @@ control-plane-manager:
     - summary: Add alert about etcd high requests latency
       pull_request: https://github.com/deckhouse/deckhouse/pull/18714
   fixes:
+    - summary: Add ClusterRoleBinding for kube-apiserver-kubelet-client.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19943
     - summary: >-
         Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully
         bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh
@@ -419,6 +425,8 @@ deckhouse-controller:
         cluster.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16499
   fixes:
+    - summary: Fix ContainerdV2 cluster default validation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20002
     - summary: Fixed error logging for MPO validation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18698
     - summary: >-
@@ -476,6 +484,8 @@ dhctl:
   fixes:
     - summary: fix wrong usage of KubeClientProviderWithCtx instead of KubeClientProvider from main
       pull_request: https://github.com/deckhouse/deckhouse/pull/19824
+    - summary: Wait for stronghold cluster sync before node deletion
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19793
     - summary: fix SSH preflight check for StaticInstances with password-only auth.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19560
     - summary: Fix CVEs in `dhctl`.
@@ -512,6 +522,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19333
     - summary: Add Deckhouse web modules architecture section.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19175
+    - summary: Add CDI component (of virtualization module) architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19087
     - summary: Added docs about creating a local account when LDAP synchronization is enabled.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18916
     - summary: Added an alert for failed documentation renderings.
@@ -625,6 +637,11 @@ istio:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
   fixes:
+    - summary: CNI-node readonly root filesystem enable fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19920
+      impact: When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+    - summary: fixed discovery_operator_versions_to_install.go hook to migrate from 1.21 to 1.25
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19648
     - summary: fixed CVEs in module images
       pull_request: https://github.com/deckhouse/deckhouse/pull/19584
       impact: module pods will be restarted
@@ -687,6 +704,10 @@ multitenancy-manager:
         Grant kubeadm:cluster-admins group granular full access to module CRDs via dedicated
         ClusterRole d8:multitenancy-manager:admin-kubeconfig.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19420
+network-gateway:
+  fixes:
+    - summary: Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19933
 node-local-dns:
   features:
     - summary: Implemented a new `nodeLocalDns` option to disable IPv6 DNS resolving.
@@ -859,6 +880,10 @@ user-authz:
         ClusterRole d8:user-authz:admin-kubeconfig.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19420
   fixes:
+    - summary: >-
+        AuthorizationRule grants are now reflected in the accessiblenamespaces response from
+        permission-browser-apiserver.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19992
     - summary: Extend cluster-admin clusterrole  with kubelet-api-admin rights.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19878
     - summary: Fix multi-tenancy namespace visibility for users without ClusterAuthorizationRules
