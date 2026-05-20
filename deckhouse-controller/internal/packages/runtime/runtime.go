@@ -296,7 +296,6 @@ func (r *Runtime) buildObjectPatcher() error {
 	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.ObjectPatcherKubeClientQPS, addonapp.ObjectPatcherKubeClientBurst)
 	client.WithTimeout(addonapp.ObjectPatcherKubeClientTimeout)
-	client.WithMetricPrefix("object_patcher_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize object patcher client: %w", err)
@@ -320,7 +319,6 @@ func (r *Runtime) buildKubeEventsManager() error {
 	client.WithContextName(addonapp.KubeContext)
 	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
-	client.WithMetricPrefix("kube_events_manager_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize kube events manager client: %w", err)
@@ -360,7 +358,6 @@ func (r *Runtime) buildNelmService() error {
 	client.WithContextName(addonapp.KubeContext)
 	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
-	client.WithMetricPrefix("nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
@@ -404,7 +401,6 @@ func (r *Runtime) buildHealthService() error {
 	client.WithContextName(addonapp.KubeContext)
 	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
-	client.WithMetricPrefix("health_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize health service client: %w", err)
