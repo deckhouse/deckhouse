@@ -40,7 +40,7 @@ import:
   before: setup
 shell:
   setup:
-  - /kubelet version
+  - /kubelet --version
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}

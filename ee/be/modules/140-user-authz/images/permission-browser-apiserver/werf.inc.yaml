@@ -14,6 +14,9 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+shell:
+  install:
+    - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" ) }}
