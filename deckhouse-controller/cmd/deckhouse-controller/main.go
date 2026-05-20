@@ -27,7 +27,7 @@ import (
 	"github.com/flant/kube-client/klogtolog"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
-	"github.com/spf13/cobra"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/dhctlcli"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
@@ -70,73 +70,59 @@ func main() {
 	sh_app.Version = ShellOperatorVersion
 	ad_app.Version = AddonOperatorVersion
 
-	cfg := ad_app.NewConfig()
-	if err := ad_app.ParseEnv(cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
-		os.Exit(1)
-	}
+	FileName := filepath.Base(os.Args[0])
+
+	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
 
 	logger := log.NewLogger()
 	log.SetDefault(logger)
 
-	fileName := filepath.Base(os.Args[0])
+	// override usage template to reveal additional commands with information about start command
+	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
 
-	rootCmd := &cobra.Command{
-		Use:   fileName,
-		Short: fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription),
-		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
-			klogtolog.InitAdapter(cfg.Debug.KubernetesAPI, logger.Named("klog"))
-			stdliblogtolog.InitAdapter(logger)
-			return nil
-		},
-	}
-
-	rootCmd.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Show version.",
-		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println(version())
-		},
+	// print version
+	kpApp.Command("version", "Show version.").Action(func(_ *kingpin.ParseContext) error {
+		fmt.Println(version())
+		return nil
 	})
 
-	startCmd := &cobra.Command{
-		Use:   "start",
-		Short: "Start deckhouse.",
-		RunE:  start(logger, cfg),
-	}
-	ad_app.BindFlags(cfg, rootCmd, startCmd)
-	rootCmd.AddCommand(startCmd)
+	kpApp.Action(func(_ *kingpin.ParseContext) error {
+		klogtolog.InitAdapter(sh_app.DebugKubernetesAPI, logger.Named("klog"))
+		stdliblogtolog.InitAdapter(logger)
+		return nil
+	})
 
-	// Add debug commands from shell-operator and addon-operator.
-	sh_debug.DefineDebugCommands(rootCmd)
-	ad_app.DefineDebugCommands(rootCmd)
+	// start main loop
+	startCmd := kpApp.
+		Command("start", "Start deckhouse.").
+		Action(start(logger))
 
-	// Add more commands to the "module" command registered by addon-operator above.
-	debug.DefineModuleConfigDebugCommands(rootCmd, logger)
+	ad_app.DefineStartCommandFlags(kpApp, startCmd)
 
-	// deckhouse-controller helper subcommands.
-	helpers.DefineHelperCommands(rootCmd, logger)
+	// Add debug commands from shell-operator and addon-operator
+	sh_debug.DefineDebugCommands(kpApp)
+	ad_app.DefineDebugCommands(kpApp)
 
-	// deckhouse-controller requirements.
-	debug.DefineRequirementsCommands(rootCmd)
+	// Add more commands to the "module" command.
+	debug.DefineModuleConfigDebugCommands(kpApp, logger)
 
-	// deckhouse-controller packages.
-	debug.DefinePackagesCommands(rootCmd)
+	// deckhouse-controller helper subcommands
+	helpers.DefineHelperCommands(kpApp, logger)
 
-	// deckhouse-controller registry.
-	registry.DefineRegistryCommand(rootCmd, logger)
+	// deckhouse-controller requirements
+	debug.DefineRequirementsCommands(kpApp)
+
+	// deckhouse-controller packages
+	debug.DefinePackagesCommands(kpApp)
+
+	// deckhouse-controller registry
+	registry.DefineRegistryCommand(kpApp, logger)
 
 	// dhctlcli command builders previously relied on dhctl/pkg/app package-level
 	// globals. They now read configuration from a dedicated *options.Options;
 	// the kingpin Envar bindings in dhctl/pkg/app are gated by flag registration
 	// (DefineGlobalFlags / DefineKubeFlags) which we do not invoke, so we seed
 	// the options struct directly from deployer-controlled env vars here.
-	//
-	// dhctl/cmd/dhctl/commands/{edit,config}.go remain kingpin-based and the
-	// internal/dhctlcli mirror is enforced to stay in sync via
-	// tools/check-dhctl-cmd-drift.sh, so we bridge those commands into the
-	// cobra root via stub commands with DisableFlagParsing that delegate the
-	// remaining argv to a kingpin Application built on the fly.
 	{
 		dhctlOpts := options.New()
 		dhctlOpts.Global.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
@@ -144,15 +130,14 @@ func main() {
 		dhctlOpts.Kube.InCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
 		dhctlOpts.Global.TmpDir = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
 
-		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
+		editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+		dhctlcli.DefineEditCommands(editCmd, dhctlOpts /* wConnFlags */, true)
+
+		dhctlcli.DefineCommandParseClusterConfiguration(kpApp.Command("cluster-configuration", "Parse configuration and print it."), dhctlOpts)
+		dhctlcli.DefineCommandParseCloudDiscoveryData(kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."), dhctlOpts)
 	}
 
-	// Make "start" the default action when no subcommand is given.
-	rootCmd.RunE = start(logger, cfg)
-
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
 }
 
 // envOr returns the env var name's value, or defaultValue when unset/empty.

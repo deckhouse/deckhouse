@@ -127,10 +127,10 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/polyfloyd/go-errorlint v0.0.0-20210418123303-74da32850375 // indirect
-	github.com/prometheus/client_golang v1.23.2 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.66.1 // indirect
-	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/prometheus/client_golang v1.22.0 // indirect
+	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/quasilyte/go-ruleguard v0.3.4 // indirect
 	github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95 // indirect
 	github.com/ryancurrah/gomodguard v1.2.0 // indirect
@@ -186,7 +186,7 @@ require (
 	helm.sh/helm/v3 v3.17.4 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
 	k8s.io/api v0.35.2 // indirect
-	k8s.io/apiextensions-apiserver v0.33.12 // indirect
+	k8s.io/apiextensions-apiserver v0.33.8 // indirect
 	k8s.io/apimachinery v0.35.2 // indirect
 	k8s.io/client-go v0.35.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
