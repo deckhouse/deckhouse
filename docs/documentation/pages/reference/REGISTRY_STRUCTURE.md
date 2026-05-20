@@ -5,7 +5,7 @@ toc: false
 search: container registry, image registry
 ---
 
-This page provides a general overview of the container image repositories used to install the Deckhouse Kubernetes Platform.
+This page provides a general overview of the container image registries used to install the Deckhouse Kubernetes Platform.
 
 ## Commercial editions container registry
 
