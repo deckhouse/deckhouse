@@ -11,9 +11,9 @@ Let's explore the additional capabilities of Deckhouse Stronghold that become av
 
 Open `https://stronghold.<example.com>` in your browser and log in using the authentication method configured in your cluster.
 
-{{< alert level="info" >}}
+{% alert level="info" %}
 Replace `<example.com>` with the actual domain name of your Deckhouse cluster.
-{{< /alert >}}
+{% endalert %}
 </div>
 
 {% include getting_started/stronghold/global/partials/FINISH_CARDS_RU.md %}

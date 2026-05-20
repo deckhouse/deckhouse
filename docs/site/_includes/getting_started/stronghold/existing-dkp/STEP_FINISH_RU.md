@@ -11,9 +11,9 @@
 
 Откройте в браузере `https://stronghold.<example.com>` и авторизуйтесь, используя настроенный в кластере метод аутентификации.
 
-{{< alert level="info" >}}
+{% alert level="info" %}
 Замените `<example.com>` на фактическое доменное имя вашего кластера Deckhouse.
-{{< /alert >}}
+{% endalert %}
 </div>
 
 {% include getting_started/stronghold/global/partials/FINISH_CARDS_RU.md %}
