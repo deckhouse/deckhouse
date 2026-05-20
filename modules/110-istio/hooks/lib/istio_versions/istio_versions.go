@@ -25,8 +25,8 @@ type IstioVersionInfo struct {
 	Revision        string `json:"revision"`
 	ImageSuffix     string `json:"imageSuffix"`
 	IsReady         bool   `json:"isReady"`
-	SupportsAmbient bool   `json:"supportsAmbient"`
-	IsOperatorFree  bool   `json:"isOperatorFree"`
+	SupportsAmbient  bool `json:"supportsAmbient"`
+	SupportsOperator bool `json:"supportsOperator"`
 }
 
 func (vm IstioVersionsMap) GetVersionByRevision(rev string) string {
@@ -65,10 +65,10 @@ func (vm IstioVersionsMap) DoesSupportAmbient(fullVer string) bool {
 	return false
 }
 
-func (vm IstioVersionsMap) IsOperatorFree(fullVer string) bool {
+func (vm IstioVersionsMap) DoesSupportOperator(fullVer string) bool {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.FullVersion == fullVer {
-			return istioVerInfo.IsOperatorFree
+			return istioVerInfo.SupportsOperator
 		}
 	}
 	return false

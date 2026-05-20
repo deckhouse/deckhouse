@@ -66,19 +66,19 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	ambientMinVersion := semver.MustParse("1.25.0")
 	supportsAmbient := versionSemver.GreaterThanEqual(ambientMinVersion)
 
-	// Operator free state is available starting with version 1.27.9
+	// Operator is supported for versions lower than 1.27.9
 	operatorFreeMinVersion := semver.MustParse("1.27.9")
-	isOperatorFree := versionSemver.GreaterThanEqual(operatorFreeMinVersion)
+	supportsOperator := versionSemver.LessThan(operatorFreeMinVersion)
 
 	return &IstioVersion{
 		version: fmt.Sprintf(versionTemplate, major, minor),
 		info: istio_versions.IstioVersionInfo{
-			FullVersion:     fullVersion,
-			Revision:        fmt.Sprintf(revisionTemplate, major, minor),
-			ImageSuffix:     fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
-			IsReady:         false,
-			SupportsAmbient: supportsAmbient,
-			IsOperatorFree:  isOperatorFree,
+			FullVersion:      fullVersion,
+			Revision:         fmt.Sprintf(revisionTemplate, major, minor),
+			ImageSuffix:      fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+			IsReady:          false,
+			SupportsAmbient:  supportsAmbient,
+			SupportsOperator: supportsOperator,
 		},
 	}, nil
 }
