@@ -21,3 +21,13 @@ func init() {
 		systemNamespacesRegex = append(systemNamespacesRegex, r)
 	}
 }
+
+// isSystemNamespace reports whether ns matches a reserved system pattern.
+func isSystemNamespace(namespace string) bool {
+	for _, pattern := range systemNamespacesRegex {
+		if pattern.MatchString(namespace) {
+			return true
+		}
+	}
+	return false
+}
