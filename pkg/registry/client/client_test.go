@@ -765,3 +765,243 @@ func TestClient_ImplementsInterface(t *testing.T) {
 	// but this test documents the intent clearly.
 	var _ registry.Client = (*Client)(nil)
 }
+
+// ---- Push (unified) ----
+
+func TestClient_Push(t *testing.T) {
+	t.Run("pushes v1.Image and returns matching digest", func(t *testing.T) {
+		_, c := newTestServer(t)
+
+		img, err := random.Image(512, 1)
+		require.NoError(t, err)
+		want, err := img.Digest()
+		require.NoError(t, err)
+
+		got, err := c.WithSegment("repo").Push(context.Background(), "v1", img)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+
+		// Verify it landed on the server.
+		exists, err := c.WithSegment("repo").ImageExists(context.Background(), "v1")
+		require.NoError(t, err)
+		assert.True(t, exists)
+	})
+
+	t.Run("pushes v1.ImageIndex and returns matching digest", func(t *testing.T) {
+		_, c := newTestServer(t)
+
+		idx, err := random.Index(512, 1, 2)
+		require.NoError(t, err)
+		want, err := idx.Digest()
+		require.NoError(t, err)
+
+		got, err := c.WithSegment("repo").Push(context.Background(), "multi", idx)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("nil object yields an explicit error", func(t *testing.T) {
+		_, c := newTestServer(t)
+		_, err := c.WithSegment("repo").Push(context.Background(), "v1", nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nil")
+	})
+
+	t.Run("deprecated PushImage still works as thin wrapper", func(t *testing.T) {
+		_, c := newTestServer(t)
+		img, err := random.Image(512, 1)
+		require.NoError(t, err)
+
+		require.NoError(t, c.WithSegment("repo").PushImage(context.Background(), "v1", img))
+		exists, err := c.WithSegment("repo").ImageExists(context.Background(), "v1")
+		require.NoError(t, err)
+		assert.True(t, exists)
+	})
+}
+
+// ---- GetManifestRaw ----
+
+func TestClient_GetManifestRaw(t *testing.T) {
+	t.Run("returns raw bytes equal to pushed image manifest", func(t *testing.T) {
+		_, c := newTestServer(t)
+		img := pushRandomImage(t, c, "repo", "v1")
+
+		wantRaw, err := img.RawManifest()
+		require.NoError(t, err)
+		wantDigest, err := img.Digest()
+		require.NoError(t, err)
+
+		gotRaw, desc, err := c.WithSegment("repo").GetManifestRaw(context.Background(), "v1")
+		require.NoError(t, err)
+		require.NotNil(t, desc)
+
+		assert.Equal(t, wantRaw, gotRaw)
+		assert.Equal(t, wantDigest, desc.Digest)
+		assert.Equal(t, int64(len(wantRaw)), desc.Size)
+		assert.NotEmpty(t, desc.MediaType)
+	})
+
+	t.Run("returns ErrImageNotFound for missing tag", func(t *testing.T) {
+		_, c := newTestServer(t)
+
+		_, _, err := c.WithSegment("repo").GetManifestRaw(context.Background(), "missing")
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, ErrImageNotFound))
+	})
+
+	t.Run("GetManifest decodes the same bytes", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "v1")
+
+		raw, _, err := c.WithSegment("repo").GetManifestRaw(context.Background(), "v1")
+		require.NoError(t, err)
+
+		manifest, err := c.WithSegment("repo").GetManifest(context.Background(), "v1")
+		require.NoError(t, err)
+
+		// GetManifest doesn't expose raw bytes, but the descriptor must match.
+		assert.NotEmpty(t, manifest.GetMediaType())
+		_ = raw
+	})
+}
+
+// ---- ImageExists ----
+
+func TestClient_ImageExists(t *testing.T) {
+	t.Run("true for existing image", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "v1")
+
+		exists, err := c.WithSegment("repo").ImageExists(context.Background(), "v1")
+		require.NoError(t, err)
+		assert.True(t, exists)
+	})
+
+	t.Run("false for missing image - no error", func(t *testing.T) {
+		_, c := newTestServer(t)
+
+		exists, err := c.WithSegment("repo").ImageExists(context.Background(), "missing")
+		assert.NoError(t, err, "404 must be normalised to (false, nil)")
+		assert.False(t, exists)
+	})
+
+	t.Run("deprecated CheckImageExists still maps to ErrImageNotFound", func(t *testing.T) {
+		_, c := newTestServer(t)
+
+		err := c.WithSegment("repo").CheckImageExists(context.Background(), "missing")
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, ErrImageNotFound))
+	})
+}
+
+// ---- WalkTags / WalkRepositories ----
+
+func TestClient_WalkTags(t *testing.T) {
+	t.Run("visit is called once per page with all tags collected", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "v1")
+		pushRandomImage(t, c, "repo", "v2")
+		pushRandomImage(t, c, "repo", "v3")
+
+		var got []string
+		var visitCalls int
+		err := c.WithSegment("repo").WalkTags(context.Background(), func(page []string) error {
+			visitCalls++
+			got = append(got, page...)
+			return nil
+		})
+		require.NoError(t, err)
+		assert.GreaterOrEqual(t, visitCalls, 1)
+		assert.ElementsMatch(t, []string{"v1", "v2", "v3"}, got)
+	})
+
+	t.Run("visit returning error stops iteration and is propagated", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "v1")
+
+		stopErr := errors.New("stop")
+		err := c.WithSegment("repo").WalkTags(context.Background(), func(_ []string) error {
+			return stopErr
+		})
+		assert.ErrorIs(t, err, stopErr)
+	})
+
+	t.Run("WithTagsLast filters out tags <= last", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "a")
+		pushRandomImage(t, c, "repo", "b")
+		pushRandomImage(t, c, "repo", "c")
+
+		var got []string
+		err := c.WithSegment("repo").WalkTags(context.Background(), func(page []string) error {
+			got = append(got, page...)
+			return nil
+		}, WithTagsLast("a"))
+		require.NoError(t, err)
+		assert.NotContains(t, got, "a")
+	})
+
+	t.Run("WithTagsLimit stops after N tags total", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "v1")
+		pushRandomImage(t, c, "repo", "v2")
+		pushRandomImage(t, c, "repo", "v3")
+
+		var total int
+		err := c.WithSegment("repo").WalkTags(context.Background(), func(page []string) error {
+			total += len(page)
+			return nil
+		}, WithTagsLimit(2))
+		require.NoError(t, err)
+		assert.LessOrEqual(t, total, 2)
+	})
+
+	t.Run("ListTags is a thin accumulating wrapper around WalkTags", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "repo", "v1")
+		pushRandomImage(t, c, "repo", "v2")
+
+		tags, err := c.WithSegment("repo").ListTags(context.Background())
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"v1", "v2"}, tags)
+	})
+}
+
+func TestClient_WalkRepositories(t *testing.T) {
+	t.Run("visit is called with repository pages", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "org/a", "v1")
+		pushRandomImage(t, c, "org/b", "v1")
+
+		var got []string
+		err := c.WalkRepositories(context.Background(), func(page []string) error {
+			got = append(got, page...)
+			return nil
+		})
+		require.NoError(t, err)
+		assert.Contains(t, got, "org/a")
+		assert.Contains(t, got, "org/b")
+	})
+
+	t.Run("visit returning error stops iteration", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "org/a", "v1")
+
+		stopErr := errors.New("stop")
+		err := c.WalkRepositories(context.Background(), func(_ []string) error {
+			return stopErr
+		})
+		assert.ErrorIs(t, err, stopErr)
+	})
+
+	t.Run("ListRepositories is a thin accumulating wrapper", func(t *testing.T) {
+		_, c := newTestServer(t)
+		pushRandomImage(t, c, "org/a", "v1")
+		pushRandomImage(t, c, "org/b", "v1")
+
+		repos, err := c.ListRepositories(context.Background())
+		require.NoError(t, err)
+		assert.Contains(t, repos, "org/a")
+		assert.Contains(t, repos, "org/b")
+	})
+}

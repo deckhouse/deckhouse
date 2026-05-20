@@ -26,8 +26,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -78,8 +76,10 @@ type Options struct {
 	// HTTP transport. Use WithMiddleware to add them via functional options.
 	Middlewares []TransportMiddleware
 
-	// Logger for client operations
-	Logger *log.Logger
+	// Logger for client operations. Nil falls back to a slog.Default() backed
+	// logger inside resolveLogger; supply your own implementation of the
+	// [Logger] interface to plug in a different backend.
+	Logger Logger
 }
 
 // Option is a functional option that configures an Options value.
@@ -149,8 +149,9 @@ func WithTimeout(d time.Duration) Option {
 	return func(o *Options) { o.Timeout = d }
 }
 
-// WithLogger sets the logger used by the client.
-func WithLogger(logger *log.Logger) Option {
+// WithLogger sets the logger used by the client. Any implementation of the
+// [Logger] interface is accepted; the slog-backed default is used when nil.
+func WithLogger(logger Logger) Option {
 	return func(o *Options) { o.Logger = logger }
 }
 
@@ -168,12 +169,16 @@ func WithProxy(proxyURL *url.URL) Option {
 	return func(o *Options) { o.ProxyURL = proxyURL }
 }
 
-// resolveLogger returns the provided logger, or a default named logger when nil.
-func resolveLogger(logger *log.Logger) *log.Logger {
+// resolveLogger returns the provided logger, or a slog.Default()-backed
+// adapter with a "component=registry-client" attribute attached when nil.
+//
+// We deliberately avoid pre-pending a "Named" segment here: slog has no
+// notion of named loggers, so we approximate it with a structured attribute
+// that every subsequent With/Debug call will carry through.
+func resolveLogger(logger Logger) Logger {
 	if logger == nil {
-		logger = log.NewLogger().Named("registry-client")
+		return NewSlogLogger(slog.Default()).With(slog.String("component", "registry-client"))
 	}
-
 	return logger
 }
 
@@ -198,7 +203,7 @@ func resolveTransport(opts *Options) http.RoundTripper {
 }
 
 // buildRemoteOptions constructs remote options including auth and transport configuration.
-func buildRemoteOptions(opts *Options, logger *log.Logger, baseTransport http.RoundTripper) []remote.Option {
+func buildRemoteOptions(opts *Options, logger Logger, baseTransport http.RoundTripper) []remote.Option {
 	remoteOptions := []remote.Option{}
 
 	if opts.Auth != nil {

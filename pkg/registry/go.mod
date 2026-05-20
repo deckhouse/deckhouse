@@ -3,13 +3,11 @@ module github.com/deckhouse/deckhouse/pkg/registry
 go 1.24.6
 
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/google/go-containerregistry v0.20.2
 	github.com/stretchr/testify v1.10.0
 )
 
 require (
-	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/cli v29.2.0+incompatible // indirect

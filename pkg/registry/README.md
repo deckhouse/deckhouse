@@ -109,16 +109,19 @@ import (
     "context"
     "fmt"
     "log"
+    "log/slog"
 
     "github.com/google/go-containerregistry/pkg/authn"
 
-    decklog "github.com/deckhouse/deckhouse/pkg/log"
     "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 func main() {
     ctx := context.Background()
-    logger := decklog.NewLogger().Named("registry")
+
+    // The client logs through the small client.Logger interface; any
+    // implementation will do. A *slog.Logger is the no-fuss default.
+    logger := client.NewSlogLogger(slog.Default())
 
     // Create base client using functional options (preferred)
     registryClient := client.New("registry.example.com",
@@ -282,23 +285,25 @@ Segments are trimmed of leading/trailing slashes. Empty segment lists return the
 
 ```go
 import (
+    "log/slog"
     "time"
 
     "github.com/google/go-containerregistry/pkg/authn"
 
-    "github.com/deckhouse/deckhouse/pkg/log"
     "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
+logger := client.NewSlogLogger(slog.Default())
+
 // Anonymous / default keychain
 registryClient := client.New("registry.example.com",
-    client.WithLogger(log.NewLogger().Named("registry")),
+    client.WithLogger(logger),
 )
 
 // With explicit credentials
 registryClient := client.New("registry.example.com",
     client.WithLoginPassword("myuser", "mypassword"),
-    client.WithLogger(log.NewLogger().Named("registry")),
+    client.WithLogger(logger),
 )
 
 // With TLS options and timeout
@@ -306,7 +311,7 @@ registryClient := client.New("registry.example.com",
     client.WithAuth(auth),
     client.WithTLSSkipVerify(true),
     client.WithTimeout(30*time.Second),
-    client.WithLogger(log.NewLogger().Named("registry")),
+    client.WithLogger(logger),
 )
 ```
 
@@ -314,11 +319,12 @@ registryClient := client.New("registry.example.com",
 
 ```go
 import (
-    "github.com/deckhouse/deckhouse/pkg/log"
+    "log/slog"
+
     "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
-logger := log.NewLogger().Named("registry")
+logger := client.NewSlogLogger(slog.Default())
 
 opts := &client.Options{
     Logger: logger,
@@ -1038,7 +1044,7 @@ type Options struct {
     Timeout   time.Duration // Per-operation timeout (0 = no limit)
 
     // Logging
-    Logger *log.Logger // Custom logger (auto-created as "registry-client" if nil)
+    Logger Logger // Custom logger; defaults to slog.Default()-backed adapter when nil
 }
 ```
 
@@ -1057,7 +1063,7 @@ All functional options are passed to `client.New()`:
 | `WithCA` | `(string)` | Set a PEM-encoded custom CA certificate |
 | `WithUserAgent` | `(string)` | Set the User-Agent header |
 | `WithTimeout` | `(time.Duration)` | Set per-operation timeout |
-| `WithLogger` | `(*log.Logger)` | Set the logger |
+| `WithLogger` | `(Logger)` | Set the logger (slog-shaped interface; see [Logging](#logging)) |
 | `WithCustomTransport` | `(http.RoundTripper)` | Set a custom HTTP transport |
 | `WithProxy` | `(*url.URL)` | Set an explicit proxy URL |
 | `WithMiddleware` | `(...TransportMiddleware)` | Add transport middlewares |
@@ -1079,16 +1085,16 @@ The default transport uses these sensible defaults:
 
 ```go
 import (
+    "log/slog"
     "net/url"
     "time"
 
     "github.com/google/go-containerregistry/pkg/authn"
 
-    "github.com/deckhouse/deckhouse/pkg/log"
     "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
-logger := log.NewLogger().Named("registry")
+logger := client.NewSlogLogger(slog.Default())
 proxyURL, _ := url.Parse("http://proxy.internal:3128")
 
 // Functional options style (preferred)
@@ -1118,6 +1124,47 @@ opts := &client.Options{
 
 registryClient = client.NewClientWithOptions("registry.example.com", opts)
 ```
+
+### Logger Interface
+
+The client logs through a small slog-shaped interface, so the package has
+zero hard-coded dependency on any concrete logger:
+
+```go
+type Logger interface {
+    Debug(msg string, args ...any)
+    Info(msg string, args ...any)
+    Warn(msg string, args ...any)
+    With(args ...any) Logger
+}
+```
+
+The standard library `*slog.Logger` is the recommended default — wire it in
+through `client.NewSlogLogger`:
+
+```go
+import "log/slog"
+
+logger := client.NewSlogLogger(slog.Default())
+registryClient := client.New("registry.example.com", client.WithLogger(logger))
+```
+
+To plug in a different backend (e.g. `github.com/deckhouse/deckhouse/pkg/log`)
+either:
+
+1. Bridge through its slog handler (works for anything slog-compatible):
+
+   ```go
+   dl := decklog.NewLogger().Named("registry")
+   logger := client.NewSlogLogger(slog.New(dl.Handler()))
+   ```
+
+2. Or implement the four-method `Logger` interface directly with your logger
+   of choice — the implementation is typically five lines.
+
+Set `Logger` to `nil` (or omit `WithLogger`) to fall back to
+`slog.Default()` with a `component=registry-client` attribute attached.
+`client.DiscardLogger()` is provided for tests and silent operation.
 
 ## Error Handling
 
@@ -1513,9 +1560,8 @@ Enable detailed logging to diagnose issues:
 ```go
 import "log/slog"
 
-logger := log.NewLogger(
-    log.WithLevel(slog.LevelDebug),
-).Named("registry-debug")
+handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
+logger := client.NewSlogLogger(slog.New(handler).With("component", "registry-debug"))
 
 registryClient := client.New("registry.example.com",
     client.WithLogger(logger),

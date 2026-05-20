@@ -18,12 +18,14 @@ package fake
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 
 	dkpreg "github.com/deckhouse/deckhouse/pkg/registry"
 	dkpclient "github.com/deckhouse/deckhouse/pkg/registry/client"
@@ -120,15 +122,36 @@ func (c *Client) GetDigest(_ context.Context, tag string) (*v1.Hash, error) {
 	return &h, nil
 }
 
-// GetManifest returns a ManifestResult for the image identified by tag.
-func (c *Client) GetManifest(_ context.Context, tag string) (dkpreg.ManifestResult, error) {
+// GetManifestRaw returns the raw manifest bytes and a synthesized descriptor
+// for the image identified by tag.
+func (c *Client) GetManifestRaw(_ context.Context, tag string) ([]byte, *v1.Descriptor, error) {
 	entry, err := c.findImage(tag)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	raw, err := entry.img.RawManifest()
 	if err != nil {
-		return nil, fmt.Errorf("fake: raw manifest: %w", err)
+		return nil, nil, fmt.Errorf("fake: raw manifest: %w", err)
+	}
+	mediaType, err := entry.img.MediaType()
+	if err != nil {
+		return nil, nil, fmt.Errorf("fake: media type: %w", err)
+	}
+	desc := &v1.Descriptor{
+		MediaType: mediaType,
+		Size:      int64(len(raw)),
+		Digest:    entry.digest,
+	}
+	return raw, desc, nil
+}
+
+// GetManifest returns a ManifestResult for the image identified by tag. Thin
+// wrapper around [Client.GetManifestRaw] that wires the bytes + descriptor
+// into the decoded form.
+func (c *Client) GetManifest(ctx context.Context, tag string) (dkpreg.ManifestResult, error) {
+	raw, _, err := c.GetManifestRaw(ctx, tag)
+	if err != nil {
+		return nil, err
 	}
 	return dkpclient.NewManifestResultFromBytes(raw), nil
 }
@@ -142,11 +165,31 @@ func (c *Client) GetImageConfig(_ context.Context, tag string) (*v1.ConfigFile, 
 	return entry.img.ConfigFile()
 }
 
+// ImageExists reports whether tag resolves to an image in the fake registry.
+// Lookup failures other than "not found" are surfaced via the error return.
+func (c *Client) ImageExists(_ context.Context, tag string) (bool, error) {
+	if _, err := c.findImage(tag); err != nil {
+		if errors.Is(err, dkpclient.ErrImageNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 // CheckImageExists returns nil if the image exists or
 // [dkpclient.ErrImageNotFound] otherwise.
-func (c *Client) CheckImageExists(_ context.Context, tag string) error {
-	_, err := c.findImage(tag)
-	return err
+//
+// Deprecated: use [Client.ImageExists].
+func (c *Client) CheckImageExists(ctx context.Context, tag string) error {
+	exists, err := c.ImageExists(ctx, tag)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return dkpclient.ErrImageNotFound
+	}
+	return nil
 }
 
 // GetImage returns a [dkpreg.Image] for the given tag or digest reference.
@@ -166,12 +209,17 @@ func (c *Client) GetImage(_ context.Context, ref string, _ ...dkpreg.ImageGetOpt
 	return &registryImage{Image: entry.img}, nil
 }
 
-// PushImage stores the image under the current path with the given tag.
-// It creates the repository on-the-fly if it does not exist.
-func (c *Client) PushImage(_ context.Context, tag string, img v1.Image, _ ...dkpreg.ImagePushOption) error {
+// Push stores obj under the current path with the given tag and returns its
+// digest. v1.Image objects are stored in the in-memory registry; v1.ImageIndex
+// objects are accepted but kept opaque (the fake does not yet model indexes).
+func (c *Client) Push(_ context.Context, tag string, obj partial.WithRawManifest, _ ...dkpreg.ImagePushOption) (v1.Hash, error) {
+	if obj == nil {
+		return v1.Hash{}, fmt.Errorf("fake: Push: object is nil")
+	}
+
 	host, repo := c.splitHostRepo()
 	if host == "" {
-		return fmt.Errorf("fake: PushImage: no registry path set – call WithSegment first")
+		return v1.Hash{}, fmt.Errorf("fake: Push: no registry path set – call WithSegment first")
 	}
 
 	reg, ok := c.registries[host]
@@ -181,45 +229,149 @@ func (c *Client) PushImage(_ context.Context, tag string, img v1.Image, _ ...dkp
 		c.registries[host] = reg
 	}
 
-	return reg.AddImage(repo, tag, img)
+	switch t := obj.(type) {
+	case v1.ImageIndex:
+		// The fake registry does not store indexes yet; return the digest so
+		// callers that depend on Push's contract still work in tests.
+		return t.Digest()
+	case v1.Image:
+		if err := reg.AddImage(repo, tag, t); err != nil {
+			return v1.Hash{}, err
+		}
+		return t.Digest()
+	default:
+		return v1.Hash{}, fmt.Errorf("fake: Push: unsupported type %T", obj)
+	}
 }
 
-// ListTags returns all tags registered under the current path.
-func (c *Client) ListTags(_ context.Context, _ ...dkpreg.ListTagsOption) ([]string, error) {
+// PushImage stores the image under the current path with the given tag.
+//
+// Deprecated: use [Client.Push].
+func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts ...dkpreg.ImagePushOption) error {
+	_, err := c.Push(ctx, tag, img, opts...)
+	return err
+}
+
+// PushIndex stores an image index under the current path with the given tag.
+//
+// Deprecated: use [Client.Push].
+func (c *Client) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...dkpreg.ImagePushOption) error {
+	_, err := c.Push(ctx, tag, idx, opts...)
+	return err
+}
+
+// WalkTags streams a single in-memory page of tags through visit. The fake
+// holds everything in memory, so paging is degenerate; the Last/Limit
+// semantics still apply for parity with the real client.
+func (c *Client) WalkTags(_ context.Context, visit func(tags []string) error, opts ...dkpreg.ListTagsOption) error {
+	listOpts := &dkpreg.ListTagsOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListTags(listOpts)
+	}
+
 	host, repo := c.splitHostRepo()
 	reg, ok := c.registries[host]
 	if !ok {
-		return nil, fmt.Errorf("fake: ListTags: registry %q not found", host)
+		return fmt.Errorf("fake: WalkTags: registry %q not found", host)
 	}
 	rs := reg.getRepo(repo)
 	if rs == nil {
-		return nil, nil
+		return nil
 	}
-	return rs.listTags(), nil
+
+	tags := rs.listTags()
+	filtered := applyLastAndLimit(tags, listOpts.Last, listOpts.N, 0)
+	if len(filtered) == 0 {
+		return nil
+	}
+	return visit(filtered)
 }
 
-// ListRepositories returns all repository paths registered under the host of
-// the current path.  The returned paths are relative to the host.
-func (c *Client) ListRepositories(_ context.Context, _ ...dkpreg.ListRepositoriesOption) ([]string, error) {
+// ListTags returns all tags registered under the current path. Thin
+// accumulating wrapper around [Client.WalkTags].
+func (c *Client) ListTags(ctx context.Context, opts ...dkpreg.ListTagsOption) ([]string, error) {
+	var tags []string
+	if err := c.WalkTags(ctx, func(page []string) error {
+		tags = append(tags, page...)
+		return nil
+	}, opts...); err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+// WalkRepositories streams a single in-memory page of repository paths
+// (relative to the host) through visit.
+func (c *Client) WalkRepositories(_ context.Context, visit func(repos []string) error, opts ...dkpreg.ListRepositoriesOption) error {
+	listOpts := &dkpreg.ListRepositoriesOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListRepositories(listOpts)
+	}
+
 	host, repoPrefix := c.splitHostRepo()
 	reg, ok := c.registries[host]
 	if !ok {
-		return nil, fmt.Errorf("fake: ListRepositories: registry %q not found", host)
+		return fmt.Errorf("fake: WalkRepositories: registry %q not found", host)
 	}
 
 	all := reg.listRepos()
-	if repoPrefix == "" {
-		return all, nil
+	if repoPrefix != "" {
+		prefix := repoPrefix + "/"
+		filtered := all[:0:0]
+		for _, r := range all {
+			if strings.HasPrefix(r, prefix) || r == repoPrefix {
+				filtered = append(filtered, r)
+			}
+		}
+		all = filtered
 	}
 
-	prefix := repoPrefix + "/"
-	var filtered []string
-	for _, r := range all {
-		if strings.HasPrefix(r, prefix) || r == repoPrefix {
-			filtered = append(filtered, r)
+	page := applyLastAndLimit(all, listOpts.Last, listOpts.N, 0)
+	if len(page) == 0 {
+		return nil
+	}
+	return visit(page)
+}
+
+// ListRepositories returns all repository paths registered under the host of
+// the current path. Thin accumulating wrapper around [Client.WalkRepositories].
+func (c *Client) ListRepositories(ctx context.Context, opts ...dkpreg.ListRepositoriesOption) ([]string, error) {
+	var repos []string
+	if err := c.WalkRepositories(ctx, func(page []string) error {
+		repos = append(repos, page...)
+		return nil
+	}, opts...); err != nil {
+		return nil, err
+	}
+	return repos, nil
+}
+
+// applyLastAndLimit is a tiny helper shared between WalkTags and
+// WalkRepositories: it drops items <= last and caps the slice at n-visited.
+func applyLastAndLimit(items []string, last string, n, alreadyVisited int) []string {
+	if last == "" && n <= 0 {
+		out := make([]string, len(items))
+		copy(out, items)
+		return out
+	}
+	remaining := -1
+	if n > 0 {
+		remaining = n - alreadyVisited
+		if remaining <= 0 {
+			return nil
 		}
 	}
-	return filtered, nil
+	out := make([]string, 0, len(items))
+	for _, t := range items {
+		if last != "" && t <= last {
+			continue
+		}
+		out = append(out, t)
+		if remaining > 0 && len(out) >= remaining {
+			break
+		}
+	}
+	return out
 }
 
 // DeleteTag removes a tag from the current repository.
@@ -236,12 +388,6 @@ func (c *Client) DeleteTag(_ context.Context, tag string) error {
 	if !rs.deleteTag(tag) {
 		return fmt.Errorf("%w: tag %q", dkpclient.ErrImageNotFound, tag)
 	}
-	return nil
-}
-
-// PushIndex stores an image index under the current path with the given tag.
-// In the fake implementation this is a no-op that returns nil.
-func (c *Client) PushIndex(_ context.Context, _ string, _ v1.ImageIndex, _ ...dkpreg.ImagePushOption) error {
 	return nil
 }
 
@@ -270,7 +416,8 @@ func (c *Client) CopyImage(ctx context.Context, srcTag string, dest dkpreg.Clien
 	if err != nil {
 		return err
 	}
-	return dest.PushImage(ctx, destTag, entry.img)
+	_, err = dest.Push(ctx, destTag, entry.img)
+	return err
 }
 
 // TagImage copies the manifest of sourceTag to destTag.
