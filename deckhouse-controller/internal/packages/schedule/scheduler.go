@@ -159,8 +159,8 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
-		for name, dep := range constraints.Dependencies {
-			deps[name] = dependency.Dependency{
+		for depName, dep := range constraints.Dependencies {
+			deps[depName] = dependency.Dependency{
 				Constraint: dep.Constraint,
 				Optional:   dep.Optional,
 			}
