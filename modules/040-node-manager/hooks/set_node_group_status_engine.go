@@ -75,7 +75,10 @@ func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc de
 		return fmt.Errorf("cannot get migration marker ConfigMap: %w", err)
 	}
 
-	defaultEngine := defaultCloudEphemeralNodeGroupEngine(input)
+	defaultEngine, err := defaultCloudEphemeralNodeGroupEngine(kubeClient.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-node-manager-cloud-provider", metav1.GetOptions{}))
+	if err != nil {
+		return fmt.Errorf("cannot determine default NodeGroup engine from registration secret: %w", err)
+	}
 	nodeGroupGVR := schema.GroupVersionResource{
 		Group:    "deckhouse.io",
 		Version:  "v1",
@@ -130,17 +133,30 @@ func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc de
 	return nil
 }
 
-func defaultCloudEphemeralNodeGroupEngine(input *go_hook.HookInput) ngv1.NodeGroupEngine {
-	hasMCM := valueExistsAndNotEmpty(input, "nodeManager.internal.cloudProvider.machineClassKind")
-	hasCAPI := valueExistsAndNotEmpty(input, "nodeManager.internal.cloudProvider.capiClusterKind")
+func defaultCloudEphemeralNodeGroupEngine(secret *corev1.Secret, err error) (ngv1.NodeGroupEngine, error) {
+	if apierrors.IsNotFound(err) {
+		return ngv1.NodeGroupEngineNone, nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	hasMCM := false
+	if value, ok := secret.Data["instanceClassKind"]; ok && len(value) > 0 {
+		hasMCM = true
+	}
+	hasCAPI := false
+	if value, ok := secret.Data["capiClusterKind"]; ok && len(value) > 0 {
+		hasCAPI = true
+	}
 
 	switch {
 	case hasMCM:
-		return ngv1.NodeGroupEngineMCM
+		return ngv1.NodeGroupEngineMCM, nil
 	case hasCAPI:
-		return ngv1.NodeGroupEngineCAPI
+		return ngv1.NodeGroupEngineCAPI, nil
 	default:
-		return ngv1.NodeGroupEngineNone
+		return ngv1.NodeGroupEngineNone, nil
 	}
 }
 
@@ -156,9 +172,4 @@ func calculateMigratedNodeGroupEngine(spec ngv1.NodeGroupSpec, defaultCloudEphem
 	default:
 		return ngv1.NodeGroupEngineNone
 	}
-}
-
-func valueExistsAndNotEmpty(input *go_hook.HookInput, path string) bool {
-	value := input.Values.Get(path)
-	return value.Exists() && value.String() != ""
 }
