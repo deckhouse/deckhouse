@@ -92,7 +92,7 @@ secrets:
 shell:
 {{- if eq $.SVACE_ENABLED "false" }}
   beforeInstall:
-  - pm install rsync grep gawk
+  - pm install rsync grep
 {{- end }}
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GO_VERSION=${GOLANG_VERSION} GOWORK=off
