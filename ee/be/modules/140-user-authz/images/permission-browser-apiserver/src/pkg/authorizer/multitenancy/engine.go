@@ -149,14 +149,9 @@ func (e *Engine) authorizeNamespacedRequest(attrs authorizer.Attributes, entry *
 	}
 
 	// Check system namespaces restriction
-	if !denied && !entry.AllowAccessToSystemNamespaces {
-		for _, pattern := range systemNamespacesRegex {
-			if pattern.MatchString(namespace) {
-				denied = true
-				reason = noNamespaceAccessReason
-				break
-			}
-		}
+	if !denied && isSystemNamespace(namespace) && !systemNamespaceAllowed(entry, namespace) {
+		denied = true
+		reason = noNamespaceAccessReason
 	}
 
 	// Check namespace selectors
@@ -280,7 +275,9 @@ func (e *Engine) getPreferredGroupVersion(group, version string) (schema.GroupVe
 	return schema.GroupVersion{}, fmt.Errorf("API group %q not found in server groups", group)
 }
 
-// combineDirEntries combines multiple directory entries into one
+// combineDirEntries combines multiple directory entries into one.
+// AllowedSystemNamespaces is merged into a fresh map so the combined view does
+// not alias (and cannot mutate) the source entries stored in the directory.
 func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 	var combined DirectoryEntry
 
@@ -296,6 +293,13 @@ func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 			combined.LimitNamespaces = append(combined.LimitNamespaces, entry.LimitNamespaces...)
 		}
 		combined.NamespaceFiltersAbsent = combined.NamespaceFiltersAbsent || entry.NamespaceFiltersAbsent
+
+		for ns := range entry.AllowedSystemNamespaces {
+			if combined.AllowedSystemNamespaces == nil {
+				combined.AllowedSystemNamespaces = make(map[string]struct{}, len(entry.AllowedSystemNamespaces))
+			}
+			combined.AllowedSystemNamespaces[ns] = struct{}{}
+		}
 	}
 
 	return combined
@@ -391,18 +395,13 @@ func (e *Engine) renewDirectories() {
 	// Fill limited namespaces by subjects kinds/names
 	for _, crd := range config.CRDs {
 		for _, subject := range crd.Spec.Subjects {
-			name := subject.Name
-			namespace := subject.Namespace
-			kind := subject.Kind
+			kind, name := subjectDirectoryKey(subject.Kind, subject.Name, subject.Namespace, "")
 
-			if kind == "ServiceAccount" {
-				name = "system:serviceaccount:" + namespace + ":" + name
+			if _, ok := directory[kind]; !ok {
+				continue
 			}
 
-			dirEntry, ok := directory[kind][name]
-			if !ok {
-				dirEntry = DirectoryEntry{}
-			}
+			dirEntry := directory[kind][name]
 
 			// If there are neither LimitNamespaces nor NamespaceSelector options, it means all non-system namespaces are allowed
 			dirEntry.NamespaceFiltersAbsent = dirEntry.NamespaceFiltersAbsent || (len(crd.Spec.LimitNamespaces) == 0 && !isLabelSelectorApplied(crd.Spec.NamespaceSelector))
@@ -424,11 +423,66 @@ func (e *Engine) renewDirectories() {
 		}
 	}
 
+	applyAuthorizationRulesToDirectory(directory, config.ARs)
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	e.directory = directory
 	klog.Info("Multi-tenancy configuration was reloaded successfully")
+}
+
+// applyAuthorizationRulesToDirectory grants each AR's subjects access to the
+// AR's own namespace, so AR-only users aren't rejected by deny-by-default.
+// QuoteMeta keeps the namespace a literal even if config.json is tampered with.
+func applyAuthorizationRulesToDirectory(directory map[string]map[string]DirectoryEntry, ars []authorizationRule) {
+	for _, ar := range ars {
+		if ar.Namespace == "" {
+			continue
+		}
+
+		nsRegex, err := regexp.Compile(wrapRegex(regexp.QuoteMeta(ar.Namespace)))
+		if err != nil {
+			// Unreachable in practice because QuoteMeta + wrapRegex always yields a
+			// valid pattern, but we prefer logging over panicking in a config loader.
+			klog.Warningf("Skipping AuthorizationRule %q: cannot compile namespace pattern %q: %v", ar.Name, ar.Namespace, err)
+			continue
+		}
+
+		arInSystemNS := isSystemNamespace(ar.Namespace)
+
+		for _, subject := range ar.Spec.Subjects {
+			kind, name := subjectDirectoryKey(subject.Kind, subject.Name, subject.Namespace, ar.Namespace)
+
+			if _, ok := directory[kind]; !ok {
+				continue
+			}
+
+			dirEntry := directory[kind][name]
+			dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, nsRegex)
+			if arInSystemNS {
+				if dirEntry.AllowedSystemNamespaces == nil {
+					dirEntry.AllowedSystemNamespaces = make(map[string]struct{})
+				}
+				dirEntry.AllowedSystemNamespaces[ar.Namespace] = struct{}{}
+			}
+			directory[kind][name] = dirEntry
+		}
+	}
+}
+
+// subjectDirectoryKey returns the directory map key for a subject.
+// ServiceAccounts are canonicalized to "system:serviceaccount:<ns>:<name>";
+// defaultNamespace fills in subject.Namespace when it's empty (RBAC fallback).
+func subjectDirectoryKey(kind, name, subjectNamespace, defaultNamespace string) (string, string) {
+	if kind != "ServiceAccount" {
+		return kind, name
+	}
+	ns := subjectNamespace
+	if ns == "" {
+		ns = defaultNamespace
+	}
+	return kind, "system:serviceaccount:" + ns + ":" + name
 }
 
 // StartRenewConfigLoop periodically reads new config file
@@ -527,13 +581,8 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 	}
 
 	// Check system namespaces restriction
-	if allowed && !combinedDir.AllowAccessToSystemNamespaces {
-		for _, pattern := range systemNamespacesRegex {
-			if pattern.MatchString(namespace) {
-				allowed = false
-				break
-			}
-		}
+	if allowed && isSystemNamespace(namespace) && !systemNamespaceAllowed(&combinedDir, namespace) {
+		allowed = false
 	}
 
 	// Check namespace selectors if denied by patterns
@@ -601,13 +650,8 @@ func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *Director
 	}
 
 	// Check system namespaces restriction
-	if allowed && !filter.AllowAccessToSystemNamespaces {
-		for _, pattern := range systemNamespacesRegex {
-			if pattern.MatchString(namespace) {
-				allowed = false
-				break
-			}
-		}
+	if allowed && isSystemNamespace(namespace) && !systemNamespaceAllowed(filter, namespace) {
+		allowed = false
 	}
 
 	// Check namespace selectors if denied by patterns
