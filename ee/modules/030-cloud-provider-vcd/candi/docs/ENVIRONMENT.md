@@ -370,7 +370,7 @@ shutdown -P now
 - For each open port, a **Pool + Virtual Service** pair is created.
 - If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.
 
-To assign a predefined external IP address to a VCD load balancer, add the `vcd.cpi.flant.com/load-balancer-ip` annotation to the `Service`.
+To assign a predefined external IP address to a VCD load balancer, add the `vcd.cpi.flant.com/load-balancer-ip` annotation to the Service.
 
 If both `vcd.cpi.flant.com/load-balancer-ip` annotation and `.spec.loadBalancerIP` filed are set, the annotation takes precedence. The `spec.loadBalancerIP` field remains supported as a deprecated fallback for compatibility.
 
