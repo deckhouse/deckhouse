@@ -26,12 +26,6 @@ final: false
 from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kiali
