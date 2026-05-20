@@ -252,10 +252,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	logger = logger.WithValues("vm_name", vm.Name, "vm_ns", vm.Namespace)
 
 	if vm.Status.Phase == v1alpha2.MachineRunning {
-		result, err := r.reconcileDisksStorageClass(ctx, logger, dvpMachine)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("reconcile disk storage classes: %w", err)
-		}
+		result := r.reconcileDisksStorageClass(ctx, logger, dvpMachine)
 		if result.RequeueAfter > 0 {
 			return result, nil
 		}
@@ -1102,7 +1099,7 @@ func (r *DeckhouseMachineReconciler) reconcileDisksStorageClass(
 	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-) (ctrl.Result, error) {
+) ctrl.Result {
 	type diskEntry struct {
 		name string
 		sc   string
@@ -1118,18 +1115,18 @@ func (r *DeckhouseMachineReconciler) reconcileDisksStorageClass(
 		migrating, err := r.migrateDiskStorageClassIfNeeded(ctx, logger, dvpMachine, d.name, d.sc)
 		if err != nil {
 			r.setDiskMigrationTerminalFailure(dvpMachine, fmt.Errorf("disk %s: %w", d.name, err))
-			return ctrl.Result{}, nil
+			return ctrl.Result{}
 		}
 		if migrating {
 			r.setDiskMigrationInProgress(dvpMachine, d.name, d.sc)
 			logger.Info("Disk storage class migration in progress, requeueing", "disk", d.name)
-			return ctrl.Result{RequeueAfter: diskMigrationRequeueInterval}, nil
+			return ctrl.Result{RequeueAfter: diskMigrationRequeueInterval}
 		}
 		clearDiskMigrationStarted(dvpMachine, d.name)
 	}
 
 	r.setDiskMigrationCompleted(dvpMachine)
-	return ctrl.Result{}, nil
+	return ctrl.Result{}
 }
 
 // migrateDiskStorageClassIfNeeded returns (isMigrating, error).

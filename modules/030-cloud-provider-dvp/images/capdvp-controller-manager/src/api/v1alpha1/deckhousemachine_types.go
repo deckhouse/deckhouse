@@ -25,8 +25,8 @@ import (
 const MachineFinalizer = "deckhousemachine.infrastructure.cluster.x-k8s.io"
 
 const (
-	VMReadyCondition                     clusterv1b2.ConditionType = "VirtualMachineReady"
-	DiskStorageClassMigrationCondition   clusterv1b2.ConditionType = "DiskStorageClassMigration"
+	VMReadyCondition                   clusterv1b2.ConditionType = "VirtualMachineReady"
+	DiskStorageClassMigrationCondition clusterv1b2.ConditionType = "DiskStorageClassMigration"
 )
 
 const (
