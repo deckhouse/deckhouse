@@ -26,10 +26,10 @@ import (
 	"sort"
 	"strings"
 
-	aoapp "github.com/flant/addon-operator/pkg/app"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonsdk "github.com/flant/addon-operator/sdk"
+	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/executor"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -202,7 +202,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
 				hookPath, namespace, name, kind.BatchHookReadyKey,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
@@ -222,7 +222,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
 				hookPath, namespace, name, key,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
@@ -276,7 +276,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 
 			hook := kind.NewBatchHook(nestedHookName,
 				hookPath, name, kind.BatchHookReadyKey,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
@@ -296,7 +296,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 
 			hook := kind.NewBatchHook(nestedHookName,
 				hookPath, name, key,
-				aoapp.DebugKeepTmpFiles, aoapp.LogProxyHookJSON, hookLogger)
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
 			result.hooks = append(result.hooks, addonhooks.NewModuleHook(hook))
 		}
