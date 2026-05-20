@@ -53,6 +53,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			ctx,
 			params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -103,6 +104,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			ctx,
 			params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
