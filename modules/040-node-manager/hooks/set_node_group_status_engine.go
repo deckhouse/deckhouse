@@ -142,7 +142,7 @@ func defaultCloudEphemeralNodeGroupEngine(secret *corev1.Secret, err error) (ngv
 	}
 
 	hasMCM := false
-	if value, ok := secret.Data["instanceClassKind"]; ok && len(value) > 0 {
+	if value, ok := secret.Data["machineClassKind"]; ok && len(value) > 0 {
 		hasMCM = true
 	}
 	hasCAPI := false
