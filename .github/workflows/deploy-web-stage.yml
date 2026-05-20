@@ -293,6 +293,8 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
+          WERF_SET_DOCS_WATCHER_DOP_URL: "global.dop_url=${{ vars.DOCS_WATCHER_DOP_URL }}"
+          WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "global.dop_auth_token=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
@@ -314,9 +316,6 @@ jobs:
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
-          # TODO: remove this after tests
-          WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{vars.DOCS_WATCHER_DOP_URL}}"
-          WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "dop.authToken=${{secrets.DOCS_WATCHER_DOP_AUTH_TOKEN}}"
       # </template: deploy_site_template>
 
       # <template: doc_version_template>
@@ -334,6 +333,8 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
+          WERF_SET_DOCS_WATCHER_DOP_URL: "global.dop_url=${{ vars.DOCS_WATCHER_DOP_URL }}"
+          WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "global.dop_auth_token=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -348,9 +349,6 @@ jobs:
           WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
           WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
           WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
-          # TODO: remove this after tests
-          WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{vars.DOCS_WATCHER_DOP_URL}}"
-          WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "dop.authToken=${{secrets.DOCS_WATCHER_DOP_AUTH_TOKEN}}"
       # </template: deploy_doc_template>
 
       # <template: update_comment_on_finish>
