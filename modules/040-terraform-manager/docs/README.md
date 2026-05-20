@@ -1,6 +1,6 @@
 ---
 title: "The terraform-manager module"
-description: Description of the Deckhouse terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.
+description: Description of the Deckhouse Kubernetes Platform terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.
 ---
 
 The module is responsible for monitoring and synchronizing the state of the underlying infrastructure and persistent nodes in the cloud environment.
