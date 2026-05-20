@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -132,7 +133,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 		return bashible.Prepare(ctx)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -147,6 +147,19 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return nil
 	}
 
+	// Bundle registry tunnel
+	bundleRegistryTunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
+		MetaConfig: cfg,
+		Node:       params.Node,
+		Logger:     params.LoggerProvider(),
+		DirsConfig: dc,
+	})
+	if err != nil {
+		return err
+	}
+	defer bundleRegistryTunnelStop()
+
+	// RPP + RPP tunnel
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
 		MetaConfig:     cfg,
 		Node:           nodeInterface,
@@ -155,7 +168,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		DirsConfig:     dc,
 		Interactive:    input.IsTerminal(),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -252,7 +264,6 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -285,7 +296,7 @@ func PrepareControlPlaneArtifacts(
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
-		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return fmt.Errorf("get control-plane template data: %w", err)
 		}
@@ -294,11 +305,11 @@ func PrepareControlPlaneArtifacts(
 		// control-plane endpoint that goes into the apiserver SAN list.
 		// Multi-master installations re-issue certificates later via
 		// control-plane-manager once additional master endpoints are known.
-		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneConfig); err != nil {
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneConfig, dc); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
