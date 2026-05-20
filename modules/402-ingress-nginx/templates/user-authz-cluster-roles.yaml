@@ -19,3 +19,11 @@ rules:
   - deletecollection
   - patch
   - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ingressnginxcontrollers/status
+  verbs:
+  - get
+  - list
+  - watch
