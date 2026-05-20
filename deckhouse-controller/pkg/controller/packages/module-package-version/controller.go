@@ -75,17 +75,11 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 		dc:       dc,
 	}
 
-	modulePackageVersionController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
-
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.ModulePackageVersion{}).
-		Complete(modulePackageVersionController)
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		Complete(r)
 }
 
 // Reconcile handles a single ModulePackageVersion event. Draft resources are
