@@ -49,7 +49,7 @@ DVCR consists of the following components:
 DVCR interacts with the following components:
 
 1. **Kube-apiserver**: Sends get/list/watch-requests for VirtualImages, ClusterVirtualImages and VirtualDisks to clean up unused images and for coordination.
-1. *External sources for VM disks or images**: Reads VM disks or images when implementing some scenarios of import to DVCR storage.
+1. **External disks or VM images sources**: Reads VM disks or images when implementing some scenarios of import to DVCR storage.
 
 The following external components interact with the DVCR component:
 
