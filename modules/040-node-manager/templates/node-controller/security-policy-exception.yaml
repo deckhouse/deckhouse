@@ -14,19 +14,19 @@ spec:
         description: |
           Allow the node-controller to run on the host network during the bootstrap phase, when CNI is not yet available
     hostPorts:
-      - port: 8080
+      - port: 4205
         protocol: TCP
         metadata:
           description: Node controller metrics endpoint.
-      - port: 8081
+      - port: 4206
         protocol: TCP
         metadata:
           description: Node controller health probe endpoint.
-      - port: 9443
+      - port: 4207
         protocol: TCP
         metadata:
           description: Node controller webhook listener.
-      - port: 8443
+      - port: 4208
         protocol: TCP
         metadata:
           description: Node controller kube-rbac-proxy metrics endpoint.
