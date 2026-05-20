@@ -858,7 +858,7 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 			expectedDecision: authorizer.DecisionNoOpinion,
 		},
 		{
-			name: "AR in a system namespace unlocks that system namespace",
+			name: "AR in a system namespace grants access only to that exact namespace",
 			config: `{
 				"crds": [],
 				"ars": [
@@ -925,6 +925,58 @@ func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
 				"Authorize: namespace=%s", tt.namespace)
 		})
 	}
+}
+
+// CAR: limitNamespaces = ["d8-.*", "team-.*"], allowAccessToSystemNamespaces = false
+// AR:  namespace       = "d8-monitoring"
+func TestEngine_RenewDirectories_AR_DoesNotLiftSystemGateForCAR(t *testing.T) {
+	config := `{
+		"crds": [
+			{
+				"name": "car-d8-wide",
+				"spec": {
+					"limitNamespaces": ["d8-.*", "team-.*"],
+					"subjects": [{"kind": "Group", "name": "developers"}]
+				}
+			}
+		],
+		"ars": [
+			{
+				"name": "ar-monitoring",
+				"namespace": "d8-monitoring",
+				"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+			}
+		]
+	}`
+
+	e := &Engine{
+		configPath: writeConfigJSON(t, config),
+		directory:  map[string]map[string]DirectoryEntry{},
+	}
+	e.renewDirectories()
+
+	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
+
+	// CAR's legitimate non-system grant must keep working.
+	assert.True(t, e.IsNamespaceAllowed(userInfo, "team-foo"),
+		"non-system namespace matched by CAR must remain accessible")
+
+	// AR explicitly punches a hole only for its own system namespace.
+	assert.True(t, e.IsNamespaceAllowed(userInfo, "d8-monitoring"),
+		"AR-granted system namespace must be allowed")
+
+	// The priv-esc the reviewer flagged: every other d8-* (and any system NS)
+	// matched by CAR's wildcard must stay behind the system gate.
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "d8-system"),
+		"other d8-* system namespaces matched by CAR must NOT be unlocked by the AR")
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "kube-system"),
+		"unrelated system namespaces must remain denied")
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "default"),
+		"`default` is a system namespace and must remain denied")
+
+	// Sanity check: namespaces matched by neither CAR nor AR are denied.
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "random-ns"),
+		"namespaces outside CAR and AR scope must be denied")
 }
 
 // TestEngine_RenewDirectories_NamespaceRegexMetacharsAreEscaped is a
@@ -1020,45 +1072,45 @@ func TestEngine_GetAllowedNamespaces(t *testing.T) {
 	}
 
 	tests := []struct {
-		name               string
-		userInfo           *mockUserInfo
-		expectedNamespaces []string
+		name                    string
+		userInfo                *mockUserInfo
+		expectedNamespaces      []string
 		expectedHasRestrictions bool
 	}{
 		{
-			name:               "nil user - all allowed",
-			userInfo:           nil,
-			expectedNamespaces: nil,
+			name:                    "nil user - all allowed",
+			userInfo:                nil,
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 		{
-			name:               "system:masters without CAR - all allowed (privileged bypass)",
-			userInfo:           &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
-			expectedNamespaces: nil,
+			name:                    "system:masters without CAR - all allowed (privileged bypass)",
+			userInfo:                &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 		{
-			name:               "kubeadm:cluster-admins without CAR - all allowed (privileged bypass)",
-			userInfo:           &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
-			expectedNamespaces: nil,
+			name:                    "kubeadm:cluster-admins without CAR - all allowed (privileged bypass)",
+			userInfo:                &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 		{
-			name:               "unknown user without CAR - empty list (deny-by-default)",
-			userInfo:           &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
-			expectedNamespaces: []string{},
+			name:                    "unknown user without CAR - empty list (deny-by-default)",
+			userInfo:                &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
+			expectedNamespaces:      []string{},
 			expectedHasRestrictions: true,
 		},
 		{
-			name:               "restricted user with CAR - has restrictions",
-			userInfo:           &mockUserInfo{name: "restricted-user"},
-			expectedNamespaces: nil,
+			name:                    "restricted user with CAR - has restrictions",
+			userInfo:                &mockUserInfo{name: "restricted-user"},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: true,
 		},
 		{
-			name:               "unrestricted user with CAR (no filters) - all allowed",
-			userInfo:           &mockUserInfo{name: "unrestricted-user"},
-			expectedNamespaces: nil,
+			name:                    "unrestricted user with CAR (no filters) - all allowed",
+			userInfo:                &mockUserInfo{name: "unrestricted-user"},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 	}

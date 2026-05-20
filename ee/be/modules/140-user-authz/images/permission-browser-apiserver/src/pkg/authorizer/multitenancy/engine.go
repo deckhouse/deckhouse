@@ -149,7 +149,7 @@ func (e *Engine) authorizeNamespacedRequest(attrs authorizer.Attributes, entry *
 	}
 
 	// Check system namespaces restriction
-	if !denied && !entry.AllowAccessToSystemNamespaces && isSystemNamespace(namespace) {
+	if !denied && isSystemNamespace(namespace) && !systemNamespaceAllowed(entry, namespace) {
 		denied = true
 		reason = noNamespaceAccessReason
 	}
@@ -275,7 +275,9 @@ func (e *Engine) getPreferredGroupVersion(group, version string) (schema.GroupVe
 	return schema.GroupVersion{}, fmt.Errorf("API group %q not found in server groups", group)
 }
 
-// combineDirEntries combines multiple directory entries into one
+// combineDirEntries combines multiple directory entries into one.
+// AllowedSystemNamespaces is merged into a fresh map so the combined view does
+// not alias (and cannot mutate) the source entries stored in the directory.
 func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 	var combined DirectoryEntry
 
@@ -291,6 +293,13 @@ func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 			combined.LimitNamespaces = append(combined.LimitNamespaces, entry.LimitNamespaces...)
 		}
 		combined.NamespaceFiltersAbsent = combined.NamespaceFiltersAbsent || entry.NamespaceFiltersAbsent
+
+		for ns := range entry.AllowedSystemNamespaces {
+			if combined.AllowedSystemNamespaces == nil {
+				combined.AllowedSystemNamespaces = make(map[string]struct{}, len(entry.AllowedSystemNamespaces))
+			}
+			combined.AllowedSystemNamespaces[ns] = struct{}{}
+		}
 	}
 
 	return combined
@@ -434,6 +443,8 @@ func applyAuthorizationRulesToDirectory(directory map[string]map[string]Director
 
 		nsRegex, err := regexp.Compile(wrapRegex(regexp.QuoteMeta(ar.Namespace)))
 		if err != nil {
+			// Unreachable in practice because QuoteMeta + wrapRegex always yields a
+			// valid pattern, but we prefer logging over panicking in a config loader.
 			klog.Warningf("Skipping AuthorizationRule %q: cannot compile namespace pattern %q: %v", ar.Name, ar.Namespace, err)
 			continue
 		}
@@ -450,7 +461,10 @@ func applyAuthorizationRulesToDirectory(directory map[string]map[string]Director
 			dirEntry := directory[kind][name]
 			dirEntry.LimitNamespaces = append(dirEntry.LimitNamespaces, nsRegex)
 			if arInSystemNS {
-				dirEntry.AllowAccessToSystemNamespaces = true
+				if dirEntry.AllowedSystemNamespaces == nil {
+					dirEntry.AllowedSystemNamespaces = make(map[string]struct{})
+				}
+				dirEntry.AllowedSystemNamespaces[ar.Namespace] = struct{}{}
 			}
 			directory[kind][name] = dirEntry
 		}
@@ -567,7 +581,7 @@ func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
 	}
 
 	// Check system namespaces restriction
-	if allowed && !combinedDir.AllowAccessToSystemNamespaces && isSystemNamespace(namespace) {
+	if allowed && isSystemNamespace(namespace) && !systemNamespaceAllowed(&combinedDir, namespace) {
 		allowed = false
 	}
 
@@ -636,7 +650,7 @@ func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *Director
 	}
 
 	// Check system namespaces restriction
-	if allowed && !filter.AllowAccessToSystemNamespaces && isSystemNamespace(namespace) {
+	if allowed && isSystemNamespace(namespace) && !systemNamespaceAllowed(filter, namespace) {
 		allowed = false
 	}
 

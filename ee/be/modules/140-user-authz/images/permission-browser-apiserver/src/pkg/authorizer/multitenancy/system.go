@@ -31,3 +31,11 @@ func isSystemNamespace(namespace string) bool {
 	}
 	return false
 }
+
+func systemNamespaceAllowed(entry *DirectoryEntry, namespace string) bool {
+	if entry.AllowAccessToSystemNamespaces {
+		return true
+	}
+	_, ok := entry.AllowedSystemNamespaces[namespace]
+	return ok
+}

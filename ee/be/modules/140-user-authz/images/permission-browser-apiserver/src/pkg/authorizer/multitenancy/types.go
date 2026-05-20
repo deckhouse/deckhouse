@@ -31,7 +31,8 @@ type DirectoryEntry struct {
 	// If there is no LimitNamespaces nor NamespaceSelectors options, the user has access to all namespaces except system namespaces.
 	// If LimitNamespaces is present, we do not need to mind about allowed access to system namespaces.
 	// Thus presence of LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.
-	NamespaceFiltersAbsent bool
+	NamespaceFiltersAbsent  bool
+	AllowedSystemNamespaces map[string]struct{}
 }
 
 // NamespaceSelector defines a selector for namespaces
