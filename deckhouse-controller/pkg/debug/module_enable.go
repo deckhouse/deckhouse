@@ -22,7 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/sdk"
 	kubeclient "github.com/flant/kube-client/client"
-	"github.com/spf13/cobra"
+	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,59 +34,33 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// DefineModuleConfigDebugCommands attaches `enable` / `disable` subcommands to
-// the `module` command registered by addon-operator's DefineDebugCommands.
-// It must be called after ad_app.DefineDebugCommands(rootCmd).
-func DefineModuleConfigDebugCommands(rootCmd *cobra.Command, logger *log.Logger) {
-	moduleCmd := findSubcommand(rootCmd, "module")
-	if moduleCmd == nil {
-		// addon-operator's debug commands have not been registered yet; create
-		// a stand-alone `module` parent so the enable/disable commands still
-		// work.
-		moduleCmd = &cobra.Command{Use: "module", Short: "Manage modules."}
-		rootCmd.AddCommand(moduleCmd)
-	}
+func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Logger) {
+	moduleCmd := kpApp.GetCommand("module")
 
-	moduleCmd.AddCommand(&cobra.Command{
-		Use:   "enable MODULE_NAME",
-		Short: "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+	var moduleName string
+	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
+		Action(func(_ *kingpin.ParseContext) error {
 			logger.SetLevel(log.LevelError)
 			cli := kubeclient.New(kubeclient.WithLogger(logger))
 			if err := cli.Init(); err != nil {
 				return fmt.Errorf("init: %w", err)
 			}
 
-			return moduleSwitch(cli, args[0], true, "enable", logger)
-		},
-	})
+			return moduleSwitch(cli, moduleName, true, "enable", logger)
+		})
+	moduleEnableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 
-	moduleCmd.AddCommand(&cobra.Command{
-		Use:   "disable MODULE_NAME",
-		Short: "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+	moduleDisableCmd := moduleCmd.Command("disable", "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
+		Action(func(_ *kingpin.ParseContext) error {
 			logger.SetLevel(log.LevelError)
 			cli := kubeclient.New(kubeclient.WithLogger(logger))
 			if err := cli.Init(); err != nil {
 				return fmt.Errorf("init: %w", err)
 			}
 
-			return moduleSwitch(cli, args[0], false, "disable", logger)
-		},
-	})
-}
-
-// findSubcommand returns the immediate subcommand of parent whose Name()
-// equals name, or nil if absent.
-func findSubcommand(parent *cobra.Command, name string) *cobra.Command {
-	for _, c := range parent.Commands() {
-		if c.Name() == name {
-			return c
-		}
-	}
-	return nil
+			return moduleSwitch(cli, moduleName, false, "disable", logger)
+		})
+	moduleDisableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 }
 
 func moduleSwitch(kubeClient *kubeclient.Client, moduleName string, enabled bool, actionDesc string, logger *log.Logger) error {
