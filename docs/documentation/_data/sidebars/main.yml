@@ -1475,9 +1475,13 @@ entries:
                 ru: Обзор
               url: /architecture/virtualization/
             - title:
+                en: Deckhouse Virtualization Container Registry (DVCR)
+                ru: Deckhouse Virtualization Container Registry (DVCR)
+              url: /architecture/virtualization/dvcr.html
+            - title:
                 en: Containerized Data Importer (CDI)
                 ru: Containerized Data Importer (CDI)
-              url: /architecture/virtualization/cdi.html
+              url: /architecture/virtualization/cdi.html              
     - title:
         en: Reference
         ru: Справка
