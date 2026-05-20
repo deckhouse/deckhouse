@@ -47,6 +47,10 @@ docsBuilder:
     _default: false
     web-production: true
 
+dop:
+  url: ""
+  authToken: ""
+
 vpa:
   updateMode:
     _default: "Off"
