@@ -6,7 +6,7 @@ metadata:
     packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
   creationTimestamp: null
   finalizers:
-  - packages.deckhouse.io/cleanup
+  - packages.deckhouse.io/package-version-exists
   name: deckhouse
   resourceVersion: "3"
 spec:

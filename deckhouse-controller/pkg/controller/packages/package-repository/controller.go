@@ -130,9 +130,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 
 	logger.Debug("handle resource")
 
-	if !controllerutil.ContainsFinalizer(repo, v1alpha1.PackageRepositoryFinalizerCleanup) {
+	if !controllerutil.ContainsFinalizer(repo, v1alpha1.PackageRepositoryFinalizerPackageVersionExists) {
 		original := repo.DeepCopy()
-		controllerutil.AddFinalizer(repo, v1alpha1.PackageRepositoryFinalizerCleanup)
+		controllerutil.AddFinalizer(repo, v1alpha1.PackageRepositoryFinalizerPackageVersionExists)
 		if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("add finalizer: %w", err)
 		}
@@ -275,19 +275,6 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	logger.Info("deleting PackageRepository")
 
-	operationList := &v1alpha1.PackageRepositoryOperationList{}
-	if err := r.client.List(ctx, operationList, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: packageRepository.Name,
-	}); err != nil {
-		return fmt.Errorf("list operations: %w", err)
-	}
-
-	for _, op := range operationList.Items {
-		if err := r.client.Delete(ctx, &op); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete operation %s: %w", op.Name, err)
-		}
-	}
-
 	appPackages := &v1alpha1.ApplicationPackageList{}
 	if err := r.client.List(ctx, appPackages); err != nil && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("list application packages: %w", err)
@@ -308,9 +295,9 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 		}
 	}
 
-	if controllerutil.ContainsFinalizer(packageRepository, v1alpha1.PackageRepositoryFinalizerCleanup) {
+	if controllerutil.ContainsFinalizer(packageRepository, v1alpha1.PackageRepositoryFinalizerPackageVersionExists) {
 		original := packageRepository.DeepCopy()
-		controllerutil.RemoveFinalizer(packageRepository, v1alpha1.PackageRepositoryFinalizerCleanup)
+		controllerutil.RemoveFinalizer(packageRepository, v1alpha1.PackageRepositoryFinalizerPackageVersionExists)
 		if err := r.client.Patch(ctx, packageRepository, client.MergeFrom(original)); err != nil {
 			return fmt.Errorf("remove finalizer: %w", err)
 		}
