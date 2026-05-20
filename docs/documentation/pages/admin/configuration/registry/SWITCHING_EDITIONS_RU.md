@@ -98,7 +98,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
@@ -216,7 +216,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    # Получаем список актуальных дайджестов из файла images_digests.json внутри Deckhouse.
-   IMAGES_DIGESTS=$(d8 k -n d8-system --as system:sudouser exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+   IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Проверяем, есть ли поды, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
    # с дайджестом, отсутствующим в списке актуальных дайджестов из IMAGES_DIGESTS.
@@ -376,7 +376,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
@@ -449,7 +449,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
-     -o yaml | d8 k -n d8-system --as system:sudouser exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
+     -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
    ```
 
 1. Измените образ Deckhouse на образ Deckhouse CSE:
@@ -593,7 +593,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Пример вывода (очереди пусты):
@@ -656,7 +656,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и убедитесь в выполнении всех задач в очереди:
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Пример вывода (очереди пусты):
@@ -812,7 +812,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    # Получаем список актуальных digest'ов из файла images_digests.json внутри Deckhouse
-   IMAGES_DIGESTS=$(d8 k -n d8-system --as system:sudouser exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+   IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Проверяем, есть ли поды, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
    # с digest'ом, отсутствующим в списке актуальных digest'ов из IMAGES_DIGESTS
@@ -855,7 +855,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Пример вывода (очереди пусты):
@@ -964,7 +964,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и убедитесь в выполнении всех задач в очереди:
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
    Пример вывода (очереди пусты):
@@ -983,13 +983,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.ru\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
    d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
-   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
 
    Для переключения на CE издание:
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
    ```
 
 1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
