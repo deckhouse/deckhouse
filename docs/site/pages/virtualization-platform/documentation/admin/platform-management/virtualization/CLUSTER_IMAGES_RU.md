@@ -9,7 +9,7 @@ lang: ru
 Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
 
 {% alert level="warning" %}
-Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или неймспейсе, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 {% endalert %}
 
 При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
@@ -364,10 +364,13 @@ Golden image — это предварительно настроенный об
 
     В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
 
+    <!-- markdownlint-disable MD031 -->
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
     ubuntu-24-04   Ready   false   100%       23h
     ```
+    {: .nowrap-default }
+    <!-- markdownlint-enable MD031 -->
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
 
@@ -391,6 +394,7 @@ d8 k get cvi ubuntu-24-04 -w
 
 В результате будет выведена информация о прогрессе создания образа:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
 ubuntu-24-04   Provisioning   false              4s
@@ -401,6 +405,8 @@ ubuntu-24-04   Provisioning   false   100.0%     10s
 ubuntu-24-04   Provisioning   false   100.0%     16s
 ubuntu-24-04   Ready          false   100%       18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В описании ресурса `ClusterVirtualImage` можно получить дополнительную информацию о скачанном образе:
 
@@ -532,10 +538,13 @@ d8 k get cvi some-image
 
 В результате будет выведена информация о состоянии образа:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Как выполнить операцию в веб-интерфейсе:
 
@@ -581,6 +590,7 @@ d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
 
 На экран будут выведены сведения о состоянии хранилища и список неактуальных образов, которые могут быть удалены.
 
+<!-- markdownlint-disable MD031 -->
 ```console
 Found 2 cvi, 5 vi, 1 vd manifests in registry
 Found 1 cvi, 5 vi, 11 vd resources in cluster
@@ -592,3 +602,5 @@ ClusterVirtualImage                         debian-12
 VirtualDisk            default              debian-10-root
 VirtualImage           default              ubuntu-2204
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

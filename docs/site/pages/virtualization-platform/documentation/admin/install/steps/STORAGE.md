@@ -65,12 +65,15 @@ Configuring the storage involves combining the available block devices on the no
 
    {% offtopic title="Example output with additional sda disks..." %}
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                           NODE           CONSUMABLE   SIZE          PATH        AGE
    dev-93640bc74158c6e491a2f257b5e0177309588db0   master-0       false        468851544Ki   /dev/sda    8m28s
    dev-40bf7a561aee502f20b81cf1eff873a0455a95cb   dvp-worker-1   false        468851544Ki   /dev/sda    8m17s
    dev-b1c720a7cec32ae4361de78b71f08da1965b1d0c   dvp-worker-2   false        468851544Ki   /dev/sda    8m12s
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    {% endofftopic %}
 
@@ -111,12 +114,15 @@ Configuring the storage involves combining the available block devices on the no
 
    {% offtopic title="Example output..." %}
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                THINPOOLS  CONFIGURATION APPLIED   PHASE   NODE          SIZE       ALLOCATED SIZE VG   AGE
    vg-on-master-0      0/0        True                    Ready   master-0      360484Mi   30064Mi        vg-1 29s
    vg-on-dvp-worker-1  0/0        True                    Ready   dvp-worker-1  360484Mi   30064Mi        vg-1 58s
    vg-on-dvp-worker-2  0/0        True                    Ready   dvp-worker-2  360484Mi   30064Mi        vg-1 6s
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    {% endofftopic %}
 
@@ -148,10 +154,13 @@ Configuring the storage involves combining the available block devices on the no
 
    {% offtopic title="Example output..." %}
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME         PHASE       TYPE   AGE
    sds-pool     Completed   LVM    32s
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    {% endofftopic %}
 
@@ -186,10 +195,13 @@ Configuring the storage involves combining the available block devices on the no
 
    {% offtopic title="Example output..." %}
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME     PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    sds-r2   replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   6s
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    {% endofftopic %}
 

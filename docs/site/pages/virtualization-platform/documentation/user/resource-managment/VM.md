@@ -174,6 +174,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    Example output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
@@ -184,6 +185,8 @@ Example of creating a virtual machine with Ubuntu 22.04.
    NAME                                                 PHASE     NODE           IPADDRESS     AGE
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Connect to the virtual machine using the console (press `Ctrl+]` to exit the console):
 
@@ -296,10 +299,13 @@ d8 k get vm linux-vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     NODE           IPADDRESS     AGE
 linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 After creation, the virtual machine will automatically get an IP address from the range specified in the module settings (`virtualMachineCIDRs` block).
 
@@ -828,10 +834,13 @@ How will the agent help?
 
   Example output (see `AGENT` column):
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 How to install QEMU Guest Agent:
 
@@ -1095,10 +1104,13 @@ d8 k get vm linux-vm -o wide
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 In the `NEED RESTART` column we see the value `True`, which means that a reboot is required to apply the changes.
 
@@ -1478,10 +1490,13 @@ d8 k get vmbda attach-blank-disk
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              PHASE      VIRTUAL MACHINE NAME   AGE
 attach-blank-disk   Attached   linux-vm              3m7s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Connect to the virtual machine and make sure the disk is connected:
 
@@ -1491,6 +1506,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
@@ -1500,6 +1516,8 @@ sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
 sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- dynamically mounted disk blank-disk
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To detach the disk from the virtual machine, delete the previously created resource:
 
@@ -1891,10 +1909,13 @@ d8 k get vm
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                   PHASE     NODE           IPADDRESS     AGE
 linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 We can see that it is currently running on the `virtlab-pt-1` node.
 
@@ -1934,6 +1955,7 @@ d8 k get vm -w
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                  PHASE       NODE           IPADDRESS     AGE
 linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -1941,6 +1963,8 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 You can interrupt any live migration while it is in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
@@ -2141,10 +2165,13 @@ d8 k get vmipl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                              STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
 
@@ -2162,10 +2189,13 @@ d8 k get vmip
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME              ADDRESS       STATUS     VM          AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The algorithm for automatically assigning an ip address to a virtual machine is as follows:
 
@@ -2366,12 +2396,15 @@ d8 k get vmmacl
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    VIRTUALMACHINEMACADDRESS                      STATUS   AGE
 mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 `VirtualMachineMACAddress` (`vmmac`) is a project-level resource that is responsible for reserving leased MAC addresses and binding them to virtual machines.
 
@@ -2385,12 +2418,15 @@ d8 k get vmmac
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          ADDRESS             STATUS     VM      AGE
 vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
 vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 When a network is removed from the VM configuration:
 

@@ -120,10 +120,13 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
 
    Example output:
 
-    ```console
+   <!-- markdownlint-disable MD031 -->
+   ```console
     NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 ## Creating a golden image for Linux
 
@@ -361,10 +364,13 @@ Let's explore how to create a cluster image.
 
     In the output, you should see information about the `ClusterVirtualImage` resource:
 
+    <!-- markdownlint-disable MD031 -->
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
     ubuntu-24-04   Ready   false   100%       23h
     ```
+    {: .nowrap-default }
+    <!-- markdownlint-enable MD031 -->
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
 
@@ -391,6 +397,7 @@ d8 k get cvi ubuntu-24-04 -w
 
 In the output, you should see information about the image creation progress:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
 ubuntu-24-04   Provisioning   false              4s
@@ -401,6 +408,8 @@ ubuntu-24-04   Provisioning   false   100.0%     10s
 ubuntu-24-04   Provisioning   false   100.0%     16s
 ubuntu-24-04   Ready          false   100%       18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Additional information about the downloaded image can be retrieved by describing the `ClusterVirtualImage` resource:
 
@@ -531,10 +540,13 @@ d8 k get cvi some-image
 
 In the output, you should see information about the image's phase:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 How to perform the operation in the web interface:
 
@@ -580,6 +592,7 @@ d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
 
 It prints information about the storage status and a list of outdated images that can be deleted.
 
+<!-- markdownlint-disable MD031 -->
 ```console
 Found 2 cvi, 5 vi, 1 vd manifests in registry
 Found 1 cvi, 5 vi, 11 vd resources in cluster
@@ -591,3 +604,5 @@ ClusterVirtualImage                         debian-12
 VirtualDisk            default              debian-10-root
 VirtualImage           default              ubuntu-2204
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
