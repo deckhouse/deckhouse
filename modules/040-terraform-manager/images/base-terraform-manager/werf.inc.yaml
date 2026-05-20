@@ -109,7 +109,7 @@ shell:
 # use artifact for one place import for base and install images
 image: opentofu
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang-1.26" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
   add: /src
