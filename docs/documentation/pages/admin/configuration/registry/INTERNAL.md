@@ -94,8 +94,8 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    master-1   Ready    control-plane,master  ...
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
-
    {: .nowrap-default }
+
 1. Ensure the Deckhouse job queue is empty and contains no errors:
 
    ```shell

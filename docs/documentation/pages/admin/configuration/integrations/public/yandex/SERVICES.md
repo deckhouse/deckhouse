@@ -104,8 +104,8 @@ To set up the integration:
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
    ```
-
    {: .nowrap-default }
+
    Check the SecretStore status as well:
 
    ```shell

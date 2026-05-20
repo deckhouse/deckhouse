@@ -184,8 +184,8 @@ Example of creating a virtual machine with Ubuntu 22.04.
    NAME                                                 PHASE     NODE           IPADDRESS     AGE
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
-
    {: .nowrap-default }
+
 1. Connect to the virtual machine using the console (press `Ctrl+]` to exit the console):
 
    ```bash
@@ -835,6 +835,7 @@ How will the agent help?
   ```
 
   {: .nowrap-default }
+
 How to install QEMU Guest Agent:
 
 For Debian-based OS:
@@ -1101,8 +1102,8 @@ Example output:
 NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
-
 {: .nowrap-default }
+
 In the `NEED RESTART` column we see the value `True`, which means that a reboot is required to apply the changes.
 
 Let's reboot the virtual machine:
@@ -1503,8 +1504,8 @@ sda       8:0    0   10G  0 disk <--- statically mounted linux-vm-root disk
 sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- dynamically mounted disk blank-disk
 ```
-
 {: .nowrap-default }
+
 To detach the disk from the virtual machine, delete the previously created resource:
 
 ```bash
@@ -1945,8 +1946,8 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
-
 {: .nowrap-default }
+
 You can interrupt any live migration while it is in the `Pending` or `InProgress` phase by deleting the corresponding VirtualMachineOperations resource.
 
 How to perform a live VM migration in the web interface:
@@ -2377,8 +2378,8 @@ mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    4
 mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
-
 {: .nowrap-default }
+
 `VirtualMachineMACAddress` (`vmmac`) is a project-level resource that is responsible for reserving leased MAC addresses and binding them to virtual machines.
 
 MAC addresses are automatically assigned to each additional VM interface from the shared address pool and remain assigned until the VM is deleted.
@@ -2397,8 +2398,8 @@ vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
 vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
-
 {: .nowrap-default }
+
 When a network is removed from the VM configuration:
 
 - The MAC address of the interface is released.

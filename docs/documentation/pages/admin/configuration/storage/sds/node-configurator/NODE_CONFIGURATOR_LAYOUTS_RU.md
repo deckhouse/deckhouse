@@ -144,8 +144,8 @@ vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Re
 vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Ready   worker-0   25596Mi   0                main   4m17s
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                main   108s
 ```
-
 {: .nowrap-default }
+
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Полное зеркало»)
 
 Чтобы сконфигурировать [`sds-local-volume`](/modules/sds-local-volume/) в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с лейблом `main` будет доступен на каждом узле в модуле:
@@ -296,8 +296,8 @@ vg-deccf08a-44d4-45f2-aea9-6232c0eeef91   0/0         True                    Re
 vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Ready   worker-0   25596Mi   0                main-unsafe   4m17s
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                main-unsafe   108s
 ```
-
 {: .nowrap-default }
+
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Частичное зеркало»)
 
 Чтобы настроить [модуль `sds-local-volume`](/modules/sds-local-volume/) по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass)
@@ -473,8 +473,8 @@ vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Re
 vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Ready   worker-0   25596Mi   0                <vg-name>   4m17s
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                <vg-name>   108s
 ```
-
 {: .nowrap-default }
+
 где `<vg-name>` — имя, присвоенное VG на зеркале на предыдущем шаге.
 
 ##### Настройка модуля sds-local-volume (комбинированное хранилище, «Полное зеркало»)
@@ -642,8 +642,8 @@ vg-deccf08a-44d4-45f2-aea9-6232c0eeef91   0/0         True                    Re
 vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Ready   worker-0   25596Mi   0                <vg-name>-unsafe   4m17s
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                <vg-name>-unsafe   108s
 ```
-
 {: .nowrap-default }
+
 где `<vg-name>` — префикс имени, присвоенного VG, созданным на предыдущем шаге.
 
 ##### Настройка модуля sds-local-volume (комбинированное хранилище, «Частичное зеркало»)

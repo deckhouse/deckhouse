@@ -126,6 +126,7 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
     ```
 
     {: .nowrap-default }
+
 ## Creating a golden image for Linux
 
 A golden image is a pre-configured virtual machine image that can be used to quickly create new VMs with pre-installed software and settings.

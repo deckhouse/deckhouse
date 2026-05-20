@@ -123,8 +123,8 @@ For example:
    default     Deployed   virtual            This is a virtual project                              181d
    test        Deployed   empty                                                                     1m
    ```
-
    {: .nowrap-default }
+
 You can change the template of the created project to an existing one.
 
 {% alert level="warning" %}

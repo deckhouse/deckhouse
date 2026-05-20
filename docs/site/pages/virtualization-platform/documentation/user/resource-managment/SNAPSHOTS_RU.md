@@ -598,8 +598,8 @@ NAME                 NODE           READY   ASSIGNED   NAMESPACE   AGE
 usb-flash-drive     node-1         True    False                  10m
 logitech-webcam     node-2         True    True      my-project   15m
 ```
-
 {: .nowrap-default }
+
 #### Условия NodeUSBDevice
 
 Состояние ресурса [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) описывается набором условий, которые отражают готовность устройства и факт назначения неймспейса:
@@ -647,8 +647,8 @@ d8 k get usbdevice -n my-project
 NAME               NODE     MANUFACTURER   PRODUCT              SERIAL       ATTACHED   AGE
 logitech-webcam    node-2   Logitech       Webcam C920         ABC123456   False      10m
 ```
-
 {: .nowrap-default }
+
 #### Атрибуты USBDevice
 
 Ресурс [USBDevice](/modules/virtualization/cr.html#usbdevice) содержит подробную информацию о физическом USB-устройстве в статусных полях. Эти атрибуты доступны в `.status.attributes`:

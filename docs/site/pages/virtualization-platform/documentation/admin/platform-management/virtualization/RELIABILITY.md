@@ -71,8 +71,8 @@ The following is an example of migrating a selected virtual machine.
    linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
    linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
    ```
-
    {: .nowrap-default }
+
 1. If you need to abort the migration, delete the corresponding `vmop` resource while it is in the `Pending` or `InProgress` phase.
 
 How to start VM migration in the web interface:

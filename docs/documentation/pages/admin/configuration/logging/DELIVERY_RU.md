@@ -736,8 +736,8 @@ d8 k -n d8-log-shipper exec $pod -it -c vector -- bash
 | d8_cluster_sink_flant-integration-loki-storage |
 +------------------------------------------------+
 ```
-
 {: .nowrap-default }
+
 #### Мониторинг нагрузки на каналы
 
 Чтобы посмотреть объем трафика на каждом этапе обработки логов, используйте команду `vector top`.

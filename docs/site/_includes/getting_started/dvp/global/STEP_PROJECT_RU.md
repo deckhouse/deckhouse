@@ -142,8 +142,8 @@ d8 k get vm -o wide
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
-
 {: .nowrap-default }
+
 Подключитесь к виртуальной машине, введите логин (в примере — `test-user`) и пароль:
 
 ```shell

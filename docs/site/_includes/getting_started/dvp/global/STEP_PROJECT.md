@@ -143,8 +143,8 @@ Example of the output:
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
-
 {: .nowrap-default }
+
 Connect to the virtual machine, enter the login (in the example — `test-user`) and the password:
 
 ```shell

@@ -128,8 +128,8 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
    nni-node-0-bond0                                           Manual      node-0-b23d3a26-5fb4b-5s9fp   Bond     bond0       76        Up      7m48s
    ...
    ```
-
    {: .nowrap-default }
+
    Посмотрите информацию о статусе нужного интерфейса:
 
    ```shell
@@ -371,8 +371,8 @@ right-worker-b23d3a26-5fb4b-h2bkv-nic-fa163eebea7b   Deckhouse   right-worker-b2
 right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b23d3a26-5fb4b-h2bkv   VLAN     ens3.900    683       Up      14h
 ...
 ```
-
 {: .nowrap-default }
+
 ### IPAM для дополнительных сетей
 
 Механизм IPAM (IP Address Management) позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](#создание-общедоступной-кластерной-сети) и [сетям проекта](#создание-сети-проекта-пользовательской-сети).
@@ -551,8 +551,8 @@ worker-01-nic-0000:17:00.1      Deckhouse   worker-01     NIC    ens3f1   4     
 worker-02-nic-0000:17:00.0      Deckhouse   worker-02     NIC    ens3f0   3         Up      PF      NetDev    ixgbe       Intel    35d
 worker-02-nic-0000:17:00.1      Deckhouse   worker-02     NIC    ens3f1   4         Up      PF      NetDev    ixgbe       Intel    35d
 ```
-
 {: .nowrap-default }
+
 Пометьте интерфейсы, которые будут использоваться для UnderlayNetwork:
 
 ```shell

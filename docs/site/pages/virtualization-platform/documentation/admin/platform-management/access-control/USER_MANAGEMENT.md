@@ -95,6 +95,7 @@ create a configuration file:
     ```
 
     {: .nowrap-default }
+
 1. Go to the provided address and log in using the email and password you specified when creating a user.
 
 ## Configuration of external providers

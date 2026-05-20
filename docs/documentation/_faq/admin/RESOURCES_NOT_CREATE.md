@@ -27,8 +27,8 @@ If the required resources do not appear after creating an object in the system (
    2e34039aa7a3018e   D8NodeIsNotUpdating                             9          12h   47s             firing
    31baf9a70d657275   D8StrongholdClusterNotHealthy                   7          16h   55s             firing
    ```
-
    {: .nowrap-default }
+
    For more information about alerts, see the [The list of alerts](/products/kubernetes-platform/documentation/v1/reference/alerts.html) section.
 
 1. Check the Deckhouse task queue:

@@ -93,8 +93,8 @@ lang: ru
    master-1   Ready    control-plane,master  ...
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
-
    {: .nowrap-default }
+
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell

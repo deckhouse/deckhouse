@@ -90,8 +90,8 @@ Example of the output:
 NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
 vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
-
 {: .nowrap-default }
+
 Create an LVM volume pool:
 
 ```bash

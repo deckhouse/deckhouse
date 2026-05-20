@@ -148,8 +148,8 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
    ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ```
-
    {: .nowrap-default }
+
 Ceph cluster connection setup is complete. You can use the created StorageClass to create PersistentVolumeClaim in your applications.
 
 ## Additional information

@@ -195,8 +195,8 @@ Output example (the size of the etcd database on the node is specified in the `D
 | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
-
 {: .nowrap-default }
+
 ### How to defragment an etcd node in a single-master cluster
 
 {% alert level="warning" %}
@@ -240,8 +240,8 @@ To defragment etcd in a cluster with multiple master nodes:
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
-
    {: .nowrap-default }
+
 1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
 
    ```bash
@@ -265,8 +265,8 @@ To defragment etcd in a cluster with multiple master nodes:
    | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
-
    {: .nowrap-default }
+
 1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
 
    > Important: Defragment the leader last.

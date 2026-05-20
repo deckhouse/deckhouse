@@ -49,8 +49,8 @@ requirements:
    NAME                     PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
-
    {: .nowrap-default }
+
 1. **При обновлении DKP.**
    Проверяется, соответствует ли новая версия DKP зависимостям установленных и активных модулей. Если хотя бы один модуль несовместим с новой версией, обновление DKP не выполнится.
 
@@ -67,8 +67,8 @@ requirements:
    v1.73.3                  Skipped       74m
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
    ```
-
    {: .nowrap-default }
+
 1. **При первичном анализе модулей.**
    Проверяются текущая версия DKP и зависимости уже установленных модулей. Если обнаружено несоответствие, модуль будет отключён.
 
@@ -107,8 +107,8 @@ requirements:
    test-v0.8.2                   Pending      test-alpha      24m              requirements are not satisfied: current kubernetes version is not suitable: 1.29.6 is less than or equal to 1.29
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
    ```
-
    {: .nowrap-default }
+
 1. **При обновлении версии Kubernetes.**
    Проверяются зависимости активных модулей, и если хотя бы один модуль несовместим с новой версией Kubernetes, изменение версии не будет принято.
 
@@ -146,8 +146,8 @@ requirements:
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
-
    {: .nowrap-default }
+
 ## Зависимость от версии других модулей
 
 Зависимости от версии других модулей описывают условия включения, обновления и выключения модуля.

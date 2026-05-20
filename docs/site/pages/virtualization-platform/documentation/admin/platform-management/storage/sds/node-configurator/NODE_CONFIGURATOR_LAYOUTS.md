@@ -143,8 +143,8 @@ vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Re
 vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Ready   worker-0   25596Mi   0                main   4m17s
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                main   108s
 ```
-
 {: .nowrap-default }
+
 ##### Configuring the sds-local-volume module (identical disks, "Full mirror")
 
 To configure `sds-local-volume` in "Full Mirror" mode, create a [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resource and specify all discovered [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources in it. This ensures that the VG with the label `main` is available on each node in the module:
@@ -287,8 +287,8 @@ vg-deccf08a-44d4-45f2-aea9-6232c0eeef91   0/0         True                    Re
 vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Ready   worker-0   25596Mi   0                main-unsafe   4m17s
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                main-unsafe   108s
 ```
-
 {: .nowrap-default }
+
 ##### Configuring the sds-local-volume module (identical disks, "Partial mirror")
 
 To configure the `sds-local-volume` module according to the "Partial mirror" scenario, create a [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `main-safe` is used on all nodes in the `sds-local-volume` module:
@@ -454,8 +454,8 @@ vg-08d3730c-9201-428d-966c-45795cba55a6   0/0         True                    Re
 vg-b59ff9e1-6ef2-4761-b5d2-6172926d4f4d   0/0         True                    Ready   worker-0   25596Mi   0                <vg-name>   4m17s
 vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Ready   worker-1   25596Mi   0                <vg-name>   108s
 ```
-
 {: .nowrap-default }
+
 Where `<vg-name>` is the name assigned to the VG on the mirror in the previous step.
 
 ##### Configuring the sds-local-volume module (combined storage, "Full mirror")
@@ -613,8 +613,8 @@ vg-deccf08a-44d4-45f2-aea9-6232c0eeef91   0/0         True                    Re
 vg-e0f00cab-03b3-49cf-a2f6-595628a2593c   0/0         True                    Ready   worker-0   25596Mi   0                <vg-name>-unsafe   4m17s
 vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Ready   worker-1   25596Mi   0                <vg-name>-unsafe   108s
 ```
-
 {: .nowrap-default }
+
 Where `<vg-name>` is the prefix of the name assigned to the VGs created in the previous step.
 
 ##### Configuring the sds-local-volume module (combined storage, "Partial mirror")

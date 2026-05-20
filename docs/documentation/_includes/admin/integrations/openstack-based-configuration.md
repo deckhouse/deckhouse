@@ -565,8 +565,8 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
    | a6e853c1-78ad-4c18-93f9-2bba317a1d13 | ceph          | True      |
    +--------------------------------------+---------------+-----------+
    ```
-
    {: .nowrap-default }
+
 1. Create an image and assign the volume type as a property (this is necessary if {{ site.data.admin.cloud-types.types[page.cloud_type].name }} does not support local disks or they are unsuitable for workloads):
 
    ```shell
@@ -607,8 +607,8 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
    | visibility       | private                                                                                                                                                                                                                                                                                   |
    +------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    ```
-
    {: .nowrap-default }
+
 ### Verifying security group support by the cloud provider
 
 Run the `openstack security group list` command.
@@ -719,8 +719,8 @@ Example output:
 | disk  | 50    |
 +-------+-------+
 ```
-
 {: .nowrap-default }
+
 ### Overriding the cloud provider's default disk type
 
 If your cloud provider offers multiple volume types,

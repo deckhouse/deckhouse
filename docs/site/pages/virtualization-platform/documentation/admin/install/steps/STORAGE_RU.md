@@ -72,8 +72,8 @@ lang: ru
    dev-40bf7a561aee502f20b81cf1eff873a0455a95cb   dvp-worker-1   false        468851544Ki   /dev/sda    8m17s
    dev-b1c720a7cec32ae4361de78b71f08da1965b1d0c   dvp-worker-2   false        468851544Ki   /dev/sda    8m12s
    ```
-
    {: .nowrap-default }
+
    {% endofftopic %}
 
 1. Создайте VolumeGroup на каждом узле.
@@ -119,8 +119,8 @@ lang: ru
    vg-on-dvp-worker-1  0/0        True                    Ready   dvp-worker-1  360484Mi   30064Mi        vg-1 58s
    vg-on-dvp-worker-2  0/0        True                    Ready   dvp-worker-2  360484Mi   30064Mi        vg-1 6s
    ```
-
    {: .nowrap-default }
+
    {% endofftopic %}
 
 1. Создайте пул из групп томов LVM.
@@ -193,8 +193,8 @@ lang: ru
    NAME     PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    sds-r2   replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   6s
    ```
-
    {: .nowrap-default }
+
    {% endofftopic %}
 
 1. Установите StorageClass по умолчанию (укажите имя своего объекта StorageClass):

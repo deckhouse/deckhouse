@@ -96,8 +96,8 @@ To ensure stable module operation, avoid rebooting multiple nodes at the same ti
    |================================================================|
    +----------------------------------------------------------------+
    ```
-
    {: .nowrap-default }
+
 1. Reboot the node and wait for all DRBD resources to resynchronize, then run `uncordon`:
 
    ```shell

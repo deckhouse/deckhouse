@@ -44,8 +44,8 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
    my-module-v3.7.4   Superseded                   5d23h
    my-module-v3.7.5   Deployed                     5d23h
    ```
-
    {: .nowrap-default }
+
    Найдите в списке релиз модуля, развернутый в кластере (он должен иметь статус `Deployed`).
 
 1. Добавьте к развернутому релизу аннотацию `modules.deckhouse.io/reinstall=true`:
@@ -70,5 +70,4 @@ backend-567d6c6cdc-g5qgt            1/1     Running   0          2d2h
 frontend-7c8b567759-h8jdf           1/1     Running   0          2d2h
 observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
-
 {: .nowrap-default }

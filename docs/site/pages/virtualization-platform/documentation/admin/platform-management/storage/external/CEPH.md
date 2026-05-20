@@ -131,8 +131,8 @@ NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOL
 ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
-
 {: .nowrap-default }
+
 If the StorageClass objects appear, it means the `csi-ceph` module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.
 
 ## Listing RBD volumes mounted on each node

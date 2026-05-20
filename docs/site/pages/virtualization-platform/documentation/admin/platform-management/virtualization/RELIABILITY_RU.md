@@ -72,8 +72,8 @@ lang: ru
    linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
    linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
    ```
-
    {: .nowrap-default }
+
 1. Если необходимо прервать миграцию, удалите соответствующий ресурс `vmop`, пока он находится в фазе `Pending` или `InProgress`.
 
 Как запустить миграцию ВМ в веб-интерфейсе:

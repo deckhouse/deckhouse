@@ -174,8 +174,8 @@ d8 k get node %node-name% --show-labels
    lvg-on-worker-4   Operational   node-worker-4   307196Mi   0                test-vg   15d
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
-
    {: .nowrap-default }
+
 1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
 
 ## Оставшийся под sds-local-volume-csi-node после удаления лейблов

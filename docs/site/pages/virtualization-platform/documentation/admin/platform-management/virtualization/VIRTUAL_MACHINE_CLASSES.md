@@ -64,8 +64,8 @@ NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready               1d
 ```
-
 {: .nowrap-default }
+
 To assign the default class, run:
 
 ```shell
@@ -91,8 +91,8 @@ NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready   true        1d
 ```
-
 {: .nowrap-default }
+
 When creating a VM without specifying the `spec.virtualMachineClassName` field, it will be set to `host-passthrough-custom`.
 
 ## VirtualMachineClass settings

@@ -101,8 +101,8 @@ lang: ru
    default     Deployed   virtual            This is a virtual project                              181d
    test        Deployed   empty                                                                     1m
    ```
-
    {: .nowrap-default }
+
 Шаблон созданного проекта можно изменить на существующий.
 
 {% alert level="warning" %}
