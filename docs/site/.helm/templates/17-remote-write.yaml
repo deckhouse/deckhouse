@@ -10,8 +10,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: deckhouse-web-docs-telemetry
 spec:
-  customAuthToken: "{{ .Values.dop.authToken }}"
-  url: "{{ .Values.dop.url }}"
+  customAuthToken: "{{ $.Values.dop.authToken }}"
+  url: "{{ $.Values.dop.url }}"
   writeRelabelConfigs:
   - action: keep
     regex: (d8_telemetry_.*)
