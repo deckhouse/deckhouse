@@ -18,7 +18,7 @@ The registry contains modules and components available in the commercial DKP edi
 Key features:
 
 * implements functionality according to the edition;
-* for modules analogous to those in the CSE edition, security testing is performed as part of the secure software development lifecycle;
+* security testing is performed as part of the secure software development lifecycle;
 * delivered electronically.
 
 Images are provided with [technical support](https://deckhouse.io/tech-support/), including operational consultation.
