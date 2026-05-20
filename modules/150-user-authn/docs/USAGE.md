@@ -534,9 +534,9 @@ spec:
 
 ### Local user operations
 
-Use the `d8 iam user` commands for administrative actions on local users. They create a [`UserOperation`](cr.html#useroperation) resource, wait for the operation to complete, and print the result.
+Use the `d8 iam user` commands for administrative actions on local users. They create a [UserOperation](cr.html#useroperation) resource, wait for the operation to complete, and print the result.
 
-The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex `OfflineSessions` and `RefreshToken` objects. This terminates the user's active offline sessions and requires re-authentication.
+The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
 Interactive password reset example:
 
@@ -580,7 +580,7 @@ User unlock example:
 d8 iam user unlock admin
 ```
 
-By default, commands wait for the operation to complete. To only create a `UserOperation` and print its name, use the `--wait=false` flag.
+By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
 
 ### Adding a user to a group
 
