@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"strconv"
 
+	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
@@ -84,6 +85,22 @@ func main() {
 		fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Mirror cfg into the addon-operator / shell-operator package-level globals
+	// before registering debug sub-commands (queue, hook, global, module, raw).
+	// Those sub-commands bind --debug-unix-socket to ad_app.DebugUnixSocket /
+	// sh_app.DebugUnixSocket and dial them via DefaultClient(); without this
+	// bridge a CLI invocation like `deckhouse-controller queue list` defaults
+	// to /var/run/shell-operator/debug.socket while the running operator
+	// actually listens on cfg.Debug.UnixSocket (set by the DEBUG_UNIX_SOCKET
+	// env var in modules/002-deckhouse/templates/deployment.yaml). The `start`
+	// command flow also performs this bridge inside NewAddonOperator, but for
+	// non-start invocations NewAddonOperator never runs. This mirrors
+	// addon-operator's own cmd/addon-operator/main.go which does the same
+	// shapp.ApplyConfig(addon_operator.ShellOperatorConfig(cfg)) call before
+	// debug.DefineDebugCommands(rootCmd) below.
+	ad_app.ApplyConfig(cfg)
+	sh_app.ApplyConfig(addonoperator.ShellOperatorConfig(cfg))
 
 	logger := log.NewLogger()
 	log.SetDefault(logger)

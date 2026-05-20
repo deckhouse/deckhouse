@@ -18,7 +18,9 @@ import (
 	"testing"
 	"time"
 
+	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
+	sh_app "github.com/flant/shell-operator/pkg/app"
 )
 
 // TestLoad_RegressionMODULES_DIR pins the original bug fix: the deployment
@@ -334,5 +336,50 @@ func TestLoad_AddonOperatorEnvWinsOverShellOperator(t *testing.T) {
 					tc.aoEnv, tc.shellOpEnv, got, tc.aoVal)
 			}
 		})
+	}
+}
+
+// TestLoad_ThenApplyConfig_SyncsDebugSocketGlobals pins the contract that the
+// deckhouse-controller main() flow — envconfig.Load(cfg) followed by
+// ad_app.ApplyConfig(cfg) and sh_app.ApplyConfig(addonoperator.ShellOperatorConfig(cfg))
+// — propagates DEBUG_UNIX_SOCKET into the addon-operator and shell-operator
+// package-level globals consulted by debug sub-commands (queue, hook, global,
+// module, raw) when NewAddonOperator is not invoked (i.e. for any CLI flow
+// other than `start`). A regression here brings back
+// `debug socket '/var/run/shell-operator/debug.socket' is not exists`.
+func TestLoad_ThenApplyConfig_SyncsDebugSocketGlobals(t *testing.T) {
+	const want = "/tmp/shell-operator-debug.socket"
+
+	prevAd := ad_app.DebugUnixSocket
+	prevSh := sh_app.DebugUnixSocket
+	t.Cleanup(func() {
+		ad_app.DebugUnixSocket = prevAd
+		sh_app.DebugUnixSocket = prevSh
+	})
+
+	ad_app.DebugUnixSocket = "/stale/addon-operator.socket"
+	sh_app.DebugUnixSocket = "/stale/shell-operator.socket"
+
+	t.Setenv("DEBUG_UNIX_SOCKET", want)
+
+	cfg := ad_app.NewConfig()
+	if err := Load(cfg); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.Debug.UnixSocket != want {
+		t.Fatalf("cfg.Debug.UnixSocket: got %q, want %q", cfg.Debug.UnixSocket, want)
+	}
+
+	ad_app.ApplyConfig(cfg)
+	sh_app.ApplyConfig(addonoperator.ShellOperatorConfig(cfg))
+
+	if ad_app.DebugUnixSocket != want {
+		t.Errorf("ad_app.DebugUnixSocket: got %q, want %q (ad_app.ApplyConfig must mirror cfg into addon-operator global)",
+			ad_app.DebugUnixSocket, want)
+	}
+	if sh_app.DebugUnixSocket != want {
+		t.Errorf("sh_app.DebugUnixSocket: got %q, want %q (sh_app.ApplyConfig must mirror cfg into shell-operator global so queue/hook/raw CLI dial the right path)",
+			sh_app.DebugUnixSocket, want)
 	}
 }
