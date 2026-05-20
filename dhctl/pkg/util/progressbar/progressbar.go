@@ -68,13 +68,11 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 	}
 
 	onComplete := func() {
-		pb := GetDefaultPb()
-		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-		_, err := pb.MultiPrinter.Stop()
-		if err != nil {
-			log.WarnF("failed to stop multi printer: %v", err)
-		}
+		FinishDefaultProgressBar()
 	}
+
+	defer onComplete()
+
 	return onComplete, phasesChan, nil
 }
 
@@ -271,4 +269,16 @@ func replaceStatus(msg string) string {
 	}
 
 	return res
+}
+
+func FinishDefaultProgressBar() {
+	pb := GetDefaultPb()
+	if pb == nil {
+		return
+	}
+
+	pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+	if _, err := pb.MultiPrinter.Stop(); err != nil {
+		log.WarnF("failed to stop multi printer: %v", err)
+	}
 }

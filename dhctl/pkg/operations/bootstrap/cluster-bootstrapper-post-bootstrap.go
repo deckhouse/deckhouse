@@ -63,15 +63,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 			return err
 		}
 
-		onComplete := func() {
-			pb := progressbar.GetDefaultPb()
-			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-			_, err := pb.MultiPrinter.Stop()
-			if err != nil {
-				log.WarnF("failed to stop multi printer: %v", err)
-			}
-		}
-		defer onComplete()
+		defer progressbar.FinishDefaultProgressBar()
 	}
 
 	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).

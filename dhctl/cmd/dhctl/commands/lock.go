@@ -15,7 +15,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -26,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -72,14 +70,8 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-		if sshProviderInitializer != nil {
-			defer func(sshProviderInitializer *providerinitializer.SSHProviderInitializer, ctx context.Context) {
-				err := sshProviderInitializer.Cleanup(ctx)
-				if err != nil {
-					log.WarnF("failed to cleanup SSH provider: %v", err)
-				}
-			}(sshProviderInitializer, ctx)
-		}
+
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {

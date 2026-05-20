@@ -84,7 +84,12 @@ func Bootstrap(ctx context.Context) error {
 	}
 
 	tracesShutdown := initTraces(tracesExporter, otelResource)
-	metricsShutdown, _ := initMetrics(metricsExporter, otelResource)
+
+	metricsShutdown, err := initMetrics(metricsExporter, otelResource)
+	if err != nil {
+		return fmt.Errorf("failed to init metrics: %w", err)
+	}
+
 	logsShutdown := initLogs(logsExporter, otelResource)
 
 	tomb.RegisterOnShutdown("OTel: traces", func() {
