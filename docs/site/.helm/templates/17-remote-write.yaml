@@ -1,5 +1,7 @@
 ---
+{{/* TODO: remove this after tests
 {{- if eq $.Values.web.env "web-production" }}
+ */}}
 {{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
 apiVersion: deckhouse.io/v1
 kind: PrometheusRemoteWrite
@@ -16,4 +18,6 @@ spec:
     sourceLabels:
     - __name__
 {{- end }}
-{{- end }}
+{{/* TODO: remove this after tests
+{{- end }} 
+*/}}
