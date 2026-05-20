@@ -71,6 +71,7 @@ import:
   before: setup
 - image: {{ index $.Images "grep" }}
   add: /usr/bin/grep
+  before: setup
 shell:
   setup:
   - |
