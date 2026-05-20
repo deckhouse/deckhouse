@@ -111,6 +111,8 @@ memory: 50Mi
   {{- $csiControllerHostNetwork := $config.csiControllerHostNetwork | default "true" }}
   {{- $csiControllerHostPID := $config.csiControllerHostPID | default "false" }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
+  {{- $livenessProbeTimeoutSeconds := $config.livenessProbeTimeoutSeconds | default 5 }}
+  {{- $livenessProbeInitialDelaySeconds := $config.livenessProbeInitialDelaySeconds | default 5 }}
   {{- $initContainers := $config.initContainers }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
@@ -465,6 +467,7 @@ spec:
         image: {{ $livenessprobeImage | quote }}
         args:
         - "--csi-address=$(ADDRESS)"
+        - "--probe-timeout={{ $livenessProbeTimeoutSeconds }}s"
   {{- if eq $csiControllerHostNetwork "true" }}
         - "--http-endpoint=$(HOST_IP):{{ $livenessProbePort }}"
   {{- else }}
@@ -512,6 +515,9 @@ spec:
           httpGet:
             path: /healthz
             port: {{ $livenessProbePort }}
+          initialDelaySeconds: {{ $livenessProbeInitialDelaySeconds }}
+          timeoutSeconds: {{ $livenessProbeTimeoutSeconds }}
+
     {{- if $additionalControllerPorts }}
         ports:
         {{- $additionalControllerPorts | toYaml | nindent 8 }}

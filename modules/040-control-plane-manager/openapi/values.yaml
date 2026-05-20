@@ -7,8 +7,6 @@ properties:
     default: {}
     x-required-for-helm:
     - effectiveKubernetesVersion
-    - pkiChecksum
-    - rolloutEpoch
     - kubeSchedulerExtenders
     properties:
       audit:
@@ -67,11 +65,6 @@ properties:
           is on — independently of the immutable-roleRef switch — to close the transient nodes/proxy
           window during the main rebind.
         x-examples: [false]
-      pkiChecksum:
-        type: string
-        pattern: '^[0-9a-zA-Z]+$'
-      rolloutEpoch:
-        type: integer
       auditPolicy:
         type: string
       secretEncryptionKey:

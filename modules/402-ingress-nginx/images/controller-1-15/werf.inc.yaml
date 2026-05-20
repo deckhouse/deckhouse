@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-15" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.29.5" }}
+{{ $nginxVersion := "1.30.1" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}

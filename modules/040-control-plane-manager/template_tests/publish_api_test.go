@@ -106,8 +106,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
 		hec.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.32")
-		hec.ValuesSet("controlPlaneManager.internal.pkiChecksum", "4da1e937a9acd5475640d55cec899e77865e51ce2ab86d372c3ed1e19a532d19")
-		hec.ValuesSet("controlPlaneManager.internal.rolloutEpoch", 2.049844452e+09)
 		hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
 		hec.ValuesSet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA", "publishedapica")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")

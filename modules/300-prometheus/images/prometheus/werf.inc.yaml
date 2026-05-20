@@ -142,3 +142,5 @@ shell:
       /bin/sh \
       /bin/df \
       " -o /relocate
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

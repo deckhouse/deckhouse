@@ -71,10 +71,12 @@ def traverse_menu_to_list(
     yaml_file_path: str,
     lang: str,
     only_top_section: Optional[str] = None,
+    exclude_top_sections: Optional[List[str]] = None,
 ) -> List[Dict[str, Optional[str]]]:
     """Collects sidebar entries with localized title (lang, fallback ru/en, or plain string).
 
     When only_top_section is set, only entries under the matching top-level section are returned.
+    When exclude_top_sections is set, entries under matching top-level sections are skipped.
     The match is checked against both EN and RU title values of level-0 entries.
     """
     with open(yaml_file_path, "r", encoding="utf-8") as f:
@@ -95,16 +97,23 @@ def traverse_menu_to_list(
                 return title
         return ""
 
+    _exclude = set(exclude_top_sections) if exclude_top_sections else set()
+
     def walk(node: Any, level: int, in_section: Optional[bool] = None) -> None:
         if isinstance(node, list):
             for item in node:
                 walk(item, level, in_section)
         elif isinstance(node, dict):
-            if level == 0 and only_top_section is not None:
+            if node.get("draft"):
+                return
+            if level == 0:
                 raw = node.get("title", {})
                 en_title = (raw.get("en") or "").strip() if isinstance(raw, dict) else ""
                 ru_title = (raw.get("ru") or "").strip() if isinstance(raw, dict) else ""
-                in_section = (en_title == only_top_section or ru_title == only_top_section)
+                if only_top_section is not None:
+                    in_section = (en_title == only_top_section or ru_title == only_top_section)
+                elif _exclude and (en_title in _exclude or ru_title in _exclude):
+                    in_section = False
             if in_section is None or in_section:
                 title_loc = get_localized_title(node)
                 if title_loc:
@@ -150,33 +159,77 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
         h4 { font-size: 12pt; }
         h5, h6 { font-size: 11pt; }
         pre, code, kbd, samp, tt {
-            font-size: 10pt;
+            font-family: "DejaVu Sans Mono", "Courier New", Courier, monospace;
+        }
+        pre {
+            font-size: 9pt;
+        }
+        code {
+            font-size: inherit;
         }
         a, a:link, a:visited, a:hover, a:active {
             color: black;
             text-decoration: none;
         }
-        /* Таблицы: не шире области печати, перенос длинного текста в ячейках */
+        /* Таблицы: не шире области печати, перенос длинного текста в ячейках.
+           border-separate + border-spacing:0 вместо collapse — иначе wkhtmltopdf
+           дублирует верхнюю границу строки при переносе на следующую страницу. */
         table {
-            border-collapse: collapse;
-            border: 1px solid black;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: none;
             max-width: 100% !important;
             width: 100% !important;
             table-layout: fixed;
             box-sizing: border-box;
         }
+        /* Таблицы supported_versions — auto по умолчанию; для Linux-таблицы
+           постобработка ставит inline style table-layout:fixed + colgroup,
+           который перебьёт это правило (без !important). */
+        table.supported_versions {
+            table-layout: auto;
+        }
         table th,
         table td {
-            border: 1px solid black;
-            padding: 8px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            word-break: break-word;
+            border-top: 1px solid black;
+            border-left: 1px solid black;
+            border-bottom: none;
+            border-right: none;
+            padding: 6px 8px;
             vertical-align: top;
             box-sizing: border-box;
         }
+        /* Правые границы — только у последней ячейки в строке */
+        table th:last-child,
+        table td:last-child {
+            border-right: 1px solid black;
+        }
+        /* Нижние границы — только у последней строки */
+        table tr:last-child th,
+        table tr:last-child td {
+            border-bottom: 1px solid black;
+        }
+        /* Ячейки данных — перенос по словам, при необходимости по символам */
+        table td {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        /* Заголовки — перенос только по словам, не по буквам */
         table th {
             background-color: #f0f0f0;
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
+            white-space: normal;
+        }
+        /* Таблицы supported_versions — центрировать ячейки данных */
+        table.supported_versions td {
+            text-align: center;
+        }
+        table.supported_versions td.name,
+        table.supported_versions td.versions {
+            text-align: left;
         }
         /* Вписываем иллюстрации в ширину страницы PDF (wkhtmltopdf обрезал широкие img) */
         img,
@@ -198,19 +251,31 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
             margin-left: 0;
             margin-right: 0;
         }
-        /* Блоки кода (Rouge/Jekyll): длинные строки переносим, не уезжают за край PDF */
+        /* Блоки кода (Rouge/Jekyll): визуальное отделение от текста + перенос строк */
         pre,
         pre.highlight,
-        .highlight pre {
+        .highlight pre,
+        div.highlighter-rouge pre,
+        div.highlight pre {
+            background-color: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 4px;
+            padding: 10px 12px;
+            margin: 8px 0;
             white-space: pre-wrap !important;
             word-wrap: break-word;
             overflow-wrap: break-word;
             word-break: break-word;
             max-width: 100% !important;
             box-sizing: border-box;
+            page-break-inside: avoid;
+            line-height: 1.4;
         }
         pre code,
         .highlight code {
+            background-color: transparent;
+            border: none;
+            padding: 0;
             white-space: pre-wrap !important;
             word-break: break-word;
         }
@@ -220,14 +285,53 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
             max-width: 100%;
             box-sizing: border-box;
         }
-        /* Инлайн-код и длинные токены в абзаце */
-        code,
-        code.highlighter-rouge,
-        code[class*="language-"] {
+        /* Инлайн-код — фон и padding; pre code сбрасывается отдельно выше */
+        code {
+            background-color: #efefef;
+            padding: 1px 3px;
             overflow-wrap: break-word;
             word-break: break-word;
-            max-width: 100%;
-            box-sizing: border-box;
+        }
+        /* Alert-блоки */
+        div.alert__wrap {
+            border-left: 4px solid #004df2;
+            background-color: #f0f4ff;
+            padding: 8px 12px 8px 32px;
+            margin: 10px 0;
+            border-radius: 0 4px 4px 0;
+            page-break-inside: avoid;
+            position: relative;
+        }
+        div.alert__wrap.warning {
+            border-left-color: #e6a700;
+            background-color: #fef9e7;
+        }
+        div.alert__wrap.danger {
+            border-left-color: #ff4141;
+            background-color: #fff0f0;
+        }
+        span.alert-icon {
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            font-size: 14pt;
+            line-height: 1.2;
+        }
+        div.alert__wrap.danger span.alert-icon {
+            color: #ff4141;
+        }
+        div.alert__wrap.warning span.alert-icon {
+            color: #e6a700;
+        }
+        /* Blockquote (цитата) — аналогично info alert */
+        blockquote.pdf-blockquote {
+            border-left: 4px solid #004df2;
+            background-color: #f0f4ff;
+            padding: 8px 12px 8px 32px;
+            margin: 10px 0;
+            border-radius: 0 4px 4px 0;
+            page-break-inside: avoid;
+            position: relative;
         }
     </style>
 </head>
@@ -246,7 +350,7 @@ def extract_content_from_html(html_path: str) -> Optional[str]:
             soup = BeautifulSoup(f, "html.parser")
         content_div = soup.find("div", class_="docs")
         if content_div:
-            return content_div.prettify()
+            return str(content_div)
         return None
     except Exception as e:
         print(f"Error reading {html_path}: {e}")
@@ -670,6 +774,24 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
                 div.decompose()
                 break
 
+    _alert_symbols = {"danger": "✖", "warning": "⚠", "info": "ℹ"}
+    for div in soup.find_all("div", class_="alert__wrap"):
+        for svg in div.find_all("svg", class_="alert__icon"):
+            svg.decompose()
+        classes = div.get("class", [])
+        for level, symbol in _alert_symbols.items():
+            if level in classes:
+                icon_span = soup.new_tag("span", attrs={"class": "alert-icon"})
+                icon_span.string = symbol
+                div.insert(0, icon_span)
+                break
+
+    for bq in soup.find_all("blockquote"):
+        bq["class"] = bq.get("class", []) + ["pdf-blockquote"]
+        icon_span = soup.new_tag("span", attrs={"class": "alert-icon"})
+        icon_span.string = "ℹ"
+        bq.insert(0, icon_span)
+
     plus_icon_spans = soup.find_all("span", class_="plus-icon")
     for span in plus_icon_spans:
         span.decompose()
@@ -777,11 +899,180 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
 
         tabs_div.decompose()
 
+    # Исправить layout таблиц supported_versions:
+    # - убрать table-layout: fixed и colgroup с пиксельными ширинами
+    # - убрать width из ячеек
+    # - Linux-таблица: явные ширины колонок через colgroup
+    # - revision-comparison: первая колонка шире, остальные поровну
+    # - Kubernetes: удалить первую колонку с иконками (SVG не рендерятся в PDF)
+    for table in soup.find_all("table", class_="supported_versions"):
+        classes = table.get("class", [])
+        is_revision = "table__small" in classes
+        is_kubernetes = ("supported_versions__kubernetes" in classes
+                         and "supported_versions__kubernetes-container" not in classes)
+        is_linux = (not is_revision and not is_kubernetes
+                    and "supported_versions__kubernetes-container" not in classes)
+
+        # Убрать table-layout из инлайн-стиля (зададим ниже явно)
+        inline = table.get("style", "")
+        inline = re.sub(r"table-layout\s*:\s*\w+\s*;?\s*", "", inline).strip()
+        if inline:
+            table["style"] = inline
+        elif "style" in table.attrs:
+            del table["style"]
+
+        # Убрать colgroup с пиксельными ширинами
+        for colgroup in table.find_all("colgroup"):
+            colgroup.decompose()
+
+        # Убрать width и white-space из инлайн-стилей ячеек
+        for cell in table.find_all(["th", "td"]):
+            cell_style = cell.get("style", "")
+            changed = False
+            if "width:" in cell_style:
+                cell_style = re.sub(r"width\s*:\s*[^;]+;?\s*", "", cell_style)
+                changed = True
+            if "white-space:" in cell_style:
+                cell_style = re.sub(r"white-space\s*:\s*[^;]+;?\s*", "", cell_style)
+                changed = True
+            if changed:
+                cell_style = cell_style.strip().rstrip(";").strip()
+                if cell_style:
+                    cell["style"] = cell_style
+                elif "style" in cell.attrs:
+                    del cell["style"]
+
+        # Kubernetes-таблица: удалить первую колонку (иконки SVG — пустые в PDF)
+        if is_kubernetes:
+            for row in table.find_all("tr"):
+                cells = row.find_all(["th", "td"])
+                if cells:
+                    cells[0].decompose()
+
+        def _col_count(tbl: Any) -> int:
+            """Считает реальное число колонок с учётом colspan."""
+            max_cols = 0
+            for row in tbl.find_all("tr"):
+                cols = sum(int(c.get("colspan", 1)) for c in row.find_all(["th", "td"]))
+                if cols > max_cols:
+                    max_cols = cols
+            return max_cols
+
+        # Linux-таблица: дистрибутив(25%), версии(20%), CE(10%), CSE(15%), BE/SE/SE+/EE(15%), примечания(15%)
+        if is_linux:
+            col_count = _col_count(table)
+            if col_count == 6:
+                widths = ["25%", "20%", "10%", "15%", "15%", "15%"]
+            elif col_count == 4:
+                # EN-версия: дистрибутив(30%), версии(25%), редакции(25%), примечания(20%)
+                widths = ["30%", "25%", "25%", "20%"]
+            else:
+                w = 100 // col_count
+                widths = [f"{w}%"] * col_count
+            colgroup = soup.new_tag("colgroup")
+            for w in widths:
+                col = soup.new_tag("col")
+                col["style"] = f"width: {w};"
+                colgroup.append(col)
+            table.insert(0, colgroup)
+            table["style"] = "table-layout: fixed;"
+
+        # revision-comparison: первая колонка — модуль, остальные — редакции.
+        # Короткие (CE, BE, SE, SE+, EE) — минимальная фиксированная ширина,
+        # длинные (CSE Lite, CSE Pro) — больше.
+        if is_revision:
+            col_count = _col_count(table)
+            if col_count > 1:
+                header_row = table.find("tr")
+                headers = header_row.find_all(["th", "td"]) if header_row else []
+                other_count = col_count - 1
+                short_w = 7
+                long_threshold = 5
+                other_texts = [h.get_text(strip=True) for h in headers[1:]]
+                long_count = sum(1 for t in other_texts if len(t) > long_threshold)
+                short_count = other_count - long_count
+                short_total = short_count * short_w
+                first_pct = 30
+                long_w = (100 - first_pct - short_total) // max(long_count, 1) if long_count else 0
+                widths = [first_pct]
+                for t in other_texts:
+                    widths.append(long_w if len(t) > long_threshold else short_w)
+                adj = 100 - sum(widths)
+                widths[0] += adj
+                colgroup = soup.new_tag("colgroup")
+                for w in widths:
+                    col = soup.new_tag("col")
+                    col["style"] = f"width: {w}%;"
+                    colgroup.append(col)
+                table.insert(0, colgroup)
+                table["style"] = "table-layout: fixed;"
+
+    # Предотвратить разрыв строк при переносе таблицы на следующую страницу.
+    # border-separate используется вместо collapse, чтобы устранить дублирование границ.
+    # page-break-inside: avoid на tr дополнительно запрещает разрыв строки пополам.
+    for table in soup.find_all("table"):
+        tbody = table.find("tbody")
+        if not tbody:
+            continue
+        for tr in tbody.find_all("tr", recursive=False):
+            existing = tr.get("style", "")
+            tr["style"] = (existing + "; " if existing else "") + "page-break-inside: avoid;"
+
+    # Инлайн-код: убираем все inline-стили и class, которые могут конфликтовать.
+    # wkhtmltopdf добавляет лишний пробел для inline-элементов с background/border/font-family.
+    for code in soup.find_all("code"):
+        if code.find_parent("pre"):
+            continue
+        if "style" in code.attrs:
+            del code["style"]
+
+    # Заменить SVG-иконки статуса (supported/not_supported/intermediate) на текстовые символы.
+    # wkhtmltopdf не загружает <image href=""> внутри <svg>, поэтому иконки пустые.
+    # Порядок важен: not_supported проверяем раньше supported (иначе подстрока "supported" даст ложный матч).
+    _svg_icon_map = [
+        ("not_supported", "✗"),
+        ("intermediate", "~"),
+        ("supported", "✓"),
+    ]
+    for svg in list(soup.find_all("svg")):
+        img_tag = svg.find("image")
+        if img_tag is None:
+            continue
+        href = img_tag.get("href", "") or img_tag.get("xlink:href", "")
+        symbol = None
+        for key, sym in _svg_icon_map:
+            if key in href:
+                symbol = sym
+                break
+        if symbol is None:
+            continue
+        parent = svg.parent
+        tippy = ""
+        if parent and hasattr(parent, "get"):
+            tippy = parent.get("data-tippy-content", "") or ""
+        new_content = symbol
+        if tippy:
+            new_content += f'<br><small style="font-size:8pt; color:#444;">{tippy}</small>'
+        svg.replace_with(BeautifulSoup(new_content, "html.parser"))
+
+    # Раскрыть все нативные <details> — wkhtmltopdf не открывает их по умолчанию.
+    for details in soup.find_all("details"):
+        details["open"] = ""
+        details["style"] = "display:block;"
+        summary = details.find("summary")
+        if summary:
+            summary["style"] = "font-weight:bold; display:block; margin-bottom:0.3em;"
+
     if lang == "en":
         remove_sections_with_exact_heading(soup, "External components")
     else:
         remove_sections_with_exact_heading(soup, "Внешние компоненты")
 
+    # OSS info page: remove logo images, bold titles
+    for logo_div in soup.find_all("div", class_="oss__item-logo"):
+        logo_div.decompose()
+    for title_a in soup.find_all("a", class_="oss__item-title"):
+        title_a["style"] = "font-weight:bold; display:block; margin-top:1em;"
 
 
 class _ChunkWriter:
@@ -843,13 +1134,18 @@ def process_menu_and_extract_content(
     yaml_file_path: str,
     lang: str,
     section_filter: Optional[str] = None,
+    exclude_sections: Optional[List[str]] = None,
     include_embedded_modules: bool = True,
 ) -> List[str]:
     """Builds chunk HTML files under chunks_{lang}/: main.yml → content/{lang}, then embedded-modules.
 
     Returns list of generated chunk file paths (in order).
     """
-    menu_items = traverse_menu_to_list(yaml_file_path, lang, only_top_section=section_filter)
+    menu_items = traverse_menu_to_list(
+        yaml_file_path, lang,
+        only_top_section=section_filter,
+        exclude_top_sections=exclude_sections,
+    )
     chunk_dir = intermediate_html_dir(lang)
     base_content = content_base_path(lang)
 
@@ -1090,6 +1386,20 @@ def _wkhtml_ui_strings(
     return header_left, footer_right, toc_header
 
 
+def _generate_localized_toc_xsl(toc_header: str, tmpdir: str) -> str:
+    """Create a copy of toc_template.xsl with the localized TOC title baked in."""
+    with open("toc_template.xsl", "r", encoding="utf-8") as f:
+        xsl_content = f.read()
+    xsl_content = xsl_content.replace(
+        "select=\"'Contents'\"",
+        f"select=\"'{toc_header}'\"",
+    )
+    out_path = os.path.join(tmpdir, "toc_template.xsl")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(xsl_content)
+    return out_path
+
+
 def _env_truthy(name: str) -> bool:
     v = os.environ.get(name, "").strip().lower()
     return v in ("1", "true", "yes", "on")
@@ -1114,6 +1424,8 @@ if __name__ == "__main__":
     base_pdf = os.environ.get("PDF_OUTPUT_PATH", "deckhouse-admin-guide.pdf")
     doc_version = os.environ.get("DOC_VERSION", "").strip()
     section_filter = os.environ.get("SECTION_FILTER", "").strip() or None
+    _exc_raw = os.environ.get("EXCLUDE_SECTIONS", "").strip()
+    exclude_sections = [s.strip() for s in _exc_raw.split(",") if s.strip()] or None
     guide_title_en = os.environ.get("GUIDE_TITLE_EN", "").strip() or "Administrator's guide"
     guide_title_ru = os.environ.get("GUIDE_TITLE_RU", "").strip() or "Справочник администратора"
     langs_to_build = selected_pdf_langs()
@@ -1126,6 +1438,7 @@ if __name__ == "__main__":
             SIDEBAR_YAML,
             lang,
             section_filter=section_filter,
+            exclude_sections=exclude_sections,
             include_embedded_modules=(section_filter is None),
         )
         print(f"Result: {len(chunk_paths)} chunk(s) in {intermediate_html_dir(lang)}/")
@@ -1142,6 +1455,7 @@ if __name__ == "__main__":
             else f"Deckhouse Kubernetes Platform {guide_title_ru}"
         )
         cover_path = generate_cover_html(lang, cover_title, doc_version, _cover_tmpdir)
+        toc_xsl_path = _generate_localized_toc_xsl(toc_header, _cover_tmpdir)
 
         # Build page-object list: each chunk is a separate wkhtmltopdf page object.
         # This keeps individual HTML files small so Qt WebKit does not scale fonts down.
@@ -1177,7 +1491,7 @@ if __name__ == "__main__":
             "--toc-header-text", toc_header,
             "--toc-text-size-shrink", "1",
             "--toc-level-indentation", "20",
-            "--xsl-style-sheet", "toc_template.xsl",
+            "--xsl-style-sheet", toc_xsl_path,
             "--user-style-sheet", "toc_style.css",
             *page_args,
             pdf_out,

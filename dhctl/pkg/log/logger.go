@@ -85,34 +85,53 @@ type LoggerOptions struct {
 	DebugStream io.Writer
 }
 
-func InitLogger(loggerType string) error {
-	return initLoggerWithOptions(loggerType, LoggerOptions{
-		IsDebug: debugEnabled,
-	})
+func InitLogger(loggerType string, interactive bool) error {
+	return initLoggerWithOptions(
+		loggerType,
+		LoggerOptions{
+			IsDebug: debugEnabled,
+		},
+		interactive,
+	)
 }
 
 func SetDebugEnabled(enabled bool) {
 	debugEnabled = enabled
 }
 
-func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
-	if err := initLoggerWithOptions(loggerType, opts); err != nil {
+func InitLoggerWithOptions(loggerType string, opts LoggerOptions, interactive bool) {
+	if err := initLoggerWithOptions(loggerType, opts, interactive); err != nil {
 		panic(err)
 	}
 }
 
 func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
-	ext := defaultLogger.(*ExternalLogger)
+	var logger external.Logger
 
-	tee, err := external.WrapWithTeeLogger(ext.logger, writer, bufSize)
+	ext, ok := defaultLogger.(*ExternalLogger)
+	if ok {
+		logger = ext.logger
+	} else {
+		i := defaultLogger.(*InteractiveLogger)
+		logger = i.logger
+	}
+
+	tee, err := external.WrapWithTeeLogger(logger, writer, bufSize)
 	if err != nil {
 		return err
 	}
 
-	ext = &ExternalLogger{logger: tee}
-	initExternalKlog(ext)
+	if ok {
+		ext = &ExternalLogger{logger: tee}
+		initExternalKlog(ext)
 
-	defaultLogger = ext
+		defaultLogger = ext
+	} else {
+		i := newInteractiveLogger(tee, true)
+		initInteractiveKlog(i)
+
+		defaultLogger = i
+	}
 
 	return nil
 }
@@ -165,8 +184,15 @@ func getExternalLoggerWrapper(loggerType string, opts LoggerOptions) (*ExternalL
 	return l, nil
 }
 
-func initLoggerWithOptions(loggerType string, opts LoggerOptions) error {
-	l, err := getExternalLoggerWrapper(loggerType, opts)
+func initLoggerWithOptions(loggerType string, opts LoggerOptions, interactive bool) error {
+	var l Logger
+	var err error
+	if interactive {
+		l, err = getInteractiveLoggerWrapper(loggerType, opts, interactive)
+	} else {
+		l, err = getExternalLoggerWrapper(loggerType, opts)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -362,17 +388,36 @@ func GetDefaultLogger() Logger {
 }
 
 func ExternalLoggerProvider(logger Logger) external.LoggerProvider {
-	ext := logger.(*ExternalLogger)
-	return external.SimpleLoggerProvider(ext.logger)
+	var l external.Logger
+	ext, ok := logger.(*ExternalLogger)
+	if ok {
+		l = ext.logger
+	} else {
+		i := logger.(*InteractiveLogger)
+		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan}
+		return external.SimpleLoggerProvider(wrapper)
+	}
+
+	return external.SimpleLoggerProvider(l)
 }
 
 func GetSilentLogger() Logger {
-	ext := defaultLogger.(*ExternalLogger)
+	var l external.Logger
+	ext, ok := defaultLogger.(*ExternalLogger)
+	if ok {
+		l = ext.logger
+	} else {
+		i := defaultLogger.(*InteractiveLogger)
+		l = i.logger
+	}
 
-	switch ext.logger.(type) {
+	switch l.(type) {
 	default:
 		return emptyLogger
 	case *external.TeeLogger:
-		return ext.NewSilentLogger()
+		if ok {
+			return ext.NewSilentLogger()
+		}
+		return defaultLogger.(*InteractiveLogger).NewSilentLogger()
 	}
 }
