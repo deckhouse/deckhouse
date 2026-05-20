@@ -57,7 +57,6 @@ spec:
     metadata:
       labels:
         app: node-controller
-        security.deckhouse.io/security-policy-exception: node-controller
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -80,7 +79,7 @@ spec:
         - /node-controller
         args:
         - --metrics-bind-address=127.0.0.1:4208
-        - --health-probe-bind-address=127.0.0.1:4215
+        - --health-probe-bind-address=127.0.0.1:4209
         - --webhook-port=4207
         - --max-concurrent-reconciles=10
         - -v=4
@@ -88,14 +87,14 @@ spec:
           httpGet:
             path: /healthz
             host: 127.0.0.1
-            port: 4215
+            port: 4209
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
             host: 127.0.0.1
-            port: 4215
+            port: 4209
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
