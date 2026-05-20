@@ -1380,7 +1380,7 @@ entries:
               url: /architecture/network/metallb.html
             - title:
                 en: DNS modules
-                ru: Модули работы с DNS
+                ru: Модули управления DNS
               url: /architecture/network/dns-modules.html
             - title:
                 en: Cluster-level Istio architecture

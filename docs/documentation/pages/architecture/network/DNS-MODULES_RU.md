@@ -1,5 +1,5 @@
 ---
-title: Модули работы с DNS
+title: Модули управления DNS
 permalink: ru/architecture/network/dns-modules.html
 lang: ru
 search: dns, coredns, доменные имена
@@ -164,7 +164,7 @@ relatedLinks:
 
   * **iptables-wrapper** — init-контейнер, выполняющий подготовку необходимых для работы с iptables исполняемых файлов;
   * **coredns** — основной контейнер;
-  * **iptables-loop** — сайдкар-контейнер, обеспечивающий синхронизацию iptables-правил перенаправления DNS-запросов с готовностью node-local-dns;
+  * **iptables-loop** — сайдкар-контейнер, обновляющий iptables-правила перенаправления DNS-запросов с учётом готовности node-local-dns;
   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам контейнера coredns. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 #### Взаимодействия модуля

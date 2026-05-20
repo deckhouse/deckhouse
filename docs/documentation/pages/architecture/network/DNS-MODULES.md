@@ -164,7 +164,7 @@ The `node-local-dns` module consists of the following components:
 
   * **iptables-wrapper**: Init container that prepares executables required for working with iptables.
   * **coredns**: Main container.
-  * **iptables-loop**: Sidecar container that synchronizes iptables rules for DNS request forwarding with node-local-dns readiness.
+  * **iptables-loop**: Sidecar container that updates iptables rules for DNS request forwarding based on node-local-dns readiness.
   * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to coredns container metrics. It is an [Open Source project](https://github.com/brancz/kube-rbac-proxy).
 
 #### Module interactions
