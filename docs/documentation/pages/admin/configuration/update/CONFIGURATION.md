@@ -26,10 +26,10 @@ d8 k get mc deckhouse -o yaml | grep releaseChannel
 
 Example output:
 
-    ```console
-    releaseChannel: Stable
-    ```
-    {: .nowrap-default }
+```console
+releaseChannel: Stable
+```
+{: .nowrap-default }
 
 ## Switching release channels
 

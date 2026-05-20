@@ -25,7 +25,7 @@ lang: ru
    d8 k patch mc virtualization \
      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
    ```
-   
+
    Пример вывода:
 
    ```console
@@ -38,7 +38,7 @@ lang: ru
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
    ```
-  
+
    Пример вывода:
 
    ```console
@@ -51,7 +51,7 @@ lang: ru
    ```shell
    d8 k get pvc dvcr -n d8-virtualization
    ```
-  
+
    Пример вывода:
 
    ```console

@@ -25,7 +25,7 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    d8 k patch mc virtualization \
      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
    ```
-   
+
    Example output:
 
    ```console
@@ -38,7 +38,7 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
    ```
-   
+
    Example output:
 
    ```console
@@ -51,7 +51,7 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    ```shell
    d8 k get pvc dvcr -n d8-virtualization
    ```
-  
+
    Example output:
 
    ```console
