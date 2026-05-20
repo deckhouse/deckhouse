@@ -239,16 +239,8 @@ func (d *DiskService) ResizeDisk(ctx context.Context, diskName string, newSize s
 }
 
 func (d *DiskService) MigrateDiskStorageClass(ctx context.Context, diskName string, newStorageClass string) error {
-	var vmd v1alpha2.VirtualDisk
-
-	err := d.client.Get(ctx, types.NamespacedName{
-		Namespace: d.namespace,
-		Name:      diskName,
-	}, &vmd)
+	vmd, err := d.GetDiskByName(ctx, diskName)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			return cloudprovider.DiskNotFound
-		}
 		return err
 	}
 
@@ -260,7 +252,7 @@ func (d *DiskService) MigrateDiskStorageClass(ctx context.Context, diskName stri
 	patch := client.MergeFrom(vmd.DeepCopy())
 	vmd.Spec.PersistentVolumeClaim.StorageClass = &newStorageClass
 
-	return d.client.Patch(ctx, &vmd, patch)
+	return d.client.Patch(ctx, vmd, patch)
 }
 
 func (d *DiskService) GetStorageClassList(ctx context.Context) (*storagev1.StorageClassList, error) {

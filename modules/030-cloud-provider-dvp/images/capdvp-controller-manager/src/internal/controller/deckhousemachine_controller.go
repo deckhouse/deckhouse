@@ -183,6 +183,7 @@ func patchDeckhouseMachine(
 		patch.WithOwnedConditions{Conditions: []string{
 			string(clusterv1b2.ReadyCondition),
 			string(infrastructurev1a1.VMReadyCondition),
+			string(infrastructurev1a1.DiskStorageClassMigrationCondition),
 		}},
 	)
 	return patchHelper.Patch(ctx, dvpMachine, options...)
@@ -257,6 +258,9 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		}
 		if result.RequeueAfter > 0 {
 			return result, nil
+		}
+		if dvpMachine.Status.FailureReason != nil {
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -950,6 +954,150 @@ func (r *DeckhouseMachineReconciler) validateVMResources(
 	return nil
 }
 
+const (
+	diskMigrationTimeout         = 2 * time.Hour
+	diskMigrationRequeueInterval = 30 * time.Second
+	diskMigrationStartedPrefix   = "dvp.deckhouse.io/disk-migration-started-"
+)
+
+type diskSCMigrationStep int
+
+const (
+	diskSCStepComplete diskSCMigrationStep = iota
+	diskSCStepWait
+	diskSCStepApplyPatch
+)
+
+type diskSCMigrationEvalInput struct {
+	Phase               v1alpha2.DiskPhase
+	SpecSC              string
+	StatusSC            string
+	DesiredSC           string
+	MigrationStartedAt  time.Time
+	HasMigrationStarted bool
+	Now                 time.Time
+	Timeout             time.Duration
+}
+
+func virtualDiskSpecStorageClass(disk *v1alpha2.VirtualDisk) string {
+	if disk.Spec.PersistentVolumeClaim.StorageClass == nil {
+		return ""
+	}
+	return *disk.Spec.PersistentVolumeClaim.StorageClass
+}
+
+func diskMigrationStartedAnnotationKey(diskName string) string {
+	return diskMigrationStartedPrefix + diskName
+}
+
+func parseDiskMigrationStartedAt(annotations map[string]string, diskName string) (time.Time, bool) {
+	raw, ok := annotations[diskMigrationStartedAnnotationKey(diskName)]
+	if !ok || raw == "" {
+		return time.Time{}, false
+	}
+	startedAt, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return startedAt, true
+}
+
+func markDiskMigrationStarted(dvpMachine *infrastructurev1a1.DeckhouseMachine, diskName string, now time.Time) {
+	if dvpMachine.Annotations == nil {
+		dvpMachine.Annotations = make(map[string]string)
+	}
+	dvpMachine.Annotations[diskMigrationStartedAnnotationKey(diskName)] = now.UTC().Format(time.RFC3339)
+}
+
+func clearDiskMigrationStarted(dvpMachine *infrastructurev1a1.DeckhouseMachine, diskName string) {
+	if dvpMachine.Annotations == nil {
+		return
+	}
+	delete(dvpMachine.Annotations, diskMigrationStartedAnnotationKey(diskName))
+}
+
+// evaluateDiskStorageClassMigration decides the next reconciliation step for one disk.
+// Terminal failures (Failed/Lost phase, migration timeout) are returned as non-nil errors.
+func evaluateDiskStorageClassMigration(in diskSCMigrationEvalInput) (diskSCMigrationStep, error) {
+	switch in.Phase {
+	case v1alpha2.DiskFailed, v1alpha2.DiskLost:
+		return diskSCStepComplete, fmt.Errorf("disk is in %s phase, manual intervention required", in.Phase)
+	case v1alpha2.DiskReady:
+		// continue below
+	default:
+		// Pending, Provisioning, Resizing, or any other transient phase — wait.
+		return diskSCStepWait, nil
+	}
+
+	if in.SpecSC == in.DesiredSC && in.StatusSC == in.DesiredSC {
+		return diskSCStepComplete, nil
+	}
+
+	// Legacy disks may have matching spec before status.StorageClassName is populated.
+	if in.SpecSC == in.DesiredSC && in.StatusSC == "" && !in.HasMigrationStarted {
+		return diskSCStepComplete, nil
+	}
+
+	if in.SpecSC == in.DesiredSC && in.StatusSC != in.DesiredSC {
+		if in.HasMigrationStarted && in.Now.Sub(in.MigrationStartedAt) > in.Timeout {
+			return diskSCStepComplete, fmt.Errorf(
+				"storage class migration timed out after %s (desired %q, status %q)",
+				in.Timeout, in.DesiredSC, in.StatusSC,
+			)
+		}
+		// spec already patched; status.StorageClassName catches up when PVC migration finishes.
+		return diskSCStepWait, nil
+	}
+
+	return diskSCStepApplyPatch, nil
+}
+
+func (r *DeckhouseMachineReconciler) setDiskMigrationInProgress(
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	diskName, desiredStorageClass string,
+) {
+	conditions.Set(dvpMachine, metav1.Condition{
+		Type:               string(infrastructurev1a1.DiskStorageClassMigrationCondition),
+		Status:             metav1.ConditionFalse,
+		Reason:             infrastructurev1a1.DiskMigrationInProgressReason,
+		Message:            fmt.Sprintf("Migrating disk %s to StorageClass %s", diskName, desiredStorageClass),
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+func (r *DeckhouseMachineReconciler) setDiskMigrationCompleted(dvpMachine *infrastructurev1a1.DeckhouseMachine) {
+	conditions.Set(dvpMachine, metav1.Condition{
+		Type:               string(infrastructurev1a1.DiskStorageClassMigrationCondition),
+		Status:             metav1.ConditionTrue,
+		Reason:             infrastructurev1a1.DiskMigrationCompletedReason,
+		Message:            "All disks use the desired StorageClass",
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+func (r *DeckhouseMachineReconciler) setDiskMigrationTerminalFailure(
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	err error,
+) {
+	msg := err.Error()
+	conditions.Set(dvpMachine, metav1.Condition{
+		Type:               string(infrastructurev1a1.DiskStorageClassMigrationCondition),
+		Status:             metav1.ConditionFalse,
+		Reason:             infrastructurev1a1.DiskMigrationFailedReason,
+		Message:            msg,
+		LastTransitionTime: metav1.Now(),
+	})
+	conditions.Set(dvpMachine, metav1.Condition{
+		Type:               string(infrastructurev1a1.VMReadyCondition),
+		Status:             metav1.ConditionFalse,
+		Reason:             infrastructurev1a1.DiskMigrationFailedReason,
+		Message:            msg,
+		LastTransitionTime: metav1.Now(),
+	})
+	dvpMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
+	dvpMachine.Status.FailureMessage = ptr.To(msg)
+}
+
 func (r *DeckhouseMachineReconciler) reconcileDisksStorageClass(
 	ctx context.Context,
 	logger logr.Logger,
@@ -967,24 +1115,29 @@ func (r *DeckhouseMachineReconciler) reconcileDisksStorageClass(
 	}
 
 	for _, d := range disks {
-		migrating, err := r.migrateDiskStorageClassIfNeeded(ctx, logger, d.name, d.sc)
+		migrating, err := r.migrateDiskStorageClassIfNeeded(ctx, logger, dvpMachine, d.name, d.sc)
 		if err != nil {
-			return ctrl.Result{}, err
+			r.setDiskMigrationTerminalFailure(dvpMachine, fmt.Errorf("disk %s: %w", d.name, err))
+			return ctrl.Result{}, nil
 		}
 		if migrating {
-			logger.Info("Disk migration in progress, requeueing", "disk", d.name)
-			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+			r.setDiskMigrationInProgress(dvpMachine, d.name, d.sc)
+			logger.Info("Disk storage class migration in progress, requeueing", "disk", d.name)
+			return ctrl.Result{RequeueAfter: diskMigrationRequeueInterval}, nil
 		}
+		clearDiskMigrationStarted(dvpMachine, d.name)
 	}
 
+	r.setDiskMigrationCompleted(dvpMachine)
 	return ctrl.Result{}, nil
 }
 
 // migrateDiskStorageClassIfNeeded returns (isMigrating, error).
-// isMigrating=true means the caller should requeue: either migration was just triggered or disk is not yet Ready.
+// isMigrating=true means the caller should requeue: migration is in progress or was just triggered.
 func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 	ctx context.Context,
 	logger logr.Logger,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	diskName, desiredStorageClass string,
 ) (bool, error) {
 	disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
@@ -995,27 +1148,63 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 		return false, err
 	}
 
-	if disk.Status.Phase != v1alpha2.DiskReady {
-		logger.Info("Disk not Ready, skipping SC migration", "disk", diskName, "phase", disk.Status.Phase)
-		return true, nil
+	startedAt, hasStarted := parseDiskMigrationStartedAt(dvpMachine.Annotations, diskName)
+	step, evalErr := evaluateDiskStorageClassMigration(diskSCMigrationEvalInput{
+		Phase:               disk.Status.Phase,
+		SpecSC:              virtualDiskSpecStorageClass(disk),
+		StatusSC:            disk.Status.StorageClassName,
+		DesiredSC:           desiredStorageClass,
+		MigrationStartedAt:  startedAt,
+		HasMigrationStarted: hasStarted,
+		Now:                 time.Now(),
+		Timeout:             diskMigrationTimeout,
+	})
+	if evalErr != nil {
+		return false, evalErr
 	}
 
-	if disk.Spec.PersistentVolumeClaim.StorageClass != nil &&
-		*disk.Spec.PersistentVolumeClaim.StorageClass == desiredStorageClass {
+	switch step {
+	case diskSCStepComplete:
 		return false, nil
+	case diskSCStepWait:
+		if hasStarted {
+			logger.Info("Waiting for disk storage class migration to complete",
+				"disk", diskName,
+				"statusSC", disk.Status.StorageClassName,
+				"desiredSC", desiredStorageClass,
+				"phase", disk.Status.Phase,
+			)
+		} else {
+			logger.Info("Disk not ready for storage class migration, waiting",
+				"disk", diskName,
+				"phase", disk.Status.Phase,
+			)
+		}
+		return true, nil
+	case diskSCStepApplyPatch:
+		if _, err := r.DVP.DiskService.GetStorageClass(ctx, desiredStorageClass); err != nil {
+			if errors.Is(err, cloudprovider.DiskNotFound) {
+				return false, fmt.Errorf("storage class %q not found", desiredStorageClass)
+			}
+			return false, err
+		}
+
+		logger.Info("Migrating disk storage class",
+			"disk", diskName,
+			"currentSpecSC", virtualDiskSpecStorageClass(disk),
+			"currentStatusSC", disk.Status.StorageClassName,
+			"desiredSC", desiredStorageClass,
+		)
+
+		if err := r.DVP.DiskService.MigrateDiskStorageClass(ctx, diskName, desiredStorageClass); err != nil {
+			return false, err
+		}
+
+		markDiskMigrationStarted(dvpMachine, diskName, time.Now())
+		return true, nil
+	default:
+		return false, fmt.Errorf("unexpected disk storage class migration step %d", step)
 	}
-
-	logger.Info("Migrating disk storage class",
-		"disk", diskName,
-		"current", disk.Spec.PersistentVolumeClaim.StorageClass,
-		"desired", desiredStorageClass,
-	)
-
-	if err := r.DVP.DiskService.MigrateDiskStorageClass(ctx, diskName, desiredStorageClass); err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
