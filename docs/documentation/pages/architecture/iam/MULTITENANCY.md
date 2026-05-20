@@ -8,6 +8,8 @@ description: How multitenancy works in Deckhouse Kubernetes Platform.
 
 The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated projects within the Deckhouse Kubernetes Platform (DKP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
 
+For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/multitenancy-manager/).
+
 ## Internal logic
 
 ### Project creation
