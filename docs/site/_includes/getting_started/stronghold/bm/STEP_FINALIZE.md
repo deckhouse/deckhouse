@@ -25,15 +25,12 @@ Select one of the two options below to continue installing the cluster:
   <li>
 <p>Run the following command on the <strong>master node</strong>, to remove the taint from the master node and permit the other Deckhouse components to run on it:</p>
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
-{% endsnippetcut %}
   </li>
   <li>
 <p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -45,16 +42,13 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
-{% endsnippetcut %}
   </li>
   <li>
 <p>Make the created StorageClass as the default one in the cluster:</p>
-{% snippetcut %}
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
-{% endsnippetcut %}
   </li>
 </ul>
 </div>
@@ -68,7 +62,6 @@ sudo -i d8 k patch mc global --type merge \
   </li>
   <li>
   Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -80,20 +73,16 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
-{% endsnippetcut %}
   </li>
   <li>
   <p>Make the created StorageClass as the default one in the cluster:</p>
-{% snippetcut %}
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
-{% endsnippetcut %}
   </li>
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
 ```bash
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
@@ -109,19 +98,15 @@ spec:
         role: worker
 EOF
 ```
-{% endsnippetcut %}
   </li>
   <li>
     <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
 ```bash
 ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
-{% endsnippetcut %}
   </li>
   <li>
     <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
 ```bash
 sudo -i d8 k -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
@@ -133,19 +118,15 @@ spec:
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 EOF
 ```
-{% endsnippetcut %}
   </li>
   <li>
     <p>Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
 ```bash
 cat /dev/shm/caps-id.pub
 ```
-{% endsnippetcut %}
   </li>
   <li>
     <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
-{% snippetcut %}
 ```bash
 # Specify the public part of the user SSH key.
 export KEY='<SSH-PUBLIC-KEY>'
@@ -158,11 +139,9 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
-{% endsnippetcut %}
   </li>
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
-{% snippetcut %}
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
 export NODE=<NODE-IP-ADDRESS>
@@ -180,15 +159,12 @@ spec:
     name: caps
 EOF
 ```
-{% endsnippetcut %}
   </li>
   <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
 <p>On the <strong>master node</strong>, run the following command to get nodes list:</p>
-{% snippetcut %}
 ```shell
 sudo -i d8 k get no
 ```
-{% endsnippetcut %}
 
 {% offtopic title="Example of the output..." %}
 ```
@@ -208,11 +184,9 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 <li><p>Make sure the Kruise controller manager is <code>Ready</code> before continuing.</p>
 <p>On the <strong>master node</strong>, run the following command:</p>
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
-{% endsnippetcut %}
 
 {% offtopic title="Example of the output..." %}
 ```
@@ -226,23 +200,17 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 Next, you will need to create an Ingress controller, a user to access the web interfaces, and configure the DNS.
 <ul><li><p><strong>Setting up an Ingress controller</strong></p>
 <p>On the <strong>master node</strong>, create the <code>ingress-nginx-controller.yml</code> file containing the Ingress controller configuration:</p>
-  {% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
-  {% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
-  {% endsnippetcut %}
-  <p>Apply it using the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
+{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
+<p>Apply it using the following command on the <strong>master node</strong>:</p>
 ```shell
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
-{% endsnippetcut %}
 
 It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
-{% endsnippetcut %}
 
 Wait for the Ingress controller pods to switch to <code>Ready</code> state.
 
@@ -256,15 +224,11 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 </li>
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
 <p>Create on the <strong>master node</strong> the <code>user.yml</code> file containing the user account data and access rights:</p>
-{% snippetcut name="user.yml" selector="user-yml" %}
 {% include_file "_includes/getting_started/stronghold/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f $PWD/user.yml
 ```
-{% endsnippetcut %}
 </li>
 <li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
   <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
@@ -300,7 +264,6 @@ upmeter.example.com</code>
     </ul>
   </li>
   <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
-{% snippetcut selector="example-hosts" %}
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -323,7 +286,6 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
-{% endsnippetcut %}
 </li>
 </ul>
 
