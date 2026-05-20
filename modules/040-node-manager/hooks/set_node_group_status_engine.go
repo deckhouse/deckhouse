@@ -18,19 +18,20 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -56,64 +57,75 @@ func applyNodeGroupEngineMigrationFilter(obj *unstructured.Unstructured) (go_hoo
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/node-manager",
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 2},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "node_groups",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "NodeGroup",
-			FilterFunc: applyNodeGroupEngineMigrationFilter,
-		},
-		{
-			Name:       "migration_config_map",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
-			},
-			NameSelector: &types.NameSelector{MatchNames: []string{nodeGroupEngineMigrationConfigMap}},
-			FilterFunc:   nameFilter,
-			// The marker is only used as a one-shot migration guard. Deleting it should not
-			// trigger this hook to recalculate engines for already existing NodeGroups.
-			ExecuteHookOnEvents: ptr.To(false),
-		},
-	},
-}, setNodeGroupStatusEngine)
+	OnStartup: &go_hook.OrderedConfig{Order: 2},
+}, dependency.WithExternalDependencies(setNodeGroupStatusEngine))
 
-func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput) error {
-	if len(input.Snapshots.Get("migration_config_map")) > 0 {
+func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %w", err)
+	}
+
+	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), nodeGroupEngineMigrationConfigMap, metav1.GetOptions{})
+	if err == nil {
 		input.Logger.Debug("NodeGroup engine migration marker already exists")
 		return nil
 	}
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("cannot get migration marker ConfigMap: %w", err)
+	}
 
 	defaultEngine := defaultCloudEphemeralNodeGroupEngine(input)
+	nodeGroupGVR := schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1",
+		Resource: "nodegroups",
+	}
 
-	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[nodeGroupEngineMigrationInfo](input.Snapshots.Get("node_groups")) {
+	nodeGroups, err := kubeClient.Dynamic().Resource(nodeGroupGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot list NodeGroups: %w", err)
+	}
+
+	for _, item := range nodeGroups.Items {
+		nodeGroup, err := applyNodeGroupEngineMigrationFilter(&item)
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'node_groups' snapshots: %w", err)
+			return fmt.Errorf("cannot decode NodeGroup %q: %w", item.GetName(), err)
 		}
+		info := nodeGroup.(nodeGroupEngineMigrationInfo)
 
-		if nodeGroup.Engine != "" {
-			input.Logger.Debug("NodeGroup engine is already set", slog.String("node_group", nodeGroup.Name), slog.String("engine", string(nodeGroup.Engine)))
+		if info.Engine != "" {
+			input.Logger.Debug("NodeGroup engine is already set", slog.String("node_group", info.Name), slog.String("engine", string(info.Engine)))
 			continue
 		}
 
-		engine := calculateMigratedNodeGroupEngine(nodeGroup.Spec, defaultEngine)
-		input.Logger.Info("Set NodeGroup engine", slog.String("node_group", nodeGroup.Name), slog.String("engine", string(engine)))
-		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, "engine", engine)
+		engine := calculateMigratedNodeGroupEngine(info.Spec, defaultEngine)
+		input.Logger.Info("Set NodeGroup engine", slog.String("node_group", info.Name), slog.String("engine", string(engine)))
+
+		patchData, err := json.Marshal(map[string]any{
+			"status": map[string]any{
+				"engine": engine,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("cannot marshal NodeGroup %q status patch: %w", info.Name, err)
+		}
+
+		_, err = kubeClient.Dynamic().Resource(nodeGroupGVR).Patch(context.TODO(), info.Name, types.MergePatchType, patchData, metav1.PatchOptions{}, "status")
+		if err != nil {
+			return fmt.Errorf("cannot patch NodeGroup %q status.engine: %w", info.Name, err)
+		}
 	}
 
-	input.PatchCollector.CreateIfNotExists(&corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
+	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nodeGroupEngineMigrationConfigMap,
 			Namespace: "kube-system",
 		},
-	})
+	}, metav1.CreateOptions{})
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("cannot create migration marker ConfigMap: %w", err)
+	}
 
 	return nil
 }
