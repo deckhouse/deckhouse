@@ -30,3 +30,4 @@ shell:
   - cd /src/istio/
   - git apply --verbose /patches/001-istio-gomod_gosum.patch
   - git apply --verbose /patches/001-kiali-gomod_gosum.patch
+  - git apply --verbose /patches/002-istio-multicluster-regenerate-token-timeout.patch
