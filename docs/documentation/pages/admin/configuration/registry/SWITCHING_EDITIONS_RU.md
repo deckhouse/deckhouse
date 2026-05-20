@@ -70,7 +70,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Как только под перейдёт в статус `Running`, выполните следующие команды:
 
    ```shell
-   CSE_MODULES=$(d8 k --as system:sudouser exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   CSE_MODULES=$(d8 k exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    ```
@@ -90,7 +90,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "d8 k -n d8-system --as system:sudouser exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
    В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
@@ -239,7 +239,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
 ### Переключение без модуля registry
@@ -339,18 +339,18 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Как только под перейдёт в статус `Running`, выполните следующие команды:
 
    ```shell
-   CSE_SANDBOX_IMAGE=$(d8 k --as system:sudouser exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
-   CSE_K8S_API_PROXY=$(d8 k --as system:sudouser exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
-   CSE_MODULES=$(d8 k --as system:sudouser exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
+   CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+   CSE_MODULES=$(d8 k exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
-   CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k --as system:sudouser exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
    ```
 
    > Дополнительная команда, которая необходима только при переключении на Deckhouse CSE версии 1.64:
    >
    > ```shell
-   > CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k --as system:sudouser exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   > CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
    > ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
@@ -368,7 +368,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    echo $MODULES_WILL_DISABLE | 
-     tr ' ' '\n' | awk {'print "d8 k -n d8-system --as system:sudouser exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+     tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
 
    В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
@@ -477,7 +477,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Чтобы проверить состояние очереди Deckhouse, используйте следующую команду:
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   d8 k -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
    Пример вывода (очереди пусты):
@@ -499,7 +499,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
 
    ```shell
-   d8 k -n d8-system --as system:sudouser exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
 1. Очистите временные файлы, ресурс NodeGroupConfiguration и переменные:
@@ -632,7 +632,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Как только под перейдёт в статус `Running`, выполните следующие команды:
 
    ```shell
-   NEW_EDITION_MODULES=$(d8 k --as system:sudouser exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   NEW_EDITION_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
@@ -940,7 +940,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 1. После перехода пода в статус `Running` выполните следующие команды:
 
    ```shell
-   NEW_EDITION_MODULES=$(d8 k --as system:sudouser exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   NEW_EDITION_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
@@ -982,7 +982,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.ru\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
-   d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
+   d8 k -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
 
