@@ -25,6 +25,9 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
