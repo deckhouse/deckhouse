@@ -109,6 +109,9 @@
         },
         {
           "@id": "pkg:golang/github.com/docker/docker@v27.2.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v27.2.1+incompatible"
         }
       ],
       "status": "not_affected",
@@ -162,7 +165,7 @@
       },
       "products": [
         {
-          "@id": "pkg:github.com/sigstore/rekor@v1.3.6"
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
         }
       ],
       "status": "not_affected",
@@ -180,7 +183,7 @@
       },
       "products": [
         {
-          "@id": "pkg:github.com/sigstore/rekor@v1.3.6"
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.3.6"
         }
       ],
       "status": "not_affected",
