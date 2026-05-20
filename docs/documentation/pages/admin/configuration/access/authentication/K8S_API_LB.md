@@ -25,7 +25,7 @@ To configure access, follow these steps:
    The kubeconfig generation interface in DKP is automatically activated after enabling the `publishAPI` parameter in the `user-authn` module.  
    This web interface is available at the following URL:
 
-```console
+   ```console
    https://kubeconfig.<publicDomainTemplate>
    ```
    {: .nowrap-default }

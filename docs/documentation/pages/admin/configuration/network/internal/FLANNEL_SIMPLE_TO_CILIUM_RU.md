@@ -38,7 +38,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    NAME                      READY STATUS  RESTARTS    AGE
    agent-5zzfv               2/2   Running 5 (23m ago) 26m
    agent-gqb2b               2/2   Running 5 (23m ago) 26m

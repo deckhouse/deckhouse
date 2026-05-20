@@ -29,7 +29,7 @@ You can enable VPA in the following ways:
 
 1. Via the `d8` command (run inside the `d8-system/deckhouse pod`):
 
-```console
+   ```console
    d8 system module enable vertical-pod-autoscaler
    ```
    {: .nowrap-default }

@@ -176,7 +176,7 @@ description: Пошаговый пример создания модуля Deckh
 
 1. Посмотрите список доступных модулей:
 
-```console
+   ```console
    $ d8 k get module
    NAME       STAGE    SOURCE   PHASE       ENABLED   READY
    ...
@@ -226,7 +226,7 @@ description: Пошаговый пример создания модуля Deckh
    ```
    Пример вывода:
 
-```console
+   ```console
    $ d8 k get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
    helloworld-v0.0.1                   Deployed     helloworld-policy    22m            

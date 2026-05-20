@@ -348,7 +348,7 @@ To simulate sending test events to the `falcosidekick` service, use its `/test` 
 
    Example output:
 
-```console
+   ```console
    {
      "metric": {
        "__name__": "falcosecurity_falcosidekick_falco_events_total",

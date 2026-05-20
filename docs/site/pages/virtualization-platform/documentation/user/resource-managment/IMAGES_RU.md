@@ -105,7 +105,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    NAME           PHASE   CDROM   PROGRESS   AGE
    ubuntu-24-04   Ready   false   100%       23h
    ```

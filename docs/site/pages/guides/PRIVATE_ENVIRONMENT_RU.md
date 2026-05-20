@@ -704,7 +704,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 * Отсоединитесь от сессии сочетанием клавиш `Ctrl + b`, затем `d`. Сессия продолжит работать, а запущенные в ней процессы не остановятся. Для выхода из сессии используйте `Ctrl + d`.
 * Просмотр запущенных сессий осуществляется командой `tmux ls`:
 
-```console
+  ```console
   $ tmux ls
   0: 1 windows (created Thu Dec 11 13:52:41 2025)
   ```
@@ -718,7 +718,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 * Отсоединитесь от сессии сочетанием клавиш `Ctrl + a`, затем `d` (не отпуская `Ctrl`). Сессия продолжит работать, а запущенные процессы не остановятся. Для выхода из сессии используйте `Ctrl + d`.
 * Просмотр запущенных сессий осуществляется командой `screen -r`:
 
-```console
+  ```console
   $ screen -r
   There are several suitable screens on:
           1166154.pts-0.guide-bastion     (12/11/25 14:00:26)     (Detached)
@@ -1406,7 +1406,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Настройте StorageClass [локального хранилища](../../../modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
 
-```console
+  ```console
   sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
@@ -1427,7 +1427,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   ```
 * Создайте NodeGroup `worker` и добавьте узел с помощью Cluster API Provider Static (CAPS):
 
-```console
+  ```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
@@ -1446,7 +1446,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
 
-```console
+  ```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: SSHCredentials
@@ -1461,14 +1461,14 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на master-узле следующую команду:
 
-```console
+  ```console
   cat /dev/shm/caps-id.pub
   ```
   {: .nowrap-default }
 
 * Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
-```console
+  ```console
   # Укажите IP-адрес узла, который нужно подключить к кластеру.
   export NODE=<NODE-IP-ADDRESS>
   sudo -i d8 k create -f - <<EOF
@@ -1489,7 +1489,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Убедитесь, что все узлы кластера находятся в статусе `Ready`:
 
-```console
+  ```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
   d8cluster          Ready    control-plane,master   30m   v1.23.17

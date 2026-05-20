@@ -39,7 +39,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get mr
    ```
    {: .nowrap-default }
@@ -55,7 +55,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    Below is an example of the DeckhouseRelease resource for which the DKP version does not meet the module requirements:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
    ```
    {: .nowrap-default }
@@ -93,7 +93,7 @@ Deckhouse checks whether the dependency is met in the following cases:
   
    Below is an example of the ModuleRelease resource for which the Kubernetes version does not meet the module requirements:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get modulereleases.deckhouse.io
    ```
    {: .nowrap-default }
@@ -110,7 +110,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
 
-```console
+   ```console
    root@dev-master-0:~# d8 system edit cluster-configuration
    ```
    {: .nowrap-default }
@@ -132,7 +132,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 
    Below is an example of the DeckhouseRelease resource for which the Kubernetes version does not meet the module requirements:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
    ```
    {: .nowrap-default }

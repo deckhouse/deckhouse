@@ -68,7 +68,7 @@ To set up the integration:
 
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) resource containing the `sa-creds` secret:
 
-```console
+   ```console
    kubectl -n external-secrets apply -f - <<EOF
    
    apiVersion: external-secrets.io/v1alpha1
@@ -98,7 +98,7 @@ To set up the integration:
    ```
    Example output:
 
-```console
+   ```console
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
@@ -113,7 +113,7 @@ To set up the integration:
    ```
    Example output:
 
-```console
+   ```console
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -127,7 +127,7 @@ To set up the integration:
 
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) pointing to the `lockbox-secret` in the `secret-store`:
 
-```console
+   ```console
    kubectl -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -167,7 +167,7 @@ To set up the integration:
    ```
    The output will contain the `password` key value of the `lockbox-secret` secret created earlier:
 
-```console
+   ```console
    p@$$w0rd
    ```
    {: .nowrap-default }
@@ -182,7 +182,7 @@ To configure PrometheusRemoteWrite, follow these steps:
 1. Create an [API key](https://yandex.cloud/en/docs/iam/operations/authentication/manage-api-keys) for the service account.
 1. Create a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) resource:
 
-```console
+   ```console
    kubectl apply -f - <<EOF
    
    apiVersion: deckhouse.io/v1

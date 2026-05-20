@@ -123,7 +123,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 1. Настройте Zabbix-агент:
    - Скопируйте файл `d8alerts.conf` в директорию, указанную в параметре `Include` основного конфига Zabbix-агента (обычно расположен по пути `/etc/zabbix/zabbix_agentd.d/`):
 
-```console
+     ```console
      # LLD of deckhouse cluster alerts
      UserParameter=d8alerts.discovery,/etc/zabbix/scripts/clusteralerts.sh discovery
 
@@ -134,7 +134,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
    - Скопируйте скрипт `clusteralerts.sh` в директорию `/etc/zabbix/scripts/`:
 
-```console
+     ```console
      #!/bin/bash
 
      MODE="$1"
@@ -173,7 +173,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
    - Убедитесь, что скрипт имеет права на выполнение:
 
-```console
+     ```console
      chmod +x /etc/zabbix/scripts/clusteralerts.sh
      ```
      {: .nowrap-default }
@@ -181,7 +181,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 1. Проверьте доступ:
    - Убедитесь, что скрипт имеет доступ к кластеру и может получать информацию об алертах:
 
-```console
+     ```console
      /etc/zabbix/scripts/clusteralerts.sh discovery
      ```
      {: .nowrap-default }
@@ -190,7 +190,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
 1. Перезапустите Zabbix-агент для применения изменений:
 
-```console
+   ```console
    systemctl restart zabbix-agent
    ```
    {: .nowrap-default }
@@ -199,14 +199,14 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
 1. Проверьте логи Zabbix-агента:
 
-```console
+   ```console
    tail -f /var/log/zabbix/zabbix_agentd.log
    ```
    {: .nowrap-default }
 
 1. Проверьте работу скрипта:
 
-```console
+   ```console
    /etc/zabbix/scripts/clusteralerts.sh discovery
    /etc/zabbix/scripts/clusteralerts.sh severity "ID_АЛЕРТА"
    ```
@@ -218,7 +218,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
    - Скрипт запускается от имени пользователя `zabbix`:
 
-```console
+     ```console
      sudo -u zabbix /etc/zabbix/scripts/clusteralerts.sh
      ```
      {: .nowrap-default }
@@ -227,7 +227,7 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
 
      Если конфигурационный файл Kubernetes недоступен по умолчанию, укажите его явно. Для этого сохраните kubeconfig, например, в `/etc/zabbix/kubeconfig` и добавьте в конфигурацию агента:
 
-```console
+     ```console
      UserParameter=d8alerts.discovery,export KUBECONFIG=/etc/zabbix/kubeconfig;/etc/zabbix/scripts/clusteralerts.sh discovery
      ```
      {: .nowrap-default }

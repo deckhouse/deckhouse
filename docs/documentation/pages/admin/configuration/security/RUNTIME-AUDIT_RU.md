@@ -351,7 +351,7 @@ d8 k run falco-event-generator --image=falcosecurity/event-generator run
 
    Пример вывода:
 
-```console
+   ```console
    {
      "metric": {
        "__name__": "falcosecurity_falcosidekick_falco_events_total",

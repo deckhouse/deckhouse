@@ -399,7 +399,7 @@ module-two                   Available   False     False
   ```
 - Посмотреть объект Module подробнее:
 
-```console
+  ```console
   d8 k get module module-one -oyaml
   ```
   {: .nowrap-default }
@@ -409,7 +409,7 @@ module-two                   Available   False     False
 
   Пример вывода информации об ошибке модуля `module-one`:
 
-```console
+  ```console
   $ d8 k get moduleconfig module-one
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
@@ -420,7 +420,7 @@ module-two                   Available   False     False
 
   Пример вывода если у источника модуля есть проблемы со скачиванием модуля:
 
-```console
+  ```console
   $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details

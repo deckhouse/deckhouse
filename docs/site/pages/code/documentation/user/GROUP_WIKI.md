@@ -43,7 +43,7 @@ Access level is determined by the user's group membership:
 
    - Create a hierarchical page structure using the `/` symbol in names. Example:
 
-```console
+     ```console
      devops/ci-pipelines
      devops/kubernetes
      product/design

@@ -208,7 +208,7 @@ spec:
   ```
   Пример вывода:
 
-```console
+  ```console
   Broadwell-noTSX
   Broadwell-noTSX-IBRS
   Haswell-noTSX

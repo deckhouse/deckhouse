@@ -710,7 +710,7 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 * Detach from the session by pressing `Ctrl + b`, then `d`. The session will keep running, and the processes started in it will continue to run. To exit the session, use `Ctrl + d`.
 * List running sessions with `tmux ls`:
 
-```console
+  ```console
   $ tmux ls
   0: 1 windows (created Thu Dec 11 13:52:41 2025)
   ```
@@ -724,7 +724,7 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 * Detach from the session by pressing `Ctrl + a`, then `d` (while holding `Ctrl`). The session will keep running, and the processes started in it will continue to run. To exit the session, use `Ctrl + d`.
 * List running sessions with `screen -r`:
 
-```console
+  ```console
   $ screen -r
   There are several suitable screens on:
           1166154.pts-0.guide-bastion     (12/11/25 14:00:26)     (Detached)
@@ -1365,7 +1365,7 @@ Perform the following steps:
 
 * Configure a StorageClass for [local storage](../../../modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
 
-```console
+  ```console
   sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
@@ -1386,7 +1386,7 @@ Perform the following steps:
   ```
 * Create the `worker` NodeGroup and add a node using Cluster API Provider Static (CAPS):
 
-```console
+  ```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
@@ -1405,7 +1405,7 @@ Perform the following steps:
 
 * Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
 
-```console
+  ```console
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: SSHCredentials
@@ -1420,14 +1420,14 @@ Perform the following steps:
 
 * Print the public SSH key (needed for verification). On the master node:
 
-```console
+  ```console
   cat /dev/shm/caps-id.pub
   ```
   {: .nowrap-default }
 
 * Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
-```console
+  ```console
   # Specify the IP address of the node to be added to the cluster.
   export NODE=<NODE-IP-ADDRESS>
   sudo -i d8 k create -f - <<EOF
@@ -1448,7 +1448,7 @@ Perform the following steps:
 
 * Make sure all cluster nodes are in the `Ready` status:
 
-```console
+  ```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
   d8cluster          Ready    control-plane,master   30m   v1.23.17

@@ -134,7 +134,7 @@ Main placement configuration options:
 
    Suppose you have a node named `kube-system-1` that is intended for monitoring services. Label the node:
 
-```console
+   ```console
    d8 k label node kube-system-1 node-role/monitoring=""
    ```
    {: .nowrap-default }
@@ -149,7 +149,7 @@ Main placement configuration options:
 
    Suppose you have a node named `kube-frontend-1` that is dedicated exclusively to Ingress controllers. Apply a taint to the node:
 
-```console
+   ```console
    d8 k taint node kube-frontend-1 node-role/frontend="":NoExecute
    ```
    {: .nowrap-default }
@@ -272,7 +272,7 @@ You can do this in one of the following ways:
    ```
 1. Using the `d8` command (in the `d8-system/deckhouse` pod):
 
-```console
+   ```console
    d8 system module enable descheduler
    # or to disable:
    d8 system module disable descheduler

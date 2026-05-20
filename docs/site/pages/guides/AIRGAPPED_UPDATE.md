@@ -275,7 +275,7 @@ To avoid this, download only the images relevant to your version following these
    ```
    Example output:
 
-```console
+   ```console
    {
      "core.deckhouse.io/edition": "EE",
      "core.deckhouse.io/version": "v1.68.13"
@@ -290,7 +290,7 @@ To avoid this, download only the images relevant to your version following these
    ```
    Example output:
 
-```console
+   ```console
    commander-agent-v1.2.4             Deployed                     13d
    console-v1.35.1                    Deployed                     7d4h
    ```

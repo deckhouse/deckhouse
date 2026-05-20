@@ -8,7 +8,7 @@ permalink: en/code/documentation/admin/configuration/group.html
    - Use administrator credentials.
    - During initial setup, use the `root` user. The password is available as a secret in your cluster namespace:
 
-```console
+     ```console
      secrets/initial-root-token
      ```
      {: .nowrap-default }

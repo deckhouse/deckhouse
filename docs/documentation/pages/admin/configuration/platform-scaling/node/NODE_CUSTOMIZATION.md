@@ -356,7 +356,7 @@ After each node reboot, perform the following steps:
 
    Successful configuration application is confirmed by a log entry similar to:
 
-```console
+   ```console
    Successfully updated to MIG config: <partedConfig>
    ```
    {: .nowrap-default }
@@ -1011,7 +1011,7 @@ spec:
 
 1. Add the necessary labels to the files in the `key=value` format. For example:
 
-```console
+   ```console
    example-label=test
    ```
    {: .nowrap-default }

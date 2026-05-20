@@ -28,7 +28,7 @@ lang: ru
 
      Ожидаемый ответ:
 
-```console
+     ```console
      401 Unauthorized
      ```
      {: .nowrap-default }

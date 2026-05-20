@@ -19,7 +19,7 @@ lang: en
 
   Example output:
 
-```console
+  ```console
   185.193.90.38    STREAM registry.deckhouse.io
   185.193.90.38    DGRAM
   185.193.90.38    RAW
@@ -33,7 +33,7 @@ lang: en
   ```
   Example output:
 
-```console
+  ```console
   185.193.90.38    STREAM registry.deckhouse.io
   185.193.90.38    DGRAM  registry.deckhouse.io
   ```

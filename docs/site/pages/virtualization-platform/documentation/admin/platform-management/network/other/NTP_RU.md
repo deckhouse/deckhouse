@@ -46,7 +46,7 @@ spec:
 
    При успешном выполнении команды будет выведено сообщение о том, что модуль был отключён:
 
-```console
+   ```console
    Module chrony disabled
    ```
    {: .nowrap-default }

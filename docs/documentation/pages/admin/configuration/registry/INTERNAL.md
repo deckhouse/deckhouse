@@ -66,7 +66,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example output:
 
-```console
+   ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
@@ -79,7 +79,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    ```
    Example output:
 
-```console
+   ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
@@ -89,7 +89,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 
    Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
 
-```console
+   ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
@@ -104,7 +104,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    ```
    Example output:
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
@@ -165,7 +165,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    ```
    Example output:
 
-```console
+   ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
@@ -178,7 +178,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    ```
    Example output:
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.

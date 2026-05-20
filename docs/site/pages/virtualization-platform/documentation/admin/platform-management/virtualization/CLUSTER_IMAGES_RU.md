@@ -366,7 +366,7 @@ Golden image — это предварительно настроенный об
 
     В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
 
-```console
+    ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
     ubuntu-24-04   Ready   false   100%       23h
     ```

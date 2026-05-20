@@ -163,7 +163,7 @@ You can enable or disable the pod restart functionality in the following ways:
 
 1. Using the `d8` command (in the `d8-system/deckhouse` pod):
 
-```console
+   ```console
    d8 system module enable pod-reloader
    ```
    {: .nowrap-default }

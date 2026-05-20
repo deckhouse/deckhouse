@@ -18,7 +18,7 @@ lang: ru
 
   Пример вывода:
 
-```console
+  ```console
   185.193.90.38    STREAM registry.deckhouse.ru
   185.193.90.38    DGRAM
   185.193.90.38    RAW
@@ -32,7 +32,7 @@ lang: ru
   ```
   Пример вывода:
 
-```console
+  ```console
   185.193.90.38    STREAM registry.deckhouse.ru
   185.193.90.38    DGRAM  registry.deckhouse.ru
   ```

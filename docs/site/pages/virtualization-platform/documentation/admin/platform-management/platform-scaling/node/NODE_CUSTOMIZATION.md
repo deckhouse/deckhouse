@@ -935,7 +935,7 @@ spec:
 
 1. Add the necessary labels to the files in the `key=value` format. For example:
 
-```console
+   ```console
    example-label=test
    ```
    {: .nowrap-default }

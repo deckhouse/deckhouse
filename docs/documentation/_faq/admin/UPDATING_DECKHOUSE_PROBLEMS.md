@@ -44,7 +44,7 @@ If the Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods in
 
    Example output:
 
-```console
+   ```console
    Type     Reason     Age                      From     Message
    ----     ------     ----                     ----     -------
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500

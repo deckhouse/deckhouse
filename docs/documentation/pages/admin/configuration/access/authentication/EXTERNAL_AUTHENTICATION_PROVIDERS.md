@@ -57,7 +57,7 @@ If the parameter is not specified, no group-based filtering will be applied.
 
    Example output:
 
-```console
+   ```console
    NAME         STAGE   SOURCE     PHASE       ENABLED   READY
    user-authn           Embedded   Available   True      True
    ```

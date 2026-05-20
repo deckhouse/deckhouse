@@ -118,7 +118,7 @@ spec:
 
    Пример вывода:
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.

@@ -249,7 +249,7 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    ```
    Пример вывода:
 
-```console
+   ```console
    {
      "core.deckhouse.io/edition": "EE",
      "core.deckhouse.io/version": "v1.68.13"
@@ -264,7 +264,7 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    ```
    Пример вывода:
 
-```console
+   ```console
    commander-agent-v1.2.4             Deployed                     13d
    console-v1.35.1                    Deployed                     7d4h
    ```

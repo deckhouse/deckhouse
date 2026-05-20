@@ -18,7 +18,7 @@ lang: ru
 
    Пример вывода (очереди пусты):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.

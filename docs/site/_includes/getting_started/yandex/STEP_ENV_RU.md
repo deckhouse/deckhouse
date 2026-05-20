@@ -10,7 +10,7 @@
 
    В ответ вернутся параметры пользователя:
 
-```console
+   ```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"

@@ -44,7 +44,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    Type     Reason     Age                      From     Message
    ----     ------     ----                     ----     -------
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500

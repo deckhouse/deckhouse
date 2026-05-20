@@ -40,7 +40,7 @@ lang: ru
 
    Пример ответа:
 
-```console
+   ```console
    NAME               RELEASE CHANNEL   UPDATE MODE
    my-module-policy   Alpha             AutoPatch
    ```

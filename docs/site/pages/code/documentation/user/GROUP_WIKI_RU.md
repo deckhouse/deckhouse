@@ -43,7 +43,7 @@ weight: 50
 
    - Создание иерархической структуры страниц с помощью символа `/` в названиях. Пример:
 
-```console
+     ```console
      devops/ci-pipelines
      devops/kubernetes
      product/design

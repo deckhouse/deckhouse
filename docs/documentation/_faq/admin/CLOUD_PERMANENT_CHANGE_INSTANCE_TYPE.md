@@ -18,7 +18,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
 
    Example output (queues are empty):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.

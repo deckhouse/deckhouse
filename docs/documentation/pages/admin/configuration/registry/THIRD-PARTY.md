@@ -48,7 +48,7 @@ To switch the cluster to use an external registry, follow these steps:
 
    Example output:
 
-```console
+   ```console
    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
    Change registry for deckhouse images.
    Flags:
@@ -80,7 +80,7 @@ To switch the cluster to use an external registry, follow these steps:
 
    Example of output when viewing the bashible service log:
 
-```console
+   ```console
    $ journalctl -u bashible -n 20
    ...
    Aug 13 05:03:08 kube-master-0 systemd[1]: Started Bashible service.

@@ -200,7 +200,7 @@ Examples of the `.spec.cpu` block settings:
   ```
   Example output:
 
-```console
+  ```console
   Broadwell-noTSX
   Broadwell-noTSX-IBRS
   Haswell-noTSX

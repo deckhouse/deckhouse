@@ -120,7 +120,7 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
 
    Example output:
 
-```console
+    ```console
     NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
@@ -336,7 +336,7 @@ Let's explore how to create a cluster image.
     ```
     In the output, you should see information about the `ClusterVirtualImage` resource:
 
-```console
+    ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
     ubuntu-24-04   Ready   false   100%       23h
     ```

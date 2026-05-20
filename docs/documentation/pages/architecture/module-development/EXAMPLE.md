@@ -175,7 +175,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
 
 1. Check the list of available modules
 
-```console
+   ```console
    $ d8 k get module
    NAME       STAGE    SOURCE   PHASE       ENABLED   READY
    ...
@@ -225,7 +225,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    ```
    An example of output:
 
-```console
+   ```console
    $ d8 k get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
    helloworld-v0.0.1                   Deployed     helloworld-policy    22m            

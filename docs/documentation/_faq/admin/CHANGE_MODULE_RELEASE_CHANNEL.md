@@ -40,7 +40,7 @@ To change the release channel for a module from a source, follow these steps:
 
    Output example:
 
-```console
+   ```console
    NAME               RELEASE CHANNEL   UPDATE MODE
    my-module-policy   Alpha             AutoPatch
    ```

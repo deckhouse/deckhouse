@@ -122,7 +122,7 @@ The following are required for the script to work:
 1. Configure the Zabbix agent:
    - Copy the `d8alerts.conf` file to the directory specified in the `Include` parameter of the main Zabbix agent config (usually located at `/etc/zabbix/zabbix_agentd.d/`):
 
-```console
+     ```console
      # LLD of deckhouse cluster alerts
      UserParameter=d8alerts.discovery,/etc/zabbix/scripts/clusteralerts.sh discovery
 
@@ -133,7 +133,7 @@ The following are required for the script to work:
 
    - Copy the `clusteralerts.sh` script to the `/etc/zabbix/scripts/` directory:
 
-```console
+     ```console
      #!/bin/bash
 
      MODE="$1"
@@ -172,7 +172,7 @@ The following are required for the script to work:
 
    - Ensure the script has execution permissions:
 
-```console
+     ```console
      chmod +x /etc/zabbix/scripts/clusteralerts.sh
      ```
      {: .nowrap-default }
@@ -180,7 +180,7 @@ The following are required for the script to work:
 1. Check access:
    - Ensure the script has access to the cluster and can retrieve alert information:
 
-```console
+     ```console
      /etc/zabbix/scripts/clusteralerts.sh discovery
      ```
      {: .nowrap-default }
@@ -189,7 +189,7 @@ The following are required for the script to work:
 
 1. Restart the Zabbix agent to apply changes:
 
-```console
+   ```console
    systemctl restart zabbix-agent
    ```
    {: .nowrap-default }
@@ -198,14 +198,14 @@ The following are required for the script to work:
 
 1. Check Zabbix agent logs:
 
-```console
+   ```console
    tail -f /var/log/zabbix/zabbix_agentd.log
    ```
    {: .nowrap-default }
 
 1. Check script operation:
 
-```console
+   ```console
    /etc/zabbix/scripts/clusteralerts.sh discovery
    /etc/zabbix/scripts/clusteralerts.sh severity "ALERT_ID"
    ```
@@ -217,7 +217,7 @@ The following are required for the script to work:
 
    - The script runs under the `zabbix` user:
 
-```console
+     ```console
      sudo -u zabbix /etc/zabbix/scripts/clusteralerts.sh
      ```
      {: .nowrap-default }
@@ -226,7 +226,7 @@ The following are required for the script to work:
 
      If the Kubernetes configuration file is not available by default, specify it explicitly. To do this, save the kubeconfig, for example, in `/etc/zabbix/kubeconfig` and add it to the agent configuration:
 
-```console
+     ```console
      UserParameter=d8alerts.discovery,export KUBECONFIG=/etc/zabbix/kubeconfig;/etc/zabbix/scripts/clusteralerts.sh discovery
      ```
      {: .nowrap-default }

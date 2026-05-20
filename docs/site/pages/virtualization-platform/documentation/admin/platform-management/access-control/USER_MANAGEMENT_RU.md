@@ -82,7 +82,7 @@ spec:
 
     Пример вывода команды:
 
-```console
+    ```console
     NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
     ...
     kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d

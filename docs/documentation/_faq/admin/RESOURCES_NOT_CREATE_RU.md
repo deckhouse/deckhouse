@@ -15,7 +15,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    NAME               ALERT                                           SEVERITY   AGE   LAST RECEIVED   STATUS
    012f602592aa7a91   K8SSchedulerTargetDown                          3          16h   54s             firing
    0836dc893d5ecc65   KubernetesDeploymentReplicasUnavailable         5          15h   62s             firing
@@ -40,7 +40,7 @@ lang: ru
    ```
    Пример вывода (очереди пусты):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.
@@ -59,7 +59,7 @@ lang: ru
      ```
      Пример вывода:
 
-```console
+     ```console
      {"level":"info","logger":"addon-operator","msg":"ConvergeModules task for OperatorStartup in phase '', trigger is Operator-Startup","binding":"ConvergeModules","event.type":"OperatorStartup","queue":"main","task.flow":"start","task.id":"fde0eb3b-5c3e-4da6-a0d8-a52f8ae03428","time":"2025-11-26T08:29:33Z"}
      {"level":"warn","logger":"addon-operator.converge-modules","msg":"ConvergeModules: functional scheduler not finished","binding":"ConvergeModules","event.type":"OperatorStartup","queue":"main","task.id":"fde0eb3b-5c3e-4da6-a0d8-a52f8ae03428","time":"2025-11-26T08:29:33Z"}
      ```
@@ -74,7 +74,7 @@ lang: ru
      ```
      Пример вывода:
 
-```console
+     ```console
      LAST SEEN   TYPE      REASON              OBJECT                                          MESSAGE
      11m         Warning   Unhealthy           pod/deckhouse-5886c9bd77-vgdbw                  Readiness probe failed: HTTP probe failed with statuscode: 500
      7m22s       Normal    SuccessfulDelete    replicaset/deckhouse-5886c9bd77                 Deleted pod: deckhouse-5886c9bd77-vgdbw

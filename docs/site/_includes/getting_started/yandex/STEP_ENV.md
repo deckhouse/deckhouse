@@ -10,7 +10,7 @@ You need to create a Yandex Cloud service account with the editor role to manage
 
    The command response will contain its parameters:
 
-```console
+   ```console
    id: <userID>
    folder_id: <folderID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"

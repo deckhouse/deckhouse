@@ -396,7 +396,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   ```
 - View the Module object in more detail:
 
-```console
+  ```console
   d8 k get module module-one -oyaml
   ```
   {: .nowrap-default }
@@ -406,7 +406,7 @@ If there were errors while enabling a module in the cluster, you can learn about
 
   Here is an example of the error message for `module-one`:
 
-```console
+  ```console
   $ d8 k get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
@@ -417,7 +417,7 @@ If there were errors while enabling a module in the cluster, you can learn about
 
   Example output if the module source has problems with downloading the module:
 
-```console
+  ```console
   $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details

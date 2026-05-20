@@ -355,7 +355,7 @@ spec:
 
    Успешное применение конфигурации подтверждается записью вида:
 
-```console
+   ```console
    Successfully updated to MIG config: <partedConfig>
    ```
    {: .nowrap-default }
@@ -1009,7 +1009,7 @@ spec:
 
 1. Добавьте в файлы нужные лейблы в формате `key=value`. Например:
 
-```console
+   ```console
    example-label=test
    ```
    {: .nowrap-default }

@@ -39,7 +39,7 @@ To download the image and reinstall the module that caused the problem:
    ```
    Output example:
 
-```console
+   ```console
    NAME               PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    my-module-v3.7.4   Superseded                   5d23h
    my-module-v3.7.5   Deployed                     5d23h

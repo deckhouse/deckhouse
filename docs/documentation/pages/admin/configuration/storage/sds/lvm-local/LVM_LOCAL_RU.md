@@ -107,7 +107,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    Пример вывода:
 
-```console
+   ```console
    NAME                                           NODE       CONSUMABLE   SIZE           PATH
    dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
    dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6

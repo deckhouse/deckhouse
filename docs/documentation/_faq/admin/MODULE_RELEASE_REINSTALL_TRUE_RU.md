@@ -39,7 +39,7 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
    ```
    Пример вывода:
 
-```console
+   ```console
    NAME               PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    my-module-v3.7.4   Superseded                   5d23h
    my-module-v3.7.5   Deployed                     5d23h

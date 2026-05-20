@@ -121,7 +121,7 @@ Example configuring a bond interface:
 
    Example output:
 
-```console
+   ```console
    NAME                                                          MANAGEDBY   NODE                             TYPE     IFNAME      IFINDEX   STATE   AGE
    nni-worker-01-bond0                                           Manual      worker-01-b23d3a26-5fb4b-5s9fp   Bond     bond0       76        Up      7m48s
    ...

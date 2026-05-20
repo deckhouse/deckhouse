@@ -67,7 +67,7 @@ Requirements for the module:
 
   An example:
 
-```console
+  ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME      UPDATED   MESSAGE                ROLLBACK
   example1  10s       The module not found   false
@@ -78,7 +78,7 @@ Requirements for the module:
 
   An example:
 
-```console
+  ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME           UPDATED  MESSAGE                  ROLLBACK
   ingress-nginx  10s      The module is embedded   false
@@ -89,7 +89,7 @@ Requirements for the module:
 
   An example:
 
-```console
+  ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME     UPDATED   MESSAGE               ROLLBACK
   example  7s        The module disabled   false
@@ -100,7 +100,7 @@ Requirements for the module:
   
   An example:
 
-```console
+  ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                                     ROLLBACK
   example    12s       The module does not have an active source   false
@@ -111,7 +111,7 @@ Requirements for the module:
 
   An example:
 
-```console
+  ```console
   $ d8 k get modulepulloverrides.deckhouse.io 
   NAME       UPDATED   MESSAGE                 ROLLBACK
   example    12s       The source not found    false

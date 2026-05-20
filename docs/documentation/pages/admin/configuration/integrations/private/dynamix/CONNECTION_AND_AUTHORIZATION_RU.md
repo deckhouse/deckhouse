@@ -53,7 +53,7 @@ lang: ru
 
 1. Отредактируйте шаблон файла `hosts`, расположенный в каталоге:
 
-```console
+   ```console
    /etc/cloud/templates/
    ```
    {: .nowrap-default }
@@ -65,7 +65,7 @@ lang: ru
    ```
 1. После изменений выполните очистку состояния `cloud-init`:
 
-```console
+   ```console
    cloud-init clean
    ```
    {: .nowrap-default }

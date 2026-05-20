@@ -164,7 +164,7 @@ metadata:
 
 1. Через команду `d8` (в поде `d8-system/deckhouse`):
 
-```console
+   ```console
    d8 system module enable pod-reloader
    ```
    {: .nowrap-default }

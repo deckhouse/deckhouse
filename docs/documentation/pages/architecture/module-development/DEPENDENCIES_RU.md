@@ -39,7 +39,7 @@ requirements:
 
    Пример ресурса ModuleRelease, когда версия DKP не соответствует требованиям модуля:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get mr
    ```
    {: .nowrap-default }
@@ -55,7 +55,7 @@ requirements:
 
    Пример ресурса DeckhouseRelease, когда версия DKP не соответствует требованиям модуля:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
    ```
    {: .nowrap-default }
@@ -93,7 +93,7 @@ requirements:
 
    Пример ресурса ModuleRelease, когда версия Kubernetes не соответствует требованиям модуля:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get modulereleases.deckhouse.io
    ```
    {: .nowrap-default }
@@ -110,7 +110,7 @@ requirements:
 
    Пример вывода при несовместимости модуля с новой версией Kubernetes:
 
-```console
+   ```console
    root@dev-master-0:~# d8 system edit cluster-configuration
    ```
    {: .nowrap-default }
@@ -132,7 +132,7 @@ requirements:
 
    Пример ресурса DeckhouseRelease, когда версия Kubernetes не соответствует требованиям модуля:
 
-```console
+   ```console
    root@dev-master-0:~# d8 k get deckhousereleases.deckhouse.io
    ```
    {: .nowrap-default }

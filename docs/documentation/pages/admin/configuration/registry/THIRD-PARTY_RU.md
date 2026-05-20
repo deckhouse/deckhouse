@@ -49,7 +49,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
 
    Change registry for deckhouse images.
@@ -84,7 +84,7 @@ lang: ru
 
    Пример вывода при просмотре журнала сервиса bashible:
 
-```console
+   ```console
    $ journalctl -u bashible -n 20
    ...
    Aug 13 05:03:08 kube-master-0 systemd[1]: Started Bashible service.

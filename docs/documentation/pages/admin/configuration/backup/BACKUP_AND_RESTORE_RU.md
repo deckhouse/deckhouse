@@ -110,7 +110,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
@@ -561,14 +561,14 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 
 - Объекты CustomResource, чьи CRD помечены аннотацией:
 
-```console
+  ```console
   backup.deckhouse.io/cluster-config=true
   ```
   {: .nowrap-default }
 
 - StorageClass'ы, имеющие лейбл:
 
-```console
+  ```console
   heritage=deckhouse
   ```
   {: .nowrap-default }
@@ -577,7 +577,7 @@ d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 
 - Роли и биндинги уровня кластера (ClusterRole и ClusterRoleBinding), если они не помечены лейблом:
 
-```console
+  ```console
   heritage=deckhouse
   ```
   {: .nowrap-default }

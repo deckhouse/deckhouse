@@ -174,7 +174,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    Example output:
 
-```console
+   ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
    #
@@ -193,7 +193,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
    ```
    Example output:
 
-```console
+   ```console
    Successfully connected to linux-vm console. The escape sequence is ^]
    #
    linux-vm login: cloud
@@ -801,7 +801,7 @@ How will the agent help?
   ```
   Example output (see `AGENT` column):
 
-```console
+  ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```

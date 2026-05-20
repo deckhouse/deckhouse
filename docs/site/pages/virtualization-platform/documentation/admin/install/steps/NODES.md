@@ -28,7 +28,7 @@ Alternatively, you can connect to the master node via SSH and run the command as
 
      Expected output:
 
-```console
+     ```console
      401 Unauthorized
      ```
      {: .nowrap-default }

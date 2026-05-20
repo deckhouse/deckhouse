@@ -109,7 +109,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    Output example:
 
-```console
+   ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
@@ -563,14 +563,14 @@ The archive includes only those objects that meet the following criteria:
 
 - CustomResource objects whose CRDs are annotated with:
 
-```console
+  ```console
   backup.deckhouse.io/cluster-config=true
   ```
   {: .nowrap-default }
 
 - StorageClasses with the label:
 
-```console
+  ```console
   heritage=deckhouse
   ```
   {: .nowrap-default }
@@ -579,7 +579,7 @@ The archive includes only those objects that meet the following criteria:
 
 - Cluster-level Roles and Bindings (ClusterRole and ClusterRoleBinding), if they are not labeled with:
 
-```console
+  ```console
   heritage=deckhouse
   ```
   {: .nowrap-default }

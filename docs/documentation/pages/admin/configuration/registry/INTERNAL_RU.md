@@ -65,7 +65,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
@@ -78,7 +78,7 @@ lang: ru
    ```
    Пример вывода:
 
-```console
+   ```console
    NAME       STATUS   ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
@@ -88,7 +88,7 @@ lang: ru
 
    Пример вывода, когда master-узел (`master-2` в примере) находится в статусе `SchedulingDisabled`:
 
-```console
+   ```console
    NAME       STATUS                      ROLES                 ...
    master-0   Ready    control-plane,master  ...
    master-1   Ready    control-plane,master  ...
@@ -103,7 +103,7 @@ lang: ru
    ```
    Пример вывода:
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.
@@ -164,7 +164,7 @@ lang: ru
    ```
    Пример вывода:
 
-```console
+   ```console
    NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
    registry   38     ...  Ready   True                         True
    ```
@@ -177,7 +177,7 @@ lang: ru
    ```
    Пример вывода:
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 107 other queues (0 active, 107 empty): 0 tasks.

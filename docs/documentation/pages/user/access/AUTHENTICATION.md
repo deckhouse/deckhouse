@@ -173,7 +173,7 @@ To enable authentication for such an application, follow these steps:
    Use the `clientID`, `clientSecret`, and `redirectURIs`, along with the Dex provider URL.  
    You can get the Dex URL (`https://dex.<publicDomainTemplate>`) using the following command:
 
-```console
+   ```console
    d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
    ```
    {: .nowrap-default }

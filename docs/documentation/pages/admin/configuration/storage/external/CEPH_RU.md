@@ -130,7 +130,7 @@ Ceph — это масштабируемая распределённая сис
 
    В результате будет выведена информация о созданных ресурсах [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass):
 
-```console
+   ```console
    NAME          PHASE     AGE
    ceph-rbd-sc   Created   1h
    ceph-fs-sc    Created   1h
@@ -144,7 +144,7 @@ Ceph — это масштабируемая распределённая сис
    ```
    В результате будет выведена информация о созданном StorageClass:
 
-```console
+   ```console
    NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
    ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s

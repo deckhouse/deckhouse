@@ -233,7 +233,7 @@ To defragment etcd in a cluster with multiple master nodes:
    ```
    Example output:
 
-```console
+   ```console
    NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
    etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
    etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
@@ -252,7 +252,7 @@ To defragment etcd in a cluster with multiple master nodes:
    ```
    Output example (the leader in the `IS LEADER` column will have the value `true`):
 
-```console
+   ```console
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
@@ -280,7 +280,7 @@ To defragment etcd in a cluster with multiple master nodes:
    ```
    Example output when the operation is successful:
 
-```console
+   ```console
    Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    ```
    {: .nowrap-default }

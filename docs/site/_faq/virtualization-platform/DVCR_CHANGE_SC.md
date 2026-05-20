@@ -40,7 +40,7 @@ To change the DVCR StorageClass, perform the following steps:
 
    Example output:
 
-```console
+   ```console
    moduleconfig.deckhouse.io/virtualization patched
    ```
    {: .nowrap-default }
@@ -57,7 +57,7 @@ To change the DVCR StorageClass, perform the following steps:
    ```
    Example output:
 
-```console
+   ```console
    NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS          VOLUMEATTRIBUTESCLASS   AGE
    dvcr   Bound    pvc-b43f2e33-32cc-435a-aa1d-b53df35b030a   100Gi      RWO            linstor-thin-r1-hdd   <unset>                 34s
    ```

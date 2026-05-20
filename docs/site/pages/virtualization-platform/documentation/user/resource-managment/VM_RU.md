@@ -176,7 +176,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
    #
@@ -195,7 +195,7 @@ lang: ru
    ```
    Пример вывода:
 
-```console
+   ```console
    Successfully connected to linux-vm console. The escape sequence is ^]
    #
    linux-vm login: cloud
@@ -813,7 +813,7 @@ spec:
   ```
   Пример вывода (колонка `AGENT`):
 
-```console
+  ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```

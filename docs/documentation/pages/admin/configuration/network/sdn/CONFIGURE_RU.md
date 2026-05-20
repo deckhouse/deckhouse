@@ -123,7 +123,7 @@ d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
 
    Пример вывода:
 
-```console
+   ```console
    NAME                                                       MANAGEDBY   NODE                          TYPE     IFNAME      IFINDEX   STATE   AGE
    nni-node-0-bond0                                           Manual      node-0-b23d3a26-5fb4b-5s9fp   Bond     bond0       76        Up      7m48s
    ...

@@ -89,7 +89,7 @@ lang: ru
 
    Пример вывода:
 
-```console
+   ```console
    Defaulted container "linstor-controller" out of: linstor-controller, kube-rbac-proxy
    +----------------------------------------------------------------+
    | ResourceName | Node | Port | Usage | Conns | State | CreatedOn |
@@ -424,7 +424,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    ```
    Пример вывода:
 
-```console
+   ```console
    ebsremotes.yaml                    layerdrbdvolumedefinitions.yaml        layerwritecachevolumes.yaml  propscontainers.yaml      satellitescapacity.yaml  secidrolemap.yaml         trackingdate.yaml
    files.yaml                         layerdrbdvolumes.yaml                  linstorremotes.yaml          resourceconnections.yaml  schedules.yaml           secobjectprotection.yaml  volumeconnections.yaml
    keyvaluestore.yaml                 layerluksvolumes.yaml                  linstorversion.yaml          resourcedefinitions.yaml  secaccesstypes.yaml      secroles.yaml             volumedefinitions.yaml

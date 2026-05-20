@@ -159,7 +159,7 @@ To manually connect a VM as a CloudStatic node, follow these steps:
 
    Expected output:
 
-```console
+   ```console
    nodeNetworkCIDR: 192.168.12.13/24
    ```
    {: .nowrap-default }

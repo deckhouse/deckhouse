@@ -48,7 +48,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
 
    Example of the output (queues are empty):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.
@@ -104,7 +104,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    ```
    Example of the output (queues are empty):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.
@@ -293,7 +293,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```
    Example of the output (queues are empty):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.
@@ -341,7 +341,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```
    Example output:
 
-```console
+   ```console
    NAME     NODES   READY   UPTODATE
    master   1       1       1
    worker   2       2       2
@@ -355,7 +355,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```
    Example output:
 
-```console
+   ```console
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
    Aug 21 11:04:28 master-ee-to-se-0 bashible.sh[53407]: Annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
    Aug 21 11:04:29 master ee-to-se-0 bashible.sh[53407]: Successful annotate node master-ee-to-se-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
@@ -395,7 +395,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```
    Example of the output (queues are empty):
 
-```console
+   ```console
    Summary:
    - 'main' queue: empty.
    - 88 other queues (0 active, 88 empty): 0 tasks.
