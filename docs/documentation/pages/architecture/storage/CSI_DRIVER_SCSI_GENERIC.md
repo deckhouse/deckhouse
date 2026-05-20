@@ -29,9 +29,9 @@ The `csi-scsi-generic` CSI driver consists of the following components:
 
    It consists of the following containers:
 
-   * **controller**: Main container implementing CSI driver functionality (capabilities) through the gRPC services Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
-
    * **scsi-modules-loader**: Init container that loads the Linux kernel module required for iSCSI (`iscsi_tcp`).
+
+   * **controller**: Main container implementing CSI driver functionality (capabilities) through the gRPC services Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
 
    * **controller sidecar containers**: Kubernetes community-maintained external controllers.
 
@@ -51,15 +51,17 @@ The `csi-scsi-generic` CSI driver consists of the following components:
 
 1. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
-   > **Warning.** The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
+   {% alert level="warning" %}
+   The plugin has privileged access to the filesystem of each node. On Linux, this requires the `CAP_SYS_ADMIN` capability. This is necessary to perform mount operations and interact with block devices.
+   {% endalert %}
 
    It consists of the following containers:
+
+   * **scsi-modules-loader**: Init container that loads the kernel module required for iSCSI (`iscsi_tcp`).
 
    * **node**: Main container implementing CSI driver functionality through the gRPC services Identity Service and Node Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
 
    * **node-driver-registrar**: Sidecar container that registers the Node Plugin with [kubelet](../../kubernetes-and-scheduling/kubelet.html). It calls the RPC methods `GetPluginInfo` and `NodeGetInfo` in the node container to retrieve plugin and node information. Communication with the node container occurs over gRPC via a Unix socket.
-
-   * **scsi-modules-loader**: Init container that loads the kernel module required for iSCSI (`iscsi_tcp`).
 
 ## Driver interactions
 
