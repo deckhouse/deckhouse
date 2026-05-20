@@ -56,6 +56,7 @@ spec:
     metadata:
       labels:
         app: "bashible-apiserver"
+        security.deckhouse.io/security-policy-exception: bashible-apiserver
     spec:
       {{- include "helm_lib_node_selector"  (tuple . "master")  | nindent 6 }}
       {{- include "helm_lib_tolerations"    (tuple . "any-node" "uninitialized")  | nindent 6 }}
@@ -86,6 +87,7 @@ spec:
           - name: https
             hostPort: 4221
             containerPort: 4221
+            protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
@@ -114,6 +116,11 @@ spec:
 
 
 {{- define "bashible_input_data" }}
+{{- $deckhouseValues := .Values.deckhouse | default dict }}
+    deckhouse:
+      channel: {{ get $deckhouseValues "releaseChannel" | default "unknown" | quote }}
+      version: {{ .Values.global.deckhouseVersion | quote }}
+      edition: {{ .Values.global.deckhouseEdition | quote }}
     podSubnetNodeCIDRPrefix: {{ $.Values.global.clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
@@ -137,10 +144,13 @@ spec:
       noProxy:
         {{- $noProxy | toYaml | nindent 8 }}
     {{- end }}
+    clusterUUID: "{{ .Values.global.discovery.clusterUUID | default "00000000-0000-0000-0000-000000000000" }}"
     bootstrapTokens:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    clusterMasterEndpoints:
+      {{- $.Values.nodeManager.internal.clusterMasterEndpoints | default (list) | toYaml | nindent 6 }}
     {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
     apiserverProxyCerts:
       crt: |
@@ -150,8 +160,6 @@ spec:
     {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
-      addresses:
-        {{- $.Values.nodeManager.internal.packagesProxy.addresses | toYaml | nindent 8 }}
       token: {{ $.Values.nodeManager.internal.packagesProxy.token | toYaml }}
     {{- end }}
     {{- if $.Values.nodeManager.internal.kubernetesCA }}

@@ -1,0 +1,882 @@
+diff --git a/backend/go.mod b/backend/go.mod
+index 8a62b3bb..8fc35622 100644
+--- a/backend/go.mod
++++ b/backend/go.mod
+@@ -9,6 +9,7 @@ require (
+ 	github.com/julienschmidt/httprouter v1.3.0
+ 	github.com/pkg/errors v0.9.1
+ 	github.com/sirupsen/logrus v1.9.3
++	golang.org/x/sync v0.19.0
+ 	golang.org/x/sys v0.39.0
+ 	google.golang.org/grpc v1.79.3
+ 	google.golang.org/protobuf v1.36.10
+@@ -100,7 +101,6 @@ require (
+ 	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
+ 	golang.org/x/net v0.48.0 // indirect
+ 	golang.org/x/oauth2 v0.34.0 // indirect
+-	golang.org/x/sync v0.19.0 // indirect
+ 	golang.org/x/term v0.38.0 // indirect
+ 	golang.org/x/text v0.32.0 // indirect
+ 	golang.org/x/time v0.10.0 // indirect
+diff --git a/backend/internal/api_clients/api_clients.go b/backend/internal/api_clients/api_clients.go
+index 776d1d3f..ebd0d67e 100644
+--- a/backend/internal/api_clients/api_clients.go
++++ b/backend/internal/api_clients/api_clients.go
+@@ -3,6 +3,9 @@ package api_clients
+ import (
+ 	"context"
+ 
++	"k8s.io/client-go/kubernetes"
++	"k8s.io/client-go/rest"
++
+ 	"github.com/cilium/hubble-ui/backend/internal/ns_watcher"
+ 	"github.com/cilium/hubble-ui/backend/internal/relay_client"
+ )
+@@ -10,4 +13,6 @@ import (
+ type APIClientsInterface interface {
+ 	RelayClient() relay_client.RelayClientInterface
+ 	NSWatcher(context.Context, ns_watcher.NSWatcherOptions) (ns_watcher.NSWatcherInterface, error)
++	K8sRESTConfig() *rest.Config
++	K8sServiceClientset() kubernetes.Interface
+ }
+diff --git a/backend/internal/api_clients/api_clients_prod.go b/backend/internal/api_clients/api_clients_prod.go
+index 1a6242af..8a9ef6d0 100644
+--- a/backend/internal/api_clients/api_clients_prod.go
++++ b/backend/internal/api_clients/api_clients_prod.go
+@@ -6,6 +6,7 @@ import (
+ 	"github.com/pkg/errors"
+ 	"github.com/sirupsen/logrus"
+ 	"k8s.io/client-go/kubernetes"
++	"k8s.io/client-go/rest"
+ 
+ 	cilium "github.com/cilium/cilium/pkg/k8s/client/clientset/versioned"
+ 
+@@ -19,8 +20,9 @@ type APIClients struct {
+ 	cfg *config.Config
+ 	log logrus.FieldLogger
+ 
+-	k8s    kubernetes.Interface
+-	cilium *cilium.Clientset
++	k8sREST *rest.Config
++	k8s     kubernetes.Interface
++	cilium  *cilium.Clientset
+ 
+ 	// TODO: GRPCClient can be refactored to be a generalized connection pool
+ 	// for both Relay/Timescape clients
+@@ -42,6 +44,7 @@ func New(
+ 		return nil, errors.Wrap(err, "k8s clientset init failed")
+ 	}
+ 
++	clients.k8sREST = k8sConfig
+ 	clients.k8s = k8s
+ 
+ 	ciliumClientset, err := initCiliumClientset(k8sConfig)
+@@ -80,3 +83,17 @@ func (c *APIClients) RelayClient() relay_client.RelayClientInterface {
+ 
+ 	return cl
+ }
++
++func (c *APIClients) K8sRESTConfig() *rest.Config {
++	if c == nil || c.k8sREST == nil {
++		return nil
++	}
++	return rest.CopyConfig(c.k8sREST)
++}
++
++func (c *APIClients) K8sServiceClientset() kubernetes.Interface {
++	if c == nil {
++		return nil
++	}
++	return c.k8s
++}
+diff --git a/backend/internal/apiserver/api_info.go b/backend/internal/apiserver/api_info.go
+new file mode 100644
+index 00000000..ef86ed40
+--- /dev/null
++++ b/backend/internal/apiserver/api_info.go
+@@ -0,0 +1,46 @@
++package apiserver
++
++import (
++	"encoding/json"
++	"net/http"
++	"strings"
++
++	"github.com/julienschmidt/httprouter"
++)
++
++type apiInfoResponse struct {
++	Username string `json:"username"`
++}
++
++func (srv *APIServer) handleAPIInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
++	if r.Method != http.MethodGet {
++		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
++		return
++	}
++
++	authz := strings.TrimSpace(r.Header.Get("Authorization"))
++	if authz == "" {
++		http.Error(w, `missing "Authorization"`, http.StatusUnauthorized)
++		return
++	}
++
++	token := strings.TrimSpace(strings.TrimPrefix(authz, "Bearer"))
++	if token == "" {
++		http.Error(w, "missing bearer token", http.StatusUnauthorized)
++		return
++	}
++
++	username, err := usernameFromJWTBearerToken(token)
++	if err != nil {
++		srv.log.WithError(err).Debug("api/info: failed to read username from JWT")
++		http.Error(w, "invalid token", http.StatusUnauthorized)
++		return
++	}
++
++	w.Header().Set("Content-Type", "application/json")
++	w.WriteHeader(http.StatusOK)
++
++	if err := json.NewEncoder(w).Encode(apiInfoResponse{Username: username}); err != nil {
++		srv.log.WithError(err).Warn("api/info: failed to write JSON body")
++	}
++}
+diff --git a/backend/internal/apiserver/apiserver.go b/backend/internal/apiserver/apiserver.go
+index d8f30776..5a6085f7 100644
+--- a/backend/internal/apiserver/apiserver.go
++++ b/backend/internal/apiserver/apiserver.go
+@@ -12,6 +12,7 @@ import (
+ 	"github.com/sirupsen/logrus"
+ 
+ 	"github.com/cilium/hubble-ui/backend/internal/api_clients"
++	"github.com/cilium/hubble-ui/backend/internal/apiserver/auth"
+ 	"github.com/cilium/hubble-ui/backend/internal/apiserver/cors"
+ 	"github.com/cilium/hubble-ui/backend/internal/config"
+ 	"github.com/cilium/hubble-ui/backend/internal/customprotocol/router"
+@@ -27,6 +28,8 @@ type APIServer struct {
+ 	clients           api_clients.APIClientsInterface
+ 	handlerMiddleware HttpHandlerMiddleware
+ 
++	AuthCache *auth.Cache
++
+ 	instance *http.Server
+ 	router   *router.Router
+ }
+@@ -76,6 +79,7 @@ func New(
+ 		baseContext:       bctx,
+ 		clients:           clients,
+ 		handlerMiddleware: handlerMiddleware,
++		AuthCache:         auth.NewCache(),
+ 	}
+ 
+ 	if err := srv.prepareRoutes(); err != nil {
+@@ -91,6 +95,10 @@ func (srv *APIServer) Listen() error {
+ 	rootRoute := srv.rootRoute + "/:RouteName"
+ 
+ 	mux := httprouter.New()
++	if srv.cfg.EnableAuth {
++		mux.GET(srv.rootRoute+"/info", srv.handleAPIInfo)
++		srv.log.WithField("path", srv.rootRoute+"/info").Info("registered auth user info endpoint")
++	}
+ 	mux.Handler(http.MethodPost, rootRoute, srv.router)
+ 
+ 	var handler http.Handler = mux
+diff --git a/backend/internal/apiserver/auth/auth_cache.go b/backend/internal/apiserver/auth/auth_cache.go
+new file mode 100644
+index 00000000..1067ded6
+--- /dev/null
++++ b/backend/internal/apiserver/auth/auth_cache.go
+@@ -0,0 +1,138 @@
++// Package auth holds helpers for HTTP bearer auth against the Kubernetes API.
++package auth
++
++import (
++	"context"
++	"crypto/sha256"
++	"encoding/hex"
++	"sync"
++	"time"
++
++	"golang.org/x/sync/singleflight"
++)
++
++// DefaultCacheTTL is used when Cache.TTL is zero.
++const DefaultCacheTTL = 5 * time.Minute
++
++// Cache stores namespace allowlists keyed by a hash of the bearer token (the raw
++// token is never stored). Successful results and failed resolutions (empty allowlist)
++// are cached until TTL so callers do not hammer the API or logs on repeated polls.
++type Cache struct {
++	ttl  time.Duration
++	mu   sync.Mutex
++	data map[string]entry
++	sf   singleflight.Group
++}
++
++type entry struct {
++	namespaces map[string]struct{}
++	expires    time.Time
++}
++
++// NewCache returns a ready-to-use cache (safe concurrent use).
++func NewCache() *Cache {
++	return &Cache{
++		ttl: DefaultCacheTTL,
++	}
++}
++
++// SnapshotIfCached returns a fresh copy of the namespace allowlist when the
++// bearerToken already has a non-expired cache entry. Otherwise it returns nil, false.
++// Use this to skip heavier work (e.g. context timeouts, SAR) on hot paths.
++func (c *Cache) SnapshotIfCached(bearerToken string) (map[string]struct{}, bool) {
++	return c.getEntry(bearerTokenHash(bearerToken))
++}
++
++// AllowedNamespaces runs compute on miss/expiry. compute sees the same ctx the
++// caller passed; its result is cached under a hash of bearerToken.
++// If compute returns an error, an empty allowlist is cached for the same TTL and
++// onComputeError is invoked once for that cache fill (not on later cache hits).
++func (c *Cache) AllowedNamespaces(
++	ctx context.Context,
++	bearerToken string,
++	compute func(context.Context) (map[string]struct{}, error),
++	onComputeError func(err error),
++) (map[string]struct{}, error) {
++	key := bearerTokenHash(bearerToken)
++
++	if ns, ok := c.getEntry(key); ok {
++		return ns, nil
++	}
++
++	v, err, _ := c.sf.Do(key, func() (interface{}, error) {
++		if ns, ok := c.getEntry(key); ok {
++			return ns, nil
++		}
++
++		ns, computeErr := compute(ctx)
++		if computeErr != nil {
++			if onComputeError != nil {
++				onComputeError(computeErr)
++			}
++			empty := map[string]struct{}{}
++			c.setEntry(key, empty)
++			return empty, nil
++		}
++
++		c.setEntry(key, ns)
++		// ns is not retained by the cache; callers receive a copy below (singleflight shares one pointer).
++		return ns, nil
++	})
++
++	if err != nil {
++		return nil, err
++	}
++
++	out, _ := v.(map[string]struct{})
++	// singleflight shares one result pointer across waiters; give each caller an owned map.
++	return copyNamespaceSet(out), nil
++}
++
++func bearerTokenHash(token string) string {
++	sum := sha256.Sum256([]byte(token))
++	return hex.EncodeToString(sum[:])
++}
++
++func copyNamespaceSet(m map[string]struct{}) map[string]struct{} {
++	if m == nil {
++		return map[string]struct{}{}
++	}
++	out := make(map[string]struct{}, len(m))
++	for k := range m {
++		out[k] = struct{}{}
++	}
++	return out
++}
++
++func (c *Cache) getEntry(key string) (map[string]struct{}, bool) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++
++	if c.data == nil {
++		return nil, false
++	}
++
++	e, ok := c.data[key]
++	if !ok || time.Now().After(e.expires) {
++		if ok {
++			delete(c.data, key)
++		}
++		return nil, false
++	}
++
++	return copyNamespaceSet(e.namespaces), true
++}
++
++func (c *Cache) setEntry(key string, namespaces map[string]struct{}) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++
++	if c.data == nil {
++		c.data = make(map[string]entry)
++	}
++
++	c.data[key] = entry{
++		namespaces: copyNamespaceSet(namespaces),
++		expires:    time.Now().Add(c.ttl),
++	}
++}
+diff --git a/backend/internal/apiserver/auth/namespace_filter.go b/backend/internal/apiserver/auth/namespace_filter.go
+new file mode 100644
+index 00000000..60b370fb
+--- /dev/null
++++ b/backend/internal/apiserver/auth/namespace_filter.go
+@@ -0,0 +1,72 @@
++package auth
++
++import (
++	pbFlow "github.com/cilium/cilium/api/v1/flow"
++
++	ns_common "github.com/cilium/hubble-ui/backend/internal/ns_watcher/common"
++)
++
++func FilterNSEventsByAllowlist(nss []*ns_common.NSEvent, allowed map[string]struct{}) []*ns_common.NSEvent {
++	if len(allowed) == 0 {
++		return nil
++	}
++	out := make([]*ns_common.NSEvent, 0, len(nss))
++	for _, n := range nss {
++		name := n.GetNamespaceStr()
++		if name == "" {
++			continue
++		}
++		if _, ok := allowed[name]; ok {
++			out = append(out, n)
++		}
++	}
++	return out
++}
++
++func FilterFlowsByAllowedNamespaces(flows []*pbFlow.Flow, allowed map[string]struct{}) []*pbFlow.Flow {
++	if len(flows) == 0 || len(allowed) == 0 {
++		return nil
++	}
++	out := make([]*pbFlow.Flow, 0, len(flows))
++	for _, f := range flows {
++		if flowInvolvesAllowedNamespace(f, allowed) {
++			out = append(out, f)
++		}
++	}
++	return out
++}
++
++func flowInvolvesAllowedNamespace(f *pbFlow.Flow, allowed map[string]struct{}) bool {
++	if f == nil || len(allowed) == 0 {
++		return false
++	}
++	if src := f.GetSource(); src != nil {
++		if ns := src.GetNamespace(); ns != "" {
++			if _, ok := allowed[ns]; ok {
++				return true
++			}
++		}
++	}
++	if dst := f.GetDestination(); dst != nil {
++		if ns := dst.GetNamespace(); ns != "" {
++			if _, ok := allowed[ns]; ok {
++				return true
++			}
++		}
++	}
++	if ss := f.GetSourceService(); ss != nil {
++		if ns := ss.GetNamespace(); ns != "" {
++			if _, ok := allowed[ns]; ok {
++				return true
++			}
++		}
++	}
++	if ds := f.GetDestinationService(); ds != nil {
++		if ns := ds.GetNamespace(); ns != "" {
++			if _, ok := allowed[ns]; ok {
++				return true
++			}
++		}
++	}
++	return false
++}
+diff --git a/backend/internal/apiserver/auth_middleware.go b/backend/internal/apiserver/auth_middleware.go
+new file mode 100644
+index 00000000..b54ee01a
+--- /dev/null
++++ b/backend/internal/apiserver/auth_middleware.go
+@@ -0,0 +1,161 @@
++package apiserver
++
++import (
++	"context"
++	"fmt"
++	"strings"
++	"time"
++
++	cp "github.com/cilium/hubble-ui/backend/internal/customprotocol"
++	"github.com/cilium/hubble-ui/backend/internal/customprotocol/message"
++	"github.com/sirupsen/logrus"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/client-go/kubernetes"
++
++	authv1 "k8s.io/api/authorization/v1"
++)
++
++type authMiddleware struct {
++	srv     *APIServer
++	handler string
++}
++
++func (srv *APIServer) authMiddleware(handler string) cp.ChannelMiddleware {
++	return &authMiddleware{
++		srv:     srv,
++		handler: handler,
++	}
++}
++
++func (m *authMiddleware) Clone() cp.ChannelMiddleware {
++	return &authMiddleware{
++		srv:     m.srv,
++		handler: m.handler,
++	}
++}
++
++func (m *authMiddleware) pollLog(ch *cp.Channel) logrus.FieldLogger {
++	log := m.srv.log.WithField("channelId", ch.Id)
++	if m.handler != "" {
++		log = log.WithField("handler", m.handler)
++	}
++	return log
++}
++
++func (m *authMiddleware) RunBeforePolling(ch *cp.Channel, msg *message.Message) error {
++	rctx, err := m.srv.ensureHandlerData(ch)
++	if err != nil {
++		return err
++	}
++
++	log := m.pollLog(ch)
++
++	headers := msg.HttpRequest.Header
++	if headers == nil {
++		log.Error("HTTP request headers missing")
++		rctx.SetAllowedNamespaces(map[string]struct{}{})
++		return nil
++	}
++
++	authHeader := headers.Get("Authorization")
++	if authHeader == "" {
++		log.Warn(`missing empty "Authorization" header`)
++		rctx.SetAllowedNamespaces(map[string]struct{}{})
++		return nil
++	}
++
++	token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
++	if token == "" {
++		log.Warn(`missing empty Bearer token`)
++		rctx.SetAllowedNamespaces(map[string]struct{}{})
++		return nil
++	}
++
++	if allowed, ok := m.srv.AuthCache.SnapshotIfCached(token); ok {
++		rctx.SetAllowedNamespaces(allowed)
++		return nil
++	}
++
++	ctx, cancel := context.WithTimeout(ch.Context(), 60*time.Second)
++	defer cancel()
++
++	allowed, err := m.srv.AuthCache.AllowedNamespaces(ctx, token, func(cctx context.Context) (map[string]struct{}, error) {
++		base := m.srv.clients.K8sRESTConfig()
++		if base == nil {
++			return nil, fmt.Errorf("kubernetes client configuration is not available")
++		}
++		base.BearerToken = token
++		base.BearerTokenFile = ""
++
++		userClient, err := kubernetes.NewForConfig(base)
++		if err != nil {
++			return nil, fmt.Errorf("kubernetes client: %w", err)
++		}
++
++		nsLister := m.srv.clients.K8sServiceClientset()
++		return ComputeNamespacePodListAllowlist(cctx, nsLister, userClient, log)
++	}, func(computeErr error) {
++		log.WithError(computeErr).Warn(
++			"failed to resolve namespace access; caching empty allowlist for this token until cache TTL",
++		)
++	})
++	if err != nil {
++		log.WithError(err).Warn("namespace access cache internal error")
++		rctx.SetAllowedNamespaces(map[string]struct{}{})
++		return nil
++	}
++
++	rctx.SetAllowedNamespaces(allowed)
++
++	return nil
++}
++
++// ComputeNamespacePodListAllowlist returns namespaces where SelfSubjectAccessReview
++// for list pods is allowed for the user behind authClient.
++//
++// Namespace names come from namespaceLister (typically the backend service account).
++// If namespaceLister is nil, authClient is used for Namespace.List (legacy / mocks).
++// authClient must carry the end-user credentials for SAR.
++func ComputeNamespacePodListAllowlist(
++	ctx context.Context,
++	namespaceLister kubernetes.Interface,
++	authClient kubernetes.Interface,
++	log logrus.FieldLogger,
++) (map[string]struct{}, error) {
++	if namespaceLister == nil {
++		namespaceLister = authClient
++	}
++
++	nsList, err := namespaceLister.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
++	if err != nil {
++		return nil, err
++	}
++
++	allowed := make(map[string]struct{}, len(nsList.Items))
++
++	for _, ns := range nsList.Items {
++		review := &authv1.SelfSubjectAccessReview{
++			Spec: authv1.SelfSubjectAccessReviewSpec{
++				ResourceAttributes: &authv1.ResourceAttributes{
++					Namespace: ns.Name,
++					Verb:      "list",
++					Resource:  "pods",
++				},
++			},
++		}
++
++		resp, err := authClient.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx, review, metav1.CreateOptions{})
++		if err != nil {
++			log.WithError(err).Warnf("SAR failed for namespace %s", ns.Name)
++			continue
++		}
++
++		if resp.Status.Allowed {
++			allowed[ns.Name] = struct{}{}
++		}
++	}
++
++	log.WithField("namespacesCount", len(allowed)).Debug("namespace access calculated")
++
++	return allowed, nil
++}
+diff --git a/backend/internal/apiserver/control_stream.go b/backend/internal/apiserver/control_stream.go
+index e86f2fe7..7e483460 100644
+--- a/backend/internal/apiserver/control_stream.go
++++ b/backend/internal/apiserver/control_stream.go
+@@ -4,6 +4,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/cilium/hubble-ui/backend/internal/api_helpers"
++	"github.com/cilium/hubble-ui/backend/internal/apiserver/auth"
+ 	"github.com/cilium/hubble-ui/backend/internal/apiserver/notifications"
+ 	"github.com/cilium/hubble-ui/backend/internal/apiserver/req_context"
+ 	cp "github.com/cilium/hubble-ui/backend/internal/customprotocol"
+@@ -72,6 +73,12 @@ F:
+ 			nsDebounce.Touch()
+ 		case <-nsDebounce.Triggered():
+ 			nss := dataStash.FlushNamespaces()
++			if enabled, allowed := rctx.GetAllowedNamespaces(); enabled {
++				nss = auth.FilterNSEventsByAllowlist(nss, allowed)
++			}
++			if len(nss) == 0 {
++				continue
++			}
+ 			nsResponse := responseFromNSEvents(nss)
+ 			log.
+ 				WithField("response", nsResponse).
+diff --git a/backend/internal/apiserver/jwt_username.go b/backend/internal/apiserver/jwt_username.go
+new file mode 100644
+index 00000000..20c311f8
+--- /dev/null
++++ b/backend/internal/apiserver/jwt_username.go
+@@ -0,0 +1,67 @@
++package apiserver
++
++import (
++	"encoding/base64"
++	"encoding/json"
++	"fmt"
++	"strings"
++)
++
++// usernameFromJWTBearerToken extracts a display name from an unverified JWT payload.
++// The token is assumed to have been validated at the edge (e.g. oauth2-proxy) when
++// ENABLE_AUTH is enabled; this is for UI display only.
++func usernameFromJWTBearerToken(token string) (string, error) {
++	token = strings.TrimSpace(token)
++	if token == "" {
++		return "", fmt.Errorf("empty token")
++	}
++
++	parts := strings.Split(token, ".")
++	if len(parts) != 3 {
++		return "", fmt.Errorf("jwt: expected 3 segments")
++	}
++
++	raw, err := decodeJWTSegment(parts[1])
++	if err != nil {
++		return "", err
++	}
++
++	var claims map[string]json.RawMessage
++	if err := json.Unmarshal(raw, &claims); err != nil {
++		return "", err
++	}
++
++	for _, key := range []string{"preferred_username", "email", "name", "sub"} {
++		rawVal, ok := claims[key]
++		if !ok {
++			continue
++		}
++		var s string
++		if err := json.Unmarshal(rawVal, &s); err != nil || strings.TrimSpace(s) == "" {
++			continue
++		}
++		return s, nil
++	}
++
++	return "", fmt.Errorf("jwt: no username claim")
++}
++
++func decodeJWTSegment(seg string) ([]byte, error) {
++	seg = strings.TrimSpace(seg)
++	if seg == "" {
++		return nil, fmt.Errorf("jwt: empty payload segment")
++	}
++
++	if b, err := base64.RawURLEncoding.DecodeString(seg); err == nil {
++		return b, nil
++	}
++
++	if pad := len(seg) % 4; pad != 0 {
++		seg += strings.Repeat("=", 4-pad)
++	}
++	if b, err := base64.URLEncoding.DecodeString(seg); err == nil {
++		return b, nil
++	}
++
++	return nil, fmt.Errorf("jwt: payload base64 decode failed")
++}
+diff --git a/backend/internal/apiserver/req_context/req_context.go b/backend/internal/apiserver/req_context/req_context.go
+index 50cadf23..2aeb55f9 100644
+--- a/backend/internal/apiserver/req_context/req_context.go
++++ b/backend/internal/apiserver/req_context/req_context.go
+@@ -12,6 +12,8 @@ type Context struct {
+ 
+ 	mx  sync.Mutex
+ 	ctx context.Context
++
++	allowedNamespaces map[string]struct{}
+ }
+ 
+ func New(ctx context.Context) *Context {
+@@ -30,3 +32,30 @@ func (c *Context) SetLogger(log logrus.FieldLogger) *Context {
+ 	c.Log = log
+ 	return c
+ }
++
++// GetAllowedNamespaces returns whether namespace allowlisting is active for this
++// channel (set by bearer auth middleware) and a copy of the allowlist
++func (c *Context) GetAllowedNamespaces() (enabled bool, allowed map[string]struct{}) {
++	c.mx.Lock()
++	defer c.mx.Unlock()
++	if c.allowedNamespaces == nil {
++		return false, nil
++	}
++	out := make(map[string]struct{}, len(c.allowedNamespaces))
++	for k := range c.allowedNamespaces {
++		out[k] = struct{}{}
++	}
++	return true, out
++}
++
++// SetAllowedNamespaces stores the allowlist for the current bearer token. The caller
++// must not mutate allowed after this call
++func (c *Context) SetAllowedNamespaces(allowed map[string]struct{}) {
++	c.mx.Lock()
++	defer c.mx.Unlock()
++	if allowed == nil {
++		c.allowedNamespaces = map[string]struct{}{}
++		return
++	}
++	c.allowedNamespaces = allowed
++}
+diff --git a/backend/internal/apiserver/service_map_stream.go b/backend/internal/apiserver/service_map_stream.go
+index 472b9358..7f7c1313 100644
+--- a/backend/internal/apiserver/service_map_stream.go
++++ b/backend/internal/apiserver/service_map_stream.go
+@@ -6,6 +6,7 @@ import (
+ 	"time"
+ 
+ 	pb_flow "github.com/cilium/cilium/api/v1/flow"
++	"github.com/cilium/hubble-ui/backend/internal/apiserver/auth"
+ 	"github.com/cilium/hubble-ui/backend/proto/ui"
+ 
+ 	"github.com/cilium/hubble-ui/backend/domain/cache"
+@@ -87,6 +88,11 @@ func (srv *APIServer) ServiceMapStream(
+ 	flushFlows := func() error {
+ 		// NOTE: take links and services from flow
+ 		wflows := flow.Wrap(flows.Flush())
++		if enabled, allowed := rctx.GetAllowedNamespaces(); enabled {
++			pbFlows := flow.Unwrap(wflows)
++			pbFlows = auth.FilterFlowsByAllowedNamespaces(pbFlows, allowed)
++			wflows = flow.Wrap(pbFlows)
++		}
+ 		var svcs []cache.Result[*service.Service]
+ 		var links []cache.Result[*link.Link]
+ 
+diff --git a/backend/internal/apiserver/setup_routes.go b/backend/internal/apiserver/setup_routes.go
+index 0a567302..ebd60ede 100644
+--- a/backend/internal/apiserver/setup_routes.go
++++ b/backend/internal/apiserver/setup_routes.go
+@@ -38,24 +38,33 @@ func (srv *APIServer) prepareRoutes() error {
+ 
+ func (srv *APIServer) setRouteHandlers() error {
+ 	srv.router.Route("control-stream").
+-		Middlewares([]cp.ChannelMiddleware{
+-			srv.loggerMiddleware("ControlStream"),
+-		}).
++		Middlewares(srv.streamMiddlewares("ControlStream")).
+ 		Stream(
+ 			srv.wrapHandler(srv.ControlStream, WrappedRouteOptions{}),
+ 		)
+ 
+ 	srv.router.Route("service-map-stream").
+-		Middlewares([]cp.ChannelMiddleware{
+-			srv.loggerMiddleware("ServiceMapStream"),
+-		}).
++		Middlewares(srv.streamMiddlewares("ServiceMapStream")).
+ 		Stream(
+ 			srv.wrapHandler(srv.ServiceMapStream, WrappedRouteOptions{}),
+ 		)
+ 
++	if srv.cfg.EnableAuth {
++		srv.log.Info("authorization is enabled")
++	}
++
+ 	return nil
+ }
+ 
++func (srv *APIServer) streamMiddlewares(handler string) []cp.ChannelMiddleware {
++	out := make([]cp.ChannelMiddleware, 0, 2)
++	if srv.cfg.EnableAuth {
++		out = append(out, srv.authMiddleware(handler))
++	}
++	out = append(out, srv.loggerMiddleware(handler))
++	return out
++}
++
+ func (srv *APIServer) wrapHandler(
+ 	handler WrappedRouteHandler,
+ 	_opts WrappedRouteOptions,
+diff --git a/backend/internal/config/builder.go b/backend/internal/config/builder.go
+index 6e5d96c1..24ce9212 100644
+--- a/backend/internal/config/builder.go
++++ b/backend/internal/config/builder.go
+@@ -38,6 +38,10 @@ func (b *ConfigBuilder) Build() (*Config, error) {
+ 		return nil, err
+ 	}
+ 
++	if err := b.initEnableAuth(cfg); err != nil {
++		return nil, err
++	}
++
+ 	if err := b.initTestModeFlags(cfg); err != nil {
+ 		return nil, err
+ 	}
+@@ -208,6 +212,18 @@ func (b *ConfigBuilder) initWebServer(cfg *Config) error {
+ 	return nil
+ }
+ 
++func (b *ConfigBuilder) initEnableAuth(cfg *Config) error {
++	enabled := b.props.EnableAuth()
++	if err := enabled.Err(); err != nil {
++		return err
++	}
++
++	enabled.LogIfFallback(b.logger)
++	cfg.EnableAuth = enabled.Value
++
++	return nil
++}
++
+ func (b *ConfigBuilder) initTestModeFlags(cfg *Config) error {
+ 	e2eMode := b.props.E2ETestModeEnabled()
+ 	if err := e2eMode.Err(); err != nil {
+diff --git a/backend/internal/config/config.go b/backend/internal/config/config.go
+index af598b05..9f541d6c 100644
+--- a/backend/internal/config/config.go
++++ b/backend/internal/config/config.go
+@@ -24,6 +24,9 @@ type Config struct {
+ 	// Enables CORS headers on http routes
+ 	CORSEnabled bool
+ 
++	// Enables bearer-token namespace allowlisting on UI API streams (ENABLE_AUTH).
++	EnableAuth bool
++
+ 	E2ETestMode         bool
+ 	E2ELogFilesBasePath string
+ 
+diff --git a/backend/internal/config/prop_getters.go b/backend/internal/config/prop_getters.go
+index ed949287..4e597bd9 100644
+--- a/backend/internal/config/prop_getters.go
++++ b/backend/internal/config/prop_getters.go
+@@ -13,6 +13,7 @@ type PropGetters struct {
+ 	GopsEnabled              EnvVarGetter[bool]
+ 	GopsPort                 EnvVarGetter[uint16]
+ 	CorsEnabled              EnvVarGetter[bool]
++	EnableAuth               EnvVarGetter[bool]
+ 	DebugLogs                EnvVarGetter[bool]
+ 	RelayAddr                EnvVarGetter[string]
+ 	UIServerPort             EnvVarGetter[uint16]
+diff --git a/backend/internal/mock/clients/clients.go b/backend/internal/mock/clients/clients.go
+index 0d69ec33..6082a78f 100644
+--- a/backend/internal/mock/clients/clients.go
++++ b/backend/internal/mock/clients/clients.go
+@@ -5,6 +5,8 @@ import (
+ 	"sync"
+ 
+ 	"github.com/sirupsen/logrus"
++	"k8s.io/client-go/kubernetes"
++	"k8s.io/client-go/rest"
+ 
+ 	"github.com/cilium/hubble-ui/backend/internal/api_clients"
+ 	"github.com/cilium/hubble-ui/backend/internal/mock/sources"
+@@ -114,6 +116,14 @@ func (cl *Clients) NSWatcher(ctx context.Context, opts ns_watcher.NSWatcherOptio
+ 	return nsw, nil
+ }
+ 
++func (cl *Clients) K8sRESTConfig() *rest.Config {
++	return nil
++}
++
++func (cl *Clients) K8sServiceClientset() kubernetes.Interface {
++	return nil
++}
++
+ func (cl *Clients) duplicateSource() sources.MockedSource {
+ 	if cl.src == nil {
+ 		return nil
+diff --git a/backend/main.go b/backend/main.go
+index b62c3a4c..e384acfb 100644
+--- a/backend/main.go
++++ b/backend/main.go
+@@ -17,6 +17,7 @@ func main() {
+ 		GopsEnabled:              config.BoolOr("GOPS_ENABLED", false),
+ 		GopsPort:                 config.Uint16Or("GOPS_PORT", 0),
+ 		CorsEnabled:              config.BoolOr("CORS_ENABLED", false),
++		EnableAuth:               config.BoolOr("ENABLE_AUTH", false),
+ 		DebugLogs:                config.BoolOr("DEBUG_LOGS", false),
+ 		UIServerPort:             config.Uint16Or("EVENTS_SERVER_PORT", 8090),
+ 		ClientPollDelays:         []time.Duration{200 * time.Millisecond, 5 * time.Second},

@@ -1,7 +1,7 @@
 linters-settings:
   module:
     oss:
-      disable: true
+      disable: false
   container:
     exclude-rules:
       read-only-root-filesystem:

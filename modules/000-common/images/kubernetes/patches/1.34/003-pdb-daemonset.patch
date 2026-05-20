@@ -1,5 +1,5 @@
 diff --git a/cmd/kube-controller-manager/app/policy.go b/cmd/kube-controller-manager/app/policy.go
-index 0db44ba6..c8893ae9 100644
+index 0db44ba6e4a..c8893ae9c78 100644
 --- a/cmd/kube-controller-manager/app/policy.go
 +++ b/cmd/kube-controller-manager/app/policy.go
 @@ -54,6 +54,7 @@ func startDisruptionController(ctx context.Context, controllerContext Controller
@@ -11,7 +11,7 @@ index 0db44ba6..c8893ae9 100644
  		controllerContext.RESTMapper,
  		scaleClient,
 diff --git a/pkg/controller/disruption/disruption.go b/pkg/controller/disruption/disruption.go
-index 05f9aa81..2f4e4969 100644
+index 05f9aa8166e..2f4e4969647 100644
 --- a/pkg/controller/disruption/disruption.go
 +++ b/pkg/controller/disruption/disruption.go
 @@ -99,6 +99,9 @@ type DisruptionController struct {
@@ -111,7 +111,7 @@ index 05f9aa81..2f4e4969 100644
  	}
  
 diff --git a/pkg/controller/disruption/disruption_test.go b/pkg/controller/disruption/disruption_test.go
-index 01c77371..07b5f873 100644
+index 01c77371bdf..07b5f873c7a 100644
 --- a/pkg/controller/disruption/disruption_test.go
 +++ b/pkg/controller/disruption/disruption_test.go
 @@ -134,6 +134,7 @@ type disruptionController struct {
@@ -266,4 +266,3 @@ index 01c77371..07b5f873 100644
  	}
  
  	for tn, tc := range testCases {
-

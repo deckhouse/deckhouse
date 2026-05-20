@@ -108,32 +108,6 @@ d8 k edit mc virtualization
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size` — размер тома (например, `50G`). Для расширения хранилища увеличьте значение параметра;
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `rv-thin-r1`).
 
-{% alert level="warning" %}
-Перенос образов при изменении значения параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` не поддерживается.
-
-При смене StorageClass DVCR все образы, хранящиеся в DVCR, будут утеряны.
-{% endalert %}
-
-Для изменения StorageClass DVCR выполните следующие действия:
-
-1. Измените значение [параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname).
-
-1. Удалите старый PVC для DVCR с помощью следующей команды:
-
-   ```shell
-   d8 k -n d8-virtualization delete pvc -l app=dvcr
-   ```
-
-1. Перезапустите DVCR, выполнив следующую команду:
-
-   ```shell
-   d8 k -n d8-virtualization rollout restart deployment dvcr
-   ```
-
-{% alert level="warning" %}
-Хранилище, обслуживающее данный класс хранения `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`, должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
-{% endalert %}
-
 ### Настройки Ingress
 
 Параметр `.spec.settings.ingressClass` определяет класс Ingress-контроллера, который будет использоваться для загрузки образов виртуальных машин через веб-интерфейс или CLI.

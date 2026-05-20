@@ -10,6 +10,10 @@ data:
   policy.yaml: |
     apiVersion: "descheduler/v1alpha2"
     kind: "DeschedulerPolicy"
+    {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
+    metricsProviders:
+    - source: KubernetesMetrics
+    {{- end }}
     profiles:
     {{- range $d := .Values.descheduler.internal.deschedulers }}
     - name: {{ $d.name }}
@@ -39,6 +43,10 @@ data:
       {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
       - name: "LowNodeUtilization"
         args:
+          {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
+          metricsUtilization:
+            source: KubernetesMetrics
+          {{- end }}
           {{- $s := unset ($d.strategies.lowNodeUtilization | deepCopy) "enabled" }}
           {{- $s | toYaml | nindent 10 }}
       {{- end }}

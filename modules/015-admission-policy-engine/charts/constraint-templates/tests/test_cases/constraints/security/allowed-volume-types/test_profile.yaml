@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-volume-types
+spec:
+  testDirectory: allowed-volume-types
+  suite:
+    expectedTestBlockNames:
+      - pss-restricted
+      - security-policy
+      - pss-restricted-with-exception

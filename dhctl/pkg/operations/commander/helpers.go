@@ -72,12 +72,17 @@ func ConstructManagedByCommanderConfigMapTask(ctx context.Context, commanderUUID
 		Manifest: func() interface{} {
 			return manifests.CommanderUUIDConfigMap(commanderUUID.String())
 		},
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Create(ctx, manifest.(*v1.ConfigMap), metav1.CreateOptions{})
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
+				Create(ctx, manifest.(*v1.ConfigMap), metav1.CreateOptions{})
+
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			existingCm, err := kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Get(ctx, manifests.CommanderUUIDCm, metav1.GetOptions{})
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			existingCm, err := kubeCl.
+				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
+				Get(ctx, manifests.CommanderUUIDCm, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("unable to get existing cm: %w", err)
 			}
@@ -88,7 +93,10 @@ func ConstructManagedByCommanderConfigMapTask(ctx context.Context, commanderUUID
 			}
 
 			if shouldUpdate {
-				_, err = kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Update(ctx, manifest.(*v1.ConfigMap), metav1.UpdateOptions{})
+				_, err = kubeCl.
+					CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
+					Update(ctx, manifest.(*v1.ConfigMap), metav1.UpdateOptions{})
+
 				return err
 			}
 			return nil
@@ -100,7 +108,9 @@ func DeleteManagedByCommanderConfigMap(ctx context.Context, kubeCl *client.Kuber
 	return retry.NewLoop("Delete commander-uuid ConfigMap", 20, 5*time.Second).
 		WithShowError(false).
 		RunContext(ctx, func() error {
-			err := kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Delete(ctx, manifests.CommanderUUIDCm, metav1.DeleteOptions{})
+			err := kubeCl.
+				CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).
+				Delete(ctx, manifests.CommanderUUIDCm, metav1.DeleteOptions{})
 			if err != nil && !errors.IsNotFound(err) {
 				return err
 			}

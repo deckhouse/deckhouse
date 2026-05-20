@@ -23,7 +23,7 @@ shell:
   - |
 {{- range $key := list "default" "managed" "minimal" }}
     # Add bundle {{ $key }}
-    cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
+    cat <<"EOD" | yq eval-all 'select(. != null) as $item ireduce ({}; . * $item )' - > /deckhouse/modules/values-{{ $key }}.yaml
       {{- range $_, $edition := $.Editions }}
     {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
         {{- if eq $.Env $edition.name }}

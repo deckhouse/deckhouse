@@ -1,0 +1,61 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: disallowed-tags
+spec:
+  suiteName: d8-disallowed-tags
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: operation-policy
+      gatorBlock: operation-policy
+      defaultObjectBase: ""
+      template: ../../templates/operation/disallowed-tags.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                containers:
+                  - name: foo
+                    image: nginx:v1
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+              spec:
+                containers:
+                  - name: foo
+                    image: nginx:latest

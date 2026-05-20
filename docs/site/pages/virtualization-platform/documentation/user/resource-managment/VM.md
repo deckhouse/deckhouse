@@ -561,6 +561,32 @@ The change step indicates by how much the total number of cores can be increased
 
 The maximum possible number of cores is 248.
 
+Summary table by `spec.cpu.cores` range:
+
+| Cores range        | Number of sockets | Change step | Minimum cores per socket | Maximum cores per socket |
+|--------------------|-------------------|-------------|--------------------------|--------------------------|
+| `1 ≤ cores ≤ 16`   | 1                 | 1           | 1                        | 16                       |
+| `16 < cores ≤ 32`  | 2                 | 2           | 9                        | 16                       |
+| `32 < cores ≤ 64`  | 4                 | 4           | 9                        | 16                       |
+| `64 < cores ≤ 248` | 8                 | 8           | 9                        | 16                       |
+
+Memory overhead does not depend on the maximum possible vCPU topology; it is calculated from actively used cores: (sockets × cores per socket × threads per core) × 8 MiB per logical CPU.
+
+Example: with `spec.cpu.cores: 20`, the status shows a topology of two sockets with 10 cores each:
+
+```yaml
+spec:
+  cpu:
+    cores: 20
+# ...
+status:
+  resources:
+    cpu:
+      topology:
+        coresPerSocket: 10
+        sockets: 2
+```
+
 The current VM topology (number of sockets and cores in each socket) is displayed in the VM status in the following format:
 
 ```yaml
@@ -980,15 +1006,17 @@ If the virtual machine is in a shutdown state (`.status.phase: Stopped`), the ch
 
 If the virtual machine is running (`.status.phase: Running`), the way the changes are applied depends on the type of change:
 
-| Configuration block                     | How changes are applied                                 |
-| --------------------------------------- | --------------------------------------------------------|
-| `.metadata.annotations`                 | Applies immediately                                     |
-| `.spec.liveMigrationPolicy`             | Applies immediately                                     |
-| `.spec.runPolicy`                       | Applies immediately                                     |
-| `.spec.disruptions.restartApprovalMode` | Applies immediately                                     |
-| `.spec.affinity`                        | EE, SE+: Applies immediately, CE: Only after VM restart |
-| `.spec.nodeSelector`                    | EE, SE+: Applies immediately, CE: Only after VM restart |
-| `.spec.*`                               | Only after VM restart                                   |
+| Configuration block                     | How changes are applied                                                                                                  |
+|-----------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| `.metadata.labels`                      | Applies immediately and propagates to the VM pod                                                                         |
+| `.metadata.annotations`                 | Applies immediately and propagates to the VM pod                                                                         |
+| `.spec.liveMigrationPolicy`             | Applies immediately                                                                                                      |
+| `.spec.runPolicy`                       | Applies immediately                                                                                                      |
+| `.spec.disruptions.restartApprovalMode` | Applies immediately                                                                                                      |
+| `.spec.affinity`                        | EE, SE+: Applies immediately, CE: Only after VM restart                                                                  |
+| `.spec.nodeSelector`                    | EE, SE+: Applies immediately, CE: Only after VM restart                                                                  |
+| `.spec.cpu.cores`                       | May apply immediately if hotplug is enabled (EE, SE+), see [CPU hotplug](#cpu-hotplug); otherwise a restart is required. |
+| `.spec.*`                               | Only after VM restart                                                                                                    |
 
 How to change the VM configuration in the web interface:
 
@@ -1110,6 +1138,51 @@ How to perform the operation in the web interface:
 - On the "Configuration" tab, scroll down to the "Additional Settings" section.
 - Enable the "Auto-apply changes" switch.
 - Click on the "Save" button that appears.
+
+### CPU hotplug
+
+CPU hotplug lets you change `spec.cpu.cores` for a running VM without restart when the change can be applied through live migration. Within the current CPU topology, you can both increase and decrease the number of cores.
+
+This functionality is disabled by default.
+
+To enable this functionality, add `HotplugCPUWithLiveMigration` to `.spec.settings.featureGates` array in the ModuleConfig/virtualization:
+
+```yaml
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  settings:
+    featureGates:
+    - HotplugCPUWithLiveMigration
+```
+
+If the new `.spec.cpu.cores` value falls within the hotplug range for the current topology and the VM is migratable, the change is applied through live migration. If the new value requires a different CPU topology or the VM cannot be migrated, a VM restart is required. The need for restart is reflected by the `AwaitingRestartToApplyConfiguration` condition.
+
+Topology calculation rules and allowed change steps for `spec.cpu.cores` are described in [Automatic CPU topology configuration](#automatic-cpu-topology-configuration).
+
+Guest OS specifics:
+
+- After live migration, new vCPUs may require explicit activation inside the guest OS.
+- On Linux, added CPUs can be enabled through sysfs:
+
+  ```bash
+  echo 1 > /sys/devices/system/cpu/cpu1/online
+  ```
+
+- To automatically enable new CPUs on Linux, configure a `udev` rule. After that, added CPUs become visible in `cat /proc/cpuinfo` and `top`:
+
+  ```bash
+  cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
+  SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
+  EOF
+  ```
+
+Limitations:
+
+- Changing `spec.cpu.cores` without restart is possible only within the hotplug range of the current CPU topology.
+- If the change requires CPU topology reconfiguration, a VM restart is required.
+- When decreasing CPU count within the current topology, CPU distribution across sockets may become uneven.
 
 ### Placement of VMs by nodes
 
@@ -2204,6 +2277,29 @@ Important considerations when working with additional network interfaces:
 
 {% alert level="info" %}
 When configuring network interfaces in the guest OS, use stable identifiers (predictable names `enpXsY` or MAC address binding) instead of `ethX` names. For more details, see the [Network interface naming in guest OS](#network-interface-naming-in-guest-os) section.
+{% endalert %}
+
+{% alert level="info" %}
+On a Linux guest system with multiple interfaces in the same subnet, the ARP Flux issue may occur, where the kernel responds to ARP requests via any arbitrary interface rather than the one the request was received on, leading to unstable connections and packet loss due to an incorrect MAC address in the router's ARP cache.
+
+To resolve this, set the following parameters to force the system to respond to requests strictly via the interface holding the target IP and to use the correct source address:
+
+```bash
+sysctl -w net.ipv4.conf.all.arp_ignore=1
+sysctl -w net.ipv4.conf.all.arp_announce=2
+```
+
+Cloud-init example:
+
+```yaml
+write_files:
+  - path: /etc/sysctl.d/90-arp-strict.conf
+    content: |
+      net.ipv4.conf.all.arp_ignore=1
+      net.ipv4.conf.all.arp_announce=2
+```
+
+For more details, see the [IP sysctl](https://docs.kernel.org/networking/ip-sysctl.html) documentation.
 {% endalert %}
 
 Example of connecting a VM to the main cluster network and the project network `user-net`:

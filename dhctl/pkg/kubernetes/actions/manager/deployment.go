@@ -30,12 +30,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.KubeClientProvider, deploymentName string) error {
+func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx, deploymentName string) error {
 	hasDeployment := false
+
 	err := retry.NewLoop(fmt.Sprintf("Check deployment %s/%s exists", global.D8SystemNamespace, deploymentName), 10, 5*time.Second).
 		RunContext(ctx, func() error {
-			kubeCl := kubeClProvider.KubeClient()
-			_, err := kubeCl.AppsV1().Deployments(global.D8SystemNamespace).Get(ctx, deploymentName, metav1.GetOptions{})
+			kubeCl, err := kubeClProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
+			_, err = kubeCl.AppsV1().Deployments(global.D8SystemNamespace).Get(ctx, deploymentName, metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
 					hasDeployment = false
@@ -60,7 +64,10 @@ func checkAndRestartDeployment(ctx context.Context, kubeClProvider kubernetes.Ku
 
 	err = retry.NewLoop(fmt.Sprintf("Restart deployment %s/%s with adding annotation", global.D8SystemNamespace, deploymentName), 10, 5*time.Second).
 		RunContext(ctx, func() error {
-			kubeCl := kubeClProvider.KubeClient()
+			kubeCl, err := kubeClProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
 			patch, err := json.Marshal(map[string]interface{}{
 				"spec": map[string]interface{}{
 					"template": map[string]interface{}{

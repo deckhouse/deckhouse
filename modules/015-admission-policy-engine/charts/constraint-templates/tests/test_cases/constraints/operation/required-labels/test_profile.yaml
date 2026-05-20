@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: required-labels
+spec:
+  testDirectory: required-labels
+  suite:
+    expectedTestBlockNames:
+      - d8requiredlabels

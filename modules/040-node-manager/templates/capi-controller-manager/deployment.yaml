@@ -66,6 +66,7 @@ spec:
         app: capi-controller-manager
         cluster.x-k8s.io/provider: cluster-api
         control-plane: controller-manager
+        security.deckhouse.io/security-policy-exception: capi-controller-manager
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "capi-controller-manager")) | nindent 6 }}
@@ -82,7 +83,7 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "capiControllerManager") }}
         name: capi-controller-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         command:
         - /capi-controller-manager
         args:
@@ -182,6 +183,7 @@ spec:
         ports:
         - containerPort: 4211
           name: https-metrics
+          protocol: TCP
         livenessProbe:
           httpGet:
             path: /livez

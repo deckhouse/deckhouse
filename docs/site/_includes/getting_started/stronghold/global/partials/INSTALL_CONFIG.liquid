@@ -19,7 +19,20 @@
 {%- if page.platform_type == 'existing' %}
 - We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
 {%- endif %}
+{% if page.platform_code == 'yandex' %}
+- If Deckhouse Stronghold is deployed on top of Deckhouse Kubernetes Platform 1.76 and above, it is necessary to explicitly enable the `cni-simple-bridge` module in the `config.yml` file when using CentOS 8.
 
+  {% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: cni-simple-bridge
+  spec:
+    enabled: true
+  ```
+  {% endofftopic %}
+{%- endif %}
 Create the `config.yml` file.
 {% capture includePath %}_includes/getting_started/stronghold/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}

@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -306,7 +306,6 @@ func autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out
 	// Note: v1 fields not in v1alpha1 are lost:
 	// - StaticInstances
 	// - Update
-	// - Fencing
 	// - GPU
 	// - NodeDrainTimeoutSecond
 	// - Kubelet.ResourceReservation

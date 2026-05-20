@@ -50,7 +50,7 @@ var tofuProviders = []string{
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(), log.GetDefaultLogger())
+	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(""), log.GetDefaultLogger())
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -60,7 +60,7 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(), log.GetDefaultLogger())
+	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(""), log.GetDefaultLogger())
 	require.NoError(t, err)
 
 	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
@@ -107,7 +107,7 @@ func TestProviderSettingsLoadError(t *testing.T) {
 }
 
 func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
-	file := infrastructure.GetInfrastructureVersions()
+	file := infrastructure.GetInfrastructureVersions("")
 	logger := log.GetDefaultLogger()
 
 	assertOneStoreInCache := func(t *testing.T, store *SettingsProvider) {

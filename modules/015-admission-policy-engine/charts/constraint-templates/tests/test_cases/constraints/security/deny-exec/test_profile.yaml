@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: deny-exec
+spec:
+  testDirectory: deny-exec
+  suite:
+    expectedTestBlockNames:
+      - security-policy

@@ -25,6 +25,16 @@ Descheduler uses parameters with the `labelSelector` syntax from Kubernetes to f
 * `namespaceLabelSelector` — filters pods by namespaces;
 * `nodeLabelSelector` — selects nodes by labels.
 
+## Metrics provider
+
+If the cluster has a registered `metrics.k8s.io` API group (for example, when [metrics-server](https://github.com/kubernetes-sigs/metrics-server) is installed), the module automatically detects it and enables the **KubernetesMetrics** metrics provider in the `descheduler` policy. This allows to use the **actual** resource consumption data from the Metrics API instead of relying solely on pod requests and limits when the `LowNodeUtilization` [strategy](#strategies) is set.
+
+No user action is required: the module discovers the `metrics.k8s.io` API group by watching APIService resources and configures the policy accordingly. If metrics-server is installed **after** the module is already running, the `descheduler` Pod will be automatically restarted with the updated policy.
+
+{% alert level="info" %}
+When `metrics.k8s.io` is not available, the module falls back to the default behavior: resource usage is estimated from pod requests and limits.
+{% endalert %}
+
 ## Strategies
 
 ### HighNodeUtilization
@@ -46,7 +56,9 @@ In GKE, you cannot configure the default scheduler, but you can use the `optimiz
 {% endalert %}
 
 {% alert level="warning" %}
-Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes. This means that resource usage metrics displayed by Kubelet (or tools like `kubectl top`) might differ from calculated metrics, as Kubelet and related tools show actual resource consumption.
+By default, node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
+
+If the `metrics.k8s.io` API is available in the cluster (see [Metrics provider](#metrics-provider)), utilization strategies can additionally consume **actual** resource usage data from the Metrics API. In this case, the displayed metrics (`kubectl top`) will be closer to the values used by the descheduler.
 {% endalert %}
 
 ### LowNodeUtilization
@@ -66,7 +78,9 @@ Nodes with resource usage in the range between `thresholds` and `targetThreshold
 The strategy is enabled by the parameter [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
 {% alert level="warning" %}
-Node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes. This means that resource usage metrics displayed by Kubelet (or tools like `kubectl top`) might differ from calculated metrics, as Kubelet and related tools show actual resource consumption.
+By default, node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
+
+If the `metrics.k8s.io` API is available in the cluster (see [Metrics provider](#metrics-provider)), utilization strategies can additionally consume **actual** resource usage data from the Metrics API. In this case, the displayed metrics (`kubectl top`) will be closer to the values used by the descheduler.
 {% endalert %}
 
 ### RemoveDuplicates
@@ -80,6 +94,12 @@ The strategy ensures that no more than one pod of a ReplicaSet, ReplicationContr
 The situation can occur if some nodes in the cluster have failed for any reason, and the pods from those nodes have been moved to other nodes. Once the failed nodes become available again to accept load, this strategy can be used to evict duplicate pods from other nodes.
 
 The strategy is enabled by the parameter [strategies.removeDuplicates.enabled](cr.html#descheduler-v1alpha2-spec-strategies-removeduplicates-enabled).
+
+### RemovePodsHavingTooManyRestarts
+
+The strategy evicts pods having too many restarts from nodes.
+Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the [`podRestartThreshold`](cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold) threshold.
+This strategy is useful for evicting pods in the `CrashLoopBackOff` state or with repeated failures, as well as for freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
 
 ### RemovePodsViolatingInterPodAntiAffinity
 
@@ -108,3 +128,8 @@ Example for `nodeAffinityType: requiredDuringSchedulingIgnoredDuringExecution`. 
 Example for `nodeAffinityType: preferredDuringSchedulingIgnoredDuringExecution`. There is a pod scheduled to a node because at the time of scheduling there were no other nodes that satisfied the node affinity rule `preferredDuringSchedulingIgnoredDuringExecution`. If over time an available node that satisfies this rule appears in the cluster, the strategy evicts the pod from the node it was originally scheduled to.
 
 The strategy is enabled by the parameter [strategies.removePodsViolatingNodeAffinity.enabled](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-enabled).
+
+### RemovePodsViolatingTopologySpreadConstraint
+
+The strategy ensures that pods violating [topology spread constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes. It evicts the minimum number of pods required to balance topology domains to within each constraint's `maxSkew`.
+This is useful for rebalancing pods across zones after a zone outage recovery.

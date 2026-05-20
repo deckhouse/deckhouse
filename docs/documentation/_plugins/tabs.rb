@@ -45,11 +45,6 @@ module Jekyll
         %Q(<div markdown="0"><div class="tabs">#{buttons.join}</div>#{panels.join}</div>)
       end
 
-      private
-
-      def slugify(text)
-        text.downcase.strip.gsub(/[^a-z0-9\s_-]/, '').gsub(/[\s-]+/, '_')
-      end
     end
 
     class TabTag < Liquid::Block

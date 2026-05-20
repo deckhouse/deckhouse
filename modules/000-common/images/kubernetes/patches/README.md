@@ -70,3 +70,10 @@ When set the API server will: encrypt the value at rest in etcd (using the same 
 See our KEP:
 - https://github.com/kubernetes/enhancements/pull/5937
 - https://github.com/kubernetes/enhancements/issues/5933
+
+### 011-fix-stale-token-metrics.patch
+
+Patch enhances the observability of stale ServiceAccount tokens by adding namespace and name labels to the `serviceaccount_stale_tokens_total` metric.
+
+Why it is needed:
+Previously, the `serviceaccount_stale_tokens_total` metric was a simple counter without any labels. While it indicated that some clients were using outdated tokens (past their warnafter threshold), it provided no information about which ServiceAccounts were responsible

@@ -127,7 +127,7 @@ apiVersions:
           If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
 
           - Support for `CgroupsV2`.
-          - Linux kernel version `5.8` or newer.
+          - Linux kernel version 5.8 or newer, except for the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS).
           - Systemd version `244` or newer.
           - Support for `erofs` kernel module.
         enum:

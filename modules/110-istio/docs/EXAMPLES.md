@@ -4,7 +4,8 @@ title: "The istio module: examples"
 
 ## Circuit Breaker
 
-The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected. Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
+The `outlierDetection` settings in the [DestinationRule](istio-cr.html#destinationrule) custom resource help to determine whether some endpoints do not behave as expected.
+Refer to the [Envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/outlier) for more details on the Outlier Detection algorithm.
 
 Example:
 
@@ -49,7 +50,9 @@ spec:
 
 ## gRPC balancing
 
-**Caution!** Assign a name with the `grpc` prefix or value to the port in the corresponding Service to make gRPC service balancing start automatically.
+{% alert level="warning" %}
+Assign a name with the `grpc` prefix or value to the port in the corresponding service to make gRPC service balancing start automatically.
+{% endalert %}
 
 ## Locality Failover
 
@@ -63,7 +66,9 @@ Istio allows you to configure a priority-based locality (geographic location) fa
 
 This comes in handy for inter-cluster failover when used together with a [multicluster](#setting-up-multicluster-for-two-clusters-using-the-istiomulticluster-cr).
 
-> **Caution!** The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
+{% alert level="warning" %}
+The Locality Failover can be enabled using the DestinationRule CR. Note that you also have to configure the outlierDetection.
+{% endalert %}
 
 Example:
 
@@ -77,7 +82,7 @@ spec:
   trafficPolicy:
     loadBalancer:
       localityLbSetting:
-        enabled: true # LF is enabled
+        enabled: true # Locality Failover is enabled
     outlierDetection: # outlierDetection must be enabled
       consecutive5xxErrors: 1
       interval: 1s
@@ -88,7 +93,9 @@ spec:
 
 You can use the [VirtualService](istio-cr.html#virtualservice) resource to configure Retry for requests.
 
-> **Caution!** All requests (including POST ones) are retried three times by default.
+{% alert level="warning" %}
+All requests (including POST ones) are retried three times by default.
+{% endalert %}
 
 Example:
 
@@ -112,7 +119,9 @@ spec:
 
 ## Canary
 
-> **Caution!** Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
+{% alert level="warning" %}
+Istio is only responsible for flexible request routing that relies on special request headers (such as cookies) or simply randomness. The CI/CD system is responsible for customizing this routing and "switching" between canary versions.
+{% endalert %}
 
 The idea is that two Deployments with different versions of the application are deployed in the same namespace. The Pods of different versions have different labels (`version: v1` and `version: v2`).
 
@@ -345,7 +354,9 @@ The following algorithm for deciding the fate of a request becomes active after 
 
 In other words, if you explicitly deny something, then only this restrictive rule will work. If you explicitly allow something, only explicitly authorized requests will be allowed (however, restrictions will stay in force and have precedence).
 
-> **Caution!** The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
+{% alert level="warning" %}
+The policies based on high-level parameters like namespace or principal require enabling Istio for all involved applications. Also, there must be organized Mutual TLS between applications.
+{% endalert %}
 
 Examples:
 * Let's deny POST requests for the myapp application. Since a policy is defined, only POST requests to the application are denied (as per the algorithm above).
@@ -511,7 +522,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Allow any requests from foo or bar clusters where the namespace is baz
+### Allow any requests only from entities in the baz namespace of the foo or bar clusters
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -530,7 +541,9 @@ spec:
 
 ### Allow from any cluster (via mTLS)
 
-> **Caution!** The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+{% alert level="warning" %}
+The denying rules (if they exist) have priority over any other rules. See the [algorithm](#decision-making-algorithm).
+{% endalert %}
 
 Example:
 
@@ -633,7 +646,7 @@ annotations:
 Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
 
 * Run the application init container from the user with uid `1337`. Requests from this user are not intercepted under Istio control.
-* Exclude an service IP address or port from Istio control using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` or `traffic.sidecar.istio.io/excludeOutboundPorts` annotations.
+* Exclude a service IP address or port from Istio control using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` or `traffic.sidecar.istio.io/excludeOutboundPorts` annotations.
 
 {% alert level="warning" %}Each of the workarounds removes traffic from Istio's control, which in turn removes encryption of traffic between application services.{% endalert %}
 
@@ -645,18 +658,18 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+  * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Upgrade algorithm (i.e. from `1.21` to `1.25`):
   * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
-  * Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
-  * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
-    * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
-  * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
-  * Make sure, the old `istiod` Pod has gone.
-  * Change application namespace labels to `istio-injection: enabled`.
+* Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
+* For every application namespase with istio enabled:
+  * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
+  * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
+* Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
+* Make sure, the old `istiod` pod has gone.
+* Change application namespace labels to `istio-injection: enabled`.
 
 To find all Pods with old Istio revision (in the example — version 21), execute the command:
 

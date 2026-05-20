@@ -47,19 +47,19 @@ The module managing Static nodes consists of the following components:
    * **psi-monitor**: Monitors the *PSI (Pressure Stall Information)* metric, which reflects how long processes wait for resources such as CPU, memory, or I/O.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the early-oom metrics.
 
-5. **Fencing-agent** (DaemonSet): Deployed to a specific node group when the [`spec.fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) parameter of the NodeGroup custom resource is enabled.
+5. **Fencing-agent** (DaemonSet): Deployed to a node group when the [`spec.fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) parameter of the NodeGroup custom resource is enabled.
 
-   After startup, the agent activates the Watchdog timer and sets the label `node-manager.deckhouse.io/fencing-enabled` on the node. The agent periodically checks Kubernetes API availability. If the API is reachable, it sends a signal to the Watchdog, resetting the timer. It also monitors maintenance labels on the node and enables or disables Watchdog accordingly.
-
-   The Linux kernel *softdog* module is used as the Watchdog with parameters `soft_margin=60` and `soft_panic=1`. This means the timeout is 60 seconds. If the timeout expires, a kernel panic occurs, and the node remains in that state until manually rebooted.
+   The operation principles of the component is described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
 
    Consists of a single container:
 
-   * **fencing-agent**: Performs the checks described above and writes to `/dev/watchdog` to signal the Watchdog.
+   * **fencing-agent**: Performs the necessary checks and writes to `/dev/watchdog` to signal the watchdog.
 
 6. **Fencing-controller**: A controller that watches all nodes labeled with `node-manager.deckhouse.io/fencing-enabled`.
 
-   If a node is unavailable for more than 60 seconds, the controller deletes all pods from that node and then removes the node itself.
+   If a node is unavailable for more than 60 seconds, the controller deletes all pods from the node but **does not delete the Node object** for static nodes (`node.deckhouse.io/type=Static`). This preserves the node's cluster registration so it can return to service after being manually restored.
+
+   For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
 
 ## Module interactions
 

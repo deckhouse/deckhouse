@@ -1,0 +1,1381 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allow-host-network
+spec:
+  suiteName: d8-host-network-ports
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-baseline-functional
+      gatorBlock: pss-baseline-functional
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: allowed-no-hostnetwork
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: absent
+            - path: spec.initContainers[].ports[].hostPort
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-hostnetwork
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+        - name: disallowed-no-hostnetwork-multiple-containers
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: absent
+            - path: spec.containers[].ports[].hostPort
+              scenario: multiContainer
+            - path: spec.containers[].ports[].protocol
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-hostnetwork-multiple-containers
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+                        hostPort: 8080
+                        protocol: TCP
+                  - image: redis
+                    name: redis
+                    ports:
+                      - containerPort: 6379
+                        hostPort: 9090
+                        protocol: TCP
+        - name: disallowed-hostnetwork-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+                hostNetwork: true
+        - name: disallowed-initcontainer-hostport-in-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.initContainers[].ports[].hostPort
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: initContainer
+            - path: spec.containers[].ports[].protocol
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-initcontainer-hostport-in-range
+              spec:
+                hostNetwork: false
+                initContainers:
+                  - image: busybox
+                    name: init
+                    ports:
+                      - containerPort: 8080
+                        hostPort: 8080
+                        protocol: TCP
+        - name: disallowed-initcontainer-hostport-out-of-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.initContainers[].ports[].hostPort
+              scenario: negative
+            - path: spec.containers[].ports[].hostPort
+              scenario: initContainer
+            - path: spec.containers[].ports[].protocol
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-initcontainer-hostport-out-of-range
+              spec:
+                hostNetwork: false
+                initContainers:
+                  - image: busybox
+                    name: init
+                    ports:
+                      - containerPort: 999
+                        hostPort: 999
+                        protocol: TCP
+        - name: disallowed-ephemeralcontainer-hostport-in-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].ports[].hostPort
+              scenario: ephemeralContainer
+            - path: spec.containers[].ports[].protocol
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-ephemeralcontainer-hostport-in-range
+              spec:
+                hostNetwork: false
+                ephemeralContainers:
+                  - image: busybox
+                    name: eph
+                    ports:
+                      - containerPort: 8080
+                        hostPort: 8080
+                        protocol: TCP
+    - name: security-policy-functional
+      gatorBlock: security-policy-functional
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed-hostnetwork-true-port-in-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: positive
+            - path: spec.containers[].ports[].protocol
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostnetwork-true-port-in-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-hostnetwork-true-container-port
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: absent
+            - path: spec.containers[].ports[].protocol
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-container-port
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+                hostNetwork: true
+        - name: allowed-hostnetwork-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostnetwork-false
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+        - name: disallowed-hostnetwork-true-port-out-of-range-low
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: negative
+            - path: spec.containers[].ports[].protocol
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-port-out-of-range-low
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 10000
+                        hostPort: 10000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-hostnetwork-true-container-port-out-of-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: absent
+            - path: spec.containers[].ports[].protocol
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-container-port-out-of-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 10000
+                hostNetwork: true
+        - name: disallowed-hostnetwork-true-port-out-of-range-high
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: negative
+            - path: spec.containers[].ports[].protocol
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-port-out-of-range-high
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 35000
+                        hostPort: 35000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-hostnetwork-true-port-on-edge-min
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: negative
+            - path: spec.containers[].ports[].protocol
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-port-on-edge-min
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 19999
+                        hostPort: 19999
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-hostnetwork-true-port-on-edge-max
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: negative
+            - path: spec.containers[].ports[].protocol
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-port-on-edge-max
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 30001
+                        hostPort: 30001
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-hostnetwork-true-init-and-main-ports-in-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: positive
+            - path: spec.containers[].ports[].protocol
+              scenario: positive
+            - path: spec.initContainers[].ports[].hostPort
+              scenario: positive
+            - path: spec.containers[].ports[].hostPort
+              scenario: initContainer
+            - path: spec.containers[].ports[].protocol
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostnetwork-true-init-and-main-ports-in-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: true
+                initContainers:
+                  - image: busybox
+                    name: init
+                    ports:
+                      - containerPort: 21000
+                        hostPort: 21000
+                        protocol: TCP
+        - name: disallowed-hostnetwork-true-init-port-out-of-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.initContainers[].ports[].hostPort
+              scenario: negative
+            - path: spec.containers[].ports[].hostPort
+              scenario: initContainer
+            - path: spec.containers[].ports[].protocol
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-hostnetwork-true-init-port-out-of-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: true
+                initContainers:
+                  - image: busybox
+                    name: init
+                    ports:
+                      - containerPort: 999
+                        hostPort: 999
+                        protocol: TCP
+    - name: security-policy-spe-pod
+      gatorBlock: security-policy-spe-pod
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed-by-exception-hostnetwork-true-tcp-25000
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-tcp-25000
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-tcp-25000
+                name: allowed-by-exception-hostnetwork-true-tcp-25000
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-hostnetwork-false-empty
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-false-empty
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: false
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-empty
+                name: allowed-by-exception-hostnetwork-false-empty
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+        - name: disallowed-by-exception-hostnetwork-true-container-port
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-multiple-ports
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+                      - port: 26000
+                        protocol: UDP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-despite-constraint
+                name: disallowed-by-exception-hostnetwork-true-container-port
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+                hostNetwork: true
+        - name: allowed-by-exception-multiple-ports-tcp
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-multiple-ports
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+                      - port: 26000
+                        protocol: UDP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-multiple-ports
+                name: allowed-by-exception-multiple-ports-tcp
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-multiple-ports-udp
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-multiple-ports
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+                      - port: 26000
+                        protocol: UDP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-multiple-ports
+                name: allowed-by-exception-multiple-ports-udp
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 26000
+                        hostPort: 26000
+                        protocol: UDP
+                hostNetwork: true
+        - name: allowed-by-exception-hostport-only-without-hostnetwork
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostport-only
+                spec:
+                  network:
+                    hostPorts:
+                      - port: 5000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostport-only
+                name: allowed-by-exception-hostport-only-without-hostnetwork
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: false
+        - name: allowed-by-exception-port-in-constraint-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-port-in-constraint-range
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-in-constraint-range
+                name: allowed-by-exception-port-in-constraint-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-port-out-of-constraint-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-port-out-of-constraint-range
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 5000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-out-of-constraint-range
+                name: allowed-by-exception-port-out-of-constraint-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-port-on-constraint-edge-min
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-port-on-constraint-edge-min
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 20000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-on-constraint-edge-min
+                name: allowed-by-exception-port-on-constraint-edge-min
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 20000
+                        hostPort: 20000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-port-on-constraint-edge-max
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-port-on-constraint-edge-max
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 30000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-on-constraint-edge-max
+                name: allowed-by-exception-port-on-constraint-edge-max
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 30000
+                        hostPort: 30000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-by-exception-hostnetwork-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMismatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-wrong-port
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-wrong-port
+                name: disallowed-by-exception-hostnetwork-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 9000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: false
+        - name: disallowed-by-exception-hostport-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMismatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-wrong-port
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-wrong-port
+                name: disallowed-by-exception-hostport-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-by-exception-protocol-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-wrong-port
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-wrong-port
+                name: disallowed-by-exception-protocol-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: UDP
+                hostNetwork: true
+        - name: disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].port
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].protocol
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-exception-allows-false-but-pod-has-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMismatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-false-with-hostport
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: false
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-with-hostport
+                name: disallowed-exception-allows-false-but-pod-has-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-hostnetwork-false-with-hostport
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-false-with-hostport
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: false
+                    hostPorts:
+                      - port: 25000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-with-hostport
+                name: allowed-by-exception-hostnetwork-false-with-hostport
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP
+                hostNetwork: false
+        - name: disallowed-exception-allows-false-constraint-allows-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMismatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-false-empty
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: false
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-empty
+                name: disallowed-exception-allows-false-constraint-allows-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-exception-allows-false-constraint-allows-true-pod-uses-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMismatch
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-false-empty
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: false
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-false-empty
+                name: disallowed-exception-allows-false-constraint-allows-true-pod-uses-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-no-exception-port-out-of-constraint-range
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].port
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].protocol
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-port-out-of-constraint-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                hostNetwork: true
+        - name: disallowed-no-exception-container-port
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].ports[].hostPort
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-container-port
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-port-exactly-min-constraint-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-port-on-constraint-edge-min
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 20000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-on-constraint-edge-min
+                name: allowed-by-exception-port-exactly-min-constraint-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 20000
+                        hostPort: 20000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-by-exception-port-exactly-max-constraint-range
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-port-on-constraint-edge-max
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 30000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-port-on-constraint-edge-max
+                name: allowed-by-exception-port-exactly-max-constraint-range
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 30000
+                        hostPort: 30000
+                        protocol: TCP
+                hostNetwork: true
+        - name: allowed-exception-container-port
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostport-despite-empty-ranges
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 5000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostport-despite-empty-ranges
+                name: allowed-exception-container-port
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-exception-container-port
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostPorts[].port
+              scenario: speMatch
+            - path: spec.network.hostPorts[].protocol
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostport-despite-empty-ranges
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts:
+                      - port: 5000
+                        protocol: TCP
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostport-despite-empty-ranges
+                name: disallowed-exception-container-port
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5001
+                        protocol: TCP
+                hostNetwork: true
+        - name: disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMismatch
+            - path: spec.network.hostPorts[].port
+              scenario: speAbsent
+            - path: spec.network.hostPorts[].protocol
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 5000
+                        hostPort: 5000
+                        protocol: TCP
+                hostNetwork: true

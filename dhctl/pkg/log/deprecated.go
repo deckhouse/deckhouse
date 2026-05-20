@@ -16,12 +16,11 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 // WARNING! This loggers is deprecated and saved
@@ -120,6 +119,13 @@ func (d *DummyLogger) FlushAndClose() error {
 	return nil
 }
 
+func (d *DummyLogger) LogProcessCtx(ctx context.Context, p, t string, run func(ctx context.Context) error) error {
+	fmt.Println(t)
+	err := run(ctx)
+	fmt.Println(t)
+	return err
+}
+
 func (d *DummyLogger) LogProcess(_, t string, run func() error) error {
 	fmt.Println(t)
 	err := run()
@@ -144,13 +150,13 @@ func (d *DummyLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *DummyLogger) LogDebugF(format string, a ...interface{}) {
-	if app.IsDebug {
+	if debugEnabled {
 		fmt.Printf(format, a...)
 	}
 }
 
 func (d *DummyLogger) LogDebugLn(a ...interface{}) {
-	if app.IsDebug {
+	if debugEnabled {
 		fmt.Println(a...)
 	}
 }
@@ -196,7 +202,7 @@ func newExternalDummyLoggerWrapper(parent *DummyLogger) *externalDummyLoggerWrap
 
 func (w *externalDummyLoggerWrapper) BufferLogger(buffer *bytes.Buffer) external.Logger {
 	return external.NewSimpleLogger(external.LoggerOptions{
-		IsDebug:   app.IsDebug,
+		IsDebug:   debugEnabled,
 		OutStream: buffer,
 	})
 }

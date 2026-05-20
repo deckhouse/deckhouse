@@ -24,7 +24,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cfgregistry "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -34,6 +34,7 @@ import (
 type DhctlEditionCheck struct {
 	MetaConfig *config.MetaConfig
 	Installer  *config.DeckhouseInstaller
+	BuildInfo  options.BuildInfo
 
 	descriptor imageDescriptorProvider
 }
@@ -77,10 +78,10 @@ func (c DhctlEditionCheck) Run(ctx context.Context) error {
 	}
 
 	labels := imageConfig.Config.Labels
-	if labels == nil || labels["io.deckhouse.edition"] != app.AppEdition {
+	if labels == nil || labels["io.deckhouse.edition"] != c.BuildInfo.AppEdition {
 		return fmt.Errorf(
 			"your edition installer image does not match: dhctl edition %s, image edition %s",
-			app.AppEdition,
+			c.BuildInfo.AppEdition,
 			labels["io.deckhouse.edition"],
 		)
 	}
@@ -139,10 +140,11 @@ func (c DhctlEditionCheck) provider() imageDescriptorProvider {
 	return remoteDescriptorProvider{}
 }
 
-func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
+func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller, buildInfo options.BuildInfo) preflight.Check {
 	check := DhctlEditionCheck{
 		MetaConfig: meta,
 		Installer:  cfg,
+		BuildInfo:  buildInfo,
 	}
 	preflightCheck := preflight.Check{
 		Name:        DhctlEditionCheckName,
@@ -151,7 +153,7 @@ func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) prefl
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
-	if app.AppVersion == "local" || app.AppEdition == "local" {
+	if buildInfo.AppVersion == "local" || buildInfo.AppEdition == "local" {
 		preflightCheck.Disable()
 	}
 	return preflightCheck

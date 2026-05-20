@@ -47,10 +47,10 @@ func (s *FileTerraStateLoader) PopulateClusterState(ctx context.Context) ([]byte
 		return nil, nil, err
 	}
 
-	return getNodesFromCache(metaConfig, s.stateCache)
+	return getNodesFromCache(ctx, metaConfig, s.stateCache)
 }
 
-func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([]byte, map[string]state.NodeGroupInfrastructureState, error) {
+func getNodesFromCache(ctx context.Context, metaConfig *config.MetaConfig, stateCache state.Cache) ([]byte, map[string]state.NodeGroupInfrastructureState, error) {
 	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)\\.tfstate$", metaConfig.ClusterPrefix)
 	groupsReg, _ := regexp.Compile(nodeGroupRegex)
 
@@ -58,7 +58,7 @@ func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([
 
 	var baseInfraState []byte
 
-	err := stateCache.Iterate(func(name string, content []byte) error {
+	err := stateCache.Iterate(ctx, func(name string, content []byte) error {
 		switch {
 		case strings.HasPrefix(name, "base-infrastructure"):
 			baseInfraState = content
@@ -90,14 +90,14 @@ func getNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) ([
 	return baseInfraState, nodesFromCache, err
 }
 
-func DeleteNodeInfrastructureStateFromCache(nodeName string, stateCache state.Cache) error {
+func DeleteNodeInfrastructureStateFromCache(ctx context.Context, nodeName string, stateCache state.Cache) error {
 	keysToDelete := []string{
 		fmt.Sprintf("%s.tfstate", nodeName),
 		fmt.Sprintf("%s.tfstate.backup", nodeName),
 	}
 
 	for _, key := range keysToDelete {
-		stateCache.Delete(key)
+		stateCache.Delete(ctx, key)
 	}
 
 	return nil

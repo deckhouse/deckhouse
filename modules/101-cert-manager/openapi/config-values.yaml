@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/101-cert-manager/openapi/config-values.yaml
+# /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
 type: object
 description: The module does not have any mandatory parameters.
 properties:
@@ -140,6 +144,14 @@ properties:
       Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
       Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.
 
+  enableListenerSet:
+    type: boolean
+    default: false
+    x-examples: [true, false]
+    description: |
+      Enable ListenerSet support in cert-manager by turning on the `ListenerSets` feature gate.
+
+      Additionally, when Gateway API integration is enabled, this flag also enables ListenerSet integration for Gateway API.
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]
@@ -187,7 +199,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -213,7 +225,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -231,7 +243,7 @@ properties:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                default: "64Mi"      
+                default: "64Mi"
         x-examples:
           - requests:
               cpu: "100m"
@@ -256,7 +268,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -280,7 +292,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -298,7 +310,7 @@ properties:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                default: "64Mi"    
+                default: "64Mi"
         x-examples:
           - requests:
               cpu: "100m"

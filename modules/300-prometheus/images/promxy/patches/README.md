@@ -25,6 +25,22 @@ Applied to vendored `github.com/prometheus/prometheus` after `go mod vendor`.
 Patches existing vendored Prometheus files to:
 - Add to the `String` method of the `AggregateExpr` struct to print the expression with the `op_top` function;
 
+### 004-cve-grpc.patch
+
+Bump `google.golang.org/grpc` from `v1.58.3` to `v1.79.3` to fix
+[CVE-2026-33186](https://github.com/advisories/GHSA-prj3-ccx8-p6x4)
+(authorization bypass via the HTTP/2 `:path` pseudo-header in gRPC-Go).
+Generated with:
+
+```sh
+go get google.golang.org/grpc@v1.79.3
+go mod tidy
+```
+
+`go mod tidy` pulls a few transitive bumps (`google.golang.org/genproto/*`,
+`go.opentelemetry.io/otel/*`, `golang.org/x/oauth2`, …) that grpc `v1.79.x`
+requires.
+
 ### op_func.go.tpl, op_top.go.tpl
 
 Copied into vendored `github.com/prometheus/prometheus/promql/` after `go mod vendor`.

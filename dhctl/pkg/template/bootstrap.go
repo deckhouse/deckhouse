@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,15 +23,26 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const bootstrapDir = "/bootstrap"
 
-func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig, dc *directoryconfig.DirectoryConfig) error {
+func PrepareBootstrap(
+	ctx context.Context,
+	templateController *Controller,
+	nodeIP string,
+	metaConfig *config.MetaConfig,
+	dc *directoryconfig.DirectoryConfig,
+) error {
+	ctx, span := telemetry.StartSpan(ctx, "PrepareBootstrap")
+	defer span.End()
+
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
 	}
+
 	_, err = os.Stat(candiDir)
 	if err != nil {
 		if dc == nil {
@@ -39,13 +51,14 @@ func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig 
 		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
 		candiBashibleDir = filepath.Join(candiDir, "bashible")
 	}
+
 	saveInfo := []saveFromTo{
 		{
 			from: filepath.Join(candiBashibleDir, "bootstrap"),
 			to:   bootstrapDir,
 			data: bashibleData,
 			ignorePaths: map[string]struct{}{
-				filepath.Join(candiBashibleDir, "bootstrap", "03-prepare-bashible.sh.tpl"): {}, // will running in next stage
+				filepath.Join(candiBashibleDir, "bootstrap", "02-bootstrap-bashible.sh.tpl"): {}, // will running in next stage
 			},
 		},
 		{
@@ -55,13 +68,14 @@ func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig 
 		},
 	}
 
-	return log.Process("default", "Render bootstrap templates", func() error {
+	return log.ProcessCtx(ctx, "default", "Render bootstrap templates", func(ctx context.Context) error {
 		for _, info := range saveInfo {
 			log.InfoF("From %q to %q\n", info.from, info.to)
 			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 }

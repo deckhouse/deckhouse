@@ -22,13 +22,12 @@ import (
 	"strings"
 	"time"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
-	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (
@@ -49,11 +48,11 @@ type LoopsParams struct {
 
 type Runner struct {
 	loggerProvider log.LoggerProvider
-	nodeInterface  node.Interface
+	nodeInterface  libcon.Interface
 	loopsParams    LoopsParams
 }
 
-func NewRunner(nodeInterface node.Interface, loggerProvider log.LoggerProvider) *Runner {
+func NewRunner(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *Runner {
 	return &Runner{
 		nodeInterface:  nodeInterface,
 		loggerProvider: loggerProvider,
@@ -66,6 +65,9 @@ func (r *Runner) WithLoopParams(p LoopsParams) *Runner {
 }
 
 func (r *Runner) Prepare(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.Prepare")
+	defer span.End()
+
 	if err := r.createDir(ctx, app.NodeDeckhouseDirectoryPath, "0755"); err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 	isReady := false
 
-	return isReady, retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		cmd := r.nodeInterface.Command("cat", endPipelineFileMark)
 		cmd.Sudo(ctx)
 		cmd.WithTimeout(10 * time.Second)
@@ -103,6 +105,8 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 		return nil
 	})
+
+	return isReady, err
 }
 
 type ExecuteBundleParams struct {
@@ -111,6 +115,9 @@ type ExecuteBundleParams struct {
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.ExecuteBundle")
+	defer span.End()
+
 	loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ExecuteBundle, executeBundleDefaultOpts...).
 		Clone(
 			retry.WithName("Execute bundle"),
@@ -118,7 +125,6 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 		)
 
 	return retry.NewLoopWithParams(loopParams).
-		BreakIf(bundleTimeoutBreakPredicate).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 			logger := r.loggerProvider()
@@ -136,8 +142,10 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 }
 
 func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.attemptExecuteBundle")
+	defer span.End()
+
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
-	bundleCmd.WithCommanderMode(params.CommanderMode)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := params.BundleDir + "/var/lib"
@@ -148,14 +156,6 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
 			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
-		}
-
-		if errors.Is(err, frontend.ErrBashibleTimeout) {
-			return frontend.ErrBashibleTimeout
-		}
-
-		if errors.Is(err, gossh.ErrBashibleTimeout) {
-			return gossh.ErrBashibleTimeout
 		}
 
 		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -230,7 +230,7 @@ func (r *Runner) killBashible(ctx context.Context, pids []string) error {
 	return r.runCmd(ctx, cmd, "kill"+strings.Join(pids, " "))
 }
 
-func (r *Runner) runCmd(ctx context.Context, cmd node.Command, desc string) error {
+func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) error {
 	logger := r.loggerProvider()
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
@@ -308,8 +308,4 @@ func (r *Runner) prepareLoopParams(target string) retry.Params {
 
 func withUmask(f string, args ...any) string {
 	return fmt.Sprintf("umask 0022 ; "+f, args...)
-}
-
-func bundleTimeoutBreakPredicate(err error) bool {
-	return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
 }

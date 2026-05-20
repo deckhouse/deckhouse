@@ -164,7 +164,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 	hec.BindingContexts.Set(hec.KubeStateSet(b.String()))
 }
 
-var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum ::", func() {
+var _ = Describe("Modules :: control-plane-manager :: hooks :: effective_kubernetes_version ::", func() {
 	// set default value for kubernetes version for testing purposes
 	DefaultKubernetesVersion = "1.32"
 

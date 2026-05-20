@@ -16,6 +16,7 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"regexp"
@@ -145,6 +146,13 @@ func (l *InMemoryLogger) AllMatches(m *Match) ([]string, error) {
 
 func (l *InMemoryLogger) FlushAndClose() error {
 	return nil
+}
+
+func (l *InMemoryLogger) LogProcessCtx(ctx context.Context, p string, t string, action func(ctx context.Context) error) error {
+	l.writeEntityFormatted("Start process: %s/%s", p, t)
+	err := l.parent.LogProcessCtx(ctx, p, t, action)
+	l.writeEntityFormatted("End process: %s/%s", p, t)
+	return err
 }
 
 func (l *InMemoryLogger) LogProcess(p string, t string, action func() error) error {

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ import (
 )
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 
@@ -58,7 +59,7 @@ func TestBootstrapGetNodesFromCache(t *testing.T) {
 		stateCache, err := cache.NewStateCache(dir)
 		require.NoError(t, err)
 
-		result, err := BootstrapGetNodesFromCache(&config.MetaConfig{ClusterPrefix: "test"}, stateCache)
+		result, err := BootstrapGetNodesFromCache(t.Context(), &config.MetaConfig{ClusterPrefix: "test"}, stateCache)
 		require.NoError(t, err)
 
 		require.Len(t, result["master"], 2)
@@ -172,6 +173,7 @@ func TestInstallDeckhouse(t *testing.T) {
 		return InstallDeckhouseParams{
 			BeforeDeckhouseTask: func() error { return nil },
 			State:               NewBootstrapState(cache.NewTestCache()),
+			DeckhouseTimeout:    15 * time.Minute,
 		}
 	}
 

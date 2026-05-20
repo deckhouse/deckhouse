@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: ingress-class
+spec:
+  objectKind: Ingress
+  objectFields:
+    - path: spec.ingressClassName
+      level: pod
+      description: Ingress class name must be in allowed ingressClassNames list.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

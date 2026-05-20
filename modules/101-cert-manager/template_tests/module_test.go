@@ -102,6 +102,10 @@ internal:
     crt: string
 `
 
+const certManagerGatewayAPI = `
+enableListenerSet: true
+`
+
 const cloudDNS = `
 cloudDNSServiceAccount: ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAicHJvamVjdC0yMDkzMTciLAogICJwcml2YXRlX2tleV9pZCI6ICJwcml2YXRlX2lkIiwKICAicHJpdmF0ZV9rZXkiOiAicHJpdmF0ZV9rZXkiLAogICJjbGllbnRfZW1haWwiOiAiZG5zMDEtc29sdmVyQHByb2plY3QtMjA5MzE3LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAiY2xpZW50X2lkIjogIjExNzM1MzAzMzgzOTQ2NTUzNjY3MiIsCiAgImF1dGhfdXJpIjogImh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL29hdXRoMi9hdXRoIiwKICAidG9rZW5fdXJpIjogImh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwKICAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsCiAgImNsaWVudF94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3JvYm90L3YxL21ldGFkYXRhL3g1MDkvZG5zMDEtc29sdmVyJXByb2plY3QtMjA5MzE3LmlhbS5nc2VydmljZWFjY291bnQuY29tIgp9Cg==
 `
@@ -550,5 +554,52 @@ podAntiAffinity:
 
 		})
 
+	})
+
+	Context("<Gateway API and ListenerSet flags>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.discovery.gatewayAPIDefaultGateway", `
+name: shared-gateway
+namespace: d8-ingress-gateway
+`)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["gateway.networking.k8s.io/v1/Gateway","gateway.networking.k8s.io/v1/HTTPRoute"]`)
+			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
+			f.HelmRender()
+		})
+
+		It("should render gateway and listenerset arguments", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			certManagerDeployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			Expect(certManagerDeployment.Exists()).To(BeTrue())
+
+			args := certManagerDeployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+	})
+
+	Context("<ListenerSet feature gate without Gateway API>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
+			f.HelmRender()
+		})
+
+		It("should enable ListenerSets feature gate only", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			certManagerDeployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			Expect(certManagerDeployment.Exists()).To(BeTrue())
+
+			args := certManagerDeployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
 	})
 })

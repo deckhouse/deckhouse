@@ -570,17 +570,17 @@ CRl8TSg922cXTLVt8Q==
 			{
 				title:     "Success",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				// docker.io/library/nginx:stable-alpine
-				image:   "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
+				// registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4
+				image:   "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
 				wantErr: false,
 			},
 			{
 				title:     "Cache hit, success",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				// docker.io/library/nginx:stable-alpine
-				image: "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
+				// registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4
+				image: "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
 				prepareFunc: func() error {
 					return os.RemoveAll(filepath.Join(testDir, "usr"))
 				},
@@ -589,7 +589,7 @@ CRl8TSg922cXTLVt8Q==
 			{
 				title:     "Invalid image reference, failure",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
 				image:     "<<<---$#%",
 				wantErr:   true,
 				err:       "parsing image reference",
@@ -597,27 +597,25 @@ CRl8TSg922cXTLVt8Q==
 			{
 				title:     "Invalid image reference, failure",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				// docker.io/library/nginx:stable-alpine
-				image:   "docker.io/library/nginx:notatag100500",
-				wantErr: true,
-				err:     "getting manifest descriptor for",
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
+				image:     "registry.deckhouse.io/deckhouse/ce/release-channel:v0.0.1",
+				wantErr:   true,
+				err:       "getting manifest descriptor for",
 			},
 			{
 				title:     "Wrong CA, failure",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io", ca: "-----BEGIN CERTIFICATE-----"},
-				// docker.io/library/nginx:stable-alpine
-				image:   "docker.io/library/nginx:latest",
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io", ca: "-----BEGIN CERTIFICATE-----"},
+				// registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4
+				image:   "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
 				wantErr: true,
 				err:     "invalid cert in CA PEM",
 			},
 			{
 				title:     "With docker ca, success",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io", ca: dockerCA},
-				// docker.io/library/nginx:stable-alpine
-				image: "docker.io/library/nginx:latest",
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io", ca: dockerCA},
+				image:     "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4",
 				prepareFunc: func() error {
 					return os.RemoveAll(filepath.Join(testDir, "usr"))
 				},
@@ -626,9 +624,9 @@ CRl8TSg922cXTLVt8Q==
 			{
 				title:     "Cannot pull image, failure",
 				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
+				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
 				// docker.io/library/nginx:stable-alpine
-				image: "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+				image: "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
 				prepareFunc: func() error {
 					if err = os.Remove(filepath.Join(testDir, "images_hashs.json")); err != nil {
 						return err
@@ -676,9 +674,9 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 		os.RemoveAll(testDir)
 	})
 
-	err = DownloadAndUnpackImage(context.Background(), "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "docker.io"})
+	err = DownloadAndUnpackImage(context.Background(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"})
 	require.NoError(t, err)
-	cachePath := filepath.Join(testDir, "sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e")
+	cachePath := filepath.Join(testDir, "sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb")
 	require.FileExists(t, cachePath)
 
 	t.Run("restoreImageFromTarGz tests", func(t *testing.T) {
@@ -747,29 +745,29 @@ func TestPullImage(t *testing.T) {
 		}{
 			{
 				title:   "Success",
-				imgRef:  "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
+				imgRef:  "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4",
+				rc:      &RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
 				destDir: testDir,
 				wantErr: false,
 			},
 			{
 				title:   "Unaccessible image, failure",
-				imgRef:  "docker.io/library/nginx:notatag100500",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
+				imgRef:  "registry.deckhouse.io/deckhouse/ce/release-channel:v0.0.1",
+				rc:      &RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
 				destDir: testDir,
 				wantErr: true,
 				err:     "pulling image",
 			},
 			{
 				title:   "Wrong images_hash.json, failure",
-				imgRef:  "docker.io/library/nginx@sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e",
+				imgRef:  "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4",
 				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
 				destDir: testDir,
 				prepareFunc: func() error {
-					if err = os.Remove(filepath.Join(testDir, "sha256:5b4900b042ccfa8b0a73df622c3a60f2322faeb2be800cbee5aa7b44d241649e")); err != nil {
+					if err = os.RemoveAll(filepath.Join(testDir, "v1.75.4")); err != nil {
 						return err
 					}
-					if err = os.Remove(filepath.Join(testDir, "images_hashs.json")); err != nil {
+					if err = os.RemoveAll(filepath.Join(testDir, "images_hashs.json")); err != nil {
 						return err
 					}
 					f, err := os.Create(filepath.Join(testDir, "images_hashs.json"))

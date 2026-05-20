@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-12" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.29.5" }}
+{{ $nginxVersion := "1.30.1" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
@@ -873,7 +873,6 @@ shell:
   - ln -sf /chroot/etc/nginx /etc/nginx
   - rm -rf /tmp
   - ln -sf /chroot/tmp /tmp
-  - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
   # a hack to let the controller update files via symlinks on a read-only file system
   - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
   - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json

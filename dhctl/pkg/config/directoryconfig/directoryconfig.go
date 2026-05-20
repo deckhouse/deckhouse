@@ -17,4 +17,10 @@ package directoryconfig
 type DirectoryConfig struct {
 	DownloadDir      string
 	DownloadCacheDir string
+
+	// VersionFilePath is the absolute path to the deckhouse installer image
+	// version file (typically /deckhouse/version inside the installer
+	// container). Consumed by config.MetaConfig.LoadInstallerVersion and
+	// config.DeckhouseInstaller.GetImageTag.
+	VersionFilePath string
 }

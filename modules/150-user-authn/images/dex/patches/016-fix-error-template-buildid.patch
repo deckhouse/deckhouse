@@ -1,0 +1,21 @@
+diff --git a/server/templates.go b/server/templates.go
+index 09f68e1b..883c0a38 100644
+--- a/server/templates.go
++++ b/server/templates.go
+@@ -504,10 +504,11 @@ func (t *templates) oob(r *http.Request, w http.ResponseWriter, code string) err
+ func (t *templates) err(r *http.Request, w http.ResponseWriter, errCode int, errMsg string) error {
+ 	w.WriteHeader(errCode)
+ 	data := struct {
+-		ErrType string
+-		ErrMsg  string
+-		ReqPath string
+-	}{http.StatusText(errCode), errMsg, r.URL.Path}
++		ErrType         string
++		ErrMsg          string
++		ReqPath         string
++		BuildIdentifier string
++	}{http.StatusText(errCode), errMsg, r.URL.Path, buildIdentifier()}
+ 	if err := t.errorTmpl.Execute(w, data); err != nil {
+ 		return fmt.Errorf("rendering template %s failed: %s", t.errorTmpl.Name(), err)
+ 	}
+

@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
   WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
@@ -375,8 +375,6 @@ jobs:
       - pull_request_info
     env:
       WERF_ENV: "FE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
       SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
     # <template: build_template>
     runs-on: [self-hosted, large]
@@ -425,6 +423,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -456,7 +458,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -478,11 +479,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -500,7 +501,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -534,6 +535,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -553,6 +555,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -626,6 +630,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -638,6 +643,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -652,19 +658,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -737,6 +730,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -768,7 +765,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -790,11 +786,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -812,7 +808,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -846,6 +842,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -865,6 +862,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -938,6 +937,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -950,6 +950,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -964,19 +965,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1048,6 +1036,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -1079,7 +1071,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -1101,11 +1092,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1123,7 +1114,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1157,6 +1148,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1176,6 +1168,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1249,6 +1243,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1261,6 +1256,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1275,19 +1271,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1359,6 +1342,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -1390,7 +1377,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -1412,11 +1398,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1434,7 +1420,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1468,6 +1454,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1487,6 +1474,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1560,6 +1549,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1572,6 +1562,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1586,19 +1577,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1670,6 +1648,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -1701,7 +1683,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -1723,11 +1704,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -1745,7 +1726,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -1779,6 +1760,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1798,6 +1780,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1871,6 +1855,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1883,6 +1868,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -1897,19 +1883,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1981,6 +1954,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -2012,7 +1989,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -2034,11 +2010,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -2056,7 +2032,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -2090,6 +2066,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2109,6 +2086,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2182,6 +2161,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -2194,6 +2174,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -2208,19 +2189,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2292,6 +2260,10 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
 
       # </template: import_secrets>
 
@@ -2323,7 +2295,6 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -2345,11 +2316,11 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
       - name: Add ssh_known_hosts
         run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
           echo "::add-mask::$HOST"
           IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
           for IP in $IPS; do
@@ -2367,7 +2338,7 @@ jobs:
       - name: Add svace analyze server to ssh_known_hosts
         continue-on-error: true
         run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
           host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
           echo "::add-mask::$host_ip"
           mkdir -p ~/.ssh
@@ -2401,6 +2372,7 @@ jobs:
         id: build
         env:
           WERF_PARALLEL_TASKS_LIMIT: 3
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
           WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2420,6 +2392,8 @@ jobs:
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2485,7 +2459,6 @@ jobs:
             publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
             publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
@@ -2493,6 +2466,7 @@ jobs:
               publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
               publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
               publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -2505,6 +2479,7 @@ jobs:
             publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
             publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
           else
             echo "Not a release tag, skipping tag publish."
           fi
@@ -2519,19 +2494,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2813,6 +2775,7 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
 
       # </template: import_secrets>
 
@@ -2846,7 +2809,7 @@ jobs:
         env:
           TAG: ${{needs.pull_request_info.outputs.ref_slug}}
           IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
-          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+          DECKHOUSE_PRIVATE_REPO: ${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}
         run: |
           echo "⚓️ 🏎 Running default user validation on ${TAG}..."
           make cve-base-images-check-default-user
@@ -2963,7 +2926,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:4aaf81659fa6ea3cbbb0f241d739dda485bce79ec98b0fd5014ef4f4210e1cd5"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:2fa0da12f239d1696f2f790ac8332ae4790f1b9db9d1e785778c4a64e2481544"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -3029,10 +2992,35 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics url | DMT_METRICS_URL ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics token | DMT_METRICS_TOKEN ;
+
+      # </template: import_secrets>
       - name: DMT lint
         env:
-          DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
-          DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+          DMT_METRICS_URL: "${{ steps.secrets.outputs.DMT_METRICS_URL }}"
+          DMT_METRICS_TOKEN: "${{ steps.secrets.outputs.DMT_METRICS_TOKEN }}"
         run: |
           make dmt-lint
     # </template: tests_dmt_lint>

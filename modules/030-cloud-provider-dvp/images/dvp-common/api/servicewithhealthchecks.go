@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
 )
 
@@ -40,7 +41,7 @@ func (lb *LoadBalancerService) CreateOrUpdateServiceWithHealthchecks(
 		return nil, err
 	}
 	if u != nil {
-		return lb.updateServiceWithHealthchecks(ctx, u, loadBalancer)
+		return lb.updateServiceWithHealthchecks(ctx, loadBalancer)
 	}
 	return lb.createServiceWithHealthchecks(ctx, loadBalancer)
 }
@@ -75,7 +76,6 @@ func (lb *LoadBalancerService) getServiceWithHealthchecksByName(ctx context.Cont
 
 func (lb *LoadBalancerService) updateServiceWithHealthchecks(
 	ctx context.Context,
-	u *unstructured.Unstructured,
 	loadBalancer LoadBalancer,
 ) (*corev1.Service, error) {
 	name := loadBalancer.Name
@@ -97,22 +97,29 @@ func (lb *LoadBalancerService) updateServiceWithHealthchecks(
 
 	ports := lb.CreateLoadBalancerPorts(service)
 
-	u.SetAnnotations(service.Annotations)
-	u.SetLabels(serviceLabels)
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		u, err := lb.getServiceWithHealthchecksByName(ctx, name)
+		if err != nil {
+			return err
+		}
 
-	if err := setServiceWithHealthchecksSpec(
-		u,
-		ports,
-		service.Spec.ExternalTrafficPolicy,
-		map[string]string{lbKey: "loadbalancer"},
-		service.Spec.ExternalIPs,
-		service.Spec.LoadBalancerClass,
-		service.Spec.LoadBalancerIP,
-	); err != nil {
-		return nil, err
-	}
+		u.SetAnnotations(service.Annotations)
+		u.SetLabels(serviceLabels)
 
-	if err := lb.client.Update(ctx, u); err != nil {
+		if err := setServiceWithHealthchecksSpec(
+			u,
+			ports,
+			service.Spec.ExternalTrafficPolicy,
+			map[string]string{lbKey: "loadbalancer"},
+			service.Spec.ExternalIPs,
+			service.Spec.LoadBalancerClass,
+			service.Spec.LoadBalancerIP,
+		); err != nil {
+			return err
+		}
+
+		return lb.client.Update(ctx, u)
+	}); err != nil {
 		return nil, err
 	}
 

@@ -156,7 +156,10 @@ func writeSections(settings writeSettings) {
 		if strings.Contains(file, "/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl") && settings.Edition == "CSE" {
 			return
 		}
-
+		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
+		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
+			return
+		}
 
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		// we do not want to add hooks to the modules-with-exclude include

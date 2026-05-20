@@ -32,8 +32,8 @@ type Preflight struct {
 }
 
 type cache interface {
-	Save(string, []byte) error
-	InCache(string) (bool, error)
+	Save(context.Context, string, []byte) error
+	InCache(context.Context, string) (bool, error)
 }
 
 func New(suites ...Suite) *Preflight {
@@ -77,11 +77,14 @@ func (p *Preflight) Run(ctx context.Context, phase Phase) error {
 	if err != nil {
 		return err
 	}
+
 	phaseLabel := fmt.Sprintf("(%s)", phase)
-	runFunc := func() error {
+
+	runFunc := func(ctx context.Context) error {
 		return p.runChecks(ctx, checks)
 	}
-	return log.Process(log.ProcessPreflight, phaseLabel, runFunc)
+
+	return log.ProcessCtx(ctx, log.ProcessPreflight, phaseLabel, runFunc)
 }
 
 func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
@@ -100,7 +103,7 @@ func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
 func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	if p.cache != nil {
 		key := p.cacheKey(check.Name)
-		if ok, err := p.cache.InCache(key); err == nil && ok {
+		if ok, err := p.cache.InCache(ctx, key); err == nil && ok {
 			log.InfoF("✓ %s: %s (cached)\n", check.Name, check.Description)
 			return nil
 		}
@@ -112,7 +115,7 @@ func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	log.InfoF("✓ %s: %s\n", check.Name, check.Description)
 
 	if p.cache != nil {
-		if err := p.cache.Save(p.cacheKey(check.Name), []byte("yes")); err != nil {
+		if err := p.cache.Save(ctx, p.cacheKey(check.Name), []byte("yes")); err != nil {
 			log.WarnF("cannot cache result of %s: %v\n", check.Name, err)
 		}
 	}

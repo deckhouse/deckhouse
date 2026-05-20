@@ -418,10 +418,10 @@ common:
   requirements_modules_optional_text_first:
     en: Conditional dependency on the module
     ru: Условная зависимость от модуля
-  requirements_modules_more: 
+  requirements_modules_more:
     en: more
     ru: подробнее
-  requirements_modules_optional_text_second: 
+  requirements_modules_optional_text_second:
     en: about conditional dependencies
     ru: про условные зависимости
   requirements_modules_optional_text_for_link:
@@ -443,6 +443,24 @@ common:
       ## Внешние компоненты
 
       Список стороннего программного обеспечения, используемого в модуле <MODULE> (информация представлена на английском языке):
+  pdf_download_button:
+    en: Download PDF
+    ru: Скачать в PDF
+  pdf_download_title:
+    en: Download PDF
+    ru: Скачать PDF
+  pdf_download_choose:
+    en: "Choose a guide to download:"
+    ru: "Выберите руководство для скачивания:"
+  pdf_admin_guide:
+    en: "Administrator's guide"
+    ru: Справочник администратора
+  pdf_user_guide:
+    en: "User's guide"
+    ru: Руководство пользователя
+  pdf_download_cancel:
+    en: Cancel
+    ru: Отмена
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

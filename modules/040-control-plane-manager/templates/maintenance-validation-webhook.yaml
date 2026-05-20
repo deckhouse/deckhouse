@@ -1,0 +1,68 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: control-plane-node-maintenance
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager")) | nindent 2 }}
+validationObject:
+  name: control-plane-node-maintenance.deckhouse.io
+  rules:
+  - apiGroups:   ["control-plane.deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["UPDATE"]
+    resources:   ["controlplanenodes"]
+    scope:       "Cluster"
+context:
+  - name: control-plane-operations
+    kubernetes:
+      apiVersion: control-plane.deckhouse.io/v1alpha1
+      kind: ControlPlaneOperation
+      jqFilter: |-
+        {
+          "name": .metadata.name,
+          "nodeName": .spec.nodeName,
+          "completed": ((.status.conditions // []) | map(select(.type == "Completed" and .status == "True" and .reason == "OperationCompleted")) | length > 0),
+          "abandoned": ((.status.conditions // []) | map(select(.type == "Completed" and .status == "False" and .reason == "OperationAbandoned")) | length > 0)
+        }
+handler:
+  python: |
+    MAINTENANCE_LABEL = "control-plane-manager.deckhouse.io/maintenance"
+
+    def labels(obj):
+        metadata = getattr(obj, "metadata", None)
+        if not metadata:
+            return {}
+        return getattr(metadata, "labels", None) or {}
+
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+        obj = ctx.review.request.object
+        old_obj = ctx.review.request.oldObject
+
+        old_labels = labels(old_obj)
+        new_labels = labels(obj)
+
+        maintenance_was_enabled = MAINTENANCE_LABEL in old_labels
+        maintenance_is_enabled = MAINTENANCE_LABEL in new_labels
+
+        if maintenance_was_enabled or not maintenance_is_enabled:
+            return None, True
+
+        node_name = obj.metadata.name
+        active_operations_count = 0
+        for snap in ctx.snapshots.get("control-plane-operations", []):
+            op = snap.filterResult
+            if op.get("nodeName") != node_name:
+                continue
+            if op.get("completed") or op.get("abandoned"):
+                continue
+            active_operations_count += 1
+
+        if active_operations_count == 0:
+            return None, True
+
+        return (
+            f'Cannot enable maintenance mode for ControlPlaneNode "{node_name}": '
+            f'{active_operations_count} active ControlPlaneOperation(s) exist. '
+            f'Wait until all of them completed or abandoned before setting the "{MAINTENANCE_LABEL}" label.',
+            False,
+        )

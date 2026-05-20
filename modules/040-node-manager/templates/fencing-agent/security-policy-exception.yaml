@@ -1,0 +1,79 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- $mode := dig "fencing" "mode" "" $ng }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: fencing-agent-{{ $ng.name }}
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "fencing-agent")) | nindent 2 }}
+spec:
+  securityContext:
+    appArmorProfile:
+      allowedValues:
+        - unconfined
+      metadata:
+        description: |
+          The fencing agent needs the unconfined AppArmor profile to interact with host watchdog and socket resources
+    seLinuxOptions:
+      allowedValues:
+        - level: s0
+          type: spc_t
+      metadata:
+        description: |
+          Allow the SELinux label used by the privileged fencing agent container
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          Privileged mode required for watchdog device access
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Required because the container runs in privileged mode with SYS_ADMIN capability    
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_ADMIN
+        drop:
+          - ALL
+      metadata:
+        description: |
+          SYS_ADMIN needed for host watchdog; all other caps dropped
+  network:
+    hostNetwork:
+      allowedValue: false
+      metadata:
+        description: |
+          Allow the fencing agent to reserve node-local memberlist ports
+    hostPorts:
+      - port: 8500
+        protocol: TCP
+        metadata:
+          description: Memberlist TCP listener used by the fencing agent
+      - port: 8500
+        protocol: UDP
+        metadata:
+          description: Memberlist UDP listener used by the fencing agent
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: hostPath volumes needed for watchdog and socket access
+    hostPath:
+      allowedValues:
+        - path: /dev/watchdog
+          readOnly: false
+          metadata:
+            description: Access to the hardware watchdog device for node fencing.
+        - path: /tmp
+          readOnly: false
+          metadata:
+            description: Shared host socket directory used by the fencing agent.
+  {{- end }}
+{{- end }}
+{{- end }}

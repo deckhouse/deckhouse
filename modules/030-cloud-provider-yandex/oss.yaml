@@ -1,0 +1,23 @@
+- name: Yandex Cloud Terraform provider
+  link: https://github.com/yandex-cloud/terraform-provider-yandex
+  description: Terraform provider for Yandex Cloud.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-yandex
+  version: "0.174.0"
+
+- name: Yandex Cloud provider
+  link: https://github.com/deckhouse/yandex-cloud-controller-manager
+  description: Cloud Controller Manager for Yandex Cloud.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+  id: ccm-yandex
+  version: v0.33.2
+
+- name: Yandex Cloud CSI driver
+  link: https://github.com/deckhouse/yandex-csi-driver
+  description: CSI driver for Yandex Compute Disks.
+  logo: /images/logos/kubernetes.svg
+  license: Apache License 2.0
+  id: csi-yandex
+  version: v0.15.1

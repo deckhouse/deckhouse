@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-ingresses
+spec:
+  testDirectory: allowed-ingresses
+  suite:
+    expectedTestBlockNames:
+      - pss-deny-all
+      - security-policy
