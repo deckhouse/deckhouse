@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.20.10-0.20260520073209-0f151b0577de
+	github.com/flant/addon-operator v1.21.3-0.20260520132545-5430f2ed589b
 	github.com/flant/kube-client v1.7.0
-	github.com/flant/shell-operator v1.16.8-0.20260520065731-206d0518b7c6
+	github.com/flant/shell-operator v1.17.4
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -57,7 +57,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.2.0
+	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa
 	github.com/deckhouse/module-sdk v0.10.4
