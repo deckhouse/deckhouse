@@ -5,7 +5,9 @@ base/distroless: "sha256:830f2578a08badab64793c277663dcca8ffbb33419ea57b937142b5
 builder/golang-1.25: "sha256:d4af7b5cf2f41bfd56df3faa5c0ec7d2e9c1ae7edd314838eb7ce937515ced67" # from: base/distroless
 builder/golang-1.26: "sha256:c87825a73578d2f847d8acb5ee3acf0f1ccfca567a6197dac702728f59c10e81" # from: base/distroless
 builder/golang: "sha256:c87825a73578d2f847d8acb5ee3acf0f1ccfca567a6197dac702728f59c10e81" # from: base/distroless
-minget-0.1: "sha256:cf519d72b5260c122428a5966802920ef508dfea5bbd1988259966f6532e58aa" # from: builder/scratch
-minget: "sha256:cf519d72b5260c122428a5966802920ef508dfea5bbd1988259966f6532e58aa" # from: builder/scratch
 coreutils-9.7: "sha256:9780e9f86c5b01d2e606518e87f27d38a98261a839e33996fc6bd5161ddbae1f" # from: builder/scratch
 coreutils: "sha256:9780e9f86c5b01d2e606518e87f27d38a98261a839e33996fc6bd5161ddbae1f" # from: builder/scratch
+grep-3.11: "sha256:1bad53a7bae766af75e61d3d7e0615a469ec4a2e34ce6b75d95c53abad6f769d" # from: builder/scratch
+grep: "sha256:1bad53a7bae766af75e61d3d7e0615a469ec4a2e34ce6b75d95c53abad6f769d" # from: builder/scratch
+minget-0.1: "sha256:cf519d72b5260c122428a5966802920ef508dfea5bbd1988259966f6532e58aa" # from: builder/scratch
+minget: "sha256:cf519d72b5260c122428a5966802920ef508dfea5bbd1988259966f6532e58aa" # from: builder/scratch
