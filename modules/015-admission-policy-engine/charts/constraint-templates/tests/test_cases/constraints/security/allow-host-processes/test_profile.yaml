@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allow-host-processes
+spec:
+  testDirectory: allow-host-processes
+  suite:
+    expectedTestBlockNames:
+      - pss-baseline
+      - security-policy
+      - security-policy-with-exception

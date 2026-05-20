@@ -15,32 +15,45 @@
 package suites
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type StaticDeps struct {
-	Node       node.Interface
-	MetaConfig *config.MetaConfig
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	MetaConfig             *config.MetaConfig
+	// LegacyMode reflects whether the SSH client uses the legacy clissh
+	// backend. Threaded into RegistryProxy for the SSH tunnel direction.
+	LegacyMode bool
 }
 
-func NewStaticSuite(deps StaticDeps) preflight.Suite {
+func NewStaticSuite(deps StaticDeps, ctx context.Context) (preflight.Suite, error) {
+	nodeInterface, err := helper.GetNodeInterface(ctx, deps.SSHProviderInitializer, deps.SSHProviderInitializer.GetSettings())
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      deps.MetaConfig.DownloadRootDir,
+		DownloadCacheDir: deps.MetaConfig.DownloadCacheDir,
+	}
+
 	return preflight.NewSuite(
 		checks.CidrIntersectionStatic(deps.MetaConfig),
 		checks.StaticInstancesIPDuplication(deps.MetaConfig),
-		checks.SingleSSHHost(deps.Node),
-		checks.SSHCredential(deps.Node),
-		checks.SSHTunnel(deps.Node),
-		checks.StaticInstancesSSHCredentials(deps.MetaConfig, deps.Node),
-		checks.DeckhouseUser(deps.Node),
-		checks.StaticSystemRequirements(deps.Node),
-		checks.Python(deps.Node),
-		checks.RegistryProxy(deps.MetaConfig, deps.Node),
-		checks.Ports(deps.Node),
-		checks.LocalhostDomain(deps.Node),
-		checks.SudoAllowed(deps.Node),
-		checks.TimeDrift(deps.Node),
-	)
+		checks.SingleSSHHost(deps.SSHProviderInitializer),
+		checks.SSHCredential(deps.SSHProviderInitializer),
+		checks.SSHTunnel(deps.SSHProviderInitializer, dc),
+		checks.StaticInstancesSSHCredentials(deps.MetaConfig, deps.SSHProviderInitializer),
+		checks.DeckhouseUser(nodeInterface, dc),
+		checks.StaticSystemRequirements(deps.SSHProviderInitializer),
+		checks.Python(nodeInterface),
+		checks.RegistryProxy(deps.MetaConfig, deps.SSHProviderInitializer, deps.LegacyMode),
+		checks.Ports(deps.SSHProviderInitializer, dc),
+		checks.LocalhostDomain(nodeInterface, dc),
+		checks.SudoAllowed(nodeInterface),
+		checks.TimeDrift(nodeInterface),
+	), err
 }

@@ -20,7 +20,7 @@
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
-API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
+API_SERVERS="{{ .clusterMasterKubeAPIEndpoints | join " " }}"
 read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
 
 
@@ -41,17 +41,20 @@ function nodeuser_patch() {
   local failure_count=0
   local failure_limit=1
 
-  if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+  if test -f /etc/kubernetes/kubelet.conf ; then
     json_file=$( mktemp -t patch_json.XXXXX )
     echo "${data}" > $json_file
 
-    until bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf patch nodeusers.deckhouse.io "${username}" --type=json --patch-file="${json_file}" --subresource=status; do
+    until bb-curl-kube "/apis/deckhouse.io/v1/nodeusers/${username}/status" \
+          -X PATCH \
+          -H "Content-Type: application/json-patch+json" \
+          --data "@${json_file}" >/dev/null; do
       failure_count=$((failure_count + 1))
       if [[ $failure_count -eq $failure_limit ]]; then
-        bb-log-error "ERROR: Failed to patch NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+        bb-log-error "Failed to patch NodeUser. Number of attempts exceeded. NodeUser patch will be skipped."
         break
       fi
-      bb-log-error "failed to NodeUser with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+      bb-log-error "Failed to patch NodeUser. Retrying..."
       sleep 10
     done
     rm $json_file
@@ -105,7 +108,7 @@ function nodeuser_patch() {
     done
 
   else
-    bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
+    bb-log-error "failed to patch NodeUser: can't find kubelet.conf or bootstrap-token"
     exit 1
   fi
 }
@@ -355,4 +358,3 @@ set +e
 main
 set -e
 {{- end  }}
-

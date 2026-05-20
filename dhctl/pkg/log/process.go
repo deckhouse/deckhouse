@@ -129,3 +129,15 @@ func (l *wrappedProcessLogger) LogProcessFail() {
 
 	l.logger.LogErrorLn(msg)
 }
+
+func (l *wrappedProcessLogger) ProcessStart(name string) {
+	l.LogProcessStart(name)
+}
+
+func (l *wrappedProcessLogger) ProcessFail() {
+	l.LogProcessFail()
+}
+
+func (l *wrappedProcessLogger) ProcessEnd() {
+	l.LogProcessEnd()
+}

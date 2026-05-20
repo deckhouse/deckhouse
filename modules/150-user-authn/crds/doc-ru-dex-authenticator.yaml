@@ -72,6 +72,16 @@ spec:
                 whitelistSourceRanges:
                   description: |
                     Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+                podMetadata:
+                  description: |-
+                    Дополнительные лейблы и аннотации для подов `dex-authenticator`.
+                  properties:
+                    labels:
+                      description: |-
+                        Дополнительные лейблы для подов `dex-authenticator`.
+                    annotations:
+                      description: |-
+                        Дополнительные аннотации для подов `dex-authenticator`.
                 nodeSelector:
                   description: |-
                     Определяет `nodeSelector` для подов `dex-authenticator`.
@@ -204,6 +214,16 @@ spec:
 
                     **По умолчанию** разрешено всем группам.
                   x-doc-default: Разрешены все группы.
+                podMetadata:
+                  description: |-
+                    Дополнительные лейблы и аннотации для подов `dex-authenticator`.
+                  properties:
+                    labels:
+                      description: |-
+                        Дополнительные лейблы для подов `dex-authenticator`.
+                    annotations:
+                      description: |-
+                        Дополнительные аннотации для подов `dex-authenticator`.
                 resources:
                   description: |-
                     Ресурсы контейнеров (CPU/память) — requests/limits.

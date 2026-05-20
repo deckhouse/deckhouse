@@ -15,6 +15,7 @@
 package context
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -53,12 +54,16 @@ func newInSecretStateStore() *inSecretStateStore {
 
 func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 	var state State
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
 
-	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
+	err = retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
-		convergeStateSecret, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Get(c, stateSecretName, metav1.GetOptions{})
+		convergeStateSecret, err := kubeClient.CoreV1().Secrets("d8-system").Get(c, stateSecretName, metav1.GetOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
@@ -82,11 +87,15 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 }
 
 func (s *inSecretStateStore) Delete(ctx *Context) error {
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
 	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
 
-		err := ctx.KubeClient().CoreV1().Secrets("d8-system").Delete(c, stateSecretName, metav1.DeleteOptions{})
+		err := kubeClient.CoreV1().Secrets("d8-system").Delete(c, stateSecretName, metav1.DeleteOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
@@ -99,10 +108,15 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 	})
 }
 
-func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
+func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error {
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("failed to marshal state: %w", err)
+	}
+
+	kubeClient, err := convergeCtx.KubeClientCtx(convergeCtx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	task := actions.ManifestTask{
@@ -110,22 +124,22 @@ func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 		Manifest: func() interface{} {
 			return manifests.SecretConvergeState(stateBytes)
 		},
-		CreateFunc: func(manifest interface{}) error {
-			c, cancel := ctx.WithTimeout(10 * time.Second)
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			c, cancel := convergeCtx.WithTimeout(10 * time.Second)
 			defer cancel()
 
-			_, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Create(c, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(c, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to create secret: %w", err)
 			}
 
 			return nil
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			c, cancel := ctx.WithTimeout(10 * time.Second)
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			c, cancel := convergeCtx.WithTimeout(10 * time.Second)
 			defer cancel()
 
-			_, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Update(c, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Update(c, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to update secret: %w", err)
 			}
@@ -134,5 +148,11 @@ func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 		},
 	}
 
-	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).RunContext(ctx.Ctx(), task.CreateOrUpdate)
+	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).
+		RunContext(
+			convergeCtx.Ctx(),
+			func() error {
+				return task.CreateOrUpdate(convergeCtx.Ctx())
+			},
+		)
 }

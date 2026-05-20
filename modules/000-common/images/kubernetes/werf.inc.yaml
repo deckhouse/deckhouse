@@ -111,7 +111,7 @@ shell:
   {{- include "image-build.build" $buildContext | indent 6 }}
 {{- end }}
 
-  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
+  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
   # werf 2.57.1 doesn't follow symlinks during calculating import cheksum; replace symlink dir witch actual files
   - if [ -L _output/bin ]; then target=$(readlink -f _output/bin); rm _output/bin; cp -r "$target" _output/bin; rm -r "$target"; fi

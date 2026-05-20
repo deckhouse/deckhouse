@@ -187,7 +187,7 @@ func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Conte
 	}
 }
 
-func onCheckResult(checkRes *check.CheckResult) error {
+func onCheckResult(ctx context.Context, checkRes *check.CheckResult) error {
 	printableCheckRes := *checkRes
 	printableCheckRes.StatusDetails.InfrastructurePlan = nil
 
@@ -196,7 +196,7 @@ func onCheckResult(checkRes *check.CheckResult) error {
 		return fmt.Errorf("unable to encode check result json: %w", err)
 	}
 
-	_ = log.Process("default", "Check result", func() error {
+	_ = log.ProcessCtx(ctx, "default", "Check result", func(ctx context.Context) error {
 		log.InfoF("%s\n", printableCheckResDump)
 		return nil
 	})
@@ -204,8 +204,8 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	return nil
 }
 
-func extractLastState() ([]byte, error) {
-	state, err := phases.ExtractDhctlState(cache.Global())
+func extractLastState(ctx context.Context) ([]byte, error) {
+	state, err := phases.ExtractDhctlState(ctx, cache.Global())
 	if err != nil {
 		return nil, fmt.Errorf("extracting last state: %w", err)
 	}
@@ -230,7 +230,7 @@ func panicResult(ctx context.Context, p any) ([]byte, error) {
 		fmt.Errorf("panic: %v, %s", p, stack),
 	}
 
-	lastState, err := extractLastState()
+	lastState, err := extractLastState(ctx)
 	if err != nil {
 		errs = append(errs, err)
 	}

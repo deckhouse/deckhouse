@@ -1,0 +1,158 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# When maintainers add label `tests/conformance/<major.minor>` (e.g. tests/conformance/1.33),
+# read conformance junit from the PR branch. If errors=0 and failures=0 on the Kubernetes e2e
+# suite line — comment and add `tests/conformance/<version>/passed`. Otherwise add
+# `tests/conformance/<version>/failed`. The trigger label `tests/conformance/<version>` is
+# always removed so it can be added again.
+
+name: CNCF conformance tests
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  conformance-on-label:
+    name: Check sonobuoy junit
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.event.label.name, 'tests/conformance/') }}
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v3.5.2
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify junit and notify
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request.number;
+
+            const label = context.payload.label.name;
+            const prefix = 'tests/conformance/';
+            if (!label.startsWith(prefix)) {
+              return;
+            }
+            const version = label.slice(prefix.length);
+            if (!/^\d+\.\d+$/.test(version)) {
+              core.info(`Skip: label version must look like 1.33, got: ${version}`);
+              return;
+            }
+
+            const triggerLabel = `${prefix}${version}`;
+            const passedLabel = `${prefix}${version}/passed`;
+            const failedLabel = `${prefix}${version}/failed`;
+
+            async function removeLabelSafe(name) {
+              try {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pr,
+                  name,
+                });
+              } catch (e) {
+                if (e.status === 404) {
+                  return;
+                }
+                throw e;
+              }
+            }
+
+            const fs = require('fs');
+            const path = require('path');
+            const junitPath = path.join(
+              'modules/000-common/images/kubernetes',
+              'conformance',
+              version,
+              'junit_01.xml',
+            );
+
+            async function finalizeFailed(message) {
+              core.info(message);
+              await removeLabelSafe(passedLabel);
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr,
+                labels: [failedLabel],
+              });
+              await removeLabelSafe(triggerLabel);
+            }
+
+            if (!fs.existsSync(junitPath)) {
+              await finalizeFailed(`Missing file: ${junitPath}`);
+              core.setFailed(`Missing file: ${junitPath}`);
+              return;
+            }
+
+            const content = fs.readFileSync(junitPath, 'utf8');
+            const m = content.match(/<testsuite name="Kubernetes e2e suite"[^>]*>/);
+            if (!m) {
+              await finalizeFailed('Could not find <testsuite name="Kubernetes e2e suite" ...> in junit_01.xml');
+              core.setFailed('Could not find <testsuite name="Kubernetes e2e suite" ...> in junit_01.xml');
+              return;
+            }
+            const suiteTag = m[0];
+            const errMatch = suiteTag.match(/\berrors="(\d+)"/);
+            const failMatch = suiteTag.match(/\bfailures="(\d+)"/);
+            if (!errMatch || !failMatch) {
+              await finalizeFailed('Could not parse errors= or failures= on Kubernetes e2e suite line');
+              core.setFailed('Could not parse errors= or failures= on Kubernetes e2e suite line');
+              return;
+            }
+
+            if (errMatch[1] !== '0' || failMatch[1] !== '0') {
+              core.info(`Suite has errors=${errMatch[1]}, failures=${failMatch[1]} — marking failed.`);
+              await finalizeFailed(`Conformance: errors=${errMatch[1]}, failures=${failMatch[1]}`);
+              return;
+            }
+
+            const body = `All CNCF Conformance requirements have passed for the kubernetes v${version}`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pr,
+              per_page: 100,
+            });
+            if (!comments.some((c) => c.body === body)) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr,
+                body,
+              });
+            } else {
+              core.info('Same conformance comment already exists; skipping duplicate comment.');
+            }
+
+            await removeLabelSafe(failedLabel);
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: pr,
+              labels: [passedLabel],
+            });
+            await removeLabelSafe(triggerLabel);

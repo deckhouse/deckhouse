@@ -17,8 +17,6 @@ package infrastructure
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 var (
@@ -39,28 +37,34 @@ func GetDhctlPath() string {
 	return dhctlPath
 }
 
-func GetInfrastructureProviderDir(provider string) string {
+// GetInfrastructureProviderDir returns the directory containing the cloud
+// provider's terraform/tofu modules. Falls back to <downloadDir>/deckhouse/candi
+// if the bundled candiDir does not exist.
+func GetInfrastructureProviderDir(provider, downloadDir string) string {
 	_, err := os.Stat(filepath.Join(candiDir, "cloud-providers", provider))
 	if err == nil {
 		return filepath.Join(candiDir, "cloud-providers", provider)
 	}
 
-	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers", provider)
+	return filepath.Join(downloadDir, "deckhouse", "candi", "cloud-providers", provider)
 }
 
-func GetInfrastructureModulesDir(provider string) string {
-	return filepath.Join(GetInfrastructureProviderDir(provider), "terraform-modules")
+func GetInfrastructureModulesDir(provider, downloadDir string) string {
+	return filepath.Join(GetInfrastructureProviderDir(provider, downloadDir), "terraform-modules")
 }
 
-func GetInfrastructureModulesForRunningDir(provider, layout, module string) string {
-	return filepath.Join(GetInfrastructureProviderDir(provider), "layouts", layout, module)
+func GetInfrastructureModulesForRunningDir(provider, layout, module, downloadDir string) string {
+	return filepath.Join(GetInfrastructureProviderDir(provider, downloadDir), "layouts", layout, module)
 }
 
-func GetInfrastructureVersions() string {
+// GetInfrastructureVersions returns the path to the infrastructure-utility
+// versions file. Falls back to <downloadDir>/deckhouse/candi if the bundled
+// path does not exist.
+func GetInfrastructureVersions(downloadDir string) string {
 	_, err := os.Stat(infrastructureVersions)
 	if err == nil {
 		return infrastructureVersions
 	}
 
-	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "terraform_versions.yml")
+	return filepath.Join(downloadDir, "deckhouse", "candi", "terraform_versions.yml")
 }

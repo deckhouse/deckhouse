@@ -1,3 +1,4 @@
+{{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-openstack"))) }}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "openstack") }}'
 git:
@@ -10,3 +11,4 @@ import:
   before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}
+{{- end }}

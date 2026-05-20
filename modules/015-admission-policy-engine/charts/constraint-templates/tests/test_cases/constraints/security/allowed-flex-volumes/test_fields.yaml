@@ -1,0 +1,17 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-flex-volumes
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.volumes[].flexVolume.driver
+      level: pod
+
+      description: FlexVolume driver name must be in allowed list
+      requiredScenarios: [positive, negative, absent]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

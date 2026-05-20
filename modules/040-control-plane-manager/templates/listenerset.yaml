@@ -1,0 +1,51 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager")) | nindent 2 }}
+  name: control-plane-manager
+  namespace: kube-system
+spec:
+  listeners:
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    name: api
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "publish_api_http_route_certificate_name" . }}
+        namespace: kube-system
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    name: api-redirect
+    port: 80
+    protocol: HTTP
+  {{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    name: api
+    port: 80
+    protocol: HTTP
+  {{- end }}
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ $moduleGateway.name }}
+    namespace: {{ $moduleGateway.namespace }}
+{{- end }}
+{{- end }}

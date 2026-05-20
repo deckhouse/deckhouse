@@ -4,7 +4,7 @@ permalink: en/admin/configuration/network/egress/gateway.html
 ---
 
 {% alert level="warning" %}
-Available in DKP Enterprise Edition only.
+Available in DKP Standard Edition+ and Enterprise Edition.
 {% endalert %}
 
 Egress Gateway enables centralized management and control of outgoing traffic

@@ -1,0 +1,103 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: dns-policy
+spec:
+  suiteName: d8dnspolicy
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8dnspolicy
+      gatorBlock: d8dnspolicy
+      defaultObjectBase: ""
+      template: ../../templates/operation/dns-policy.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.dnsPolicy
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                hostNetwork: true
+                dnsPolicy: ClusterFirstWithHostNet
+        - name: example-disallowed-missing-dns-policy
+          violations: "yes"
+          assertionMessage: Pod <disallowed-missing-dns-policy> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.dnsPolicy
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-missing-dns-policy
+              spec:
+                hostNetwork: true
+        - name: example-disallowed-invalid-dns-policy
+          violations: "yes"
+          assertionMessage: Pod <disallowed-invalid-dns-policy> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+            - path: spec.dnsPolicy
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-invalid-dns-policy
+              spec:
+                hostNetwork: true
+                dnsPolicy: ClusterFirst
+        - name: example-allowed-without-hostnetwork
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: negative
+            - path: spec.dnsPolicy
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-without-hostnetwork
+              spec:
+                hostNetwork: false
+                dnsPolicy: ClusterFirst

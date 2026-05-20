@@ -1,0 +1,21 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allow-privileged
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.privileged
+      level: container
+
+      description: Controls whether a container runs in privileged mode
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+  speFields:
+    - path: spec.securityContext.privileged.allowedValue
+      level: container
+      description: SPE override for privileged per container
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

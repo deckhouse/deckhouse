@@ -17,6 +17,8 @@
 package bootstrap
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -35,30 +37,30 @@ func NewBootstrapState(stateCache state.Cache) *State {
 	}
 }
 
-func (s *State) SavePostBootstrapScriptResult(result string) error {
-	return s.cache.Save(PostBootstrapResultCacheKey, []byte(result))
+func (s *State) SavePostBootstrapScriptResult(ctx context.Context, result string) error {
+	return s.cache.Save(ctx, PostBootstrapResultCacheKey, []byte(result))
 }
 
-func (s *State) SaveManifestsCreated() error {
-	return s.cache.Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
+func (s *State) SaveManifestsCreated(ctx context.Context) error {
+	return s.cache.Save(ctx, ManifestCreatedInClusterCacheKey, []byte("yes"))
 }
 
-func (s *State) IsManifestsCreated() (bool, error) {
-	return s.cache.InCache(ManifestCreatedInClusterCacheKey)
+func (s *State) IsManifestsCreated(ctx context.Context) (bool, error) {
+	return s.cache.InCache(ctx, ManifestCreatedInClusterCacheKey)
 }
 
-func (s *State) PostBootstrapScriptResult() ([]byte, error) {
-	return s.cache.Load(PostBootstrapResultCacheKey)
+func (s *State) PostBootstrapScriptResult(ctx context.Context) ([]byte, error) {
+	return s.cache.Load(ctx, PostBootstrapResultCacheKey)
 }
 
-func (s *State) Clean() {
-	s.cache.Clean()
+func (s *State) Clean(ctx context.Context) {
+	s.cache.Clean(ctx)
 }
 
-func (s *State) Save(key string, data []byte) error {
-	return s.cache.Save(key, data)
+func (s *State) Save(ctx context.Context, key string, data []byte) error {
+	return s.cache.Save(ctx, key, data)
 }
 
-func (s *State) InCache(key string) (bool, error) {
-	return s.cache.InCache(key)
+func (s *State) InCache(ctx context.Context, key string) (bool, error) {
+	return s.cache.InCache(ctx, key)
 }

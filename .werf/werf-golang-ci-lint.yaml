@@ -1,3 +1,4 @@
+{{- if eq $.Env "FE" }}
 ---
 image: golangci-lint-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
@@ -19,3 +20,4 @@ shell:
   - CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -extldflags '-static' -X 'main.version=${GOLANGCI_LINT_VERSION}' -X 'main.date=$(date -u +%Y-%m-%d)'" -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
   - rm -rf /golangci-lint/.git
 ---
+{{- end }}

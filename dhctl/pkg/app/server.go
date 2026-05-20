@@ -15,32 +15,26 @@
 package app
 
 import (
-	"time"
-
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var (
-	ServerNetwork                    string
-	ServerAddress                    string
-	ServerParallelTasksLimit         int
-	ServerRequestsCounterMaxDuration time.Duration
-)
-
-func DefineServerFlags(cmd *kingpin.CmdClause) {
+// DefineServerFlags registers gRPC server flags into o.
+func DefineServerFlags(cmd *kingpin.CmdClause, o *options.ServerOptions) {
 	cmd.Flag("server-network", "").
 		Envar(configEnvName("SERVER_NETWORK")).
 		Default("tcp").
-		EnumVar(&ServerNetwork, "tcp", "unix")
+		EnumVar(&o.Network, "tcp", "unix")
 	cmd.Flag("server-address", "").
 		Envar(configEnvName("SERVER_ADDRESS")).
-		StringVar(&ServerAddress)
+		StringVar(&o.Address)
 	cmd.Flag("server-parallel-tasks-limit", "").
 		Envar(configEnvName("SERVER_PARALLEL_TASKS_LIMIT")).
 		Default("10").
-		IntVar(&ServerParallelTasksLimit)
+		IntVar(&o.ParallelTasksLimit)
 	cmd.Flag("server-requests-counter-max-duration", "").
 		Default("2h").
 		Envar(configEnvName("SERVER_REQUESTS_COUNTER_MAX_DURATION")).
-		DurationVar(&ServerRequestsCounterMaxDuration)
+		DurationVar(&o.RequestsCounterMaxDuration)
 }

@@ -1,4 +1,4 @@
-Включите модуль виртуализации. В параметре [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) модуля укажите подсети, IP-адреса из которых будут назначаться виртуальным машинам:
+Включите модуль виртуализации. В параметре [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) модуля укажите подсети, IP-адреса из которых будут назначаться виртуальным машинам. Для хранилища образов DVCR задайте размер PVC и имя StorageClass (в примере указан `sds-r1`, созданный на предыдущем шаге):
 
 ```shell
 sudo -i d8 k create -f - <<EOF
@@ -13,6 +13,7 @@ spec:
       storage:
         persistentVolumeClaim:
           size: 50G
+          storageClassName: sds-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
     # Укажите подсети, из которых будут назначаться IP-адреса виртуальным машинам.

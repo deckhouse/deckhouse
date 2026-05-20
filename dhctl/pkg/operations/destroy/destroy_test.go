@@ -30,10 +30,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func TestInitStateLoader(t *testing.T) {
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	createKubeProvider := func() kube.ClientProviderWithCleanup {
 		kubeCl := testCreateFakeKubeClient()
 		return newFakeKubeClientProvider(kubeCl)

@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: image-pull-policy
+spec:
+  testDirectory: image-pull-policy
+  suite:
+    expectedTestBlockNames:
+      - d8imagepullpolicy

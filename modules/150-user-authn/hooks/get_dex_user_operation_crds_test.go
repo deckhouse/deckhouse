@@ -313,6 +313,64 @@ status:
 			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
+		It("Lock local user terminates active sessions", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(password, nowStr) +
+					fmt.Sprintf(offlineSessions, nowStr, nowStr) +
+					refreshTokensForAdmin +
+					fmt.Sprintf(userOperationLock, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
+			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(1*time.Hour), 5*time.Second))
+			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
+
+			for _, name := range []string{"offsess-1", "offsess-2"} {
+				offsess := f.KubernetesResource("OfflineSessions", "d8-user-authn", name)
+				Expect(offsess.Exists()).To(BeFalse(), "OfflineSessions %s must be deleted on Lock", name)
+			}
+			for _, name := range []string{"rt-1", "rt-2"} {
+				rt := f.KubernetesResource("RefreshToken", "d8-user-authn", name)
+				Expect(rt.Exists()).To(BeFalse(), "RefreshToken %s must be deleted on Lock", name)
+			}
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Reset user's password terminates active sessions", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(password, nowStr) +
+					fmt.Sprintf(offlineSessions, nowStr, nowStr) +
+					refreshTokensForAdmin +
+					fmt.Sprintf(userOperationResetPassword, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
+			Expect(pw.Field("hash").String()).To(Equal("JDJ5JDEwJDlmZG12NGV3ZHZ6VkNUUTAxQm5BWi5DeTI3ZmRuZk5rbC5kTElnZTJZUzJnU0Y0Y3pxWFV5"))
+			Expect(pw.Field("requireResetHashOnNextSuccLogin").Bool()).To(BeTrue())
+
+			for _, name := range []string{"offsess-1", "offsess-2"} {
+				offsess := f.KubernetesResource("OfflineSessions", "d8-user-authn", name)
+				Expect(offsess.Exists()).To(BeFalse(), "OfflineSessions %s must be deleted on ResetPassword", name)
+			}
+			for _, name := range []string{"rt-1", "rt-2"} {
+				rt := f.KubernetesResource("RefreshToken", "d8-user-authn", name)
+				Expect(rt.Exists()).To(BeFalse(), "RefreshToken %s must be deleted on ResetPassword", name)
+			}
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
 		It("Reset user's 2FA", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
 				fmt.Sprintf(offlineSessions, nowStr, nowStr) + fmt.Sprintf(userOperationReset2FA, nowStr),

@@ -32,6 +32,12 @@ positive:
             requests:
               cpu: 100m
               memory: 128Mi
+    - ambient:
+        enabled: false
+    - ambient:
+        enabled: true
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
   values:
     - {}
 negative:
@@ -46,3 +52,9 @@ negative:
             requests:
               cpu: 100m
               memory: 128Mi
+    - ambient:
+        enabled: true
+    - ambient:
+        enabled: true
+      dataPlane:
+        trafficRedirectionSetupMode: InitContainer

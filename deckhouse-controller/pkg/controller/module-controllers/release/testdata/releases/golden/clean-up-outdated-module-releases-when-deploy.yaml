@@ -125,7 +125,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
-    modules.deckhouse.io/notified: "false"
+    modules.deckhouse.io/notified: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:

@@ -352,4 +352,73 @@ internal:
 			Expect(args).To(ContainSubstring("30m"))
 		})
 	})
+
+	Context("With isMetricsServerEnabled=true", func() {
+		BeforeEach(func() {
+			moduleValues := `
+internal:
+  isMetricsServerEnabled: true
+  deschedulers:
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 20
+          memory: 20
+          pods: 20
+        targetThresholds:
+          cpu: 50
+          memory: 50
+          pods: 50
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render metricsProviders and metricsUtilization for LowNodeUtilization", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
+			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
+apiVersion: descheduler/v1alpha2
+kind: DeschedulerPolicy
+metricsProviders:
+- source: KubernetesMetrics
+profiles:
+- name: test1
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      metricsUtilization:
+        source: KubernetesMetrics
+      targetThresholds:
+        cpu: 50
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 20
+        memory: 20
+        pods: 20
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+`))
+		})
+	})
 })

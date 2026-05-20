@@ -104,12 +104,17 @@ spec:
         - name: INSTANCE_CLASS_NAME
           value: "{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"
         {{- end }}
+        - name: SHELL_OPERATOR_PROMETHEUS_METRICS_PREFIX
+          value: webhook_handler_
         ports:
           - containerPort: 9680
             name: validating-http
             protocol: TCP
           - containerPort: 9681
             name: conversion-http
+            protocol: TCP
+          - containerPort: 9115
+            name: metrics
             protocol: TCP
         livenessProbe:
           httpGet:

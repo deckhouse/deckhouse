@@ -28,7 +28,7 @@ import (
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -44,14 +44,14 @@ var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() 
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -73,7 +73,7 @@ spec:
   "annotationValidationEnabled": false,
   "chaosMonkey": false,
   "config": {},
-  "controllerVersion": "1.10",
+  "controllerVersion": "1.12",
   "disableHTTP2": false,
   "enableHTTP3": false,
   "geoIP2": {},
@@ -90,16 +90,21 @@ spec:
   "loadBalancerWithSSLPassthrough": {},
   "maxReplicas": 1,
   "minReplicas": 1,
-  "resourcesRequests": {
+  "resourcesManagement": {
     "mode": "VPA",
-    "static": {},
+    "static": {
+      "limits": {},
+      "requests": {}
+    },
     "vpa": {
       "cpu": {},
-      "memory": {}
+      "memory": {},
+      "mode": "Initial"
     }
   },
   "underscoresInHeaders": false,
-  "validationEnabled": true
+  "validationEnabled": true,
+  "validationIsolationMode": "NoIsolation"
 }
 }]`))
 			})
@@ -110,7 +115,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: testd
@@ -133,36 +138,42 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  resourcesRequests:
+  resourcesManagement:
     mode: Static
+    static:
+      limits:
+        cpu: "1"
+        memory: 1Gi
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-2
 spec:
   ingressClass: test
   inlet: HostPortWithProxyProtocol
-  resourcesRequests:
+  resourcesManagement:
     mode: VPA
     vpa:
       mode: Auto
       cpu:
         max: 100m
+        limitRatio: 1.5
       memory:
-        max: 200Mi
+        max: 2000Mi
+        limitRatio: 2
   hostPortWithProxyProtocol:
     httpPort: 80
     httpsPort: 443
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-3
@@ -199,16 +210,24 @@ spec:
 "maxReplicas": 1,
 "minReplicas": 1,
 "controllerLogLevel": "Info",
-"resourcesRequests": {
+"resourcesManagement": {
   "mode": "Static",
-  "static": {},
+  "static": {
+    "limits": {
+      "cpu": "1",
+      "memory": "1Gi"
+    },
+    "requests": {}
+  },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true
+"validationEnabled": true,
+"validationIsolationMode": "NoIsolation"
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.name").String()).To(Equal("test-2"))
@@ -237,23 +256,30 @@ spec:
 "loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
-"resourcesRequests": {
+"resourcesManagement": {
   "mode": "VPA",
-  "static": {},
+  "static": {
+    "limits": {},
+    "requests": {}
+  },
   "vpa": {
+    "mode": "InPlaceOrRecreate",
     "cpu": {
+      "limitRatio": 1.5,
       "max": "100m",
-      "min": "10m"
+      "min": "100m"
     },
     "memory": {
-      "max": "200Mi",
-      "min": "50Mi"
+      "limitRatio": 2,
+      "max": "2000Mi",
+      "min": "500Mi"
     },
     "mode": "Auto"
   }
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
+"validationIsolationMode": "NoIsolation",
 "controllerLogLevel": "Info"
 }`))
 
@@ -277,16 +303,21 @@ spec:
 "loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
-"resourcesRequests": {
+"resourcesManagement": {
   "mode": "VPA",
-  "static": {},
+  "static": {
+    "limits": {},
+    "requests": {}
+  },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
+"validationIsolationMode": "NoIsolation",
 "controllerLogLevel": "Info"
 }`))
 		})
@@ -294,7 +325,7 @@ spec:
 
 	var IngressNginxControllerWithDeletionTomeStamp = `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-3
@@ -322,7 +353,7 @@ spec:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-suspended
@@ -351,7 +382,7 @@ spec:
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: test-mm

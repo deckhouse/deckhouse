@@ -26,6 +26,7 @@ import (
 var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "User", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Group", false)
 
 	Context("User expiration schedule", func() {
 		BeforeEach(func() {
@@ -61,6 +62,20 @@ status:
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
+  name: expired-two
+spec:
+  email: expired-two@example.com
+  groups:
+  - Admins
+  - Everyone
+  password: password
+  ttl: 60m
+status:
+  expireAt: "2020-02-02T22:22:22Z"
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
   name: without-ttl
 spec:
   email: without-ttl@example.com
@@ -68,15 +83,52 @@ spec:
   - Admins
   - Everyone
   password: password
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: Admins
+  members:
+  - kind: User
+    name: admin
+  - kind: User
+    name: expired-two
+  - kind: User
+    name: future
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: everyone
+spec:
+  name: Everyone
+  members:
+  - kind: User
+    name: admin
+  - kind: User
+    name: expired-two
+  - kind: Group
+    name: admins
 `)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
 		})
 
 		When("User expired (.status.expireAt < time.Now())", func() {
-			It("Should delete user CR", func() {
+			It("Should delete user CR and remove user from groups", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.KubernetesGlobalResource("User", "admin").Exists()).Should(BeFalse())
+				Expect(f.KubernetesGlobalResource("User", "expired-two").Exists()).Should(BeFalse())
+				Expect(f.KubernetesGlobalResource("Group", "admins").Field("spec.members").String()).To(MatchJSON(`
+[
+  {"kind":"User","name":"future"}
+]`))
+				Expect(f.KubernetesGlobalResource("Group", "everyone").Field("spec.members").String()).To(MatchJSON(`
+[
+  {"kind":"Group","name":"admins"}
+]`))
 			})
 		})
 

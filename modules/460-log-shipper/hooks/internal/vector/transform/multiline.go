@@ -30,7 +30,7 @@ const (
 	endsWhen   = "ends_when"
 )
 
-func CreateMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType, multilineCustomConfig v1alpha1.MultilineParserCustom) ([]apis.LogTransform, error) {
+func createMultiLineTransforms(multiLineType v1alpha1.MultiLineParserType, multilineCustomConfig v1alpha1.MultilineParserCustom) ([]apis.LogTransform, error) {
 	multiLineTransform := &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "multiline",

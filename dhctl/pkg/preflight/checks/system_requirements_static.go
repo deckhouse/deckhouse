@@ -23,12 +23,15 @@ import (
 	"strconv"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type StaticSystemRequirementsCheck struct {
-	Node node.Interface
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 }
 
 const StaticSystemRequirementsCheckName preflight.CheckName = "static-system-requirements"
@@ -46,12 +49,16 @@ func (StaticSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
-	ramKb, err := extractRAMCapacityFromNode(ctx, c.Node)
+	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+	ramKb, err := extractRAMCapacityFromNode(ctx, nodeInterface)
 	if err != nil {
 		return err
 	}
 
-	coresCount, err := extractCPULogicalCoresCountFromNode(ctx, c.Node)
+	coresCount, err := extractCPULogicalCoresCountFromNode(ctx, nodeInterface)
 	if err != nil {
 		return err
 	}
@@ -80,8 +87,8 @@ func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func extractRAMCapacityFromNode(ctx context.Context, sshCl node.Interface) (int, error) {
-	cmd := sshCl.Command("cat", "/proc/meminfo")
+func extractRAMCapacityFromNode(ctx context.Context, nodeInterface libcon.Interface) (int, error) {
+	cmd := nodeInterface.Command("cat", "/proc/meminfo")
 	memInfo, _, err := cmd.Output(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("Failed to read MemTotal from /proc/meminfo: %w", err)
@@ -98,7 +105,7 @@ func extractRAMCapacityFromNode(ctx context.Context, sshCl node.Interface) (int,
 	return ramKb, nil
 }
 
-func extractCPULogicalCoresCountFromNode(ctx context.Context, nodeInterface node.Interface) (int, error) {
+func extractCPULogicalCoresCountFromNode(ctx context.Context, nodeInterface libcon.Interface) (int, error) {
 	cmd := nodeInterface.Command("cat", "/proc/cpuinfo")
 	stdout, _, err := cmd.Output(ctx)
 	if err != nil {
@@ -133,8 +140,8 @@ func logicalCoresCountFromCPUInfo(cpuinfo []byte) (int, error) {
 	return len(processors), nil
 }
 
-func StaticSystemRequirements(nodeInterface node.Interface) preflight.Check {
-	check := StaticSystemRequirementsCheck{Node: nodeInterface}
+func StaticSystemRequirements(sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
+	check := StaticSystemRequirementsCheck{SSHProviderInitializer: sshProviderInitializer}
 	return preflight.Check{
 		Name:        StaticSystemRequirementsCheckName,
 		Description: check.Description(),

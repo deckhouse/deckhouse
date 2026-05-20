@@ -27,6 +27,7 @@ data:
     metadata:
       name: helper-pod
     spec:
+{{- include "helm_lib_tolerations" (tuple $context "wildcard") | nindent 6 }}
       securityContext:
         runAsNonRoot: false
         runAsUser: 0

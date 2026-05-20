@@ -14,11 +14,14 @@
 
 {{ if eq .runType "Normal" }}
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
-  >&2 echo "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
+  WAITING_APPROVAL_MAX_RETRIES=30
+  WAITING_APPROVAL_RETRY_SLEEP_SEC=15
+
+  bb-log-info "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
   attempt=0
   until
     node_data="$(
-      bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq '
+      bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq '
       {
         "resourceVersion": .metadata.resourceVersion,
         "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
@@ -28,32 +31,41 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
      jq -ne --argjson n "$node_data" '(($n.isApproved | not) and ($n.isWaitingForApproval)) or ($n.isApproved)' >/dev/null
   do
     attempt=$(( attempt + 1 ))
-    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
+    if [ "$attempt" -gt "${WAITING_APPROVAL_MAX_RETRIES}" ]; then
+      bb-log-error "Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
       exit 1
     fi
-    bb-kubectl-exec annotate node $(bb-d8-node-name) \
-      --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-      update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
-      || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
+    bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
+      "--resource-version=$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+      "update.node.deckhouse.io/waiting-for-approval=" "node.deckhouse.io/configuration-checksum-" \
+      || { bb-log-info "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in ${WAITING_APPROVAL_RETRY_SLEEP_SEC}sec..."; sleep "${WAITING_APPROVAL_RETRY_SLEEP_SEC}"; }
   done
 
-  >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
+  bb-log-info "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
+  approval_command="d8 k annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
+  waiting_approval_message="Steps are waiting for approval to start. Deckhouse is performing a rolling update. If you want to force an update, use: ${approval_command}"
+  waiting_approval_status_set="no"
   attempt=0
   until
-    bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
+    bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | \
     jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
   do
-    attempt=$(( attempt + 1 ))
-    if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-      >&2 echo "ERROR: Can't get annotation 'update.node.deckhouse.io/approved' from our Node."
-      exit 1
+    if [ "$waiting_approval_status_set" != "yes" ]; then
+      bb-waiting-approval-required "${waiting_approval_message}"
+      waiting_approval_status_set="yes"
     fi
-    echo "Steps are waiting for approval to start."
-    echo "Note: Deckhouse is performing a rolling update. If you want to force an update, use the following command."
-    echo "kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
-    echo "Retry in 10sec..."
-    sleep 10
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "${WAITING_APPROVAL_MAX_RETRIES}" ]; then
+      bb-waiting-approval-timeout "Waiting for approval timed out. ${waiting_approval_message}"
+      bb-log-info "Waiting for approval exceeded retry limit (${WAITING_APPROVAL_MAX_RETRIES}). Continue waiting for approval."
+      attempt=0
+    fi
+    bb-log-info "Steps are waiting for approval to start."
+    bb-log-info "Deckhouse is performing a rolling update. If you want to force an update, use"
+    bb-log-info "${approval_command}"
+    bb-log-info "Retry in ${WAITING_APPROVAL_RETRY_SLEEP_SEC}sec..."
+    sleep "${WAITING_APPROVAL_RETRY_SLEEP_SEC}"
   done
+  bb-waiting-approval-not-required
 fi
 {{ end }}

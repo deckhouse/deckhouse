@@ -1,0 +1,5 @@
+node-manager:
+  fixes:
+    - summary: Added cleanup for oversized MCM MachineSet revision history annotation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19657
+

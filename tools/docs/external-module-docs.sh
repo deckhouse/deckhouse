@@ -9,7 +9,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-${TEMPLATE_DIR}/public}"
 MODULE_PATH="${MODULE_PATH:-}"
 CHANNEL="${CHANNEL:-alpha}"
 MODULE_VERSION="${MODULE_VERSION:-v0.1.0}"
-HUGO_IMAGE="${HUGO_IMAGE:-hugomods/hugo:debian-ci-0.150.1}"
+HUGO_IMAGE="${HUGO_IMAGE:-ghcr.io/gohugoio/hugo:v0.159.2}"
 MODE="${MODE:-build}"
 POLL_INTERVAL="${POLL_INTERVAL:-700ms}"
 

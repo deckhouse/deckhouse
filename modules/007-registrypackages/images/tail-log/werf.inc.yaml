@@ -1,0 +1,52 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    setup:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src/tail-log
+  stageDependencies:
+    setup:
+    - '**/*'
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - tail-log
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "tail-log": "0.0.1" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/golang-alpine" }}
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  setup:
+  - cd /src/tail-log && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s" -o /tail-log .
+  - mv /src/scripts/* /

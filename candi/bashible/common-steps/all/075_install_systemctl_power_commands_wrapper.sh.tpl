@@ -16,4 +16,4 @@
 {{- $wrapperIndex := "systemctlPowerCommandsWrapper" }}
 {{- $wrapperVersion := "0.2" | replace "." "" }}
 
-bb-package-install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"
+rpp-get install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"

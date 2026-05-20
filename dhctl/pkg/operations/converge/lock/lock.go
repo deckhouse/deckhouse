@@ -24,7 +24,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -41,12 +40,12 @@ type InLockRunner struct {
 	lockConfig     *lease.LeaseLockConfig
 	forceLock      bool
 	fullUnlock     bool
-	getter         kubernetes.KubeClientProvider
+	getter         kubernetes.KubeClientProviderWithCtx
 	unlockConverge func(fullUnlock bool)
 }
 
-func NewInLockRunner(getter kubernetes.KubeClientProvider, identity string) *InLockRunner {
-	lockConfig := GetLockLeaseConfig(identity)
+func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
+	lockConfig := GetLockLeaseConfig(identity, sshUser)
 	return &InLockRunner{
 		getter:     getter,
 		lockConfig: lockConfig,
@@ -55,9 +54,9 @@ func NewInLockRunner(getter kubernetes.KubeClientProvider, identity string) *InL
 	}
 }
 
-func NewInLockLocalRunner(getter kubernetes.KubeClientProvider, identity string) *InLockRunner {
-	localIdentity := getLocalConvergeLockIdentity(identity)
-	return NewInLockRunner(getter, localIdentity)
+func NewInLockLocalRunner(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, identity, sshUser string) *InLockRunner {
+	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
+	return NewInLockRunner(getter, localIdentity, sshUser)
 }
 
 func (r *InLockRunner) WithForceLock(f bool) *InLockRunner {
@@ -120,13 +119,13 @@ func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
 }
 
-func LockConverge(ctx context.Context, provider kubernetes.KubeClientProvider, identity string) (func(bool), error) {
-	localIdentity := getLocalConvergeLockIdentity(identity)
-	lockConfig := GetLockLeaseConfig(localIdentity)
+func LockConverge(ctx context.Context, provider kubernetes.KubeClientProviderWithCtx, identity, sshUser string) (func(bool), error) {
+	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
+	lockConfig := GetLockLeaseConfig(localIdentity, sshUser)
 	return LockConvergeWithConfig(ctx, provider, lockConfig)
 }
 
-func LockConvergeWithConfig(ctx context.Context, getter kubernetes.KubeClientProvider, lockConfig *lease.LeaseLockConfig) (func(bool), error) {
+func LockConvergeWithConfig(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, lockConfig *lease.LeaseLockConfig) (func(bool), error) {
 	unlockConverge, err := lockLease(ctx, getter, lockConfig, false)
 	if err != nil {
 		return nil, err
@@ -140,18 +139,18 @@ func LockConvergeWithConfig(ctx context.Context, getter kubernetes.KubeClientPro
 	return unlockConverge, nil
 }
 
-func IsConvergeLocked(ctx context.Context, getter kubernetes.KubeClientProvider, lockConfig *lease.LeaseLockConfig, checkIsStillLocked bool) (bool, error) {
+func IsConvergeLocked(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, lockConfig *lease.LeaseLockConfig, checkIsStillLocked bool) (bool, error) {
 	leaseLock := lease.NewLeaseLock(getter, *lockConfig)
 	return leaseLock.IsLocked(ctx, checkIsStillLocked)
 }
 
-func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
+func GetLockLeaseConfig(identity, sshUser string) *lease.LeaseLockConfig {
 	additionalInfo := ""
-	if app.SSHUser != "" {
+	if sshUser != "" {
 		info := struct {
 			SSHUser string `json:"ssh_user,omitempty"`
 		}{
-			SSHUser: app.SSHUser,
+			SSHUser: sshUser,
 		}
 
 		infoStr, err := json.Marshal(info)
@@ -185,20 +184,20 @@ func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
 	}
 }
 
-func getLocalConvergeLockIdentity(pref string) string {
+func getLocalConvergeLockIdentity(ctx context.Context, pref string) string {
 	const cacheKey = "lock-identifier"
 
 	cache := statecache.Global()
 
-	if hasID, err := cache.InCache(cacheKey); err == nil && hasID {
-		id, err := cache.Load(cacheKey)
+	if hasID, err := cache.InCache(ctx, cacheKey); err == nil && hasID {
+		id, err := cache.Load(ctx, cacheKey)
 		if err == nil && len(id) > 0 {
 			return string(id)
 		}
 	}
 
 	id := fmt.Sprintf("%v-%v", pref, uuid.New().String())
-	if err := cache.Save(cacheKey, []byte(id)); err != nil {
+	if err := cache.Save(ctx, cacheKey, []byte(id)); err != nil {
 		panic(err)
 	}
 
@@ -207,7 +206,7 @@ func getLocalConvergeLockIdentity(pref string) string {
 
 func lockLease(
 	ctx context.Context,
-	getter kubernetes.KubeClientProvider,
+	getter kubernetes.KubeClientProviderWithCtx,
 	config *lease.LeaseLockConfig,
 	forceLock bool,
 ) (func(fullUnlock bool), error) {

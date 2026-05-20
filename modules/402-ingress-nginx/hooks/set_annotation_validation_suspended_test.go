@@ -30,7 +30,7 @@ import (
 
 var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHandleIngressNginxControllers ::", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"internal":{"ingressControllers":[]}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", false)
 	f.RegisterCRD(internal.IngressNginxControllerGVR.Group, internal.IngressNginxControllerGVR.Version, "IngressNginxController", false)
 
 	Context("No controllers, no ConfigMap", func() {
@@ -139,21 +139,21 @@ metadata:
 `
 
 	threeControllers = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-1
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-2
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-3
@@ -162,35 +162,35 @@ spec:
 `
 
 	fiveControllers = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-1
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-2
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-3
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-4
 spec:
   validationEnabled: true
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-5
@@ -200,33 +200,33 @@ spec:
 )
 
 const fiveControllersWithAnnotation = `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-1
   annotations:
     network.deckhouse.io/ingress-nginx-validation-suspended: ""
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-2
   annotations:
     network.deckhouse.io/ingress-nginx-validation-suspended: ""
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-3
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-4
   annotations:
     network.deckhouse.io/ingress-nginx-validation-suspended: ""
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: ctrl-5

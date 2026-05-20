@@ -24,6 +24,73 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const testRPPBootstrapServerPort = 4282
+
+func TestClusterUUIDIsPreservedInTemplateContexts(t *testing.T) {
+	const clusterUUID = "ce64db27-f724-4b50-bb86-e4ac57a1d49d"
+
+	var input inputData
+	if err := yaml.Unmarshal([]byte("clusterUUID: "+clusterUUID+"\n"), &input); err != nil {
+		t.Fatalf("unmarshal inputData: %v", err)
+	}
+	if input.ClusterUUID != clusterUUID {
+		t.Fatalf("inputData.ClusterUUID = %q, want %q", input.ClusterUUID, clusterUUID)
+	}
+
+	common := tplContextCommon{ClusterUUID: input.ClusterUUID}
+	bundle := bundleNGContext{tplContextCommon: &common}
+	bundleData, err := yaml.Marshal(bundle)
+	if err != nil {
+		t.Fatalf("marshal bundleNGContext: %v", err)
+	}
+	bundleMap := make(map[string]interface{})
+	if err := yaml.Unmarshal(bundleData, &bundleMap); err != nil {
+		t.Fatalf("unmarshal bundleNGContext: %v", err)
+	}
+	if got := bundleMap["clusterUUID"]; got != clusterUUID {
+		t.Fatalf("bundleNGContext clusterUUID = %v, want %q", got, clusterUUID)
+	}
+
+	bc := bashibleContext{ClusterUUID: input.ClusterUUID}
+	bcData, err := yaml.Marshal(bc)
+	if err != nil {
+		t.Fatalf("marshal bashibleContext: %v", err)
+	}
+	bcMap := make(map[string]interface{})
+	if err := yaml.Unmarshal(bcData, &bcMap); err != nil {
+		t.Fatalf("unmarshal bashibleContext: %v", err)
+	}
+	if got := bcMap["clusterUUID"]; got != clusterUUID {
+		t.Fatalf("bashibleContext clusterUUID = %v, want %q", got, clusterUUID)
+	}
+}
+
+func TestClusterMasterEndpointAddresses(t *testing.T) {
+	kubeAPIEndpoints, rppAddresses, rppBootstrapAddresses := clusterMasterEndpointAddresses([]clusterMasterEndpoint{
+		{
+			Address:                "10.0.0.1",
+			KubeAPIPort:            6443,
+			RPPServerPort:          4219,
+			RPPBootstrapServerPort: testRPPBootstrapServerPort,
+		},
+		{
+			Address:                "10.0.0.2",
+			RPPServerPort:          4219,
+			RPPBootstrapServerPort: testRPPBootstrapServerPort,
+		},
+	})
+
+	if got, want := fmt.Sprint(kubeAPIEndpoints), "[10.0.0.1:6443]"; got != want {
+		t.Fatalf("kubeAPIEndpoints = %s, want %s", got, want)
+	}
+	if got, want := fmt.Sprint(rppAddresses), "[10.0.0.1:4219 10.0.0.2:4219]"; got != want {
+		t.Fatalf("rppAddresses = %s, want %s", got, want)
+	}
+	if got, want := fmt.Sprint(rppBootstrapAddresses), fmt.Sprintf("[10.0.0.1:%d 10.0.0.2:%d]", testRPPBootstrapServerPort, testRPPBootstrapServerPort); got != want {
+		t.Fatalf("rppBootstrapAddresses = %s, want %s", got, want)
+	}
+}
+
 func TestBashibleChecksum(t *testing.T) {
 	hash := func(t *testing.T, bc *bashibleContext) string {
 		h := sha256.New()
@@ -96,9 +163,19 @@ updateEpoch: "1680009541"
 
 	bc := bashibleContext{
 		KubernetesVersion: "1.26",
-		Normal:            map[string][]string{"apiserverEndpoints": clusterMasterAddresses},
-		NodeGroup:         ng,
-		RunType:           "Normal",
+		Normal: map[string]interface{}{
+			"apiserverEndpoints": clusterMasterAddresses,
+			"clusterMasterEndpoints": []map[string]interface{}{
+				{
+					"address":                "10.0.0.1",
+					"kubeApiPort":            6443,
+					"rppServerPort":          4219,
+					"rppBootstrapServerPort": testRPPBootstrapServerPort,
+				},
+			},
+		},
+		NodeGroup: ng,
+		RunType:   "Normal",
 
 		Images: map[string]map[string]string{
 			"common": {

@@ -1,0 +1,32 @@
+{{- if ((.Values.controlPlaneManager.apiserver).publishAPI).loadBalancer.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: d8-control-plane-apiserver
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+    {{- if .Values.controlPlaneManager.apiserver.publishAPI.loadBalancer.annotations }}
+  annotations:
+      {{- range $key, $value := .Values.controlPlaneManager.apiserver.publishAPI.loadBalancer.annotations }}
+    {{ $key }}: {{ $value | quote }}
+      {{- end }}
+    {{- end }}
+spec:
+  externalTrafficPolicy: Local
+  # must be changed if NodePort range is changed via "--service-node-port-range"
+  healthCheckNodePort: 32767
+  type: LoadBalancer
+    {{- if .Values.controlPlaneManager.apiserver.publishAPI.loadBalancer.sourceRanges }}
+  loadBalancerSourceRanges:
+    {{- .Values.controlPlaneManager.apiserver.publishAPI.loadBalancer.sourceRanges | toYaml | nindent 4 }}
+    {{- end }}
+  ports:
+  - name: https
+    port: {{ .Values.controlPlaneManager.apiserver.publishAPI.loadBalancer.port }}
+    targetPort: 6443
+    protocol: TCP
+  selector:
+    tier: control-plane
+    component: kube-apiserver
+{{- end }}

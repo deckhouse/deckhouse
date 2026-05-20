@@ -174,7 +174,7 @@ When `--highAvailability` is enabled:
 ## Dependencies
 
 ### Core Dependencies
-- **Hugo:** v0.150.1 - Static site generator
+- **Hugo:** v0.159.2 - Static site generator
 - **Kubernetes Client:** v0.28.3 - K8s API integration
 - **Deckhouse Logger:** Custom structured logging
 - **Afero/Fsync:** File system operations

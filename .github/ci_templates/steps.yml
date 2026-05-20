@@ -180,38 +180,6 @@
 # </template: login_rw_registry_step>
 {!{- end -}!}
 
-{!{ define "login_flant_registry_step" }!}
-# <template: login_flant_registry_step>
-- name: Check flant registry credentials
-  id: check_flant_registry
-  env:
-    HOST: ${{secrets.FLANT_REGISTRY_HOST}}
-  run: |
-    if [[ -n $HOST ]]; then
-      echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
-      echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
-    else
-      echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
-    fi
-- name: Login to flant registry
-  uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
-  with:
-    registry: ${{ secrets.FLANT_REGISTRY_HOST }}
-    username: ${{ secrets.FLANT_REGISTRY_USER }}
-    password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
-    logout: false
-- name: Login to Github Container Registry
-  uses: {!{ index (ds "actions") "docker/login-action" }!}
-  if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
-  with:
-    registry: ghcr.io
-    username: ${{ github.actor }}
-    password: ${{ secrets.GITHUB_TOKEN }}
-    logout: false
-# </template: login_flant_registry_step>
-{!{- end -}!}
-
 {!{ define "werf_install_step" }!}
 # <template: werf_install_step>
 - name: Install werf CLI
@@ -226,7 +194,8 @@
 - name: Install d8 CLI
   run: |
     mkdir -p bin
-    INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+    INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+    mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
     echo "$(pwd)/bin" >> "$GITHUB_PATH"
 # </template: d8cli_install_step>
 {!{- end -}!}
@@ -266,11 +235,11 @@
   uses: {!{ index (ds "actions") "ssh-agent" }!}
   with:
     ssh-private-key: |
-      ${{secrets.SOURCE_REPO_SSH_KEY}}
-      ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+      ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
 - name: Add ssh_known_hosts
   run: |
-    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
     echo "::add-mask::$HOST"
     IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
     for IP in $IPS; do
@@ -288,7 +257,7 @@
 - name: Add svace analyze server to ssh_known_hosts
   continue-on-error: true
   run: |
-    host=${{ secrets.SVACE_ANALYZE_HOST }}
+    host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
     host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
     echo "::add-mask::$host_ip"
     mkdir -p ~/.ssh
@@ -311,7 +280,7 @@
 - name: Send fail report
   if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
   env:
-    LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+    LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
     JOB_NAME: ${{ github.job }}
     WORKFLOW_NAME: ${{ github.workflow }}
     WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
@@ -327,7 +296,12 @@
   id: split
   env:
     REPO: ${{ github.repository }}
-  run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+  run: |
+    if [ $REPO == "deckhouse/deckhouse" ]; then
+      echo "name=deckhouse" >> $GITHUB_OUTPUT
+    else
+      echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+    fi
 - name: Import secrets
   id: secrets
   uses: hashicorp/vault-action@v2

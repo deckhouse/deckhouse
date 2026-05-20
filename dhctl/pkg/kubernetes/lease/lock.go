@@ -86,7 +86,7 @@ func NewLockUserInfo(additional string) *LockUserInfo {
 }
 
 type LeaseLock struct {
-	getter kubernetes.KubeClientProvider
+	getter kubernetes.KubeClientProviderWithCtx
 	config LeaseLockConfig
 
 	lockLease   sync.Mutex
@@ -94,7 +94,7 @@ type LeaseLock struct {
 	lease       *coordinationv1.Lease
 }
 
-func NewLeaseLock(getter kubernetes.KubeClientProvider, config LeaseLockConfig) *LeaseLock {
+func NewLeaseLock(getter kubernetes.KubeClientProviderWithCtx, config LeaseLockConfig) *LeaseLock {
 	return &LeaseLock{
 		getter:      getter,
 		config:      config,
@@ -119,7 +119,11 @@ func (l *LeaseLock) Lock(ctx context.Context, force bool) error {
 }
 
 func (l *LeaseLock) IsLocked(ctx context.Context, checkStillLocked bool) (bool, error) {
-	lease, err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
+	kubeClient, err := l.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+	lease, err := kubeClient.CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -145,9 +149,15 @@ func (l *LeaseLock) Unlock(ctx context.Context) {
 
 	close(l.exitRenewCh)
 
+	kubeClient, err := l.getter.KubeClientCtx(ctx)
+	if err != nil {
+		log.Error("Could not get kube client: %w", err)
+		return
+	}
+
 	deleteRetries := l.config.RenewRetries()
-	err := retry.NewSilentLoop("unlock lease", deleteRetries, l.config.RetryWaitDuration).RunContext(ctx, func() error {
-		err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Delete(ctx, l.lease.Name, metav1.DeleteOptions{})
+	err = retry.NewSilentLoop("unlock lease", deleteRetries, l.config.RetryWaitDuration).RunContext(ctx, func() error {
+		err := kubeClient.CoordinationV1().Leases(l.config.Namespace).Delete(ctx, l.lease.Name, metav1.DeleteOptions{})
 		if errors.IsNotFound(err) {
 			return nil
 		}
@@ -200,8 +210,13 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 		return strings.HasPrefix(err.Error(), prefix)
 	}
 
+	kubeClient, err := l.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	acquireRetries := l.config.RenewRetries()
-	err := retry.NewSilentLoop("acquire lease", acquireRetries, l.config.RetryWaitDuration).BreakIf(cannotRenew).RunContext(ctx, func() error {
+	err = retry.NewSilentLoop("acquire lease", acquireRetries, l.config.RetryWaitDuration).BreakIf(cannotRenew).RunContext(ctx, func() error {
 		var err error
 		lease, err = l.createLease(ctx)
 		if err == nil {
@@ -209,7 +224,7 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 		}
 
 		if errors.IsAlreadyExists(err) {
-			lease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
+			lease, err = kubeClient.CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
 			if err != nil {
 				return fmt.Errorf("%s Can't get current lease %v", prefix, err)
 			}
@@ -248,7 +263,12 @@ func (l *LeaseLock) createLease(ctx context.Context) (*coordinationv1.Lease, err
 		},
 	}
 
-	return l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Create(ctx, lease, metav1.CreateOptions{})
+	kubeClient, err := l.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	return kubeClient.CoordinationV1().Leases(l.config.Namespace).Create(ctx, lease, metav1.CreateOptions{})
 }
 
 func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, force bool) (*coordinationv1.Lease, error) {
@@ -278,18 +298,23 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 
 	var newLease *coordinationv1.Lease
 
+	kubeClient, err := l.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	renewRetries := l.config.RenewRetries()
-	err := retry.NewSilentLoop("try to renew", renewRetries, l.config.RetryWaitDuration).RunContext(ctx, func() error {
+	err = retry.NewSilentLoop("try to renew", renewRetries, l.config.RetryWaitDuration).RunContext(ctx, func() error {
 		var err error
 		lease.Spec.RenewTime = now()
-		newLease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Update(ctx, lease, metav1.UpdateOptions{})
+		newLease, err = kubeClient.CoordinationV1().Leases(l.config.Namespace).Update(ctx, lease, metav1.UpdateOptions{})
 		if err != nil && strings.Contains(err.Error(), "the object has been modified; please apply your changes to the latest version and try again") {
-			leaseTemp, err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
+			leaseTemp, err := kubeClient.CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 			leaseTemp.Spec.RenewTime = now()
-			newLease, err = l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Update(ctx, leaseTemp, metav1.UpdateOptions{})
+			newLease, err = kubeClient.CoordinationV1().Leases(l.config.Namespace).Update(ctx, leaseTemp, metav1.UpdateOptions{})
 			return err
 		}
 		return err

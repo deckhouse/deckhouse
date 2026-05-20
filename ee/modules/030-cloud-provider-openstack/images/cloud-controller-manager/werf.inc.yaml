@@ -1,12 +1,13 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
+{{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "ccm-openstack" "k8s" $) | fromYaml }}
+{{- range $key, $value := $version_map }}
+  {{- $k8s_version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
-  {{- if $value.ccm.openstack }}
-    {{- $src_version := $version }}
+  {{- $version := toString $value }}
+  {{- if $version }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $src_version) }}
-      {{- $patch = true }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $k8s_version) }}
+        {{- $patch = true }}
     {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -25,7 +26,7 @@ final: false
 fromImage: common/src-artifact
 {{- if $patch }}
 git:
-- add: {{ $patches }}/patches/{{ $src_version }}
+- add: {{ $patches }}/patches/{{ $k8s_version }}
   to: /patches
   stageDependencies:
     install:
@@ -36,7 +37,7 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.openstack }}  $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-openstack.git /src
+  - git clone --depth 1 --branch {{ $version }}  $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-openstack.git /src
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
@@ -52,19 +53,19 @@ import:
   to: /src
   before: install
 mount:
-{{ include "mount points for golang builds" . }}
+{{ include "mount points for golang builds" $ }}
 secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - export VERSION={{ $value.ccm.openstack }}
-  - export GIT_VERSION={{ $value.ccm.openstack }}
+  - export VERSION={{ $version }}
+  - export GIT_VERSION={{ $version }}
   - make openstack-cloud-controller-manager
   - chown 64535:64535 /src/openstack-cloud-controller-manager
   - chmod 0755 /src/openstack-cloud-controller-manager

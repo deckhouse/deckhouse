@@ -3,8 +3,8 @@
   description: A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
-  id: ingress-nginx-1-10
-  version: 1.10.4
+  id: ingress-nginx-1-15
+  version: 1.15.1
 
 - name: Ingress NGINX Controller
   link: https://github.com/kubernetes/ingress-nginx

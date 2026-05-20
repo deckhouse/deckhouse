@@ -20,7 +20,8 @@ import (
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -32,7 +33,7 @@ type Storage struct {
 
 	valuesPatches []addonutils.ValuesPatch
 
-	schemaStorage *validation.SchemaStorage
+	schemaStorage *schema.Storage
 
 	mu sync.Mutex
 
@@ -41,9 +42,9 @@ type Storage struct {
 	//   /packages/001-package/values.yaml
 	staticValues addonutils.Values
 
-	// configValues are user-defined values from package settings
+	// settings are user-defined values from package settings
 	// These are stored separately before merging with static and openapi values
-	configValues addonutils.Values
+	settings addonutils.Values
 
 	// resultValues is the final merged result of all value sources
 	// This is what hooks and templates see
@@ -56,12 +57,12 @@ type Storage struct {
 // Parameters:
 //   - name: Package name (will be converted to values key format)
 //   - staticValues: Pre-loaded static values from values.yaml
-//   - configBytes: OpenAPI config schema (YAML bytes)
+//   - settingsBytes: OpenAPI config schema (YAML bytes)
 //   - valuesBytes: OpenAPI values schema (YAML bytes)
 //
 // Returns error if schema initialization or initial value calculation fails.
-func NewStorage(name string, staticValues addonutils.Values, configBytes, valuesBytes []byte) (*Storage, error) {
-	schemaStorage, err := validation.NewSchemaStorage(configBytes, valuesBytes)
+func NewStorage(name string, staticValues addonutils.Values, settingsBytes, valuesBytes []byte) (*Storage, error) {
+	schemaStorage, err := schema.NewStorage(settingsBytes, valuesBytes)
 	if err != nil {
 		return nil, fmt.Errorf("new schema storage: %w", err)
 	}
@@ -88,13 +89,13 @@ func (s *Storage) GetValuesChecksum() string {
 	return s.resultValues.Checksum()
 }
 
-// GetConfigChecksum returns a checksum of only the user-defined config values.
+// GetSettingsChecksum returns a checksum of only the user-defined config values.
 // Unlike GetValuesChecksum, this excludes static values, schema defaults, and patches.
-func (s *Storage) GetConfigChecksum() string {
+func (s *Storage) GetSettingsChecksum() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.configValues.Checksum()
+	return s.settings.Checksum()
 }
 
 // GetValues returns the final merged values that hooks and templates see.
@@ -112,17 +113,17 @@ func (s *Storage) GetSettings() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	settings := s.configValues
+	settings := s.settings
 	if len(settings) == 0 {
 		settings = addonutils.Values{}
 	}
 
-	return s.openapiDefaultsTransformer(validation.ConfigValuesSchema).Transform(settings)
+	return s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
 }
 
-// ApplyDefaultsConfigValues returns a copy of the provided values with defaults
+// ApplySettingsDefaults returns a copy of the provided values with defaults
 // from the config OpenAPI schema applied. Does not modify stored values.
-func (s *Storage) ApplyDefaultsConfigValues(settings addonutils.Values) addonutils.Values {
+func (s *Storage) ApplySettingsDefaults(settings addonutils.Values) addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -130,12 +131,12 @@ func (s *Storage) ApplyDefaultsConfigValues(settings addonutils.Values) addonuti
 		settings = addonutils.Values{}
 	}
 
-	return s.openapiDefaultsTransformer(validation.ConfigValuesSchema).Transform(settings)
+	return s.openapiDefaultsTransformer(schema.TypeSettings).Transform(settings)
 }
 
-// ValidateConfigValues validates values against the config OpenAPI schema.
-// Does not modify the stored values - use ApplyConfigValues to persist.
-func (s *Storage) ValidateConfigValues(settings addonutils.Values) error {
+// ValidateSettings validates values against the config OpenAPI schema.
+// Does not modify the stored values - use ApplySettings to persist.
+func (s *Storage) ValidateSettings(settings addonutils.Values) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -143,16 +144,16 @@ func (s *Storage) ValidateConfigValues(settings addonutils.Values) error {
 		settings = addonutils.Values{}
 	}
 
-	if err := s.validateConfigValues(settings); err != nil {
+	if err := s.validateSettings(settings); err != nil {
 		return fmt.Errorf("validate config values: %w", err)
 	}
 
 	return nil
 }
 
-// ApplyConfigValues validates and saves user-defined config values.
+// ApplySettings validates and saves user-defined config values.
 // After saving, recalculates the result values with all layers merged.
-func (s *Storage) ApplyConfigValues(settings addonutils.Values) error {
+func (s *Storage) ApplySettings(settings addonutils.Values) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -160,11 +161,11 @@ func (s *Storage) ApplyConfigValues(settings addonutils.Values) error {
 		settings = addonutils.Values{}
 	}
 
-	if err := s.validateConfigValues(settings); err != nil {
+	if err := s.validateSettings(settings); err != nil {
 		return fmt.Errorf("validate config values: %w", err)
 	}
 
-	s.configValues = settings
+	s.settings = settings
 
 	return s.calculateResultValues()
 }
@@ -204,13 +205,13 @@ func (s *Storage) calculateResultValues() error {
 		s.staticValues,
 
 		// from openapi config spec
-		s.openapiDefaultsTransformer(validation.ConfigValuesSchema),
+		s.openapiDefaultsTransformer(schema.TypeSettings),
 
 		// from package settings
-		s.configValues,
+		s.settings,
 
 		// from openapi values spec
-		s.openapiDefaultsTransformer(validation.ValuesSchema),
+		s.openapiDefaultsTransformer(schema.TypeValues),
 	)
 
 	// from patches
@@ -233,10 +234,9 @@ func (s *Storage) calculateResultValues() error {
 }
 
 // openapiDefaultsTransformer creates a transformer that applies defaults from an OpenAPI schema.
-func (s *Storage) openapiDefaultsTransformer(schemaType validation.SchemaType) transformer {
+func (s *Storage) openapiDefaultsTransformer(schemaType schema.Type) transformer {
 	return &applyDefaults{
-		SchemaType: schemaType,
-		Schemas:    s.schemaStorage.Schemas,
+		schema: s.schemaStorage.GetSchema(schemaType),
 	}
 }
 
@@ -244,17 +244,17 @@ func (s *Storage) openapiDefaultsTransformer(schemaType validation.SchemaType) t
 func (s *Storage) validateValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
-	return s.schemaStorage.ValidateValues(s.name, validatableValues)
+	return s.schemaStorage.Validate(schema.TypeValues, s.name, validatableValues)
 }
 
 // validateConfigValues validates values against the config OpenAPI schema.
 // Returns error if values are provided but no config schema is defined.
-func (s *Storage) validateConfigValues(values addonutils.Values) error {
+func (s *Storage) validateSettings(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
-	if s.schemaStorage.Schemas[validation.ConfigValuesSchema] == nil && len(values) > 0 {
+	if s.schemaStorage.GetSchema(schema.TypeSettings) == nil && len(values) > 0 {
 		return errors.New("config schema is not defined but config values were provided")
 	}
 
-	return s.schemaStorage.ValidateConfigValues(s.name, validatableValues)
+	return s.schemaStorage.Validate(schema.TypeSettings, s.name, validatableValues)
 }

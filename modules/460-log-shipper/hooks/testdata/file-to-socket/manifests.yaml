@@ -14,7 +14,7 @@ spec:
     - test-socket3-dest
     - test-socket4-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-socket1-dest
@@ -31,7 +31,7 @@ spec:
         verifyHostname: false
 
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-socket2-dest
@@ -43,7 +43,7 @@ spec:
     encoding:
       codec: Syslog
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-socket3-dest
@@ -58,7 +58,7 @@ spec:
     mode: TCP
   type: Socket
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-socket4-dest

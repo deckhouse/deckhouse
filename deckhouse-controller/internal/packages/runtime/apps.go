@@ -29,11 +29,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
-	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/download"
-	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
-	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
+	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -73,8 +73,8 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 // Flow:
 //  1. NeedUpdate fast-path: skip if version and settings checksum are unchanged
 //  2. Store.Update: if version changed → new root context, enqueue full pipeline
-//     (Disable → Download → Install → Load); if only settings changed → nil context,
-//     trigger Reschedule so the scheduler re-runs ApplySettings → Startup → Run
+//     (Disable → Deploy → Load); if only settings changed → nil context,
+//     trigger Reschedule so the scheduler re-runs Configure → Startup → Run
 //  3. CheckConstraints: validate Kubernetes/Deckhouse version requirements before enqueuing
 //
 // Settings are applied lazily: the scheduler's schedulePackage reads pending settings
@@ -105,17 +105,16 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	r.status.ClearRuntimeConditions(name)
+	r.status.ClearStatus(name)
 
 	tasks := []queue.Task{
-		taskdownload.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
-		taskinstall.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
+		taskdeploy.NewAppTask(name, packageName, version, repo, r.appDeployer, r.status, r.logger),
 		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
 	}
 
 	// If there's an existing app, disable it first
 	if pkg := r.apps[name]; pkg != nil {
-		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.logger))
 	}
 
 	for _, task := range tasks {
@@ -135,7 +134,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf, err := loader.LoadAppConf(ctx, packagePath, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
+		return "", status.NewError("LoadFailed", err)
 	}
 
 	conf.Repository = repo
@@ -146,7 +145,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
+		return "", status.NewError("LoadFailed", err)
 	}
 
 	r.mu.Lock()
@@ -160,13 +159,13 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 
 // RemoveApp removes an application and cancels all its running operations.
 //
-// After the uninstall task succeeds, a cleanup goroutine removes the
+// After the undeploy task succeeds, a cleanup goroutine removes the
 // Store entry and stops the queue. The goroutine is necessary because
 // queueService.Remove stops the queue — calling it synchronously from
 // within the queue's own processing loop would deadlock on WaitGroup.
 //
 // Store.Delete has a state guard: if UpdateApp re-created the package
-// between uninstall and cleanup, Delete is a no-op (version != "").
+// between undeploy and cleanup, Delete is a no-op (version != "").
 func (r *Runtime) RemoveApp(namespace, instance string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -180,7 +179,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	}
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {
@@ -190,11 +189,11 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 
 			if r.packages.Delete(name) {
 				r.queueService.Remove(name)
-				r.status.Delete(name)
+				r.status.DeleteStatus(name)
 				delete(r.apps, name)
 			}
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewAppTask(name, r.appDeployer, r.logger), cleanup)
 }

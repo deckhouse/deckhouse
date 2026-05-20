@@ -4,7 +4,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/ne
 ---
 
 {% alert level="warning" %}
-Available in DVP Enterprise Edition only.
+Available in DVP Standard Edition+ and Enterprise Edition.
 {% endalert %}
 
 Egress Gateway enables centralized management and control of outgoing traffic

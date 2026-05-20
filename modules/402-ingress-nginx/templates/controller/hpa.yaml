@@ -90,11 +90,13 @@ spec:
                     values:
                       - {{ $name }}
               topologyKey: kubernetes.io/hostname
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
         - name: hpa-scaler
           image: {{ include "helm_lib_module_common_image" (list $context "pause") }}
+      {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           resources:
             requests:
               cpu: "10m"

@@ -11,7 +11,7 @@ description: Deckhouse управляет компонентами control plane
 - **Настройка компонентов**. Автоматически создает необходимые конфигурации и манифесты компонентов `control-plane`.
 - **Upgrade/downgrade компонентов**. Поддерживает в кластере одинаковые версии компонентов.
 - **Управление конфигурацией etcd-кластера** и его членов. Масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
-- **Настройка kubeconfig**. Обеспечивает всегда актуальную конфигурацию для работы kubectl. Генерирует, продлевает, обновляет kubeconfig с правами cluster-admin и создает symlink пользователю root, чтобы kubeconfig использовался по умолчанию.
+- **Настройка kubeconfig**. Обеспечивает актуальные файлы kubeconfig на узлах control-plane. Генерирует, продлевает и обновляет kubeconfig для компонентов control-plane и admin kubeconfig (`admin.conf`). По умолчанию создаёт символическую ссылку для root-пользователя (`/root/.kube/config` -> `admin.conf`). При включённом модуле [user-authz](/modules/user-authz/) симлинк можно отключить параметром `rootKubeconfigSymlink` в модуле **control-plane-manager** (см. [FAQ](faq.html#модель-административного-доступа-к-кластеру)). Также ужесточает права доступа к файлам `admin.conf` и `super-admin.conf`.
 - **Расширение работы планировщика**, за счет подключения внешних плагинов через вебхуки. Управляется ресурсом [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration). Позволяет использовать более сложную логику при решении задач планирования нагрузки в кластере. Например:
   - размещение подов приложений организации хранилища данных ближе к самим данным,
   - приоритизация узлов в зависимости от их состояния (сетевой нагрузки, состояния подсистемы хранения и т. д.),
@@ -95,6 +95,32 @@ description: Deckhouse управляет компонентами control plane
   - Успешное понижение версии гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
   - Сначала на узлах кластера выполняется понижение версии kubelet, после чего производится понижение версии компонентов control plane.
 
+## Публикация API kubernetes
+
+Компонент kube-apiserver без дополнительных настроек доступен только во внутренней сети кластера. Этот модуль решает проблему простого и безопасного доступа к API Kubernetes извне кластера.
+
+### Через Ingress
+
+Указанием параметров [`apiserver.publishAPI.ingress`](configuration.html#parameters-apiserver-publishapi-ingress) можно опубликовать API-сервер на специальном домене (подробнее см. [раздел о служебных доменах в документации](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+При настройке можно указать:
+
+* перечень сетевых адресов и подсетей, с которых разрешено подключение;
+* Ingress-контроллер, на котором производится публикация;
+* Использовать ли вручную заданный, полученный через cert-manager или автоматический самоподписанный сертификат TLS.
+
+По умолчанию будет сгенерирован специальный сертификат ЦС (CA) и автоматически настроен генератор kubeconfig.
+
+### Через сервис с типом LoadBalancer
+
+Указанием параметров [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) можно создать сервис с типом LoadBalancer `kube-system/d8-control-plane-apiserver`.
+
+При настройке можно указать:
+
+* перечень сетевых адресов и подсетей, с которых разрешено подключение;
+* внешний порт сервиса;
+* аннотации на сервис для настроек провайдера балансировки.
+
 ## Аудит
 
 Если требуется журналировать операции с API или отдебажить неожиданное поведение, для этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/). Его можно настроить путем создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy), а результатом работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
@@ -145,3 +171,49 @@ spec:
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Защита чувствительных полей кастомных ресурсов
+
+Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (apiextensions-apiserver)
+и поддерживается, начиная с версии Kubernetes 1.31.
+
+Маркер `x-kubernetes-sensitive-data` проверяется `kube-apiserver` при применении ресурса:
+
+- маркер требует, чтобы был включен feature gate `CRDSensitiveData` (включается автоматически, когда `apiserver.encryptionEnabled` равен `true`);
+- маркер не допускается устанавливать на корне схемы (на самом узле `openAPIV3Schema`). Чтобы защитить все поля ресурса, добавьте маркер на свойство `spec` (или на поддерево ниже него), а не на корень схемы — на корне также находятся системные поля (`apiVersion`, `kind`, `metadata`), которые невозможно зашифровать;
+- тип поля должен быть одним из типов OpenAPI v3: `string`, `integer`, `number`, `boolean`, `object` или `array`. Маркер на `object` или `array` делает чувствительным всё поддерево;
+- поддерживаются поля, объявленные как `x-kubernetes-int-or-string: true`;
+- маркер запрещён внутри веток `anyOf`, `oneOf`, `allOf` и `not` (это проверяет валидатор структурной схемы).
+
+Если хотя бы одно поле в схеме ресурса помечено `x-kubernetes-sensitive-data: true`, ко всем кастомным ресурсам этого типа применяются следующие меры защиты:
+
+- **Шифрование в etcd** — весь ресурс шифруется с помощью того же механизма, что и Kubernetes Secrets.
+  Требует включения параметра `apiserver.encryptionEnabled`.
+- **Фильтрация полей на основе RBAC** — при выполнении запросов `get`, `list`, или `watch` чувствительные поля удаляются из ответа API, если у вызывающей стороны нет прав `get`, `list` или `watch` на субресурс `<resource>/sensitive`.
+- **Маскировка в журнале аудита** — значения чувствительных полей всегда заменяются на `"******"` в журнале аудита, независимо от прав RBAC и уровня аудита.
+
+Чтобы включить защиту чувствительных полей, установите [параметр `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в `true`.
+Feature gate `CRDSensitiveData` включается
+автоматически при активации шифрования, его не следует указывать вручную:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+```
+
+{% alert level="warning" %}
+Включение `encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.
+{% endalert %}
+
+За подробностями обратитесь к следующим разделам:
+
+- [«FAQ»](faq.html#как-защитить-чувствительные-поля-кастомных-ресурсов) — инструкция по включению защиты чувствительных полей;
+- [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями) — примеры конфигурации и результатов.

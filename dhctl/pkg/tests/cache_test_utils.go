@@ -24,7 +24,7 @@ import (
 
 func assertCacheKeys(t *testing.T, stateCache state.Cache, expectedKeys []string) {
 	var objectsInCacheAfterClean []string
-	err := stateCache.Iterate(func(s string, _ []byte) error {
+	err := stateCache.Iterate(t.Context(), func(s string, _ []byte) error {
 		objectsInCacheAfterClean = append(objectsInCacheAfterClean, s)
 		return nil
 	})
@@ -47,21 +47,21 @@ func RunStateCacheTests(t *testing.T, stateCache state.Cache) {
 	}
 
 	for _, k := range simpleKeys {
-		err = stateCache.Save(k.key, k.value)
+		err = stateCache.Save(t.Context(), k.key, k.value)
 		require.NoError(t, err)
 
-		ok, err := stateCache.InCache(k.key)
+		ok, err := stateCache.InCache(t.Context(), k.key)
 		require.NoError(t, err)
 		require.True(t, ok)
 
-		content, err := stateCache.Load(k.key)
+		content, err := stateCache.Load(t.Context(), k.key)
 
 		require.NoError(t, err)
 		require.Equal(t, k.value, content)
 	}
 
 	var iterateValues []testCase
-	err = stateCache.Iterate(func(k string, v []byte) error {
+	err = stateCache.Iterate(t.Context(), func(k string, v []byte) error {
 		iterateValues = append(iterateValues, testCase{
 			key:   k,
 			value: v,
@@ -73,17 +73,17 @@ func RunStateCacheTests(t *testing.T, stateCache state.Cache) {
 	require.Equal(t, iterateValues, simpleKeys)
 
 	structForTest := map[string]int{"abc": 10, "def": 1000, "xyz": 10}
-	err = stateCache.SaveStruct("test-struct", structForTest)
+	err = stateCache.SaveStruct(t.Context(), "test-struct", structForTest)
 	require.NoError(t, err)
 
 	var test map[string]int
-	err = stateCache.LoadStruct("test-struct", &test)
+	err = stateCache.LoadStruct(t.Context(), "test-struct", &test)
 	require.NoError(t, err)
 
 	require.Equal(t, structForTest, test)
 
 	var objectsInCache []string
-	err = stateCache.Iterate(func(s string, _ []byte) error {
+	err = stateCache.Iterate(t.Context(), func(s string, _ []byte) error {
 		objectsInCache = append(objectsInCache, s)
 		return nil
 	})
@@ -91,22 +91,22 @@ func RunStateCacheTests(t *testing.T, stateCache state.Cache) {
 
 	require.Equal(t, []string{"test", "test-struct", "test.tfstate", "test2.tfstate"}, objectsInCache)
 
-	stateCache.Delete("test")
+	stateCache.Delete(t.Context(), "test")
 	assertCacheKeys(t, stateCache, []string{"test-struct", "test.tfstate", "test2.tfstate"})
 
-	stateCache.Clean()
+	stateCache.Clean(t.Context())
 	assertCacheKeys(t, stateCache, []string{".tombstone"})
 
-	stateCache.Delete(".tombstone")
-	err = stateCache.Save("a", []byte("a-test"))
+	stateCache.Delete(t.Context(), ".tombstone")
+	err = stateCache.Save(t.Context(), "a", []byte("a-test"))
 	require.NoError(t, err)
 
-	err = stateCache.Save("b", []byte("b-test"))
+	err = stateCache.Save(t.Context(), "b", []byte("b-test"))
 	require.NoError(t, err)
 
-	err = stateCache.Save("c", []byte("c-test"))
+	err = stateCache.Save(t.Context(), "c", []byte("c-test"))
 	require.NoError(t, err)
 
-	stateCache.CleanWithExceptions("b")
+	stateCache.CleanWithExceptions(t.Context(), "b")
 	assertCacheKeys(t, stateCache, []string{".tombstone", "b"})
 }

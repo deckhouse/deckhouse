@@ -35,7 +35,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: upmeter_discovery ::", fu
 
 		f = HookExecutionConfigInit(initValues, `{}`)
 	)
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", true)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", true)
 
 	DescribeTable("Objects discovery for Upmeter dynamic probes",
 		func(objectsYAMLs, want []string) {
@@ -83,7 +83,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: upmeter_discovery ::", fu
 
 func ingressNginxControllerYAML(name string) string {
 	tpl := `
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: %q

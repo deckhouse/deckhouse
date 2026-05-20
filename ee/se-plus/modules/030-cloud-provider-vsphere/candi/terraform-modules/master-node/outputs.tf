@@ -5,7 +5,7 @@ locals {
     for disk in vsphere_virtual_machine.master.disk :
     disk.uuid if disk.label == "disk1"
   ]
-  kubernetes_data_device_uuid = replace(length(local.kubernetes_data_device_uuid_list) > 0 ? local.kubernetes_data_device_uuid_list[0] : "", "-", "")
+  kubernetes_data_device_uuid = lower(replace(length(local.kubernetes_data_device_uuid_list) > 0 ? local.kubernetes_data_device_uuid_list[0] : "", "-", ""))
   kubernetes_data_device_path = local.kubernetes_data_device_uuid != "" ? "/dev/disk/by-id/wwn-0x${local.kubernetes_data_device_uuid}" : "/dev/sdb"
 }
 
@@ -20,4 +20,3 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = local.kubernetes_data_device_path
 }
-

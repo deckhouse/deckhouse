@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -44,6 +46,9 @@ const (
 	maxConcurrentReconciles = 1
 
 	defaultRequeue = 15 * time.Second
+
+	schemaTypeSettings = iota
+	schemaTypeValues
 )
 
 // reconciler promotes draft ApplicationPackageVersion resources by loading
@@ -141,7 +146,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apv.Spec.PackageRepositoryName}, repo); err != nil {
 		original := apv.DeepCopy()
-		r.setConditionFalse(
+		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
 			fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
@@ -161,7 +166,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	img, err := r.registry.GetImageReader(ctx, remote, versionPath, version)
 	if err != nil {
 		original := apv.DeepCopy()
-		r.setConditionFalse(
+		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
 			fmt.Sprintf("get image: %s", err.Error()),
@@ -177,7 +182,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	meta, err := r.parseVersionMetadataByImage(ctx, img)
 	if err != nil {
 		original := apv.DeepCopy()
-		r.setConditionFalse(
+		r.setMetadataLoadedConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
 			fmt.Sprintf("fetch package metadata: %s", err.Error()),
@@ -191,24 +196,21 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	original := apv.DeepCopy()
-	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-		Stage: meta.definition.Stage,
-		Description: &v1alpha1.PackageDescription{
-			Ru: meta.definition.Descriptions.Ru,
-			En: meta.definition.Descriptions.En,
-		},
-		Requirements: &v1alpha1.PackageRequirements{
-			Deckhouse:  meta.definition.Requirements.Deckhouse,
-			Kubernetes: meta.definition.Requirements.Kubernetes,
-			Modules:    meta.definition.Requirements.Modules,
-		},
-		Changelog: &v1alpha1.PackageChangelog{
-			Features: meta.changelog.Features,
-			Fixes:    meta.changelog.Fixes,
-		},
+	if err = r.setPackageMetadata(apv, meta); err != nil {
+		r.setMetadataLoadedConditionFalse(
+			apv,
+			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
+			fmt.Sprintf("fetch package metadata: %s", err.Error()),
+		)
+
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", apv.Name, err)
+		}
+
+		return fmt.Errorf("set package metadata '%s': %w", apv.Name, err)
 	}
 
-	r.setConditionTrue(apv)
+	r.setMetadataLoadedConditionTrue(apv)
 
 	if err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch status '%s': %w", apv.Name, err)
@@ -273,8 +275,8 @@ func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.Application
 	return ctrl.Result{}, nil
 }
 
-// setConditionTrue sets the given condition to True, clearing reason and message.
-func (r *reconciler) setConditionTrue(apv *v1alpha1.ApplicationPackageVersion) {
+// setMetadataLoadedConditionTrue sets the condition MetadataLoaded to True, clearing reason and message.
+func (r *reconciler) setMetadataLoadedConditionTrue(apv *v1alpha1.ApplicationPackageVersion) {
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionTrue,
@@ -284,8 +286,8 @@ func (r *reconciler) setConditionTrue(apv *v1alpha1.ApplicationPackageVersion) {
 	})
 }
 
-// setConditionFalse sets the given condition to False with a reason and message.
-func (r *reconciler) setConditionFalse(apv *v1alpha1.ApplicationPackageVersion, reason, message string) {
+// setMetadataLoadedConditionFalse sets the condition MetadataLoaded to  False with a reason and message.
+func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPackageVersion, reason, message string) {
 	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 		Status:             metav1.ConditionFalse,
@@ -294,4 +296,84 @@ func (r *reconciler) setConditionFalse(apv *v1alpha1.ApplicationPackageVersion, 
 		ObservedGeneration: apv.Generation,
 		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
+}
+
+// setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion
+// status. It overwrites Status.PackageMetadata with the stage, localized descriptions,
+// runtime requirements, and changelog extracted from the package image, then delegates
+// to setPackageSchema for the settings and values OpenAPI schemas. A nil meta is a
+// no-op, so callers may invoke this unconditionally after a best-effort parse.
+func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion, meta *packageMetadata) error {
+	if meta == nil {
+		return nil
+	}
+
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		Stage: meta.definition.Stage,
+		Description: &v1alpha1.PackageDescription{
+			Ru: meta.definition.Descriptions.Ru,
+			En: meta.definition.Descriptions.En,
+		},
+		Requirements: &v1alpha1.PackageRequirements{
+			Deckhouse:  meta.definition.Requirements.Deckhouse,
+			Kubernetes: meta.definition.Requirements.Kubernetes,
+			Modules:    meta.definition.Requirements.Modules,
+		},
+		Changelog: &v1alpha1.PackageChangelog{
+			Features: meta.changelog.Features,
+			Fixes:    meta.changelog.Fixes,
+		},
+	}
+
+	if err := setPackageSchema(apv, schemaTypeSettings, meta.rawSettingsSchema); err != nil {
+		return fmt.Errorf("set settings schema: %w", err)
+	}
+
+	if err := setPackageSchema(apv, schemaTypeValues, meta.rawValuesSchema); err != nil {
+		return fmt.Errorf("set values schema: %w", err)
+	}
+
+	return nil
+}
+
+// setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
+// ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
+// selected by schemaType. The schema is wrapped in a lightweight envelope that
+// recognises the x-config-version marker used by packages to version their schema
+// format. An empty rawSchema is treated as "no schema supplied" and returns nil
+// without touching the status. Unknown schemaType values are silently ignored.
+func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
+	if len(rawSchema) == 0 {
+		return nil
+	}
+
+	type schemaVersion struct {
+		Version string `json:"x-config-version"`
+		apiextensionsv1.JSONSchemaProps
+	}
+
+	jsonSchema := &schemaVersion{
+		Version: "1",
+	}
+	if err := yaml.Unmarshal(rawSchema, jsonSchema); err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
+	}
+
+	if apv.Status.PackageSchemas == nil {
+		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
+	}
+
+	switch schemaType {
+	case schemaTypeSettings:
+		apv.Status.PackageSchemas.SettingsSchema = &apiextensionsv1.CustomResourceValidation{
+			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
+		}
+	case schemaTypeValues:
+		apv.Status.PackageSchemas.ValuesSchema = &apiextensionsv1.CustomResourceValidation{
+			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
+		}
+	default:
+	}
+
+	return nil
 }

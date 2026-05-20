@@ -46,6 +46,12 @@ func main() {
 	}
 	defer listener.Close()
 
+	bootstrapListener, err := net.Listen("tcp", config.RPPGetBinaryListenAddress)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+	defer bootstrapListener.Close()
+
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -77,13 +83,20 @@ func main() {
 		opts = append(opts, proxy.WithCache(cache))
 	}
 	rp := proxy.NewProxy(server, listener, watcher, logger, &registry.DefaultClient{}, opts...)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
+	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
+		Listener:           bootstrapListener,
+		Logger:             logger,
+		ClientConfigGetter: watcher,
+		RegistryClient:     &registry.DefaultClient{},
+		SignCheck:          config.SignCheck,
+		ClusterUUID:        config.ClusterUUID,
+	})
 
 	go rp.Serve(&proxy.Config{SignCheck: config.SignCheck})
+	go rppGetServer.Serve()
 
 	<-ctx.Done()
 
 	rp.Stop()
+	rppGetServer.Stop()
 }

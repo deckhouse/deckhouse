@@ -274,3 +274,7 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
+## What to do if switching to nodes in lower-priority groups takes a long time?
+
+If switching to nodes in lower-priority groups takes a long time, follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

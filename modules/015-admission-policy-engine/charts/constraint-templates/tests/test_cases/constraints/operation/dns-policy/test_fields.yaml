@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: dns-policy
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.hostNetwork
+      level: pod
+      description: Whether pod uses host networking; policy applies only when true.
+      requiredScenarios: [positive, negative]
+    - path: spec.dnsPolicy
+      level: pod
+      description: Pod DNS policy must be ClusterFirstWithHostNet when hostNetwork is true.
+      requiredScenarios: [positive, negative, absent]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

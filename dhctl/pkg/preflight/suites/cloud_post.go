@@ -15,19 +15,23 @@
 package suites
 
 import (
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type PostCloudDeps struct {
-	MetaConfig *config.MetaConfig
-	Node       node.Interface
+	MetaConfig  *config.MetaConfig
+	SSHProvider libcon.SSHProvider
+	// LegacyMode reflects whether the SSH client uses the legacy clissh
+	// backend. Threaded into CloudAPICheck for the SSH tunnel direction.
+	LegacyMode bool
 }
 
 func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 	return preflight.NewSuite(
-		checks.CloudAPIAccess(deps.MetaConfig, deps.Node),
+		checks.CloudAPIAccess(deps.MetaConfig, deps.SSHProvider, deps.LegacyMode),
 	)
 }
