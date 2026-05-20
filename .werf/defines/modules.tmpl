@@ -46,10 +46,12 @@ dependencies:
 {{- $context := . -}}
 
 image: images-digests
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "base/scratch" }}
+final: false
 dependencies:
 
 {{- range $imageDigest := $context.ModulesImagesDigestList }}
+  {{- if not (hasSuffix "artifact" $imageDigest) }}
   {{- $ModuleNameCamel := $imageDigest | splitList "/" | first | camelcase | untitle }}
   {{- $ImageDigestCamel  := $imageDigest | splitList "/" | last  | camelcase | untitle }}
 - image: {{ $imageDigest }}
@@ -57,6 +59,7 @@ dependencies:
   imports:
   - type: ImageDigest
     targetEnv: MODULE_IMAGE_DIGEST_{{ $ModuleNameCamel }}_{{ $ImageDigestCamel }}
+  {{- end }}
 {{- end }}
 
 import:
@@ -64,25 +67,41 @@ import:
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
+- image: {{ index $.Images "coreutils" }}
+  add: /usr/bin
+  to: /usr/bin
+  before: setup
+  includePaths:
+  - env
+  - grep
 shell:
   setup:
   - |
-    touch digests_full.lst
-    # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
-    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | grep -vi "artifact" | cut -d "=" -f 1`
-    do
-      digestKey=`echo $line | cut -f 4- -d '_'`
-      imageDigest=`printenv $line | grep -Eo "sha256:[a-f0-9]+"`
-      echo $digestKey'='$imageDigest >> digests_full.lst
-    done
-    cat digests_full.lst | jq -Rn '
-      reduce inputs as $i (
+    env | grep '^MODULE_IMAGE_DIGEST_' | jq -Rn '
+      reduce inputs as $line (
         {};
-        . * (
-          $i | sub("=";"_") |
-          split("_") as [$moduleName, $imageName, $digest] |
-          {($moduleName): {($imageName): $digest}}
-        )
+        (
+          $line
+          | capture("^(?<key>MODULE_IMAGE_DIGEST_(?<digestKey>[^=]+))=(?<value>.*)$")
+        ) as $m
+        | (
+            $m.digestKey
+            | split("_")
+          ) as $parts
+        | (
+            $m.value
+            | capture("(?<digest>sha256:[a-f0-9]+)")?
+            | .digest
+          ) as $digest
+        | if ($parts | length) >= 2 and $digest then
+            . * {
+              ($parts[0]): {
+                (($parts[1:] | join("_"))): $digest
+              }
+            }
+          else
+            .
+          end
       )
     ' > /images_digests.json
 {{- end }}
