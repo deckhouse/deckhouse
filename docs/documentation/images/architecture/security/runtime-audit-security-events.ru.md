@@ -53,7 +53,7 @@ flowchart LR
   style LS fill:#e0e7ff,stroke:#1a237e,stroke-width:2px,color:#000000
   style SES fill:#f5f3ff,stroke:#4a148c,stroke-width:2px,color:#000000
   style ST fill:#f0fdfa,stroke:#004d40,stroke-dasharray: 5 5,stroke-width:2px,color:#000000
-  
+
   style P fill:none,stroke:#4a148c,stroke-dasharray: 3 3
   style E fill:none,stroke:#4a148c,stroke-dasharray: 3 3
   style F fill:none,stroke:#4a148c,stroke-dasharray: 3 3

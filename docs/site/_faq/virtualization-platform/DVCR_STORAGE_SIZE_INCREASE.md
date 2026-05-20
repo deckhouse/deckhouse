@@ -15,7 +15,7 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    Example output:
 
    ```console
-    {"size":"58G","storageClass":"linstor-thick-data-r1"}
+   {"size":"58G","storageClass":"linstor-thick-data-r1"}
    ```
    {: .nowrap-default }
 
@@ -25,6 +25,7 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    d8 k patch mc virtualization \
      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
    ```
+   
    Example output:
 
    ```console
@@ -37,6 +38,7 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
    ```
+   
    Example output:
 
    ```console
@@ -49,12 +51,11 @@ The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.s
    ```shell
    d8 k get pvc dvcr -n d8-virtualization
    ```
+  
    Example output:
 
    ```console
    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
    ```
-   {: .nowrap-default }
-
    {: .nowrap-default }

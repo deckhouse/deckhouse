@@ -21,7 +21,9 @@ ALB средствами Istio реализуется через [Istio Ingress 
    metadata:
     name: main
    spec:
+
      # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
+
      ingressGatewayClass: istio-hp
      inlet: HostPort
      hostPort:
@@ -64,24 +66,32 @@ ALB средствами Istio реализуется через [Istio Ingress 
      namespace: app-ns
    spec:
      selector:
+
        # Селектор лейблов для использования Istio Ingress Gateway main-hp.
+
        istio.deckhouse.io/ingress-gateway-class: istio-hp
      servers:
        - port:
+
            # Стандартный шаблон для использования протокола HTTP.
+
            number: 80
            name: http
            protocol: HTTP
          hosts:
            - app.example.com
        - port:
+
            # Стандартный шаблон для использования протокола HTTPS.
+
            number: 443
            name: https
            protocol: HTTPS
          tls:
            mode: SIMPLE
+
            # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имен d8-ingress-istio.
+
            credentialName: app-tls-secret
          hosts:
            - app.example.com
@@ -126,11 +136,17 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
+
     # Nginx будет проксировать трафик на ClusterIP вместо собственных IP подов.
+
     nginx.ingress.kubernetes.io/service-upstream: "true"
+
     # В Istio маршрутизация основана на заголовке запросов `Host:`.
+
     # Чтобы не указывать наличие внешнего домена `productpage.example.com`,
+
     # используется внутренний домен, известный Istio.
+
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:

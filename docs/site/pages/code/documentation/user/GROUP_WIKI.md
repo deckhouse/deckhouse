@@ -54,7 +54,7 @@ Access level is determined by the user's group membership:
 
    - Markdown (GitLab Flavored):
      - Mentions (`@username`), references to issues/MRs (`#123`, `!456`), checklists (`- [ ]`), tables, code blocks.
-  
+
    - Rich text editor:
      - WYSIWYG editor for users who prefer visual formatting.
      - Built-in support for Mermaid and Draw.io.
@@ -68,7 +68,7 @@ Access level is determined by the user's group membership:
    - Complete history of changes for each page:
      - Who made the changes.
      - When the changes were made.
-  
+
    - View diffs, revert changes, and track revisions.
 
 1. Discussions and comments on pages.
@@ -81,6 +81,7 @@ Access level is determined by the user's group membership:
      ```bash
      git clone git@code.example.com:groupname/wiki.git
      ```
+
    - Full access to `.md` files, branches, and history for local editing, backups, or automation.
 
 1. PDF export:

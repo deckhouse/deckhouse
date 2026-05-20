@@ -29,18 +29,30 @@ provider:
   providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 masterNodeGroup:
+
   # Количество master-узлов.
+
   # Если указано больше одного master-узла, то etcd-кластер соберется автоматически.
+
   replicas: 1
   instanceClass:
+
     # Тип используемого инстанса.
+
     instanceType: m5.xlarge
+
     # ID образа виртуальной машины в Amazon.
+
     # Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+
     ami: ami-0aad10862ade98f27
+
     # Размер диска для виртуальной машины master-узла.
+
     diskSizeGb: 30
+
     # Используемый тип диска для виртуальной машины master-узла.
+
     diskType: gp3
 nodeGroups:
   - name: mydb
@@ -84,18 +96,30 @@ withNAT:
       ami: ami-0aad10862ade98f27
       diskType: gp3
 masterNodeGroup:
+
   # Количество master-узлов.
+
   # Если указано больше одного master-узла, etcd-кластер соберется автоматически.
+
   replicas: 1
   instanceClass:
+
     # Тип используемого инстанса.
+
     instanceType: m5.xlarge
+
     # ID образа виртуальной машины в Amazon.
+
     # Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
+
     ami: ami-0aad10862ade98f27
+
     # Размер диска для виртуальной машины master-узла.
+
     diskSizeGb: 30
+
     # Используемый тип диска для виртуальной машины master-узла.
+
     diskType: gp3
 nodeGroups:
   - name: mydb

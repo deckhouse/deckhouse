@@ -11,15 +11,18 @@ The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
 
 Run the following command to configure [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io* (specify the public IP address of the node where the Ingress controller is running):
 {% raw %}
+
 ```shell
 BALANCER_IP=<INGRESS_CONTROLLER_IP> 
 kubectl patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
 echo "Domain template is '$(kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+
 {% endraw %}
 
 The command will also print the DNS name template set in the cluster. Example output:
+
 ```text
 moduleconfig.deckhouse.io/global patched
 
@@ -36,8 +39,10 @@ Instead of using *sslip.io*, you can use other options.
 
 Then, run the following command to change the DNS name template:
 <div markdown="1">
+
 ```shell
 kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+
 </div>
 {% endofftopic %}

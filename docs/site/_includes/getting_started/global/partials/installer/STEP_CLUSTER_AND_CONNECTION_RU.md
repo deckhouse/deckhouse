@@ -20,6 +20,7 @@
   <li>«SSH-ключ для доступа на узлы» — ключ, с помощью которого будет осуществляться подключение к машинам. Здесь можно выбрать ранее добавленный ключ, сгенерировать новый или ввести данные уже существующего ключа.
   Приватный ключ лежит в файле <code>~/.ssh/&lt;SSH_PRIVATE_KEY_FILE&gt;</code>. Получить его можно командой <code>cat ~/.ssh/&lt;SSH_PRIVATE_KEY_FILE&gt;</code>. Пример вывода (для ключа с ED25519-шифрованием):
 {% capture command %}
+
 ```bash
 $ cat ~/.ssh/id_ed25519
 -----BEGIN OPENSSH PRIVATE KEY-----
@@ -29,6 +30,7 @@ AAAEB3AcmUCQ9dd7fPhIYpQe1pBhZEanld6ZgJHmyD8XO460T3766IVjzrA+Vpgvu1l2IL
 RTAeNZpi2e6dqGhsbK6cAAAAGHpoYmVydEB6aGJlcnQtMjB3bnMxeGowOQECAwQF
 -----END OPENSSH PRIVATE KEY-----
 ```
+
 {% endcapture %}
   {{ command | markdownify }}
   Полностью скопируйте полученный текст в поле формы, включая строки <code>-----BEGIN OPENSSH PRIVATE KEY-----</code> и <code>-----END OPENSSH PRIVATE KEY-----</code>.

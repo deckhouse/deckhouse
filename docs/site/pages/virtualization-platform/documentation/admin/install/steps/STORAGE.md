@@ -99,15 +99,19 @@ Configuring the storage involves combining the available block devices on the no
            operator: In
            values:
              - "$DEV_NAME"
+
      # The name of the LVM volume group that will be created from the block devices on the selected node.
+
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
+
    Wait for all the created LVMVolumeGroup resources to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg -w
    ```
+
    {% offtopic title="Example output..." %}
 
    ```console
@@ -133,17 +137,21 @@ Configuring the storage involves combining the available block devices on the no
    spec:
      type: LVM
      lvmVolumeGroups:
+
        # Укажите свои имена групп томов.
+
        - name: vg-on-dvp-worker-01
        - name: vg-on-dvp-worker-02
        - name: vg-on-master
    EOF
    ```
+
    Wait for the resource to transition to the `Completed` state:
 
    ```shell
    d8 k get rsp data -w
    ```
+
    {% offtopic title="Example output..." %}
 
    ```console
@@ -176,11 +184,13 @@ Configuring the storage involves combining the available block devices on the no
      topology: Ignored
    EOF
    ```
+
    Check that the corresponding StorageClass has appeared in the cluster:
 
    ```shell
    d8 k get sc
    ```
+
    {% offtopic title="Example output..." %}
 
    ```console

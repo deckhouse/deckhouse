@@ -129,14 +129,17 @@ cd harbor/
 mkdir certs
 cd certs
 ```
+
 Generate certificates for external access:
 
 ```bash
 openssl genrsa -out ca.key 4096
 ```
+
 ```bash
 openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
+
 Generate certificates for the internal domain name `harbor.example` so clients can reach the Harbor VM securely inside the private network.
 
 {% alert level="warning" %}
@@ -146,9 +149,11 @@ In the commands below, replace `<INTERNAL_IP_ADDRESS>` with the Harbor VM’s in
 ```bash
 openssl genrsa -out harbor.example.key 4096
 ```
+
 ```bash
 openssl req -sha512 -new -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
 ```
+
 ```bash
 cat > v3.ext <<-EOF
 authorityKeyIdentifier=keyid, issuer
@@ -162,17 +167,21 @@ IP.1=<INTERNAL_IP_ADDRESS>
 DNS.1=harbor.example
 EOF
 ```
+
 ```bash
 openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
 ```
+
 ```bash
 openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
 ```
+
 Verify that all certificates were created successfully:
 
 ```bash
 ls -la
 ```
+
 {% offtopic title="Example command output..." %}
 
 ```bash
@@ -189,6 +198,7 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 -rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
 -rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
 ```
+
 {% endofftopic %}
 
 Next, configure Docker to work with the private container registry over TLS. Create the `harbor.example` directory under `/etc/docker/certs.d/`:
@@ -196,6 +206,7 @@ Next, configure Docker to work with the private container registry over TLS. Cre
 ```bash
 sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
+
 > The `-p` option tells `mkdir` to create parent directories if they do not exist (in this case, the `certs.d` directory).
 
 Copy the generated certificates into it:
@@ -205,6 +216,7 @@ cp ca.crt /etc/docker/certs.d/harbor.example/
 cp harbor.example.cert /etc/docker/certs.d/harbor.example/
 cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```
+
 These certificates will be used when accessing the registry via the `harbor.example` domain name.
 
 Return to the `harbor` directory (installer root):
@@ -212,11 +224,13 @@ Return to the `harbor` directory (installer root):
 ```bash
 cd ..
 ```
+
 Copy the configuration file template that comes with the installer:
 
 ```bash
 cp harbor.yml.tmpl harbor.yml
 ```
+
 Update the following parameters in `harbor.yml`:
 
 * `hostname`: set to `harbor.example` (the certificates were generated for this name)
@@ -229,253 +243,445 @@ Save the file.
 {% offtopic title="Example configuration file..." %}
 
 ```yaml
+
 # Configuration file of Harbor
 
 # The IP address or hostname to access admin UI and registry service.
+
 # DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.
+
 hostname: harbor.example
 
 # http related config
+
 http:
+
   # port for http, default is 80. If https enabled, this port will redirect to https port
+
   port: 80
 
 # https related config
+
 https:
+
   # https port for harbor, default is 443
+
   port: 443
+
   # The path of cert and key files for nginx
+
   certificate: /home/ubuntu/harbor/certs/harbor.example.crt
   private_key: /home/ubuntu/harbor/certs/harbor.example.key
+
   # enable strong ssl ciphers (default: false)
+
   # strong_ssl_ciphers: false
 
 # # Harbor will set ipv4 enabled only by default if this block is not configured
+
 # # Otherwise, please uncomment this block to configure your own ip_family stacks
+
 # ip_family:
+
 #   # ipv6Enabled set to true if ipv6 is enabled in docker network, currently it affected the nginx related component
+
 #   ipv6:
+
 #     enabled: false
+
 #   # ipv4Enabled set to true by default, currently it affected the nginx related component
+
 #   ipv4:
+
 #     enabled: true
 
 # # Uncomment following will enable tls communication between all harbor components
+
 # internal_tls:
+
 #   # set enabled to true means internal tls is enabled
+
 #   enabled: true
+
 #   # put your cert and key files on dir
+
 #   dir: /etc/harbor/tls/internal
 
-
 # Uncomment external_url if you want to enable external proxy
+
 # And when it enabled the hostname will no longer used
+
 # external_url: https://reg.mydomain.com:8433
 
 # The initial password of Harbor admin
+
 # It only works in first time to install harbor
+
 # Remember Change the admin password from UI after launching Harbor.
+
 harbor_admin_password: Flant12345
 
 # Harbor DB configuration
+
 database:
+
   # The password for the user('postgres' by default) of Harbor DB. Change this before any production use.
+
   password: root123
+
   # The maximum number of connections in the idle connection pool. If it <=0, no idle connections are retained.
+
   max_idle_conns: 100
+
   # The maximum number of open connections to the database. If it <= 0, then there is no limit on the number of open connections.
+
   # Note: the default number of connections is 1024 for postgres of harbor.
+
   max_open_conns: 900
+
   # The maximum amount of time a connection may be reused. Expired connections may be closed lazily before reuse. If it <= 0, connections are not closed due to a connection's age.
+
   # The value is a duration string. A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
   conn_max_lifetime: 5m
+
   # The maximum amount of time a connection may be idle. Expired connections may be closed lazily before reuse. If it <= 0, connections are not closed due to a connection's idle time.
+
   # The value is a duration string. A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
   conn_max_idle_time: 0
 
 # The default data volume
+
 data_volume: /data
 
 # Harbor Storage settings by default is using /data dir on local filesystem
+
 # Uncomment storage_service setting If you want to using external storage
+
 # storage_service:
+
 #   # ca_bundle is the path to the custom root ca certificate, which will be injected into the truststore
+
 #   # of registry's containers.  This is usually needed when the user hosts a internal storage with self signed certificate.
+
 #   ca_bundle:
 
 #   # storage backend, default is filesystem, options include filesystem, azure, gcs, s3, swift and oss
+
 #   # for more info about this configuration please refer https://distribution.github.io/distribution/about/configuration/
+
 #   # and https://distribution.github.io/distribution/storage-drivers/
+
 #   filesystem:
+
 #     maxthreads: 100
+
 #   # set disable to true when you want to disable registry redirect
+
 #   redirect:
+
 #     disable: false
 
 # Trivy configuration
+
 #
+
 # Trivy DB contains vulnerability information from NVD, Red Hat, and many other upstream vulnerability databases.
+
 # It is downloaded by Trivy from the GitHub release page https://github.com/aquasecurity/trivy-db/releases and cached
+
 # in the local file system. In addition, the database contains the update timestamp so Trivy can detect whether it
+
 # should download a newer version from the Internet or use the cached one. Currently, the database is updated every
+
 # 12 hours and published as a new release to GitHub.
+
 trivy:
+
   # ignoreUnfixed The flag to display only fixed vulnerabilities
+
   ignore_unfixed: false
+
   # skipUpdate The flag to enable or disable Trivy DB downloads from GitHub
+
   #
+
   # You might want to enable this flag in test or CI/CD environments to avoid GitHub rate limiting issues.
+
   # If the flag is enabled you have to download the `trivy-offline.tar.gz` archive manually, extract `trivy.db` and
+
   # `metadata.json` files and mount them in the `/home/scanner/.cache/trivy/db` path.
+
   skip_update: false
   #
+
   # skipJavaDBUpdate If the flag is enabled you have to manually download the `trivy-java.db` file and mount it in the
+
   # `/home/scanner/.cache/trivy/java-db/trivy-java.db` path
+
   skip_java_db_update: false
   #
+
   # The offline_scan option prevents Trivy from sending API requests to identify dependencies.
+
   # Scanning JAR files and pom.xml may require Internet access for better detection, but this option tries to avoid it.
+
   # For example, the offline mode will not try to resolve transitive dependencies in pom.xml when the dependency doesn't
+
   # exist in the local repositories. It means a number of detected vulnerabilities might be fewer in offline mode.
+
   # It would work if all the dependencies are in local.
+
   # This option doesn't affect DB download. You need to specify "skip-update" as well as "offline-scan" in an air-gapped environment.
+
   offline_scan: false
   #
+
   # Comma-separated list of what security issues to detect. Possible values are `vuln`, `config` and `secret`. Defaults to `vuln`.
+
   security_check: vuln
   #
+
   # insecure The flag to skip verifying registry certificate
+
   insecure: false
   #
+
   # timeout The duration to wait for scan completion.
+
   # There is upper bound of 30 minutes defined in scan job. So if this `timeout` is larger than 30m0s, it will also timeout at 30m0s.
+
   timeout: 5m0s
   #
+
   # github_token The GitHub access token to download Trivy DB
+
   #
+
   # Anonymous downloads from GitHub are subject to the limit of 60 requests per hour. Normally such rate limit is enough
+
   # for production operations. If, for any reason, it's not enough, you could increase the rate limit to 5000
+
   # requests per hour by specifying the GitHub access token. For more details on GitHub rate limiting please consult
+
   # https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting
+
   #
+
   # You can create a GitHub token by following the instructions in
+
   # https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+
   #
+
   # github_token: xxx
 
 jobservice:
+
   # Maximum number of job workers in job service
+
   max_job_workers: 10
+
   # Maximum hours of task duration in job service, default 24
+
   max_job_duration_hours: 24
+
   # The jobLoggers backend name, only support "STD_OUTPUT", "FILE" and/or "DB"
+
   job_loggers:
     - STD_OUTPUT
     - FILE
+
     # - DB
+
   # The jobLogger sweeper duration (ignored if `jobLogger` is `stdout`)
+
   logger_sweeper_duration: 1 #days
 
 notification:
+
   # Maximum retry count for webhook job
+
   webhook_job_max_retry: 3
+
   # HTTP client timeout for webhook job
+
   webhook_job_http_client_timeout: 3 #seconds
 
 # Log configurations
+
 log:
+
   # options are debug, info, warning, error, fatal
+
   level: info
+
   # configs for logs in local storage
+
   local:
+
     # Log files are rotated log_rotate_count times before being removed. If count is 0, old versions are removed rather than rotated.
+
     rotate_count: 50
+
     # Log files are rotated only if they grow bigger than log_rotate_size bytes. If size is followed by k, the size is assumed to be in kilobytes.
+
     # If the M is used, the size is in megabytes, and if G is used, the size is in gigabytes. So size 100, size 100k, size 100M and size 100G
+
     # are all valid.
+
     rotate_size: 200M
+
     # The directory on your host that store log
+
     location: /var/log/harbor
 
   # Uncomment following lines to enable external syslog endpoint.
+
   # external_endpoint:
+
   #   # protocol used to transmit log to external endpoint, options is tcp or udp
+
   #   protocol: tcp
+
   #   # The host of external endpoint
+
   #   host: localhost
+
   #   # Port of external endpoint
+
   #   port: 5140
 
 #This attribute is for migrator to detect the version of the .cfg file, DO NOT MODIFY!
 _version: 2.14.0
 
 # Uncomment external_database if using external database.
+
 # external_database:
+
 #   harbor:
+
 #     host: harbor_db_host
+
 #     port: harbor_db_port
+
 #     db_name: harbor_db_name
+
 #     username: harbor_db_username
+
 #     password: harbor_db_password
+
 #     ssl_mode: disable
+
 #     max_idle_conns: 2
+
 #     max_open_conns: 0
 
 # Uncomment redis if need to customize redis db
+
 # redis:
+
 #   # db_index 0 is for core, it's unchangeable
+
 #   # registry_db_index: 1
+
 #   # jobservice_db_index: 2
+
 #   # trivy_db_index: 5
+
 #   # it's optional, the db for harbor business misc, by default is 0, uncomment it if you want to change it.
+
 #   # harbor_db_index: 6
+
 #   # it's optional, the db for harbor cache layer, by default is 0, uncomment it if you want to change it.
+
 #   # cache_layer_db_index: 7
 
 # Uncomment external_redis if using external Redis server
+
 # external_redis:
+
 #   # support redis, redis+sentinel
+
 #   # host for redis: <host_redis>:<port_redis>
+
 #   # host for redis+sentinel:
+
 #   #  <host_sentinel1>:<port_sentinel1>,<host_sentinel2>:<port_sentinel2>,<host_sentinel3>:<port_sentinel3>
+
 #   host: redis:6379
+
 #   password:
+
 #   # Redis AUTH command was extended in Redis 6, it is possible to use it in the two-arguments AUTH <username> <password> form.
+
 #   # there's a known issue when using external redis username ref:https://github.com/goharbor/harbor/issues/18892
+
 #   # if you care about the image pull/push performance, please refer to this https://github.com/goharbor/harbor/wiki/Harbor-FAQs#external-redis-username-password-usage
+
 #   # username:
+
 #   # sentinel_master_set must be set to support redis+sentinel
+
 #   #sentinel_master_set:
+
 #   # tls configuration for redis connection
+
 #   # only server-authentication is supported
+
 #   # mtls for redis connection is not supported
+
 #   # tls connection will be disable by default
+
 #   tlsOptions:
+
 #     enable: false
+
 #   # if it is a self-signed ca, please set the ca path specifically.
+
 #     rootCA:
+
 #   # db_index 0 is for core, it's unchangeable
+
 #   registry_db_index: 1
+
 #   jobservice_db_index: 2
+
 #   trivy_db_index: 5
+
 #   idle_timeout_seconds: 30
+
 #   # it's optional, the db for harbor business misc, by default is 0, uncomment it if you want to change it.
+
 #   # harbor_db_index: 6
+
 #   # it's optional, the db for harbor cache layer, by default is 0, uncomment it if you want to change it.
+
 #   # cache_layer_db_index: 7
 
 # Uncomment uaa for trusting the certificate of uaa instance that is hosted via self-signed cert.
+
 # uaa:
+
 #   ca_file: /path/to/ca
 
 # Global proxy
+
 # Config http proxy for components, e.g. http://my.proxy.com:3128
+
 # Components doesn't need to connect to each others via http proxy.
+
 # Remove component from `components` array if want disable proxy
+
 # for it. If you want use proxy for replication, MUST enable proxy
+
 # for core and jobservice, and set `http_proxy` and `https_proxy`.
+
 # Add domain to the `no_proxy` field, when you want disable proxy
+
 # for some special registry.
+
 proxy:
   http_proxy:
   https_proxy:
@@ -486,76 +692,137 @@ proxy:
     - trivy
 
 # metric:
+
 #   enabled: false
+
 #   port: 9090
+
 #   path: /metrics
 
 # Trace related config
+
 # only can enable one trace provider(jaeger or otel) at the same time,
+
 # and when using jaeger as provider, can only enable it with agent mode or collector mode.
+
 # if using jaeger collector mode, uncomment endpoint and uncomment username, password if needed
+
 # if using jaeger agetn mode uncomment agent_host and agent_port
+
 # trace:
+
 #   enabled: true
+
 #   # set sample_rate to 1 if you wanna sampling 100% of trace data; set 0.5 if you wanna sampling 50% of trace data, and so forth
+
 #   sample_rate: 1
+
 #   # # namespace used to differentiate different harbor services
+
 #   # namespace:
+
 #   # # attributes is a key value dict contains user defined attributes used to initialize trace provider
+
 #   # attributes:
+
 #   #   application: harbor
+
 #   # # jaeger should be 1.26 or newer.
+
 #   # jaeger:
+
 #   #   endpoint: http://hostname:14268/api/traces
+
 #   #   username:
+
 #   #   password:
+
 #   #   agent_host: hostname
+
 #   #   # export trace data by jaeger.thrift in compact mode
+
 #   #   agent_port: 6831
+
 #   # otel:
+
 #   #   endpoint: hostname:4318
+
 #   #   url_path: /v1/traces
+
 #   #   compression: false
+
 #   #   insecure: true
+
 #   #   # timeout is in seconds
+
 #   #   timeout: 10
 
 # Enable purge _upload directories
+
 upload_purging:
   enabled: true
+
   # remove files in _upload directories which exist for a period of time, default is one week.
+
   age: 168h
+
   # the interval of the purge operations
+
   interval: 24h
   dryrun: false
 
 # Cache layer configurations
+
 # If this feature enabled, harbor will cache the resource
+
 # `project/project_metadata/repository/artifact/manifest` in the redis
+
 # which can especially help to improve the performance of high concurrent
+
 # manifest pulling.
+
 # NOTICE
+
 # If you are deploying Harbor in HA mode, make sure that all the harbor
+
 # instances have the same behaviour, all with caching enabled or disabled,
+
 # otherwise it can lead to potential data inconsistency.
+
 cache:
+
   # not enabled by default
+
   enabled: false
+
   # keep cache for one day by default
+
   expire_hours: 24
 
 # Harbor core configurations
+
 # Uncomment to enable the following harbor core related configuration items.
+
 # core:
+
 #   # The provider for updating project quota(usage), there are 2 options, redis or db,
+
 #   # by default is implemented by db but you can switch the updation via redis which
+
 #   # can improve the performance of high concurrent pushing to the same project,
+
 #   # and reduce the database connections spike and occupies.
+
 #   # By redis will bring up some delay for quota usage updation for display, so only
+
 #   # suggest switch provider to redis if you were ran into the db connections spike around
+
 #   # the scenario of high concurrent pushing to same project, no improvement for other scenes.
+
 #   quota_update_provider: redis # Or db
+
 ```
+
 {% endofftopic %}
 
 Run the installation script:
@@ -563,6 +830,7 @@ Run the installation script:
 ```bash
 ./install.sh
 ```
+
 Harbor installation will start: the required images will be prepared and the containers will be started.
 
 {% offtopic title="Successful installation log..." %}
@@ -593,6 +861,7 @@ Verify that Harbor is running successfully:
 ```bash
 docker ps
 ```
+
 {% offtopic title="Example command output..." %}
 
 ```console
@@ -616,17 +885,26 @@ On the Harbor VM, add an entry to `/etc/hosts` that maps the `harbor.example` do
 ```bash
 127.0.0.1 localhost harbor.example
 ```
+
 {% alert level="warning" %}
 In some cloud providers (for example, Yandex Cloud), changes to `/etc/hosts` may be reverted after a virtual machine reboot. A note about this is typically shown at the beginning of the `/etc/hosts` file.
 
 ```text
+
 # Your system has configured 'manage_etc_hosts' as True.
+
 # As a result, if you wish for changes to this file to persist
+
 # then you will need to either
+
 # a.) make changes to the master file in /etc/cloud/templates/hosts.debian.tmpl
+
 # b.) change or remove the value of 'manage_etc_hosts' in
+
 #     /etc/cloud/cloud.cfg or cloud-config from user-data
+
 ```
+
 If your provider uses the same mechanism, apply the corresponding changes to the template file referenced in the comment so that the settings persist after reboot.
 {% endalert %}
 
@@ -750,6 +1028,7 @@ d8 mirror pull \
   --source='registry.deckhouse.io/deckhouse/<EDITION>' \
   --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
+
 where:
 
 - `--source` — DKP image registry address
@@ -773,6 +1052,7 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.io/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
+
 Example log when modules are packed:
 
 ```text
@@ -819,6 +1099,7 @@ Feb 26 18:31:08.441 INFO  ║ Packing module-observability-platform.tar
 Feb 26 18:31:17.443 INFO  ║ Packing module-state-snapshotter.tar
 Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```
+
 {% endofftopic %}
 
 Verify that the bundles were created (you should see `platform.tar`, `security.tar`, `deckhousereleases.yaml`, and multiple `module-*.tar` files):
@@ -841,6 +1122,7 @@ Push the downloaded images to the private registry. Substitute the DKP edition a
 ```bash
 d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
+
 > The `--tls-skip-verify` flag tells the CLI to trust the registry certificate and skip verification.
 
 Images are read from the local bundles and pushed to the registry. This step is usually faster than download and often takes about 15 minutes.
@@ -861,6 +1143,7 @@ Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
  payload-registry, pod-reloader, prompp, runtime-audit-engine, sdn, sds-local-volume, sds-node-configurator, sds-replicated-volume, secrets-store-integration, snapshot-controller, state-snapshotter, static-routing-manager, storage-volume-data-manager, stronghold, virtualization
 ```
+
 {% endofftopic %}
 
 To verify the push, open the `deckhouse` project in the Harbor web UI.
@@ -881,6 +1164,7 @@ Sign in to Harbor so Docker can pull the [dhctl](../documentation/v1/installing/
 ```bash
 docker login harbor.example
 ```
+
 {% offtopic title="Example of a successful command execution..." %}
 
 ```text
@@ -894,6 +1178,7 @@ https://docs.docker.com/go/credential-store/
 
 Login Succeeded
 ```
+
 {% endofftopic %}
 
 ## Preparing VMs for the future nodes
@@ -947,12 +1232,14 @@ There are two ways to connect:
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
+
    In this mode, you first connect to the Bastion host, and then connect through it to the target server using the same SSH key.
 1. *Connect with agent forwarding.* Connect to the Bastion host using:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
    ```
+
    > Note: for this to work, you may need to start ssh-agent and add your key with `ssh-add` on the workstation from which you run the command.
 
    Then connect to the target servers:
@@ -960,12 +1247,13 @@ There are two ways to connect:
    ```bash
    ssh ubuntu@<NODE_IP>
    ```
+
 {% endofftopic %}
 
-```console
-<INTERNAL-IP-ADDRESS> harbor.example proxy.local
-```
-{: .nowrap-default }
+   ```console
+   <INTERNAL-IP-ADDRESS> harbor.example proxy.local
+   ```
+   {: .nowrap-default }
 
 > Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
 
@@ -975,17 +1263,17 @@ To install DKP, create a user on the future master node that will be used to con
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
-```console
-useradd deckhouse -m -s /bin/bash -G sudo
-echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/deckhouse/.ssh
-export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
-echo $KEY >> /home/deckhouse/.ssh/authorized_keys
-chown -R deckhouse:deckhouse /home/deckhouse
-chmod 700 /home/deckhouse/.ssh
-chmod 600 /home/deckhouse/.ssh/authorized_keys
-```
-{: .nowrap-default }
+   ```console
+   useradd deckhouse -m -s /bin/bash -G sudo
+   echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+   mkdir /home/deckhouse/.ssh
+   export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
+   echo $KEY >> /home/deckhouse/.ssh/authorized_keys
+   chown -R deckhouse:deckhouse /home/deckhouse
+   chmod 700 /home/deckhouse/.ssh
+   chmod 600 /home/deckhouse/.ssh/authorized_keys
+   ```
+   {: .nowrap-default }
 
 {% offtopic title="How to obtain the public part of the key..." %}
 Run `cat ~/.ssh/id_rsa.pub` to print the public key (or use the path to your key’s `.pub` file).
@@ -1002,6 +1290,7 @@ Verify that you can connect as the new user:
 ```bash
 ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ```
+
 If the login succeeds, the user has been created correctly.
 
 ### Creating a user for the worker node
@@ -1015,10 +1304,13 @@ On the **master node**, generate an SSH key with an empty passphrase:
 ```bash
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
+
 On the worker node server, create the `caps` user. Run the following commands and set the public key from the previous step:
 
 ```console
+
 # Set the user’s public SSH key.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
@@ -1035,7 +1327,9 @@ chmod 600 /home/caps/.ssh/authorized_keys
 On RHEL-based systems, add the `caps` user to the `wheel` group:
 
 ```console
+
 # Set the user’s public SSH key.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG wheel caps
@@ -1067,6 +1361,7 @@ You may use any suitable proxy. This example uses [Squid](https://www.squid-cach
 ```bash
 docker run -d --name squid -p 3128:3128 ubuntu/squid
 ```
+
 Example of a successful start:
 
 ```text
@@ -1080,6 +1375,7 @@ Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
 Status: Downloaded newer image for ubuntu/squid:latest
 059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
 ```
+
 Check that the container is running:
 
 ```console
@@ -1094,12 +1390,15 @@ You should see a container named `squid` in the list.
 * In ClusterConfiguration, set proxy parameters **if** the environment uses a proxy for external access:
 
   ```yaml
+
   # Proxy server settings.
+
   proxy:
     httpProxy: http://proxy.local:3128
     httpsProxy: https://proxy.local:3128
     noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
+
   Here you specify:
   * HTTP and HTTPS proxy addresses
   * hostnames and IP addresses that **must not** use the proxy (internal names and internal IPs of your servers).
@@ -1108,19 +1407,29 @@ You should see a container named `squid` in the list.
 
   ```yaml
   deckhouse:
+
     # Docker registry that hosts Deckhouse images (set the DKP edition).
+
     imagesRepo: harbor.example/deckhouse/<EDITION>
+
     # Base64-encoded Docker client auth string for the registry.
+
     registryDockerCfg: <DOCKER_CFG_BASE64>
+
     # Registry protocol (HTTP or HTTPS).
+
     registryScheme: HTTPS
+
     # Root CA used to verify the registry certificate.
+
     # Example: `cat harbor/certs/ca.crt`.
+
     registryCA: |
       -----BEGIN CERTIFICATE-----
       ...
       -----END CERTIFICATE-----
   ```
+
   `<DOCKER_CFG_BASE64>` is the contents of the Docker client config (on Linux, usually `$HOME/.docker/config.json`) for the third-party registry, encoded in Base64.
 
   For example, for registry `harbor.example` with user `user` and password `P@ssw0rd`, the value is `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (Base64 of `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}`).
@@ -1131,16 +1440,24 @@ You should see a container named `squid` in the list.
   ```yaml
   settings:
     modules:
+
       # Template for system application URLs in the cluster.
+
       # With %s.test.local, Grafana is served at grafana.test.local.
+
       # MUST NOT match clusterDomain in ClusterConfiguration.
+
       # You may change this now or after installation.
+
       publicDomainTemplate: "%s.test.local"
+
       # How Deckhouse modules terminate HTTPS.
+
       https:
         certManager:
           clusterIssuerName: selfsigned
   ```
+
   The `settings.modules.https` block in ModuleConfig/global supports several [modes](../documentation/v1/reference/api/global.html): `CertManager` (certificate from the chosen `ClusterIssuer`— not necessarily `selfsigned`; can be corporate CA, HashiCorp Vault, Venafi, etc., see [the certificate overview](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` (TLS Secret in `d8-system`); with an external TLS terminator, `OnlyInURI` is possible. Using `selfsigned` together with disabling Let's Encrypt below is a simple pattern for isolated environments without ACME.
 
 * In the `user-authn` ModuleConfig, set [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) to `FromIngressSecret`:
@@ -1150,6 +1467,7 @@ You should see a container named `squid` in the list.
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
   ```
+
 * Enable [`cert-manager`](/modules/cert-manager/) and disable Let's Encrypt:
 
   ```yaml
@@ -1163,56 +1481,87 @@ You should see a container named `squid` in the list.
     settings:
       disableLetsencrypt: true
   ```
+
 * In StaticClusterConfiguration, set [`internalNetworkCIDRs`](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) to the subnet of the nodes’ internal IPs. For example:
 
   ```yaml
   internalNetworkCIDRs:
     - 10.128.0.0/24
   ```
+
 {% offtopic title="Full configuration file example..." %}
 
 ```yaml
+
 # Cluster-wide settings.
+
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
+
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
+
 # Cluster Pod address space.
+
 # You may want to change this. Make sure it does not overlap with serviceSubnetCIDR and internalNetworkCIDRs.
+
 podSubnetCIDR: 10.111.0.0/16
+
 # Cluster Service address space.
+
 # You may want to change this. Make sure it does not overlap with podSubnetCIDR and internalNetworkCIDRs.
+
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
+
 # Cluster domain.
+
 clusterDomain: "cluster.local"
+
 # The default container runtime type used on cluster nodes (in NodeGroups).
+
 defaultCRI: "ContainerdV2"
+
 # Proxy server settings.
+
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
+
 # Initial cluster bootstrap settings for Deckhouse.
+
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
+
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
+
   # Docker registry address that hosts Deckhouse images.
+
   imagesRepo: harbor.example/deckhouse/ee
+
   # Docker registry credentials string.
+
   registryDockerCfg: <DOCKER_CFG_BASE64>
+
   # Registry access scheme (HTTP or HTTPS).
+
   registryScheme: HTTPS
+
   # Root CA certificate used to validate the registry certificate (if the registry uses a self-signed certificate).
+
   registryCA: |
     -----BEGIN CERTIFICATE-----
     ...
     -----END CERTIFICATE-----
 ---
+
 # deckhouse module settings.
+
 # https://deckhouse.io/modules/deckhouse/configuration.html
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1225,8 +1574,11 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
+
 # Global Deckhouse settings.
+
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1235,19 +1587,31 @@ spec:
   version: 2
   settings:
     modules:
+
       # A template used to construct the addresses of system applications in the cluster.
+
       # For example, with %s.test.local, Grafana will be available at 'grafana.test.local'.
+
       # The domain MUST NOT match the value specified in the clusterDomain parameter of the ClusterConfiguration resource.
+
       # You can set your own value right away, or follow the guide and change it after installation.
+
       publicDomainTemplate: "%s.test.local"
+
       # The HTTPS implementation method used by Deckhouse modules.
+
       https:
         certManager:
+
           # Use self-signed certificates for Deckhouse modules.
+
           clusterIssuerName: selfsigned
 ---
+
 # user-authn module settings.
+
 # https://deckhouse.io/modules/user-authn/configuration.html
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1258,8 +1622,11 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
+
     # Enable access to the Kubernetes API server via Ingress.
+
     # https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
+
     publishAPI:
       enabled: true
       https:
@@ -1277,32 +1644,49 @@ spec:
   settings:
     disableLetsencrypt: true
 ---
+
 # cni-cilium module settings.
+
 # https://deckhouse.io/modules/cni-cilium/configuration.html
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: cni-cilium
 spec:
   version: 1
+
   # Enable the cni-cilium module.
+
   enabled: true
   settings:
+
     # cni-cilium module settings.
+
     # https://deckhouse.io/modules/cni-cilium/configuration.html
+
     tunnelMode: VXLAN
 ---
+
 # Static cluster settings.
+
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
+
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
+
 # A list of internal node networks (for example, '10.0.4.0/24') used for communication between Kubernetes components
+
 # (kube-apiserver, kubelet, etc.).
+
 # Specify this if you use the virtualization module or if cluster nodes have more than one network interface.
+
 # If cluster nodes use only one interface, you can omit the StaticClusterConfiguration resource.
+
 internalNetworkCIDRs:
   - 10.128.0.0/24
 ```
+
 {% endofftopic %}
 
 The installation configuration file is ready.
@@ -1314,6 +1698,7 @@ Copy the prepared configuration file to the host from which you run the installa
 ```bash
 docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<EDITION>/install:stable bash
 ```
+
 {% offtopic title="If you get the `509: certificate signed by unknown authority` error..." %}
 Even if the certificates are present in `/etc/docker/certs.d/harbor.example/`, Docker may still report that the certificate is signed by an unknown certificate authority (which is typical for self-signed certificates). In most cases, adding `ca.crt` to the system trusted certificate store and restarting Docker resolves the issue.
 {% endofftopic %}
@@ -1336,6 +1721,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   --config=/config.yml \
   --ask-become-pass
 ```
+
 > Replace `id_rsa` with the name of your private key file if it differs.
 
 The installation process may take up to 30 minutes depending on the network speed.
@@ -1384,6 +1770,7 @@ Perform the following steps:
   sudo -i d8 k patch mc global --type merge \
     -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
+
 * Create the `worker` NodeGroup and add a node using Cluster API Provider Static (CAPS):
 
   ```console
@@ -1428,7 +1815,9 @@ Perform the following steps:
 * Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
   ```console
+
   # Specify the IP address of the node to be added to the cluster.
+
   export NODE=<NODE-IP-ADDRESS>
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
@@ -1469,25 +1858,36 @@ $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
+
 Create the `ingress-nginx-controller.yml` file on the master node containing the Ingress controller configuration:
 
 ```yaml
+
 # Ingress NGINX controller parameters.
+
 # https://deckhouse.io/modules/ingress-nginx/cr.html
+
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
+
   # The name of the IngressClass served by the Ingress NGINX controller.
+
   ingressClass: nginx
+
   # How traffic enters from outside the cluster.
+
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
+
   # Defines which nodes will run the component.
+
   # You may want to adjust this.
+
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
@@ -1495,11 +1895,13 @@ spec:
       key: node-role.kubernetes.io/control-plane
       operator: Exists
 ```
+
 Apply it by running the following command on the master node:
 
 ```bash
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
+
 Starting the Ingress controller after DKP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
 
 ```console
@@ -1514,37 +1916,57 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 Create the `user.yml` file on the master node containing the user account definition and access rights:
 
 ```yaml
+
 # RBAC and authorization settings.
+
 # https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
+
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: admin
 spec:
+
   # List of Kubernetes RBAC subjects.
+
   subjects:
     - kind: User
       name: admin@deckhouse.io
+
   # A predefined access level template.
+
   accessLevel: SuperAdmin
+
   # Allow the user to use kubectl port-forward.
+
   portForwarding: true
 ---
+
 # Static user data.
+
 # https://deckhouse.io/modules/user-authn/cr.html#user
+
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
 spec:
+
   # User email.
+
   email: admin@deckhouse.io
+
   # This is the password hash for 3xqgv2auys, generated just now.
+
   # Generate your own or use this one for testing purposes only:
+
   # echo -n '3xqgv2auys' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+
   # You may want to change it.
+
   password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
 ```
+
 Apply it by running the following command on the master node:
 
 ```console
@@ -1579,6 +2001,7 @@ $PUBLIC_IP upmeter.test.local
 EOF
 "
 ```
+
 To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplate`, e.g. `grafana.test.local` for `%s.test.local`) and sign in with the user you created earlier.
 
 ## Where to go next?

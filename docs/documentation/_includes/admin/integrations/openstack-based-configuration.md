@@ -49,20 +49,30 @@ masterNodeGroup:
   instanceClass:
     flavorName: m1.large                        # Required.
     imageName: ubuntu-18-04-cloud-amd64         # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 50
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
     additionalTags:
       severity: critical
       environment: production
+
   # Required, volume type map for etcd and Kubernetes certificates
+
   # (always use the fastest disk supplied by the provider).
+
   volumeTypeMap:
+
     # If rootDiskSize is specified, this volume type will
+
     # be also used for master root volume.
+
     ru-1a: fast-ru-1a
     ru-1b: fast-ru-1b
     ru-1c: fast-ru-1c
@@ -72,27 +82,43 @@ nodeGroups:
   instanceClass:
     flavorName: m1.small                        # Required.
     imageName: ubuntu-18-04-cloud-amd64         # Required
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 20
+
     # Optional, false by default. Determines if configuration drive is
+
     # required during vm bootstrap process. It's needed if there
+
     # is no DHCP in the network that is used as a default gateway.
+
     configDrive: false
+
     # Required, the gateway of this network will be used as the default gateway.
+
     # Matches the cloud.prefix in the ClusterConfiguration resource.
+
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
     - shared
+
     # Optional, if there are networks with disabled port
+
     # security their names must be specified.
+
     networksWithSecurityDisabled:
     - office
+
     # Optional, a list of network pools where to order floating IPs.
+
     floatingIPPools:
     - public
     - shared
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
@@ -135,8 +161,11 @@ layout: StandardWithNoRouter
 standardWithNoRouter:
   internalNetworkCIDR: 192.168.199.0/24          # Required.
   externalNetworkName: ext-net                   # Required.
+
   # Optional, defines whether DHCP is enabled in specified external
+
   # network (true by default).
+
   externalNetworkDHCP: false
   internalNetworkSecurity: true|false            # Optional, true by default.
 masterNodeGroup:
@@ -144,17 +173,27 @@ masterNodeGroup:
   instanceClass:
     flavorName: m1.large                         # Required.
     imageName: ubuntu-18-04-cloud-amd64          # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 50
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+
   # Required, volume type map for etcd and Kubernetes certificates
+
   # (always use the fastest disk supplied by the provider).
+
   volumeTypeMap:
+
     # If rootDiskSize is specified, this volume type will
+
     # be also used for master root volume.
+
     nova: ceph-ssd
 nodeGroups:
 - name: front
@@ -162,32 +201,51 @@ nodeGroups:
   instanceClass:
     flavorName: m1.small                         # Required.
     imageName: ubuntu-18-04-cloud-amd64          # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 20
+
     # Optional, false by default, determines if configuration drive
+
     # is required during vm bootstrap process. It's needed
+
     # if there is no DHCP in the network that is used as a default
+
     # gateway.
+
     configDrive: false
+
     # Required, the gateway of the network will be used as the default gateway.
+
     # Matches the cloud.prefix in the ClusterConfiguration resource.
+
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
     - shared
+
     # Optional, if there are networks with disabled port
+
     # security, their names must be specified.
+
     networksWithSecurityDisabled:
     - office
+
     # Optional, a list of network pools where to order floating IPs.
+
     floatingIPPools:
     - public
     - shared
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+
   # Required if rootDiskSize is specified. Volume type map for node's root volume.
+
   volumeTypeMap:
     nova: ceph-ssd
 sshPublicKey: "<SSH_PUBLIC_KEY>"
@@ -218,25 +276,38 @@ layout: Simple
 simple:
   externalNetworkName: ext-net                  # Required.
   externalNetworkDHCP: false                    # Optional, true by default.
+
   # Optional, VXLAN by default, may also be DirectRouting
+
   # or DirectRoutingWithPortSecurityEnabled.
+
   podNetworkMode: VXLAN
 masterNodeGroup:
   replicas: 3
   instanceClass:
     flavorName: m1.large                        # Required.
     imageName: ubuntu-18-04-cloud-amd64         # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 50
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+
   # Required, volume type map for etcd and Kubernetes certificates
+
   # (always use the fastest disk supplied by the provider).
+
   volumeTypeMap:
+
     # If rootDiskSize is specified, this volume type will
+
     # be also used for master root volume.
+
     nova: ceph-ssd
 nodeGroups:
 - name: front
@@ -244,28 +315,45 @@ nodeGroups:
   instanceClass:
     flavorName: m1.small                        # Required.
     imageName: ubuntu-18-04-cloud-amd64         # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 20
+
     # Optional, false by default, determines if configuration drive
+
     # is required during vm bootstrap process. It's needed
+
     # if there is no DHCP in network that is used as a default
+
     # gateway.
+
     configDrive: false
+
     # Required, the network will be used as a default gateway.
+
     # Matches the name of the pre-created network.
+
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
     - shared
+
     # Optional, if there are networks with disabled port
+
     # security, their names must be specified.
+
     networksWithSecurityDisabled:
     - office
+
     # Optional, list of network pools where to order floating IPs.
+
     floatingIPPools:
     - public
     - shared
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
@@ -296,32 +384,52 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:
+
   # Required, all cluster nodes have to be in the same subnet.
+
   internalSubnetName: pivot-standard
+
   # Optional, DirectRoutingWithPortSecurityEnabled by default,
+
   # may also be DirectRouting or VXLAN.
+
   podNetworkMode: DirectRoutingWithPortSecurityEnabled
+
   # Optional. If set, it will be used for the load balancer default
+
   # configuration and ordering the master floating IP.
+
   externalNetworkName: ext-net
+
   # Optional, true by default.
+
   masterWithExternalFloatingIP: false
 masterNodeGroup:
   replicas: 3
   instanceClass:
     flavorName: m1.large                        # Required.
     imageName: ubuntu-18-04-cloud-amd64         # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 50
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
+
   # Required, volume type map for etcd and Kubernetes certificates
+
   # (always use the fastest disk supplied by the provider).
+
   volumeTypeMap:
+
     # If rootDiskSize is specified, this volume type will
+
     # be also used for master root volume.
+
     nova: ceph-ssd
 nodeGroups:
 - name: front
@@ -329,28 +437,45 @@ nodeGroups:
   instanceClass:
     flavorName: m1.small                        # Required.
     imageName: ubuntu-18-04-cloud-amd64         # Required.
+
     # Optional, local disk is used if not specified.
+
     rootDiskSize: 20
+
     # Optional, false by default, determines if configuration drive
+
     # is required during vm bootstrap process. It's needed
+
     # if there is no DHCP in the network that is used as a default
+
     # gateway.
+
     configDrive: false
+
     # Required, the network will be used as a default gateway.
+
     # Matches the name of the pre-created network.
+
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
     - shared
+
     # Optional, if there are networks with disabled port
+
     # security, their names must be specified.
+
     networksWithSecurityDisabled:
     - office
+
     # Optional, a list of network pools where to order floating IPs.
+
     floatingIPPools:
     - public
     - shared
+
     # Optional, additional security groups.
+
     additionalSecurityGroups:
     - sec_group_1
     - sec_group_2
@@ -573,11 +698,13 @@ specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInsta
    openstack image create --private --disk-format qcow2 --container-format bare \
      --file /ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=dp1-high-iops ubuntu-18-04-cloud-amd64
    ```
+
 1. Ensure the image has been created:
 
    ```shell
    openstack image show ubuntu-18-04-cloud-amd64
    ```
+
    Example output:
 
    ```console
@@ -635,6 +762,7 @@ region_name = {{ nova_service_region }}
 user_domain_id = default
 username = {{ nova_service_user_name }}
 ```
+
 {% endraw %}
 
 For more details, see the [OpenStack-Ansible bug report](https://bugs.launchpad.net/openstack-ansible/+bug/1902914).
@@ -706,6 +834,7 @@ Run the following command:
 ```shell
 openstack flavor show m1.medium-50g -c disk
 ```
+
 Example output:
 
 ```console
@@ -731,6 +860,7 @@ Example:
 openstack volume type list
 openstack image set ubuntu-18-04-cloud-amd64 --property cinder_img_volume_type=VOLUME_NAME
 ```
+
 {% if page.cloud_type != 'vk-private' and page.cloud_type != 'vk' %}
 
 ### Offline disk resizing
@@ -747,4 +877,5 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
 {% endif %}

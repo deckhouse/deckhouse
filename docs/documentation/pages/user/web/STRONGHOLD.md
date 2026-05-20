@@ -197,7 +197,7 @@ Available actions:
   - Delete an entity.
 
     ![Merge entities](../../images/stronghold/merge-entities.png)
-  
+
 - For Aliases:
   - View details.
 

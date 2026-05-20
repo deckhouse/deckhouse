@@ -7,7 +7,9 @@ You need to create a service account so that Deckhouse Kubernetes Platform can m
 Please note, that to create a node with the `CloudEphemeral` type in a zone other than zone A, you must first create a flavor with a disk of the required size. The [rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter does not need to be specified.
 
 {% offtopic title="Example of creating a flavor..." %}
+
 ```shell
 openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4 --private
 ```
+
 {% endofftopic %}

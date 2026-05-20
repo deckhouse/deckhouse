@@ -76,6 +76,7 @@ To switch the cluster to use an external registry, follow these steps:
    ```shell
    journalctl -u bashible -n 20
    ```
+
    The log should contain the message `Configuration is in sync, nothing to do`.
 
    Example of output when viewing the bashible service log:

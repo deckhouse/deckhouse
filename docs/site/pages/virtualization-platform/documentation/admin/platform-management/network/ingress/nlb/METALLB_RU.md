@@ -129,9 +129,13 @@ kind: Service
 metadata:
   name: nginx-deployment
   annotations:
+
     # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
+
     network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+
     # Список адресов из пула, объявленного в MetalLoadBalancerClass, которые будут выделены сервису.
+
     network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
 spec:
   type: LoadBalancer
@@ -167,6 +171,7 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 ```
+
 Пример вывода:
 
 ```console
@@ -252,4 +257,5 @@ IP-адреса сервисов анонсируются напрямую в м
            node-role.deckhouse.io/metallb: ""
      version: 2
    ```
+
 1. Настройте BGP-пиринг на сетевом оборудовании.

@@ -23,7 +23,6 @@ lang: ru
 | **upmeter**                 | Модуль для оценки доступности компонентов DVP.                                                                                                                                                                           |
 | **trickster**               | Кеширующий прокси, снижающий нагрузку на Prometheus. В ближайшем времени будет deprecated.                                                                                                                               |
 
-
 ### Внешние компоненты
 
 Deckhouse может интегрироваться с большим количеством разнообразных решений следующими способами:
@@ -32,7 +31,6 @@ Deckhouse может интегрироваться с большим колич
 |--------------------------------|--------------------------------------------------------------------------|
 | **Alertmanagers**              | Alertmanager'ы могут быть подключены к Prometheus и Grafana и находиться как в кластере Deckhouse, так и за его пределами.|
 | **Long-term metrics storages** | Используя протокол `remote write`, возможно отсылать метрики из Deckhouse в большое количество хранилищ, включающее [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
-
 
 ## Prometheus
 
@@ -68,7 +66,6 @@ Prometheus устанавливается модулем `prometheus-operator` D
   * rules — `emptyDir`, который наполняет `prometheus-config-reloader`, а читает `prometheus`. Подключен в оба контейнера, но в `prometheus` в режиме read only;
   * data — данные Prometheus. Подмонтирован только в `prometheus`.
 
-
 ### Как настраивается Prometheus?
 
 * У сервера Prometheus есть *config* и есть *rule files* (файлы с правилами);
@@ -97,13 +94,17 @@ Prometheus устанавливается модулем `prometheus-operator` D
 
   ```yaml
   scrape_configs:
+
     # Общие настройки
+
   - job_name: d8-monitoring/custom/0    # просто название scrape job'а, показывается в разделе Service Discovery
     scrape_interval: 30s                  # как часто собирать данные
     scrape_timeout: 10s                   # таймаут на запрос
     metrics_path: /metrics                # path, который запрашивать
     scheme: http                          # http или https
+
     # Настройки service discovery
+
     kubernetes_sd_configs:                # означает, что target'ы мы получаем из Kubernetes
     - api_server: null                    # означает, что адрес API-сервера использовать из переменных окружения (которые есть в каждом Pod'е)
       role: endpoints                     # target'ы брать из endpoint'ов
@@ -111,39 +112,57 @@ Prometheus устанавливается модулем `prometheus-operator` D
         names:                            # искать endpoint'ы только в этих namespace'ах
         - foo
         - baz
+
     # Настройки "фильтрации" (какие enpoint'ы брать, а какие нет) и "релейблинга" (какие лейблы добавить или удалить, на все получаемые метрики)
+
     relabel_configs:
+
     # Фильтр по значению label'а prometheus_custom_target (полученного из связанного с endpoint'ом service'а)
+
     - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
       regex: .+                           # подходит любой НЕ пустой лейбл
       action: keep
+
     # Фильтр по имени порта
+
     - source_labels: [__meta_kubernetes_endpointslice_port_name]
       regex: http-metrics                 # подходит, только если порт называется http-metrics
       action: keep
+
     # Добавляем label job, используем значение label'а prometheus_custom_target у service'а, к которому добавляем префикс "custom-"
+
     #
+
     # Лейбл job это служебный лейбл Prometheus:
+
     #    * он определяет название группы, в которой будет показываться target на странице targets
+
     #    * и конечно же он будет у каждой метрики, полученной у этих target'ов, чтобы можно было удобно фильтровать в rule'ах и dashboard'ах
+
     - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
       regex: (.*)
       target_label: job
       replacement: custom-$1
       action: replace
+
     # Добавляем label namespace
+
     - source_labels: [__meta_kubernetes_namespace]
       regex: (.*)
       target_label: namespace
       replacement: $1
       action: replace
+
     # Добавляем label service
+
     - source_labels: [__meta_kubernetes_service_name]
       regex: (.*)
       target_label: service
       replacement: $1
       action: replace
+
     # Добавляем label instance (в котором будет имя Pod'а)
+
     - source_labels: [__meta_kubernetes_pod_name]
       regex: (.*)
       target_label: instance
@@ -196,4 +215,3 @@ Prometheus устанавливается модулем `prometheus-operator` D
 - **smoke-mini** — поддерживает постоянное *smoke-тестирование* с помощью StatefulSet.
 
 Модуль отправляет около 100 показаний метрик каждые 5 минут. Это значение зависит от количества включенных модулей Deckhouse Virtualization Platform.
-

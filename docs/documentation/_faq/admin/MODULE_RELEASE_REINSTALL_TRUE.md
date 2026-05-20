@@ -37,6 +37,7 @@ To download the image and reinstall the module that caused the problem:
    ```shell
    d8 k get mr -l module=my-module
    ```
+
    Output example:
 
    ```console
@@ -53,6 +54,7 @@ To download the image and reinstall the module that caused the problem:
    ```shell
    d8 k annotate mr my-module-v3.7.5 modules.deckhouse.io/reinstall=true
    ```
+
 After adding the annotation, the module image is re-downloaded from the registry, the module is validated with the current settings from `ModuleConfig`, and installed in the cluster. After successful reinstallation, the annotation is automatically removed from `ModuleRelease`.
 
 To verify that the module has been successfully reinstalled and all module pods are working, use the command:
@@ -60,6 +62,7 @@ To verify that the module has been successfully reinstalled and all module pods 
 ```shell
 d8 k -n d8-<module-name> get pods
 ```
+
 All pods in the module must have the status `Running`. Example:
 
 ```console
@@ -70,4 +73,3 @@ observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
 {: .nowrap-default }
 
-{: .nowrap-default }

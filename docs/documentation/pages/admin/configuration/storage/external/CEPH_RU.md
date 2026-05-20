@@ -64,17 +64,28 @@ Ceph — это масштабируемая распределённая сис
    metadata:
      name: ceph-cluster-1
    spec:
+
      # FSID/UUID Ceph-кластера.
+
      # Получить FSID/UUID Ceph-кластера можно с помощью команды `ceph fsid`.
+
      clusterID: 2bf085fc-5119-404f-bb19-820ca6a1b07e
+
      # Список IP-адресов ceph-mon в формате 10.0.0.10:6789.
+
      monitors:
        - 10.0.0.10:6789
+
      # Имя пользователя без `client.`.
+
      # Получить имя пользователя можно с помощью команды `ceph auth list`.
+
      userID: admin
+
      # Ключ авторизации, соответствующий userID.
+
      # Получить ключ авторизации можно с помощью команды `ceph auth get-key client.admin`.
+
      userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
    EOF
    ```
@@ -142,6 +153,7 @@ Ceph — это масштабируемая распределённая сис
    ```shell
    d8 k get sc
    ```
+
    В результате будет выведена информация о созданном StorageClass:
 
    ```console
@@ -163,6 +175,7 @@ Ceph — это масштабируемая распределённая сис
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
+
 ### Поддерживаемые версии Ceph-кластеров
 
 Модуль `csi-ceph` предъявляет требования к версии Ceph-кластера, чтобы обеспечить совместимость и стабильную работу. Официально поддерживаются версии Ceph >= 16.2.0. На практике текущая версия модуля обычно работает и с кластерами >= 14.2.0, но для надёжной эксплуатации рекомендуется обновить Ceph до актуальной поддерживаемой версии.
@@ -189,6 +202,7 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
         caps mon = "profile rbd"
         caps osd = "profile rbd pool=rbd"
 ```
+
 #### CephFS
 
 Перед настройкой разрешений CephFS убедитесь, что в CephFS создан subvolumegroup `csi` (или другой, указанный в `Custom resources`).
@@ -198,11 +212,13 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
 ```shell
 ceph fs subvolumegroup create <fs_name> <group_name>
 ```
+
 Например, для создания subvolumegroup `csi` для файловой системы `myfs`:
 
 ```shell
 ceph fs subvolumegroup create myfs csi
 ```
+
 Требуемые разрешения для CephFS с названием `myfs`:
 
 ```ini
@@ -213,6 +229,7 @@ ceph fs subvolumegroup create myfs csi
         caps mon = "allow r fsname=myfs"
         caps osd = "allow rw tag cephfs data=myfs, allow rw tag cephfs metadata=myfs"
 ```
+
 #### CephFS + RBD
 
 Для пользователя, которому необходим доступ к CephFS `myfs` и RBD пулу `rbd`, объедините разрешения следующим образом:

@@ -37,25 +37,25 @@ DKP provides two web interfaces for availability assessment:
 - Status page.
 
   You can get the page address in the web interface on the main page in the "Tools" section (Status page tile), or by running the command:
-  
+
   ```shell
   d8 k -n d8-upmeter get ing status -o jsonpath='{.spec.rules[*].host}'
   ``` 
 
   Example of the status page web interface:
-  
+
   ![Example of the status page web interface](../../../images/upmeter/status.png)
 
 - Component availability page.
 
   You can get the page address in the web interface on the main page in the "Tools" section (Component availability tile), or by running the command:
-  
+
   ```shell
   d8 k -n d8-upmeter get ing upmeter -o jsonpath='{.spec.rules[*].host}'
   ``` 
 
   Example of the component availability page:
-  
+
   ![Example of upmeter metrics graphs in Grafana](../../../images/upmeter/image1.png)
 
 ## Status metrics export

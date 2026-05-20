@@ -59,6 +59,7 @@ X-Gitlab-Event: Member Hook
 }
 
 ```
+
 ### Изменение вебхуков групп
 
 Заголовок запроса:
@@ -87,6 +88,7 @@ X-Gitlab-Event: Member Hook
 }
 
 ```
+
 ### Удаление вебхуков групп
 
 Заголовок запроса:
@@ -115,6 +117,7 @@ X-Gitlab-Event: Member Hook
 }
 
 ```
+
 ## События проекта
 
 Срабатывает при создании или удалении проектов в группе и подгруппах.
@@ -149,6 +152,7 @@ X-Gitlab-Event: Project Hook
   "project_visibility": "private"
 }
 ```
+
 ### Удаление вебхуков проекта
 
 Заголовок запроса:
@@ -179,6 +183,7 @@ X-Gitlab-Event: Project Hook
   "project_visibility": "private"
 }
 ```
+
 ## События подгрупп
 
 Срабатывает при создании или удалении подгруппы.
@@ -209,6 +214,7 @@ X-Gitlab-Event: Subgroup Hook
   "parent_full_path": "flant-development"
 }
 ```
+
 ### Удаление вебхуков подгрупп
 
 Заголовок запроса:

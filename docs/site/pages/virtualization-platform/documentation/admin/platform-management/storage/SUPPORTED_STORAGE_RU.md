@@ -23,7 +23,9 @@ StorageClass по умолчанию используется в случаях,
 Чтобы задать StorageClass по умолчанию, укажите нужный класс хранения в [глобальной конфигурации](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). Пример команды:
 
 ```shell
+
 # Укажите имя своего объекта StorageClass.
+
 DEFAULT_STORAGE_CLASS=replicated-storage-class
 d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```

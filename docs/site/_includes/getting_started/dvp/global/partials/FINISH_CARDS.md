@@ -67,6 +67,7 @@ Use our [checklist](/products/virtualization-platform/guides/production.html) to
 </section>
 
 <div markdown="1">
+
 ## What's next?
 
 Detailed information about the system and components is available in the [documentation](/products/virtualization-platform/documentation/admin/overview.html).

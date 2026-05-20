@@ -68,12 +68,14 @@ Before installing the virtualization platform, you need to plan its parameters:
      ```shell
      sudo passwd dvpinstall
      ```
-  
+
    - (Optionally) For convenience during the installation, you can allow the `dvpinstall` user to run `sudo` without a password:
 
      ```shell
      visudo   
+
      # Add the following line:    
+
      dvpinstall ALL=(ALL:ALL) NOPASSWD: ALL
      ```
 

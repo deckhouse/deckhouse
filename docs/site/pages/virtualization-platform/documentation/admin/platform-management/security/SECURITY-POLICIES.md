@@ -544,10 +544,10 @@ and the image is unsigned or the signature does not match the specified keys, Po
 
 Example error output when creating a Pod with an unverified container image:
 
-```console
-[verify-image-signatures] Image signature verification failed: nginx:1.17.2
-```
-{: .nowrap-default }
+   ```console
+   [verify-image-signatures] Image signature verification failed: nginx:1.17.2
+   ```
+   {: .nowrap-default }
 
 ## Using alternative security policy management tools
 

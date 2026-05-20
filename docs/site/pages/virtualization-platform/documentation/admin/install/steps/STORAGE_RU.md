@@ -100,15 +100,19 @@ lang: ru
            operator: In
            values:
              - "$DEV_NAME"
+
      # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
+
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
+
    Дождитесь, что все созданные ресурсы LVMVolumeGroup перейдут в состояние `Ready`:
 
    ```shell
    d8 k get lvg -w
    ```
+
    {% offtopic title="Пример вывода..." %}
 
    ```console
@@ -134,17 +138,21 @@ lang: ru
    spec:
      type: LVM
      lvmVolumeGroups:
+
        # Укажите свои имена групп томов.
+
        - name: vg-on-dvp-worker-01
        - name: vg-on-dvp-worker-02
        - name: vg-on-master
    EOF
    ```
+
    Дождитесь, когда ресурс перейдет в состояние `Completed`:
 
    ```shell
    d8 k get rsp data -w
    ```
+
    {% offtopic title="Пример вывода..." %}
 
    ```console
@@ -177,11 +185,13 @@ lang: ru
      topology: Ignored
    EOF
    ```
+
    Проверьте, что в кластере появился соответствующий StorageClass:
 
    ```shell
    d8 k get sc
    ```
+
    {% offtopic title="Пример вывода..." %}
 
    ```console

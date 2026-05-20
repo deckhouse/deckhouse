@@ -246,10 +246,14 @@ kind: StaticInstance
 metadata:
   name: static-master-1
   labels:
+
     # Лейбл, указанный в spec.staticInstances.labelSelector NodeGroup master.
+
     role: master
 spec:
+
   # Укажите IP-адрес сервера статического узла.
+
   address: "<SERVER-IP>"
   credentialsRef:
     kind: SSHCredentials

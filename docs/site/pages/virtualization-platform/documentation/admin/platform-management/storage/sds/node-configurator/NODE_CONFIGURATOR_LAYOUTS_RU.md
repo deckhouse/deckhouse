@@ -167,6 +167,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 ##### Настройка модуля sds-replicated-volume (одинаковые диски, «Полное зеркало»)
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
@@ -188,6 +189,7 @@ EOF
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
 1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool):
 
    ```shell
@@ -224,6 +226,7 @@ EOF
      topology: Ignored
    EOF
    ```
+
 ### Частичное зеркало
 
 {% alert level="warning" %}
@@ -254,12 +257,14 @@ EOF
    ```shell
    vgchange main-safe --addtag storage.deckhouse.io/enabled=true
    ```
+
 1. Создайте VG с именем `main-unsafe` из вторых разделов каждого диска.
 1. Установите тег `storage.deckhouse.io/enabled=true` для VG `main-unsafe`, используя следующую команду:
 
    ```shell
    vgchange main-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
+
 1. Добавьте подготовленный узел в кластер DVP.
 
    Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`,
@@ -279,6 +284,7 @@ EOF
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
 ```
+
 В результате будет выведен следующий список:
 
 ```console
@@ -314,6 +320,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 ##### Настройка модуля sds-replicated-volume (одинаковые диски, «Частичное зеркало»)
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
@@ -336,6 +343,7 @@ EOF
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
 1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) с именем `data-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
    чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
    `replication: ConsistencyAndAvailability` использовалась только VG `main-unsafe`:
@@ -354,6 +362,7 @@ EOF
        - name: vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2
    EOF
    ```
+
 1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool),
    чтобы на всех узлах использовались VG `main-safe` и `main-unsafe`:
 
@@ -391,6 +400,7 @@ EOF
      topology: Ignored
    EOF
    ```
+
 ## Комбинированное хранилище
 
 Комбинированное хранилище предполагает одновременное использование на узле дисков разных типов.
@@ -431,6 +441,7 @@ EOF
    ```shell
    vgchange <vg-name> --addtag storage.deckhouse.io/enabled=true
    ```
+
 {% alert level="info" %}
 В примере выше замените `<vg-name>` на информативное имя, в зависимости от типа дополнительных дисков.
 
@@ -453,6 +464,7 @@ EOF
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
 ```
+
 В результате будет выведен список вида:
 
 ```console
@@ -487,6 +499,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 {% alert level="info" %}
 В примере выше `<local-storage-class-name>` замените на информативное имя, в зависимости от типа дополнительных дисков.
 
@@ -518,6 +531,7 @@ EOF
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
    > В примере выше замените `<replicated-storage-pool-name>` на информативное имя, в зависимости от типа дополнительных дисков.
    >
    > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
@@ -562,6 +576,7 @@ EOF
      topology: Ignored
    EOF
    ```
+
 ### Настройка дополнительных дисков (Частичное зеркало)
 
 {% alert level="warning" %}
@@ -594,6 +609,7 @@ EOF
    vgchange <vg-name>-safe --addtag storage.deckhouse.io/enabled=true
    vgchange <vg-name>-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
+
    > В примере выше `<vg-name>` замените на информативный префикс, в зависимости от типа дополнительных дисков.
    >
    > Примеры информативного префикса `<vg-name>` для дополнительных дисков разных типов:
@@ -614,6 +630,7 @@ EOF
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
 ```
+
 В результате будет выведен список вида:
 
 ```console
@@ -651,6 +668,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 {% alert level="info" %}
 В примере выше замените `<local-storage-class-name>` на информативное имя, в зависимости от типа дополнительных дисков.
 
@@ -683,6 +701,7 @@ EOF
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
    > В примере выше замените `data-<vg-name>-safe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
    > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
@@ -709,6 +728,7 @@ EOF
        - name: vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2
    EOF
    ```
+
    > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
    > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
@@ -754,6 +774,7 @@ EOF
      topology: Ignored
    EOF
    ```
+
    > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
    > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:

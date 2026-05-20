@@ -307,22 +307,28 @@ spec:
     )
 
     # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+
     ## ca-file-updated   - Event name
+
     ## update-certs      - The function name that the event will call
-    
+
     bb-event-on "ca-file-updated" "update-certs"
-    
+
     update-certs() {          # Function with commands for adding a certificate to the store
       update-ca-certificates
     }
 
     # bb-tmp-file - Creating temp file function. More information: http://www.bashbooster.net/#tmp
+
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
+
     # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+
     ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+
     ##  ${CERT_TMP_FILE}                          - Source file
+
     ##  ca-file-updated                           - Name of event that will be called if the file changes.
 
     bb-sync-file \
@@ -367,37 +373,42 @@ spec:
         ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
     EOF
     )
-    
+
     mkdir -p /etc/containerd/conf.d
 
     # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
 
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
+
     CONFIG_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
 
     # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
+
     ## ca-file-updated   - Event name
+
     ## update-certs      - The function name that the event will call
-    
+
     bb-event-on "ca-file-updated" "update-certs"
-    
+
     update-certs() {          # Function with commands for adding a certificate to the store
       update-ca-certificates  # Restarting the containerd service is not required as this is done automatically in the script 032_configure_containerd.sh
     }
 
     # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+
     ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+
     ##  ${CERT_TMP_FILE}                          - Source file
+
     ##  ca-file-updated                           - Name of event that will be called if the file changes.
 
     bb-sync-file \
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
       ${CERT_TMP_FILE} \
       ca-file-updated   
-      
+
     bb-sync-file \
       "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
       ${CONFIG_TMP_FILE} 
@@ -421,18 +432,31 @@ spec:
     - '*'
   weight: 32
   content: |
+
     # Copyright 2022 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     desired_version="5.15.0-53-generic"
@@ -469,18 +493,31 @@ spec:
     - '*'
   weight: 32
   content: |
+
     # Copyright 2022 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     desired_version="3.10.0-1160.42.2.el7.x86_64"
@@ -679,7 +716,9 @@ Deckhouse Kubernetes Platform может работать поверх серв�
      labels:
        role: worker
    spec:
+
      # Укажите IP-адрес сервера статического узла.
+
      address: "<SERVER-IP>"
      credentialsRef:
        kind: SSHCredentials

@@ -23,7 +23,7 @@ description: Обзор архитектуры Deckhouse Kubernetes Platform.
   * [Подсистема Network](network/)
   * [Подсистема Storage](storage/)  
   * [Подсистема Observability](observability/)
-  
+
 {% alert level="info" %}
 В разделе представлена информация не по всем подсистемам и модулям DKP.
 Материалы по остальным компонентам будут добавляться по мере готовности.

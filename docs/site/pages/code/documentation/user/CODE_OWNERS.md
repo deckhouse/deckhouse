@@ -75,19 +75,25 @@ Owners:
 ### Examples
 
 ```console
+
 # Owner of all files.
+
 * @default-team
 
 # README.md only in the root directory.
+
 /README.md @docs-team
 
 # All Ruby files.
+
 *.rb @backend-team
 
 # The entire config directory.
+
 /config/ @devops
 
 # README.md anywhere.
+
 README.md @docs
 ```
 {: .nowrap-default }
@@ -163,43 +169,58 @@ Below is an example of a real industrial file showing:
 - Inheritance of sections with identical names
 
 ```console
+
 # Global settings.
+
 * @fallback-team
 !*.lock                    # lock files do not require approval
 !**/generated/**           # automatic generation
 
 [Backend][2] @backend-core
+
 # Requires 2 approvals from backend-core for any Ruby code.
+
 app/**/*.rb
 
 # But for critical models, we define a different order.
+
 app/models/**/*.rb @backend-core @security-team
 
 # But this model is an exception; the owner is different.
+
 app/models/legacy/**/*.rb @migration-team
 
 [Backend]
+
 # Section update: Backend now also includes SQL.
+
 db/**/*.sql @db-team
 
 [Ruby Optional]
+
 # Additional highlighting for owners, approvals are NOT required.
+
 ^[Ruby Optional]
 *.rb @ruby-advisors
 
 [Frontend][3]
+
 # The UI requires 3 approvals.
+
 *.vue @frontend-team
 *.js  @frontend-team
 
 # Redefining: specific file → specific person.
+
 frontend/critical_entry.vue @frontend-lead
 
 [Docs]
 *.md @technical-writers
 
 [Docs]
+
 # Redefining: README always belongs to docs-lead.
+
 README.md @docs-lead
 ```
 {: .nowrap-default }
@@ -221,6 +242,7 @@ Used to exclude files within a section:
 !package-lock.json
 !**/generated/**
 ```
+
 After exclusion, the file **cannot be re-included** in the same section.
 
 ## Rule processing order
@@ -309,10 +331,13 @@ When formatting the `CODEOWNERS` file, follow these recommendations:
 ## Example of the final file
 
 ```console
+
 # Global owners.
+
 * @default-team
 
 # Exclusions.
+
 !yarn.lock
 !**/generated/**
 
@@ -330,4 +355,3 @@ app/**/*.rb @backend-core
 /config/production.yml @ops-lead
 ```
 {: .nowrap-default }
-

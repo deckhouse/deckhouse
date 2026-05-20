@@ -193,8 +193,11 @@ metadata:
   name: productpage-canary
 spec:
   host: productpage
+
   # Subset'ы доступны только при обращении к хосту через VirtualService из пода под управлением Istio.
+
   # Эти subset'ы должны быть указаны в маршрутах.
+
   subsets:
   - name: v1
     labels:

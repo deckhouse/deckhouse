@@ -325,17 +325,22 @@ spec:
    L = Moscow
    O = Example Company
    OU = IT Department
+
    # CN = Не указывайте поле CN.
 
    [ req_ext ]
    subjectAltName = @alt_names
 
    [ alt_names ]
+
    # Укажите все доменные имена.
+
    DNS.1 = example.com
    DNS.2 = www.example.com
    DNS.3 = api.example.com
+
    # Укажите IP-адреса (если требуется).
+
    IP.1 = 192.0.2.1
    IP.2 = 192.0.4.1
 
@@ -351,6 +356,7 @@ spec:
    subjectAltName = @alt_names
 
    # Параметры эллиптических кривых.
+
    [ ec_params ]
    name = prime256v1
    ```

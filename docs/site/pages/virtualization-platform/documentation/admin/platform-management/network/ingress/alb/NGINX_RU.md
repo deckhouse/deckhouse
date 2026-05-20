@@ -277,7 +277,9 @@ metallb:
      loadBalancer:
        loadBalancerClass: ingress
        annotations:
+
          # Количество адресов, которые будут выделены из пула, описанного в MetalLoadBalancerClass.
+
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
      nodeSelector:
        node-role.deckhouse.io/frontend: ""
@@ -304,4 +306,3 @@ main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.10
 ```
 {: .nowrap-default }
 
-{: .nowrap-default }

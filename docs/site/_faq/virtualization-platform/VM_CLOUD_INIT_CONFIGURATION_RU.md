@@ -18,16 +18,24 @@ lang: ru
 
 ```yaml
 #cloud-config
+
 # Обновить списки пакетов
+
 package_update: true
+
 # Обновить установленные пакеты до последних версий
+
 package_upgrade: true
+
 # Список пакетов для установки
+
 packages:
   - nginx
   - curl
   - htop
+
 # Команды для выполнения после установки пакетов
+
 runcmd:
   - systemctl enable --now nginx.service
 ```
@@ -38,7 +46,9 @@ runcmd:
 
 ```yaml
 #cloud-config
+
 # Список пользователей для создания
+
 users:
   - name: cloud                    # Имя пользователя
     passwd: "$6$rounds=4096$saltsalt$..."  # Хеш пароля (SHA-512)
@@ -47,7 +57,9 @@ users:
     shell: /bin/bash              # Оболочка по умолчанию
     ssh-authorized-keys:          # SSH-ключи для доступа
       - ssh-ed25519 AAAAC3NzaC... your-public-key ...
+
 # Разрешить аутентификацию по паролю через SSH
+
 ssh_pwauth: true
 ```
 
@@ -63,7 +75,9 @@ mkpasswd --method=SHA-512 --rounds=4096
 
 ```yaml
 #cloud-config
+
 # Список файлов для создания
+
 write_files:
   - path: /opt/scripts/start.sh    # Путь к файлу
     content: |                     # Содержимое файла
@@ -79,7 +93,9 @@ write_files:
 
 ```yaml
 #cloud-config
+
 # Настройка разметки диска
+
 disk_setup:
   /dev/sdb:                        # Устройство диска
     table_type: gpt                # Тип таблицы разделов (gpt или mbr)
@@ -87,6 +103,7 @@ disk_setup:
     overwrite: false               # Не перезаписывать существующие разделы
 
 # Настройка файловых систем
+
 fs_setup:
   - label: data                    # Метка файловой системы
     filesystem: ext4               # Тип файловой системы
@@ -94,8 +111,11 @@ fs_setup:
     partition: auto                # Автоматически определить раздел
 
 # Монтирование файловых систем
+
 mounts:
+
   # [устройство, точка_монтирования, тип_ФС, опции, dump, pass]
+
   - ["/dev/sdb1", "/mnt/data", "ext4", "defaults", "0", "2"]
 ```
 

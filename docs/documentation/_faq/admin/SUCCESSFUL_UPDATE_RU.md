@@ -31,6 +31,7 @@ v1.47.1    Deployed     4h12m
 ```shell
 d8 k -n d8-system get pods -l app=deckhouse
 ```
+
 Пример вывода:
 
 ```console
@@ -50,4 +51,5 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   ```shell
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
+
 - Соберите отладочную информацию и свяжитесь с [технической поддержкой DKP](/tech-support/).

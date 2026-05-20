@@ -60,21 +60,32 @@ metadata:
 spec:
   type: Local
   local:
+
     # Replace with the name of your node for which you are creating the volume group.
+
     nodeName: "dvp-worker"
   blockDeviceSelector:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
+
           # Replace with the names of your block devices of the node for which you are creating the volume group.
+
           - *!CHANGE_dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa*
+
   # The name of the volume group in LVM that will be created from the specified block devices on the chosen node.
+
   actualVGNameOnTheNode: "vg"
+
   # Comment if it is important to have the ability to create Thin pools; details will be revealed later.
+
   # thinPools:
+
   #   - name: thin-pool-0
+
   #     size: 70%
+
 EOF
 ```
 
@@ -106,11 +117,13 @@ spec:
     - name: vg-on-dvp-worker
 EOF
 ```
+
 Wait for the created resource ReplicatedStoragePool to enter the `Completed` state:
 
 ```shell
 sudo -i d8 k get rsp sds-pool -w
 ```
+
 Example of the output:
 
 ```console
@@ -134,11 +147,13 @@ spec:
   topology: Ignored
 EOF
 ```
+
 Check that the StorageClasses have been created:
 
 ```bash
 sudo -i d8 k get storageclass
 ```
+
 Set the StorageClass as the default StorageClass (specify the name of the StorageClass):
 
 ```shell

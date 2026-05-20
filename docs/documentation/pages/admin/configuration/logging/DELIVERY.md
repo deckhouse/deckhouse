@@ -288,7 +288,9 @@ spec:
       codec: Syslog
   extraLabels:
     syslog.severity: "alert"
+
     # The request_id field must be present in the message.
+
     syslog.message_id: "{{ request_id }}"
 ```
 
@@ -735,6 +737,7 @@ Example diagram for one log transmission channel in ASCII format:
 | d8_cluster_sink_flant-integration-loki-storage |
 +------------------------------------------------+
 ```
+
 #### Monitoring channel load
 
 To view the traffic volume at each log processing stage, use the `vector top` command.

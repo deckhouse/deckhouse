@@ -80,6 +80,7 @@ lang: ru
    ```shell
    journalctl -u bashible -n 20
    ```
+
    В журнале должно появится сообщение `Configuration is in sync, nothing to do`.
 
    Пример вывода при просмотре журнала сервиса bashible:

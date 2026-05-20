@@ -22,7 +22,9 @@ The default StorageClass is used when a PersistentVolumeClaim is created without
 To set the default StorageClass, specify the desired class in the [global configuration](../../../reference/api/global.html#parameters-defaultclusterstorageclass). Example command:
 
 ```shell
+
 # Replace with the name of your StorageClass object.
+
 DEFAULT_STORAGE_CLASS=replicated-storage-class
 d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```

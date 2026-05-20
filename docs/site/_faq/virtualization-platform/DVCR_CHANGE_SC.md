@@ -50,11 +50,13 @@ To change the DVCR StorageClass, perform the following steps:
    ```shell
    d8 k -n d8-virtualization scale deployment dvcr --replicas=1
    ```
+
 1. Verify the PVC:
 
    ```shell
    d8 k get pvc -n d8-virtualization
    ```
+
    Example output:
 
    ```console

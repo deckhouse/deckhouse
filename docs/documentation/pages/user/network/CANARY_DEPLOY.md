@@ -203,8 +203,11 @@ metadata:
   name: productpage-canary
 spec:
   host: productpage
+
   # Subsets are available only when accessing the host through a VirtualService from a Pod managed by Istio.
+
   # These subsets must be specified in the routes.
+
   subsets:
   - name: v1
     labels:

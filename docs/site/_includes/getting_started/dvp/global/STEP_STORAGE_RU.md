@@ -60,16 +60,22 @@ metadata:
 spec:
   type: Local
   local:
+
     # Замените на имя своего узла, для которого создаете группу томов.
+
     nodeName: "dvp-worker"
   blockDeviceSelector:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
+
           # Замените на имена своих блочных устройств узла, для которого создаете группу томов.
+
           - *!CHANGE_dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa*
+
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
+
   actualVGNameOnTheNode: "vg"
 EOF
 ```
@@ -102,11 +108,13 @@ spec:
     - name: vg-on-dvp-worker
 EOF
 ```
+
 Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние `Completed`:
 
 ```shell
 sudo -i d8 k get rsp sds-pool -w
 ```
+
 Пример вывода:
 
 ```console
@@ -130,11 +138,13 @@ spec:
   topology: Ignored
 EOF
 ```
+
 Проверьте, что ресурсы StorageClass появились в кластере:
 
 ```bash
 sudo -i d8 k get storageclass
 ```
+
 Установите StorageClass как используемый в кластере по умолчанию (укажите имя StorageClass):
 
 ```shell

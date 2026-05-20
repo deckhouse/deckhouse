@@ -37,6 +37,7 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
    ```shell
    d8 k get mr -l module=my-module
    ```
+
    Пример вывода:
 
    ```console
@@ -53,6 +54,7 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
    ```shell
    d8 k annotate mr my-module-v3.7.5 modules.deckhouse.io/reinstall=true
    ```
+
 После добавления аннотации образ модуля заново скачивается из хранилища образов, модуль валидируется с текущими настройками из `ModuleConfig` и устанавливается в кластер. После успешной переустановки аннотация автоматически удаляется из `ModuleRelease`.
 
 Чтобы убедиться, что переустановка модуля прошла успешно, и все поды работают, используйте команду:
@@ -60,6 +62,7 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
 ```shell
 d8 k -n d8-<module-name> get pods
 ```
+
 Все поды модуля должны иметь статус `Running`. Пример:
 
 ```console
@@ -70,4 +73,3 @@ observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
 {: .nowrap-default }
 
-{: .nowrap-default }

@@ -246,10 +246,14 @@ kind: StaticInstance
 metadata:
   name: static-master-1
   labels:
+
     # The label specified in spec.staticInstances.labelSelector NodeGroup master.
+
     role: master
 spec:
+
   # Specify the IP address of the static node server.
+
   address: "<SERVER-IP>"
   credentialsRef:
     kind: SSHCredentials
@@ -404,8 +408,7 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 
 In clusters with multiple master nodes, DKP runs in high-availability mode (with multiple replicas). To access the active DKP controller, you can use the following command (example shown for the `deckhouse-controller queue list` command):
 
-```console
-d8 system queue list
-```
-{: .nowrap-default }
-
+   ```console
+   d8 system queue list
+   ```
+   {: .nowrap-default }

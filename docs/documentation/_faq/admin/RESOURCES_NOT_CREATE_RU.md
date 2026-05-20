@@ -38,6 +38,7 @@ lang: ru
    ```shell
    d8 s queue list
    ```
+
    Пример вывода (очереди пусты):
 
    ```console
@@ -57,6 +58,7 @@ lang: ru
      ```shell
      d8 k -n d8-system logs -f -l app=deckhouse
      ```
+
      Пример вывода:
 
      ```console
@@ -72,6 +74,7 @@ lang: ru
      ```shell
      d8 k -n d8-system get events
      ```
+
      Пример вывода:
 
      ```console

@@ -213,6 +213,7 @@ d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
   --key /etc/kubernetes/pki/etcd/ca.key \
   --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
 ```
+
 Example output when the operation is successful:
 
 ```console
@@ -231,6 +232,7 @@ To defragment etcd in a cluster with multiple master nodes:
    ```bash
    d8 k -n kube-system get pod -l component=etcd -o wide
    ```
+
    Example output:
 
    ```console
@@ -250,6 +252,7 @@ To defragment etcd in a cluster with multiple master nodes:
      --cacert=/etc/kubernetes/pki/etcd/ca.crt \
      endpoint status --cluster -w table
    ```
+
    Output example (the leader in the `IS LEADER` column will have the value `true`):
 
    ```console
@@ -278,6 +281,7 @@ To defragment etcd in a cluster with multiple master nodes:
      --key /etc/kubernetes/pki/etcd/ca.key \
      --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
    ```
+
    Example output when the operation is successful:
 
    ```console

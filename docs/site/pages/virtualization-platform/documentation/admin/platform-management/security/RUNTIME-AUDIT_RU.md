@@ -37,9 +37,9 @@ DVP использует два основных источника событи
     ```shell
     ls -lah /sys/kernel/btf/vmlinux
     ```
-  
+
   - убедитесь, что включён параметр `CONFIG_DEBUG_INFO_BTF`:
-  
+
     ```shell
     grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*
     ```
@@ -179,7 +179,9 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 - Изначальное правило:
 
   ```yaml
+
   # /path/to/falco/rule_example.yaml
+
   - macro: spawned_process
     condition: (evt.type in (execve, execveat) and evt.dir=<)
 
@@ -194,7 +196,9 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 - Ресурс с правилом после конвертации:
 
   ```yaml
+
   # ./my-rules-cr.yaml
+
   apiVersion: deckhouse.io/v1alpha1
   kind: FalcoAuditRules
   metadata:
@@ -372,4 +376,3 @@ d8 k run falco-event-generator --image=falcosecurity/event-generator run
    }
    ```
    {: .nowrap-default }
-

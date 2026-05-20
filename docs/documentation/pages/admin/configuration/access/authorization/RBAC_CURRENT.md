@@ -181,6 +181,7 @@ write:
     - rbac.authorization.k8s.io/roles
     - resourcequotas
 ```
+
 <!-- end user-authz roles placeholder -->
 
 To get an additional list of access rules for a cluster module role
@@ -228,9 +229,13 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
+
   # Available only with enableMultiTenancy mode turned on (in Enterprise Edition).
+
   allowAccessToSystemNamespaces: false
+
   # Available only with enableMultiTenancy mode turned on (in Enterprise Edition).
+
   namespaceSelector:
     labelSelector:
       matchExpressions:

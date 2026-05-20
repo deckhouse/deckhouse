@@ -107,6 +107,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    ```bash
    tcpdump -A -v -i any host 10.111.1.122 and port 80
    ```
+
 1. Создайте Deployment client в этом же пространстве имён, чтобы он был участником mesh-сети:
 
    - При использовании образов из публичных registry:
@@ -114,16 +115,19 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
      ```bash
      d8 k -n test-istio-mtls create deployment client --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
      ```
+
    - При использовании образа all-in-one-image (замените адрес на свой):
 
      ```bash
      d8 k -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
      ```
+
 1. После создания пода сделайте запрос к сервису `webserver`:
 
    ```bash
    d8 k -n test-istio-mtls exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`
    ```
+
    В `tcpdump` будет виден только зашифрованный трафик.
 
    ```shell
@@ -137,11 +141,13 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    ...h....Cm.Z.......n......L.......-_.......r...%Z.....h...........`..8A....yt.t..2d....oH?.1.O&.J....F..b.OV.............E1H..%~..2.H..{.I...=.I.*..2y1p0h..........P.....@r....vk.!".......{..`.3..<,.r&L.....M...t...;.z...Q...1+.,.......:._L.V.....e.. ..!]\..6*}....vT.A>.....A0.....{.?}AH.+R..g.[=?.X...|94....S+!..e...*..M`f...o..b.K#5.....@...5.......o.(.
    ...
    ```
+
 1. Создайте пространство без лейбла `istio-injection=enabled` и выполните запрос к сервису `webserver.test-istio-mtls` (т.е. выполняется запрос из пода, который не является участником mesh-сети):
 
    ```bash
    d8 k create namespace test-istio-mtls-without-injection
    ```
+
 1. Добавьте Deployment:
 
    - При использовании образов из публичных registry:
@@ -149,16 +155,19 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
      ```bash
      d8 k -n test-istio-mtls-without-injection create deployment alpine --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
      ```
+
    - При использовании образа all-in-one-image (замените адрес на свой):
 
      ```bash
      d8 k -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
      ```
+
 1. После создания пода сделайте запрос к сервису `webserver.test-istio-mtls`:
 
    ```bash
    d8 k -n test-istio-mtls-without-injection exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
    ```
+
    В выводе `tcpdump` будут отображаться незашифрованные (plain text) запросы и ответы:
 
    ```shell
@@ -168,7 +177,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    User-Agent: Wget
    Accept: */*
    Connection: close
-   
+
    E...y.@.?...
    o[.
    o[D...P....<Nb......w.....
@@ -177,7 +186,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    User-Agent: Wget
    Accept: */*
    Connection: close
-   
+
    09:14:20.960302 lxc4f4a182c887c In  IP (tos 0x0, ttl 64, id 33396, offset 0, flags [DF], proto TCP (6), length 52)
    10.111.91.68.http > 10.111.91.211.54424: Flags [.], cksum 0xcc1b (incorrect -> 0xa850), ack 93, win 128, options [nop,nop,TS val 3834507601 ecr 305286128], length 0
    E..4.t@.@..Z
@@ -197,7 +206,7 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    x-envoy-upstream-service-time: 0
    connection: close
    x-envoy-decorator-operation: webserver.test-istio-mtls.svc.cluster.local:80/*
-  
+
    <!DOCTYPE html>
    <html>
    <head>
@@ -212,12 +221,12 @@ mTLS (mutual TLS) обеспечивает взаимную аутентифик
    <h1>Welcome to nginx!</h1>
    <p>If you see this page, the nginx web server is successfully installed and
    working. Further configuration is required.</p>
-   
+
    <p>For online documentation and support please refer to
    <a href="http://nginx.org/">nginx.org</a>.<br/>
    Commercial support is available at
    <a href="http://nginx.com/">nginx.com</a>.</p>
-   
+
    <p><em>Thank you for using nginx.</em></p>
    </body>
    </html>

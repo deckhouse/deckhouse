@@ -5,6 +5,7 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
+
 ## Everything is installed, configured, and working!
 
 Now that you have installed and properly configured Deckhouse Kubernetes Platform, let's look at what you can do with it.
@@ -15,7 +16,7 @@ Access to the documentation is restricted via the authentication mechanism (addi
 
 - Login — `admin`
 - Password was generated automatically. You can find it out by running the command:
-  
+
   - For Deckhouse 1.46 or newer:
 
     ```bash
@@ -30,9 +31,11 @@ Access to the documentation is restricted via the authentication mechanism (addi
 
   {% offtopic title="Sample output..." %}
 ```
+
 $ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values documentation -o json | jq -r '.internal.auth.password'" 
 3aE7nY1VlfiYCH4GFIqA
 ```
+
   {% endofftopic %}
 </div>
 

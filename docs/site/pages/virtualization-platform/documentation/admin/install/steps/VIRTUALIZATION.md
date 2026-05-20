@@ -92,6 +92,7 @@ You can modify the configuration of the `virtualization` module through the admi
 ```shell
 d8 k edit mc virtualization
 ```
+
 ## Parameter description
 
 The following are descriptions of the virtualization module parameters.
@@ -121,6 +122,7 @@ spec:
   settings:
     ingressClass: nginx
 ```
+
 {% alert level="info" %}
 
 When uploading large virtual machine images (especially over slow connections), it is recommended to increase the Ingress controller worker shutdown timeout. This prevents upload interruption during Ingress controller restart or update.
@@ -136,6 +138,7 @@ spec:
   config:
     worker-shutdown-timeout: 1800s  # 30 minutes or more if needed
 ```
+
 {% endalert %}
 
 ### Network settings
@@ -152,6 +155,7 @@ spec:
       - 10.66.20.0/24
       - 10.77.20.0/16
 ```
+
 For each subnet, the first and last IP addresses are reserved by the system and cannot be assigned to virtual machines. For example, for the `10.66.10.0/24` subnet, addresses `10.66.10.0` and `10.66.10.255` are not available for use by VMs.
 
 {% alert level="warning" %}
@@ -176,6 +180,7 @@ spec:
       - sc-2
       defaultStorageClassName: sc-1
 ```
+
 Where:
 
 - `allowedStorageClassNames` (optional): A list of the allowed StorageClasses for creating a VirtualImage that can be explicitly specified in the resource specification.
@@ -197,6 +202,7 @@ spec:
       - sc-2
       defaultStorageClassName: sc-1
 ```
+
 Where:
 
 - `allowedStorageClassNames` (optional): A list of the allowed StorageClass for creating a VirtualDisk that can be explicitly specified in the resource specification.
@@ -220,6 +226,7 @@ To enable security event auditing:
        audit:
          enabled: true
    ```
+
 For a complete list of configuration options, see [Configuration](/modules/virtualization/configuration.html).
 
 Events are collected by the `virtualization-audit-*` pod in the `d8-virtualization` namespace. To forward events to the cluster logging system (e.g., Loki), create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
@@ -241,11 +248,13 @@ spec:
         app: virtualization-audit
   type: KubernetesPods
 ```
+
 To view events in Grafana, use a Loki query:
 
 ```logql
 {namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
 ```
+
 Available fields in the logs:
 - `type`: Event type (Access to VM, VM Management, etc.).
 - `name`: Human-readable description.

@@ -25,6 +25,7 @@ You need to create a Yandex Cloud service account with the editor role to manage
    yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
+
 1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 
    ```shell

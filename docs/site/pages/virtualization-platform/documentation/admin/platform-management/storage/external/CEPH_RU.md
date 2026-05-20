@@ -47,17 +47,28 @@ kind: CephClusterConnection
 metadata:
   name: ceph-cluster-1
 spec:
+
   # FSID/UUID Ceph-кластера.
+
   # Получить FSID/UUID Ceph-кластера можно с помощью команды `ceph fsid`.
+
   clusterID: 2bf085fc-5119-404f-bb19-820ca6a1b07e
+
   # Список IP-адресов ceph-mon’ов в формате `10.0.0.10:6789`.
+
   monitors:
     - 10.0.0.10:6789
+
   # Имя пользователя без `client.`.
+
   # Получить имя пользователя можно с помощью команды `ceph auth list`.
+
   userID: admin
+
   # Ключ авторизации, соответствующий userID.
+
   # Получить ключ авторизации можно с помощью команды `ceph auth get-key client.admin`.
+
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 EOF
 ```
@@ -125,6 +136,7 @@ ceph-fs-sc    Created   1h
 ```shell
 d8 k get sc
 ```
+
 В результате будет выведена информация о созданном StorageClass:
 
 ```console
@@ -145,6 +157,7 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 
 ```
+
 ## Поддерживаемые версии Ceph
 
 - Официальная поддержка — Ceph версии 16.2.0 и выше.
@@ -173,11 +186,13 @@ spec:
   userID: admin
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 ```
+
 Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
 
 ```shell
 d8 k get cephclusterconnection <имя cephclusterconnection>
 ```
+
 Пример описания [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass):
 
 - Для RBD
@@ -195,6 +210,7 @@ d8 k get cephclusterconnection <имя cephclusterconnection>
       defaultFSType: ext4
       pool: ceph-rbd-pool  
   ```
+
 - Для CephFS:
 
   ```yaml
@@ -209,6 +225,7 @@ d8 k get cephclusterconnection <имя cephclusterconnection>
     cephFS:
       fsName: cephfs
   ```
+
 Проверить создание объекта можно следующей командой (`Phase` должен быть `Created`):
 
 ```shell

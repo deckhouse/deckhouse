@@ -128,6 +128,7 @@ export CONTEXT_NAME=${CLUSTER_NAME}-${USER_NAME}
 export FILE_NAME=kube.config
 
 # For public CA, remove --certificate-authority and --embed-certs
+
 d8 k config set-cluster $CLUSTER_NAME \
   --server=https://${API_HOST} \
   --certificate-authority=/tmp/ca.crt \

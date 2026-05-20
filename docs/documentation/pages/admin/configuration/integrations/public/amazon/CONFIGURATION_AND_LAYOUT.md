@@ -30,18 +30,30 @@ provider:
   providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 masterNodeGroup:
+
   # Number of master nodes.
+
   # If you specify more than one master node, an etcd cluster will be created automatically.
+
   replicas: 1
   instanceClass:
+
     # Instance type to use.
+
     instanceType: m5.xlarge
+
     # ID of the Amazon Machine Image (AMI).
+
     # AMI catalog can be found in the AWS Console: EC2 → AMI Catalog.
+
     ami: ami-0aad10862ade98f27
+
     # Disk size for the master node VM.
+
     diskSizeGb: 30
+
     # Disk type to use for the master node VM.
+
     diskType: gp3
 nodeGroups:
   - name: mydb
@@ -90,18 +102,30 @@ withNAT:
       ami: ami-0aad10862ade98f27
       diskType: gp3
 masterNodeGroup:
+
   # Number of master nodes.
+
   # If you specify more than one master node, an etcd cluster will be created automatically.
+
   replicas: 1
   instanceClass:
+
     # Instance type to use.
+
     instanceType: m5.xlarge
+
     # ID of the Amazon Machine Image (AMI).
+
     # AMI catalog can be found in the AWS Console: EC2 → AMI Catalog.
+
     ami: ami-0aad10862ade98f27
+
     # Disk size for the master node VM.
+
     diskSizeGb: 30
+
     # Disk type to use for the master node VM.
+
     diskType: gp3
 nodeGroups:
   - name: mydb

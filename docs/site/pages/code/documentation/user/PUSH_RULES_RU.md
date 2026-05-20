@@ -27,7 +27,7 @@ weight: 50
 - ***Блокировать утечки секретов***  
 
   Попытка закоммитить файлы, подпадающие под следующие шаблоны, будет отклонена:
-  
+
   - `aws/credentials`,
   - `ssh/personal_rsa`, `ssh/personal_dsa`, `ssh/personal_ed25519`, `ssh/personal_ecdsa`, `ssh/personal_ecdsa_sk`, `ssh/personal_ed25519_sk`,
   - `ssh/server_rsa`, `ssh/server_dsa`, `ssh/server_ed25519`, `ssh/server_ecdsa`, `ssh/server_ecdsa_sk`, `ssh/server_ed25519_sk`,

@@ -5,13 +5,16 @@
 Создайте пользователя с именем `deckhouse`:
 
 {% snippetcut %}
+
 ```shell
 yc iam service-account create --name deckhouse
 ```
+
 {% endsnippetcut %}
 
 В ответ вернутся параметры пользователя:
 {% snippetcut %}
+
 ```console
 id: <userID>
 folder_id: <folderID>
@@ -25,15 +28,19 @@ name: deckhouse
 Назначьте роль `editor` вновь созданному пользователю для своего облака:
 
 {% snippetcut %}
+
 ```shell
 yc resource-manager folder add-access-binding <folderID> --role editor --subject serviceAccount:<userID>
 ```
+
 {% endsnippetcut %}
 
 Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
 
 {% snippetcut %}
+
 ```shell
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
+
 {% endsnippetcut %}

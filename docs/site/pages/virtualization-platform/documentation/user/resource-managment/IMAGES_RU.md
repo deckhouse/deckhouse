@@ -85,9 +85,13 @@ lang: ru
    metadata:
      name: ubuntu-24-04
    spec:
+
      # Сохраним образ в DVCR.
+
      storage: ContainerRegistry
+
      # Источник для создания образа.
+
      dataSource:
        type: HTTP
        http:
@@ -99,7 +103,9 @@ lang: ru
 
    ```bash
    d8 k get virtualimage ubuntu-24-04
+
    # или более короткий вариант
+
    d8 k get vi ubuntu-24-04
    ```
 
@@ -131,6 +137,7 @@ lang: ru
 ```bash
 d8 k get vi ubuntu-24-04 -w
 ```
+
 Пример вывода:
 
 ```console
@@ -150,6 +157,7 @@ ubuntu-24-04   Ready          false   100%       18s
 ```bash
 d8 k describe vi ubuntu-24-04
 ```
+
 Как создать образ с HTTP-сервера в веб-интерфейсе:
 
 - Перейдите на вкладку «Проекты» и выберите нужный проект.
@@ -171,23 +179,31 @@ kind: VirtualImage
 metadata:
   name: ubuntu-24-04-pvc
 spec:
+
   # Настройки хранения проектного образа.
+
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
+
     # Подставьте ваше название StorageClass.
+
     storageClassName: rv-thin-r2
+
   # Источник для создания образа.
+
   dataSource:
     type: HTTP
     http:
       url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
+
 Проверьте результат создания `VirtualImage`:
 
 ```bash
 d8 k get vi ubuntu-24-04-pvc
 ```
+
 Пример вывода:
 
 ```console
@@ -220,17 +236,20 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
    ```bash
    curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
    ```
+
 1. Создайте `Dockerfile` со следующим содержимым:
 
    ```Dockerfile
    FROM scratch
    COPY ubuntu2204.img /disk/ubuntu2204.img
    ```
+
 1. Соберите образ и загрузите его в container registry. В качестве container registry в примере ниже использован docker.io. Для выполнения необходимо иметь учетную запись сервиса и настроенное окружение.
 
    ```bash
    docker build -t docker.io/<username>/ubuntu2204:latest
    ```
+
    где `username` — имя пользователя, указанное при регистрации в docker.io.
 
 1. Загрузите созданный образ в container registry:
@@ -238,6 +257,7 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
    ```bash
    docker push docker.io/<username>/ubuntu2204:latest
    ```
+
 1. Чтобы использовать этот образ, создайте в качестве примера ресурс:
 
    ```yaml
@@ -254,6 +274,7 @@ ubuntu-24-04-pvc  Ready   false   100%       23h
          image: docker.io/<username>/ubuntu2204:latest
    EOF
    ```
+
 Как создать образ из Container Registry в веб-интерфейсе:
 
 - Перейдите на вкладку «Проекты» и выберите нужный проект.
@@ -277,13 +298,18 @@ kind: VirtualImage
 metadata:
   name: some-image
 spec:
+
   # Настройки хранения проектного образа.
+
   storage: ContainerRegistry
+
   # Настройки источника образа.
+
   dataSource:
     type: Upload
 EOF
 ```
+
 После создания, ресурс перейдет в фазу `WaitForUserUpload`, а это значит, что он готов для загрузки образа.
 
 Доступно два варианта загрузки с узла кластера и с произвольного узла за пределами кластера:
@@ -291,6 +317,7 @@ EOF
 ```bash
 d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```
+
 Пример вывода:
 
 ```json
@@ -299,21 +326,25 @@ d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
   "inCluster": "http://10.222.165.239/upload"
 }
 ```
+
 В качестве примера загрузите образ Cirros:
 
 ```bash
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
 ```
+
 Выполните загрузку образа с использование следующей команды
 
 ```bash
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
+
 После завершения загрузки образ должен быть создан и перейти в фазу `Ready`
 
 ```bash
 d8 k get vi some-image
 ```
+
 Пример вывода:
 
 ```console
@@ -357,6 +388,7 @@ spec:
       name: linux-vm-root
 EOF
 ```
+
 Как в веб-интерфейсе создать образ из диска:
 
 - Перейдите на вкладку «Проекты» и выберите нужный проект.

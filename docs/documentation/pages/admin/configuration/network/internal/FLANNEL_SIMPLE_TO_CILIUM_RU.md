@@ -57,6 +57,7 @@ lang: ru
      ```shell
      d8 k -n kube-system get ds d8-kube-proxy -oyaml > d8-kube-proxy.yaml
      ```
+
    - Выполните действия для восстановления запуска:
 
      ```shell
@@ -64,37 +65,49 @@ lang: ru
      d8 k -n kube-system delete ds d8-kube-proxy
      d8 k -n d8-cni-cilium delete po -l app=agent
      ```
+
    - Если запуск Cilium продолжается более 5 минут, перезапустите `kube-proxy`:
 
      ```shell
      d8 k -n kube-system delete pod -l k8s-app=kube-proxy
      ```
+
 1. Сохраните манифест DaemonSet:
 
    ```shell
    d8 k -n d8-cni-simple-bridge get ds simple-bridge -o yaml > simple-bridge.yaml
+
    # или
+
    d8 k -n d8-cni-flannel get ds flannel -o yaml > flannel.yaml
    ```
+
 1. Отключите модуль `cni-simple-bridge` или `cni-flannel`. Выполняйте шаг после того, как поды Cilium перешли в состояние `Ready`:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-simple-bridge
+
    # или
+
    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller module disable cni-flannel
    ```
+
 1. Удалите `validating webhook` (если присутствует):
 
    ```shell
    d8 k delete validatingwebhookconfigurations.admissionregistration.k8s.io d8-deckhouse-validating-webhook-handler-hooks
    ```
+
 1. Удалите неймспейс старого CNI (если не удалился автоматически):
 
    ```shell
    d8 k delete ns d8-cni-simple-bridge
+
    # или
+
    d8 k delete ns d8-cni-flannel
    ```
+
 1. (Опционально) Очистите артефакты старого CNI. При необходимости удалите интерфейс и сбросьте правила iptables:
 
    ```shell
@@ -112,14 +125,17 @@ lang: ru
    iptables -P FORWARD ACCEPT
    iptables -P OUTPUT ACCEPT
    ```
+
 1. Перезапустите все поды:
 
    ```shell
    d8 k delete pods -A --all --wait=false
    ```
+
 1. Настройте внутренние балансировщики LoadBalancer (при использовании). Для всех TargetGroup, входящих во внутренний балансировщик, установите параметр:
 
    ```text
    Preserve client IP addresses = Off
    ```
+
 1. Перезагрузите узлы кластера по одному, включая master-узлы.

@@ -215,6 +215,7 @@ d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
   --key /etc/kubernetes/pki/etcd/ca.key \
   --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
 ```
+
 Пример вывода при успешном выполнении операции:
 
 ```console
@@ -233,6 +234,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    ```bash
    d8 k -n kube-system get pod -l component=etcd -o wide
    ```
+
    Пример вывода:
 
    ```console
@@ -252,6 +254,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
      --cacert=/etc/kubernetes/pki/etcd/ca.crt \
      endpoint status --cluster -w table
    ```
+
    Пример вывода (у лидера в колонке `IS LEADER` будет значение `true`):
 
    ```console
@@ -280,6 +283,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
      --key /etc/kubernetes/pki/etcd/ca.key \
      --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
    ```
+
    Пример вывода при успешном выполнении операции:
 
    ```console

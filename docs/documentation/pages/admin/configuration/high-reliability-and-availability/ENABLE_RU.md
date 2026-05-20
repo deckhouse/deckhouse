@@ -119,7 +119,9 @@ lang: ru
            - europe-west3-b
          instanceClass:
            machineType: n1-standard-4
+
        # ... остальная часть манифеста
+
      ```
 
    * Сохраните изменения.
@@ -170,7 +172,9 @@ lang: ru
          taints:
            - key: node.deckhouse.io/etcd-arbiter
              effect: NoSchedule
+
      # ... остальная часть манифеста
+
    ```
 
 1. Добавьте [удобным вам способом](../platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере) в кластер узел, который будет использовать как arbiter-узел.

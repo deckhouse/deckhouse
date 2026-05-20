@@ -72,7 +72,7 @@ d8 k get module csi-huawei -w
       - 10.240.0.101
       - 10.250.0.101 
     maxClientThreads: 30
-  
+
   EOF
   ```
 

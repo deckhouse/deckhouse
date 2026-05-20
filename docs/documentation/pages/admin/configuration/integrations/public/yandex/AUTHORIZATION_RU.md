@@ -68,6 +68,7 @@ yc resource-manager folder add-access-binding --id <folderID> --role compute.edi
 yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
 yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
 ```
+
 ## Генерация авторизованного ключа
 
 Создайте JSON-файл с авторизацией для использования в конфигурации:
@@ -75,6 +76,7 @@ yc resource-manager folder add-access-binding --id <folderID> --role load-balanc
 ```shell
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
+
 Содержимое файла `deckhouse-sa-key.json` используйте в поле `provider.serviceAccountJSON` при описании конфигурации кластера.
 
 ## Проверка и увеличение квот
@@ -94,6 +96,7 @@ yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.jso
 ```shell
 yc vpc address create --external-ipv4 zone=ru-central1-a
 ```
+
 Пример вывода команды:
 
 ```console

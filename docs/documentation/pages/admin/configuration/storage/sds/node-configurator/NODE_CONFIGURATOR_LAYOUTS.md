@@ -166,6 +166,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 ##### Configuring the sds-replicated-volume module (identical disks, "Full mirror")
 
 To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module according to the "Full mirror" scenario, follow these steps:
@@ -186,6 +187,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
 1. Create a [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource in the `storagePool` field:
 
    ```shell
@@ -222,6 +224,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
      topology: Ignored
    EOF
    ```
+
 ### Partial mirror
 
 {% alert level="warning" %}
@@ -251,12 +254,14 @@ To configure a node according to the "Partial mirror" scenario, follow these ste
    ```shell
    vgchange main-safe --addtag storage.deckhouse.io/enabled=true
    ```
+
 1. Create a VG named `main-unsafe` from the second partitions of each disk.
 1. Set the tag `storage.deckhouse.io/enabled=true` for the VG `main-unsafe` using the following command:
 
    ```shell
    vgchange main-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
+
 1. Add the prepared node to the Deckhouse cluster.
 
    If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the [`sds-replicated-volume`](/modules/sds-replicated-volume/) or [`sds-local-volume`](/modules/sds-local-volume/) modules, the [`sds-node-configurator`](/modules/sds-node-configurator/) agent will run on this node, detect the VGs `main-safe` and `main-unsafe`, and add the corresponding [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to the Deckhouse cluster. These [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources can then be used to create volumes in the [`sds-replicated-volume`](/modules/sds-replicated-volume/) or [`sds-local-volume`](/modules/sds-local-volume/) modules.
@@ -270,6 +275,7 @@ To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegro
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
 ```
+
 The result will be the following list:
 
 ```console
@@ -304,6 +310,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 ##### Configuring the sds-replicated-volume module (identical disks, "Partial mirror")
 
 To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module according to the "Partial mirror" scenario, follow these steps:
@@ -324,6 +331,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
 1. Create a [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource named `data-unsafe` and add the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `main-unsafe` is used on all nodes in the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module for [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with the parameter `replication: Availability` or `replication: ConsistencyAndAvailability`:
 
    ```shell
@@ -340,6 +348,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
        - name: vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2
    EOF
    ```
+
 1. Create a [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resources in the `storagePool` field so that the VGs `main-safe` and `main-unsafe` are used on all nodes:
 
    ```shell
@@ -376,6 +385,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
      topology: Ignored
    EOF
    ```
+
 ## Combined storage
 
 Combined storage involves the simultaneous use of disks of different types on a node.
@@ -415,6 +425,7 @@ To configure additional disks on a node according to the "Full mirror" scenario,
    ```shell
    vgchange <vg-name> --addtag storage.deckhouse.io/enabled=true
    ```
+
 {% alert level="info" %}
 In the example above, replace `<vg-name>` with an informative name depending on the type of additional disks.
 
@@ -434,6 +445,7 @@ To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegro
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
 ```
+
 The result will be a list like this:
 
 ```console
@@ -467,6 +479,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 {% alert level="info" %}
 In the example above, replace `<local-storage-class-name>` with an informative name depending on the type of additional disks.
 
@@ -497,6 +510,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
    > In the example above, replace `<replicated-storage-pool-name>` with an informative name depending on the type of additional disks.
    >
    > Examples of informative names for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
@@ -541,6 +555,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
      topology: Ignored
    EOF
    ```
+
 ### Configuring additional disks (Partial mirror)
 
 {% alert level="warning" %}
@@ -568,6 +583,7 @@ To configure a node with additional disks according to the "Partial mirror" scen
    vgchange <vg-name>-safe --addtag storage.deckhouse.io/enabled=true
    vgchange <vg-name>-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
+
    > In the example above, replace `<vg-name>` with an informative prefix depending on the type of additional disks.
    >
    > Examples of informative prefixes `<vg-name>` for additional disks of different types:
@@ -585,6 +601,7 @@ To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegro
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
 ```
+
 The result will be a list like this:
 
 ```console
@@ -621,6 +638,7 @@ spec:
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
+
 {% alert level="info" %}
 In the example above, replace `<local-storage-class-name>` with an informative name depending on the type of additional disks.
 
@@ -651,6 +669,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
        - name: vg-c7863e12-c143-42bb-8e33-d578ce50d6c7
    EOF
    ```
+
    > In the example above, replace `data-<vg-name>-safe` with an informative name depending on the type of additional disks.
    >
    > Examples of informative names for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
@@ -675,6 +694,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
        - name: vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2
    EOF
    ```
+
    > In the example above, replace `data-<vg-name>-unsafe` with an informative name depending on the type of additional disks.
    >
    > Examples of informative names for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
@@ -719,6 +739,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
      topology: Ignored
    EOF
    ```
+
    > In the example above, replace `data-<vg-name>-unsafe` with an informative name depending on the type of additional disks.
    >
    > Examples of informative names for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:

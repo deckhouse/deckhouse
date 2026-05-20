@@ -66,30 +66,43 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+
   # The controller to scale (reference to a Deployment or StatefulSet).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: myapp
   minReplicas: 1
   maxReplicas: 2
+
   # Metrics used for scaling.
+
   metrics:
   - type: Object
     object:
+
       # The object that owns the metrics in Prometheus.
+
       describedObject:
         apiVersion: networking.k8s.io/v1
         kind: Ingress
         name: myingress
       metric:
+
         # The metric registered via a custom resource like IngressMetric or ClusterIngressMetric.
+
         # You can also use built-in metrics like rps_1m, rps_5m, or rps_15m provided by the prometheus-metrics-adapter module.
+
         name: mymetric
       target:
+
         # For Object-type metrics, use either `Value` or `AverageValue`.
+
         type: AverageValue
+
         # Scaling will occur if the average value of the metric across all pods in the Deployment differs significantly from 10.
+
         averageValue: 10
 ```
 
@@ -105,17 +118,26 @@ Example:
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
+
   # Recommended naming pattern for your CustomPrometheusRules.
+
   name: prometheus-metrics-adapter-mymetric
 spec:
   groups:
+
   # Recommended group name pattern.
+
   - name: prometheus-metrics-adapter.mymetric
     rules:
+
     # Name of your custom metric.
+
     # Important! The prefix 'kube_adapter_metric_' is required.
+
     - record: kube_adapter_metric_mymetric
+
       # PromQL query that defines the metric. Avoid including unnecessary labels.
+
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
@@ -143,31 +165,31 @@ When dealing with unstable metrics (e.g., metrics that fluctuate and cause exces
 
 To get a list of available metrics, use the following command:
 
-```console
-d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
+  ```
+  {: .nowrap-default }
 
 To retrieve metric values associated with specific objects, use:
 
-```console
-d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+  ```
+  {: .nowrap-default }
 
 To get values of metrics created via `NamespaceMetric`, use:
 
-```console
-d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+  ```
+  {: .nowrap-default }
 
 To retrieve external metrics, use:
 
-```console
-d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
+  ```
+  {: .nowrap-default }
 
 ### Configuring autoscaling in the Deckhouse Web Interface
 

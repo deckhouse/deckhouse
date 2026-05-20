@@ -164,9 +164,13 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
      name: ghcr
    spec:
      registry:
+
        # Insert your GitHub username (or organization), e.g., ghcr.io/octocat/modules.
+
        repo: ghcr.io/<!OWNER>/modules
+
        # Paste the authentication string for accessing GitHub Packages that you got in the previous step
+
        dockerCfg: <!REGISTRY_CREDENTIALS>
    EOF
    ```
@@ -200,6 +204,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
        mode: Auto
    EOF
    ```
+
 1. Create a ModuleConfig where you specify the module source (the `source` parameter), the update policy (the `updatePolicy` parameter), and set the `enabled` parameter to `true`:
 
    ```shell
@@ -213,16 +218,19 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
          source: ghcr
          updatePolicy: helloworld-policy
    ```
+
 1. Check the ModuleSource (the status should have no errors and list the available modules):
 
    ```shell
    d8 k get ms ghcr -o yaml
    ```
+
 1. Confirm that the new [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) objects have been created for the module:
 
    ```shell
    d8 k get mr
    ```
+
    An example of output:
 
    ```console
@@ -237,6 +245,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    ```shell
    d8 k -n d8-system get pod -l app=deckhouse
    ```
+
    After a while, the module objects will be available in the cluster.
 
    If you run into errors while starting the module, check the DKP log:
@@ -244,11 +253,13 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    ```shell
    d8 k -n d8-system logs deploy/deckhouse -f | jq -rc '.msg'
    ```
+
   or check the status of the DKP queue:
 
    ```shell
    d8 system queue list
    ```
+
 ## Migration of ModuleUpdatePolicy to version v1alpha2
 
 If there is a ModuleUpdatePolicy of version v1alpha1 in the cluster, the following migration steps to version v1alpha2 must be performed:
@@ -261,4 +272,5 @@ If any ModuleUpdatePolicy of version v1alpha1 in the cluster defines `moduleRele
   d8 k patch moduleupdatepolicies.v1alpha1.deckhouse.io <MUP_NAME> --type='json' \
     -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
   ```
+
 {% endraw %}

@@ -41,7 +41,7 @@ This feature allows you to configure integration with a Vault server and use sec
    ```
 
    > Always use `bound_claims` to restrict access to the role. Otherwise, any JWT issued by the platform will be able to authenticate using this role.
-  
+
 1. Create a policy:
 
    ```bash
@@ -175,13 +175,16 @@ export VAULT_ADDR="https://vault.example.com"
 export VAULT_TOKEN="<your-token>"
 
 # Deckhouse Code URL.
+
 export CODE_URL="https://code.example.com"
 
 # Vault role and policy names.
+
 export VAULT_ROLE="code-role"
 export VAULT_POLICY="code-policy"
 
 # Secret path and data.
+
 export VAULT_SECRET_PATH="code/vault-demo"
 export VAULT_SECRET_FIELD="DATABASE_PASSWORD"
 export VAULT_SECRET_VALUE="super-secret-password"
@@ -325,7 +328,7 @@ At this point, the Vault configuration is complete.
    ```yml
    stages:
      - test
-   
+
    vault-demo:
      stage: test
      image: alpine
@@ -340,7 +343,7 @@ At this point, the Vault configuration is complete.
      script:
        - echo "Raw value (masked by GitLab):"
        - echo "$DATABASE_PASSWORD"
-   
+
        - echo
        - echo "Value with spaces (not masked):"
        - printf '%s\n' "$DATABASE_PASSWORD" | sed 's/./& /g'
@@ -548,7 +551,9 @@ deploy-main:
 Example of configuring a Vault role with bound claims based on branch for access control:
 
 ```bash
+
 # Role for `develop` — access only from `develop` branch.
+
 vault write auth/jwt/role/myapp-develop - <<EOF
 {
   "role_type": "jwt",
@@ -565,6 +570,7 @@ vault write auth/jwt/role/myapp-develop - <<EOF
 EOF
 
 # Role for `main` — access only from `main` branch (protected).
+
 vault write auth/jwt/role/myapp-main - <<EOF
 {
   "role_type": "jwt",

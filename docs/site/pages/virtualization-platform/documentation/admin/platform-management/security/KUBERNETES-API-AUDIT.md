@@ -135,8 +135,9 @@ If the API server fails to start, take the following steps:
 
    ```shell
    docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
-   
+
    # Alternative option (depending on the CRI in use).
+
    crictl stopp $(crictl pods --name=kube-apiserver -q)
    ```
 

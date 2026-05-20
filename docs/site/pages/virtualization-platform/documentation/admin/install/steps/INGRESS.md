@@ -20,21 +20,29 @@ Create an IngressNginxController resource that describes the parameters for the 
 
 ```yaml
 d8 k apply -f - <<EOF
+
 # Section describing the Ingress NGINX Controller parameters.
+
 # https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller
+
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
   ingressClass: nginx
+
   # Method of traffic entry from the outside world.
+
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
+
   # Describes which nodes will host the Ingress controller.
+
   # You might want to change this.
+
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
@@ -75,6 +83,7 @@ Ensure that the subdomains resolve to the IP address of the node where the Ingre
 ```shell
 d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
+
 {% offtopic title="Example outputs..." %}
 
 Example output if a custom Wildcard domain was used:
@@ -162,6 +171,7 @@ $PUBLIC_IP upmeter.$CLUSTER_DOMAIN
 EOF
 "
 ```
+
 ## Creating a User
 
 To access the cluster's web interfaces, you can create a static user:
@@ -171,6 +181,7 @@ To access the cluster's web interfaces, you can create a static user:
    ```shell
    echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
+
    `<USER-PASSWORD>` — the password to be set for the user.
 
 1. Create the user:
@@ -199,6 +210,7 @@ To access the cluster's web interfaces, you can create a static user:
 
    EOF
    ```
+
 Now you can log in to the cluster web interfaces using your email and password. For further configuration, it is recommended to review the section [Access Control / Role Model](../../platform-management/access-control/role-model.html).
 
 ## Enable console module

@@ -109,7 +109,9 @@ d8 k create -f cni-migration.yaml
 
 ```bash
 d8 k get cnimigration migration-to-cilium -o yaml -w
+
 # или
+
 watch -n 1 "d8 k get cnimigration migration-to-cilium -o yaml"
 ```
 

@@ -26,10 +26,15 @@ lang: ru
      name: my-module-policy
    spec:
      releaseChannel: Alpha
+
      # При необходимости, укажите режим обновления и окна обновления.
+
      # update:
+
      #   mode: AutoPatch
+
      #   windows: []
+
    ```
 
    Убедитесь, что политика создана:
@@ -55,6 +60,7 @@ lang: ru
    ```shell
    d8 k edit mc my-module
    ```
+
    Пример ModuleConfig:
 
    ```yaml
@@ -64,9 +70,12 @@ lang: ru
      name: my-module
    spec:
      enabled: true
+
      # Имя ModuleUpdatePolicy.
+
      updatePolicy: my-module-policy
    ```
+
 При изменении канала обновлений модуля, его установленная версия изменится согласно настроенному режиму обновления.
 
 Чтобы посмотреть текущий канал обновлений модуля и другую информацию о его состоянии в кластере, используйте соответствующий объект [Module](reference/api/cr.html#module).
@@ -76,6 +85,7 @@ lang: ru
 ```shell
 d8 k get module my-module -o yaml
 ```
+
 Используемая политика обновления будет указана в поле `properties.updatePolicy`, текущий канал обновлений — в поле `properties.releaseChannel`. Пример вывода:
 
 ```yaml
@@ -83,11 +93,17 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: my-module
+
   # ...
+
 properties:
+
   # ...
+
   releaseChannel: Alpha # Канал обновлений модуля.
   updatePolicy: my-module-policy # Политика обновлений модуля.
   version: v1.16.10  # Версия модуля.
+
   # ...
+
 ```

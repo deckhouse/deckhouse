@@ -13,7 +13,7 @@ Follow these steps to run the module in a cluster:
 - [Define ModuleSource](#module-source) (the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource).
 - _(optional)_ Define the [module update policy](#module-update-policy) (the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource).
 - [Enable the module in the cluster](#enabling-the-module) (the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource).
-  
+
 ### Module source
 
 Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
@@ -89,11 +89,13 @@ The complete list of modules available from all module sources created in the cl
 ```shell
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
+
 After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
 
 ```shell
 d8 k get module
 ```
+
 Example of getting a list of modules:
 
 ```console
@@ -109,6 +111,7 @@ To get additional information about the module, use the following command:
 ```shell
 d8 k get module module-one -oyaml
 ```
+
 Example of output:
 
 ```yaml
@@ -143,6 +146,7 @@ status:
     type: IsReady
   phase: Available
 ```
+
 You can find available sources from which the module can be downloaded in the Module (there is only one in the example).
 
 Next, you need to enable the module. To do this, you need to create a ModuleConfig with the name of the module.
@@ -162,6 +166,7 @@ spec:
   enabled: true
   source: example
 ```
+
 {% alert level="warning" %}
 If there are mandatory parameters in the module configuration and the module is enabled without specifying them, a configuration validation error will occur. In this case, the [`D8DeckhouseModuleValidationError`](../../../reference/alerts.html#monitoring-deckhouse-d8deckhousemodulevalidationerror) alert will appear, and the module will not be successfully activated.
 
@@ -170,6 +175,7 @@ To get more details, use the following command:
 ```shell
 d8 k get mr -l module=<MODULE_NAME>
 ```
+
 Make sure to specify the required configuration parameters in `ModuleConfig` according to the module’s documentation.
 {% endalert %}
 
@@ -180,6 +186,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Downloading   False     False
 ```
+
 {% alert level="warning" %}
 If the module has not entered the download phase, check the module source (ModuleSource), as the module may not be able to download.
 {% endalert %}
@@ -191,6 +198,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE         ENABLED   READY
 module-one           example  Installing    False     False
 ```
+
 If the module was successfully installed, it will enter the `Ready` phase:
 
 ```shell
@@ -198,6 +206,7 @@ $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE  ENABLED  READY
 module-one           example  Ready  True     True
 ```
+
 Example of a Module object in the cluster when the module has been successfully installed:
 
 ```yaml
@@ -240,6 +249,7 @@ status:
   hooksState: 'v0.7.24/hooks/moduleVersion.py: ok'
   phase: Ready
 ```
+
 In the Module, you can see the current installed version of the module, its size, the source from which it was downloaded, its dependencies, and the release channel.
 
 In case of any errors, the module will enter the `Error` phase:
@@ -269,6 +279,7 @@ You can view the list of releases using the following command:
 ```shell
 d8 k get mr
 ```
+
 An example of retrieving the list of module releases:
 
 ```console
@@ -292,11 +303,13 @@ If a module release is `Pending`, it means that manual confirmation is required 
 ```shell
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
+
 This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve <module-name> <version>
 ```
+
 {% endalert %}
 
 ### Switching the module to a different module source
@@ -311,6 +324,7 @@ Follow these steps to deploy a module from a different module source:
    ```shell
    d8 k get mr
    ```
+
 ### Module update policy
 
 The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
@@ -338,6 +352,7 @@ spec:
       from: "13:30"
       to: "14:00"
 ```
+
 The update policy is specified in the `updatePolicy` field in ModuleConfig.
 
 ### Enabling the module
@@ -347,6 +362,7 @@ Before enabling the module, make sure that it can be enabled. Run the following 
 ```shell
 d8 k get modules
 ```
+
 The module must be in the list.
 
 Below is an example of the output:
@@ -371,6 +387,7 @@ You can enable the module similarly to built-in DKP modules using any of the fol
   ```shell
   d8 system module enable <MODULE_NAME>
   ```
+
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
   Below is an example of a [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) that enables and configures the `module-one` module in the cluster:
@@ -386,6 +403,7 @@ You can enable the module similarly to built-in DKP modules using any of the fol
       parameter: value
     version: 1
   ```
+
 ### Troubleshooting
 
 If there were errors while enabling a module in the cluster, you can learn about them as follows:
@@ -394,6 +412,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   ```shell
   d8 k -n d8-system logs -l app=deckhouse
   ```
+
 - View the Module object in more detail:
 
   ```console
@@ -401,7 +420,6 @@ If there were errors while enabling a module in the cluster, you can learn about
   ```
   {: .nowrap-default }
 
-  
 - View the ModuleConfig object of the module.
 
   Here is an example of the error message for `module-one`:
@@ -429,6 +447,7 @@ Similar to [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/ref
 ```shell
 d8 k get mr
 ```
+
 Output example:
 
 ```console
@@ -443,11 +462,13 @@ The example output above illustrates ModuleRelease message when the update mode 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
 ```
+
 This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve module-1 v1.23.2
 ```
+
 ## Integrating Deckhouse Module Tools for Module Validation
 
 To enable automatic validation of the module structure and, if needed, metrics reporting, you can integrate Deckhouse Module Tools (DMT) into your build process.
@@ -473,6 +494,7 @@ jobs:
          DMT_METRICS_URL: ${{ secrets.DMT_METRICS_URL }}
          DMT_METRICS_TOKEN: ${{ secrets.DMT_METRICS_TOKEN }}
 ```
+
 {% endraw %}
 
 The `DMT_METRICS_URL` and `DMT_METRICS_TOKEN` variables are optional. If set, the DMT will send telemetry to the specified endpoint.
@@ -499,6 +521,7 @@ For GitLab projects, ready-to-use templates are available and can be included in
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Setup.gitlab-ci.yml
       - remote: https://raw.githubusercontent.com/deckhouse/modules-gitlab-ci/refs/heads/main/templates/Build.gitlab-ci.yml
     ```
+
    Example of template inclusion:  
    [GitLab `.gitlab-ci.yml`, line 2](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L2)
 
@@ -508,6 +531,7 @@ For GitLab projects, ready-to-use templates are available and can be included in
     Lint:
       extends: .lint
     ```
+
    For an example of how to add a check step, see [GitLab `.gitlab-ci.yml`, line 48](https://fox.flant.com/deckhouse/flant-integration/-/blob/main/.gitlab-ci.yml?ref_type=heads#L48).
 
 > If your project is hosted in the [https://fox.flant.com/deckhouse](https://fox.flant.com/deckhouse) group, the metrics variables are already configured. No additional setup is required.

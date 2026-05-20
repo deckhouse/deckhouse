@@ -36,7 +36,9 @@ spec:
       detectionStrategy: DefaultRoute # В качестве служебной сетевой карты используется та, через которую проложен дефолтный маршрут.
     virtualIPAddresses:
     - address: 42.43.44.101/32
+
       # В приведённом примере IP-адреса переходят по тем же сетевым интерфейсам, по которым передаётся служебный VRRP-трафик, поэтому параметр interface указывать не требуется.
+
   - id: 2
     interface:
       detectionStrategy: DefaultRoute
@@ -69,7 +71,9 @@ spec:
       networkAddress: 192.168.42.0/24
     virtualIPAddresses:
     - address: 192.168.42.1/24
+
       # Так как локальная сеть уже определена выше, параметр interface для этого IP можно не указывать.
+
     - address: 42.43.44.1/28
       interface:
         detectionStrategy: Name

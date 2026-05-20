@@ -29,7 +29,9 @@ lang: ru
    Пример настройки для группы узлов:
 
    ```yaml
+
    # NodeGroup для облачных узлов в AWS.
+
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:

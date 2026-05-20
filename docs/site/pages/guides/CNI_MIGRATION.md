@@ -109,7 +109,9 @@ Monitor the status of the CNIMigration resource:
 
 ```bash
 d8 k get cnimigration migration-to-cilium -o yaml -w
+
 # OR
+
 watch -n 1 "d8 k get cnimigration migration-to-cilium -o yaml"
 ```
 

@@ -4,6 +4,7 @@
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 ## Accessing to the master node
+
 Deckhouse have finished installation process. It remains to make some settings, for which you need to connect to the **master node**.
 
 Connect to the master node via SSH (the IP address of the master node was printed by the installer upon completion of the installation, but you can also find it using the cloud provider web interface/CLI tool):
@@ -20,11 +21,13 @@ sudo -i d8 k get nodes
 
 {% offtopic title="Example of the output..." %}
 ```
+
 $ sudo -i d8 k get nodes
 NAME                                     STATUS   ROLES                  AGE   VERSION
 cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
 cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
 ```
+
 {%- endofftopic %}
 
 {%- if page.platform_type == "cloud" %}
@@ -45,11 +48,13 @@ Wait for the Pods to switch to `Ready` state.
 
 {% offtopic title="Example of the output..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get po
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          16h
 kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 ```
+
 {%- endofftopic %}
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' and page.platform_code != 'vcd' %}
@@ -63,10 +68,12 @@ The `EXTERNAL-IP` value must be filled with a public IP address or DNS name.
 
 {% offtopic title="Example of the output..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
 nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
 ```
+
 {%- endofftopic %}
 {% endif %}
 
@@ -84,25 +91,30 @@ The guide will use [sslip.io](https://sslip.io/) to simplify configuration.
 Run the following command on **the master node** to get the load balancer IP and to configure [template for DNS names](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) to use the *sslip.io*:
 {% if page.platform_code == 'aws' %}
 {% raw %}
+
 ```shell
 BALANCER_IP=$(dig $(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
 echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+
 {% endraw %}
 {% else %}
 {% raw %}
+
 ```shell
 BALANCER_IP=$(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
 echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+
 {% endraw %}
 {% endif %}
 
 The command will also print the DNS name template set in the cluster. Example output:
+
 ```text
 Balancer IP is '1.2.3.4'.
 moduleconfig.deckhouse.io/global patched
@@ -120,10 +132,12 @@ Instead of using *sslip.io*, you can use other options.
 
 Then, run the following command on the **master node** (specify the template for DNS names to use in the <code>DOMAIN_TEMPLATE</code> variable):
 <div markdown="1">
+
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+
 </div>
 {% endofftopic %}
 {% endif %}
@@ -135,10 +149,12 @@ Configure DNS for Deckhouse services using one of the following methods:
 
 Then, run the following command on the **master node** (specify the template for DNS names to use in the <code>DOMAIN_TEMPLATE</code> variable):
 {% raw %}
+
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+
 {% endraw %}
 {% endif %}
 

@@ -137,6 +137,7 @@ To properly restore a multi-master cluster, follow these steps:
    ```shell
    d8 k delete node <MASTER_NODE_NAME>
    ```
+
    > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/upstreams.json` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
 
 1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
@@ -146,6 +147,7 @@ To properly restore a multi-master cluster, follow these steps:
    ```shell
    d8 system queue main
    ```
+
 1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
 
 Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
@@ -173,6 +175,7 @@ In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#backing-up-et
   make release
   build/auger -h
   ```
+
 - Resulting executable `build/auger`, and also the `snapshot` from the backup copy of etcd must be uploaded on master-node, on which following actions would be performed.
 
 Following actions are performed on a master node, to which `etcd snapshot` file and `auger` tool were copied:
@@ -182,6 +185,7 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
    ```shell
    chmod 644 etcd-backup.snapshot
    ```
+
 1. Set full path for snapshot file and for the tool into environmental variables:
 
    ```shell
@@ -189,6 +193,7 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
    AUGER_BIN=/root/auger 
    chmod +x $AUGER_BIN
    ```
+
 1. Run a Pod with temporary instance of `etcd`.
    - Create Pod manifest. It should schedule on current master node by `$HOSTNAME` variable, and mounts snapshot file by `$SNAPSHOT` variable, which it then restores in temporary `etcd` instance:
 
@@ -213,12 +218,19 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
+
          # Uncomment the fragment below to set limits for the container if the node does not have enough resources to run it.
+
          # resources:
+
          #   requests:
+
          #     ephemeral-storage: "200Mi"
+
          #   limits:
+
          #     ephemeral-storage: "500Mi"
+
          volumeMounts:
          - name: etcddir
            mountPath: /default.etcd
@@ -237,20 +249,26 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        volumes:
        - name: etcddir
          emptyDir: {}
+
          # Use the snippet below instead of emptyDir: {} to set limits for the container if the node's resources are insufficient to run it.
+
          # emptyDir:
+
          #  sizeLimit: 500Mi
+
        - name: etcd-snapshot
          hostPath:
            path: $SNAPSHOT
            type: File
      EOF
      ```
+
    - Create Pod from the resulting manifest:
 
      ```shell
      d8 k create -f etcd.pod.yaml
      ```
+
 1. Set environment variables. In this example:
 
    - `infra-production` — namespace which we will search resources in.
@@ -264,6 +282,7 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
      BACKUP_OUTPUT_DIR=/root/etcd-restore/output
      mkdir -p $BACKUP_OUTPUT_DIR && cd $BACKUP_OUTPUT_DIR
      ```
+
 1. Commands below will filter needed resources by `$FILTER` and output them into `$BACKUP_OUTPUT_DIR` directory:
 
    ```shell
@@ -276,6 +295,7 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
      echo $BACKUP_OUTPUT_DIR/$FILENAME.yaml
    done
    ```
+
 1. [Restore objects](#restoring-cluster-objects-from-exported-yaml-files) from exported YAML files.
 
 1. Delete the Pod with a temporary instance of etcd:
@@ -283,6 +303,7 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
    ```bash
    d8 k -n default delete pod etcdrestore
    ```
+
 ### Restoring cluster objects from exported YAML files
 
 To restore objects from exported YAML files, follow these steps:
@@ -300,6 +321,7 @@ To restore objects from exported YAML files, follow these steps:
    ```shell
    d8 k create -f <PATH_TO_FILE>.json
    ```
+
    You can specify either a single file or a directory path.
 
 1. To restore multiple objects at once, use the `find` command:
@@ -307,6 +329,7 @@ To restore objects from exported YAML files, follow these steps:
    ```shell
    find $BACKUP_OUTPUT_DIR -type f -name "*.yaml" -exec d8 k create -f {} \;
    ```
+
    This will locate all `.yaml` files within the specified `$BACKUP_OUTPUT_DIR` and apply them sequentially using `d8 k create`.
 
 After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the YAML files.
@@ -387,6 +410,7 @@ crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
 systemctl daemon-reload
 systemctl restart kubelet.service
 ```
+
 {% endofftopic %}
 
 ### Manual object restore after changing the IP address
@@ -400,12 +424,14 @@ If you prefer to manually make changes during cluster recovery after the master 
      ```shell
      mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
      ```
+
    - Create a directory to temporarily store the previous etcd data:
 
      ```shell
      mkdir ./etcd_old
      mv /var/lib/etcd ./etcd_old
      ```
+
    - Find or download the `etcdutl` utility if it’s not available, and perform the snapshot restore:
 
      ```shell
@@ -416,11 +442,13 @@ If you prefer to manually make changes during cluster recovery after the master 
        etcd-backup.snapshot \
        --data-dir=/var/lib/etcd
      ```
+
    - Restore the etcd manifest so kubelet starts the etcd pod again:
 
      ```shell
      mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
      ```
+
    - Verify etcd is running by checking the pod list using `crictl ps | grep etcd` or reviewing the kubelet logs.
 
 1. Update the IP address in static configuration files. If the old IP address is used in manifests or kubelet services, replace it with the new one:
@@ -433,6 +461,7 @@ If you prefer to manually make changes during cluster recovery after the master 
     find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     ```
+
 1. Regenerate certificates issued for the old IP address:
 
    - Prepare a directory to store the old certificates:
@@ -443,6 +472,7 @@ If you prefer to manually make changes during cluster recovery after the master 
      mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
      mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
      ```
+
    - Install or download kubeadm to match the current Kubernetes version:
 
      ```shell
@@ -450,11 +480,13 @@ If you prefer to manually make changes during cluster recovery after the master 
      curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
      chmod +x kubeadm
      ```
+
    - Generate new certificates with the updated IP:
 
      ```shell
      ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
      ```
+
      The new IP address will be included in the generated certificates.
 
 1. Restart all services that use the updated configuration and certificates. To immediately stop active containers, run:
@@ -467,6 +499,7 @@ If you prefer to manually make changes during cluster recovery after the master 
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
+
     Kubelet will restart the necessary pods, and Kubernetes components will load the new certificates.
 
 1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
@@ -493,6 +526,7 @@ To create a snapshot, run the following command:
 ```shell
 d8 backup etcd <path-to-snapshot> [flags]
 ```
+
 Flags:
 
 - `-p`, `--etcd-pod string`: Name of the etcd pod to snapshot.
@@ -504,6 +538,7 @@ Example:
 ```shell
 d8 backup etcd etcd-backup.snapshot
 ```
+
 Example output:
 
 ```console
@@ -521,6 +556,7 @@ etcdctl snapshot save etcd-backup.snapshot
 tar -czvf etcd-backup.tar.gz etcd-backup.snapshot
 mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
 ```
+
 To configure automatic etcd backups, use the [`control-plane-manager`](/modules/control-plane-manager/) module. The required parameters are specified in its configuration:
 
 | Parameter                  | Description                                                                 |
@@ -545,6 +581,7 @@ spec:
         cronSchedule: 0 14 * * *
         enabled: true
 ```
+
 ### Cluster configuration backup
 
 The `d8 backup cluster-config` command creates an archive containing a set of key resources related to the cluster configuration. This is not a full backup of all objects, but a specific whitelist.
@@ -554,11 +591,13 @@ To create the backup, run the following command:
 ```shell
 d8 backup cluster-config <path-to-backup-file>
 ```
+
 Example:
 
 ```shell
 d8 backup cluster-config /backup/cluster-config-2025-04-21.tar
 ```
+
 The archive includes only those objects that meet the following criteria:
 
 - CustomResource objects whose CRDs are annotated with:
@@ -658,16 +697,19 @@ subjects:
     name: loki
     namespace: d8-monitoring
 ```
+
 To create a log backup, run the following command:
 
 ```shell
 d8 backup loki [flags]
 ```
+
 Example:
 
 ```shell
 d8 backup loki --days 1 > ./loki.log
 ```
+
 Flags:
 
 - `--start`, `--end`: Time range boundaries in the format "YYYY-MM-DD HH:MM:SS".

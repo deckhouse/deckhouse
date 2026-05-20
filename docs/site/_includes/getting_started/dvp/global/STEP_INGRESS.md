@@ -12,23 +12,32 @@ Set up the Ingress controller and DNS.
 <ol>
   <li><p><strong>Setting up an Ingress controller</strong></p>
 <div markdown="1">
+
 ```shell
 sudo d8 k apply -f - <<EOF
+
 # The parameters of the Ingress NGINX Controller.
+
 # https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller
+
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
   ingressClass: nginx
+
   # The way traffic goes to cluster from the outer network.
+
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
+
   # Describes on which nodes the Ingress Controller will be located.
+
   # You might consider changing this.
+
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
@@ -37,17 +46,21 @@ spec:
     operator: Exists
 EOF
 ```
+
 </div>
 <p>
 It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):</p>
 <div markdown="1">
+
 ```shell
 sudo d8 k -n d8-ingress-nginx get po -l app=controller
 ```
+
 </div>
 <p>Wait for the Ingress controller pods to switch to <code>Running</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
+
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
@@ -92,6 +105,7 @@ upmeter.example.com</code>
   </li>
   <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
 <div markdown="1">
+
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -113,6 +127,7 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
+
 </div>
 </li>
 </ul>

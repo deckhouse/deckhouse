@@ -164,7 +164,7 @@ The following files are required for building the documentation:
 The following files aren't required but have a [predetermined name](https://github.com/deckhouse/deckhouse/blob/main/docs/site/backends/docs-builder-template/data/helpers.yaml#L1) in the sidebar menu and the page title:
 
 * `EXAMPLES.md` and `EXAMPLES.ru.md` — this file (and its localized version) contains examples of module configuration with description.
-  
+
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page, e.g., `Examples`. It is also used in navigation if there is no `linkTitle`.
   - `description` – **(recommended)** A short unique description of the page content (up to 150 characters). It should not repeat the `title'. Goes on with the meaning of the title and reveals it in more detail. It is used during generation of preview links and indexing by search engines, e.g., "Examples of storing secrets in a neural network and automatically substituting them into thoughts when communicating."
@@ -184,7 +184,7 @@ The following files aren't required but have a [predetermined name](https://gith
   </div>
 
 * `FAQ.md` and `FAQ.ru.md` — this file (and its localized version) contains frequently asked questions related to module operation, e.g., "What scenario should I choose: A or B?".
-  
+
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page.
   - `description` – **(recommended)** A short unique description of the page content (up to 150 characters).
@@ -202,9 +202,9 @@ The following files aren't required but have a [predetermined name](https://gith
   </div>
   </details>
   </div>
-  
+
 * `ADVANCED_USAGE.md` and `ADVANCED_USAGE.ru.md` — this file (and its localized version) contains expanded instructions on using and debugging the module.
-  
+
   The ([front matter](https://gohugo.io/content-management/front-matter/)) file metadata as a YAML structure must present in all language versions of the file. You can use the following parameters in the metadata:
   - `title` – **(recommended)** The title of the page.
   - `description` – **(recommended)** A short unique description of the page content (up to 150 characters).
@@ -222,7 +222,7 @@ The following files aren't required but have a [predetermined name](https://gith
   </div>
   </details>
   </div>
-  
+
 * `CR.md` and `CR.ru.md` — the files for generating resources from the `/crds/` directory.
   Add these files if such a generation is required.
 
@@ -252,7 +252,7 @@ The following files aren't required but have a [predetermined name](https://gith
   </div>
   </details>
   </div>
-  
+
 All images, PDF files and other media files should be stored in the `/docs` directory or its subdirectories (e.g, `/docs/images/`). All links to files should be relative.
 
 You need a file with the appropriate suffix for each language, e.g. `image1.jpg` and `image1.ru.jpg`. Here's how you can include images in your document:
@@ -307,13 +307,21 @@ Each conversion can only be performed between two consecutive versions (e.g., fr
 The conversion file is a YAML file named `v<N>.yaml` or `v<N>.yml`, where `<N>` is the conversion version. It has the following structure:
 
 ```yaml
+
 # Version number of the module parameter specification to which the data is converted during the conversion.
+
 version: N
+
 # A set of jq expressions used during conversion in the cluster for the automatic transformation 
+
 # of the previous version module parameters.
+
 conversions: []
+
 # Actions (in two languages) that need to be taken to convert the data 
+
 # from the previous version of the module parameter specification.
+
 description:
   ru: ""
   en: ""
@@ -390,7 +398,7 @@ When using CEL validations, keep the following features in mind:
 Below are examples of complex validation rules described in CEL:
 
 - Checking whether the parameter value falls within the range:
-  
+
   ```yaml
   type: object
   properties:
@@ -406,21 +414,21 @@ Below are examples of complex validation rules described in CEL:
   ```
 
 - Checking for the presence of a key:
-  
+
   ```yaml
   - expression: "'Available' in self.stateCounts"
     message: "The key 'Available' must be present"
   ```
 
 - Checking that exactly one of two lists is non-empty:
-  
+
   ```yaml
   - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
     message: "Exactly one of the lists must be non-empty"
   ```
 
 - Checking a value by regular expression:
-  
+
   ```yaml
   - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
     message: "All values must contain only letters"

@@ -111,7 +111,7 @@ DVP includes:
 
 - **Built-in rules**, including:
   - Kubernetes audit rules (located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`).
-  
+
   To configure the list of built-in rules,
   use the [`settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) parameter
   of the `runtime-audit-engine` module.
@@ -174,7 +174,9 @@ Example conversion result:
 - Original rule:
 
   ```yaml
+
   # /path/to/falco/rule_example.yaml
+
   - macro: spawned_process
     condition: (evt.type in (execve, execveat) and evt.dir=<)
 
@@ -189,7 +191,9 @@ Example conversion result:
 - Converted resource:
 
   ```yaml
+
   # ./my-rules-cr.yaml
+
   apiVersion: deckhouse.io/v1alpha1
   kind: FalcoAuditRules
   metadata:
@@ -369,4 +373,3 @@ To simulate sending test events to the `falcosidekick` service, use its `/test` 
    }
    ```
    {: .nowrap-default }
-

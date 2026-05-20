@@ -214,7 +214,9 @@ rules:
     userGroups: ["system:authenticated"]
     users: []
     omitStages: []
+
     # Исключаем сервисные аккаунты через deny-правило
+
   - level: None
     userGroups: ["system:serviceaccounts"]
 ```
@@ -272,6 +274,7 @@ rules:
    crictl stop $(crictl pods --name=kube-apiserver -q)
 
    # Альтернативный вариант (в зависимости от используемого CRI).
+
    docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
    ```
 

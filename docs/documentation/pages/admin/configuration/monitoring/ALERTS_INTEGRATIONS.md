@@ -47,9 +47,9 @@ The script requires:
                    trends: '0'
                    description: |
                      Summary: {#SUMMARY}
-                
+
                      {#DESCRIPTION}
-                
+
                      Labels: {#LABELS}
                      To get more information: `kubectl describe clusteralert {#ALERTID}`
                    preprocessing:
@@ -67,9 +67,9 @@ The script requires:
                        priority: DISASTER
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: d1935044cf3f49df8bc53f738e36b683
@@ -78,9 +78,9 @@ The script requires:
                        priority: HIGH
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: 0b134c599d9d4de79f906fbd8e749ec2
@@ -89,9 +89,9 @@ The script requires:
                        priority: AVERAGE
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: 6967dc80d6414239b2d597447815048a
@@ -100,9 +100,9 @@ The script requires:
                        priority: WARNING
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: 8e531a2e6a0f47849c1dffea9a1733e1
@@ -111,9 +111,9 @@ The script requires:
                        priority: INFO
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
      ```
@@ -124,10 +124,13 @@ The script requires:
    - Copy the `d8alerts.conf` file to the directory specified in the `Include` parameter of the main Zabbix agent config (usually located at `/etc/zabbix/zabbix_agentd.d/`):
 
      ```console
+
      # LLD of deckhouse cluster alerts
+
      UserParameter=d8alerts.discovery,/etc/zabbix/scripts/clusteralerts.sh discovery
 
      # Severity of a specific alert by its ID
+
      UserParameter=d8alerts.severity[*],/etc/zabbix/scripts/clusteralerts.sh severity "$1"
      ```
      {: .nowrap-default }
@@ -247,6 +250,7 @@ metadata:
 stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
+
 Deploy the [CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) custom resource:
 
 ```yaml
@@ -272,6 +276,7 @@ spec:
       receiver: telegram
       repeatInterval: 12h
 ```
+
 The `token` field in the Secret and `chatID` in the `CustomAlertmanager` resource need to be set to your own values. [More details](https://core.telegram.org/bots) about the Telegram API.
 
 ## Example of sending alerts to Slack with filter
@@ -321,6 +326,7 @@ spec:
       repeatInterval: 12h
   type: Internal
 ```
+
 ## Example of sending alerts to Opsgenie
 
 ```yaml
@@ -338,6 +344,7 @@ spec:
               - id: team_id
                 type: team
 ```
+
 ## Example of sending alerts via email
 
 Create a secret with the email account password. Specify the password encoded in Base64 format in the `password` field:
@@ -351,6 +358,7 @@ metadata:
 data:
   password: BASE64_ENCODED_PASSWORD_HERE
 ```
+
 Modify the values in the [CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) resource example according to the values relevant to your infrastructure and apply it:
 
 ```yaml
@@ -373,13 +381,21 @@ spec:
             authPassword:
               key: password
               name: am-mail-server-pass
+
             # If you use a custom CA on the server, you can place the public part of the CA in a ConfigMap in the d8-monitoring namespace
+
             # tlsConfig:
+
             #   insecureSkipVerify: true
+
             #   ca:
+
             #     configMap:
+
             #       key: ca.pem
+
             #       name: alertmanager-mail-server-ca
+
             sendResolved: true
             requireTLS: true
     route:
@@ -396,4 +412,5 @@ spec:
             value: "^[1-4]$"
           receiver: mail
 ```
+
 {% endraw %}

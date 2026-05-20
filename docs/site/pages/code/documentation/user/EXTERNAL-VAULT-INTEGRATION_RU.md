@@ -41,7 +41,7 @@ weight: 50
    ```
 
    > Всегда используйте `bound_claims`, чтобы ограничить доступ к роли. Без этого любой JWT, выданный платформой, сможет получить доступ с этой ролью.
-  
+
 1. Настройте политики:
 
    ```bash
@@ -171,18 +171,22 @@ export VAULT_ADDR="https://vault.example.com"
 export VAULT_TOKEN="<your-token>"
 
 # URL-адрес Deckhouse Code.
+
 export CODE_URL="https://code.example.com"
 
 # Имя роли и политики Vault.
+
 export VAULT_ROLE="code-role"
 export VAULT_POLICY="code-policy"
 
 # Путь и данные секрета.
+
 export VAULT_SECRET_PATH="code/vault-demo"
 export VAULT_SECRET_FIELD="DATABASE_PASSWORD"
 export VAULT_SECRET_VALUE="super-secret-password"
 
 # Значение claim project_path, которое будет проверять Vault.
+
 export PROJECT_PATH="root/my-pr"
 ```
 
@@ -319,7 +323,7 @@ EOF
    ```yml
    stages:
      - test
-   
+
    vault-demo:
      stage: test
      image: alpine
@@ -334,7 +338,7 @@ EOF
      script:
        - echo "Raw value (masked by GitLab):"
        - echo "$DATABASE_PASSWORD"
-   
+
        - echo
        - echo "Value with spaces (not masked):"
        - printf '%s\n' "$DATABASE_PASSWORD" | sed 's/./& /g'
@@ -542,7 +546,9 @@ deploy-main:
 Пример настройки роли в Vault с bound claims по ветке для разграничения доступа:
 
 ```bash
+
 # Роль для `develop` — доступ только с ветки `develop`.
+
 vault write auth/jwt/role/myapp-develop - <<EOF
 {
   "role_type": "jwt",
@@ -559,6 +565,7 @@ vault write auth/jwt/role/myapp-develop - <<EOF
 EOF
 
 # Роль для `main` — доступ только с ветки `main` (защищённой).
+
 vault write auth/jwt/role/myapp-main - <<EOF
 {
   "role_type": "jwt",

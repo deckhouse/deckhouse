@@ -22,7 +22,6 @@ permalink: en/virtualization-platform/documentation/architecture/monitoring/
 | **upmeter**                 | Module for assessing DVP component availability.                                                                                                                                                                                                                                                  |
 | **trickster**               | Caching proxy that reduces load on Prometheus. Will be deprecated in the near future.                                                                                                                                                                                                      |
 
-
 ### External components
 
 Deckhouse can integrate with a large number of diverse solutions in the following ways:
@@ -31,7 +30,6 @@ Deckhouse can integrate with a large number of diverse solutions in the followin
 |--------------------------------|--------------------------------------------------------------------------|
 | **Alertmanagers**              | Alertmanagers can be connected to Prometheus and Grafana and be located both in the Deckhouse cluster and outside it.|
 | **Long-term metrics storages** | Using the `remote write` protocol, it is possible to send metrics from Deckhouse to a large number of storages, including [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
-
 
 ## Prometheus
 
@@ -67,7 +65,6 @@ Prometheus is installed by the `prometheus-operator` DVP module, which performs 
   - Rules: `emptyDir`, which is filled by `prometheus-config-reloader` and read by `prometheus`. Connected to both containers, but in `prometheus` in read-only mode;
   - Dat0a: Prometheus data. Mounted only in `prometheus`.
 
-
 ### How is Prometheus configured?
 
 - Prometheus server has *config* and *rule files* (files with rules);
@@ -96,13 +93,17 @@ Prometheus is installed by the `prometheus-operator` DVP module, which performs 
 
   ```yaml
   scrape_configs:
+
     # General settings
+
   - job_name: d8-monitoring/custom/0    # just the name of the scrape job, shown in the Service Discovery section
     scrape_interval: 30s                  # how often to collect data
     scrape_timeout: 10s                   # request timeout
     metrics_path: /metrics                # path to request
     scheme: http                          # http or https
+
     # Service discovery settings
+
     kubernetes_sd_configs:                # means that targets are obtained from Kubernetes
     - api_server: null                    # means to use the API server address from environment variables (which are in every Pod)
       role: endpoints                     # take targets from endpoints
@@ -110,39 +111,57 @@ Prometheus is installed by the `prometheus-operator` DVP module, which performs 
         names:                            # search for endpoints only in these namespaces
         - foo
         - baz
+
     # "Filtering" settings (which endpoints to take and which not) and "relabeling" (which labels to add or remove, on all received metrics)
+
     relabel_configs:
+
     # Filter by the value of the prometheus_custom_target label (obtained from the service associated with the endpoint)
+
     - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
       regex: .+                           # matches any NON-empty label
       action: keep
+
     # Filter by port name
+
     - source_labels: [__meta_kubernetes_endpointslice_port_name]
       regex: http-metrics                 # matches only if the port is called http-metrics
       action: keep
+
     # Add job label, use the value of the prometheus_custom_target label of the service, to which we add the "custom-" prefix
+
     #
+
     # The job label is a Prometheus service label:
+
     #    * it determines the name of the group in which the target will be shown on the targets page
+
     #    * and of course it will be on every metric obtained from these targets, so you can conveniently filter in rules and dashboards
+
     - source_labels: [__meta_kubernetes_service_label_prometheus_custom_target]
       regex: (.*)
       target_label: job
       replacement: custom-$1
       action: replace
+
     # Add namespace label
+
     - source_labels: [__meta_kubernetes_namespace]
       regex: (.*)
       target_label: namespace
       replacement: $1
       action: replace
+
     # Add service label
+
     - source_labels: [__meta_kubernetes_service_name]
       regex: (.*)
       target_label: service
       replacement: $1
       action: replace
+
     # Add instance label (which will contain the Pod name)
+
     - source_labels: [__meta_kubernetes_pod_name]
       regex: (.*)
       target_label: instance

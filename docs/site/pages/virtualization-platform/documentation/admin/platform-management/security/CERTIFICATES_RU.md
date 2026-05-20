@@ -90,21 +90,31 @@ DVP экспортирует метрики в Prometheus, что позволя
      namespace: default
    spec:
      acme:
+
        # Заменить этот адрес электронной почты на свой собственный.
+
        # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
+
        # сертификатов и вопросов, связанных с вашей учетной записью.
+
        email: your@email.com
        server: https://acme-staging-v02.api.letsencrypt.org/directory
        privateKeySecretRef:
+
          # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
+
          name: secret-ref
        solvers:
          - dns01:
              webhook:
                config:
+
                  # Идентификатор папки, в которой расположена DNS-зона.
+
                  folder: <your-folder-ID>
+
                  # Секрет, используемый для доступа к учетной записи сервиса.
+
                  serviceAccountSecretRef:
                    name: cert-manager-secret
                    key: iamkey.json
@@ -183,7 +193,7 @@ DVP экспортирует метрики в Prometheus, что позволя
 
    ```shell
    d8 k create serviceaccount issuer
-     
+
    ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
    ```
 
@@ -199,7 +209,9 @@ DVP экспортирует метрики в Prometheus, что позволя
    spec:
      vault:
        server: http://vault.default.svc.cluster.local:8200
+
        # Указывается на этапе конфигурации PKI.
+
        path: pki/sign/example-dot-com 
        auth:
          kubernetes:
@@ -224,7 +236,9 @@ DVP экспортирует метрики в Prometheus, что позволя
      secretName: example-com-tls
      issuerRef:
        name: vault-issuer
+
      # Домены указываются на этапе конфигурации PKI в Vault.
+
      commonName: www.example.com 
      dnsNames:
      - www.example.com

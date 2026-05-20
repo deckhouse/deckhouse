@@ -124,7 +124,9 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
            - europe-west3-b
           instanceClass:
             machineType: n1-standard-4
+
        # ... the rest of the manifest
+
      ```
 
    * Save your changes.
@@ -175,7 +177,9 @@ To configure HA mode with two master nodes and an arbiter node in a static clust
          taints:
            - key: node.deckhouse.io/etcd-arbiter
              effect: NoSchedule
+
      # ... the rest of the manifest
+
      ```
 
 1. Add a node to the cluster that will be used as an arbiter node in a [way that is convenient](../platform-scaling/node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster) for you.

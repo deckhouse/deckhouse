@@ -26,10 +26,15 @@ To change the release channel for a module from a source, follow these steps:
      name: my-module-policy
    spec:
      releaseChannel: Alpha
+
      # If necessary, specify the update mode and update windows.
+
      # update:
+
      #   mode: AutoPatch
+
      #   windows: []
+
    ```
 
    Ensure that the policy has been created:
@@ -55,6 +60,7 @@ To change the release channel for a module from a source, follow these steps:
    ```shell
    d8 k edit mc my-module
    ```
+
    Example ModuleConfig:
 
    ```yaml
@@ -64,9 +70,12 @@ To change the release channel for a module from a source, follow these steps:
      name: my-module
    spec:
      enabled: true
+
      # ModuleUpdatePolicy name.
+
      updatePolicy: my-module-policy
    ```
+
 When you change the module's release channel, its version will change according to the configured update mode.
 
 To view the current release channel of the module and other information about the module's state in the cluster, use the corresponding [Module](reference/api/cr.html#module) object.
@@ -76,6 +85,7 @@ Example command to get information about the module:
 ```shell
 d8 k get module my-module -o yaml
 ```
+
 The update policy used will be specified in the `properties.updatePolicy` field, and the current release channel in the `properties.releaseChannel` field. Example output:
 
 ```yaml
@@ -83,11 +93,17 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: my-module
+
   # ...
+
 properties:
+
   # ...
+
   releaseChannel: Alpha # Module release channel.
   updatePolicy: my-module-policy # Module update policy.
   version: v1.16.10  # Module version.
+
   # ...
+
 ```

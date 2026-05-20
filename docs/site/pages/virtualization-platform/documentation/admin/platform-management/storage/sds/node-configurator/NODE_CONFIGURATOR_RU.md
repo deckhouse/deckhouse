@@ -7,7 +7,7 @@ lang: ru
 Deckhouse Virtualization Platform (DVP) предоставляет возможность автоматического управления логическими томами (Logical Volume Manager, LVM) на узлах кластера с помощью пользовательских ресурсов Kubernetes. Эта функциональность обеспечивается модулем `sds-node-configurator` и включает в себя:
 
 - Обнаружение блочных устройств на каждом узле и создание соответствующих ресурсов [BlockDevice](/modules/sds-node-configurator/stable/cr.html#blockdevice).
-  
+
   > Ручное создание и изменение ресурса [BlockDevice](/modules/sds-node-configurator/stable/cr.html#blockdevice) запрещено.
 
 - Автоматический поиск на узлах [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) с лейблом `storage.deckhouse.io/enabled=true` (включая thin pool) и управление соответствующими ресурсами [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup). При обнаружении групп томов (Volume Group, VG) без ресурсов контроллер создаёт ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) автоматически.

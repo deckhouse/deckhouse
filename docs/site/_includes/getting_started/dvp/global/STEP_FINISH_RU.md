@@ -5,6 +5,7 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
+
 ## Все установлено, настроено и работает!
 
 Рассмотрим дальнейшие возможности Deckhouse Virtualization Platform, открывающиеся сразу после установки.

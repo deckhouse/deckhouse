@@ -30,8 +30,11 @@ To create a static user, use the [User](/modules/user-authn/cr.html#user) resour
 Before creating a user, generate a password hash using the following command:
 
 ```shell
+
 # To avoid saving the password in the command history, begin the command line with a space character
+
 # Replace example_password with your password
+
  echo -n 'example_password' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
@@ -62,7 +65,9 @@ kind: Group
 metadata:
   name: vms-admins
 spec:
+
   # A list of users
+
   members:
   - kind: User
     name: joe
@@ -117,6 +122,7 @@ spec:
     clientID: plainstring
     clientSecret: plainstring
 ```
+
 In a [GitHub organization](https://docs.github.com/en/organizations), create a new application:
 
 1. Go to **Settings** → **Developer settings** → **OAuth Apps** → **Register a new OAuth application**.
@@ -153,6 +159,7 @@ spec:
     - administrators
     - users
 ```
+
 To create an application in GitLab, follow the steps below.
 
 For a self-managed GitLab instance:
@@ -200,6 +207,7 @@ spec:
     - administrators
     - users
 ```
+
 To create a generic application in Atlassian Crowd, follow these steps:
 
 1. Go to **Applications** → **Add application**.
@@ -226,6 +234,7 @@ spec:
     - administrators
     - users
 ```
+
 To set up authentication in Bitbucket, follow these steps:
 
 1. In the workspace menu, create a new OAuth consumer.
@@ -270,6 +279,7 @@ spec:
         groupAttr: member
       nameAttr: cn
 ```
+
 To set up authentication in LDAP, follow these steps:
 
 1. Create a read-only user (service account) in LDAP.
@@ -305,6 +315,7 @@ spec:
     insecureSkipEmailVerified: true
     getUserInfo: true
 ```
+
 #### Blitz Identity Provider
 
 When [registering an application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with Blitz Identity Provider, specify the URL to redirect users after authorization.
@@ -338,6 +349,7 @@ spec:
     userNameKey: email
   type: OIDC
 ```
+
 To ensure proper logout from applications, involving token callbacks and requiring re-authorization, set the `promptType` parameter to `login`.
 
 To ensure detailed user access to applications, do the following:

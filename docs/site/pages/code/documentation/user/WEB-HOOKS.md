@@ -58,6 +58,7 @@ Example request body:
 }
 
 ```
+
 ### Updating group webhooks
 
 Request header:
@@ -65,6 +66,7 @@ Request header:
 ```text
 X-Gitlab-Event: Member Hook
 ```
+
 Example request body:
 
 ```json
@@ -84,6 +86,7 @@ Example request body:
 }
 
 ```
+
 ### Deleting group webhooks
 
 Request header:
@@ -91,6 +94,7 @@ Request header:
 ```text
 X-Gitlab-Event: Member Hook
 ```
+
 Example request body:
 
 ```json
@@ -110,6 +114,7 @@ Example request body:
 }
 
 ```
+
 ## Project events
 
 Trigger on creation or deletion of projects in groups and subgroups.
@@ -121,6 +126,7 @@ Request header:
 ```text
 X-Gitlab-Event: Project Hook
 ```
+
 Example request body:
 
 ```json
@@ -142,6 +148,7 @@ Example request body:
   "project_visibility": "private"
 }
 ```
+
 ### Deleting project webhooks
 
 Request header:
@@ -149,6 +156,7 @@ Request header:
 ```text
 X-Gitlab-Event: Project Hook
 ```
+
 Example request body:
 
 ```json
@@ -170,6 +178,7 @@ Example request body:
   "project_visibility": "private"
 }
 ```
+
 ## Subgroup events
 
 Trigger on creation or deletion of subgroups.
@@ -181,6 +190,7 @@ Request header:
 ```text
 X-Gitlab-Event: Subgroup Hook
 ```
+
 Example request body:
 
 ```json
@@ -198,6 +208,7 @@ Example request body:
   "parent_full_path": "flant-development"
 }
 ```
+
 ### Deleting subgroup webhooks
 
 Request header:
@@ -205,6 +216,7 @@ Request header:
 ```text
 X-Gitlab-Event: Subgroup Hook
 ```
+
 Example request body:
 
 ```json

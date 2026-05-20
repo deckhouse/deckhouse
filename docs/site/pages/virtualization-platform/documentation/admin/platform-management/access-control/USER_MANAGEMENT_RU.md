@@ -28,8 +28,11 @@ lang: ru
 Перед этим необходимо сгенерировать хеш пароля с помощью следующей команды:
 
 ```shell
+
 # В начале команды используйте пробел, чтобы пароль не сохранился в истории команд.
+
 # Замените example_password на свой пароль. 
+
  echo -n 'example_password' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
@@ -60,7 +63,9 @@ kind: Group
 metadata:
   name: vms-admins
 spec:
+
   # список пользователей
+
   members:
   - kind: User
     name: joe
@@ -112,6 +117,7 @@ spec:
     clientID: plainstring
     clientSecret: plainstring
 ```
+
 В [организации GitHub](https://docs.github.com/ru/organizations) необходимо создать новое приложение. Для этого выполните следующие шаги:
 
 1. Перейдите в «Settings» → «Developer settings» → «OAuth Apps» → «Register a new OAuth application».
@@ -148,6 +154,7 @@ spec:
     - administrators
     - users
 ```
+
 Для того чтобы создать приложение в GitLab, выполните следующие шаги:
 
 Для GitLab, размещённого на собственном сервере:
@@ -196,6 +203,7 @@ spec:
     - administrators
     - users
 ```
+
 Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
 1. Перейдите в раздел «Applications» → «Add application».
@@ -222,6 +230,7 @@ spec:
     - administrators
     - users
 ```
+
 Для настройки аутентификации в Bitbucket выполните следующие шаги:
 
 1. В меню команды создайте новый OAuth-consumer.
@@ -266,6 +275,7 @@ spec:
         groupAttr: member
       nameAttr: cn
 ```
+
 Для настройки аутентификации в LDAP выполните следующие шаги:
 
 1. Создайте в LDAP read-only-пользователя (service account).
@@ -300,6 +310,7 @@ spec:
     insecureSkipEmailVerified: true
     getUserInfo: true
 ```
+
 #### Blitz Identity Provider
 
 На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) – указанный в модуле `global` шаблон DNS-имен кластера.
@@ -332,6 +343,7 @@ spec:
     userNameKey: email
   type: OIDC
 ```
+
 Чтобы корректно работал выход из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
 
 Для обеспечения детализированного доступа пользователя к приложениям необходимо:

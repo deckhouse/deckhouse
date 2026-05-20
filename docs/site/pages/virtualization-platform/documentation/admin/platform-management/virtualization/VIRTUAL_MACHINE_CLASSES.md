@@ -43,6 +43,7 @@ spec:
   virtualMachineClassName: generic # VirtualMachineClass resource name.
   ...
 ```
+
 ### Default VirtualMachineClass
 
 For convenience, you can assign a default VirtualMachineClass. This class will be used in the `spec.virtualMachineClassName` field if it is not specified in the virtual machine manifest.
@@ -56,6 +57,7 @@ To list all VirtualMachineClass resources, run the following command:
 ```shell
 d8 k get virtualmachineclass
 ```
+
 Example output (no default class):
 
 ```console
@@ -70,6 +72,7 @@ To assign the default class, run:
 ```shell
 d8 k annotate vmclass host-passthrough-custom virtualmachineclass.virtualization.deckhouse.io/is-default-class=true
 ```
+
 Example output:
 
 ```console
@@ -82,6 +85,7 @@ After assigning the default class, list all VirtualMachineClass resources again:
 ```shell
 d8 k get vmclass
 ```
+
 Example output (with default class):
 
 ```console
@@ -102,20 +106,34 @@ apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineClass
 metadata:
   name: <vmclass-name>
+
   # (optional) Set class as a default.
+
   # annotations:
+
   #   virtualmachineclass.virtualization.deckhouse.io/is-default-class: "true"
+
 spec:
+
   # The section describes virtual processor parameters for virtual machines.
+
   # This block cannot be changed after the resource has been created.
+
   cpu: ...
+
   # (optional) Describes the rules for allocating virtual machines between nodes.
+
   # When changed, it is automatically applied to all virtual machines using this VirtualMachineClass.
+
   nodeSelector: ...
+
   # (optional) Describes the sizing policy for configuring virtual machine resources.
+
   # When changed, it is automatically applied to all virtual machines using this VirtualMachineClass.
+
   sizingPolicies: ...
 ```
+
 How to configure VirtualMachineClass in the web interface:
 
 - Go to the "System" tab, then to the "Virtualization" → "VM Classes" section.
@@ -143,6 +161,7 @@ Examples of the `.spec.cpu` block settings:
         - vmx
       type: Features
   ```
+
   How to configure vCPU in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
   - In the "CPU Settings" block, select `Features` in the "Type" field.
@@ -161,6 +180,7 @@ Examples of the `.spec.cpu` block settings:
               operator: DoesNotExist
       type: Discovery
   ```
+
   How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
   - In the "CPU Settings" block, select `Discovery` in the "Type" field.
@@ -176,6 +196,7 @@ Examples of the `.spec.cpu` block settings:
     cpu:
       type: Host
   ```
+
   How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
   - In the "CPU Settings" block, select `Host` in the "Type" field.
@@ -188,6 +209,7 @@ Examples of the `.spec.cpu` block settings:
     cpu:
       type: HostPassthrough
   ```
+
   How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
   - In the "CPU Settings" block, select `HostPassthrough` in the "Type" field.
@@ -198,6 +220,7 @@ Examples of the `.spec.cpu` block settings:
   ```bash
   d8 k get nodes <node-name> -o json | jq '.metadata.labels | to_entries[] | select(.key | test("cpu-model.node.virtualization.deckhouse.io")) | .key | split("/")[1]' -r
   ```
+
   Example output:
 
   ```console
@@ -226,6 +249,7 @@ Examples of the `.spec.cpu` block settings:
       model: IvyBridge
       type: Model
   ```
+
   How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
   - In the "CPU Settings" block, select `Model` in the "Type" field.
@@ -245,6 +269,7 @@ The `.spec.nodeSelector` block is optional. It allows you to specify the nodes t
           values:
           - green
 ```
+
 {% alert level="warning" %}
 Since changing the `.spec.nodeSelector` parameter affects all virtual machines using this `VirtualMachineClass`, consider the following:
 
@@ -284,6 +309,7 @@ Correct structure (the ranges follow one another without intersections):
     min: 5   # Start of next range = (previous max + 1)
     max: 8
 ```
+
 Invalid option (overlapping values):
 
 ```yaml
@@ -295,6 +321,7 @@ Invalid option (overlapping values):
     min: 4   # Error: Value 4 is already included in the previous range
     max: 8
 ```
+
 {% alert level="warning" %}
 Rule: Each new range must start with a value that immediately follows the max of the previous range.
 {% endalert %}
@@ -330,6 +357,7 @@ Examples of memory volume dependency on the number of cores:
       min: 2Gi
       max: 8Gi
   ```
+
   In this example, for any virtual machine with 1 to 4 cores, you can choose any memory volume from 2 to 8 GB — regardless of the number of cores. Memory does not depend on the number of cores in the range.
 
 - When using the `memory.perCore` parameter, the allowed memory volume is calculated as the product of the number of cores multiplied by the specified memory range per core:
@@ -343,6 +371,7 @@ Examples of memory volume dependency on the number of cores:
         min: 1Gi
         max: 2Gi
   ```
+
   In this case:
   - For a virtual machine with 1 core: from 1×1 GiB = 1 GiB to 1×2 GiB = 2 GiB of memory
   - For a virtual machine with 2 cores: from 2×1 GiB = 2 GiB to 2×2 GiB = 4 GiB of memory
@@ -366,6 +395,7 @@ Examples of memory volume dependency on the number of cores:
         max: 8Gi
         step: 1Gi
     ```
+
     In this case, only the following memory values are available: 2 GB, 3 GB, 4 GB, 5 GB, 6 GB, 7 GB, 8 GB. You cannot set, for example, 2.5 GB or 7.5 GB.
 
   - Example with `memory.perCore` and step:
@@ -380,6 +410,7 @@ Examples of memory volume dependency on the number of cores:
           max: 2Gi
         step: 512Mi
     ```
+
     In this case, for each virtual machine, available memory values are calculated taking into account the step:
     - For 1 core: 1 GB, 1.5 GB, 2 GB
     - For 2 cores: 2 GB, 3 GB, 4 GB
@@ -393,10 +424,15 @@ Here is an example of a policy with similar settings:
 ```yaml
 spec:
   sizingPolicies:
+
     # For a range of 1–4 cores, it is possible to use 1–8 GB of RAM in 512Mi increments,
+
     # i.e., 1 GB, 1.5 GB, 2 GB, 2.5 GB, etc.
+
     # No dedicated cores are allowed.
+
     # All `corefraction` options are available.
+
     - cores:
         min: 1
         max: 4
@@ -406,10 +442,15 @@ spec:
         step: 512Mi
       coreFractions: [5, 10, 20, 50, 100]
       defaultCoreFraction: 50  # Default value for the 1–4 core range
+
     # For a range of 5–8 cores, it is possible to use 5–16 GB of RAM in 1 GB increments,
+
     # i.e., 5 GB, 6 GB, 7 GB, etc.
+
     # No dedicated cores are allowed.
+
     # Some `corefraction` options are available.
+
     - cores:
         min: 5
         max: 8
@@ -419,9 +460,13 @@ spec:
         step: 1Gi
       coreFractions: [20, 50, 100]
       defaultCoreFraction: 100  # Default value for the 5–8 core range
+
     # For a range of 9–16 cores, it is possible to use 9–32 GB of RAM in 1 GB increments.
+
     # You can use dedicated cores if needed.
+
     # Some `corefraction` options are available.
+
     - cores:
         min: 9
         max: 16
@@ -430,9 +475,13 @@ spec:
         max: 32Gi
         step: 1Gi
       coreFractions: [50, 100]
+
     # For the range of 17–248 cores, it is possible to use 1–2 GB of RAM per core.
+
     # Only the dedicated cores are available for use.
+
     # The only available `corefraction` parameter is 100%.
+
     - cores:
         min: 17
         max: 248
@@ -442,6 +491,7 @@ spec:
           max: 2Gi
       coreFractions: [100]
 ```
+
 How to configure sizing policies in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
 - Click "Add" in the "Resource allocation rules for virtual machines" block.
@@ -494,6 +544,7 @@ spec:
       coreFractions: [20]  # Only one value
       defaultCoreFraction: 20
 ```
+
 For all VMs of this class, `coreFraction: 20%` is hard-coded, ensuring a fixed oversubscription ratio of 5:1.
 
 Example 2: Flexible configuration
@@ -517,6 +568,7 @@ spec:
       coreFractions: [5, 10, 20, 50, 100]
       defaultCoreFraction: 20
 ```
+
 Users can select `coreFraction` from the list; if not specified, the value 20% is applied.
 
 ## vCPU Discovery configuration example

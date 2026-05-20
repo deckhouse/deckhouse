@@ -66,31 +66,45 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+
   # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: myapp
   minReplicas: 1
   maxReplicas: 2
+
   # Метрики, используемые для масштабирования.
+
   # Пример использования метрик.
+
   metrics:
   - type: Object
     object:
+
       # Объект, который обладает метриками в Prometheus.
+
       describedObject:
         apiVersion: networking.k8s.io/v1
         kind: Ingress
         name: myingress
       metric:
+
         # Метрика, зарегистрированная с помощью custom resource IngressMetric или ClusterIngressMetric.
+
         # Можно использовать rps_1m, rps_5m или rps_15m которые поставляются с модулем prometheus-metrics-adapter.
+
         name: mymetric
       target:
+
         # Для метрик типа Object можно использовать `Value` или `AverageValue`.
+
         type: AverageValue
+
         # Масштабирование происходит, если среднее значение метрики для всех подов в Deployment сильно отличается от 10.
+
         averageValue: 10
 ```
 
@@ -106,17 +120,26 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: CustomPrometheusRules
 metadata:
+
   # Рекомендованный шаблон для названия ваших CustomPrometheusRules.
+
   name: prometheus-metrics-adapter-mymetric
 spec:
   groups:
+
   # Рекомендованный шаблон.
+
   - name: prometheus-metrics-adapter.mymetric
     rules:
+
     # Название вашей новой метрики.
+
     # Важно! Префикс 'kube_adapter_metric_' обязателен.
+
     - record: kube_adapter_metric_mymetric
+
       # Запрос, результаты которого попадут в итоговую метрику, нет смысла тащить в нее лишние лейблы.
+
       expr: sum(ingress_nginx_detail_sent_bytes_sum) by (namespace,ingress)
 ```
 
@@ -144,31 +167,31 @@ spec:
 
 Для получения списка метрик используйте команду:
 
-```console
-d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
+  ```
+  {: .nowrap-default }
 
 Для получения значений метрик, привязанных к объектам используйте команду:
 
-```console
-d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+  ```
+  {: .nowrap-default }
 
 Для получения значений метрик, созданных через `NamespaceMetric` используйте команду:
 
-```console
-d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+  ```
+  {: .nowrap-default }
 
 Для получения внешних метрик используйте команду:
 
-```console
-d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
-```
-{: .nowrap-default }
+  ```console
+  d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
+  ```
+  {: .nowrap-default }
 
 ### Настройка автомасштабирования в веб-интерфейсе Deckhouse
 

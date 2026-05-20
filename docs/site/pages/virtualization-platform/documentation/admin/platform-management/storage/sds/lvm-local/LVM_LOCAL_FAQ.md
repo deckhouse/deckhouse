@@ -56,6 +56,7 @@ After configuring the labels, ensure that the `sds-local-volume-csi-node` pods a
 ```shell
 d8 k -n d8-sds-local-volume get pod -owide
 ```
+
 ## Verifying PVC creation on the selected node
 
 Make sure that the `sds-local-volume-csi-node` pod is running on the selected node. To do this, run the command:
@@ -63,6 +64,7 @@ Make sure that the `sds-local-volume-csi-node` pod is running on the selected no
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
+
 If the VM is absent, verify that all the labels specified in the module settings in the nodeSelector field are present on the node. For available solutions when VMs are missing from the target node, refer to [this section](#absence-of-component-service-pods-on-the-desired-node).
 
 ## Removing a node from the module management
@@ -74,6 +76,7 @@ To check the current labels, execute the command:
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 ```
+
 Example output:
 
 ```console
@@ -87,6 +90,7 @@ Remove the specified labels from the nodes with the command:
 ```shell
 d8 k label node %node-name% %label-from-selector%-
 ```
+
 {% alert level="warning" %}
 After the label key, you must specify a minus sign to remove it.
 {% endalert %}
@@ -96,11 +100,13 @@ After this, the `sds-local-volume-csi-node` pod should be removed from the node.
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
+
 If the pod remains after removing the label, ensure that the labels from the `d8-sds-local-volume-controller-config` config are actually removed. You can verify this using:
 
 ```shell
 d8 k get node %node-name% --show-labels
 ```
+
 If the labels are absent, check that the node does not have any [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources being used by [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resources. More information on this check can be found in [this section](#verifying-dependent-lvmvolumegroup-resources-on-the-node).
 
 {% alert level="warning" %}
@@ -118,6 +124,7 @@ To check the dependent resources, follow these steps:
    ```shell
    d8 k get lsc
    ```
+
 1. Check each of them for the list of used [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources.
 
    If you want to list all [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resources at once, run the command:
@@ -125,6 +132,7 @@ To check the dependent resources, follow these steps:
    ```shell
    d8 k get lsc -oyaml
    ```
+
    Example [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resource:
 
    ```yaml
@@ -147,6 +155,7 @@ To check the dependent resources, follow these steps:
        phase: Created
    kind: List
    ```
+
    Pay attention to the `spec.lvm.lvmVolumeGroups` field. It specifies the used [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources.
 
 1. Display the list of existing [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources.
@@ -154,6 +163,7 @@ To check the dependent resources, follow these steps:
    ```shell
    d8 k get lvg
    ```
+
    Example [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) output:
 
    ```text
@@ -165,6 +175,7 @@ To check the dependent resources, follow these steps:
    lvg-on-worker-4   Operational   node-worker-4   307196Mi   0                test-vg   15d
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
+
 1. Ensure that the node you intend to remove from the module's control does not have any [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources used in [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resources. To avoid unintentionally losing control over volumes already created using the module, the user needs to manually delete dependent resources by performing necessary operations on the volume.
 
 ## Remaining sds-local-volume-csi-node pod after removing labels
@@ -178,6 +189,7 @@ The issue may be related to incorrectly set labels. The nodes used by the module
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 ```
+
 Example output:
 
 ```console
@@ -191,6 +203,7 @@ Additionally, you can check the selectors used by the module in the secret confi
 ```shell
 d8 k -n d8-sds-local-volume get secret d8-sds-local-volume-controller-config  -o jsonpath='{.data.config}' | base64 --decode
 ```
+
 Example output:
 
 ```console
@@ -207,17 +220,20 @@ Check the labels on the desired node:
 ```shell
 d8 k get node %node-name% --show-labels
 ```
+
 If necessary, add the missing labels to the desired node:
 
 ```shell
 d8 k label node %node-name% my-custom-label-key=my-custom-label-value
 ```
+
 If the labels are present, check for the presence of the label `storage.deckhouse.io/sds-local-volume-node=` on the node. If this label is missing, ensure that the `sds-local-volume-controller` is running, and review its logs:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -l app=sds-local-volume-controller
 d8 k -n d8-sds-local-volume logs -l app=sds-local-volume-controller
 ```
+
 ## Data migration between PVCs
 
 Copy the following script into a file named `migrate.sh` on any master node:
@@ -285,11 +301,13 @@ while [[ $kubectl_completed_check -eq 0 ]]; do
 done
 echo "Data migration completed"
 ```
+
 To use the script, run the following command:
 
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 ```
+
 ## Creating volume snapshots
 
 You can read more about snapshots and associated resources in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
@@ -307,6 +325,7 @@ You can read more about snapshots and associated resources in the [Kubernetes do
      version: 1
    EOF
    ```
+
 1. Now you can create volume snapshots. To do this, execute the following command with the necessary parameters:
 
    ```shell
@@ -322,6 +341,7 @@ You can read more about snapshots and associated resources in the [Kubernetes do
        persistentVolumeClaimName: <name of the PVC to snapshot>
    EOF
    ```
+
    Note that `sds-local-volume-snapshot-class` is created automatically, and its `deletionPolicy` is set to `Delete`, which means that the VolumeSnapshotContent resource will be deleted when the associated VolumeSnapshot resource is deleted.
 
 1. To check the status of the created snapshot, execute the command:
@@ -329,4 +349,5 @@ You can read more about snapshots and associated resources in the [Kubernetes do
    ```shell
    d8 k get volumesnapshot
    ```
+
    This command will display a list of all snapshots and their current status.

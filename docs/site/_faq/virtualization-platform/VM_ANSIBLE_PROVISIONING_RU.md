@@ -19,12 +19,18 @@ lang: ru
    all:
      vars:
        ansible_ssh_common_args: '-o ProxyCommand="d8 v port-forward --stdio=true %h %p"'
+
        # Пользователь по умолчанию, для доступа по SSH.
+
        ansible_user: cloud
+
        # Путь к приватному ключу.
+
        ansible_ssh_private_key_file: /home/user/.ssh/id_rsa
      hosts:
+
        # Название узла в формате <название ВМ>.<название проекта>.
+
        frontend.demo-app:
 
    ```
@@ -35,7 +41,9 @@ lang: ru
    ansible -m shell -a "uptime" -i inventory.yaml all
 
    # frontend.demo-app | CHANGED | rc=0 >>
+
    # 12:01:20 up 2 days,  4:59,  0 users,  load average: 0.00, 0.00, 0.00
+
    ```
 
 Если вы не хотите использовать файл inventory, передайте все параметры прямо в командной строке:

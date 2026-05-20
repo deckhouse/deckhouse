@@ -147,7 +147,9 @@ nodegroups`. Подробнее об этом в [документации](/mod
 [NodeGroup](/modules/node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
+
 # TODO Bare metal!!!
+
 {% endif %}
 </div>
 </div>
@@ -158,6 +160,7 @@ nodegroups`. Подробнее об этом в [документации](/mod
 {% endif %}
 
 <div markdown="1">
+
 ## Что дальше?
 
 Подробная информация о системе в целом и по каждому компоненту Deckhouse Kubernetes Platform расположена в [документации](/products/kubernetes-platform/documentation/v1/).

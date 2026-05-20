@@ -321,6 +321,7 @@ write:
     - rbac.authorization.k8s.io/roles
     - resourcequotas
 ```
+
 <!-- end user-authz roles placeholder -->
 
 Вы можете получить дополнительный список правил доступа для роли из кластера (существующие пользовательские правила и нестандартные правила из других модулей DVP):

@@ -50,11 +50,13 @@ StorageClass хранилища DVCR можно сменить только пе
    ```shell
    d8 k -n d8-virtualization scale deployment dvcr --replicas=1
    ```
+
 1. Проверьте PVC:
 
    ```shell
    d8 k get pvc -n d8-virtualization
    ```
+
    Пример вывода:
 
    ```console

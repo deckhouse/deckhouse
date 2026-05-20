@@ -138,11 +138,13 @@ d8 k -n d8-sds-local-volume get pod -owide
      actualVGNameOnTheNode: "vg-1" # The name of the LVM VG that will be created from the specified block devices on the node.
    EOF
    ```
+
 1. Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg vg-1-on-worker-0 -w
    ```
+
    If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-0` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
 1. Create an [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `worker-1` node:
@@ -167,11 +169,13 @@ d8 k -n d8-sds-local-volume get pod -owide
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
+
 1. Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg vg-1-on-worker-1 -w
    ```
+
    If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-1` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
 1. Create an [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `worker-2` node:
@@ -196,11 +200,13 @@ d8 k -n d8-sds-local-volume get pod -owide
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
+
 1. Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg vg-1-on-worker-2 -w
    ```
+
    If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-2` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
 1. Create a [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) resource:
@@ -222,6 +228,7 @@ d8 k -n d8-sds-local-volume get pod -owide
      volumeBindingMode: WaitForFirstConsumer
    EOF
    ```
+
    For a thin volume:
 
    ```shell
@@ -243,6 +250,7 @@ d8 k -n d8-sds-local-volume get pod -owide
      volumeBindingMode: WaitForFirstConsumer
    EOF
    ```
+
    > **Important.** In a [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) with `type: Thick`, you cannot use an LVMVolumeGroup that contains at least one thin pool.
 
 1. Wait for the created LocalStorageClass resource to transition to the `Created` state:
@@ -250,11 +258,13 @@ d8 k -n d8-sds-local-volume get pod -owide
    ```shell
    d8 k get lsc local-storage-class -w
    ```
+
 1. Verify that the corresponding StorageClass has been created:
 
    ```shell
    d8 k get sc local-storage-class
    ```
+
 If a StorageClass named `local-storage-class` appears, the configuration of the `sds-local-volume` module is complete. Users can now create PVCs by specifying the StorageClass named `local-storage-class`.
 
 ### Selecting a volume cleanup method after PV deletion

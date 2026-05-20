@@ -177,6 +177,7 @@ write:
     - rbac.authorization.k8s.io/roles
     - resourcequotas
 ```
+
 <!-- end user-authz roles placeholder -->
 
 Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](granting.html#предоставление-прав-с-помощью-authorizationrule-и-clusterauthorizationrule-текущая-ролевая-модель) и нестандартные правила из других модулей Deckhouse) с помощью команды:
@@ -222,9 +223,13 @@ spec:
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
+
   # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+
   allowAccessToSystemNamespaces: false
+
   # Опция доступна только при включенном режиме enableMultiTenancy (версия Enterprise Edition).
+
   namespaceSelector:
     labelSelector:
       matchExpressions:

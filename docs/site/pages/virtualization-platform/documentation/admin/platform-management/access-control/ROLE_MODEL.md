@@ -313,6 +313,7 @@ write:
     - rbac.authorization.k8s.io/roles
     - resourcequotas
 ```
+
 <!-- end user-authz roles placeholder -->
 
 You can get an additional list of access rules for a role from the cluster (existing user-defined rules and non-default rules from other DVP modules):

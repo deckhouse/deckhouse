@@ -140,11 +140,13 @@ d8 k -n d8-sds-local-volume get pod -owide
      actualVGNameOnTheNode: "vg-1" # Имя LVM VG, который будет создан из указанных блочных устройств на узле.
    EOF
    ```
+
 1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
    ```shell
    d8 k get lvg vg-1-on-worker-0 -w
    ```
+
    Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
 1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-1`:
@@ -169,11 +171,13 @@ d8 k -n d8-sds-local-volume get pod -owide
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
+
 1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
    ```shell
    d8 k get lvg vg-1-on-worker-1 -w
    ```
+
    Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-1` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
 1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-2`:
@@ -198,11 +202,13 @@ d8 k -n d8-sds-local-volume get pod -owide
      actualVGNameOnTheNode: "vg-1"
    EOF
    ```
+
 1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
    ```shell
    d8 k get lvg vg-1-on-worker-2 -w
    ```
+
    Если ресурс перешел в состояние `Ready`, то это значит, что на узле `worker-2` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
 1. Создайте ресурс [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass):
@@ -224,6 +230,7 @@ d8 k -n d8-sds-local-volume get pod -owide
      volumeBindingMode: WaitForFirstConsumer
    EOF
    ```
+
    Для thin volume:
 
    ```shell
@@ -245,6 +252,7 @@ d8 k -n d8-sds-local-volume get pod -owide
      volumeBindingMode: WaitForFirstConsumer
    EOF
    ```
+
    > **Важно.** В [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) с `type: Thick` нельзя использовать LocalVolumeGroup, содержащие хотя бы один thin pool.
 
 1. Дождитесь, когда созданный ресурс LocalStorageClass перейдет в состояние `Created`:
@@ -252,11 +260,13 @@ d8 k -n d8-sds-local-volume get pod -owide
    ```shell
    d8 k get lsc local-storage-class -w
    ```
+
 1. Проверьте, что был создан соответствующий StorageClass:
 
    ```shell
    d8 k get sc local-storage-class
    ```
+
 Если StorageClass с именем `local-storage-class` появился, значит настройка [модуля `sds-local-volume`](/modules/sds-local-volume/) завершена. Теперь пользователи могут создавать PVC, указывая StorageClass с именем `local-storage-class`.
 
 ### Выбор метода очистки тома после удаления PV

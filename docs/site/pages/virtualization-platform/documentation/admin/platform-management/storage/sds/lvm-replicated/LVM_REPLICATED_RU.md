@@ -55,6 +55,7 @@ spec:
   version: 1
 EOF
 ```
+
 Это установит модуль ядра DRBD на всех узлах кластера, зарегистрирует CSI-драйвер и запустит служебные ВМ компонентов `sds-replicated-volume`.
 
 Дождитесь, когда модуль `sds-replicated-volume` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
@@ -62,6 +63,7 @@ EOF
 ```shell
 d8 k get modules sds-replicated-volume -w
 ```
+
 В результате будет выведена информация о модуле `sds-replicated-volume`:
 
 ```console
@@ -76,6 +78,7 @@ sds-replicated-volume              Embedded  Available   True       True
 d8 k -n d8-sds-replicated-volume get pod -w
 d8 k -n d8-sds-node-configurator get pod -w
 ```
+
 {% alert level="info" %}
 Не рекомендуется настраивать бэкенд `LINSTOR` вручную, поскольку это может привести к ошибкам.
 {% endalert %}
@@ -89,6 +92,7 @@ d8 k -n d8-sds-node-configurator get pod -w
 ```shell
 d8 k get bd
 ```
+
 В результате будет выведен список доступных блочных устройств:
 
 ```console
@@ -115,29 +119,42 @@ metadata:
 spec:
   type: Local
   local:
+
     # Замените на имя своего узла, для которого вы создаете группу томов. 
+
     nodeName: "worker-0"
   blockDeviceSelector:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
+
           # Замените на имена своих блочных устройств узла, для которого вы создаете группу томов. 
+
           - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
           - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
+
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
+
   actualVGNameOnTheNode: "vg"
+
   # Раскомментируйте, если важно иметь возможность создавать thin pool.
+
   # thinPools:
+
   #   - name: thin-pool-0
+
   #     size: 70%
+
 EOF
 ```
+
 Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
 ```
+
 В результате будет выведена информация о состоянии ресурса:
 
 ```console
@@ -155,6 +172,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 ```shell
 d8 k get lvg -w
 ```
+
 В результате будет выведен список созданных групп томов:
 
 ```console
@@ -185,11 +203,13 @@ spec:
     - name: vg-1-on-worker-2
 EOF
 ```
+
 Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
 ```
+
 В результате будет выведена информация о состоянии созданного ресурса:
 
 ```console
@@ -222,6 +242,7 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
   }
 ]'
 ```
+
 В обновленной версии [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
 
 Повторите добавление thin pool для оставшихся узлов (`worker-1` и `worker-2`). Пример создания реплицированного thin pool:
@@ -243,11 +264,13 @@ spec:
       thinPoolName: thin-pool-0
 EOF
 ```
+
 Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
 ```
+
 В результате будет выведена информация о состоянии созданного ресурса:
 
 ```console
@@ -269,25 +292,39 @@ kind: ReplicatedStorageClass
 metadata:
   name: replicated-storage-class
 spec:
+
   # Имя одного из пулов хранения, созданных ранее.
+
   storagePool: thick-pool
+
   # Режим поведения при удалении PVC.
+
   # Допустимые значения: "Delete", "Retain".
+
   # Подробнее в документации Kubernetes: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming
+
   reclaimPolicy: Delete
+
   # Реплики смогут размещаться на любых доступных узлах: не более одной реплики определенного тома на один узел.
+
   # В кластере нет зон (нет узлов с лейблами topology.kubernetes.io/zone).
+
   topology: Ignored
+
   # Режим репликации, при котором том остается доступным для чтения и записи, даже если одна из реплик тома становится недоступной. 
+
   # Данные хранятся в трех экземплярах на разных узлах.
+
   replication: ConsistencyAndAvailability
 EOF
 ```
+
 Проверьте, что созданный ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
+
 В результате будет выведена информация о созданном [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass):
 
 ```console
@@ -301,6 +338,7 @@ replicated-storage-class   Created   1h
 ```shell
 d8 k get sc replicated-storage-class
 ```
+
 В результате будет выведена информация о созданном StorageClass:
 
 ```console

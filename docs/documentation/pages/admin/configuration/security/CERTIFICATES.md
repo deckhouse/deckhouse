@@ -88,21 +88,31 @@ The following example is based on using Yandex Cloud DNS:
      namespace: default
    spec:
      acme:
+
        # Replace this email address with your own.
+
        # Let's Encrypt will use it to notify you about expiring certificates
+
        # and issues related to your account.
+
        email: your@email.com
        server: https://acme-staging-v02.api.letsencrypt.org/directory
        privateKeySecretRef:
+
          # The Secret resource used to store the account private key.
+
          name: secret-ref
        solvers:
          - dns01:
              webhook:
                config:
+
                  # The folder ID containing your DNS zone.
+
                  folder: <your-folder-ID>
+
                  # Secret used to access the service account.
+
                  serviceAccountSecretRef:
                    name: cert-manager-secret
                    key: iamkey.json
@@ -180,7 +190,7 @@ After configuring the PKI and [enabling Kubernetes authentication](../access/aut
 
    ```shell
    d8 k create serviceaccount issuer
-     
+
    ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
    ```
 
@@ -196,7 +206,9 @@ After configuring the PKI and [enabling Kubernetes authentication](../access/aut
    spec:
      vault:
        server: http://vault.default.svc.cluster.local:8200
+
        # Defined during PKI configuration.
+
        path: pki/sign/example-dot-com 
        auth:
          kubernetes:
@@ -221,7 +233,9 @@ After configuring the PKI and [enabling Kubernetes authentication](../access/aut
      secretName: example-com-tls
      issuerRef:
        name: vault-issuer
+
      # Domains must match those configured in the PKI in Vault.
+
      commonName: www.example.com 
      dnsNames:
      - www.example.com

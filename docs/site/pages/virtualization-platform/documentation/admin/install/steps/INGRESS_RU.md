@@ -20,21 +20,29 @@ d8 k -n d8-ingress-nginx get po -l app=kruise
 
 ```yaml
 d8 k apply -f - <<EOF
+
 # Секция, описывающая параметры Ingress NGINX Controller.
+
 # https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller
+
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
   ingressClass: nginx
+
   # Способ поступления трафика из внешнего мира.
+
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
+
   # Описывает, на каких узлах будет находиться Ingress-контроллер.
+
   # Возможно, захотите изменить.
+
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
@@ -75,6 +83,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 ```shell
 d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
+
 Пример вывода, если использовался свой wildcard-домен:
 
 ```console
@@ -158,6 +167,7 @@ $PUBLIC_IP upmeter.$CLUSTER_DOMAIN
 EOF
 "
 ```
+
 ## Создание пользователя
 
 Для доступа в веб-интерфейсы кластера можно создать статического пользователя:
@@ -167,6 +177,7 @@ EOF
    ```shell
    echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
+
    `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
 
 1. Создайте пользователя:
@@ -191,9 +202,10 @@ EOF
    spec:
      email: admin@my-dvp-cluster.example.com
      password: '<BASE64 СТРОКА С ПРЕДЫДУЩЕГО ШАГА>'
-   
+
    EOF
    ```
+
 Теперь можно авторизоваться в веб-интерфейсах кластера, используя электронную почту и пароль. Для дальнейшей настройки рекомендуется ознакомиться с разделом [Разграничение доступа / Ролевая модель](../../platform-management/access-control/role-model.html).
 
 ## Включение модуля console

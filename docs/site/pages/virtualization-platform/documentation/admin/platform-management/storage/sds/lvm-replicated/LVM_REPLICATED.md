@@ -54,6 +54,7 @@ spec:
   version: 1
 EOF
 ```
+
 This will install the DRBD kernel module on all cluster nodes, register the CSI driver, and launch the `sds-replicated-volume` component pods.
 
 Wait until the `sds-replicated-volume` module reaches the `Ready` status. To check the module status, run the following command:
@@ -61,6 +62,7 @@ Wait until the `sds-replicated-volume` module reaches the `Ready` status. To che
 ```shell
 d8 k get modules sds-replicated-volume -w
 ```
+
 In the output, you should see information about the `sds-replicated-volume` module:
 
 ```console
@@ -75,6 +77,7 @@ To check that all pods in the `d8-sds-replicated-volume` and `d8-sds-node-config
 d8 k -n d8-sds-replicated-volume get pod -w
 d8 k -n d8-sds-node-configurator get pod -w
 ```
+
 {% alert level="info" %}
 Avoid configuring the `LINSTOR` backend manually, as this can can result in errors.
 {% endalert %}
@@ -88,6 +91,7 @@ Before configuring the creation of StorageClass objects, you need to combine the
 ```shell
 d8 k get bd
 ```
+
 In the output, you should see a list of available block devices:
 
 ```console
@@ -114,29 +118,42 @@ metadata:
 spec:
   type: Local
   local:
+
     # Replace with the name of the node where you are creating the volume group.
+
     nodeName: "worker-0"
   blockDeviceSelector:
     matchExpressions:
       - key: kubernetes.io/metadata.name
         operator: In
         values:
+
           # Replace with the names of the block devices for the node you are creating the volume group on.
+
           - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
           - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
+
   # The name of the LVM volume group that will be created from the specified block devices on the selected node.
+
   actualVGNameOnTheNode: "vg"
+
   # Uncomment if you want to be able to create thin pools.
+
   # thinPools:
+
   #   - name: thin-pool-0
+
   #     size: 70%
+
 EOF
 ```
+
 Wait for the created [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to reach the `Ready` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
 ```
+
 In the output, you should see information about the resource phase:
 
 ```console
@@ -154,6 +171,7 @@ Ensure that LVM volume groups have been created on all nodes where they are plan
 ```shell
 d8 k get lvg -w
 ```
+
 In the output, you should see a list of created volume groups:
 
 ```console
@@ -188,11 +206,13 @@ spec:
     - name: vg-1-on-worker-2
 EOF
 ```
+
 Wait for the created [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource to reach the `Completed` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get rsp data -w
 ```
+
 In the output, you should see information about the resource phase:
 
 ```console
@@ -221,6 +241,7 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
   }
 ]'
 ```
+
 In the updated version of [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), 70% of the available space will be used to create thin pools. The remaining 30% can be used for thick pools.
 
 Repeat the addition of thin pools for the remaining nodes (`worker-1` and `worker-2`). Example of creating a replicated thin pool:
@@ -242,11 +263,13 @@ spec:
       thinPoolName: thin-pool-0
 EOF
 ```
+
 Wait for the created [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource to transition to the `Completed` phase. To check the resource phase, run the following command:
 
 ```shell
 d8 k get rsp data -w
 ```
+
 In the output, you should see information about the resource phase:
 
 ```console
@@ -268,25 +291,39 @@ kind: ReplicatedStorageClass
 metadata:
   name: replicated-storage-class
 spec:
+
   # Specify the name of one of the storage pools created earlier.
+
   storagePool: thick-pool
+
   # Reclaim policy when deleting PVC.
+
   # Allowed values: "Delete", "Retain".
+
   # [Learn more...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
+
   reclaimPolicy: Delete
+
   # Replicas can be placed on any available node: no more than one replica of a specific volume on one node.
+
   # The cluster does not have zones (no nodes with the topology.kubernetes.io/zone labels).
+
   topology: Ignored
+
   # Replication mode where the volume remains available for read and write even if one replica becomes unavailable.
+
   # Data is stored in three instances across different nodes.
+
   replication: ConsistencyAndAvailability
 EOF
 ```
+
 Check that the created [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
+
 In the output, you should see information about the created [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource:
 
 ```console
@@ -300,6 +337,7 @@ Check that the corresponding StorageClass has been generated by running the foll
 ```shell
 d8 k get sc replicated-storage-class
 ```
+
 In the output, you should see information about the generated StorageClass:
 
 ```console

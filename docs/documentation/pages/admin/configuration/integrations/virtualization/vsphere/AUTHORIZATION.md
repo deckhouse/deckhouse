@@ -203,6 +203,7 @@ export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
+
 #### Creating tags and tag categories with govc
 
 VMware vSphere does not have built-in concepts of a "region" or a "zone". In vSphere, a Datacenter acts as a region, and a Cluster acts as a zone. Tags are used to establish this mapping.
@@ -213,6 +214,7 @@ Create tag categories with the following commands:
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
+
 Create tags in each category. If you intend to use multiple "zones" (Cluster), create a tag for each one of them:
 
 ```shell
@@ -220,17 +222,20 @@ govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
+
 Attach the "region" tag to Datacenter:
 
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
+
 Attach "zone" tags to the Cluster objects:
 
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
+
 #### Datastore configuration with govc
 
 {% alert level="warning" %}
@@ -246,6 +251,7 @@ govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreN
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
+
 #### Creating and assigning a role with govc
 
 {% alert %}
@@ -291,6 +297,7 @@ govc role.create deckhouse \
     VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
     VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
+
 Assign the role to a user on the vCenter object.
 
 {% alert level="warning" %}
@@ -300,6 +307,7 @@ Make sure to specify the username together with the domain, for example: `userna
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
+
 {% alert level="info" %}
 For more detailed permission configuration, refer to [the official documentation](https://pkg.go.dev/github.com/vmware/govmomi).
 {% endalert %}

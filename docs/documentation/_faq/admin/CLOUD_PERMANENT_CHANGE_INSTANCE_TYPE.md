@@ -34,12 +34,14 @@ To change the instance type for nodes with the CloudPermanent type, follow these
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
+
 1. **In the installer container**, run the following command to check the state before working:
 
    ```bash
    dhctl terraform check --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
+
    The command output should indicate that Terraform found no inconsistencies and no changes are required.
 
 1. **In the installer container**, run the command to edit the cluster configuration (specify the addresses of all master nodes in the `--ssh-host` parameter):
@@ -48,6 +50,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
+
 1. Edit the `instanceClass` parameter of the desired node group by changing the instance type and save the changes. Example settings for the `masterNodeGroup` of the Yandex Cloud provider:
 
    ```yaml
@@ -56,12 +59,15 @@ To change the instance type for nodes with the CloudPermanent type, follow these
     instanceClass:
       cores: 4      # change the number of CPUs
       memory: 8192  # change the memory size (in MB)
+
       # other instance parameters...
+
       externalIPAddresses:
       - "Auto"      # for each master node
       - "Auto"
       - "Auto"
    ```
+
 1. **In the installer container**, run the following command to perform nodes upgrade:
 
    You should read carefully what converge is going to do when it asks for approval.
@@ -72,6 +78,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> \
      --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST> --ssh-host <MASTER-NODE-2-HOST>
    ```
+
    Repeat the steps below (Sec. 9-12) for each master node one by one, starting with the node with the highest number (suffix 2) and ending with the node with the lowest number (suffix 0).
 
 1. **On the newly created node**, check the systemd-unit log for the `bashible.service`. Wait until the node configuration is complete (you will see a message `nothing to do` in the log):
@@ -79,6 +86,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
    ```bash
    journalctl -fu bashible.service
    ```
+
 1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
@@ -91,10 +99,12 @@ To change the instance type for nodes with the CloudPermanent type, follow these
      fi
    done
    ```
+
 1. Make sure `control-plane-manager` is running on the node:
 
    ```bash
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
      -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
+
 1. Proceed to update the next node (repeat the steps above).

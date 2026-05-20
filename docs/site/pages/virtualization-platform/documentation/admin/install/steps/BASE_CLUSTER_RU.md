@@ -76,8 +76,11 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
+
     # Включение доступа к Kubernetes API через Ingress.
+
     # https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
+
     publishAPI:
       enabled: true
       https:
@@ -191,20 +194,20 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 {% offtopic title="Пример вывода при успешном окончании установки..." %}
 
-```console
-...
+   ```console
+   ...
 
-┌ Create deckhouse release for version v1.65.6
-│ 🎉 Succeeded!
-└ Create deckhouse release for version v1.65.6 (0.23 seconds)
+   ┌ Create deckhouse release for version v1.65.6
+   │ 🎉 Succeeded!
+   └ Create deckhouse release for version v1.65.6 (0.23 seconds)
 
-┌ ⛵ ~ Bootstrap: Clear cache
-│ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
-└ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+   ┌ ⛵ ~ Bootstrap: Clear cache
+   │ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
+   └ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
 
-🎉 Deckhouse cluster was created successfully!
-```
-{: .nowrap-default }
+   🎉 Deckhouse cluster was created successfully!
+   ```
+   {: .nowrap-default }
 
 {% endofftopic %}
 
@@ -254,7 +257,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 - `--preflight-skip-sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`.
 - `--preflight-skip-system-requirements-check` — пропуск проверки системных требований.
 - `--preflight-skip-one-ssh-host` — пропуск проверки количества указанных SSH-хостов.
-  
+
 Пример применения флага пропуска:
 
 ```shell
@@ -263,6 +266,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
     --config=/config.yml \
     --preflight-skip-all-checks 
 ```
+
 > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 {% endofftopic %}

@@ -5,6 +5,7 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
+
 ## Everything is installed, configured, and working!
 
 Now that you have installed and properly configured Deckhouse Virtualization Platform, let's look at what you can do with it.

@@ -97,7 +97,9 @@ metadata:
 spec:
   containers:
     - name: app
+
     # other parameters...
+
 ```
 
 ## IPAM for additional networks (IP allocation and assignment)
@@ -316,6 +318,7 @@ To verify that an IP address is assigned to the interface, follow these steps:
    ```shell
    d8 k -n my-namespace get pod app-with-static-ip -o jsonpath='{.metadata.annotations.network\.deckhouse\.io/networks-status}   ' | jq
    ```
+
    Output example:
 
    ```json

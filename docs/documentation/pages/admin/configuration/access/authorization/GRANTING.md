@@ -83,8 +83,11 @@ spec:
   subjects:
   - kind: User
     name: dev-user@example.com
+
   # Available only with enableMultiTenancy mode turned on
+
   # in the user-authz module (Enterprise Edition).
+
   namespaceSelector:
     labelSelector:
       matchLabels:

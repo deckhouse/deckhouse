@@ -49,7 +49,7 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
    ```bash
    d8 system module disable control-plane-manager
    ```  
-  
+
 1. Via the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section.
@@ -180,11 +180,13 @@ To manually renew the control plane certificates, use the `kubeadm` utility on e
    ```shell
    ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
+
 1. Execute the following command:
 
    ```shell
    kubeadm certs renew all
    ```
+
    This command will regenerate the necessary certificates (for kube-apiserver, kube-controller-manager, kube-scheduler, etcd, and others).
 
 ## Speeding up pod restarts after losing connection to a node
@@ -209,6 +211,7 @@ spec:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
 ```
+
 {% alert level="warning" %}
 The shorter the timeouts, the more frequently system components check node status and plan pod rescheduling. This increases the load on the control plane, so choose values that match your requirements for high availability and performance.
 {% endalert %}
@@ -232,14 +235,15 @@ spec:
   weight: 50
   content: |
     GRUB_FILE_PATH="/etc/default/grub"
-    
+
     if ! grep -q "ipv6.disable" "$GRUB_FILE_PATH"; then
       sed -E -e 's/^(GRUB_CMDLINE_LINUX_DEFAULT="[^"]*)"/\1 ipv6.disable=1"/' -i "$GRUB_FILE_PATH"
       update-grub
-      
+
       bb-flag-set reboot
     fi
 ```
+
 {% alert level="warning" %}
 After applying the resource, the GRUB settings will be updated and the cluster nodes will begin a sequential reboot to apply the changes.
 {% endalert %}

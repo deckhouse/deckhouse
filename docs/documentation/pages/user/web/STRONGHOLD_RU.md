@@ -178,11 +178,11 @@ lang: ru
   - Просмотр детальной информации;
 
     ![Info entities](../../images/stronghold/info-entities.png)
-  
+
   - Создание сущности.
 
     ![Create entity](../../images/stronghold/create-entity.png)
-  
+
   - Удаление сущности.
 
     ![Merge entities](../../images/stronghold/merge-entities.png)
@@ -191,7 +191,7 @@ lang: ru
   - Просмотр детальной информации;
 
     ![Info alias](../../images/stronghold/info-alias.png)
-  
+
   - Создание псевдонима;
 
     ![Create alias](../../images/stronghold/create-alias.png)

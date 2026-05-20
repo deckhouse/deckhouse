@@ -5,6 +5,7 @@
 При помощи следующей команды сохраните JSON-спецификацию:
 
 {% offtopic title="Команда создания policy.json" %}
+
 ```bash
 cat > policy.json << EOF
 {
@@ -148,6 +149,7 @@ cat > policy.json << EOF
 }
 EOF
 ```
+
 {% endofftopic %}
 
 Создайте на основе ранее созданной спецификации новую Policy с именем `D8CloudProviderAWS` и примечанием ARN, используя JSON-спецификацию из файла `policy.json`:

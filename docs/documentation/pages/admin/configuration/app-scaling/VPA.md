@@ -44,10 +44,10 @@ The [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module has no
 
 After creating a [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler) resource, you can check VPA recommendations using the following command:
 
-```console
-d8 k describe vpa my-app-vpa
-```
-{: .nowrap-default }
+   ```console
+   d8 k describe vpa my-app-vpa
+   ```
+   {: .nowrap-default }
 
 In the `status` section, you’ll see the following parameters:
 
@@ -78,6 +78,7 @@ In the `status` section, you’ll see the following parameters:
          operator: Equal
          value: system
     ```
+
 1. Apply the VPA configuration file using `d8 k apply -f <your-config-file-name>`.
 
 For more details on VPA resource limits configuration, see [the documentation](../../../user/configuration/app-scaling/vpa.html#how-vpa-interacts-with-limits).

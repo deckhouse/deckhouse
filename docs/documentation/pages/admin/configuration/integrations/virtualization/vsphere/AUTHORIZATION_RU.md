@@ -212,6 +212,7 @@ export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
+
 #### Создание тегов и категорий тегов с использованием govc
 
 В VMware vSphere нет понятий «регион» и «зона». «Регионом» в vSphere является Datacenter, а «зоной» — Cluster. Для создания этой связи используются теги.
@@ -222,6 +223,7 @@ export GOVC_INSECURE=1
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
+
 Создайте теги в каждой категории. Если вы планируете использовать несколько «зон» (Cluster), создайте тег для каждой из них:
 
 ```shell
@@ -229,17 +231,20 @@ govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
+
 Назначьте тег «региона» на Datacenter:
 
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
+
 Назначьте теги «зон» на объекты Cluster:
 
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
+
 #### Настройка Datastore с использованием govc
 
 {% alert level="warning" %}
@@ -255,6 +260,7 @@ govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreN
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
+
 #### Создание и назначение роли с использованием govc
 
 {% alert %}
@@ -300,6 +306,7 @@ govc role.create deckhouse \
    VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
    VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
+
 Назначьте пользователю роль на объекте vCenter.
 
 {% alert level="warning" %}
@@ -309,6 +316,7 @@ govc role.create deckhouse \
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
+
 {% alert level="info" %}
 Для более детальной настройки прав обратитесь к [официальной документации](https://pkg.go.dev/github.com/vmware/govmomi).
 {% endalert %}

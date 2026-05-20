@@ -30,6 +30,7 @@ To view the status of the Deckhouse `main` task queue, run the following command
 ```shell
 d8 s queue main
 ```
+
 Example output (38 tasks in the `main` queue):
 
 ```console
@@ -43,4 +44,3 @@ Example output (the `main` queue is empty):
 Queue 'main': length 0, status: 'waiting for task 0s'
 ```
 {: .nowrap-default }
-

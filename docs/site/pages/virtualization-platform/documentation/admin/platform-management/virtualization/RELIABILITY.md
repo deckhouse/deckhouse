@@ -50,17 +50,23 @@ The following is an example of migrating a selected virtual machine.
    metadata:
      generateName: evict-linux-vm-
    spec:
+
      # Virtual machine name.
+
      virtualMachineName: linux-vm
+
      # An operation for the migration.
+
      type: Evict
    EOF
    ```
+
 1. Immediately after creating the `vmop` resource, run the following command:
 
    ```bash
    d8 k get vm -w
    ```
+
    Example output:
 
    ```console
@@ -91,6 +97,7 @@ To do this, run the following command:
 ```bash
 d8 k drain <nodename> --ignore-daemonsets --delete-emptydir-data
 ```
+
 Where `<nodename>` is a node scheduled for maintenance, which needs to be freed from all resources (including system resources).
 
 If you need to evict only virtual machines off the node, run the following command:
@@ -98,6 +105,7 @@ If you need to evict only virtual machines off the node, run the following comma
 ```bash
 d8 k drain <nodename> --pod-selector vm.kubevirt.internal.virtualization.deckhouse.io/name --delete-emptydir-data
 ```
+
 After running the `d8 k drain` command, the node will enter maintenance mode and no virtual machines will be able to start on it.
 
 To take it out of maintenance mode, stop the `drain` command (Ctrl+C), then execute:
@@ -105,6 +113,7 @@ To take it out of maintenance mode, stop the `drain` command (Ctrl+C), then exec
 ```bash
 d8 k uncordon <nodename>
 ```
+
 ![A diagram showing the migration of virtual machines from one node to another](/../../../../../images/virtualization-platform/drain.png)
 
 How to perform the operation in the web interface:

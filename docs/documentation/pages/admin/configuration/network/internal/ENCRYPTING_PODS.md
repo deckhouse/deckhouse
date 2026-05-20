@@ -106,6 +106,7 @@ The settings can be overridden at the namespace level.
    ```bash
    tcpdump -A -v -i any host 10.111.1.122 and port 80
    ```
+
 1. Create a Deployment client in the same namespace so that it is part of the mesh network:
 
    - If using a public registry image:
@@ -113,16 +114,19 @@ The settings can be overridden at the namespace level.
      ```bash
      d8 k -n test-istio-mtls create deployment client --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
      ```
+
    - If using an all-in-one image (replace with your registry address):
 
      ```bash
      d8 k -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
      ```
+
 1. After the Pod is created, make a request to the `webserver` service:
 
    ```bash
    d8 k -n test-istio-mtls exec -ti deployments/client -- wget -S --spider --timeout 1 webserver`
    ```
+
    The `tcpdump` output will show only encrypted traffic:
 
    ```shell
@@ -136,6 +140,7 @@ The settings can be overridden at the namespace level.
    ...h....Cm.Z.......n......L.......-_.......r...%Z.....h...........`..8A....yt.t..2d....oH?.1.O&.J....F..b.OV.............E1H..%~..2.H..{.I...=.I.*..2y1p0h..........P.....@r....vk.!".......{..`.3..<,.r&L.....M...t...;.z...Q...1+.,.......:._L.V.....e.. ..!]\..6*}....vT.A>.....A0.....{.?}AH.+R..g.[=?.X...|94....S+!..e...*..M`f...o..b.K#5.....@...5.......o.(.
    ...
    ```
+
 1. Create a namespace without the `istio-injection=enabled` label
    and make a request to the `webserver.test-istio-mtls` service
    (a request is made from a Pod that is not part of the mesh network):
@@ -143,6 +148,7 @@ The settings can be overridden at the namespace level.
    ```bash
    d8 k create namespace test-istio-mtls-without-injection
    ```
+
 1. Add a Deployment:
 
    - If using a public registry image:
@@ -150,16 +156,19 @@ The settings can be overridden at the namespace level.
      ```bash
      d8 k -n test-istio-mtls-without-injection create deployment alpine --image=docker.io/library/alpine:3.21 -- /bin/sh -c "sleep infinity"
      ```
+
    - If using an all-in-one image (replace with your registry address):
 
      ```bash
      d8 k -n test-istio-mtls create deployment client --image=registry.company.network/localrepo/all-in-one-image:0.1 -- /bin/sh -c "sleep infinity"
      ```
+
 1. After the Pod is created, make a request to the `webserver.test-istio-mtls` service:
 
    ```bash
    d8 k -n test-istio-mtls-without-injection exec -ti deployments/alpine -- wget -S --spider --timeout 1 webserver.test-istio-mtls`.
    ```
+
    The `tcpdump` output will show only unencrypted (plain text) requests and responses:
 
    ```shell
@@ -169,7 +178,7 @@ The settings can be overridden at the namespace level.
    User-Agent: Wget
    Accept: */*
    Connection: close
-   
+
    E...y.@.?...
    o[.
    o[D...P....<Nb......w.....
@@ -178,7 +187,7 @@ The settings can be overridden at the namespace level.
    User-Agent: Wget
    Accept: */*
    Connection: close
-   
+
    09:14:20.960302 lxc4f4a182c887c In  IP (tos 0x0, ttl 64, id 33396, offset 0, flags [DF], proto TCP (6), length 52)
    10.111.91.68.http > 10.111.91.211.54424: Flags [.], cksum 0xcc1b (incorrect -> 0xa850), ack 93, win 128, options [nop,nop,TS val 3834507601 ecr 305286128], length 0
    E..4.t@.@..Z
@@ -198,7 +207,7 @@ The settings can be overridden at the namespace level.
    x-envoy-upstream-service-time: 0
    connection: close
    x-envoy-decorator-operation: webserver.test-istio-mtls.svc.cluster.local:80/*
-  
+
    <!DOCTYPE html>
    <html>
    <head>
@@ -213,12 +222,12 @@ The settings can be overridden at the namespace level.
    <h1>Welcome to nginx!</h1>
    <p>If you see this page, the nginx web server is successfully installed and
    working. Further configuration is required.</p>
-   
+
    <p>For online documentation and support please refer to
    <a href="http://nginx.org/">nginx.org</a>.<br/>
    Commercial support is available at
    <a href="http://nginx.com/">nginx.com</a>.</p>
-   
+
    <p><em>Thank you for using nginx.</em></p>
    </body>
    </html>

@@ -16,7 +16,9 @@ Deckhouse конфигурируется с помощью:
 Пример набора кастомных ресурсов конфигурации Deckhouse:
 
 ```yaml
+
 # Глобальные настройки.
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -27,7 +29,9 @@ spec:
     modules:
       publicDomainTemplate: "%s.kube.company.my"
 ---
+
 # Настройки модуля monitoring-ping.
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -38,7 +42,9 @@ spec:
     externalTargets:
     - host: 8.8.8.8
 ---
+
 # Отключить модуль dashboard.
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -75,6 +81,7 @@ upmeter         false     2         12h
 ```shell
 d8 k edit moduleconfig/upmeter
 ```
+
 После завершения редактирования изменения применяются автоматически.
 
 ### Изменение конфигурации кластера
@@ -90,6 +97,7 @@ d8 k edit moduleconfig/upmeter
 ```shell
 d8 system edit cluster-configuration
 ```
+
 После сохранения изменений DKP автоматически приведёт кластер в соответствие с новой конфигурацией. В зависимости от размеров кластера это может занять некоторое время.
 
 #### Изменение защищённых параметров
@@ -133,12 +141,14 @@ d8 system edit cluster-configuration
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
    ```
+
 1. Запустите контейнер инсталлятора DKP (при необходимости измените адрес registry):
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
      registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
+
    Где `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер установщика, такие как:
     - SSH-ключи доступа;
     - файл конфигурации;
@@ -153,6 +163,7 @@ d8 system edit cluster-configuration
      --ssh-host=<MASTER-NODE-HOST> \
      --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
+
    Где:
    - `<SSH_KEY_FILENAME>` — имя файла вашего приватного SSH-ключа,
    - `<USERNAME>` — SSH-пользователь с правами sudo на целевом  master-узле кластера,
@@ -173,33 +184,39 @@ d8 system edit cluster-configuration
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    ```
+
 1. Получите текущую конфигурацию, декодируйте её и сохраните в файл:
 
    ```shell
    d8 k -n kube-system get secret d8-cluster-configuration \
      -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d > cluster-config.yaml
    ```
+
 1. Отредактируйте файл `cluster-config.yaml` в предпочитаемом редакторе:
 
    ```shell
    vi cluster-config.yaml
    ```
+
 1. Закодируйте отредактированную конфигурацию и обновите секрет:
 
    ```shell
    d8 k -n kube-system patch secret d8-cluster-configuration \
      --patch="{\"data\":{\"cluster-configuration.yaml\":\"$(base64 -w0 < cluster-config.yaml)\"}}"
    ```
+
 1. Удалите аннотацию после применения изменений:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
+
 1. Удалите временный файл с новой конфигурацией:
 
    ```shell
    rm cluster-config.yaml
    ```
+
 {% alert level="warning" %}
 Если вы забудете удалить аннотацию `deckhouse.io/allow-unsafe`, механизм защиты останется отключённым, оставляя ваш кластер уязвимым для случайных изменений конфигурации.
 {% endalert %}
@@ -213,16 +230,19 @@ DKP управляется с помощью глобальных настрое
    ```shell
    d8 k get mc global -o yaml
    ```
+
 1. Для просмотра состояния всех модулей (доступно для Deckhouse версии 1.47+):
 
    ```shell
    d8 k get modules
    ```
+
 1. Для просмотра настроек модуля [`user-authn`](/modules/user-authn/):
 
    ```shell
    d8 k get moduleconfigs user-authn -o yaml
    ```
+
 ## Настройка модуля
 
 Модуль настраивается с помощью ресурса [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig), имя которого совпадает с именем модуля (в kebab-case). ModuleConfig имеет следующие поля:
@@ -254,6 +274,7 @@ spec:
     - 10.2.100.55
     - 10.2.200.55
 ```
+
 Некоторые модули настраиваются с помощью дополнительных ресурсов. Воспользуйтесь поиском (вверху страницы) или выберите модуль в меню слева, чтобы просмотреть документацию по его настройкам и используемым кастомным ресурсам.
 
 ### Включение и отключение модуля
@@ -272,6 +293,7 @@ metadata:
 spec:
   enabled: false
 ```
+
 Проверить состояние модуля можно с помощью команды `d8 k get moduleconfig <ИМЯ_МОДУЛЯ>`.
 
 Пример:  
@@ -281,6 +303,7 @@ $ d8 k get moduleconfig user-authn
 NAME         ENABLED   VERSION   AGE   MESSAGE
 user-authn   false     1         12h
 ```
+
 ## Наборы модулей
 
 В зависимости от используемого [набора модулей](/modules/deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.

@@ -38,6 +38,7 @@ vm-b   Running   virtlab-1      10.66.20.71   5m
 ```shell
 d8 k get vm -n test-project -o yaml | less
 ```
+
 Пример вывода:
 
 ```yaml
@@ -56,6 +57,7 @@ d8 k get vm -n test-project -o yaml | less
     name: vm-b
     namespace: test-project
 ```
+
 ## Изоляция всего входящего трафика виртуальной машины
 
 Сетевая политика, ограничивающая весь входящий трафик для виртуальных машин с лейблом `vm-a`, в пространстве имён `test-project`:
@@ -73,6 +75,7 @@ spec:
   policyTypes:
     - Ingress
 ```
+
 Тип политики (policy type) Ingress означает, что будут применены правила для входящего трафика. Так как никаких Ingress правил в спецификации не указано, то будет ограничен весь входящий трафик.
 
 По такому же принципу можно ограничить и исходящий трафик, добавив Egress в блок `spec.policyTypes`.
@@ -82,6 +85,7 @@ policyTypes:
   - Egress
   - Ingress
 ```
+
 ## Разрешение входящего трафика между виртуальными машинами
 
 Сетевая политика, разрешающая входящий трафик от виртуальных машин с лейблам `vm-b`, до виртуальных машин с лейблом `vm-a`:
@@ -104,6 +108,7 @@ spec:
   policyTypes:
     - Ingress
 ```
+
 С помощью `spec.podSelector` для всех виртуальных машин с лейблом `vm: a` применяется сетевая политика с типом Ingress. В спецификации `spec.ingress` указано правило, которое разрешает входящий трафик `from` из виртуальных машин с лейблом `vm: b`.
 
 ## Разрешение исходящего трафика виртуальной машины за пределы кластера
@@ -130,6 +135,7 @@ spec:
   policyTypes:
     - Egress
 ```
+
 Тип политики (policy type) указывает на то, что будут применены правила исходящего трафика в спецификации `spec.egress`. Также указаны протокол `TCP` и порт `53`, на который разрешён трафик.
 
 Порты могут быть указаны в виде диапазона с помощью дополнительного поля `endPort` в блоке `ports`.
@@ -140,6 +146,7 @@ ports:
     port: 32000
     endPort: 32768
 ```
+
 ## Разрешение входящего трафика между пространствами имён
 
 Сетевая политика разрешает входящий трафик до виртуальных машин с лейблом `vm: a` из пространства имён `another-project`, которое имеет соответствующий лейбл `kubernetes.io/metadata.name: another-project`.
@@ -162,11 +169,12 @@ spec:
   policyTypes:
     - Ingress
 ```
+
 ## Полезные ссылки
 
 С полным описанием спецификации сетевых политик можно ознакомиться в документации:
 
 - [https://kubernetes.io/docs/concepts/services-networking/network-policies](https://kubernetes.io/docs/concepts/services-networking/network-policies).
 - [https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io).
-  
+
   где `1.31` — версия Kubernetes релиза. При необходимости укажите поддерживаемую в вашем кластере версию.

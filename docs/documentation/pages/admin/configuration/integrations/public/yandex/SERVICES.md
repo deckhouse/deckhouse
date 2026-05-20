@@ -70,7 +70,7 @@ To set up the integration:
 
    ```console
    kubectl -n external-secrets apply -f - <<EOF
-   
+
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -96,6 +96,7 @@ To set up the integration:
    ```shell
    kubectl -n external-secrets get po
    ```
+
    Example output:
 
    ```console
@@ -111,6 +112,7 @@ To set up the integration:
    ```shell
    kubectl -n external-secrets get secretstores.external-secrets.io 
    ```
+
    Example output:
 
    ```console
@@ -165,6 +167,7 @@ To set up the integration:
    ```shell
    kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
+
    The output will contain the `password` key value of the `lockbox-secret` secret created earlier:
 
    ```console
@@ -184,7 +187,7 @@ To configure PrometheusRemoteWrite, follow these steps:
 
    ```console
    kubectl apply -f - <<EOF
-   
+
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:
@@ -228,6 +231,7 @@ To read metrics in Grafana:
      secureJsonData:
        httpHeaderValue1: Bearer <API_KEY>
    ```
+
    Where:
 
    - `<GRAFANA_READ_URL>`: URL from the **Yandex Monitoring** -> **Prometheus** -> **Reading Grafana metrics** page.

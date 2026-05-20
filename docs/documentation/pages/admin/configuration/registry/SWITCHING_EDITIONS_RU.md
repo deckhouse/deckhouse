@@ -118,7 +118,9 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```yaml
    ---
+
    # Пример для Direct-режима.
+
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -130,15 +132,22 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        registry:
          mode: Direct
          direct:
+
            # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry.
+
            # Для переключения между редакциями необходимо использовать данный режим проверки registry.
+
            checkMode: Relax
            imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
+
            # Укажите свой параметр <LICENSE_TOKEN>.
+
            license: <LICENSE_TOKEN>
    ---
+
    # Пример для Unmanaged-режима.
+
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -150,12 +159,17 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        registry:
          mode: Unmanaged
          unmanaged:
+
            # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry.
+
            # Для переключения между редакциями необходимо использовать данный режим проверки.
+
            checkMode: Relax
            imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
+
            # Укажите свой параметр <LICENSE_TOKEN>.
+
            license: <LICENSE_TOKEN>
    ```
 
@@ -172,7 +186,9 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        reason: Ready
        status: "True"
        type: RegistryContainsRequiredImages
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
@@ -195,7 +211,9 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        reason: Ready
        status: "True"
        type: RegistryContainsRequiredImages
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
@@ -215,11 +233,15 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Для других режимов, использующих фиксированный адрес (данная проверка не учитывает внешние модули):
 
    ```shell
+
    # Получаем список актуальных дайджестов из файла images_digests.json внутри Deckhouse.
+
    IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Проверяем, есть ли поды, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
+
    # с дайджестом, отсутствующим в списке актуальных дайджестов из IMAGES_DIGESTS.
+
    d8 k get pods -A -o json |
    jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
      .items[]
@@ -319,6 +341,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    journalctl -u bashible -n 5
    ```
+
    Пример вывода:
 
    ```console
@@ -333,9 +356,12 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
    ```shell
    DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
+
    # Например, DECKHOUSE_VERSION=v1.58.2
+
    d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
+
    Как только под перейдёт в статус `Running`, выполните следующие команды:
 
    ```shell
@@ -346,6 +372,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
    CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
    ```
+
    > Дополнительная команда, которая необходима только при переключении на Deckhouse CSE версии 1.64:
    >
    > ```shell
@@ -360,6 +387,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
+
    > Проверьте список и убедитесь, что функциональность указанных модулей не задействована в кластере, и вы готовы к их отключению.
 
    Отключите неподдерживаемые в Deckhouse CSE модули:
@@ -368,6 +396,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    echo $MODULES_WILL_DISABLE | 
      tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
    ```
+
    В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](/modules/node-manager/configuration.html#parameters-earlyoomenabled).
 
    Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
@@ -375,11 +404,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Проверьте, что отключенные модули перешли в состояние `Disabled`.
 
    ```shell
    d8 k get modules
    ```
+
 1. Создайте [ресурс NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
    ```shell
@@ -410,6 +441,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
         sed -i 's|crictl pull .*|crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
    EOF
    ```
+
    Дождитесь завершения синхронизации bashible на всех узлах.
 
    Состояние синхронизации можно отследить по значению `UPTODATE` статуса (отображаемое число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
@@ -417,11 +449,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
+
    В журнале systemd-сервиса bashible на узлах должно появиться сообщение `Configuration is in sync, nothing to do` в результате выполнения следующей команды:
 
    ```shell
    journalctl -u bashible -n 5
    ```
+
    Пример вывода:
 
    ```console
@@ -444,6 +478,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      --dry-run='client' \
      -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
    ```
+
 1. Измените образ Deckhouse на образ Deckhouse CSE:
 
    Команда для Deckhouse CSE версии 1.58:
@@ -451,11 +486,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
+
    Команда для Deckhouse CSE версии 1.64 и 1.67:
 
    ```shell
    d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
+
 1. Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди. Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Чтобы узнать статус пода Deckhouse, используйте следующую команду:
@@ -463,11 +500,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    d8 k -n d8-system get po -l app=deckhouse
    ```
+
    Чтобы проверить состояние очереди Deckhouse, используйте следующую команду:
 
    ```shell
    d8 k -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
+
    Пример вывода (очереди пусты):
 
    ```console
@@ -484,11 +523,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
    Если в выводе присутствуют поды модуля `chrony`, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
 
    ```shell
    d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
+
 1. Очистите временные файлы, ресурс NodeGroupConfiguration и переменные:
 
    - Удалите временный файл:
@@ -496,16 +537,19 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      ```shell
      rm /tmp/cse-deckhouse-registry.yaml
      ```
+
    - Удалите ресурс NodeGroupConfiguration:
 
      ```shell
      d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
      ```
+
    - Удалите под:
 
      ```shell
      d8 k delete pod cse-image
      ```
+
    - Создайте и примените временный ресурс NodeGroupConfiguration для очистки:
 
      ```shell
@@ -529,11 +573,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
          fi
      EOF
      ```
+
    После синхронизации (статус синхронизации на узлах можно отследить по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell
    d8 k delete ngc del-temp-config.sh
    ```
+
 ## Переключение DKP на CE/BE/SE/SE+/EE
 
 Переключение DKP на CE/BE/SE/SE+/EE может быть выполнено одним из следующих способов:
@@ -571,11 +617,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    NEW_EDITION=<PUT_YOUR_EDITION_HERE>
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
    ```
+
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Пример вывода (очереди пусты):
 
    ```console
@@ -594,6 +642,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
    d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
+
    Для других редакций:
 
    ```shell
@@ -608,6 +657,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
     --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
     --command sleep -- infinity
    ```
+
    Как только под перейдёт в статус `Running`, выполните следующие команды:
 
    ```shell
@@ -615,6 +665,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
+
 1. Убедитесь, что используемые в кластере модули поддерживаются в желаемой редакции.
 
    Посмотреть список модулей, которые не поддерживаются в новой редакции и будут отключены, можно с помощью команды:
@@ -622,6 +673,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
+
    > Проверьте полученный список и убедитесь, что функциональность указанных модулей не используется вами в кластере и вы готовы их отключить.
 
    Отключите неподдерживаемые новой редакцией модули:
@@ -629,11 +681,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
+
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и убедитесь в выполнении всех задач в очереди:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Пример вывода (очереди пусты):
 
    ```console
@@ -650,11 +704,14 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k delete pod/$NEW_EDITION-image
    d8 k delete secret/$NEW_EDITION-image-pull-secret
    ```
+
 1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/)):
 
    ```yaml
    ---
+
    # Пример для Direct режима
+
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -666,17 +723,27 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        registry:
          mode: Direct
          direct:
+
            # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
+
            # Для переключения между редакциями необходимо использовать данный режим проверки registry
+
            checkMode: Relax
+
            # Укажите свой параметр <NEW_EDITION>
+
            imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
            scheme: HTTPS
+
            # Укажите свой параметр <LICENSE_TOKEN>
+
            # Если переключение выполняется на CE редакцию, удалите данный параметр
+
            license: <LICENSE_TOKEN>
    ---
+
    # Пример для Unmanaged режима
+
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -688,16 +755,25 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        registry:
          mode: Unmanaged
          unmanaged:
+
            # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
+
            # Для переключения между редакциями необходимо использовать данный режим проверки
+
            checkMode: Relax
+
            # Укажите свой параметр <NEW_EDITION>
+
            imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
            scheme: HTTPS
+
            # Укажите свой параметр <LICENSE_TOKEN>
+
            # Если переключение выполняется на CE редакцию, удалите данный параметр
+
            license: <LICENSE_TOKEN>
    ```
+
 1. Дождитесь переключения registry. Для проверки выполнения переключения воспользуйтесь [инструкцией](/modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
 
    Пример вывода:
@@ -711,13 +787,16 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        reason: Ready
        status: "True"
        type: RegistryContainsRequiredImages
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
        status: "True"
        type: Ready
    ```
+
 1. После переключения, удалите из ModuleConfig `deckhouse` параметр `checkMode: Relax`, чтобы активировать выполнение проверки по умолчанию. Удаление запустит проверку наличия критически важных компонентов в registry.
 
 1. Дождитесь выполнения проверки. Статус переключения режима registry можно получить, воспользовавшись [инструкцией](/modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
@@ -733,13 +812,16 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        reason: Ready
        status: "True"
        type: RegistryContainsRequiredImages
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
        status: "True"
        type: Ready
    ```
+
 1. Проверьте, нет ли в неймспейсах `d8-*` подов в состоянии ошибки, которые не могут загрузить образы. Это необходимо сделать вручную, так как в настоящий момент модули Deckhouse не переинициализируются автоматически после изменений, описанных выше.
 
    Получите список подов:
@@ -747,26 +829,31 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    d8 k get po -A
    ```
+
    Получите детальную информацию о проблемных подах:
 
    ```shell
    d8 k describe po <pod_name> <namespace>
    ```
+
    Повторно загрузите соответствующие проблемным подам модули, выполнив на всех master-узлах команду:
 
    ```shell
    rm -rf /var/lib/deckhouse/downloaded/<module-name>/
    ```
+
    Для получения `<module-name>` выполните команду:
 
    ```shell
    d8 k get modules
    ```
+
    После удаления данных нужных модулей перезапустите Deckhouse:
 
    ```shell
    d8 k rollout restart deploy -n d8-system deckhouse
    ```
+
 1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
 
    Для Unmanaged-режима:
@@ -774,14 +861,19 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
    Для других режимов, использующих фиксированный адрес (данная проверка не учитывает внешние модули):
 
    ```shell
+
    # Получаем список актуальных digest'ов из файла images_digests.json внутри Deckhouse
+
    IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Проверяем, есть ли поды, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
+
    # с digest'ом, отсутствующим в списке актуальных digest'ов из IMAGES_DIGESTS
+
    d8 k get pods -A -o json |
    jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
      .items[]
@@ -797,6 +889,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
      | .namespace + "\t" + .name
    ' | sort -u
    ```
+
 ### Переключение без использования модуля registry
 
 1. Если модуль `registry` включен, отключите его с [помощью инструкции](/modules/registry/faq.html#как-мигрировать-обратно-с-модуля-registry).
@@ -816,11 +909,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
+
 1. Проверьте, чтобы очередь Deckhouse была пустой и без ошибок:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Пример вывода (очереди пусты):
 
    ```console
@@ -864,13 +959,15 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
        EOF_TOML
    EOF
    ```
+
    Дождитесь появления файла `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` на узлах и завершения синхронизации bashible. Чтобы отследить статус синхронизации, проверьте значение `UPTODATE` (число узлов в этом статусе должно совпадать с общим числом узлов (`NODES`) в группе):
 
    ```shell
    d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
+
    Пример вывода:
-  
+
    ```console
    NAME     NODES   READY   UPTODATE
    master   1       1       1
@@ -883,6 +980,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    journalctl -u bashible -n 5
    ```
+
    Пример вывода:
 
    ```console
@@ -899,6 +997,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
    d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
+
 1. После перехода пода в статус `Running` выполните следующие команды:
 
    ```shell
@@ -906,6 +1005,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
+
 1. Убедитесь, что используемые в кластере модули поддерживаются в желаемой редакции.
 
    Посмотреть список модулей, которые не поддерживаются в новой редакции и будут отключены, можно с помощью команды:
@@ -913,6 +1013,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
+
    > Проверьте полученный список и убедитесь, что функциональность указанных модулей не используется в кластере и вы готовы их отключить.
 
    Отключите неподдерживаемые новой редакцией модули:
@@ -920,11 +1021,13 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```shell
    echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
+
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и убедитесь в выполнении всех задач в очереди:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Пример вывода (очереди пусты):
 
    ```console
@@ -944,16 +1047,19 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
+
    Для переключения на CE издание:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
    ```
+
 1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
 1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
    > При переходе на редакцию CE пропустите этот шаг.
@@ -978,6 +1084,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
            fi
    EOF
    ```
+
    После завершения синхронизации bashible (статус синхронизации на узлах отображается по значению `UPTODATE` у NodeGroup) удалите созданный ресурс NodeGroupConfiguration:
 
    ```shell

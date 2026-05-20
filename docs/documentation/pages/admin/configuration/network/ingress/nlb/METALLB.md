@@ -131,9 +131,13 @@ kind: Service
 metadata:
   name: nginx-deployment
   annotations:
+
     # The number of addresses that will be allocated from the pool declared in MetalLoadBalancerClass.
+
     network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+
     # A list of addresses from the pool declared in MetalLoadBalancerClass that will be allocated to the service.
+
     network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
 spec:
   type: LoadBalancer
@@ -169,6 +173,7 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
 curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 ```
+
 Example output:
 
 ```console
@@ -256,4 +261,5 @@ Service IP addresses are announced directly to routers (or top-of-rack switches)
            node-role.deckhouse.io/metallb: ""
      version: 2
    ```
+
 1. Configure BGP peering on the network equipment.

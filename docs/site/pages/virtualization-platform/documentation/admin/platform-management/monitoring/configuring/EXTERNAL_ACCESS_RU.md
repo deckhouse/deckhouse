@@ -55,7 +55,9 @@ metadata:
   namespace: d8-monitoring
 type: Opaque
 data:
+
   # Строка basic-auth хешируется с помощью htpasswd.
+
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
 
@@ -77,7 +79,6 @@ data:
 ## Сбор метрик через шлюз (Pushgateway)
 
 Prometheus, находящийся в основе системы мониторинга DVP, преимущественно использует pull-модель для сбора метрик. При таком подходе происходит опрос экспортеров метрик со стороны DVP. Когда применение pull-модели затруднено, например, для сервисов без постоянного сетевого интерфейса, можно использовать сбор метрик через шлюз (Pushgateway). Pushgateway позволяет таким задачам самим отправлять метрики, которые затем могут быть собраны Prometheus. Важно отметить, что Pushgateway может стать единой точкой отказа и узким местом в системе. Как отправлять метрики из приложения в Pushgateway можно узнать [в документации Prometheus](https://prometheus.io/docs/instrumenting/pushing/).
-
 
 Пример настройки сбора метрик через шлюз (Pushgateway):
 - Включите и настройте модуль `prometheus-pushgateway`.

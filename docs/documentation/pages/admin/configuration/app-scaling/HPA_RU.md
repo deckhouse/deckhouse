@@ -102,38 +102,57 @@ metadata:
   name: app-hpa
   namespace: app-prod
 spec:
+
   # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: app
+
   # Границы масштабирования контроллера.
+
   minReplicas: 1
   maxReplicas: 10
+
   # Если для приложения характерны кратковременные скачки потребления CPU,
+
   # можно отложить принятие решения о масштабировании, чтобы убедиться, что оно необходимо.
+
   # По умолчанию масштабирование вверх происходит немедленно.
+
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 300
   metrics:
+
   # Масштабирование по CPU и памяти.
+
   - type: Resource
     resource:
       name: cpu
       target:
+
         # Масштабирование, когда среднее использование CPU всех подов в scaleTargetRef превышает заданное значение.
+
         # Для метрики с type: Resource доступен только type: Utilization.
+
         type: Utilization
+
         # Масштабирование, если для всех подов из Deployment запрошено по 1 ядру и в среднем уже используется более 700m.
+
         averageUtilization: 70
   - type: Resource
     resource:
       name: memory
       target:
+
         # Пример масштабирования, когда среднее использование памяти всех подов в scaleTargetRef превышает заданное значение.
+
         type: Utilization
+
         # Масштабирование, если для подов запрошено по 1 ГБ памяти и в среднем использовано уже более 800 МБ.
+
         averageUtilization: 80
 ```
 
@@ -156,7 +175,9 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+
   # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -188,7 +209,9 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+
   # Указывается контроллер, который нужно масштабировать (ссылка на deployment или statefulset).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -196,20 +219,30 @@ spec:
   minReplicas: 1
   maxReplicas: 2
   metrics:
+
   # Используем внешние метрики для масштабирования.
+
   - type: External
     external:
       metric:
+
         # Метрика, которую мы зарегистрировали с помощью создания метрики в Prometheus kube_adapter_metric_mymetric, но без префикса 'kube_adapter_metric_'.
+
         name: mymetric
         selector:
+
           # Для внешних метрик можно и нужно уточнять запрос с помощью лейблов.
+
           matchLabels:
             namespace: mynamespace
             ingress: myingress
       target:
+
         # Для метрик типа External можно использовать только `type: Value`.
+
         type: Value
+
         # Масштабирование, если значение нашей метрики больше 10.
+
         value: 10
 ```

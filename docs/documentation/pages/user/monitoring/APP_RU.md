@@ -28,7 +28,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает четыре спо
 
 1. Установите лейбл `prometheus.deckhouse.io/custom-target` на сервис или под, которые необходимо подключить к мониторингу.
    Значение лейбла определит имя в списке target'ов Prometheus.
-  
+
    Пример:
 
    ```yaml

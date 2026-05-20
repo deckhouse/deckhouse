@@ -322,15 +322,21 @@ To generate a certificate, we'll use the `openssl` utility.
    L = London
    O = Example Company
    OU = IT Department
+
    # CN = Do not specify the CN field.
+
    [ req_ext ]
    subjectAltName = @alt_names
    [ alt_names ]
+
    # Specify all domain names.
+
    DNS.1 = example.co.uk
    DNS.2 = www.example.co.uk
    DNS.3 = api.example.co.uk
+
    # Specify IP addresses (if required).
+
    IP.1 = 192.0.2.1
    IP.2 = 192.0.4.1
    [ v3_ca ]
@@ -342,7 +348,9 @@ To generate a certificate, we'll use the `openssl` utility.
    keyUsage = digitalSignature, keyEncipherment
    extendedKeyUsage = serverAuth
    subjectAltName = @alt_names
+
    # Elliptic curve parameters.
+
    [ ec_params ]
    name = prime256v1
    ```

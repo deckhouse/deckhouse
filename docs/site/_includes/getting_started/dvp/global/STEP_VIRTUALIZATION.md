@@ -16,7 +16,9 @@ spec:
           storageClassName: sds-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
+
     # Specify the subnets from which IP addresses will be assigned to virtual machines.
+
     - 10.66.10.0/24
     - 10.66.20.0/24
     - 10.66.30.0/24

@@ -134,7 +134,7 @@ The Level 2 C4 architecture of Ingress controller with HostWithFailover inlet ty
    * **iptables-loop**: Sidecar container that updates the `iptables` rules on the node that are necessary for the Ingress controller to work. It is developed by Flant.
 
    * **nginx-exporter**: Sidecar container that connects to NGINX over HTTP and exports metrics in the Prometheus format. It is an [open source project](https://github.com/nginx/nginx-prometheus-exporter).
-  
+
    * **kube-rbac-proxy**: Sidecar container providing authorized access to controller metrics and status (described above).
 
 3. **Failover-cleaner** (DaemonSet): Component deployed to the cluster nodes that are labeled with `ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup=true`. It cleans up the `iptables` rules. If the Ingress controller operates normally, the failover-cleaner component doesn't run on any node.

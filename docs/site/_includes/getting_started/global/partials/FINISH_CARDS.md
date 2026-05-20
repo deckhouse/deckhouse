@@ -151,6 +151,7 @@ You need to create a new
 {% endif %}
 
 <div markdown="1">
+
 ## What's next?
 
 Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).

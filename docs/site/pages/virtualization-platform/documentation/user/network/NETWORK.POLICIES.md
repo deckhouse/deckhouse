@@ -37,6 +37,7 @@ Virtual machines have corresponding labels:
 ```shell
 d8 k get vm -n test-project -o yaml | less
 ```
+
 Example output:
 
 ```yaml
@@ -55,6 +56,7 @@ Example output:
     name: vm-b
     namespace: test-project
 ```
+
 ## Isolation of all incoming traffic for virtual machine
 
 A network policy that restricts all incoming traffic to virtual machines with the label `vm-a` in the `test-project` namespace:
@@ -72,6 +74,7 @@ spec:
   policyTypes:
     - Ingress
 ```
+
 The policy type Ingress indicates that the rules for incoming traffic will be applied. Since no Ingress rules are specified in the configuration, all incoming traffic will be restricted.
 
 Similarly, outgoing traffic can be restricted by adding Egress to the `spec.policyTypes` block.
@@ -81,6 +84,7 @@ policyTypes:
   - Egress
   - Ingress
 ```
+
 ## Allowing incoming traffic between virtual machines
 
 A network policy allowing incoming traffic from virtual machines with the label `vm-b` to virtual machines with the label `vm-a`:
@@ -103,6 +107,7 @@ spec:
   policyTypes:
     - Ingress
 ```
+
 With `spec.podSelector`, a network policy with type Ingress is applied to all virtual machines with the label `vm: a`. In the `spec.ingress` specification, a rule is defined that allows incoming traffic `from` virtual machines with the label `vm: b`.
 
 ## Allowing outgoing traffic from a virtual machine to external addresses
@@ -129,6 +134,7 @@ spec:
   policyTypes:
     - Egress
 ```
+
 The Egress policy type indicates that outgoing traffic rules will be applied in the `spec.egress` specification. The `TCP` protocol and port `53` are specified, allowing traffic to that port.
 
 Ports can be specified as a range using the additional `endPort` field within the `ports` block.
@@ -139,6 +145,7 @@ ports:
     port: 32000
     endPort: 32768
 ```
+
 ## Allowing incoming traffic between namespaces
 
 The network policy allows incoming traffic to virtual machines with the label `vm: a` from the `another-project` namespace, which has the corresponding label `kubernetes.io/metadata.name: another-project`.
@@ -161,6 +168,7 @@ spec:
   policyTypes:
     - Ingress
 ```
+
 ## Useful Links
 
 You can find the full specification of network policies in the following documentation:

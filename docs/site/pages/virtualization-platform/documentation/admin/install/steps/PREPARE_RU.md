@@ -63,7 +63,7 @@ lang: ru
      ```shell
      sudo useradd -m -s /bin/bash -G sudo dvpinstall
      ```
-  
+
    - Установите пароль (пароль нужно сохранить, он понадобится в дальнейшем):
 
      ```shell
@@ -74,7 +74,9 @@ lang: ru
 
      ```shell
      visudo   
+
      # Добавить строку:    
+
      dvpinstall ALL=(ALL:ALL) NOPASSWD: ALL
      ```
 

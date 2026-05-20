@@ -18,16 +18,24 @@ Example `cloud-config` for updating the system and installing packages from a li
 
 ```yaml
 #cloud-config
+
 # Update package lists
+
 package_update: true
+
 # Upgrade installed packages to latest versions
+
 package_upgrade: true
+
 # List of packages to install
+
 packages:
   - nginx
   - curl
   - htop
+
 # Commands to run after package installation
+
 runcmd:
   - systemctl enable --now nginx.service
 ```
@@ -38,7 +46,9 @@ Example `cloud-config` for creating a local user with a password and SSH key:
 
 ```yaml
 #cloud-config
+
 # List of users to create
+
 users:
   - name: cloud                    # Username
     passwd: "$6$rounds=4096$saltsalt$..."  # Password hash (SHA-512)
@@ -47,7 +57,9 @@ users:
     shell: /bin/bash              # Default shell
     ssh-authorized-keys:          # SSH keys for access
       - ssh-ed25519 AAAAC3NzaC... your-public-key ...
+
 # Allow password authentication via SSH
+
 ssh_pwauth: true
 ```
 
@@ -63,7 +75,9 @@ Example `cloud-config` for creating a file with specified access permissions:
 
 ```yaml
 #cloud-config
+
 # List of files to create
+
 write_files:
   - path: /opt/scripts/start.sh    # File path
     content: |                     # File content
@@ -79,7 +93,9 @@ Example `cloud-config` for disk partitioning, filesystem creation, and mounting:
 
 ```yaml
 #cloud-config
+
 # Disk partitioning setup
+
 disk_setup:
   /dev/sdb:                        # Disk device
     table_type: gpt                # Partition table type (gpt or mbr)
@@ -87,6 +103,7 @@ disk_setup:
     overwrite: false               # Do not overwrite existing partitions
 
 # Filesystem setup
+
 fs_setup:
   - label: data                    # Filesystem label
     filesystem: ext4               # Filesystem type
@@ -94,8 +111,11 @@ fs_setup:
     partition: auto                # Automatically detect partition
 
 # Filesystem mounting
+
 mounts:
+
   # [device, mount_point, fs_type, options, dump, pass]
+
   - ["/dev/sdb1", "/mnt/data", "ext4", "defaults", "0", "2"]
 ```
 

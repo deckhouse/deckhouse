@@ -27,7 +27,7 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
 - ***Prevent secret leaks***  
 
   Any attempt to commit files that match the following patterns will be rejected:
-  
+
   - `aws/credentials`,
   - `ssh/personal_rsa`, `ssh/personal_dsa`, `ssh/personal_ed25519`, `ssh/personal_ecdsa`, `ssh/personal_ecdsa_sk`, `ssh/personal_ed25519_sk`,
   - `ssh/server_rsa`, `ssh/server_dsa`, `ssh/server_ed25519`, `ssh/server_ecdsa`, `ssh/server_ecdsa_sk`, `ssh/server_ed25519_sk`,

@@ -97,7 +97,7 @@ example1  10s       Ready     false
   {: .nowrap-default }
 
 * Модуль должен иметь источник, иначе сообщение у ModulePullOverride будет *The module does not have an active source*.
-  
+
   Пример:
 
   ```console
@@ -123,6 +123,7 @@ example1  10s       Ready     false
 ```sh
 d8 k annotate mpo <name> renew=""
 ```
+
 ## Доступность модуля и включение по умолчанию
 
 Чтобы назначить редакции Deckhouse, в которых должен быть доступен модуль,
@@ -138,6 +139,7 @@ accessibility:
       enabledInBundles:
         - Default
 ```
+
 В данном примере модуль будет доступен в редакции `ee` (DKP Enterprise Edition)
 и может быть включен через объект ModuleConfig, а также будет по умолчанию включен в составе набора модулей `Default`.
 
@@ -201,6 +203,7 @@ status:
     type: IsOverridden
   phase: Ready
 ```
+
 После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
 
 ### Пример
@@ -226,6 +229,7 @@ status:
        policy: test-alpha
      modulesCount: 2
    ```
+
 1. Включите модуль и создайте [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
@@ -236,6 +240,7 @@ status:
    spec:
      imageTag: main-patch-03354
    ```
+
    После создания ModulePullOverride, для модуля будет использоваться тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
 1. Данные ModulePullOverride будут меняться при каждом обновлении модуля:
@@ -253,6 +258,7 @@ status:
      message: "Ready"
      updatedAt: "2023-12-07T08:41:21Z"
    ```
+
    где:
    - `imageDigest` — уникальный идентификатор образа контейнера, который был загружен.
    - `lastUpdated` — время последней загрузки образа.
@@ -278,6 +284,7 @@ status:
        policy: test-alpha
      modulesCount: 2
    ```
+
 {% endraw %}
 
 {% raw %}
@@ -326,6 +333,7 @@ update:
     - from: "1.99"
       to:   "2.0" # Переход между основными версиями задаётся форматом X.0.
 ```
+
 > Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
 
 Условия применения `from-to`:
@@ -344,6 +352,7 @@ update:
 ```shell
 d8 k get mr
 ```
+
 Пример вывода, если текущая версия модуля — `0.3.33`, а в `module.yaml` задано правило `from: "0.3" → to: "0.7"`:
 
 ```console
@@ -364,11 +373,13 @@ p-o-test-v0.7.25   Pending      Release is waiting for the 'modules.deckhouse.io
 ```shell
 d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
 ```
+
 Для удобства это можно сделать с помощью [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI (имена модулей и версии автодополняются):
 
 ```shell
 d8 system module approve p-o-test v0.7.25
 ```
+
 Пример вывода после подтверждения:
 
 ```console
@@ -388,13 +399,16 @@ p-o-test-v0.7.25   Deployed
 В этом примере правило `from-to` прописано в самом релизе назначения, и значение `to` равно версии этого релиза. Текущая установленная версия (`Deployed`) не ниже значения `from`, значит переход возможен. Как только релиз появляется в кластере, DKP готовит обновление. Если по политике обновления требуется подтверждение — пометьте релиз аннотацией. После подтверждения промежуточные релизы будут пропущены, релиз назначения станет `Deployed`:
 
 ```yaml
+
 # Версия модуля (Deployed): v1.67.23 (≥ 1.67) → условие from выполнено.
+
 metadata:
   name: module-test-v1.67.23
 status:
   phase: Deployed
 
 # Релиз назначения: версия релиза = update.versions.to (1.75).
+
 metadata:
   name: module-test-v1.75.25
 update:
@@ -402,16 +416,20 @@ update:
   - from: "1.67"
     to:   "1.75"   # Обновление выполнится до этой версии после подтверждения (если подтверждение необходимо).
 ```
+
 Также если текущая версия ещё выше значения `from`, переход также выполняется:
 
 ```yaml
+
 # Версия модуля (Deployed): v1.69.0  (≥ 1.67) → условие from выполнено.
+
 metadata:
   name: module-test-v1.69.0
 status:
   phase: Deployed
 
 # Релиз назначения: версия релиза = update.versions.to (1.75)
+
 metadata:
   name: module-test-v1.75.25
 update:
@@ -419,12 +437,15 @@ update:
   - from: "1.67"
     to:   "1.75"  # Обновление выполнится до этой версии после подтверждения (если подтверждение необходимо).
 ```
+
 **Пример 2**. Текущая версия ниже `from` — переход не выполняется.
 
 Если текущая установленная версия меньше значения `from`, правило не применяется. Обновление идёт по порядку (без пропуска):
 
 ```yaml
+
 # Версия модуля (Deployed): v1.61.0  (< 1.67) → условие from НЕ выполнено.
+
 metadata:
   name: module-test-v1.61.0
 status:
@@ -437,12 +458,15 @@ update:
   - from: "1.67"
     to:   "1.75"   # Переход по from-to не выполняется → происходит обновление по порядку.
 ```
+
 **Пример 3**. Несовпадение `to` с версией релиза с правилом — переход не выполняется.
 
 Переход возможен только в релиз, где `to` равно версии этого релиза. Если правило описано в другом релизе (например, `to: "1.74"` лежит в релизе `v1.75.25`), оно не сработает — обновление пойдёт по порядку.
 
 ```yaml
+
 # Версия модуля (Deployed): v1.67.0.
+
 metadata:
   name: module-test-v1.67.0
 status:
@@ -452,6 +476,7 @@ metadata:
   name: module-test-v1.74.0   # У этого релиза нет update.versions.
 
 # Правило записано в другом релизе (v1.75.25), и to не равно его версии.
+
 metadata:
   name: module-test-v1.75.25
 update:
@@ -459,6 +484,7 @@ update:
   - from: "1.67"
     to:   "1.74"   # Значение to не равно версии этого релиза (1.75.25) → правило игнорируется.
 ```
+
 {% endraw %}
 
 ## Артефакты модуля в хранилище образов
@@ -491,6 +517,7 @@ registry.example.io
       ├─ 📝 alpha
       └─ 📝 beta
 ```
+
 {% alert level="warning" %}
 Хранилище образов должно поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](../#требования).  
 {% endalert %}
@@ -502,6 +529,7 @@ registry.example.io
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>
 ```
+
 Пример:
 
 ```shell
@@ -509,11 +537,13 @@ $ crane ls registry.example.io/modules-source
 module-1
 module-2
 ```
+
 ### Вывод списка образов модуля
 
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>
 ```
+
 Пример:
 
 ```shell
@@ -523,6 +553,7 @@ d4bf3e71015d1e757a8481536eeabda98f51f1891d68b539cc50753a-1589714365467
 e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
 v1.23.2
 ```
+
 В примере в модуле `module-1` присутствуют два образа модуля и два образа контейнеров приложений.
 
 ### Вывод файлов в образе модуля
@@ -530,11 +561,13 @@ v1.23.2
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -tf -
 ```
+
 Пример:
 
 ```shell
 crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
 ```
+
 Ответ будет достаточно большим.
 
 ### Вывод списка образов контейнеров приложений модуля
@@ -542,6 +575,7 @@ crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - images_digests.json
 ```
+
 Пример:
 
 ```shell
@@ -551,6 +585,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
   "frontend": "sha256:f31f4b7da5faa5e320d3aad809563c6f5fcaa97b571fffa5c9cab103327cc0e8"
 }
 ```
+
 ### Конфигурация дополнительных образов
 
 Модули могут включать дополнительные образы (например, базы данных уязвимостей или другие вспомогательные данные) путем добавления файла `extra_images.json`. Этот файл указывает дополнительные образы, которые необходимо вручную загрузить в реестр и которые отделены от основных образов модуля.
@@ -560,6 +595,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - extra_images.json
 ```
+
 Пример файла `extra_images.json` для базы уязвимостей neuvector:
 
 ```json
@@ -567,6 +603,7 @@ crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -
   "scanner": 3
 }
 ```
+
 Важные замечания:
 
 - Дополнительные образы должны быть вручную загружены в реестр модулей по пути `extra/`.
@@ -578,6 +615,7 @@ crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release
 ```
+
 Пример:
 
 ```shell
@@ -587,6 +625,7 @@ v1.23.2
 alpha
 beta
 ```
+
 В примере в хранилище образов два релиза и используются два канала обновлений: `alpha` и `beta`.
 
 ### Вывод версии, используемой на канале обновлений `alpha`
@@ -594,6 +633,7 @@ beta
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release:alpha - | tar -Oxf - version.json
 ```
+
 Пример:
 
 ```shell

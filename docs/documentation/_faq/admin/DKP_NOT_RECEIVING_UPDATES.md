@@ -7,7 +7,7 @@ lang: en
 
 - Ensure the [correct release channel](../admin/configuration/update/configuration.html#checking-the-current-update-mode) is configured.
 - Check that DNS resolution for the Deckhouse image registry is working correctly.
-  
+
   Get and compare the IP addresses of `registry.deckhouse.io` from both a node and the `deckhouse` Pod.
   They must match.
 
@@ -31,6 +31,7 @@ lang: en
   ```shell
   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   ```
+
   Example output:
 
   ```console
@@ -54,6 +55,7 @@ Below is an example of how DNS settings may result in different resolution behav
   nameserver 10.0.0.10
   search company.my
   ```
+
   > On nodes, the default `ndot` setting is **1** (`options ndots:1`), while in Kubernetes Pods, it’s **5**.
   > This causes different resolution logic for DNS names with 5 or fewer dots on a node and on the Pod.
 

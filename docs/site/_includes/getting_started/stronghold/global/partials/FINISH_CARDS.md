@@ -150,6 +150,7 @@ You need to create a new
 {% endif %}
 
 <div markdown="1">
+
 ## What's next?
 
 Detailed information about the system and components is available in the [documentation](/products/stronghold/documentation/admin/overview.html).

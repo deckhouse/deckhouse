@@ -33,14 +33,20 @@ apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: Standard
 standard:
+
   # Optional. Listed addresses will be used for
+
   # addressing Cloud NAT.
+
   cloudNATAddresses:
   - example-address-1
   - example-address-2
 subnetworkCIDR: 10.0.0.0/24         # Required.
+
 # Optional. A list of GCP VPC Networks used by Kubernetes VPC
+
 # Network to connect over peering.
+
 peeredVPCs:
 - default
 sshKey: "<SSH_PUBLIC_KEY>"  # Required.
@@ -105,8 +111,11 @@ apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: WithoutNAT
 subnetworkCIDR: 10.0.0.0/24         # Required.
+
 # Optional. A list of GCP VPC Networks used by Kubernetes VPC
+
 # Network to connect over peering.
+
 peeredVPCs:
 - default
 labels:

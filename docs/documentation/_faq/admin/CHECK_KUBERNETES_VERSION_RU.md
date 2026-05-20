@@ -25,4 +25,3 @@ worker-0               Ready    worker                 37d   
 worker-1               Ready    worker                 19d    v1.31.9
 ```
 {: .nowrap-default }
-

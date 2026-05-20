@@ -75,8 +75,11 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
+
     # Enabling access to the Kubernetes API through Ingress.
+
     # https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
+
     publishAPI:
       enabled: true
       https:
@@ -186,20 +189,20 @@ The installation time may range from 5 to 30 minutes, depending on the connectio
 
 {% offtopic title="Example output upon successful completion of the installation..." %}
 
-```console
-...
+   ```console
+   ...
 
-┌ Create deckhouse release for version v1.65.6
-│ 🎉 Succeeded!
-└ Create deckhouse release for version v1.65.6 (0.23 seconds)
+   ┌ Create deckhouse release for version v1.65.6
+   │ 🎉 Succeeded!
+   └ Create deckhouse release for version v1.65.6 (0.23 seconds)
 
-┌ ⛵ ~ Bootstrap: Clear cache
-│ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
-└ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
+   ┌ ⛵ ~ Bootstrap: Clear cache
+   │ ❗ ~ Next run of "dhctl bootstrap" will create a new Kubernetes cluster.
+   └ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
 
-🎉 Deckhouse cluster was created successfully!
-```
-{: .nowrap-default }
+   🎉 Deckhouse cluster was created successfully!
+   ```
+   {: .nowrap-default }
 
 {% endofftopic %}
 
@@ -258,4 +261,5 @@ Example of using the preflight skip flag:
       --config=/config.yml \
       --preflight-skip-all-checks 
   ```
+
 {% endofftopic %}

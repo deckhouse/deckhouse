@@ -19,12 +19,18 @@ The example assumes that:
    all:
      vars:
        ansible_ssh_common_args: '-o ProxyCommand="d8 v port-forward --stdio=true %h %p"'
+
        # Default user for SSH access.
+
        ansible_user: cloud
+
        # Path to private key.
+
        ansible_ssh_private_key_file: /home/user/.ssh/id_rsa
      hosts:
+
        # Host name in the format <VM name>.<namespace>.
+
        frontend.demo-app:
 
    ```
@@ -35,7 +41,9 @@ The example assumes that:
    ansible -m shell -a "uptime" -i inventory.yaml all
 
    # frontend.demo-app | CHANGED | rc=0 >>
+
    # 12:01:20 up 2 days,  4:59,  0 users,  load average: 0.00, 0.00, 0.00
+
    ```
 
 If you do not want to use an inventory file, pass all parameters on the command line:

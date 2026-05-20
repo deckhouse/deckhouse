@@ -5,6 +5,7 @@ You have to create an IAM account with the {{ page.platform_name[page.lang] }} c
 Create the `JSON specification` using the following command.
 
 {% offtopic title="Command to create policy.json" %}
+
 ```bash
 cat > policy.json << EOF
 {
@@ -148,6 +149,7 @@ cat > policy.json << EOF
 }
 EOF
 ```
+
 {% endofftopic %}
 
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name:

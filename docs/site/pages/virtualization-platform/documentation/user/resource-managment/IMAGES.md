@@ -80,9 +80,13 @@ kind: VirtualImage
 metadata:
   name: ubuntu-24-04
 spec:
+
   # Save the image to DVCR
+
   storage: ContainerRegistry
+
   # The source for the image.
+
   dataSource:
     type: HTTP
     http:
@@ -94,7 +98,9 @@ Check the result of the `VirtualImage` creation:
 
 ```bash
 d8 k get virtualimage ubuntu-24-04
+
 # or a shorter version
+
 d8 k get vi ubuntu-24-04
 ```
 
@@ -124,6 +130,7 @@ You can trace the image creation process by adding the `-w` key to the previous 
 ```bash
 d8 k get vi ubuntu-24-04 -w
 ```
+
 Example output:
 
 ```console
@@ -143,6 +150,7 @@ The `VirtualImage` resource description provides additional information about th
 ```bash
 d8 k describe vi ubuntu-24-04
 ```
+
 How to create an image from an HTTP server in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -166,20 +174,26 @@ metadata:
 spec:
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
+
     # Substitute your StorageClass name.
+
     storageClassName: rv-thin-r2
+
   # Source for image creation.
+
   dataSource:
     type: HTTP
     http:
       url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
+
 Check the result of the `VirtualImage` creation:
 
 ```bash
 d8 k get vi ubuntu-24-04-pvc
 ```
+
 Example output:
 
 ```console
@@ -212,17 +226,20 @@ First, download the image locally:
 ```bash
 curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
 ```
+
 Next, create a `Dockerfile` with the following contents:
 
 ```Dockerfile
 FROM scratch
 COPY ubuntu2204.img /disk/ubuntu2204.img
 ```
+
 Build the image and load it into the container registry. The example below uses docker.io as the container registry. you need to have a service account and a customized environment to run it.
 
 ```bash
 docker build -t docker.io/<username>/ubuntu2204:latest
 ```
+
 where `username` is the username specified when registering with docker.io.
 
 Load the created image into the container registry:
@@ -230,6 +247,7 @@ Load the created image into the container registry:
 ```bash
 docker push docker.io/<username>/ubuntu2204:latest
 ```
+
 To use this image, create a resource as an example:
 
 ```yaml
@@ -246,6 +264,7 @@ spec:
       image: docker.io/<username>/ubuntu2204:latest
 EOF
 ```
+
 How to create an image from Container Registry in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
@@ -274,6 +293,7 @@ spec:
     type: Upload
 EOF
 ```
+
 Once created, the resource will enter the `WaitForUserUpload` phase, which means it is ready for image upload.
 
 There are two options available for uploading from a cluster node and from an arbitrary node outside the cluster:
@@ -281,6 +301,7 @@ There are two options available for uploading from a cluster node and from an ar
 ```bash
 d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```
+
 Example output:
 
 ```json
@@ -289,21 +310,25 @@ Example output:
   "inCluster":"http://10.222.165.239/upload"
 }
 ```
+
 As an example, download the Cirros image:
 
 ```bash
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
 ```
+
 Upload the image using the following command:
 
 ```bash
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
+
 After the upload is complete, the image should be created and enter the `Ready` phase
 
 ```bash
 d8 k get vi some-image
 ```
+
 Example output:
 
 ```console
@@ -347,6 +372,7 @@ spec:
       name: linux-vm-root
 EOF
 ```
+
 How to create an image from a disk in the web interface:
 
 - Go to the "Projects" tab and select the desired project.

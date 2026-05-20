@@ -60,6 +60,7 @@ lang: ru
 ```shell
 d8 k get deckhousereleases.deckhouse.io
 ```
+
 Пример вывода:
 
 ```console
@@ -77,4 +78,3 @@ v1.70.17   Deployed     160m
 v1.71.3    Suspended    14d              Release is suspended
 ```
 {: .nowrap-default }
-

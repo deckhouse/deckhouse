@@ -57,27 +57,46 @@ To enable authentication for an application deployed in DKP, follow these steps:
    apiVersion: deckhouse.io/v1
    kind: DexAuthenticator
    metadata:
+
      # Prefix for Dex authenticator pod names.
+
      # For example, if the name prefix is `app-name`, pods will be named like `app-name-dex-authenticator-7f698684c8-c5cjg`.
+
      name: app-name
+
      # Namespace where Dex authenticator will be deployed.
+
      namespace: app-ns
    spec:
+
      # Domain name of your application. Requests to this domain will be redirected to Dex for authentication.
+
      applicationDomain: "app-name.kube.my-domain.com"
+
      # Whether to send an `Authorization: Bearer` header to the application. Useful with NGINX's auth_request.
+
      sendAuthorizationHeader: false
+
      # Name of the Secret containing the TLS certificate.
+
      applicationIngressCertificateSecretName: "ingress-tls"
+
      # Name of the Ingress class to use for the Ingress resource created for the Dex authenticator.
+
      applicationIngressClassName: "nginx"
+
      # Duration for which the user session remains active.
+
      keepUsersLoggedInFor: "720h"
+
      # List of groups whose users are allowed to authenticate.
+
      allowedGroups:
      - everyone
      - admins
+
      # List of IP addresses and CIDRs allowed to authenticate.
+
      whitelistSourceRanges:
      - 1.1.1.1/32
      - 192.168.0.0/24
@@ -177,4 +196,3 @@ To enable authentication for such an application, follow these steps:
    d8 k -n d8-user-authn get ingress dex -o jsonpath="{.spec.rules[*].host}"
    ```
    {: .nowrap-default }
-

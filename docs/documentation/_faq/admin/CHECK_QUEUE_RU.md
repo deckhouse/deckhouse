@@ -30,6 +30,7 @@ Summary:
 ```shell
 d8 s queue main
 ```
+
 Пример вывода (в очереди `main` 38 заданий):
 
 ```console
@@ -43,4 +44,3 @@ Queue 'main': length 38, status: 'run first task'
 Queue 'main': length 0, status: 'waiting for task 0s'
 ```
 {: .nowrap-default }
-

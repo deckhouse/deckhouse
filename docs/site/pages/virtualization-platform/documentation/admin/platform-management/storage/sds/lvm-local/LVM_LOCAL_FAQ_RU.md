@@ -57,6 +57,7 @@ nodeSelector:
 ```shell
 d8 k -n d8-sds-local-volume get pod -owide
 ```
+
 ## Проверка создания PVC на выбранном узле
 
 Убедитесь, что на выбранном узле работает под `sds-local-volume-csi-node`. Для этого выполните команду:
@@ -64,6 +65,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
+
 При отсутствии подов проверьте, что на узле установлены все лейблы, указанные в настройках модуля в поле `nodeSelector`. Подробнее о способах решения проблемы с отсутствием подов на нужном узле можно прочитать [в этом разделе](#отсутствие-служебных-подов-на-нужном-узле).
 
 ## Вывод узла из-под управления модуля
@@ -75,6 +77,7 @@ d8 k -n d8-sds-local-volume get po -owide
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 ```
+
 Пример вывода:
 
 ```console
@@ -88,6 +91,7 @@ nodeSelector:
 ```shell
 d8 k label node %node-name% %label-from-selector%-
 ```
+
 {% alert level="warning" %}
 После ключа лейбла необходимо указать знак минуса для её удаления.
 {% endalert %}
@@ -97,11 +101,13 @@ d8 k label node %node-name% %label-from-selector%-
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
+
 Если под остаётся после удаления лейбла, убедитесь, что лейблы из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
 
 ```shell
 d8 k get node %node-name% --show-labels
 ```
+
 Если лейблы отсутствуют, проверьте, что на узле нет ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), используемых ресурсами [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). Подробнее об этой проверке можно прочитать [в этом разделе](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 {% alert level="warning" %}
@@ -119,6 +125,7 @@ d8 k get node %node-name% --show-labels
    ```shell
    d8 k get lsc
    ```
+
 1. Проверьте у каждого из них список используемых ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 
    Вы можете сразу отобразить содержимое всех [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) ресурсов, выполнив команду:
@@ -126,6 +133,7 @@ d8 k get node %node-name% --show-labels
    ```shell
    d8 k get lsc -oyaml
    ```
+
    Примерный вид [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass):
 
    ```yaml
@@ -148,6 +156,7 @@ d8 k get node %node-name% --show-labels
        phase: Created
    kind: List
    ```
+
    Обратите внимание на поле `spec.lvm.lvmVolumeGroups` — именно в нем указаны используемые ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 
 1. Отобразите список существующих ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup):
@@ -155,6 +164,7 @@ d8 k get node %node-name% --show-labels
    ```shell
    d8 k get lvg
    ```
+
    Примерный вывод [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup):
 
    ```text
@@ -166,6 +176,7 @@ d8 k get node %node-name% --show-labels
    lvg-on-worker-4   Operational   node-worker-4   307196Mi   0                test-vg   15d
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
+
 1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
 
 ## Оставшийся под sds-local-volume-csi-node после удаления лейблов
@@ -179,6 +190,7 @@ d8 k get node %node-name% --show-labels
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
 ```
+
 Пример вывода:
 
 ```console
@@ -192,6 +204,7 @@ nodeSelector:
 ```shell
 d8 k -n d8-sds-local-volume get secret d8-sds-local-volume-controller-config  -o jsonpath='{.data.config}' | base64 --decode
 ```
+
 Пример вывода:
 
 ```console
@@ -208,17 +221,20 @@ nodeSelector:
 ```shell
 d8 k get node %node-name% --show-labels
 ```
+
 При необходимости добавьте недостающие лейблы на желаемый узел:
 
 ```shell
 d8 k label node %node-name% my-custom-label-key=my-custom-label-value
 ```
+
 Если лейблы присутствуют, проверьте наличие лейбла `storage.deckhouse.io/sds-local-volume-node=` на узле. Если лейбл отсутствует, убедитесь, что работает `sds-local-volume-controller`, и ознакомьтесь с его логами:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -l app=sds-local-volume-controller
 d8 k -n d8-sds-local-volume logs -l app=sds-local-volume-controller
 ```
+
 ## Перемещение данных между PVC
 
 Скопируйте следующий скрипт в файл `migrate.sh` на любом master-узле:
@@ -286,11 +302,13 @@ while [[ $kubectl_completed_check -eq 0 ]]; do
 done
 echo "Data migration completed"
 ```
+
 Для запуска скрипта выполните команду:
 
 ```shell
 migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 ```
+
 ## Создание снимков томов
 
 Подробную информацию о снимках и используемых ресурсах можно найти [в документации Kubernetes](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
@@ -308,6 +326,7 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
      version: 1
    EOF
    ```
+
 1. Теперь вы можете создавать снимки томов. Для этого выполните следующую команду с необходимыми параметрами:
 
    ```shell
@@ -323,6 +342,7 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
        persistentVolumeClaimName: <name of the PVC to snapshot>
    EOF
    ```
+
    Обратите внимание, что `sds-local-volume-snapshot-class` создается автоматически, и его `deletionPolicy` установлена в `Delete`, что означает, что ресурс VolumeSnapshotContent будет удален при удалении связанного ресурса VolumeSnapshot.
 
 1. Чтобы проверить статус созданного снимка, выполните команду:
@@ -330,4 +350,5 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
    ```shell
    d8 k get volumesnapshot
    ```
+
    Данная команда выведет список всех снимков и их текущий статус.

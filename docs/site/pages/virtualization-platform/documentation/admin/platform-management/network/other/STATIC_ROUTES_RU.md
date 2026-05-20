@@ -57,11 +57,13 @@ spec:
 status:
   ipRoutingTableID: 10000 # Если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status.
 ```
+
 На узлах, попадающих под `nodeSelector`, будет создан маршрут `0.0.0.0/0 via 192.168.0.1` в таблице `10000`:
 
 ```shell
 ip -4 route ls table 10000
 ```
+
 Пример вывода:
 
 ```console
@@ -99,11 +101,13 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 ```
+
 На узлах, попадающих под `nodeSelector`, будет создан ip rule. Команда для просмотра:
 
 ```shell
 ip rule list
 ```
+
 Пример вывода:
 
 ```console
@@ -114,4 +118,3 @@ ip rule list
 50: from 192.168.111.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 ```
 {: .nowrap-default }
-

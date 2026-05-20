@@ -53,7 +53,7 @@ Before installation, ensure the following:
 - For supported clouds: the required resource quotas are available and access credentials to the cloud infrastructure are prepared (provider-specific).
 
 - If there are infrastructure-level restrictions on network communication, ensure that the requirements described in the [Network interaction of the platform components](../reference/network_interaction.html) section are met.
-  
+
 - There is access to the Deckhouse container registry (official `registry.deckhouse.io`, or a mirror).
 
 ## Preparing the Configuration
@@ -233,10 +233,15 @@ metadata:
 spec:
   version: 2
   enabled: true
+
   # Specify if you plan to use dedicated nodes for monitoring.
+
   # settings:
+
   #   nodeSelector:
+
   #     node.deckhouse.io/group: monitoring
+
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -388,10 +393,15 @@ metadata:
 spec:
   version: 2
   enabled: true
+
   # Specify if you plan to use dedicated nodes for monitoring.
+
   # settings:
+
   #   nodeSelector:
+
   #     node.deckhouse.io/group: monitoring
+
 ---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -467,16 +477,16 @@ This sample script retrieves the IP address of the load balancer after DKP is in
 set -e
 set -o pipefail
 
-
 INGRESS_NAME="nginx"
-
 
 echo_err() { echo "$@" 1>&2; }
 
 # Declare the variable.
+
 lb_ip=""
 
 # Get the load balancer IP address.
+
 for i in {0..100}
 do
   if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
@@ -1091,7 +1101,9 @@ Available in the following editions: BE, SE, SE+, EE.
    auth_param basic realm proxy
    acl authenticated proxy_auth REQUIRED
    http_access allow authenticated
+
    # Specify the required port. Port 3128 is used by default.
+
    http_port 3128
    ```
 

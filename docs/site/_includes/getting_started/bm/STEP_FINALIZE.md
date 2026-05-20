@@ -12,6 +12,7 @@
   <li>
 <p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -23,15 +24,18 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
+
 </div>
   </li>
   <li>
 <p>Make the created StorageClass as the default one in the cluster:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
+
 </div>
   </li>
 </ul>
@@ -47,6 +51,7 @@ sudo -i d8 k patch mc global --type merge \
   <li>
   Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -58,20 +63,23 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
+
 </div>
   </li>
   <li>
   <p>Make the created StorageClass as the default one in the cluster:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
+
 </div>
   </li>
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
-    
+
 <div class="tabs">
         <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
@@ -89,6 +97,7 @@ sudo -i d8 k patch mc global --type merge \
   <ul>
   <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```bash
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
@@ -99,22 +108,27 @@ spec:
   nodeType: Static
 EOF
 ```
+
 </div>
   </li>
   <li><p>Get the script code for adding and configuring a node in Base64 encoding.</p>
   <p>To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```shell
 export NODE_GROUP=worker
 sudo -i d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
 ```
+
 </div>
   </li>
   <li><p>On the <strong>prepared virtual machine</strong>, run the following command, inserting the Base64-encoded script code obtained in the previous step:</p>
 <div markdown="1">
+
 ```shell
 echo <Base64-CODE> | base64 -d | bash
 ```
+
   </div>
   </li>
   </ul>
@@ -123,6 +137,7 @@ echo <Base64-CODE> | base64 -d | bash
   <ul>
 <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```bash
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
@@ -138,19 +153,23 @@ spec:
         role: worker
 EOF
 ```
+
 </div>
 </li>
   <li>
     <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```bash
 ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
+
 </div>
   </li>
   <li>
     <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```bash
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
@@ -162,22 +181,28 @@ spec:
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 EOF
 ```
+
 </div>
   </li>
   <li>
     <p>Print the public part of the previously generated SSH key (you will need it in the next step). To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```bash
 cat /dev/shm/caps-id.pub
 ```
+
 </div>
   </li>
   <li>
     <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
 {% tabs os %}
 {% tab "For Ubuntu-based OS" %}
+
 ```bash
+
 # Specify the public part of the user SSH key.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
@@ -188,10 +213,14 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+
 {% endtab %}
 {% tab "For CentOS or Rocky Linux (RHEL-based OS)" %}
+
 ```bash
+
 # Specify the public part of the user SSH key.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG wheel caps
@@ -202,14 +231,18 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+
 {% endtab %}
 {% endtabs %}
   </li>
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 <div markdown="1">
+
 ```bash
+
 # Specify the IP address of the node you want to connect to the cluster.
+
 export NODE=<NODE-IP-ADDRESS>
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
@@ -225,6 +258,7 @@ spec:
     name: caps
 EOF
 ```
+
 </div>
   </li>
   </ul>
@@ -233,18 +267,22 @@ EOF
   <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
 <p>On the <strong>master node</strong>, run the following command to get nodes list:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k get no
 ```
+
 </div>
 
 {% offtopic title="Example of the output..." %}
 ```
+
 sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
 d8cluster          Ready    control-plane,master   30m   v1.23.17
 d8cluster-worker   Ready    worker                 10m   v1.23.17
 ```
+
 {%- endofftopic %}
 </li>
 </ul>
@@ -281,17 +319,21 @@ If you use CAPS and want to add more static nodes in the `worker` NodeGroup:
 <p>On the <strong>master node</strong>, run the following command:</p>
 
 <div markdown="1">
+
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
+
 </div>
 
 {% offtopic title="Example of the output..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
+
 {%- endofftopic %}
 </li></ul>
 
@@ -305,27 +347,33 @@ Next, you will need to create an Ingress controller, a user to access the web in
 </div>
   <p>Apply it using the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
+
 </div>
 
 <p>It may take some time to start the Ingress controller after installing Deckhouse. Make sure the Ingress controller has started before continuing (run on the <code>master</code> node):</p>
 
 <div markdown="1">
+
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
+
 </div>
 
 Wait for the Ingress controller pods to switch to <code>Ready</code> state.
 
 {% offtopic title="Example of the output..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+
 {%- endofftopic %}
 </li>
 <li><p><strong>Create a user</strong> to access the cluster web interfaces</p>
@@ -337,9 +385,11 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 </div>
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f $PWD/user.yml
 ```
+
 </div>
 </li>
 <li><strong>Create DNS records</strong> to organize access to the cluster web interfaces.
@@ -383,6 +433,7 @@ upmeter.example.com</code>
   </li>
   <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
 <div markdown="1">
+
 ```bash
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -406,6 +457,7 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
+
 </div>
 </li>
 </ul>

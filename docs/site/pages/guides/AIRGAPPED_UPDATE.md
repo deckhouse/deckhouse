@@ -45,6 +45,7 @@ To do that, run the following command:
 ```bash
 crane export registry.deckhouse.io/deckhouse/ee/release-channel:alpha | tar -tf -
 ```
+
 The output contains a list of files and directories in the image:
 
 ```console
@@ -67,6 +68,7 @@ The image contains two key files:
   ```bash
   crane export registry.deckhouse.io/deckhouse/ee/release-channel:alpha | tar -xOf - version.json | jq
   ```
+
   Example contents of `version.json`:
 
   ```json
@@ -119,6 +121,7 @@ The image contains two key files:
     "version": "v1.71.5"
   }
   ```
+
 When the `version` field changes in `version.json` in the registry, DKP applies a new release in the cluster:
 a `deckhouserelease` object is created and the update process begins.
 
@@ -152,6 +155,7 @@ To see from which repository modules will be installed, run the following comman
 ```bash
 d8 k get ms deckhouse -o jsonpath='{.spec.registry.repo}'
 ```
+
 Example output:
 
 ```console
@@ -164,6 +168,7 @@ You can view repository contents with the following command:
 ```bash
 crane ls registry.deckhouse.io/deckhouse/ee/modules
 ```
+
 Example output:
 
 ```console
@@ -194,6 +199,7 @@ To view the contents of this image, use the following command:
 ```bash
 crane export registry.deckhouse.io/deckhouse/ee/modules/console/release:alpha | tar -tf -
 ```
+
 Example output:
 
 ```console
@@ -209,6 +215,7 @@ To view the contents of `version.json`, run the following command:
 ```bash
 crane export registry.deckhouse.io/deckhouse/ee/modules/console/release:alpha | tar -xOf - version.json | jq
 ```
+
 Example contents of `version.json`:
 
 ```json
@@ -216,6 +223,7 @@ Example contents of `version.json`:
   "version": "v1.39.4"
 }
 ```
+
 The `version` field contains the module version.
 When it changes, DKP applies a new release (a `modulerelease` object is created and the update process begins).
 
@@ -252,11 +260,13 @@ registry.deckhouse.io/deckhouse/ee/security/trivy-java-db:1
 registry.deckhouse.io/deckhouse/ee/security/trivy-checks:0
 registry.deckhouse.io/deckhouse/ee/security/trivy-bdu:1
 ```
+
 To configure periodic updates of vulnerability database images, run the command in the following format:
 
 ```bash
 d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --no-platform --no-modules $(pwd)/d8-bundle-security-db && d8 mirror push $(pwd)/d8-bundle-security-db YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
 ```
+
 ## Example workflow for updating the platform, modules, and vulnerability databases
 
 To update DKP, its modules, and vulnerability databases to the latest versions in an air-gapped environment,
@@ -273,6 +283,7 @@ To avoid this, download only the images relevant to your version following these
    ```bash
    d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
    ```
+
    Example output:
 
    ```console
@@ -288,6 +299,7 @@ To avoid this, download only the images relevant to your version following these
    ```bash
    d8 k get mr | grep Deployed
    ```
+
    Example output:
 
    ```console
@@ -303,11 +315,13 @@ To avoid this, download only the images relevant to your version following these
    ```bash
    d8 k get mr -o json | jq -r '.items[] | select(.status.phase == "Deployed") | "--include-module='\''\(.spec.moduleName)@\(.spec.version)'\''"' | paste -sd " " -
    ```
+
 1. Create the final command for pulling images with the obtained parameters:
 
    ```bash
    d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
    ```
+
    > If you have already set up periodic downloading and pushing of vulnerability databases to your registry,
    > you can add the flag `--no-security-db` to skip them during this process.
 
@@ -319,6 +333,7 @@ To avoid this, download only the images relevant to your version following these
    ```bash
    d8 mirror push $(pwd)/d8-bundle YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
    ```
+
 1. Check the update status in the cluster by running the following commands:
 
    ```bash
@@ -326,6 +341,7 @@ To avoid this, download only the images relevant to your version following these
    d8 k get modulereleases.deckhouse.io
    d8 system queue list
    ```
+
 ## Possible issues
 
 ### Release is suspended
@@ -333,12 +349,12 @@ To avoid this, download only the images relevant to your version following these
 When trying to download platform images with `d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY'`,
 you may encounter the following error:
 
-```console
-Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Kubernetes Platform
-Sep  9 00:11:01.532 ERROR Pull Deckhouse Kubernetes Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
-Error: pull failed, see the log for details
-```
-{: .nowrap-default }
+   ```console
+   Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Kubernetes Platform
+   Sep  9 00:11:01.532 ERROR Pull Deckhouse Kubernetes Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
+   Error: pull failed, see the log for details
+   ```
+   {: .nowrap-default }
 
 This means that release deployment on a channel has been suspended.
 This happens when a new version is pushed to the release channel but then something happened that paused its rollout.
@@ -350,6 +366,7 @@ For example:
 ```bash
 d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY' --deckhouse-tag='v1.71.3'
 ```
+
 Example output:
 
 ```console
@@ -366,4 +383,3 @@ Sep 16 12:56:27.087 INFO  ║║ [1 / 1] Pulling registry.deckhouse.io/deckhouse
 ...
 ```
 {: .nowrap-default }
-

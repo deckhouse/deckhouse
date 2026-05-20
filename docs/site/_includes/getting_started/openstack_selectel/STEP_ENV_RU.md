@@ -7,7 +7,9 @@
 Обратите внимание, что при создании узлов с типом `CloudEphemeral` в облаке Selectel, для создания узла в зоне отличной от зоны A, необходимо заранее создать flavor с диском необходимого размера. Параметр [rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) в этом случае указывать не нужно.
 
 {% offtopic title="Пример создания flavor..." %}
+
 ```shell
 openstack flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4 --private
 ```
+
 {% endofftopic %}

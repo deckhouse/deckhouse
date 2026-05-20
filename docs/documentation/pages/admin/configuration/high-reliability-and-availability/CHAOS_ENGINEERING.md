@@ -28,7 +28,9 @@ Enable chaos engineering mode for a node group in one of the following ways:
    Example configuration for a node group:
 
    ```yaml
+
    # NodeGroup for cloud nodes in AWS.
+
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:

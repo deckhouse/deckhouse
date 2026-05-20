@@ -74,8 +74,11 @@ spec:
   subjects:
   - kind: User
     name: dev-user@example.com
+
   # Опция доступна только при включенном режиме enableMultiTenancy 
+
   # в модуле user-authz (версия Enterprise Edition).
+
   namespaceSelector:
     labelSelector:
       matchLabels:

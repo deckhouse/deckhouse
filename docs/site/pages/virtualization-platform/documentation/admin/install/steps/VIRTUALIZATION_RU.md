@@ -93,6 +93,7 @@ vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```shell
 d8 k edit mc virtualization
 ```
+
 ## Описание параметров
 
 Ниже представлены описания параметров модуля виртуализации.
@@ -122,6 +123,7 @@ spec:
   settings:
     ingressClass: nginx
 ```
+
 {% alert level="info" %}
 
 При загрузке больших образов виртуальных машин (особенно при слабых каналах связи) рекомендуется увеличить таймаут завершения работы воркеров Ingress-контроллера. Это предотвратит прерывание загрузки при перезапуске или обновлении Ingress-контроллера.
@@ -137,6 +139,7 @@ spec:
   config:
     worker-shutdown-timeout: 1800s  # 30 минут или более при необходимости
 ```
+
 {% endalert %}
 
 ### Сетевые настройки
@@ -153,6 +156,7 @@ spec:
       - 10.66.20.0/24
       - 10.77.20.0/16
 ```
+
 Для каждой подсети первый и последний IP-адреса зарезервированы системой и не могут быть назначены виртуальным машинам. Например, для подсети `10.66.10.0/24` адреса `10.66.10.0` и `10.66.10.255` недоступны для использования ВМ.
 
 {% alert level="warning" %}
@@ -177,6 +181,7 @@ spec:
       - sc-2
       defaultStorageClassName: sc-1
 ```
+
 Здесь:
 
 - `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualImage, которые можно явно указать в спецификации ресурса;
@@ -198,6 +203,7 @@ spec:
       - sc-2
       defaultStorageClassName: sc-1
 ```
+
 Здесь:
 
 - `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
@@ -221,6 +227,7 @@ spec:
        audit:
          enabled: true
    ```
+
 Полный перечень параметров конфигурации приведён в разделе [«Настройки»](/modules/virtualization/configuration.html).
 
 События собираются подом `virtualization-audit-*` в неймспейсе `d8-virtualization`. Чтобы перенаправить события в систему логирования кластера (например, Loki), создайте [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
@@ -242,11 +249,13 @@ spec:
         app: virtualization-audit
   type: KubernetesPods
 ```
+
 Для просмотра событий в Grafana используйте запрос к Loki:
 
 ```logql
 {namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
 ```
+
 Доступные поля в логах:
 - `type` — тип события (Access to VM, VM Management и т.д.);
 - `name` — описание события;

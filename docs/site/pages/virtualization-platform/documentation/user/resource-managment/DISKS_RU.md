@@ -79,13 +79,18 @@ kind: VirtualDisk
 metadata:
   name: blank-disk
 spec:
+
   # Настройки параметров хранения диска.
+
   persistentVolumeClaim:
+
     # Подставьте ваше название StorageClass.
+
     storageClassName: rv-thin-r2
     size: 100Mi
 EOF
 ```
+
 После создания ресурс [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) может находиться в следующих состояниях (`Phase`):
 
 - `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания диска;
@@ -115,6 +120,7 @@ EOF
 ```bash
 d8 k get vd blank-disk
 ```
+
 Пример вывода:
 
 ```console
@@ -145,6 +151,7 @@ blank-disk   Ready   100Mi      1m2s
 ```bash
 d8 k get vi ubuntu-24-04 -o wide
 ```
+
 Пример вывода:
 
 ```console
@@ -164,13 +171,21 @@ kind: VirtualDisk
 metadata:
   name: linux-vm-root
 spec:
+
   # Настройки параметров хранения диска.
+
   persistentVolumeClaim:
+
     # Укажем размер больше чем значение распакованного образа.
+
     size: 10Gi
+
     # Подставьте ваше название StorageClass.
+
     storageClassName: rv-thin-r2
+
   # Источник из которого создается диск.
+
   dataSource:
     type: ObjectRef
     objectRef:
@@ -178,6 +193,7 @@ spec:
       name: ubuntu-24-04
 EOF
 ```
+
 А теперь создайте диск, без явного указания размера:
 
 ```yaml
@@ -187,11 +203,17 @@ kind: VirtualDisk
 metadata:
   name: linux-vm-root-2
 spec:
+
   # Настройки параметров хранения диска.
+
   persistentVolumeClaim:
+
     # Подставьте ваше название StorageClass.
+
     storageClassName: rv-thin-r2
+
   # Источник из которого создается диск.
+
   dataSource:
     type: ObjectRef
     objectRef:
@@ -199,11 +221,13 @@ spec:
       name: ubuntu-24-04
 EOF
 ```
+
 Проверьте состояние дисков после создания:
 
 ```bash
 d8 k get vd
 ```
+
 Пример вывода:
 
 ```console
@@ -241,6 +265,7 @@ spec:
     type: Upload
 EOF
 ```
+
 После создания ресурс перейдет в фазу `WaitForUserUpload`, что означает, что он готов для загрузки диска.
 
 Доступно два варианта загрузки: с узла кластера и с произвольного узла за пределами кластера:
@@ -248,6 +273,7 @@ EOF
 ```bash
 d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```
+
 Пример вывода:
 
 ```json
@@ -256,22 +282,26 @@ d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}"  | jq
   "inCluster": "http://10.222.165.239/upload"
 }
 ```
+
 Выполните загрузку диска с использованием следующей команды:
 
 ```bash
 curl https://virtualization.example.com/upload/<secret-url> --progress-bar -T <image.name> | cat
 ```
+
 После завершения загрузки диск должен быть создан и перейти в фазу `Ready`:
 
 ```bash
 d8 k get vd uploaded-disk
 ```
+
 Пример вывода:
 
 ```txt
 NAMESPACE   NAME                  PHASE   CAPACITY    AGE
 default     uploaded-disk         Ready   3Gi         7d23h
 ```
+
 ## Изменение размера диска
 
 Размер дисков можно увеличивать, даже если они уже подключены к работающей виртуальной машине. Для этого отредактируйте поле `spec.persistentVolumeClaim.size`:
@@ -281,6 +311,7 @@ default     uploaded-disk         Ready   3Gi         7d23h
 ```bash
 d8 k get vd linux-vm-root
 ```
+
 Пример вывода:
 
 ```console
@@ -298,11 +329,13 @@ d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"
 
 d8 k edit vd linux-vm-root
 ```
+
 Проверьте размер после изменения:
 
 ```bash
 d8 k get vd linux-vm-root
 ```
+
 Пример вывода:
 
 ```console
@@ -349,11 +382,13 @@ linux-vm-root   Ready   11Gi       12m
 ```bash
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```
+
 Или внесите аналогичные изменения, отредактировав ресурс:
 
 ```bash
 d8 k edit vd disk
 ```
+
 После изменения конфигурации диска запустится живая миграция ВМ, в процессе которой диск ВМ будет перемещён в новое хранилище.
 
 Если к виртуальной машине подключены несколько дисков и требуется изменить класс хранения для нескольких дисков, эту операцию необходимо выполнить последовательно:
@@ -362,6 +397,7 @@ d8 k edit vd disk
 d8 k patch vd disk1 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 d8 k patch vd disk2 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```
+
 При неуспешной миграции повторные попытки выполняются с увеличивающимися задержками (алгоритм экспоненциального backoff). Максимальная задержка — 300 секунд (5 минут). Задержки: 5 секунд (1-я попытка), 10 секунд (2-я), далее каждая задержка удваивается, достигая 300 секунд (7-я и последующие попытки). Первая попытка выполняется без задержки.
 
 Для отмены миграции пользователь должен вернуть класс хранения в спецификации на исходный.

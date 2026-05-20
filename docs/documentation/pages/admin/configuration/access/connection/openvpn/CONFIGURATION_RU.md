@@ -110,12 +110,18 @@ d8 k -n d8-openvpn delete secret/basic-auth
 В клиентских конфигурациях, генерируемых модулем, предопределены и закомментированы блоки, отвечающие за эти настройки:
 
 ```bash
+
 # Uncomment the lines below for use with Linux
+
 #script-security 2
+
 # If you use resolved
+
 #up /etc/openvpn/update-resolv-conf
 #down /etc/openvpn/update-resolv-conf
+
 # If you use systemd-resolved, first install the openvpn-systemd-resolved package
+
 #up /etc/openvpn/update-systemd-resolved
 #down /etc/openvpn/update-systemd-resolved
 ```

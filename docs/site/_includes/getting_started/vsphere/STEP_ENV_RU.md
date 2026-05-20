@@ -131,7 +131,7 @@ govc role.create deckhouse \
    VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
    VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
-    
+
 Назначьте пользователю роль на объекте `vCenter`.
 
 {% alert level="warning" %}

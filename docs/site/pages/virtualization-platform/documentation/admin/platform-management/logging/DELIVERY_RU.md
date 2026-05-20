@@ -291,7 +291,9 @@ spec:
       codec: Syslog
   extraLabels:
     syslog.severity: "alert"
+
     # Поле request_id должно присутствовать в сообщении.
+
     syslog.message_id: "{{ request_id }}"
 ```
 
@@ -746,6 +748,7 @@ d8 k -n d8-log-shipper exec $pod -it -c vector -- bash
 | d8_cluster_sink_flant-integration-loki-storage |
 +------------------------------------------------+
 ```
+
 #### Мониторинг нагрузки на каналы
 
 Чтобы посмотреть объем трафика на каждом этапе обработки логов, используйте команду `vector top`.

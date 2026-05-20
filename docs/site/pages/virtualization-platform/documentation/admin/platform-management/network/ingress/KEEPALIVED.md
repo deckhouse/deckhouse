@@ -36,7 +36,9 @@ spec:
       detectionStrategy: DefaultRoute # The card with the default route is used as a service network one.
     virtualIPAddresses:
     - address: 42.43.44.101/32
+
       # The interface parameter is omitted since IP addresses are based on the cards that service VRRP traffic.
+
   - id: 2
     interface:
       detectionStrategy: DefaultRoute
@@ -72,7 +74,9 @@ spec:
       networkAddress: 192.168.42.0/24
     virtualIPAddresses:
     - address: 192.168.42.1/24
+
       # In this case, we have already detected the local network (above); thus, the interface parameter can be safely omitted.
+
     - address: 42.43.44.1/28
       interface:
         detectionStrategy: Name

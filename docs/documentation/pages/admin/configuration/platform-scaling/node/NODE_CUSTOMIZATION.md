@@ -34,6 +34,7 @@ Available template variables include:
 <ul>
 <li><code>.cloudProvider</code> (for node groups with <code>CloudEphemeral</code> or <code>CloudPermanent</code> nodeType) — an array of cloud provider data.
 {% offtopic title="Example data..." %}
+
 ```yaml
 cloudProvider:
   instanceClassKind: OpenStackInstanceClass
@@ -62,12 +63,14 @@ cloudProvider:
   zones:
   - nova
 ```
+
 {% endofftopic %}
 </li>
 <li><code>.cri</code> — the container runtime interface in use (since Deckhouse version 1.49, only <code>Containerd</code> is used).</li>
 <li><code>.kubernetesVersion</code> — the version of Kubernetes in use.</li>
 <li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a> resource.
 {% offtopic title="Example data..." %}
+
 ```yaml
 nodeUsers:
 - name: user1
@@ -79,10 +82,12 @@ nodeUsers:
     sshPublicKey: SSH_PUBLIC_KEY
     uid: 1050
 ```
+
 {% endofftopic %}
 </li>
 <li><code>.nodeGroup</code> — an array of NodeGroup data.
 {% offtopic title="Example data..." %}
+
 ```yaml
 nodeGroup:
   cri:
@@ -107,6 +112,7 @@ nodeGroup:
   nodeType: CloudPermanent
   updateEpoch: "1699879470"
 ```
+
 {% endofftopic %}</li>
 </ul>
 
@@ -116,7 +122,9 @@ Example of using variables in the template engine:
 ```shell
 {{- range .nodeUsers }}
 echo 'Tuning environment for user {{ .name }}'
+
 # Some code for tuning user environment
+
 {{- end }}
 ```
 
@@ -211,18 +219,31 @@ spec:
   bundles:
   - '*'
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     mkdir -p /etc/containerd/conf.d
@@ -260,18 +281,31 @@ spec:
   bundles:
   - ubuntu-lts
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
@@ -297,18 +331,31 @@ spec:
   bundles:
   - centos
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
@@ -368,6 +415,7 @@ After each node reboot, perform the following steps:
    ```bash
    d8 k uncordon <node_name>
    ```
+
 ### Verifying successful installation
 
 Create the following Job in your cluster:
@@ -392,11 +440,13 @@ spec:
           command:
             - nvidia-smi
 ```
+
 Check the logs with the following command:
 
 ```shell
 d8 k logs job/nvidia-cuda-test
 ```
+
 Example output:
 
 ```console
@@ -443,11 +493,13 @@ spec:
           image: nvidia/samples:vectoradd-cuda10.2
           imagePullPolicy: "IfNotPresent"
 ```
+
 Check the logs with the following command:
 
 ```shell
 d8 k logs job/gpu-operator-test
 ```
+
 Example output:
 
 ```console
@@ -481,18 +533,31 @@ spec:
   bundles:
     - '*'
   content: |
+
     # Copyright 2024 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     mkdir -p /etc/containerd/conf.d
@@ -506,6 +571,7 @@ spec:
     - "worker"
   weight: 31
 ```
+
 ## Adding a configuration for an additional registry
 
 Containerd supports two methods for registry configuration: the **deprecated** method and the **actual** method.
@@ -516,6 +582,7 @@ To check for the presence of the **deprecated** configuration method, run the fo
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
 ```
+
 Example output:
 
 ```console
@@ -532,8 +599,11 @@ To check for the presence of the **actual** configuration method, run the follow
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 
 # Example output:
+
 # config_path = "/etc/containerd/registry.d"
+
 ```
+
 ### Old Method
 
 {% alert level="warning" %}
@@ -566,6 +636,7 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
           ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
           insecure_skip_verify = true
 ```
+
 {% alert level="danger" %}
 Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
@@ -580,27 +651,42 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
+
   # To add a file before the '032_configure_containerd.sh' step.
+
   weight: 31
   bundles:
     - '*'
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
-    
+
     REGISTRY_URL=private.registry.example
 
     mkdir -p /etc/containerd/conf.d
@@ -615,10 +701,13 @@ spec:
             [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
               username = "username"
               password = "password"
+
               # OR
+
               auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
 ```
+
 #### Configuring a certificate for an additional registry (deprecated method)
 
 Example of configuring a certificate for an additional registry when using the **deprecated** configuration method:
@@ -629,31 +718,45 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
+
   # To add a file before the '032_configure_containerd.sh' step.
+
   weight: 31
   bundles:
     - '*'
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
-    
+
     REGISTRY_URL=private.registry.example
     CERT_FILE_NAME=${REGISTRY_URL}
     CERTS_FOLDER="/var/lib/containerd/certs/"
-
 
     mkdir -p ${CERTS_FOLDER}
     bb-sync-file "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" - << EOF
@@ -672,6 +775,7 @@ spec:
               ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
     EOF
 ```
+
 {% alert level="info" %}
 In addition to containerd, the certificate can be [added to the OS](./cloud-node.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
@@ -686,27 +790,42 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
+
   # To add a file before the '032_configure_containerd.sh' step.
+
   weight: 31
   bundles:
     - '*'
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
-    
+
     REGISTRY_URL=private.registry.example
 
     mkdir -p /etc/containerd/conf.d
@@ -719,12 +838,16 @@ spec:
               insecure_skip_verify = true
     EOF
 ```
+
 After applying the configuration file, verify access to the registry from the nodes using the command:
 
 ```bash
+
 # Via the CRI interface
+
 crictl pull private.registry.example/image/repo:tag
 ```
+
 #### Configuring a mirror for access to public registries (deprecated method)
 
 Example of configuring a mirror for public image registries when using the **deprecated** configuration method:
@@ -741,18 +864,31 @@ spec:
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     sed -i '/endpoint = \["https:\/\/registry-1.docker.io"\]/d' /var/lib/bashible/bundle_steps/032_configure_containerd.sh
@@ -768,6 +904,7 @@ spec:
               endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
     EOF
 ```
+
 ### New Method
 
 {% alert level="info" %}
@@ -788,11 +925,14 @@ Configuration is specified by creating subdirectories named after the registry a
     ├── ca.crt
     └── hosts.toml
 ```
+
 Example contents of the `hosts.toml` file:
 
 ```toml
 [host]
+
   # Mirror 1.
+
   [host."https://${REGISTRY_URL_1}"]
     capabilities = ["pull", "resolve"]
     ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
@@ -802,10 +942,12 @@ Example contents of the `hosts.toml` file:
       password = "${PASSWORD}"
 
   # Mirror 2.
+
   [host."http://${REGISTRY_URL_2}"]
     capabilities = ["pull", "resolve"]
     skip_verify = true
 ```
+
 {% alert level="info" %}
 Configuration changes do not cause the containerd service to restart.
 {% endalert %}
@@ -820,27 +962,42 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
+
   # The step can be arbitrary, as restarting the containerd service is not required.
+
   weight: 0
   bundles:
     - '*'
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
-    
+
     REGISTRY_URL=private.registry.example
 
     mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
@@ -853,6 +1010,7 @@ spec:
           password = "password"
     EOF
 ```
+
 #### Configuring a certificate for an additional registry (actual method)
 
 Example of configuring a certificate for an additional registry when using the **actual** configuration method:
@@ -863,27 +1021,42 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
+
   # The step can be arbitrary, as restarting the containerd service is not required.
+
   weight: 0
   bundles:
     - '*'
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
-    
+
     REGISTRY_URL=private.registry.example
 
     mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
@@ -901,6 +1074,7 @@ spec:
         ca = ["/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt"]
     EOF
 ```
+
 {% alert level="info" %}
 In addition to containerd, the certificate can be [added to the OS](./cloud-node.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
@@ -915,27 +1089,42 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
+
   # The step can be arbitrary, as restarting the containerd service is not required.
+
   weight: 0
   bundles:
     - '*'
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
-    
+
     REGISTRY_URL=private.registry.example
 
     mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
@@ -946,18 +1135,24 @@ spec:
         skip_verify = true
     EOF
 ```
+
 After applying the configuration file, check access to the registry from the nodes using the following commands:
 
 ```bash
+
 # Via the CRI interface.
+
 crictl pull private.registry.example/image/repo:tag
 
 # Via ctr with the configuration directory specified.
+
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
 
 # Via ctr for an HTTP registry.
+
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
+
 #### Configuring a mirror for access to public registries (actual method)
 
 Example of configuring a mirror for public image registries when using the **actual** configuration method:
@@ -974,18 +1169,31 @@ spec:
   nodeGroups:
     - "*"
   content: |
+
     # Copyright 2023 Flant JSC
+
     #
+
     # Licensed under the Apache License, Version 2.0 (the "License");
+
     # you may not use this file except in compliance with the License.
+
     # You may obtain a copy of the License at
+
     #
+
     #     http://www.apache.org/licenses/LICENSE-2.0
+
     #
+
     # Unless required by applicable law or agreed to in writing, software
+
     # distributed under the License is distributed on an "AS IS" BASIS,
+
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
     # See the License for the specific language governing permissions and
+
     # limitations under the License.
 
     REGISTRY1_URL=docker.io
@@ -1003,6 +1211,7 @@ spec:
       override_path = true
     EOF
 ```
+
 ## How to automatically put custom labels on the node
 
 1. On the node, create the directory `/var/lib/node_labels`.

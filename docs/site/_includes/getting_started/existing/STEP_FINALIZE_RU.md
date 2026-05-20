@@ -11,16 +11,19 @@
 Выполните следующую команду, чтобы настроить [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io* (укажите публичный IP-адрес узла, где запущен Ingress-контролллер):
 <div markdown="1">
 {% raw %}
+
 ```shell
 BALANCER_IP=<INGRESS_CONTROLLER_IP> 
 kubectl patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
 echo "Domain template is '$(kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+
 {% endraw %}
 </div>
 
 Команда также выведет установленный шаблон DNS-имен. Пример вывода:
+
 ```text
 moduleconfig.deckhouse.io/global patched
 
@@ -37,8 +40,10 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 
 Затем, выполните следующую команду, чтобы изменить шаблон DNS-имен в параметрах Deckhouse:
 <div markdown="1">
+
 ```shell
 kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+
 </div>
 {% endofftopic %}

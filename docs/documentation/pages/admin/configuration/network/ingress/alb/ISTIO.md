@@ -21,7 +21,9 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
    metadata:
     name: main
    spec:
+
      # ingressGatewayClass contains the label selector value used to create the Gateway resource.
+
      ingressGatewayClass: istio-hp
      inlet: HostPort
      hostPort:
@@ -64,24 +66,32 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
      namespace: app-ns
    spec:
      selector:
+
        # Label selector for using the Istio Ingress Gateway main-hp.
+
        istio.deckhouse.io/ingress-gateway-class: istio-hp
      servers:
        - port:
+
            # Standard template for using the HTTP protocol.
+
            number: 80
            name: http
            protocol: HTTP
          hosts:
            - app.example.com
        - port:
+
            # Standard template for using the HTTPS protocol.
+
            number: 443
            name: https
            protocol: HTTPS
          tls:
            mode: SIMPLE
+
            # A Secret resource with a certificate and a key, which must be created in the d8-ingress-istio namespace.
+
            credentialName: app-tls-secret
          hosts:
            - app.example.com
@@ -131,11 +141,17 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
+
     # Nginx proxies traffic to the ClusterIP instead of pods' own IPs.
+
     nginx.ingress.kubernetes.io/service-upstream: "true"
+
     # In Istio, all routing is carried out based on the `Host:` headers.
+
     # Instead of letting Istio know about the `productpage.example.com` external domain,
+
     # we use the internal domain of which Istio is aware.
+
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:

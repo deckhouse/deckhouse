@@ -76,6 +76,7 @@ lang: ru
    ```bash
    d8 k get nodes
    ```
+
    Пример вывода:
 
    ```console
@@ -101,6 +102,7 @@ lang: ru
    ```shell
    d8 system queue list
    ```
+
    Пример вывода:
 
    ```console
@@ -131,13 +133,16 @@ lang: ru
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
+
 1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](#просмотр-статуса-переключения-режима-registry).
 
    Пример вывода:
 
    ```yaml
    conditions:
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
@@ -147,6 +152,7 @@ lang: ru
    mode: Direct
    target_mode: Direct
    ```
+
 ### Переключение на режим Unmanaged
 
 Для переключения уже работающего кластера на режим `Unmanaged` выполните следующие шаги:
@@ -162,6 +168,7 @@ lang: ru
    ```bash
    d8 k get module registry -o wide
    ```
+
    Пример вывода:
 
    ```console
@@ -175,6 +182,7 @@ lang: ru
    ```shell
    d8 system queue list
    ```
+
    Пример вывода:
 
    ```console
@@ -205,13 +213,16 @@ lang: ru
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
+
 1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](#просмотр-статуса-переключения-режима-registry).
 
    Пример вывода:
 
    ```yaml
    conditions:
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
@@ -221,6 +232,7 @@ lang: ru
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
 1. При необходимости переключения на старый метод управления registry, ознакомьтесь с [инструкцией](#миграция-обратно-с-модуля-registry).
 
 {% alert level="warning" %}
@@ -241,6 +253,7 @@ containerd v2 использует новую схему по умолчанию
    ```bash
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
+
    Данные настройки укажите при конфигурации `Unmanaged` режима:
 
    ```yaml
@@ -259,11 +272,14 @@ containerd v2 использует новую схему по умолчанию
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
+
 1. Дождитесь завершения переключения. Пример [статуса переключения](#просмотр-статуса-переключения-режима-registry):
 
    ```yaml
    conditions:
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
@@ -273,6 +289,7 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
 ### Для containerd v1
 
 {% alert level="danger" %}
@@ -291,27 +308,42 @@ containerd v2 использует новую схему по умолчанию
    metadata:
      name: containerd-additional-config-auth.sh
    spec:
+
      # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd
+
      weight: 0
      bundles:
        - '*'
      nodeGroups:
        - "*"
      content: |
+
        # Copyright 2023 Flant JSC
+
        #
+
        # Licensed under the Apache License, Version 2.0 (the "License");
+
        # you may not use this file except in compliance with the License.
+
        # You may obtain a copy of the License at
+
        #
+
        #     http://www.apache.org/licenses/LICENSE-2.0
+
        #
+
        # Unless required by applicable law or agreed to in writing, software
+
        # distributed under the License is distributed on an "AS IS" BASIS,
+
        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
        # See the License for the specific language governing permissions and
+
        # limitations under the License.
-       
+
        REGISTRY_URL=private.registry.example
 
        mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
@@ -324,17 +356,22 @@ containerd v2 использует новую схему по умолчанию
              password = "password"
        EOF
    ```
+
 1. Примените [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Дождитесь появления конфигурационных файлов в директории `/etc/containerd/registry.d` на всех узлах.
 
 1. Проверьте корректность работы конфигураций. Для этого воспользуйтесь командой:
 
    ```bash
+
    # Для https:
+
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/registry/path:tag
 
    # Для http:
+
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
+
 1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](/modules/deckhouse/latest/configuration.html) для корректной настройки.
 
    Посмотреть текущие настройки registry можно с помощью команды:
@@ -342,6 +379,7 @@ containerd v2 использует новую схему по умолчанию
    ```bash
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
+
    Данные настройки укажите при конфигурации `Unmanaged` режима:
 
    ```yaml
@@ -360,13 +398,16 @@ containerd v2 использует новую схему по умолчанию
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
+
 1. После применения, дождитесь в [статусе переключения](#просмотр-статуса-переключения-режима-registry) сообщения:
 
    Пример вывода:
 
    ```yaml
    conditions:
+
    # ...
+
    - lastTransitionTime: "2025-08-13T15:22:34Z"
      message: |
        Check current nodes configuration
@@ -377,6 +418,7 @@ containerd v2 использует новую схему по умолчанию
      status: "False"
      type: ContainerdConfigPreflightReady
    ```
+
    Это сообщение означает, что на узлах имеются старые конфигурации registry, расположенные в директории `/etc/containerd/conf.d`. И в данный момент переключение на новую конфигурацию containerd заблокировано. Для того чтобы разрешить переключение, необходимо удалить старые конфигурационные файлы.
 
 1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Пример манифеста NodeGroupConfiguration:
@@ -387,47 +429,68 @@ containerd v2 использует новую схему по умолчанию
    metadata:
      name: containerd-additional-config-auth-delete.sh
    spec:
+
      # Шаг должен выполниться до '032_configure_containerd.sh'
+
      weight: 0
      bundles:
        - '*'
      nodeGroups:
        - "*"
      content: |
+
        # Copyright 2023 Flant JSC
+
        #
+
        # Licensed under the Apache License, Version 2.0 (the "License");
+
        # you may not use this file except in compliance with the License.
+
        # You may obtain a copy of the License at
+
        #
+
        #     http://www.apache.org/licenses/LICENSE-2.0
+
        #
+
        # Unless required by applicable law or agreed to in writing, software
+
        # distributed under the License is distributed on an "AS IS" BASIS,
+
        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
        # See the License for the specific language governing permissions and
+
        # limitations under the License.
 
        file="/etc/containerd/conf.d/old-config.toml"
 
        [ -f "$file" ] && rm -f "$file"
    ```
+
 1. После удаления старых конфигураций убедитесь, что переключение продолжается. Пример [статуса переключения](#просмотр-статуса-переключения-режима-registry):
 
    ```yaml
    conditions:
+
    # ...
+
    - lastTransitionTime: "2025-08-13T16:42:09Z"
      message: ""
      reason: ""
      status: "True"
      type: ContainerdConfigPreflightReady
    ```
+
 1. Дождитесь завершения переключения. Пример [статуса переключения](#просмотр-статуса-переключения-режима-registry):
 
    ```yaml
    conditions:
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
@@ -437,16 +500,19 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
 1. Удалите [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), созданный на шаге удаления старых конфигурационных файлов:
 
    ```shell
    d8 k delete nodegroupconfiguration containerd-additional-config-auth-delete.sh
    ```
+
    Чтобы убедиться, что NodeGroupConfiguration удалён, используйте команду:
 
    ```shell
    d8 k get nodegroupconfiguration
    ```
+
    В списке не должно быть NodeGroupConfiguration, подлежащего удалению (в этом примере — `containerd-additional-config-auth-delete.sh`).
 
 ## Миграция обратно с модуля registry
@@ -478,11 +544,14 @@ containerd v2 использует новую схему по умолчанию
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
+
 1. Проверьте статус переключения, используя [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
    conditions:
+
    # ...
+
    - lastTransitionTime: "..."
      message: ""
      reason: ""
@@ -492,6 +561,7 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
 1. Переведите registry в неконфигурируемый режим `Unmanaged`. Пример конфигурации:
 
    ```yaml
@@ -506,11 +576,14 @@ containerd v2 использует новую схему по умолчанию
        registry:
          mode: Unmanaged
    ```
+
 1. Проверьте статус переключения, используя [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
    conditions:
+
    # ...
+
    - lastTransitionTime: "..."
      message: ""
      reason: ""
@@ -520,6 +593,7 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
 1. Если используется containerd v1, и в кластере применены [пользовательские конфигурации реестра](/modules/node-manager/latest/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), их необходимо заменить на старый формат. Для этого подготовьте конфигурации registry старого формата. Данные конфигурации на данном этапе применять не нужно. Пример конфигурации:
 
    ```yaml
@@ -528,25 +602,40 @@ containerd v2 использует новую схему по умолчанию
    metadata:
      name: containerd-additional-config-auth.sh
    spec:
+
      # Для добавления файла перед шагом '032_configure_containerd.sh'
+
      weight: 31
      bundles:
        - '*'
      nodeGroups:
        - "*"
      content: |
+
        # Copyright 2023 Flant JSC
+
        #
+
        # Licensed under the Apache License, Version 2.0 (the "License");
+
        # you may not use this file except in compliance with the License.
+
        # You may obtain a copy of the License at
+
        #
+
        #     http://www.apache.org/licenses/LICENSE-2.0
+
        #
+
        # Unless required by applicable law or agreed to in writing, software
+
        # distributed under the License is distributed on an "AS IS" BASIS,
+
        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+
        # See the License for the specific language governing permissions and
+
        # limitations under the License.
 
        REGISTRY_URL=private.registry.example
@@ -563,20 +652,26 @@ containerd v2 использует новую схему по умолчанию
                [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
                  username = "username"
                  password = "password"
+
                  # OR
+
                  auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
        EOF
    ```
+
 1. Удалите секрет `registry-bashible-config`. Во время удаления containerd v1 переключится на старый формат конфигурации containerd:
 
    ```bash
    d8 k -n d8-system delete secret registry-bashible-config
    ```
+
 1. После удаления дождитесь завершения переключения. Для отслеживания используйте [инструкцию](#просмотр-статуса-переключения-режима-registry). Пример вывода:
 
    ```yaml
    conditions:
+
    # ...
+
    - lastTransitionTime: "..."
      message: ""
      reason: ""
@@ -586,6 +681,7 @@ containerd v2 использует новую схему по умолчанию
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
 1. Если используется containerd v1, примените заготовленные на этапе ранее `NodeGroupConfiguration` с пользовательскими конфигурациями registry.
 
 1. Отключите модуль `registry`. Пример:
@@ -600,6 +696,7 @@ containerd v2 использует новую схему по умолчанию
      settings: {}
      version: 1
    ```
+
 ## Просмотр статуса переключения режима registry
 
 Статус переключения режима registry можно получить с помощью следующей команды:
@@ -607,6 +704,7 @@ containerd v2 использует новую схему по умолчанию
 ```bash
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
 ```
+
 Пример вывода:
 
 ```yaml
@@ -649,6 +747,7 @@ conditions:
 mode: Direct
 target_mode: Direct
 ```
+
 Вывод отображает состояние процесса переключения. Каждое условие может находиться в статусе `True` или `False`, а также содержать поле `message` с пояснением.
 
 Описание условий:

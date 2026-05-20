@@ -77,7 +77,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 
 - `Manual` — режим ручного подтверждения disruptive-обновлений.
   При появлении доступного disruptive-обновления отображается [алерт `NodeRequiresDisruptionApprovalForUpdate`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#node-manager-noderequiresdisruptionapprovalforupdate).
-  
+
   Чтобы подтвердить disruptive-обновление,
   установите аннотацию `update.node.deckhouse.io/disruption-approved=` на каждый узел в группе, следуя примеру:
 
@@ -92,7 +92,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
   > всегда устанавливайте режим `Manual` для группы master-узлов.
 
 - `Automatic` — режим автоматического разрешения disruptive-обновлений.
-  
+
   В этом режиме по умолчанию выполняется автоматический drain узла перед применением обновления.
   Поведение можно изменить с помощью параметра `disruptions.automatic.drainBeforeApproval` в настройках узла.
 
@@ -169,7 +169,7 @@ metadata:
 - Все действия по обновлению (обновление kubelet, перезапуск, замена узлов) выполняются вручную или через внешние автоматизации вне DVP.
 
 - Рекомендуется явно указывать желаемую версию kubelet, чтобы обеспечить единообразие между узлами, особенно если они подключаются с разными версиями вручную:
-  
+
   ```yaml
   nodeTemplate:
      kubelet:

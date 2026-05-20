@@ -46,17 +46,28 @@ kind: CephClusterConnection
 metadata:
   name: ceph-cluster-1
 spec:
+
   # FSID/UUID of the Ceph cluster.
+
   # The FSID/UUID of the Ceph cluster can be obtained using the `ceph fsid` command.
+
   clusterID: 2bf085fc-5119-404f-bb19-820ca6a1b07e
+
   # List of Ceph monitor IP addresses in the format `10.0.0.10:6789`.
+
   monitors:
     - 10.0.0.10:6789
+
   # User name without `client.`.
+
   # The user name can be obtained using the `ceph auth list` command.
+
   userID: admin
+
   # Authentication key corresponding to the userID.
+
   # The authentication key can be obtained using the `ceph auth get-key client.admin` command.
+
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 EOF
 ```
@@ -124,6 +135,7 @@ Check the created StorageClass using the following command:
 ```shell
 d8 k get sc
 ```
+
 In the output, you should see information about the created StorageClass:
 
 ```console
@@ -143,6 +155,7 @@ To get a list of RBD volumes mounted on each node of the cluster, run the follow
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
+
 ## Supported Ceph versions
 
 - Official support: Ceph version 16.2.0 and above.
@@ -171,11 +184,13 @@ spec:
   userID: admin
   userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
 ```
+
 You can verify that the object has been created with the following command (`Phase` should be `Created`):
 
 ```shell
 d8 k get cephclusterconnection <name-of-cephclusterconnection>
 ```
+
 Example definition of a [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass):
 
 - For RBD:
@@ -193,6 +208,7 @@ Example definition of a [CephStorageClass](/modules/csi-ceph/stable/cr.html#ceph
       defaultFSType: ext4
       pool: ceph-rbd-pool  
   ```
+
 - For CephFS:
 
     ```yaml
@@ -207,6 +223,7 @@ Example definition of a [CephStorageClass](/modules/csi-ceph/stable/cr.html#ceph
     cephFS:
       fsName: cephfs
   ```
+
 You can verify that the object has been created with the following command (`Phase` should be `Created`):
 
 ```shell

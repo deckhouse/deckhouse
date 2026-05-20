@@ -97,7 +97,7 @@ Requirements for the module:
   {: .nowrap-default }
 
 * The module must have a source; otherwise the message at ModulePullOverride will be *The module does not have an active source*.
-  
+
   An example:
 
   ```console
@@ -123,6 +123,7 @@ To update the module without waiting for the next update cycle to begin, you can
 ```sh
 d8 k annotate mpo <name> renew=""
 ```
+
 ## Module availability and enabling by default
 
 To assign Deckhouse editions the module should be available in,
@@ -138,6 +139,7 @@ accessibility:
       enabledInBundles:
         - Default
 ```
+
 In this configuration, the module will be available in `ee` (DKP Enterprise Edition)  
 and can be enabled using the ModuleConfig object, and will be enabled by default in the `Default` bundle.
 
@@ -201,6 +203,7 @@ status:
     type: IsOverridden
   phase: Ready
 ```
+
 The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
 
 ### An example
@@ -226,6 +229,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
        policy: test-alpha
      modulesCount: 2
    ```
+
 1. Enable the module and create [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) for the `echo` module:
 
    ```yaml
@@ -236,6 +240,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
    spec:
      imageTag: main-patch-03354
    ```
+
   After creating ModulePullOverride, the image tag `registry.example.com/deckhouse/modules/echo:main-patch-03354` will be used for the module (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
 1. The ModulePullOverride will change with each update of the module:
@@ -253,6 +258,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
      message: "Ready"
      updatedAt: "2023-12-07T08:41:21Z"
    ```
+
    where:
    - `imageDigest` is the unique identifier of the container image that was pulled.
    - `lastUpdated` is the time when the image was last pulled.
@@ -278,6 +284,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
        policy: test-alpha
      modulesCount: 2
    ```
+
 {% endraw %}
 
 {% raw %}
@@ -326,6 +333,7 @@ update:
     - from: "1.99"
       to:   "2.0" # Transitions between major versions are specified in the X.Y format.
 ```
+
 > A constrained release is a module release whose `module.yaml` contains the [`update.versions`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
 
 Conditions for applying `from-to`:
@@ -344,6 +352,7 @@ Check available releases (ModuleRelease) with:
 ```shell
 d8 k get mr
 ```
+
 Example output if the current module version is `0.3.33`, and `module.yaml` contains the rule `from: "0.3" → to: "0.7"`:
 
 ```console
@@ -364,11 +373,13 @@ To approve the module release, apply the annotation:
 ```shell
 d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
 ```
+
 This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
 
 ```shell
 d8 system module approve p-o-test v0.7.25
 ```
+
 Example output after approval:
 
 ```console
@@ -388,13 +399,16 @@ Whether an annotation is required depends on the module’s update policy. More 
 In this example, the `from-to` rule is defined in the **target** release, and the `to` value equals the version of that release. The current installed version (`Deployed`) is not lower than `from`, so the transition is possible. As soon as the release appears in the cluster, DKP prepares the update. If the update policy requires approval, mark the release with the annotation. After approval, intermediate releases will be skipped and the target release becomes `Deployed`:
 
 ```yaml
+
 # Module version (Deployed): v1.67.23 (≥ 1.67) → the 'from' condition is satisfied.
+
 metadata:
   name: module-test-v1.67.23
 status:
   phase: Deployed
 
 # Target release: the release version equals update.versions.to (1.75).
+
 metadata:
   name: module-test-v1.75.25
 update:
@@ -402,16 +416,20 @@ update:
   - from: "1.67"
     to:   "1.75"   # The update will be performed to this version after approval (if required).
 ```
+
 Likewise, if the current version is even higher than `from`, the transition is also performed:
 
 ```yaml
+
 # Module version (Deployed): v1.69.0  (≥ 1.67) → the 'from' condition is satisfied.
+
 metadata:
   name: module-test-v1.69.0
 status:
   phase: Deployed
 
 # Target release: the release version equals update.versions.to (1.75).
+
 metadata:
   name: module-test-v1.75.25
 update:
@@ -419,12 +437,15 @@ update:
   - from: "1.67"
     to:   "1.75"  # The update will be performed to this version after approval (if required).
 ```
+
 **Example 2.** The current version is lower than `from` — the transition is not performed.
 
 If the current installed version is lower than `from`, the rule does not apply. The update proceeds sequentially (without skipping):
 
 ```yaml
+
 # Module version (Deployed): v1.61.0  (< 1.67) → the 'from' condition is NOT satisfied.
+
 metadata:
   name: module-test-v1.61.0
 status:
@@ -437,12 +458,15 @@ update:
   - from: "1.67"
     to:   "1.75"   # The from-to transition is not performed → sequential update.
 ```
+
 **Example 3.** `to` does not match the version of the release that contains the rule — the transition is not performed.
 
 A transition is possible only to a release where `to` equals the version of that release. If the rule is described in another release (for example, `to: "1.74"` is placed in release `v1.75.25`), it will not work — the update goes sequentially.
 
 ```yaml
+
 # Module version (Deployed): v1.67.0.
+
 metadata:
   name: module-test-v1.67.0
 status:
@@ -452,6 +476,7 @@ metadata:
   name: module-test-v1.74.0   # This release has no update.versions.
 
 # The rule is written in another release (v1.75.25), and 'to' does not equal its version.
+
 metadata:
   name: module-test-v1.75.25
 update:
@@ -459,6 +484,7 @@ update:
   - from: "1.67"
     to:   "1.74"   # 'to' does not equal this release version (1.75.25) → the rule is ignored.
 ```
+
 {% endraw %}
 
 ## Module artifacts in the container registry
@@ -491,6 +517,7 @@ registry.example.io
       ├─ 📝 alpha
       └─ 📝 beta
 ```
+
 {% alert level="warning" %}
 The container registry must support a nested repository structure. See [the requirements section](../#requirements) for more details.  
 {% endalert %}
@@ -502,6 +529,7 @@ Below is a list of commands for working with the module source. The examples use
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>
 ```
+
 An example:
 
 ```shell
@@ -509,11 +537,13 @@ $ crane ls registry.example.io/modules-source
 module-1
 module-2
 ```
+
 ### Print the list of module images
 
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>
 ```
+
 An example:
 
 ```shell
@@ -523,6 +553,7 @@ d4bf3e71015d1e757a8481536eeabda98f51f1891d68b539cc50753a-1589714365467
 e6073b8f03231e122fa3b7d3294ff69a5060c332c4395e7d0b3231e3-1589714362300
 v1.23.2
 ```
+
 In the example above, there are two module images and two application container images in `module-1`.
 
 ### Print the list of files in the module image
@@ -530,11 +561,13 @@ In the example above, there are two module images and two application container 
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -tf -
 ```
+
 An example:
 
 ```shell
 crane export registry.example.io/modules-source/module-1:v1.23.1 - | tar -tf -
 ```
+
 The output will be quite large.
 
 ### Print the list of images of the module's application containers
@@ -542,6 +575,7 @@ The output will be quite large.
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - images_digests.json
 ```
+
 An example:
 
 ```shell
@@ -551,6 +585,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
   "frontend": "sha256:f31f4b7da5faa5e320d3aad809563c6f5fcaa97b571fffa5c9cab103327cc0e8"
 }
 ```
+
 ### Configuring extra images
 
 Modules can include additional images (such as vulnerability databases or other supplementary data) by adding an `extra_images.json` file. This file specifies extra images that need to be manually pushed to the registry and are separate from the main module images.
@@ -560,6 +595,7 @@ To view the extra images configuration:
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>:<MODULE_TAG> - | tar -Oxf - extra_images.json
 ```
+
 An example of `extra_images.json` for neuvector vulnerability database:
 
 ```json
@@ -567,6 +603,7 @@ An example of `extra_images.json` for neuvector vulnerability database:
   "scanner": 3
 }
 ```
+
 Important notes:
 
 - Extra images must be manually pushed to the module registry under the `extra/` path.
@@ -578,6 +615,7 @@ Important notes:
 ```shell
 crane ls <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release
 ```
+
 An example:
 
 ```shell
@@ -587,6 +625,7 @@ v1.23.2
 alpha
 beta
 ```
+
 In the example above, there are two releases in the container registry; two release channels, `alpha` and `beta`, are also used:
 
 ### Print the version in use on the `alpha` release channel
@@ -594,6 +633,7 @@ In the example above, there are two releases in the container registry; two rele
 ```shell
 crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release:alpha - | tar -Oxf - version.json
 ```
+
 An example:
 
 ```shell

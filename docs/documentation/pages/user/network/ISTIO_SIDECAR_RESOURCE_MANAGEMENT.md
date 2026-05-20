@@ -32,7 +32,9 @@ For Deployments:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+
 # ...
+
 spec:
   template:
     metadata:
@@ -41,7 +43,9 @@ spec:
         sidecar.istio.io/proxyCPULimit: "1"
         sidecar.istio.io/proxyMemory: 128Mi
         sidecar.istio.io/proxyMemoryLimit: 512Mi
+
 # ... Rest of the manifest.
+
 ```
 
 For ReplicaSets:
@@ -50,7 +54,9 @@ For ReplicaSets:
 apiVersion: apps/v1
 kind: ReplicaSet
 metadata:
+
 # ...
+
 spec:
   template:
     metadata:
@@ -59,7 +65,9 @@ spec:
         sidecar.istio.io/proxyCPULimit: "1"
         sidecar.istio.io/proxyMemory: 128Mi
         sidecar.istio.io/proxyMemoryLimit: 512Mi
+
 # ... Rest of the manifest.
+
 ```
 
 For Pods:
@@ -73,5 +81,7 @@ metadata:
     sidecar.istio.io/proxyCPULimit: "1"
     sidecar.istio.io/proxyMemory: 128Mi
     sidecar.istio.io/proxyMemoryLimit: 512Mi
+
 # ... Rest of the manifest.
+
 ```

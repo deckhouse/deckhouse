@@ -4,6 +4,7 @@
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
 ## Подключение к master-узлу
+
 Deckhouse завершил процесс установки кластера. Осталось выполнить некоторые настройки, для чего необходимо подключиться к **master-узлу**.
 
 Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя веб-интерфейс или CLI&#8209;утилиты облачного провайдера):
@@ -20,11 +21,13 @@ sudo -i d8 k get nodes
 
 {% offtopic title="Пример вывода..." %}
 ```
+
 $ sudo -i d8 k get nodes
 NAME                                     STATUS   ROLES                  AGE   VERSION
 cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
 cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
 ```
+
 {%- endofftopic %}
 
 {%- if page.platform_type == "cloud" %}
@@ -45,11 +48,13 @@ sudo -i d8 k -n d8-ingress-nginx get po
 
 {% offtopic title="Пример вывода..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get po
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          16h
 kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 ```
+
 {%- endofftopic %}
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' and page.platform_code != 'vcd' %}
@@ -63,10 +68,12 @@ sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 
 {% offtopic title="Пример вывода..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
 nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
 ```
+
 {%- endofftopic %}
 {% endif %}
 
@@ -85,25 +92,30 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 {% if page.platform_code == 'aws' %}
 
 {% raw %}
+
 ```shell
 BALANCER_IP=$(dig $(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
 echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+
 {% endraw %}
 {% else %}
 {% raw %}
+
 ```shell
 BALANCER_IP=$(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
 echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
+
 {% endraw %}
 {% endif %}
 
 Команда также выведет установленный шаблон DNS-имен. Пример вывода:
+
 ```text
 Balancer IP is '1.2.3.4'.
 moduleconfig.deckhouse.io/global patched
@@ -121,10 +133,12 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
 <div markdown="1">
+
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+
 </div>
 {% endofftopic %}
 {% endif %}
@@ -137,10 +151,12 @@ sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"module
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
 
 {% raw %}
+
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
+
 {% endraw %}
 {% endif %}
 

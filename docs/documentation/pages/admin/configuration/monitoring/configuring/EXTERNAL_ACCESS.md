@@ -54,7 +54,9 @@ metadata:
   namespace: d8-monitoring
 type: Opaque
 data:
+
   # Basic-auth string is hashed using htpasswd.
+
   auth: Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK  # foo:bar
 ```
 

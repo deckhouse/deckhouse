@@ -47,9 +47,9 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
                    trends: '0'
                    description: |
                      Summary: {#SUMMARY}
-                
+
                      {#DESCRIPTION}
-                
+
                      Labels: {#LABELS}
                      To get more information: `kubectl describe clusteralert {#ALERTID}`
                    preprocessing:
@@ -67,9 +67,9 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
                        priority: DISASTER
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: d1935044cf3f49df8bc53f738e36b683
@@ -78,9 +78,9 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
                        priority: HIGH
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: 0b134c599d9d4de79f906fbd8e749ec2
@@ -89,9 +89,9 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
                        priority: AVERAGE
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: 6967dc80d6414239b2d597447815048a
@@ -100,9 +100,9 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
                        priority: WARNING
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
                      - uuid: 8e531a2e6a0f47849c1dffea9a1733e1
@@ -111,9 +111,9 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
                        priority: INFO
                        description: |
                          Summary: {#SUMMARY}
-                    
+
                          {#DESCRIPTION}
-                    
+
                          Labels: {#LABELS}
                          To get more information: `kubectl describe clusteralert {#ALERTID}`
       ```
@@ -124,10 +124,13 @@ Deckhouse Virtualization Platform поддерживает интеграцию 
    - Скопируйте файл `d8alerts.conf` в директорию, указанную в параметре `Include` основного конфига Zabbix-агента (обычно расположен по пути `/etc/zabbix/zabbix_agentd.d/`):
 
      ```console
+
      # LLD of deckhouse cluster alerts
+
      UserParameter=d8alerts.discovery,/etc/zabbix/scripts/clusteralerts.sh discovery
 
      # Severity of a specific alert by its ID
+
      UserParameter=d8alerts.severity[*],/etc/zabbix/scripts/clusteralerts.sh severity "$1"
      ```
      {: .nowrap-default }
@@ -247,6 +250,7 @@ metadata:
 stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
+
 Разверните кастомный ресурс `CustomAlertManager`:
 
 ```yaml
@@ -272,6 +276,7 @@ spec:
       receiver: telegram
       repeatInterval: 12h
 ```
+
 Поля `token` в Secret'е и `chatID` в ресурсе `CustomAlertmanager` необходимо поставить свои. [Подробнее](https://core.telegram.org/bots) о Telegram API.
 
 ## Пример отправки алертов в Slack с фильтром
@@ -321,6 +326,7 @@ spec:
       repeatInterval: 12h
   type: Internal
 ```
+
 ## Пример отправки алертов в Opsgenie
 
 ```yaml
@@ -338,6 +344,7 @@ spec:
               - id: team_id
                 type: team
 ```
+
 ## Пример отправки алертов по электронной почте
 
 Создайте секрет с паролем от аккаунта электронной почты. Пароль, закодированный в формате Base64, укажите в поле `password`:
@@ -351,6 +358,7 @@ metadata:
 data:
   password: BASE64_ENCODED_PASSWORD_HERE
 ```
+
 Измените значения в примере ресурса CustomAlertManager в соответствии с актуальными для вашей инфраструктуры значениями и примените его:
 
 ```yaml
@@ -373,13 +381,21 @@ spec:
             authPassword:
               key: password
               name: am-mail-server-pass
+
             # Если вы используете custom CA на сервере, можете поместить публичную часть CA в ConfigMap в пространстве имен d8-monitoring
+
             # tlsConfig:
+
             #   insecureSkipVerify: true
+
             #   ca:
+
             #     configMap:
+
             #       key: ca.pem
+
             #       name: alertmanager-mail-server-ca
+
             sendResolved: true
             requireTLS: true
     route:
@@ -396,4 +412,5 @@ spec:
             value: "^[1-4]$"
           receiver: mail
 ```
+
 {% endraw %}

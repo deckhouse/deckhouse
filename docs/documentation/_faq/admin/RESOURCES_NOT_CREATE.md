@@ -36,6 +36,7 @@ If the required resources do not appear after creating an object in the system (
    ```shell
    d8 s queue list
    ```
+
    Example output (queues are empty):
 
    ```console
@@ -55,6 +56,7 @@ If the required resources do not appear after creating an object in the system (
      ```shell
      d8 k -n d8-system logs -f -l app=deckhouse
      ```
+
      Example output:
 
      ```console
@@ -70,6 +72,7 @@ If the required resources do not appear after creating an object in the system (
      ```shell
      d8 k -n d8-system get events
      ```
+
      Example output:
 
      ```console

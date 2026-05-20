@@ -139,18 +139,21 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    ```bash
    yum install -y qemu-guest-agent
    ```
+
    - For Debian/Ubuntu:
 
    ```bash
    apt-get update
    apt-get install -y qemu-guest-agent
    ```
+
 1. Enable and start the service:
 
    ```bash
    systemctl enable qemu-guest-agent
    systemctl start qemu-guest-agent
    ```
+
 1. Set the VM run policy to [`runPolicy: AlwaysOnUnlessStoppedManually`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy). This is required to be able to shut down the VM.
 
 1. Prepare the image. Clean unused filesystem blocks:
@@ -159,6 +162,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    fstrim -v /
    fstrim -v /boot
    ```
+
 1. Clean network settings:
 
    - For RHEL:
@@ -167,11 +171,13 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
    rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
    ```
+
    - For Debian/Ubuntu:
 
    ```bash
    rm -f /etc/network/interfaces.d/*
    ```
+
 1. Clean system identifiers:
 
    ```bash
@@ -179,16 +185,19 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    rm -f /var/lib/dbus/machine-id
    ln -s /etc/machine-id /var/lib/dbus/machine-id
    ```
+
 1. Remove SSH host keys:
 
    ```bash
    rm -f /etc/ssh/ssh_host_*
    ```
+
 1. Clean systemd journal:
 
    ```bash
    journalctl --vacuum-size=100M --vacuum-time=7d
    ```
+
 1. Clean package manager cache:
 
    - For RHEL:
@@ -196,27 +205,32 @@ A golden image is a pre-configured virtual machine image that can be used to qui
    ```bash
    yum clean all
    ```
+
    - For Debian/Ubuntu:
 
    ```bash
    apt-get clean
    ```
+
 1. Clean temporary files:
 
    ```bash
    rm -rf /tmp/*
    rm -rf /var/tmp/*
    ```
+
 1. Clean logs:
 
    ```bash
    find /var/log -name "*.log" -type f -exec truncate -s 0 {} \;
    ```
+
 1. Clean command history:
 
    ```bash
    history -c
    ```
+
    For RHEL: reset and restore SELinux contexts (choose one of the following):
 
    - Option 1: Check and restore contexts immediately:
@@ -224,33 +238,39 @@ A golden image is a pre-configured virtual machine image that can be used to qui
      ```bash
      restorecon -R /
      ```
+
    - Option 2: Schedule relabel on next boot:
 
      ```bash
      touch /.autorelabel
      ```
+
 1. Verify that `/etc/fstab` uses UUID or LABEL instead of device names (e.g., `/dev/sdX`). To check, run:
 
    ```bash
    blkid
    cat /etc/fstab
    ```
+
 1. Clean cloud-init state, logs, and seed (recommended method):
 
    ```bash
    cloud-init clean --logs --seed
    ```
+
 1. Perform final synchronization and buffer cleanup:
 
    ```bash
    sync
    echo 3 > /proc/sys/vm/drop_caches
    ```
+
 1. Shut down the virtual machine:
 
    ```bash
    poweroff
    ```
+
 1. Create a `VirtualImage` resource from the prepared VM disk:
 
    ```bash
@@ -268,6 +288,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
          name: <source-disk-name>
    EOF
    ```
+
    Alternatively, create a `ClusterVirtualImage` to make the image available at the cluster level for all projects:
 
     ```bash
@@ -285,6 +306,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
           namespace: <namespace>
     EOF
     ```
+
 1. Create a VM disk from the created image:
 
    ```bash
@@ -302,6 +324,7 @@ A golden image is a pre-configured virtual machine image that can be used to qui
          name: <image-name>
    EOF
    ```
+
 After completing these steps, you will have a golden image that can be used to quickly create new virtual machines with pre-installed software and configurations.
 
 ### Creating an image from an HTTP server
@@ -317,23 +340,28 @@ Let's explore how to create a cluster image.
     metadata:
       name: ubuntu-24-04
     spec:
+
       # Source for creating the image.
+
       dataSource:
         type: HTTP
         http:
           url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
     EOF
     ```
+
 1. Check the result of creating the `ClusterVirtualImage` with the following command:
 
     ```shell
     d8 k get clustervirtualimage ubuntu-24-04
     ```
+
     A shorter version of the command:
 
    ```shell
     d8 k get cvi ubuntu-24-04
     ```
+
     In the output, you should see information about the `ClusterVirtualImage` resource:
 
     ```console
@@ -364,6 +392,7 @@ You can trace the image creation process by adding the `-w` key to the command u
 ```shell
 d8 k get cvi ubuntu-24-04 -w
 ```
+
 In the output, you should see information about the image creation progress:
 
 ```console
@@ -383,6 +412,7 @@ Additional information about the downloaded image can be retrieved by describing
 ```shell
 d8 k describe cvi ubuntu-24-04
 ```
+
 How to create an image from an HTTP server in the web interface:
 
 - Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
@@ -401,17 +431,20 @@ An image stored in a container registry has a specific format. Let’s consider 
     ```shell
     curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
     ```
+
 1. Create a `Dockerfile` with the following content:
 
     ```shell
     FROM scratch
     COPY ubuntu2204.img /disk/ubuntu2204.img
     ```
+
 1. Build the image and push it to a container registry. In this example, [docker.io](https://www.docker.com/) is used. To perform these steps, you need an account on the service and a properly configured environment:
 
     ```shell
     docker build -t docker.io/<username>/ubuntu2204:latest
     ```
+
     where `username` is the username you specified during registration on docker.io.
 
 1. Push the created image to the container registry:
@@ -419,6 +452,7 @@ An image stored in a container registry has a specific format. Let’s consider 
     ```shell
     docker push docker.io/<username>/ubuntu2204:latest
     ```
+
 1. To use this image, create the following resource:
 
     ```yaml
@@ -434,6 +468,7 @@ An image stored in a container registry has a specific format. Let’s consider 
           image: docker.io/<username>/ubuntu2204:latest
     EOF
     ```
+
 How to create an image from the container registry in the web interface:
 
 - Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
@@ -458,6 +493,7 @@ spec:
     type: Upload
 EOF
 ```
+
 After creating this resource, it will transition to the `WaitForUserUpload` phase, indicating that it is ready for image upload.
 
 There are two options available for uploading: from a cluster node and from an arbitrary node outside the cluster:
@@ -465,6 +501,7 @@ There are two options available for uploading: from a cluster node and from an a
 ```shell
 d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 ```
+
 Example output:
 
 ```text
@@ -473,6 +510,7 @@ Example output:
   "inCluster":"http://10.222.165.239/upload"
 }
 ```
+
 Where:
 
 - `inCluster`: A URL used to download the image from one of the cluster nodes.
@@ -483,16 +521,19 @@ As an example, download the Cirros image:
 ```shell
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
 ```
+
 Then upload the image using the following command:
 
 ```shell
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
+
 After the upload is complete, the image should be created and transition to the `Ready` phase. To check the image's phase, run the command:
 
 ```shell
 d8 k get cvi some-image
 ```
+
 In the output, you should see information about the image's phase:
 
 ```console
@@ -527,13 +568,18 @@ kind: ModuleConfig
 metadata:
   name: virtualization
 spec:
+
   # ...
+
   settings:
     dvcr:
       gc:
         schedule: "0 20 * * *"
+
   # ...
+
 ```
+
 While garbage collection is running, the storage is switched to read-only mode, and all resources created during this time will wait for the cleanup to finish.
 
 To check for outdated images in the storage, you can run the following command:
@@ -541,6 +587,7 @@ To check for outdated images in the storage, you can run the following command:
 ```bash
 d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
 ```
+
 It prints information about the storage status and a list of outdated images that can be deleted.
 
 ```console
@@ -555,4 +602,3 @@ VirtualDisk            default              debian-10-root
 VirtualImage           default              ubuntu-2204
 ```
 {: .nowrap-default }
-

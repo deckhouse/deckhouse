@@ -128,14 +128,17 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 cd harbor/
 mkdir certs
 ```
+
 Перейдите в созданную директорию и сгенерируйте сертификаты для внешнего доступа следующими командами:
 
 ```bash
 openssl genrsa -out ca.key 4096
 ```
+
 ```bash
 openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
+
 Сгенерируйте сертификаты для внутреннего доменного имени `harbor.example`, чтобы внутри приватной сети обращаться к ВМ с Harbor по защищённому соединению.
 
 {% alert level="warning" %}
@@ -145,9 +148,11 @@ openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow
 ```bash
 openssl genrsa -out harbor.example.key 4096
 ```
+
 ```bash
 openssl req -sha512 -new -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
 ```
+
 ```bash
 cat > v3.ext <<-EOF
 authorityKeyIdentifier=keyid, issuer
@@ -161,17 +166,21 @@ IP.1=<INTERNAL_IP_ADDRESS>
 DNS.1=harbor.example
 EOF
 ```
+
 ```bash
 openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
 ```
+
 ```bash
 openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
 ```
+
 Проверьте, что все сертификаты созданы успешно:
 
 ```bash
 ls -la
 ```
+
 {% offtopic title="Пример вывода команды..." %}
 
 ```bash
@@ -188,6 +197,7 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 -rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
 -rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
 ```
+
 {% endofftopic %}
 
 Далее настройте Docker для работы с приватным container registry, доступ к которому выполняется по TLS. Для этого создайте директорию `harbor.example` в `/etc/docker/certs.d/`:
@@ -195,6 +205,7 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 ```bash
 sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
+
 > Параметр `-p` указывает утилите `mkdir` создать родительские директории, если они отсутствуют (в данном случае — директорию `certs.d`).
 
 Скопируйте в неё созданные сертификаты:
@@ -204,6 +215,7 @@ cp ca.crt /etc/docker/certs.d/harbor.example/
 cp harbor.example.cert /etc/docker/certs.d/harbor.example/
 cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```
+
 Эти сертификаты будут использоваться при обращении к registry по доменному имени `harbor.example`.
 
 Скопируйте шаблон конфигурационного файла, который поставляется вместе с установщиком:
@@ -211,6 +223,7 @@ cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```bash
 cp harbor.yml.tmpl harbor.yml
 ```
+
 Измените в `harbor.yml` следующие параметры:
 
 * `hostname` — укажите `harbor.example` (для него генерировались сертификаты);
@@ -223,253 +236,445 @@ cp harbor.yml.tmpl harbor.yml
 {% offtopic title="Пример конфигурационного файла..." %}
 
 ```yaml
+
 # Configuration file of Harbor
 
 # The IP address or hostname to access admin UI and registry service.
+
 # DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.
+
 hostname: harbor.example
 
 # http related config
+
 http:
+
   # port for http, default is 80. If https enabled, this port will redirect to https port
+
   port: 80
 
 # https related config
+
 https:
+
   # https port for harbor, default is 443
+
   port: 443
+
   # The path of cert and key files for nginx
+
   certificate: /home/ubuntu/harbor/certs/harbor.example.crt
   private_key: /home/ubuntu/harbor/certs/harbor.example.key
+
   # enable strong ssl ciphers (default: false)
+
   # strong_ssl_ciphers: false
 
 # # Harbor will set ipv4 enabled only by default if this block is not configured
+
 # # Otherwise, please uncomment this block to configure your own ip_family stacks
+
 # ip_family:
+
 #   # ipv6Enabled set to true if ipv6 is enabled in docker network, currently it affected the nginx related component
+
 #   ipv6:
+
 #     enabled: false
+
 #   # ipv4Enabled set to true by default, currently it affected the nginx related component
+
 #   ipv4:
+
 #     enabled: true
 
 # # Uncomment following will enable tls communication between all harbor components
+
 # internal_tls:
+
 #   # set enabled to true means internal tls is enabled
+
 #   enabled: true
+
 #   # put your cert and key files on dir
+
 #   dir: /etc/harbor/tls/internal
 
-
 # Uncomment external_url if you want to enable external proxy
+
 # And when it enabled the hostname will no longer used
+
 # external_url: https://reg.mydomain.com:8433
 
 # The initial password of Harbor admin
+
 # It only works in first time to install harbor
+
 # Remember Change the admin password from UI after launching Harbor.
+
 harbor_admin_password: Flant12345
 
 # Harbor DB configuration
+
 database:
+
   # The password for the user('postgres' by default) of Harbor DB. Change this before any production use.
+
   password: root123
+
   # The maximum number of connections in the idle connection pool. If it <=0, no idle connections are retained.
+
   max_idle_conns: 100
+
   # The maximum number of open connections to the database. If it <= 0, then there is no limit on the number of open connections.
+
   # Note: the default number of connections is 1024 for postgres of harbor.
+
   max_open_conns: 900
+
   # The maximum amount of time a connection may be reused. Expired connections may be closed lazily before reuse. If it <= 0, connections are not closed due to a connection's age.
+
   # The value is a duration string. A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
   conn_max_lifetime: 5m
+
   # The maximum amount of time a connection may be idle. Expired connections may be closed lazily before reuse. If it <= 0, connections are not closed due to a connection's idle time.
+
   # The value is a duration string. A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
   conn_max_idle_time: 0
 
 # The default data volume
+
 data_volume: /data
 
 # Harbor Storage settings by default is using /data dir on local filesystem
+
 # Uncomment storage_service setting If you want to using external storage
+
 # storage_service:
+
 #   # ca_bundle is the path to the custom root ca certificate, which will be injected into the truststore
+
 #   # of registry's containers.  This is usually needed when the user hosts a internal storage with self signed certificate.
+
 #   ca_bundle:
 
 #   # storage backend, default is filesystem, options include filesystem, azure, gcs, s3, swift and oss
+
 #   # for more info about this configuration please refer https://distribution.github.io/distribution/about/configuration/
+
 #   # and https://distribution.github.io/distribution/storage-drivers/
+
 #   filesystem:
+
 #     maxthreads: 100
+
 #   # set disable to true when you want to disable registry redirect
+
 #   redirect:
+
 #     disable: false
 
 # Trivy configuration
+
 #
+
 # Trivy DB contains vulnerability information from NVD, Red Hat, and many other upstream vulnerability databases.
+
 # It is downloaded by Trivy from the GitHub release page https://github.com/aquasecurity/trivy-db/releases and cached
+
 # in the local file system. In addition, the database contains the update timestamp so Trivy can detect whether it
+
 # should download a newer version from the Internet or use the cached one. Currently, the database is updated every
+
 # 12 hours and published as a new release to GitHub.
+
 trivy:
+
   # ignoreUnfixed The flag to display only fixed vulnerabilities
+
   ignore_unfixed: false
+
   # skipUpdate The flag to enable or disable Trivy DB downloads from GitHub
+
   #
+
   # You might want to enable this flag in test or CI/CD environments to avoid GitHub rate limiting issues.
+
   # If the flag is enabled you have to download the `trivy-offline.tar.gz` archive manually, extract `trivy.db` and
+
   # `metadata.json` files and mount them in the `/home/scanner/.cache/trivy/db` path.
+
   skip_update: false
   #
+
   # skipJavaDBUpdate If the flag is enabled you have to manually download the `trivy-java.db` file and mount it in the
+
   # `/home/scanner/.cache/trivy/java-db/trivy-java.db` path
+
   skip_java_db_update: false
   #
+
   # The offline_scan option prevents Trivy from sending API requests to identify dependencies.
+
   # Scanning JAR files and pom.xml may require Internet access for better detection, but this option tries to avoid it.
+
   # For example, the offline mode will not try to resolve transitive dependencies in pom.xml when the dependency doesn't
+
   # exist in the local repositories. It means a number of detected vulnerabilities might be fewer in offline mode.
+
   # It would work if all the dependencies are in local.
+
   # This option doesn't affect DB download. You need to specify "skip-update" as well as "offline-scan" in an air-gapped environment.
+
   offline_scan: false
   #
+
   # Comma-separated list of what security issues to detect. Possible values are `vuln`, `config` and `secret`. Defaults to `vuln`.
+
   security_check: vuln
   #
+
   # insecure The flag to skip verifying registry certificate
+
   insecure: false
   #
+
   # timeout The duration to wait for scan completion.
+
   # There is upper bound of 30 minutes defined in scan job. So if this `timeout` is larger than 30m0s, it will also timeout at 30m0s.
+
   timeout: 5m0s
   #
+
   # github_token The GitHub access token to download Trivy DB
+
   #
+
   # Anonymous downloads from GitHub are subject to the limit of 60 requests per hour. Normally such rate limit is enough
+
   # for production operations. If, for any reason, it's not enough, you could increase the rate limit to 5000
+
   # requests per hour by specifying the GitHub access token. For more details on GitHub rate limiting please consult
+
   # https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting
+
   #
+
   # You can create a GitHub token by following the instructions in
+
   # https://help.github.com/en/github/authenticating-to-github/creating-a-personal-access-token-for-the-command-line
+
   #
+
   # github_token: xxx
 
 jobservice:
+
   # Maximum number of job workers in job service
+
   max_job_workers: 10
+
   # Maximum hours of task duration in job service, default 24
+
   max_job_duration_hours: 24
+
   # The jobLoggers backend name, only support "STD_OUTPUT", "FILE" and/or "DB"
+
   job_loggers:
     - STD_OUTPUT
     - FILE
+
     # - DB
+
   # The jobLogger sweeper duration (ignored if `jobLogger` is `stdout`)
+
   logger_sweeper_duration: 1 #days
 
 notification:
+
   # Maximum retry count for webhook job
+
   webhook_job_max_retry: 3
+
   # HTTP client timeout for webhook job
+
   webhook_job_http_client_timeout: 3 #seconds
 
 # Log configurations
+
 log:
+
   # options are debug, info, warning, error, fatal
+
   level: info
+
   # configs for logs in local storage
+
   local:
+
     # Log files are rotated log_rotate_count times before being removed. If count is 0, old versions are removed rather than rotated.
+
     rotate_count: 50
+
     # Log files are rotated only if they grow bigger than log_rotate_size bytes. If size is followed by k, the size is assumed to be in kilobytes.
+
     # If the M is used, the size is in megabytes, and if G is used, the size is in gigabytes. So size 100, size 100k, size 100M and size 100G
+
     # are all valid.
+
     rotate_size: 200M
+
     # The directory on your host that store log
+
     location: /var/log/harbor
 
   # Uncomment following lines to enable external syslog endpoint.
+
   # external_endpoint:
+
   #   # protocol used to transmit log to external endpoint, options is tcp or udp
+
   #   protocol: tcp
+
   #   # The host of external endpoint
+
   #   host: localhost
+
   #   # Port of external endpoint
+
   #   port: 5140
 
 #This attribute is for migrator to detect the version of the .cfg file, DO NOT MODIFY!
 _version: 2.14.0
 
 # Uncomment external_database if using external database.
+
 # external_database:
+
 #   harbor:
+
 #     host: harbor_db_host
+
 #     port: harbor_db_port
+
 #     db_name: harbor_db_name
+
 #     username: harbor_db_username
+
 #     password: harbor_db_password
+
 #     ssl_mode: disable
+
 #     max_idle_conns: 2
+
 #     max_open_conns: 0
 
 # Uncomment redis if need to customize redis db
+
 # redis:
+
 #   # db_index 0 is for core, it's unchangeable
+
 #   # registry_db_index: 1
+
 #   # jobservice_db_index: 2
+
 #   # trivy_db_index: 5
+
 #   # it's optional, the db for harbor business misc, by default is 0, uncomment it if you want to change it.
+
 #   # harbor_db_index: 6
+
 #   # it's optional, the db for harbor cache layer, by default is 0, uncomment it if you want to change it.
+
 #   # cache_layer_db_index: 7
 
 # Uncomment external_redis if using external Redis server
+
 # external_redis:
+
 #   # support redis, redis+sentinel
+
 #   # host for redis: <host_redis>:<port_redis>
+
 #   # host for redis+sentinel:
+
 #   #  <host_sentinel1>:<port_sentinel1>,<host_sentinel2>:<port_sentinel2>,<host_sentinel3>:<port_sentinel3>
+
 #   host: redis:6379
+
 #   password:
+
 #   # Redis AUTH command was extended in Redis 6, it is possible to use it in the two-arguments AUTH <username> <password> form.
+
 #   # there's a known issue when using external redis username ref:https://github.com/goharbor/harbor/issues/18892
+
 #   # if you care about the image pull/push performance, please refer to this https://github.com/goharbor/harbor/wiki/Harbor-FAQs#external-redis-username-password-usage
+
 #   # username:
+
 #   # sentinel_master_set must be set to support redis+sentinel
+
 #   #sentinel_master_set:
+
 #   # tls configuration for redis connection
+
 #   # only server-authentication is supported
+
 #   # mtls for redis connection is not supported
+
 #   # tls connection will be disable by default
+
 #   tlsOptions:
+
 #     enable: false
+
 #   # if it is a self-signed ca, please set the ca path specifically.
+
 #     rootCA:
+
 #   # db_index 0 is for core, it's unchangeable
+
 #   registry_db_index: 1
+
 #   jobservice_db_index: 2
+
 #   trivy_db_index: 5
+
 #   idle_timeout_seconds: 30
+
 #   # it's optional, the db for harbor business misc, by default is 0, uncomment it if you want to change it.
+
 #   # harbor_db_index: 6
+
 #   # it's optional, the db for harbor cache layer, by default is 0, uncomment it if you want to change it.
+
 #   # cache_layer_db_index: 7
 
 # Uncomment uaa for trusting the certificate of uaa instance that is hosted via self-signed cert.
+
 # uaa:
+
 #   ca_file: /path/to/ca
 
 # Global proxy
+
 # Config http proxy for components, e.g. http://my.proxy.com:3128
+
 # Components doesn't need to connect to each others via http proxy.
+
 # Remove component from `components` array if want disable proxy
+
 # for it. If you want use proxy for replication, MUST enable proxy
+
 # for core and jobservice, and set `http_proxy` and `https_proxy`.
+
 # Add domain to the `no_proxy` field, when you want disable proxy
+
 # for some special registry.
+
 proxy:
   http_proxy:
   https_proxy:
@@ -480,76 +685,137 @@ proxy:
     - trivy
 
 # metric:
+
 #   enabled: false
+
 #   port: 9090
+
 #   path: /metrics
 
 # Trace related config
+
 # only can enable one trace provider(jaeger or otel) at the same time,
+
 # and when using jaeger as provider, can only enable it with agent mode or collector mode.
+
 # if using jaeger collector mode, uncomment endpoint and uncomment username, password if needed
+
 # if using jaeger agent mode uncomment agent_host and agent_port
+
 # trace:
+
 #   enabled: true
+
 #   # set sample_rate to 1 if you wanna sampling 100% of trace data; set 0.5 if you wanna sampling 50% of trace data, and so forth
+
 #   sample_rate: 1
+
 #   # # namespace used to differentiate different harbor services
+
 #   # namespace:
+
 #   # # attributes is a key value dict contains user defined attributes used to initialize trace provider
+
 #   # attributes:
+
 #   #   application: harbor
+
 #   # # jaeger should be 1.26 or newer.
+
 #   # jaeger:
+
 #   #   endpoint: http://hostname:14268/api/traces
+
 #   #   username:
+
 #   #   password:
+
 #   #   agent_host: hostname
+
 #   #   # export trace data by jaeger.thrift in compact mode
+
 #   #   agent_port: 6831
+
 #   # otel:
+
 #   #   endpoint: hostname:4318
+
 #   #   url_path: /v1/traces
+
 #   #   compression: false
+
 #   #   insecure: true
+
 #   #   # timeout is in seconds
+
 #   #   timeout: 10
 
 # Enable purge _upload directories
+
 upload_purging:
   enabled: true
+
   # remove files in _upload directories which exist for a period of time, default is one week.
+
   age: 168h
+
   # the interval of the purge operations
+
   interval: 24h
   dryrun: false
 
 # Cache layer configurations
+
 # If this feature enabled, harbor will cache the resource
+
 # `project/project_metadata/repository/artifact/manifest` in the redis
+
 # which can especially help to improve the performance of high concurrent
+
 # manifest pulling.
+
 # NOTICE
+
 # If you are deploying Harbor in HA mode, make sure that all the harbor
+
 # instances have the same behaviour, all with caching enabled or disabled,
+
 # otherwise it can lead to potential data inconsistency.
+
 cache:
+
   # not enabled by default
+
   enabled: false
+
   # keep cache for one day by default
+
   expire_hours: 24
 
 # Harbor core configurations
+
 # Uncomment to enable the following harbor core related configuration items.
+
 # core:
+
 #   # The provider for updating project quota(usage), there are 2 options, redis or db,
+
 #   # by default is implemented by db but you can switch the updation via redis which
+
 #   # can improve the performance of high concurrent pushing to the same project,
+
 #   # and reduce the database connections spike and occupies.
+
 #   # By redis will bring up some delay for quota usage updation for display, so only
+
 #   # suggest switch provider to redis if you were ran into the db connections spike around
+
 #   # the scenario of high concurrent pushing to same project, no improvement for other scenes.
+
 #   quota_update_provider: redis # Or db
+
 ```
+
 {% endofftopic %}
 
 Запустите скрипт установки:
@@ -557,6 +823,7 @@ cache:
 ```bash
 ./install.sh
 ```
+
 Начнётся установка Harbor — будут подготовлены необходимые образы и запущены контейнеры.
 
 {% offtopic title="Лог успешной установки..." %}
@@ -587,6 +854,7 @@ cache:
 ```bash
 docker ps
 ```
+
 {% offtopic title="Пример вывода команды..." %}
 
 ```console
@@ -610,17 +878,26 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 ```bash
 127.0.0.1 localhost harbor.example
 ```
+
 {% alert level="warning" %}
 В некоторых облачных провайдерах (например, Yandex Cloud) изменения в `/etc/hosts` могут быть сброшены после перезагрузки виртуальной машины. Сообщение об этом обычно указано в начале файла `/etc/hosts`.
 
 ```text
+
 # Your system has configured 'manage_etc_hosts' as True.
+
 # As a result, if you wish for changes to this file to persist
+
 # then you will need to either
+
 # a.) make changes to the master file in /etc/cloud/templates/hosts.debian.tmpl
+
 # b.) change or remove the value of 'manage_etc_hosts' in
+
 #     /etc/cloud/cloud.cfg or cloud-config from user-data
+
 ```
+
 Если у вашего провайдера действует такая схема, внесите соответствующие изменения также в файл шаблона, указанный в комментарии, чтобы настройки сохранялись после перезагрузки.
 {% endalert %}
 
@@ -744,6 +1021,7 @@ d8 mirror pull \
   --source='registry.deckhouse.ru/deckhouse/<EDITION>' \
   --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
+
 где:
 
 - `--source` — адрес хранилища образов Deckhouse;
@@ -767,6 +1045,7 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.ru/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
+
 Пример вывода успешной загрузки модулей:
 
 ```text
@@ -813,6 +1092,7 @@ Feb 26 18:31:08.441 INFO  ║ Packing module-observability-platform.tar
 Feb 26 18:31:17.443 INFO  ║ Packing module-state-snapshotter.tar
 Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```
+
 {% endofftopic %}
 
 Проверьте, что все архивы успешно созданы:
@@ -872,6 +1152,7 @@ $ ls -lh
 ```bash
 d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
+
 > Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
 
 Архив будет распакован, после чего образы будут загружены в registry. Этот этап обычно выполняется быстрее, чем скачивание, так как работа идёт с локальным архивом. Как правило, он занимает около 15 минут.
@@ -892,6 +1173,7 @@ Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
  payload-registry, pod-reloader, prompp, runtime-audit-engine, sdn, sds-local-volume, sds-node-configurator, sds-replicated-volume, secrets-store-integration, snapshot-controller, state-snapshotter, static-routing-manager, storage-volume-data-manager, stronghold, virtualization
 ```
+
 {% endofftopic %}
 
 Проверить, что образы загружены, можно в веб-интерфейсе Harbor: откройте проект `deckhouse` в веб-интерфейсе Harbor.
@@ -912,6 +1194,7 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 ```bash
 docker login harbor.example
 ```
+
 {% offtopic title="Пример успешного выполнения команды..." %}
 
 ```text
@@ -925,6 +1208,7 @@ https://docs.docker.com/go/credential-store/
 
 Login Succeeded
 ```
+
 {% endofftopic %}
 
 ## Подготовка ВМ для будущих узлов
@@ -980,12 +1264,14 @@ Login Succeeded
    ```bash
    ssh -J ubuntu@<BASTION_IP> ubuntu@<NODE_IP>
    ```
+
    В этом режиме сначала выполняется подключение к серверу Bastion, затем через него к целевому серверу с использованием того же SSH-ключа.
 1. *Подключение в режиме агента.* Подключитесь к серверу Bastion командой:
 
    ```bash
    ssh -A ubuntu@<BASTION_IP>
    ```
+
    > Обратите внимание: для успешного выполнения команды может понадобиться предварительно запустить ssh-agent, выполнив команду `ssh-add` на том компьютере, с которого будет запускаться команда.
 
    После этого выполните подключение к целевым серверам:
@@ -993,12 +1279,13 @@ Login Succeeded
    ```bash
    ssh ubuntu@<NODE_IP>
    ```
+
 {% endofftopic %}
 
-```console
-<INTERNAL-IP-ADDRESS> harbor.example proxy.local
-```
-{: .nowrap-default }
+   ```console
+   <INTERNAL-IP-ADDRESS> harbor.example proxy.local
+   ```
+   {: .nowrap-default }
 
 > Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
 
@@ -1008,17 +1295,17 @@ Login Succeeded
 
 Выполните команды от `root` (подставьте публичную часть своего SSH-ключа):
 
-```console
-useradd deckhouse -m -s /bin/bash -G sudo
-echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/deckhouse/.ssh
-export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
-echo $KEY >> /home/deckhouse/.ssh/authorized_keys
-chown -R deckhouse:deckhouse /home/deckhouse
-chmod 700 /home/deckhouse/.ssh
-chmod 600 /home/deckhouse/.ssh/authorized_keys
-```
-{: .nowrap-default }
+   ```console
+   useradd deckhouse -m -s /bin/bash -G sudo
+   echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+   mkdir /home/deckhouse/.ssh
+   export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
+   echo $KEY >> /home/deckhouse/.ssh/authorized_keys
+   chown -R deckhouse:deckhouse /home/deckhouse
+   chmod 700 /home/deckhouse/.ssh
+   chmod 600 /home/deckhouse/.ssh/authorized_keys
+   ```
+   {: .nowrap-default }
 
 {% offtopic title="Как узнать публичную часть ключа..." %}
 Узнать публичную часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
@@ -1035,6 +1322,7 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```bash
 ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ```
+
 Если вход выполнен успешно, пользователь создан корректно.
 
 ### Создание пользователя для worker-узла
@@ -1048,10 +1336,13 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ```bash
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
+
 На подготовленном сервере для worker-узла создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
 ```console
+
 # Укажите публичную часть SSH-ключа пользователя.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
@@ -1068,7 +1359,9 @@ chmod 600 /home/caps/.ssh/authorized_keys
 В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя `caps` в группу `wheel`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
 ```console
+
 # Укажите публичную часть SSH-ключа пользователя.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG wheel caps
@@ -1089,6 +1382,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 ```bash
 pdpl-user -i 63 caps
 ```
+
 {% endofftopic %}
 
 ## Подготовка конфигурационного файла
@@ -1110,6 +1404,7 @@ pdpl-user -i 63 caps
 ```bash
 docker run -d --name squid -p 3128:3128 ubuntu/squid
 ```
+
 Пример успешного запуска:
 
 ```text
@@ -1123,6 +1418,7 @@ Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
 Status: Downloaded newer image for ubuntu/squid:latest
 059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
 ```
+
 Убедитесь, что контейнер запущен:
 
 ```console
@@ -1137,33 +1433,46 @@ Status: Downloaded newer image for ubuntu/squid:latest
 * В блоке `ClusterConfiguration` укажите настройки прокси-сервера (если в контуре используется прокси для доступа к внешним ресурсам).
 
   ```yaml
+
   # Настройки proxy-сервера.
+
   proxy:
     httpProxy: http://proxy.local:3128
     httpsProxy: https://proxy.local:3128
     noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
+
   Здесь указываются следующие параметры:
   * адреса HTTP и HTTPS прокси-сервера;
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
-  
+
 * В секции `InitConfiguration` добавьте параметры доступа к registry:
 
   ```yaml
   deckhouse:
+
     # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
+
     imagesRepo: harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>
+
     # Строка с ключом для доступа к Docker registry в формате Base64.
+
     registryDockerCfg: <DOCKER_CFG_BASE64>
+
     # Протокол доступа к registry (HTTP или HTTPS).
+
     registryScheme: HTTPS
+
     # Корневой сертификат, созданный ранее.
+
     # Получить его можно командой: `cat harbor/certs/ca.crt`.
+
     registryCA: |
       -----BEGIN CERTIFICATE-----
       ...
       -----END CERTIFICATE-----
   ```
+
   Здесь `<DOCKER_CFG_BASE64>` — строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
 
   Например, для доступа к container registry `harbor.example` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (строка `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}` в Base64).
@@ -1174,16 +1483,24 @@ Status: Downloaded newer image for ubuntu/squid:latest
   ```yaml
   settings:
   modules:
+
     # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+
     # Например, Grafana для %s.test.local будет доступна на домене 'grafana.test.local'.
+
     # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+
     # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+
     publicDomainTemplate: "%s.test.local"
+
     # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+
     https:
       certManager:
         clusterIssuerName: selfsigned
   ```
+
   Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в пространстве имён `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
 
 * В ModuleConfig `user-authn` измените значение параметра [`dexCAMode`](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
@@ -1193,6 +1510,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
   controlPlaneConfigurator:
     dexCAMode: FromIngressSecret
   ```
+
 * Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
 
   ```yaml
@@ -1206,56 +1524,87 @@ Status: Downloaded newer image for ubuntu/squid:latest
     settings:
       disableLetsencrypt: true
   ```
+
 * В параметре [internalNetworkCIDRs](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) StaticClusterConfiguration укажите подсеть внутренних IP-адресов узлов кластера. Например:
 
   ```yaml
   internalNetworkCIDRs:
   - 10.128.0.0/24
   ```
+
 {% offtopic title="Пример полного конфигурационного файла..." %}
 
 ```yaml
+
 # Общие параметры кластера.
+
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
+
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
+
 # Адресное пространство подов кластера.
+
 # Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
+
 podSubnetCIDR: 10.111.0.0/16
+
 # Адресное пространство сети сервисов кластера.
+
 # Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
+
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
+
 # Домен кластера.
+
 clusterDomain: "cluster.local"
+
 # Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
+
 defaultCRI: "ContainerdV2"
+
 # Настройки proxy-сервера.
+
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
+
 # Настройки первичной инициализации кластера Deckhouse.
+
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
+
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
+
   # Адрес Docker registry с образами Deckhouse.
+
   imagesRepo: harbor.example/deckhouse/ee
+
   # Строка с ключом для доступа к Docker registry.
+
   registryDockerCfg: <DOCKER_CFG_BASE64>
+
   # Протокол доступа к registry (HTTP или HTTPS).
+
   registryScheme: HTTPS
+
   # Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
+
   registryCA: |
     -----BEGIN CERTIFICATE-----
     ...
     -----END CERTIFICATE-----
 ---
+
 # Настройки модуля deckhouse.
+
 # https://deckhouse.ru/modules/deckhouse/configuration.html
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1268,8 +1617,11 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
+
 # Глобальные настройки Deckhouse.
+
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1278,19 +1630,31 @@ spec:
   version: 2
   settings:
     modules:
+
       # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+
       # Например, Grafana для %s.test.local будет доступна на домене 'grafana.test.local'.
+
       # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+
       # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+
       publicDomainTemplate: "%s.test.local"
+
       # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+
       https:
         certManager:
+
           # Использовать самоподписанные сертификаты для модулей Deckhouse.
+
           clusterIssuerName: selfsigned
 ---
+
 # Настройки модуля user-authn.
+
 # https://deckhouse.ru/modules/user-authn/configuration.html
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1301,8 +1665,11 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
+
     # Включение доступа к API-серверу Kubernetes через Ingress.
+
     # https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
+
     publishAPI:
       enabled: true
       https:
@@ -1320,32 +1687,49 @@ spec:
   settings:
     disableLetsencrypt: true
 ---
+
 # Настройки модуля cni-cilium.
+
 # https://deckhouse.ru/modules/cni-cilium/configuration.html
+
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: cni-cilium
 spec:
   version: 1
+
   # Включить модуль cni-cilium
+
   enabled: true
   settings:
+
     # Настройки модуля cni-cilium
+
     # https://deckhouse.ru/modules/cni-cilium/configuration.html
+
     tunnelMode: VXLAN
 ---
+
 # Параметры статического кластера.
+
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
+
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
+
 # Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
+
 # используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
+
 # Укажите, если используете модуль virtualization или узлы кластера имеют более одного сетевого интерфейса.
+
 # Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
+
 internalNetworkCIDRs:
 - 10.128.0.0/24
 ```
+
 {% endofftopic %}
 
 Конфигурационный файл для установки подготовлен.
@@ -1357,6 +1741,7 @@ internalNetworkCIDRs:
 ```bash
 docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
 ```
+
 {% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
 Даже при наличии сертификатов в `/etc/docker/certs.d/harbor.example/` Docker может выдавать ошибку о неизвестном центре сертификации (это типично для самоподписанных сертификатов). В таком случае, как правило, помогает добавление `ca.crt` в системное хранилище доверенных сертификатов с последующим перезапуском Docker.
 {% endofftopic %}
@@ -1379,6 +1764,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   --config=/config.yml \
   --ask-become-pass
 ```
+
 Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения.
 
 При успешном завершении установки вы увидите следующее сообщение:
@@ -1425,6 +1811,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   sudo -i d8 k patch mc global --type merge \
     -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
+
 * Создайте NodeGroup `worker` и добавьте узел с помощью Cluster API Provider Static (CAPS):
 
   ```console
@@ -1469,7 +1856,9 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 * Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
   ```console
+
   # Укажите IP-адрес узла, который нужно подключить к кластеру.
+
   export NODE=<NODE-IP-ADDRESS>
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
@@ -1510,25 +1899,36 @@ $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
+
 Создайте на master-узле файл `ingress-nginx-controller.yml`, содержащий конфигурацию Ingress-контроллера:
 
 ```yaml
+
 # Секция, описывающая параметры NGINX Ingress controller.
+
 # https://deckhouse.ru/modules/ingress-nginx/cr.html
+
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: nginx
 spec:
+
   # Имя Ingress-класса для обслуживания NGINX Ingress controller.
+
   ingressClass: nginx
+
   # Способ поступления трафика из внешнего мира.
+
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
+
   # Описывает, на каких узлах будет находиться компонент.
+
   # Возможно, захотите изменить.
+
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
@@ -1536,11 +1936,13 @@ spec:
     key: node-role.kubernetes.io/control-plane
     operator: Exists
 ```
+
 Примените его, выполнив на master-узле следующую команду:
 
 ```bash
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
+
 Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
 
 ```console
@@ -1555,37 +1957,57 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 Создайте на master-узле файл `user.yml`, содержащий описание учётной записи пользователя и прав доступа:
 
 ```yaml
+
 # Настройки RBAC и авторизации.
+
 # https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
+
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: admin
 spec:
+
   # Список учётных записей Kubernetes RBAC.
+
   subjects:
   - kind: User
     name: admin@deckhouse.io
+
   # Предустановленный шаблон уровня доступа.
+
   accessLevel: SuperAdmin
+
   # Разрешить пользователю делать kubectl port-forward.
+
   portForwarding: true
 ---
+
 # Данные статического пользователя.
+
 # https://deckhouse.ru/modules/user-authn/cr.html#user
+
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
   name: admin
 spec:
+
   # E-mail пользователя.
+
   email: admin@deckhouse.io
+
   # Это хеш пароля 3xqgv2auys, сгенерированного сейчас.
+
   # Сгенерируйте свой или используйте этот, но только для тестирования:
+
   # echo -n '3xqgv2auys' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+
   # Возможно, захотите изменить.
+
   password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
 ```
+
 Примените его, выполнив на master-узле следующую команду:
 
 ```console
@@ -1620,6 +2042,7 @@ $PUBLIC_IP upmeter.test.local
 EOF
 "
 ```
+
 Проверить, что кластер корректно развёрнут и работает, можно в веб-интерфейсе Grafana, где отображается состояние кластера. Адрес Grafana формируется по шаблону `publicDomainTemplate`. Например, при значении `%s.test.local` интерфейс будет доступен по адресу `grafana.test.local`. Для входа используйте учётные данные пользователя, созданного ранее.
 
 ## Куда двигаться дальше?

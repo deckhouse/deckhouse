@@ -150,6 +150,7 @@ Connect to the virtual machine, enter the login (in the example — `test-user`)
 ```shell
 d8 v console -n test-project vm
 ```
+
 To exit the console, press `Ctrl+]`.
 
 Congratulations! You have created a virtual machine and connected to it.

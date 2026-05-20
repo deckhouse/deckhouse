@@ -102,7 +102,9 @@ spec:
           - name: app-tls   # Reference to the secret with the TLS certificate.
             namespace: prod
 ---
+
 # Route for HTTP traffic
+
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -123,7 +125,9 @@ spec:
         - name: app-svc # Reference to the internal load balancer of the application.
           port: 8080 
 ---
+
 # Route for HTTP traffic
+
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -590,11 +594,17 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
+
     # Enables proxying traffic to the Service's ClusterIP via nginx instead of directly to Pod IPs.
+
     nginx.ingress.kubernetes.io/service-upstream: "true"
+
     # In Istio, all routing is based on the `Host:` request header.
+
     # This avoids the need to inform Istio about the existence of the external domain `productpage.example.com`;
+
     # the internal domain known to Istio is used instead.
+
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:
@@ -641,25 +651,34 @@ To publish an application using the Istio Ingress Gateway resource:
      namespace: app-ns
    spec:
      selector:
+
        # Label selector for using the Istio Ingress Gateway main-hp.
+
        istio.deckhouse.io/ingress-gateway-class: istio-hp
      servers:
        - port:
+
            # Standard template for using the HTTP protocol.
+
            number: 80
            name: http
            protocol: HTTP
          hosts:
            - app.example.com
        - port:
+
            # Standard template for using the HTTPS protocol.
+
            number: 443
            name: https
            protocol: HTTPS
          tls:
            mode: SIMPLE
+
            # Secret resource with the certificate and key, which must be created in the d8-ingress-istio namespace.
+
            # Supported Secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
+
            credentialName: app-tls-secret
          hosts:
            - app.example.com

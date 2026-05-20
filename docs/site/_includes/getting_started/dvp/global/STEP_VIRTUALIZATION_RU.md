@@ -16,7 +16,9 @@ spec:
           storageClassName: sds-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
+
     # Укажите подсети, из которых будут назначаться IP-адреса виртуальным машинам.
+
     - 10.66.10.0/24
     - 10.66.20.0/24
     - 10.66.30.0/24

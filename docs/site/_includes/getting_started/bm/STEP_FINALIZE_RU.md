@@ -12,6 +12,7 @@
   <li>
 <p>Настройте StorageClass <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -23,15 +24,18 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
+
 </div>
   </li>
   <li>
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
+
 </div>
   </li>
 </ul>
@@ -47,6 +51,7 @@ sudo -i d8 k patch mc global --type merge \
   <li>
 <p>Настройте StorageClass <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -58,20 +63,23 @@ spec:
   reclaimPolicy: Delete
 EOF
 ```
+
 </div>
   </li>
   <li>
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
+
 </div>
   </li>
   <li>
     <p>Создайте <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> и добавьте узел с помощью с помощью Cluster API Provider Static (CAPS) или вручную — с помощью bootstrap-скрипта.</p>
-    
+
 <div class="tabs">
         <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
@@ -89,6 +97,7 @@ sudo -i d8 k patch mc global --type merge \
   <ul>
   <li><p>Создайте NodeGroup с именем <code>worker</code>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```bash
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
@@ -99,22 +108,27 @@ spec:
   nodeType: Static
 EOF
 ```
+
 </div>
   </li>
   <li><p>Получите код скрипта для добавления и настройки узла в кодировке Base64.</p>
   <p>Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```shell
 NODE_GROUP=worker
 sudo -i d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
 ```
+
 </div>
   </li>
   <li><p><strong>На подготовленной виртуальной машине</strong> выполните следующую команду, вставив полученный на предыдущем шаге код скрипта в кодировке Base64:</p>
 <div markdown="1">
+
 ```shell
 echo <Base64-КОД-СКРИПТА> | base64 -d | bash
 ```
+
   </div>
   </li>
   </ul>
@@ -123,6 +137,7 @@ echo <Base64-КОД-СКРИПТА> | base64 -d | bash
   <ul>
 <li><p>Создайте NodeGroup с именем <code>worker</code>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```bash
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
@@ -138,19 +153,23 @@ spec:
         role: worker
 EOF
 ```
+
 </div>
 </li>
   <li>
     <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```bash
 ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
+
 </div>
   </li>
   <li>
     <p>Создайте в кластере ресурс <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```bash
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
@@ -162,22 +181,28 @@ spec:
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 EOF
 ```
+
 </div>
   </li>
   <li>
     <p>Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```bash
 cat /dev/shm/caps-id.pub
 ```
+
 </div>
   </li>
   <li>
     <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
 {% tabs os %}
 {% tab "ОС на базе Ubuntu" %}
+
 ```bash
+
 # Укажите публичную часть SSH-ключа пользователя.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
@@ -188,10 +213,14 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+
 {% endtab %}
 {% tab "Для CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС, МОС ОС" %}
+
 ```bash
+
 # Укажите публичную часть SSH-ключа пользователя.
+
 export KEY='<SSH-PUBLIC-KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG wheel caps
@@ -202,22 +231,28 @@ chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
+
 {% endtab %}
 {% endtabs %}
   </li>
   <li>
     <p><strong>В операционных системах семейства Astra Linux</strong>, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя <code>caps</code>:</p>
 <div markdown="1">
+
 ```bash
 pdpl-user -i 63 caps
 ```
+
 </div>
   </li>
   <li>
     <p>Создайте <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> для добавляемого узла. Для этого выполните на <strong>master-узле</strong> следующую команду, указав IP-адрес добавляемого узла:</p>
 <div markdown="1">
+
 ```bash
+
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
+
 export NODE=<NODE-IP-ADDRESS>
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
@@ -233,6 +268,7 @@ spec:
     name: caps
 EOF
 ```
+
 </div>
   </li>
   </ul>
@@ -241,18 +277,22 @@ EOF
   <li><p>Убедитесь, что все узлы кластера находятся в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду, чтобы получить список узлов кластера:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k get no
 ```
+
 </div>
 
 {% offtopic title="Пример вывода..." %}
 ```
+
 $ sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
 d8cluster          Ready    control-plane,master   30m   v1.23.17
 d8cluster-worker   Ready    worker                 10m   v1.23.17
 ```
+
 {%- endofftopic %}
   </li>
 </ul>
@@ -289,17 +329,21 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 <p>Выполните на <strong>master-узле</strong> следующую команду:</p>
 
 <div markdown="1">
+
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
+
 </div>
 
 {% offtopic title="Пример вывода..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
+
 {%- endofftopic %}
 </li></ul>
 
@@ -314,27 +358,33 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
+
 </div>
 
 <p>Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился (выполните на <code>master-узле</code>):</p>
 
 <div markdown="1">
+
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
+
 </div>
 
 <p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
 ```
+
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+
 {%- endofftopic %}
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
@@ -345,9 +395,11 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 </div>
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
+
 ```shell
 sudo -i d8 k create -f $PWD/user.yml
 ```
+
 </div>
 </li>
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
@@ -396,6 +448,7 @@ upmeter.example.com</code>
 
   <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
 <div markdown="1">
+
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
@@ -419,6 +472,7 @@ $PUBLIC_IP upmeter.example.com
 EOF
 "
 ```
+
 </div>
 </li>
 </ul>

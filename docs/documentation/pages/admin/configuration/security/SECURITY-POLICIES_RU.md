@@ -554,6 +554,7 @@ spec:
         }
 
         # requestSubResource предпочтительнее, но на всякий случай падаем в subResource
+
         subresource_is(sub) {
           sr := object.get(input.review, "requestSubResource", input.review.subResource)
           sr == sub

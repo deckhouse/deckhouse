@@ -37,29 +37,29 @@ DVP provides two web interfaces for availability assessment:
 1. Status page.
 
    You can get the page address in the web interface on the main page in the "Tools" section (the "Status page" tile), or by running the command:
-   
+
    ```shell
    d8 k -n d8-upmeter get ing status -o jsonpath='{.spec.rules[*].host}'
    ``` 
 
    Example of the status page web interface:
-   
+
    ![Example of the status page web interface](/images/upmeter/status.png)
 
 1. Component availability page.
 
    You can get the page address in the web interface on the main page in the "Tools" section (the "Component availability" tile), or by running the command:
-   
+
    ```shell
    d8 k -n d8-upmeter get ing upmeter -o jsonpath='{.spec.rules[*].host}'
    ``` 
 
    Example of the component availability page:
-   
+
    ![Example of upmeter metrics charts in Grafana](/images/upmeter/image1.png)
 
 ## Status Metrics Export
- 
+
 Example configuration of UpmeterRemoteWrite for exporting status metrics via the [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/) protocol:
 
 ```yaml

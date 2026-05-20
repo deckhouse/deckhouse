@@ -67,7 +67,7 @@ Two node scaling modes are available:
 - **Automatic scaling.**
 
   When resources are insufficient and pods are in `Pending` state, nodes are added to the group. If there is no load on one or several nodes, they are removed from the cluster. With automatic scaling, a group priority is considered (groups with higher priority are scaled first).
-  
+
   To enable auto-scaling, specify different non-zero values for `minPerZone` and `maxPerZone` number of nodes per group.
 
 - **Fixed node count.**

@@ -101,38 +101,57 @@ metadata:
   name: app-hpa
   namespace: app-prod
 spec:
+
   # Specifies the controller to scale (reference to a Deployment or StatefulSet).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: app
+
   # Scaling boundaries for the controller.
+
   minReplicas: 1
   maxReplicas: 10
+
   # If the application tends to have short CPU usage spikes,
+
   # you can delay the scaling decision to confirm it's necessary.
+
   # By default, scaling up happens immediately.
+
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 300
   metrics:
+
   # CPU and memory-based scaling.
+
   - type: Resource
     resource:
       name: cpu
       target:
+
         # Scaling happens when the average CPU utilization across all pods in scaleTargetRef exceeds this value.
+
         # For metrics of type: Resource, only target type: Utilization is available.
+
         type: Utilization
+
         # Example: if each pod requests 1 core, scaling occurs when average usage exceeds 700m.
+
         averageUtilization: 70
   - type: Resource
     resource:
       name: memory
       target:
+
         # Scaling based on memory usage exceeding a certain percentage.
+
         type: Utilization
+
         # Example: if each pod requests 1 GiB, scaling occurs when average usage exceeds 800 MiB.
+
         averageUtilization: 80
 ```
 
@@ -155,7 +174,9 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+
   # Specifies the controller to scale (reference to a Deployment or StatefulSet).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -187,7 +208,9 @@ metadata:
   name: myhpa
   namespace: mynamespace
 spec:
+
   # Specifies the controller to scale (reference to a Deployment or StatefulSet).
+
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -195,21 +218,32 @@ spec:
   minReplicas: 1
   maxReplicas: 2
   metrics:
+
   # Using external metrics for scaling.
+
   - type: External
     external:
       metric:
+
         # This is the metric registered in Prometheus as kube_adapter_metric_mymetric,
+
         # but used here without the 'kube_adapter_metric_' prefix.
+
         name: mymetric
         selector:
+
           # Use label selectors to narrow down the metric query.
+
           matchLabels:
             namespace: mynamespace
             ingress: myingress
       target:
+
         # Only `type: Value` is supported for External metrics.
+
         type: Value
+
         # Scaling is triggered if the metric value exceeds 10.
+
         value: 10
 ```

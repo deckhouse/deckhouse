@@ -20,6 +20,7 @@
   <li>"SSH key for node access" — the key used to connect to machines. Here you can select a previously added key, generate a new one, or provide an existing key.
   The private key is stored in the <code>~/.ssh/&lt;SSH_PRIVATE_KEY_FILE&gt;</code> file. You can get it with the <code>cat ~/.ssh/&lt;SSH_PRIVATE_KEY_FILE&gt;</code> command. Example output (for an ED25519-encrypted key):
 {% capture command %}
+
 ```bash
 $ cat ~/.ssh/id_ed25519
 -----BEGIN OPENSSH PRIVATE KEY-----
@@ -29,6 +30,7 @@ AAAEB3AcmUCQ9dd7fPhIYpQe1pBhZEanld6ZgJHmyD8XO460T3766IVjzrA+Vpgvu1l2IL
 RTAeNZpi2e6dqGhsbK6cAAAAGHpoYmVydEB6aGJlcnQtMjB3bnMxeGowOQECAwQF
 -----END OPENSSH PRIVATE KEY-----
 ```
+
 {% endcapture %}
   {{ command | markdownify }}
   Copy the full output text into the form field, including the <code>-----BEGIN OPENSSH PRIVATE KEY-----</code> and <code>-----END OPENSSH PRIVATE KEY-----</code> lines.

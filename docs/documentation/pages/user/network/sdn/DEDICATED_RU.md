@@ -98,7 +98,9 @@ metadata:
 spec:
   containers:
     - name: app
+
     # остальные параметры...
+
 ```
 
 ## IPAM для дополнительных сетей
@@ -318,6 +320,7 @@ spec:
    ```shell
    d8 k -n my-namespace get pod app-with-static-ip -o jsonpath='{.metadata.annotations.network\.deckhouse\.io/networks-status}   ' | jq
    ```
+
    Пример вывода:
 
    ```json

@@ -29,14 +29,20 @@ apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: Standard
 standard:
+
   # Необязательный параметр. Адреса из этого списка будут использованы для
+
   # адресации Cloud NAT.
+
   cloudNATAddresses:
   - example-address-1
   - example-address-2
 subnetworkCIDR: 10.0.0.0/24         # Обязательный параметр.
+
 # Необязательный параметр, список GCP VPC Networks, с которыми Kubernetes VPC
+
 # Network будет соединяться через пиринговое соединение.
+
 peeredVPCs:
 - default
 sshKey: "<SSH_PUBLIC_KEY>"  # Обязательный параметр.
@@ -100,8 +106,11 @@ apiVersion: deckhouse.io/v1
 kind: GCPClusterConfiguration
 layout: WithoutNAT
 subnetworkCIDR: 10.0.0.0/24         # Обязательный параметр.
+
 # Необязательный параметр, список GCP VPC Networks, с которыми Kubernetes VPC
+
 # Network будет соединяться через пиринговое соединение.
+
 peeredVPCs:
 - default
 labels:

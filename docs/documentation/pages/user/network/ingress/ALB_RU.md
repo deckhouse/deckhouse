@@ -104,7 +104,9 @@ spec:
           - name: app-tls   # Наименование секрета, содержащего необходимый TLS-сертификат.
             namespace: prod
 ---
+
 # Маршрут для HTTP-трафика
+
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -125,7 +127,9 @@ spec:
         - name: app-svc # Наименование сервиса приложения.
           port: 8080
 ---
+
 # Маршрут для HTTPS-трафика
+
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -575,7 +579,7 @@ spec:
 Для публикации приложения средствами Ingress NGINX администратор Deckhouse Kubernetes Platform должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Обязательные аннотации для Ingress-ресурса:
-  
+
 - `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы отправлять их напрямую в поды приложения. Сайдкар-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую.
 - `nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc` — с этой аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
@@ -588,11 +592,17 @@ metadata:
   name: productpage
   namespace: bookinfo
   annotations:
+
     # Включает проксирование трафика через nginx на ClusterIP вместо собственных IP подов.
+
     nginx.ingress.kubernetes.io/service-upstream: "true"
+
     # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов.
+
     # Это позволяет избежать необходимости указывать Istio о существовании внешнего домена `productpage.example.com`,
+
     # используется внутренний домен, известный Istio.
+
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   rules:
@@ -639,25 +649,34 @@ spec:
      namespace: app-ns
    spec:
      selector:
+
        # Селектор лейблов для использования Istio Ingress Gateway main-hp.
+
        istio.deckhouse.io/ingress-gateway-class: istio-hp
      servers:
        - port:
+
            # Стандартный шаблон для использования протокола HTTP.
+
            number: 80
            name: http
            protocol: HTTP
          hosts:
            - app.example.com
        - port:
+
            # Стандартный шаблон для использования протокола HTTPS.
+
            number: 443
            name: https
            protocol: HTTPS
          tls:
            mode: SIMPLE
+
            # Ресурс Secret с сертификатом и ключом, который должен быть создан администратором в неймспейсе d8-ingress-istio.
+
            # Поддерживаемые форматы Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
+
            credentialName: app-tls-secret
          hosts:
            - app.example.com

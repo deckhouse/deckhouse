@@ -135,8 +135,9 @@ spec:
 
    ```shell
    docker stop $(docker ps | grep kube-apiserver- | awk '{print $1}')
-   
+
    # Альтернативный вариант (в зависимости от используемого CRI).
+
    crictl stopp $(crictl pods --name=kube-apiserver -q)
    ```
 

@@ -49,6 +49,7 @@ To configure access, follow these steps:
        masterURI: https://159.89.5.247:6443
        description: "Direct access to kubernetes API"
    ```
+
 ## How API access protection works in Kubernetes
 
 In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
@@ -97,7 +98,9 @@ clusters:
 - name: my-cluster
   cluster:
     server: https://api.example.com
+
     # Path to CA certificate or insecure-skip-tls-verify: true
+
     certificate-authority: /path/to/ca.crt
 users:
 - name: ldap-user
@@ -111,6 +114,7 @@ contexts:
     user: ldap-user
 current-context: default
 ```
+
 ## Kerberos (SPNEGO) SSO for LDAP
 
 Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. The mechanism works as follows:
@@ -167,6 +171,7 @@ spec:
       usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
       fallbackToPassword: false               # The default is false; if true, a login/password form is rendered when the `Authorization: Negotiate` header is missing or invalid.
 ```
+
 Notes:
 
 - The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.

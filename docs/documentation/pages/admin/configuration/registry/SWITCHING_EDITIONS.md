@@ -64,6 +64,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
    d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
+
    For other editions:
 
    ```shell
@@ -78,6 +79,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
     --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
     --command sleep -- infinity
    ```
+
    Once the pod is in `Running` state, execute the following commands:
 
    ```shell
@@ -85,11 +87,13 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
+
 1. Verify that the modules used in the cluster are supported in the desired edition. To see the list of modules not supported in the new edition and will be disabled:
 
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
+
    > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
 
    Disable the modules not supported by the new edition:
@@ -97,11 +101,13 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    ```shell
    echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
+
    Wait for the Deckhouse pod to reach `Ready` state and ensure all tasks in the queue are completed:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Example of the output (queues are empty):
 
    ```console
@@ -118,11 +124,14 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    d8 k delete pod/$NEW_EDITION-image
    d8 k delete secret/$NEW_EDITION-image-pull-secret
    ```
+
 1. Perform the switch to the new edition. To do this, specify the following parameter in the `deckhouse` ModuleConfig. For detailed configuration, refer to the [`deckhouse`](/modules/deckhouse/) module documentation.
 
    ```yaml
    ---
+
    # Example for Direct mode
+
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -134,17 +143,27 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
        registry:
          mode: Direct
          direct:
+
            # Relax mode is used to check for the presence of the current Deckhouse version in the specified registry.
+
            # This mode must be used to switch between editions.
+
            checkMode: Relax
+
            # Specify your value for <NEW_EDITION>.
+
            imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
            scheme: HTTPS
+
            # Specify your value for <LICENSE_TOKEN>.
+
            # If switching to the CE edition, remove this parameter.
+
            license: <LICENSE_TOKEN>
    ---
+
    # Example for Unmanaged mode.
+
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -156,16 +175,25 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
        registry:
          mode: Unmanaged
          unmanaged:
+
            # Relax mode is used to check for the presence of the current Deckhouse version in the specified registry.
+
            # This mode must be used to switch between editions.
+
            checkMode: Relax
+
            # Specify your value for <NEW_EDITION>.
+
            imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
            scheme: HTTPS
+
            # Specify your value for <LICENSE_TOKEN>.
+
            # If switching to the CE edition, remove this parameter.
+
            license: <LICENSE_TOKEN>
    ```
+
 1. Wait for the registry to switch. To verify the switch progress, follow the [instruction](/modules/registry/faq.html#how-to-check-the-registry-mode-switch-status).
 
    Example output:
@@ -179,13 +207,16 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
        reason: Ready
        status: "True"
        type: RegistryContainsRequiredImages
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
        status: "True"
        type: Ready
    ```
+
 1. After the switch, remove the `checkMode: Relax` parameter from the `deckhouse` ModuleConfig to revert to the default check mode.  
 Removing this parameter will trigger a check for the presence of critical components in the registry.
 
@@ -202,13 +233,16 @@ Removing this parameter will trigger a check for the presence of critical compon
        reason: Ready
        status: "True"
        type: RegistryContainsRequiredImages
+
    # ...
+
      - lastTransitionTime: "..."
        message: ""
        reason: ""
        status: "True"
        type: Ready
    ```
+
 1. Check for any pods in the `d8-*` namespaces that are in an error state and unable to load images. This must be done manually, as Deckhouse modules currently do not automatically reinitialize after the changes described above.
 
    Get a list of pods:
@@ -216,26 +250,31 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```shell
    d8 k get po -A
    ```
+
    Get detailed information about problematic pods:
 
    ```shell
    d8 k describe po <pod_name> <namespace>
    ```
+
    Re-download the modules corresponding to the problematic pods by running the following command on all master nodes:
 
    ```shell
    rm -rf /var/lib/deckhouse/downloaded/<module-name>/
    ```
+
    To get `<module-name>`, run the command:
 
    ```shell
    d8 k get modules
    ```
+
    After  removing the data of the required modules, restart Deckhouse:
 
    ```shell
    d8 k rollout restart deploy -n d8-system deckhouse
    ```
+
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` is your previous edition name:
 
    For Unmanaged mode:
@@ -243,15 +282,20 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
    For other modes that use a fixed registry address.  
    This check does not take external modules into account:  
 
    ```shell
+
    # Get the list of valid digest values from the images_digests.json file inside Deckhouse.
+
    IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Check for Pods using Deckhouse images from `registry.d8-system.svc:5001/system/deckhouse`
+
    # with a digest that is NOT present in the list of valid digest values (IMAGES_DIGESTS).
+
    d8 k get pods -A -o json |
    jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
      .items[]
@@ -267,6 +311,7 @@ Removing this parameter will trigger a check for the presence of critical compon
      | .namespace + "\t" + .name
    ' | sort -u
    ```
+
 ### Switching without using the registry module
 
 1. If the `registry` module is enabled, disable it by following [instruction](/modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
@@ -286,11 +331,13 @@ Removing this parameter will trigger a check for the presence of critical compon
     LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
     AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
     ```
+
 1. Ensure the Deckhouse queue is empty and error-free:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Example of the output (queues are empty):
 
    ```console
@@ -334,11 +381,13 @@ Removing this parameter will trigger a check for the presence of critical compon
        EOF_TOML
    EOF
    ```
+
    Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
    ```shell
    d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
+
    Example output:
 
    ```console
@@ -353,6 +402,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```shell
    journalctl -u bashible -n 5
    ```
+
    Example output:
 
    ```console
@@ -369,6 +419,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
    d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
    ```
+
 1. Once the pod is in `Running` state, execute the following commands:
 
    ```shell
@@ -376,11 +427,13 @@ Removing this parameter will trigger a check for the presence of critical compon
    USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
+
 1. Verify that the modules used in the cluster are supported in the desired edition. To see the list of modules not supported in the new edition and will be disabled:
 
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
+
    > Check the list to ensure the functionality of these modules is not in use in your cluster and you are ready to disable them.
 
    Disable the modules not supported by the new edition:
@@ -388,11 +441,13 @@ Removing this parameter will trigger a check for the presence of critical compon
    ```shell
    echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
+
    Wait for the Deckhouse pod to reach `Ready` state and ensure all tasks in the queue are completed:
 
    ```shell
    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
+
    Example of the output (queues are empty):
 
    ```console
@@ -412,16 +467,19 @@ Removing this parameter will trigger a check for the presence of critical compon
    d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
    ```
+
    To switch to CE edition:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
    ```
+
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
+
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
 
    > Skip this step if switching to Deckhouse CE.
@@ -446,6 +504,7 @@ Removing this parameter will trigger a check for the presence of critical compon
            fi
    EOF
    ```
+
    After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
 
    ```shell

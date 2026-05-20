@@ -54,11 +54,13 @@ spec:
 status:
   ipRoutingTableID: 10000 # If spec.ipRoutingTableID is not specified, it will be generated automatically and placed in status.
 ```
+
 According to this configuration, the route `10.0.0.0.0/8 via 192.168.0.1` will be created on the nodes falling under `nodeSelector` in the table `10000`:
 
 ```shell
 ip -4 route ls table 10000
 ```
+
 Example output:
 
 ```console
@@ -96,11 +98,13 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 ```
+
 According to this configuration, an ip rule will be created on the nodes falling under `nodeSelector`. To view results, run:
 
 ```shell
 ip rule list
 ```
+
 Example output:
 
 ```console
@@ -112,4 +116,3 @@ Example output:
 ...
 ```
 {: .nowrap-default }
-

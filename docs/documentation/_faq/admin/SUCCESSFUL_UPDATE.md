@@ -32,6 +32,7 @@ To ensure the update completed successfully, check the state of the `deckhouse` 
 ```shell
 d8 k -n d8-system get pods -l app=deckhouse
 ```
+
 Example output:
 
 ```console
@@ -52,4 +53,5 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   ```shell
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
+
 - Collect debug information and contact [DKP technical support](/tech-support/).
