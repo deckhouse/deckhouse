@@ -35,13 +35,13 @@ import (
 	shapp "github.com/flant/shell-operator/pkg/app"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
+	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"google.golang.org/grpc/credentials"
-	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -84,8 +84,8 @@ func (r *reaperMutex) Release() {
 	r.Unlock()
 }
 
-func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
-	return func(_ *kingpin.ParseContext) error {
+func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args []string) error {
+	return func(_ *cobra.Command, _ []string) error {
 		if os.Getenv(skipEntrypointEnv) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
@@ -93,6 +93,11 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			}
 		}
 
+		// addon-operator owns its own AppStartMessage starting with the
+		// "pass completely config when init" refactor; setting the shell-operator
+		// global as well keeps any legacy reader happy without affecting
+		// addon-operator's startup log line.
+		aoapp.AppStartMessage = version()
 		shapp.AppStartMessage = version()
 		shapp.KubeClientFieldManager = "deckhouse-hook"
 
@@ -108,11 +113,19 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		)
 
 		// Initialize metric names with the configured prefix
-		shmetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+		shmetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 		// Initialize addon-operator specific metrics
-		admetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+		admetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 
-		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage, addonoperator.WithLogger(logger.Named("addon-operator")))
+		// Hand the fully-built *Config to addon-operator via WithConfig: it
+		// then calls app.ApplyConfig internally to populate its package
+		// globals and projects the relevant subset onto shell-operator's
+		// *Config (kube clients, listen addr, metric prefix), so no env vars
+		// are re-parsed downstream. See deckhouse-controller/pkg/envconfig.
+		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
+			addonoperator.WithConfig(cfg),
+			addonoperator.WithLogger(logger.Named("addon-operator")),
+		)
 
 		operator.StartAPIServer()
 

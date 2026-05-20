@@ -18,127 +18,169 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
 
-func DefinePackagesCommands(kpApp *kingpin.Application) {
-	packagesCmd := kpApp.Command("packages", "Package debug commands.")
+func DefinePackagesCommands(rootCmd *cobra.Command) {
+	packagesCmd := &cobra.Command{
+		Use:   "packages",
+		Short: "Package debug commands.",
+	}
+	rootCmd.AddCommand(packagesCmd)
 
-	var packageName string
+	{
+		var packageName string
+		dumpCmd := &cobra.Command{
+			Use:   "dump",
+			Short: "Dump all/specific packages state from memory.",
+			RunE: func(_ *cobra.Command, _ []string) error {
+				client, err := debug.NewClient(packagesDebugSocket)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
 
-	packagesDumpCmd := packagesCmd.Command("dump", "Dump all/specific packages state from memory.").
-		Action(func(_ *kingpin.ParseContext) error {
-			client, err := debug.NewClient(packagesDebugSocket)
-			if err != nil {
-				return err
-			}
-			defer client.Close()
+				ctx := context.Background()
+				out, err := client.Get(ctx, withQuery("packages/dump", "name", packageName))
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(out))
 
-			ctx := context.Background()
-			out, err := client.Get(ctx, withQuery("packages/dump", "name", packageName))
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(out))
+				return nil
+			},
+		}
+		dumpCmd.Flags().StringVar(&packageName, "name", "", "Filter by package name.")
+		definePackagesDebugSocketFlag(dumpCmd)
+		packagesCmd.AddCommand(dumpCmd)
+	}
 
-			return nil
-		})
-	packagesDumpCmd.Flag("name", "Filter by package name.").StringVar(&packageName)
-	definePackagesDebugSocketFlag(packagesDumpCmd)
+	{
+		schedulerCmd := &cobra.Command{Use: "scheduler", Short: "Scheduler operations."}
+		packagesCmd.AddCommand(schedulerCmd)
 
-	schedulerCmd := packagesCmd.Command("scheduler", "Scheduler operations.")
-	schedulerDumpCmd := schedulerCmd.Command("dump", "Dump all scheduler node state from memory.").
-		Action(func(_ *kingpin.ParseContext) error {
-			client, err := debug.NewClient(packagesDebugSocket)
-			if err != nil {
-				return err
-			}
-			defer client.Close()
+		var packageName string
+		dumpCmd := &cobra.Command{
+			Use:   "dump",
+			Short: "Dump all scheduler node state from memory.",
+			RunE: func(_ *cobra.Command, _ []string) error {
+				client, err := debug.NewClient(packagesDebugSocket)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
 
-			ctx := context.Background()
-			out, err := client.Get(ctx, withQuery("packages/scheduler/dump", "name", packageName))
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(out))
+				ctx := context.Background()
+				out, err := client.Get(ctx, withQuery("packages/scheduler/dump", "name", packageName))
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(out))
 
-			return nil
-		})
-	schedulerDumpCmd.Flag("name", "Filter by package name.").StringVar(&packageName)
-	definePackagesDebugSocketFlag(schedulerDumpCmd)
+				return nil
+			},
+		}
+		dumpCmd.Flags().StringVar(&packageName, "name", "", "Filter by package name.")
+		definePackagesDebugSocketFlag(dumpCmd)
+		schedulerCmd.AddCommand(dumpCmd)
+	}
 
-	packagesQueueCmd := packagesCmd.Command("queue", "Queue operations.")
-	packagesQueueListCmd := packagesQueueCmd.Command("dump", "Dump all package queues with tasks.").
-		Action(func(_ *kingpin.ParseContext) error {
-			client, err := debug.NewClient(packagesDebugSocket)
-			if err != nil {
-				return err
-			}
-			defer client.Close()
+	{
+		queueCmd := &cobra.Command{Use: "queue", Short: "Queue operations."}
+		packagesCmd.AddCommand(queueCmd)
 
-			ctx := context.Background()
-			out, err := client.Get(ctx, withQuery("packages/queues/dump", "name", packageName))
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(out))
+		var packageName string
+		dumpCmd := &cobra.Command{
+			Use:   "dump",
+			Short: "Dump all package queues with tasks.",
+			RunE: func(_ *cobra.Command, _ []string) error {
+				client, err := debug.NewClient(packagesDebugSocket)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
 
-			return nil
-		})
-	packagesQueueListCmd.Flag("name", "Filter by package name.").StringVar(&packageName)
-	definePackagesDebugSocketFlag(packagesQueueListCmd)
+				ctx := context.Background()
+				out, err := client.Get(ctx, withQuery("packages/queues/dump", "name", packageName))
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(out))
 
-	packagesRenderCmd := packagesCmd.Command("render", "Render package Helm templates.").
-		Action(func(_ *kingpin.ParseContext) error {
-			client, err := debug.NewClient(packagesDebugSocket)
-			if err != nil {
-				return err
-			}
-			defer client.Close()
+				return nil
+			},
+		}
+		dumpCmd.Flags().StringVar(&packageName, "name", "", "Filter by package name.")
+		definePackagesDebugSocketFlag(dumpCmd)
+		queueCmd.AddCommand(dumpCmd)
+	}
 
-			ctx := context.Background()
-			out, err := client.Get(ctx, "packages/render", packageName)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(out))
+	{
+		renderCmd := &cobra.Command{
+			Use:   "render PACKAGE_NAME",
+			Short: "Render package Helm templates.",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(_ *cobra.Command, args []string) error {
+				client, err := debug.NewClient(packagesDebugSocket)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
 
-			return nil
-		})
-	packagesRenderCmd.Arg("package_name", "Name of the package to render.").Required().StringVar(&packageName)
-	definePackagesDebugSocketFlag(packagesRenderCmd)
+				ctx := context.Background()
+				out, err := client.Get(ctx, "packages/render", args[0])
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(out))
 
-	packagesSnapshotsCmd := packagesCmd.Command("snapshots", "Dump hook snapshots for a package.").
-		Action(func(_ *kingpin.ParseContext) error {
-			client, err := debug.NewClient(packagesDebugSocket)
-			if err != nil {
-				return err
-			}
-			defer client.Close()
+				return nil
+			},
+		}
+		definePackagesDebugSocketFlag(renderCmd)
+		packagesCmd.AddCommand(renderCmd)
+	}
 
-			ctx := context.Background()
-			out, err := client.Get(ctx, "packages/snapshots", packageName)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(out))
+	{
+		snapshotsCmd := &cobra.Command{
+			Use:   "snapshots PACKAGE_NAME",
+			Short: "Dump hook snapshots for a package.",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(_ *cobra.Command, args []string) error {
+				client, err := debug.NewClient(packagesDebugSocket)
+				if err != nil {
+					return err
+				}
+				defer client.Close()
 
-			return nil
-		})
-	packagesSnapshotsCmd.Arg("package_name", "Name of the package.").Required().StringVar(&packageName)
-	definePackagesDebugSocketFlag(packagesSnapshotsCmd)
+				ctx := context.Background()
+				out, err := client.Get(ctx, "packages/snapshots", args[0])
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(out))
+
+				return nil
+			},
+		}
+		definePackagesDebugSocketFlag(snapshotsCmd)
+		packagesCmd.AddCommand(snapshotsCmd)
+	}
 }
 
-func definePackagesDebugSocketFlag(cmd *kingpin.CmdClause) {
-	cmd.Flag("debug-unix-socket", "Path to Unix socket for packages debug endpoint.").
-		Envar("PACKAGES_DEBUG_UNIX_SOCKET").
-		Default(packagesDebugSocket).
-		StringVar(&packagesDebugSocket)
+func definePackagesDebugSocketFlag(cmd *cobra.Command) {
+	defaultSocket := packagesDebugSocket
+	if v, ok := os.LookupEnv("PACKAGES_DEBUG_UNIX_SOCKET"); ok && v != "" {
+		defaultSocket = v
+		packagesDebugSocket = v
+	}
+	cmd.Flags().StringVar(&packagesDebugSocket, "debug-unix-socket", defaultSocket, "Path to Unix socket for packages debug endpoint.")
 }
 
 // withQuery appends a query parameter to a path if value is non-empty.
