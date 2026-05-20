@@ -1,6 +1,6 @@
 ---
 title: Deckhouse Virtualization Container Registry (DVCR)
-permalink: ru/architecture/virtualization/dvcr.html
+permalink: en/architecture/virtualization/dvcr.html
 search: deckhouse virtualization container registry, dvcr 
 description: Architecture of the DVCR component of virtualization module in Deckhouse Kubernetes Platform.
 ---
