@@ -253,6 +253,3 @@ d8 k -n d8-cni-cilium rollout restart daemonset/agent
 Чтобы откатить изменения, удалите ресурс `CiliumNodeConfig` и перезапустите те же
 поды.
 
-> **Внимание.** В Cilium 1.17.x BPF-программа `cilium_vxlan` не перекомпилируется
-> на лету при изменении `bpf-events-trace-enabled` через `cilium config set`.
-> Рестарт пода агента — надёжный способ применить новое значение.

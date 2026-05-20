@@ -250,6 +250,3 @@ d8 k -n d8-cni-cilium rollout restart daemonset/agent
 
 To revert, delete the `CiliumNodeConfig` resource and restart the same pods.
 
-> **Note.** On Cilium 1.17.x the `cilium_vxlan` BPF program is not recompiled at
-> runtime when `bpf-events-trace-enabled` changes via `cilium config set`.
-> Restarting the agent pod is the reliable way to apply the change.
