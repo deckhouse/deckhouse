@@ -9,20 +9,13 @@
     padding: 0;
     margin: 0;
 
-    @include breakpoints.max-w(xxl) {
-        // gap: 12px;
-    }
-
     .tabs__container {
         margin: 0;
 
         &--title {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
-
-            @include breakpoints.max-w(xxl) {
-                gap: 16px;
-            }
         }
 
         &--descr {
@@ -63,6 +56,10 @@
                 border-radius: 8px;
                 background: linear-gradient(0deg, #FFF 0%, #FFF 100%), #f5f9ff;
                 box-shadow: 0 2.881px 8.643px .96px rgba(59, 66, 109, .15);
+            }
+
+            @include breakpoints.max-w(xxl) {
+                padding: 7px 20px;
             }
         }
 
