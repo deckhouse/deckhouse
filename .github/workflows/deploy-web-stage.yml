@@ -315,7 +315,7 @@ jobs:
           DOC_API_REFERER: "${{vars.DOC_API_REFERER}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
           # TODO: remove this after tests
-          WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{ secrets.DOCS_WATCHER_DOP_URL }}"
+          WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{ vars.DOCS_WATCHER_DOP_URL }}"
           WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "dop.authToken=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
       # </template: deploy_site_template>
 

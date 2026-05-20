@@ -1783,7 +1783,7 @@ jobs:
           env: web-production
         env:
           WERF_REQUIRE_BUILT_IMAGES: "true"
-          WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{ secrets.DOCS_WATCHER_DOP_URL }}"
+          WERF_SET_DOCS_WATCHER_DOP_URL: "dop.url=${{ vars.DOCS_WATCHER_DOP_URL }}"
           WERF_SET_DOCS_WATCHER_DOP_AUTH_TOKEN: "dop.authToken=${{ secrets.DOCS_WATCHER_DOP_AUTH_TOKEN }}"
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
