@@ -63,6 +63,7 @@ StorageClass хранилища DVCR можно сменить только пе
    dvcr   Bound    pvc-b43f2e33-32cc-435a-aa1d-b53df35b030a   100Gi      RWO            linstor-thin-r1-hdd   <unset>                 34s
    ```
 
+   {: .nowrap-default }
 {% alert level="warning" %}
 Хранилище выбранного StorageClass должно быть доступно на узлах, где запускается DVCR: на system-узлах или на worker-узлах, если в кластере нет system-узлов.
 {% endalert %}

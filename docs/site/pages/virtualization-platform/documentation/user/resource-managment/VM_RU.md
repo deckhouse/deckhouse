@@ -187,6 +187,7 @@ lang: ru
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
 
+   {: .nowrap-default }
 1. Подключитесь с помощью консоли к виртуальной машине (для выхода из консоли необходимо нажать `Ctrl+]`):
 
    ```bash
@@ -845,6 +846,7 @@ spec:
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
 
+  {: .nowrap-default }
 Как установить QEMU Guest Agent:
 
 Для Debian-based ОС:
@@ -1115,6 +1117,7 @@ NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIG
 linux-vm    Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
 
+{: .nowrap-default }
 В колонке `NEED RESTART` мы видим значение `True`, а это значит что для применения изменений требуется перезагрузка.
 
 Выполните перезагрузку виртуальной машины:
@@ -1518,6 +1521,7 @@ sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
 ```
 
+{: .nowrap-default }
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
 
 ```bash
@@ -1959,6 +1963,7 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
+{: .nowrap-default }
 Прервать любую живую миграцию, пока она находится в фазе `Pending` или `InProgress`, можно, удалив соответствующий ресурс VirtualMachineOperations.
 
 Как выполнить живую миграцию ВМ в веб-интерфейсе:
@@ -2402,6 +2407,7 @@ mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    4
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
 
+{: .nowrap-default }
 Ресурс `VirtualMachineMACAddress` (`vmmac`): проектный ресурс, который отвечает за резервирование арендованных MAC-адресов и их привязку к виртуальным машинам.
 
 MAC-адреса виртуальной машине назначается автоматически на каждый дополнительный интерфейс из общего пула адресов и закрепляется за ней до её удаления.
@@ -2421,6 +2427,7 @@ vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
 
+{: .nowrap-default }
 При удалении сети из конфигурации ВМ:
 
 - MAC-адрес интерфейса освобождается.

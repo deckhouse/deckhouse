@@ -59,6 +59,7 @@ rv-thin-r2                           replicated.csi.storage.deckhouse.io   Delet
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
+{: .nowrap-default }
 С полным описанием параметров конфигурации дисков можно ознакомиться [в документации ресурса VirtualDisk](/modules/virtualization/cr.html#virtualdisk).
 
 Как узнать доступные варианты хранилищ веб-интерфейсе DVP:
@@ -153,6 +154,7 @@ NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY U
 ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
 
+{: .nowrap-default }
 Искомый размер указан в колонке **UNPACKEDSIZE** и равен 2.5Gi.
 
 Создадим диск из этого образа:

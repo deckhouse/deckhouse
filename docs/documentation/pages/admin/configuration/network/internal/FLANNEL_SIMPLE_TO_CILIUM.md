@@ -48,6 +48,7 @@ To perform the migration, follow these steps:
    safe-agent-updater-wjjr5  3/3   Running 0           26m
    ```
 
+   {: .nowrap-default }
    If the Cilium agent pods do not transition to the `Ready` state:
 
    - Save the `d8-kube-proxy` manifest:

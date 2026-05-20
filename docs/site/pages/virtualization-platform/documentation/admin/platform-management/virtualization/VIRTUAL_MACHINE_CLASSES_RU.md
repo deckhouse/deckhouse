@@ -69,6 +69,7 @@ generic                                 Ready               1d
 host-passthrough-custom                 Ready               1d
 ```
 
+{: .nowrap-default }
 Чтобы назначить класс по умолчанию, выполните:
 
 ```shell
@@ -95,6 +96,7 @@ generic                                 Ready               1d
 host-passthrough-custom                 Ready   true        1d
 ```
 
+{: .nowrap-default }
 При создании ВМ без указания значения для поля `spec.virtualMachineClassName` в него будет подставлено имя `host-passthrough-custom`.
 
 ## Настройки VirtualMachineClass

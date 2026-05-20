@@ -150,6 +150,7 @@ Ceph — это масштабируемая распределённая сис
    ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
    ```
 
+   {: .nowrap-default }
 Настройка подключения к Ceph-кластеру завершена. Вы можете использовать созданный StorageClass для создания PersistentVolumeClaim в ваших приложениях.
 
 ## Дополнительная информация

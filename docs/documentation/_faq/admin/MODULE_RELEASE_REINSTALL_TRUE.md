@@ -45,6 +45,7 @@ To download the image and reinstall the module that caused the problem:
    my-module-v3.7.5   Deployed                     5d23h
    ```
 
+   {: .nowrap-default }
    Find the module release deployed in the cluster in the list (it should have the status `Deployed`).
 
 1. Add the annotation `modules.deckhouse.io/reinstall=true` to the expanded release:
@@ -69,3 +70,5 @@ backend-567d6c6cdc-g5qgt            1/1     Running   0          2d2h
 frontend-7c8b567759-h8jdf           1/1     Running   0          2d2h
 observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
+
+{: .nowrap-default }

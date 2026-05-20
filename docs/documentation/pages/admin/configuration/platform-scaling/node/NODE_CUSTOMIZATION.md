@@ -424,6 +424,7 @@ Tue Jan 24 11:36:18 2023
 +-----------------------------------------------------------------------------+
 ```
 
+{: .nowrap-default }
 Create the following Job in your cluster:
 
 ```yaml

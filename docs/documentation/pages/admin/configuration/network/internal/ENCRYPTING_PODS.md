@@ -100,6 +100,7 @@ The settings can be overridden at the namespace level.
    webserver-76d6c9b8c-9mdtb   2/2     Running   0          48m   10.111.1.122   test-worker-e36e4712-5948b-sp9t8   <none>           <none>
    ```
 
+   {: .nowrap-default }
 1. Access the node via SSH as root and run `tcpdump`:
 
    ```bash

@@ -599,6 +599,7 @@ usb-flash-drive     node-1         True    False                  10m
 logitech-webcam     node-2         True    True      my-project   15m
 ```
 
+{: .nowrap-default }
 #### NodeUSBDevice Conditions
 
 The status of a [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resource is represented by a set of conditions that describe its availability and assignment state:
@@ -647,6 +648,7 @@ NAME               NODE     MANUFACTURER   PRODUCT              SERIAL       ATT
 logitech-webcam    node-2   Logitech       Webcam C920         ABC123456   False      10m
 ```
 
+{: .nowrap-default }
 #### USBDevice Attributes
 
 The [USBDevice](/modules/virtualization/cr.html#usbdevice) resource exposes detailed information about the physical USB device through its status fields. This attributes are available in `.status.attributes`:

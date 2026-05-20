@@ -145,6 +145,8 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
 
 ```
 
+
+{: .nowrap-default }
 ## Поддерживаемые версии Ceph
 
 - Официальная поддержка — Ceph версии 16.2.0 и выше.

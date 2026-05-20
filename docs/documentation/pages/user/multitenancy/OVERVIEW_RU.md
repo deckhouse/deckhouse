@@ -102,6 +102,7 @@ lang: ru
    test        Deployed   empty                                                                     1m
    ```
 
+   {: .nowrap-default }
 Шаблон созданного проекта можно изменить на существующий.
 
 {% alert level="warning" %}

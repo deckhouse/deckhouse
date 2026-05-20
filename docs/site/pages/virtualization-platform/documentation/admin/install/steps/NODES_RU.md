@@ -135,4 +135,5 @@ dvp-worker-1    Ready    worker                 3m     v1.29.10
 dvp-worker-2    Ready    worker                 3m     v1.29.10
 ```
 
+{: .nowrap-default }
 {% endofftopic %}

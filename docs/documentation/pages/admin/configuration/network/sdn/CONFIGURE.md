@@ -166,6 +166,8 @@ Example configuring a bond interface:
 
    ```
 
+
+   {: .nowrap-default }
 ## Configuring and connecting additional virtual networks for use in application pods
 
 The Deckhouse Kubernetes Platform provides the ability to declaratively manage additional networks for application workloads (pods, virtual machines). At the same time:
@@ -369,6 +371,7 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 ...
 ```
 
+{: .nowrap-default }
 ### IPAM: IP address pools for additional networks
 
 The IPAM mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
@@ -548,6 +551,7 @@ worker-02-nic-0000:17:00.0      Deckhouse   worker-02     NIC    ens3f0   3     
 worker-02-nic-0000:17:00.1      Deckhouse   worker-02     NIC    ens3f1   4         Up      PF      NetDev    ixgbe       Intel    35d
 ```
 
+{: .nowrap-default }
 Label the interfaces that will be used for UnderlayNetwork:
 
 ```shell

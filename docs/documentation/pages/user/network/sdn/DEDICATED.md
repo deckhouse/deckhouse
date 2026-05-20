@@ -310,6 +310,7 @@ To verify that an IP address is assigned to the interface, follow these steps:
    ipaddress-auto-2   Auto   Network   mynet   192.168.12.2   192.168.12.0/24   Allocated   4d1h
    ```
 
+   {: .nowrap-default }
 1. Check the pod annotation `network.deckhouse.io/networks-status` (including `ipAddressConfigs` and routes):
 
    ```shell

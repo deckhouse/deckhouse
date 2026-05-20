@@ -63,6 +63,7 @@ To change the DVCR StorageClass, perform the following steps:
    dvcr   Bound    pvc-b43f2e33-32cc-435a-aa1d-b53df35b030a   100Gi      RWO            linstor-thin-r1-hdd   <unset>                 34s
    ```
 
+   {: .nowrap-default }
 {% alert level="warning" %}
 The storage for the chosen StorageClass must be reachable from the nodes where DVCR runs: system nodes, or worker nodes if the cluster has no system nodes.
 {% endalert %}

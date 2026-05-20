@@ -159,6 +159,7 @@ NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP               
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
 ```
 
+{: .nowrap-default }
 Полученные `EXTERNAL-IP` можно прописывать в качестве A-записей для прикладного домена:
 
 ```shell

@@ -72,6 +72,7 @@ vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
 
+{: .nowrap-default }
 {% endofftopic %}
 
 ## Конфигурация модуля `virtualization`

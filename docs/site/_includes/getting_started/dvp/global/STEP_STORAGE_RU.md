@@ -87,6 +87,7 @@ NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE  
 vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
+{: .nowrap-default }
 Создайте пул LVM-томов:
 
 ```bash

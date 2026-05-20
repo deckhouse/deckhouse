@@ -102,6 +102,7 @@ dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
+{: .nowrap-default }
 In the example output, there are six block devices available across three nodes.
 
 To combine the block devices on a node, you need to create an LVM volume group using the [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource. To create the LVMVolumeGroup resource on node `worker-0`, apply the following resource, replacing the node and block device names with your own:
@@ -147,6 +148,7 @@ NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE    
 vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
+{: .nowrap-default }
 If the resource has transitioned to the `Ready` phase, this means that an LVM volume group named vg has been created on node `worker-0` from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
 Next, you need to repeat the creation of [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources for the remaining nodes (`worker-1` and `worker-2`), changing the resource name, node name, and block device names accordingly.
@@ -166,6 +168,7 @@ vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi
 vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
+{: .nowrap-default }
 ### Creating replicated thick pools
 
 {% alert level="info" %}
@@ -314,4 +317,5 @@ NAME                       PROVISIONER                      RECLAIMPOLICY   VOLU
 replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
+{: .nowrap-default }
 If a StorageClass with the name `replicated-storage-class` appears, it means the configuration of the `sds-replicated-volume` module is complete. Users can now create PersistentVolume objects by specifying the `replicated-storage-class` StorageClass. With the above configuration, a volume with three replicas across different nodes will be created.

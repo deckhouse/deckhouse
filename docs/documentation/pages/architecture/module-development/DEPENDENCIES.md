@@ -50,6 +50,7 @@ Deckhouse checks whether the dependency is met in the following cases:
       test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
 
+   {: .nowrap-default }
 1. **When upgrading Deckhouse Kubernetes Platform**
    Deckhouse checks if the new DKP version matches the dependencies of the installed and active modules. If at least one module is not compatible with the new version, the DKP upgrade will not be performed.
 
@@ -67,6 +68,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
    ```
 
+   {: .nowrap-default }
 1. **When conducting initial module analyses**
    Deckhouse checks the current version of DKP and the dependencies of the installed modules. If a mismatch is discovered, the module will be disabled.
 
@@ -106,6 +108,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
    ```
 
+   {: .nowrap-default }
 1. **When upgrading Kubernetes**
    Deckhouse examines the dependencies of active modules, and if at least one module is incompatible with the new Kubernetes version, the version upgrade will not proceed.
 
@@ -144,6 +147,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
 
+   {: .nowrap-default }
 ## Dependency on the version of other modules
 
 Dependencies on other modules describe the conditions for enabling, updating, and disabling a module.

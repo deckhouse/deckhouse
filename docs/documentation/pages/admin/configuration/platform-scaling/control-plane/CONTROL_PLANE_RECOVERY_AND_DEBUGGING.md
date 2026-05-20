@@ -196,6 +196,7 @@ Output example (the size of the etcd database on the node is specified in the `D
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
 
+{: .nowrap-default }
 ### How to defragment an etcd node in a single-master cluster
 
 {% alert level="warning" %}
@@ -240,6 +241,7 @@ To defragment etcd in a cluster with multiple master nodes:
    etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
    ```
 
+   {: .nowrap-default }
 1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
 
    ```bash
@@ -264,6 +266,7 @@ To defragment etcd in a cluster with multiple master nodes:
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
 
+   {: .nowrap-default }
 1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
 
    > Important: Defragment the leader last.

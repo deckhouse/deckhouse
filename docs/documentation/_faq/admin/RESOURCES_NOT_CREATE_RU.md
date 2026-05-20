@@ -28,6 +28,7 @@ lang: ru
    31baf9a70d657275   D8StrongholdClusterNotHealthy                   7          16h   55s             firing
    ```
 
+   {: .nowrap-default }
    <!-- TODO: заменить ссылку на относительную перед публикацией FAQ на сайте с документацией -->
 
    Подробнее об алертах — в разделе [«Список алертов»](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/alerts.html).

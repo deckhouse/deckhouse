@@ -105,6 +105,7 @@ To set up the integration:
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
    ```
 
+   {: .nowrap-default }
    Check the SecretStore status as well:
 
    ```shell

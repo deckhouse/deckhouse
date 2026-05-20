@@ -104,6 +104,7 @@ dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584
 dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
+{: .nowrap-default }
 В примере вывода перечислены шесть блочных устройств, расположенных на трёх узлах.
 
 Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Для создания ресурса LVMVolumeGroup на узле `worker-0` примените следующий ресурс, предварительно заменив имена узла и блочных устройств на необходимые:
@@ -149,6 +150,7 @@ NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE    
 vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
+{: .nowrap-default }
 Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
 
 Далее необходимо повторить создание ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для оставшихся узлов (`worker-1` и `worker-2`), изменив в примере выше имя ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), имя узла и имена блочных устройств, соответствующих узлу.
@@ -168,6 +170,7 @@ vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi
 vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
+{: .nowrap-default }
 ### Создание реплицированных thick pool
 
 Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
@@ -316,4 +319,5 @@ NAME                       PROVISIONER                      RECLAIMPOLICY   VOLU
 replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
+{: .nowrap-default }
 Если StorageClass с именем `replicated-storage-class` появился, значит настройка модуля [`sds-replicated-volume`](/modules/sds-replicated-volume/) завершена. Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `replicated-storage-class`. При указанных выше настройках будет создаваться том с тремя репликами на разных узлах.

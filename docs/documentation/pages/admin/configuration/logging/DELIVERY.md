@@ -736,6 +736,7 @@ Example diagram for one log transmission channel in ASCII format:
 +------------------------------------------------+
 ```
 
+{: .nowrap-default }
 #### Monitoring channel load
 
 To view the traffic volume at each log processing stage, use the `vector top` command.

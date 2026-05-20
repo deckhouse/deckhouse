@@ -49,6 +49,7 @@ lang: ru
    safe-agent-updater-wjjr5  3/3   Running 0           26m
    ```
 
+   {: .nowrap-default }
    Если поды агента Cilium не переходят в состояние `Ready`:
 
    - Сохраните манифест `d8-kube-proxy`:
