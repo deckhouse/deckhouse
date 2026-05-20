@@ -105,6 +105,7 @@
 810-documentation/                                               @z9r5
 
 /candi/                                  @borg-z @090809
+/candi/control-plane/                    @sprait
 /ee/candi/                               @borg-z @090809
 /ee/**/candi/                            @borg-z @090809
 candi/version_map.yml                    @sprait
