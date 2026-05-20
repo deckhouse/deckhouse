@@ -430,9 +430,7 @@ spec:
 			require.True(t, index.IsValid())
 
 			require.Equal(t, index.Kind, "NodeGroup")
-
 		})
-
 	})
 }
 
@@ -787,7 +785,6 @@ provider:
 			createAndAssertCloudConfigEmptyOrInvalidError(t, tst, pointer.String(cloudConfig))
 		})
 	})
-
 }
 
 type testParseConfigFromClusterParams struct {
@@ -1007,7 +1004,6 @@ deckhouse:
 }
 
 func TestFetchDocuments(t *testing.T) {
-
 	t.Run("Parse init config path", func(t *testing.T) {
 		initConfig := `---
 apiVersion: deckhouse.io/v1alpha1

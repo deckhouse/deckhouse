@@ -24,7 +24,7 @@ const (
 	LayoutsDir = "layouts"
 )
 
-func GetPluginDir(root string, settings settings.ProviderSettings, version string, arch string) string {
+func GetPluginDir(root string, settings settings.ProviderSettings, version, arch string) string {
 	registry := "registry.terraform.io"
 	if settings.UseOpenTofu() {
 		registry = "registry.opentofu.org"

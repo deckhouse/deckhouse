@@ -28,7 +28,6 @@ import (
 	tplt "text/template"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
@@ -36,6 +35,8 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type LoopsParams struct {

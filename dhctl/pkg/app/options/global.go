@@ -114,7 +114,7 @@ func LoadBuildInfo(deckhouseDir string) BuildInfo {
 }
 
 func readBuildFile(dst *string, filePath string) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
+	file, err := os.OpenFile(filePath, os.O_RDONLY, 0o644)
 	if err != nil {
 		return
 	}
