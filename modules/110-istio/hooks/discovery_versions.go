@@ -67,8 +67,8 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	supportsAmbient := versionSemver.GreaterThanEqual(ambientMinVersion)
 
 	// Operator is supported for versions lower than 1.27.9
-	operatorFreeMinVersion := semver.MustParse("1.27.9")
-	supportsOperator := versionSemver.LessThan(operatorFreeMinVersion)
+	supportOperatorCutoffVersion := semver.MustParse("1.27.9")
+	supportsOperator := versionSemver.LessThan(supportOperatorCutoffVersion)
 
 	return &IstioVersion{
 		version: fmt.Sprintf(versionTemplate, major, minor),
