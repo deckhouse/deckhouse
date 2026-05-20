@@ -23,6 +23,8 @@ rules:
    - azuremachineclasses
    - gcpmachineclasses
    - openstackmachineclasses
+   - alicloudmachineclasses
+   - packetmachineclasses
    - vspheremachineclasses
    - yandexmachineclasses
    - machinedeployments
@@ -32,6 +34,8 @@ rules:
    - azuremachineclasses/status
    - gcpmachineclasses/status
    - openstackmachineclasses/status
+   - alicloudmachineclasses/status
+   - packetmachineclasses/status
    - vspheremachineclasses/status
    - yandexmachineclasses/status
    - machinedeployments/status
