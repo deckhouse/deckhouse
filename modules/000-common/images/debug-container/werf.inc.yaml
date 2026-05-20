@@ -26,9 +26,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "builder/distroless" }}
-shell:
-  install:
-    - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru util-linux
 import:
 - image: control-plane-manager/etcd
   add: /usr/bin
@@ -52,8 +49,9 @@ import:
   before: install
 shell:
   install:
-  - /usr/bin/ln -s /var/run /run
-  - /usr/bin/ln -s /bin/bash /bin/sh
+    - pm install curl bash jq yq sed grep gawk procps iproute2 findutils coreutils openssl vim less ethtool pwru util-linux
+    - /usr/bin/ln -fs /var/run /run
+    - /usr/bin/ln -fs /bin/bash /bin/sh
 imageSpec:
   config:
     env:
