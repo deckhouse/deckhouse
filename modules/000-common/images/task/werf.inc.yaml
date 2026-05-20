@@ -12,7 +12,7 @@ shell:
   - rm -rf .git website
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -26,7 +26,6 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
