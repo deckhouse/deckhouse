@@ -32,3 +32,13 @@ rules:
   - update
   - patch
   - delete
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - daemonsets
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
