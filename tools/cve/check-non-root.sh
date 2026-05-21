@@ -40,6 +40,10 @@ declare -A skip_components=(
 )
 declare -A skip_components_images=(
   ["d8ShutdownInhibitor"]="skip"
+  ["terraformManager"]="skip"
+  ["baseTerraform"]="skip"
+  ["baseOpentofu"]="skip"
+  ["candi"]="skip"
 )
 # Function to get skip components
 function get_skip_components() {
