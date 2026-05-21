@@ -63,9 +63,9 @@ shell:
       echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
       echo '[registries.crates-io-mirror]' >> .cargo/config.toml
       echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
-      git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
     fi
-  #- git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - |
     cargo build \
     --release 
