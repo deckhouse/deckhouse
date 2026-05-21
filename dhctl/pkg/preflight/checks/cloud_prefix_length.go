@@ -17,11 +17,16 @@ package checks
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
+
+var yamlDocSeparator = regexp.MustCompile(`(?m)^---\s*$`)
 
 const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length"
 
@@ -102,10 +107,53 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 }
 
 func (c CloudDiskNameLengthCheck) collectNodeGroupNames() []string {
+	seen := map[string]struct{}{"master": {}}
 	names := []string{"master"}
+
 	for _, ng := range c.MetaConfig.TerraNodeGroupSpecs {
 		if ng.Name != "" {
-			names = append(names, ng.Name)
+			if _, ok := seen[ng.Name]; !ok {
+				seen[ng.Name] = struct{}{}
+				names = append(names, ng.Name)
+			}
+		}
+	}
+
+	for _, name := range parseNodeGroupNamesFromResources(c.MetaConfig.ResourcesYAML) {
+		if _, ok := seen[name]; !ok {
+			seen[name] = struct{}{}
+			names = append(names, name)
+		}
+	}
+
+	return names
+}
+
+func parseNodeGroupNamesFromResources(resourcesYAML string) []string {
+	if resourcesYAML == "" {
+		return nil
+	}
+
+	type resource struct {
+		Kind     string `yaml:"kind"`
+		Metadata struct {
+			Name string `yaml:"name"`
+		} `yaml:"metadata"`
+	}
+
+	var names []string
+	docs := yamlDocSeparator.Split(resourcesYAML, -1)
+	for _, doc := range docs {
+		doc = strings.TrimSpace(doc)
+		if doc == "" {
+			continue
+		}
+		var r resource
+		if err := yaml.Unmarshal([]byte(doc), &r); err != nil {
+			continue
+		}
+		if r.Kind == "NodeGroup" && r.Metadata.Name != "" {
+			names = append(names, r.Metadata.Name)
 		}
 	}
 	return names

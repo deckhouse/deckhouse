@@ -121,6 +121,35 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "exceeds 63 characters",
 		},
 		{
+			name: "DVP: NodeGroup from ResourcesYAML with long name fails",
+			metaConfig: &config.MetaConfig{
+				ClusterPrefix: strings.Repeat("a", 20),
+				ProviderName:  "dvp",
+				ResourcesYAML: `apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: my-very-long-system-group
+spec:
+  nodeType: CloudEphemeral`,
+			},
+			expectError: true,
+			errContains: "my-very-long-system-group",
+		},
+		{
+			name: "DVP: NodeGroup from ResourcesYAML with short name passes",
+			metaConfig: &config.MetaConfig{
+				ClusterPrefix: strings.Repeat("a", 20),
+				ProviderName:  "dvp",
+				ResourcesYAML: `apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  nodeType: CloudEphemeral`,
+			},
+			expectError: false,
+		},
+		{
 			name: "empty prefix passes",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix: "",
