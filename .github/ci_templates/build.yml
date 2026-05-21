@@ -286,3 +286,106 @@ steps:
 {!{ end }!}
 # </template: build_template>
 {!{ end }!}
+
+{!{/* build_tests_template
+     A focused werf build of just the `tests` image (FE env), used by the
+     unit-test / dhctl-tests / openapi / validators jobs so they no longer
+     wait on the full build_fe job (which builds dev, dev/install,
+     e2e-opentofu-eks, etc., none of which the tests jobs need).
+     werf's incremental cache means stages also built later by build_fe
+     are reused via the shared dev-registry repo. */}!}
+{!{ define "build_tests_template" }!}
+{!{- $ctx := index . 0 -}!}
+# <template: build_tests_template>
+runs-on: [self-hosted, large]
+outputs:
+  tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
+
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_SSH_KEY" "SOURCE_REPO_SSH_KEY" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
+
+  - name: Set up Go 1.25
+    uses: actions/setup-go@v5
+    with:
+      go-version: '1.25'
+      cache: false
+
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+  - name: Build tests image
+    id: build
+    env:
+      WERF_ENV: FE
+      WERF_PARALLEL_TASKS_LIMIT: 3
+      WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+      WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+      DECKHOUSE_DEV_REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+      SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+      CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+      OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
+      DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    run: |
+      # Same dev-registry path computation as build_template (build.yml).
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+        REPO_SUFFIX=
+      fi
+      REGISTRY_SUFFIX=fe
+      DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+      export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+      type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+      # Build only the `tests` image (and its transitive werf deps);
+      # cache is shared with build_fe via WERF_REPO.
+      d8-build dk build tests \
+        --parallel=true --parallel-tasks-limit=10 \
+        --save-build-report=true \
+        --build-report-path images_tags_werf.json
+
+      TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+      echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+      egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+      mv images_tags_werf_filtered.json images_tags_werf.json
+
+  - name: Save build report
+    if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+    uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+    with:
+      name: build_report_tests
+      path: images_tags_werf.json
+
+  - name: Cleanup workdir
+    if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+    run: rm -f images_tags_werf.json
+# </template: build_tests_template>
+{!{ end }!}
