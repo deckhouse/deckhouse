@@ -148,7 +148,6 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
   - operator: Exists
 `))
 		})
-
 	})
 
 	Context("Cluster with deckhouse on system node", func() {
