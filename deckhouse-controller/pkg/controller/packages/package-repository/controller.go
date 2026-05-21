@@ -308,6 +308,10 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 	return nil
 }
 
+// cleanupApplicationPackage removes repoName from pkg.Status.AvailableRepositories.
+// If the resulting list is empty the package is no longer available from any source
+// and the CR itself is deleted; otherwise the status is patched with the trimmed list.
+// Returns nil (no-op) when the package was not contributed by repoName.
 func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha1.ApplicationPackage, repoName string) error {
 	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
 		return nil
@@ -331,6 +335,10 @@ func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha
 	return nil
 }
 
+// cleanupModulePackage removes repoName from pkg.Status.AvailableRepositories.
+// If the resulting list is empty the package is no longer available from any source
+// and the CR itself is deleted; otherwise the status is patched with the trimmed list.
+// Returns nil (no-op) when the package was not contributed by repoName.
 func (r *reconciler) cleanupModulePackage(ctx context.Context, pkg *v1alpha1.ModulePackage, repoName string) error {
 	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
 		return nil
