@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
@@ -90,12 +91,12 @@ func setAnnotationValidationSuspendedHandleIngressNginxControllers(_ context.Con
 	// First run → set blocking annotations on all controllers
 	if !configMapExists {
 		setValidationSuspendedAnnotationToAll(controllersSnapshot, input)
-		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil)
+		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil, metrics.WithGroup(validationSuspendMetricName))
 	}
 
 	// If at least one controller has annotation → set metric
 	if anyControllerHasAnnotationValidationSuspended(controllersSnapshot) {
-		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil)
+		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil, metrics.WithGroup(validationSuspendMetricName))
 	}
 
 	return nil
