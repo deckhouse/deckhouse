@@ -12,7 +12,7 @@ Let's explore the additional capabilities of Deckhouse Stronghold that become av
 Open `https://stronghold.<example.com>` in your browser and log in using the authentication method configured in your cluster.
 
 {% alert level="info" %}
-Replace `<example.com>` with the actual domain name of your Deckhouse cluster.
+Replace `<example.com>` with the actual domain name of your Deckhouse Kubernetes Platform cluster.
 {% endalert %}
 </div>
 

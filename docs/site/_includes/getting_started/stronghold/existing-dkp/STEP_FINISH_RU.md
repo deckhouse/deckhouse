@@ -12,7 +12,7 @@
 Откройте в браузере `https://stronghold.<example.com>` и авторизуйтесь, используя настроенный в кластере метод аутентификации.
 
 {% alert level="info" %}
-Замените `<example.com>` на фактическое доменное имя вашего кластера Deckhouse.
+Замените `<example.com>` на фактическое доменное имя вашего кластера Deckhouse Kubernetes Platform.
 {% endalert %}
 </div>
 
