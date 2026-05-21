@@ -102,6 +102,7 @@ shell:
       --type openvex \
       --key ${SIGN_KEY} \
       --tlog-upload=false \
+      --use-signing-config=false \
       -y -d \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
