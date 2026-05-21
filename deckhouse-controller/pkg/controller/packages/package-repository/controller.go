@@ -309,9 +309,9 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 }
 
 // cleanupApplicationPackage removes repoName from pkg.Status.AvailableRepositories.
-// If the resulting list is empty the package is no longer available from any source
-// and the CR itself is deleted; otherwise the status is patched with the trimmed list.
-// Returns nil (no-op) when the package was not contributed by repoName.
+// Lifecycle of the ApplicationPackage CR itself is handled by Kubernetes GC via ownerRefs;
+// this function only updates the status. Returns nil (no-op) when the package was not
+// contributed by repoName.
 func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha1.ApplicationPackage, repoName string) error {
 	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
 		return nil
@@ -322,13 +322,6 @@ func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha
 		return name == repoName
 	})
 
-	if len(pkg.Status.AvailableRepositories) == 0 {
-		if err := r.client.Delete(ctx, pkg); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete application package %s: %w", pkg.Name, err)
-		}
-		return nil
-	}
-
 	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application package %s status: %w", pkg.Name, err)
 	}
@@ -336,9 +329,9 @@ func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha
 }
 
 // cleanupModulePackage removes repoName from pkg.Status.AvailableRepositories.
-// If the resulting list is empty the package is no longer available from any source
-// and the CR itself is deleted; otherwise the status is patched with the trimmed list.
-// Returns nil (no-op) when the package was not contributed by repoName.
+// Lifecycle of the ModulePackage CR itself is handled by Kubernetes GC via ownerRefs;
+// this function only updates the status. Returns nil (no-op) when the package was not
+// contributed by repoName.
 func (r *reconciler) cleanupModulePackage(ctx context.Context, pkg *v1alpha1.ModulePackage, repoName string) error {
 	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
 		return nil
@@ -348,13 +341,6 @@ func (r *reconciler) cleanupModulePackage(ctx context.Context, pkg *v1alpha1.Mod
 	pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
 		return name == repoName
 	})
-
-	if len(pkg.Status.AvailableRepositories) == 0 {
-		if err := r.client.Delete(ctx, pkg); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete module package %s: %w", pkg.Name, err)
-		}
-		return nil
-	}
 
 	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch module package %s status: %w", pkg.Name, err)
