@@ -20,11 +20,8 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-# Example:
-#  ["istio pilotV1x19x7"]="1337:1337"
-#  ["istio pilotV1x21x6"]="1337:1337"
 declare -A allowed_users=(
-
+  ["common debugContainer"]="root:root"
 )
 
 declare -A allowed_components=(
