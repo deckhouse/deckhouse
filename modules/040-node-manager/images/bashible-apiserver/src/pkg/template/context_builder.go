@@ -143,6 +143,12 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	hashMap := make(map[string]hash.Hash, len(cb.clusterInputData.NodeGroups))
 	clusterMasterKubeAPIEndpoints, clusterMasterRPPAddresses, clusterMasterRPPBootstrapAddresses := clusterMasterEndpointAddresses(cb.clusterInputData.ClusterMasterEndpoints)
 
+	if len(clusterMasterKubeAPIEndpoints) == 0 {
+		return BashibleContextData{}, nil, map[string]error{
+			"clusterMasterKubeAPIEndpoints": fmt.Errorf("no kube-api endpoints available"),
+		}
+	}
+
 	commonContext := &tplContextCommon{
 		versionMapWrapper:                  versionMapFromMap(cb.versionMap),
 		RunType:                            "Normal",

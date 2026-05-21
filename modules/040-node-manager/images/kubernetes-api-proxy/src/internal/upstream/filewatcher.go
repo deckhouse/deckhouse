@@ -19,8 +19,11 @@ package upstream
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // fileWatcher watches and writes a file for changes
@@ -28,12 +31,14 @@ type fileWatcher struct {
 	filePath string
 	onChange func([]*Upstream)
 	ticker   *time.Ticker
+	logger   *log.Logger
 }
 
-func newFileWatcher(filePath string, onChange func([]*Upstream)) *fileWatcher {
+func newFileWatcher(filePath string, onChange func([]*Upstream), logger *log.Logger) *fileWatcher {
 	return &fileWatcher{
 		filePath: filePath,
 		onChange: onChange,
+		logger:   logger,
 	}
 }
 
@@ -70,6 +75,12 @@ func (fw *fileWatcher) Stop() {
 func (fw *fileWatcher) triggerChangedOutside() {
 	changedFile, err := os.Open(fw.filePath)
 	if err != nil {
+		if fw.logger != nil {
+			fw.logger.Warn("failed to open upstreams file, keeping existing upstreams",
+				slog.String("path", fw.filePath),
+				slog.String("error", err.Error()),
+			)
+		}
 		return
 	}
 	defer changedFile.Close() //nolint:errcheck
@@ -77,6 +88,21 @@ func (fw *fileWatcher) triggerChangedOutside() {
 	var upstreamRecords []string
 
 	if err := json.NewDecoder(changedFile).Decode(&upstreamRecords); err != nil {
+		if fw.logger != nil {
+			fw.logger.Warn("failed to decode upstreams file, keeping existing upstreams",
+				slog.String("path", fw.filePath),
+				slog.String("error", err.Error()),
+			)
+		}
+		return
+	}
+
+	if len(upstreamRecords) == 0 {
+		if fw.logger != nil {
+			fw.logger.Warn("upstreams file is empty or null, keeping existing upstreams",
+				slog.String("path", fw.filePath),
+			)
+		}
 		return
 	}
 
@@ -89,7 +115,7 @@ func (fw *fileWatcher) triggerChangedOutside() {
 }
 
 func (fw *fileWatcher) triggerChangedInside(upstreams []*Upstream) {
-	changeFile, err := os.OpenFile(fw.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0640)
+	changeFile, err := os.OpenFile(fw.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o640)
 	if err != nil {
 		return
 	}
