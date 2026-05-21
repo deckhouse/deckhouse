@@ -369,7 +369,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					go func() {
 						defer rm.Release()
 						// give some time to real parent processes to reap their children if any
-						time.Sleep(time.Second)
+						time.Sleep(0)
 
 						processes, err := process.Processes()
 						if err != nil {
