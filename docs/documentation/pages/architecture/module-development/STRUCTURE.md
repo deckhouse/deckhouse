@@ -566,6 +566,7 @@ If `stage` is set to `Experimental`, the module cannot be enabled by default. To
 - `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.
 
   The startup order can also be influenced by the list of [module dependencies](../dependencies/).
+- `critical` — *Boolean.* Marks the module as critical for cluster bootstrapping. Critical modules are started during the initial cluster setup, before the cluster is considered fully operational. Non-critical (functional) modules start only after the cluster bootstrap is complete. Default: `false`.
 
 Example of metadata description for the `hello-world` module:
 
