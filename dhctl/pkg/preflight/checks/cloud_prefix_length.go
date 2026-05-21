@@ -24,23 +24,8 @@ import (
 
 const CloudPrefixLengthCheckName preflight.CheckName = "cloud-prefix-length"
 
-// maxResourceNameLength is the Kubernetes DNS label limit.
 const maxResourceNameLength = 63
 
-// providerSuffixOverhead maps each provider (lowercase) to the length
-// of the longest resource-name suffix appended after the prefix.
-//
-// DVP:         {prefix}-master-additional-disk-0-0-abcdef  → 37
-// Zvirt:       {prefix}-master-0-kubernetes-data            → 26
-// Dynamix:     {prefix}-master-0-kubernetes-data            → 26
-// VCD:         {prefix}-master-0-etcd-disk                  → 21
-// AWS:         {prefix}-kubernetes-data-0                   → 19
-// Azure:       {prefix}-kubernetes-data-0                   → 19
-// GCP:         {prefix}-kubernetes-data-0                   → 19
-// Yandex:      {prefix}-kubernetes-data-0                   → 19
-// OpenStack:   {prefix}-kubernetes-data-0                   → 19
-// Huaweicloud: {prefix}-kubernetes-data-0                   → 19
-// vSphere:     {prefix}-master-0                            → 9
 var providerSuffixOverhead = map[string]int{
 	"dvp":         37,
 	"zvirt":       26,
@@ -55,7 +40,6 @@ var providerSuffixOverhead = map[string]int{
 	"vsphere":     9,
 }
 
-// defaultSuffixOverhead is used for unknown providers (worst case — DVP).
 const defaultSuffixOverhead = 37
 
 type CloudPrefixLengthCheck struct {
