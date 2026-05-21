@@ -659,7 +659,7 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 
 	// err - apierrors.IsNotFound
 	if err != nil {
-		// Create new ApplicationPackage
+		// Create new ApplicationPackage with this repository as a non-controller owner.
 		pkg = &v1alpha1.ApplicationPackage{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
@@ -672,13 +672,21 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 				},
 			},
 		}
-
-		// Add owner reference to PackageRepository
-		s.setOwnerReference(pkg)
+		s.ensureSharedOwnerReference(pkg)
 
 		err = s.client.Create(ctx, pkg)
 		if err != nil {
 			return fmt.Errorf("create application package: %w", err)
+		}
+	} else {
+		// Existing — make sure we are listed as an owner and downgrade any legacy
+		// Controller=true PackageRepository ownerRefs so a single repo deletion does not
+		// cascade-delete the multi-source package.
+		original := pkg.DeepCopy()
+		if s.ensureSharedOwnerReference(pkg) {
+			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("sync application package owner refs: %w", err)
+			}
 		}
 	}
 
@@ -760,7 +768,7 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 
 	// err - apierrors.IsNotFound
 	if err != nil {
-		// Create new ModulePackage
+		// Create new ModulePackage with this repository as a non-controller owner.
 		pkg = &v1alpha1.ModulePackage{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1alpha1.ModulePackageGVK.GroupVersion().String(),
@@ -773,13 +781,21 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 				},
 			},
 		}
-
-		// Add owner reference to PackageRepository
-		s.setOwnerReference(pkg)
+		s.ensureSharedOwnerReference(pkg)
 
 		err = s.client.Create(ctx, pkg)
 		if err != nil {
 			return fmt.Errorf("create module package: %w", err)
+		}
+	} else {
+		// Existing — make sure we are listed as an owner and downgrade any legacy
+		// Controller=true PackageRepository ownerRefs so a single repo deletion does not
+		// cascade-delete the multi-source package.
+		original := pkg.DeepCopy()
+		if s.ensureSharedOwnerReference(pkg) {
+			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("sync module package owner refs: %w", err)
+			}
 		}
 	}
 
@@ -799,6 +815,29 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 	}
 
 	return nil
+}
+
+// ensureSharedOwnerReference appends s.repo as a non-controller owner of obj if it is not
+// already present. ApplicationPackage / ModulePackage CRs can be contributed by several
+// repositories, so no single repository should be the sole controller-owner — otherwise
+// Kubernetes GC would cascade-delete the package when that one repo is removed, even if
+// other repos still contribute it. Returns true if obj.OwnerReferences was modified.
+func (s *OperationService) ensureSharedOwnerReference(obj client.Object) bool {
+	refs := obj.GetOwnerReferences()
+	for _, ref := range refs {
+		if ref.UID == s.repo.UID {
+			return false
+		}
+	}
+	refs = append(refs, metav1.OwnerReference{
+		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+		Kind:       v1alpha1.PackageRepositoryKind,
+		Name:       s.repo.Name,
+		UID:        s.repo.UID,
+		Controller: &[]bool{false}[0],
+	})
+	obj.SetOwnerReferences(refs)
+	return true
 }
 
 func (s *OperationService) setOwnerReference(obj client.Object) {
