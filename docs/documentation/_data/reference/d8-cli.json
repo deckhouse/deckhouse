@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.30.4",
+  "version": "v0.30.12",
   "aliases": null,
   "flags": {
     "help": {
@@ -45591,7 +45591,7 @@
           "aliases": null,
           "flags": {
             "deckhouse-tag": {
-              "description": "Specific Deckhouse build tag to pull. Conflicts with --since-version. If registry contains release channel image for specified tag, all release channels in the bundle will be pointed to it.",
+              "description": "Specific Deckhouse build tag to pull. Conflicts with --since-version and --include-platform. If registry contains release channel image for specified tag, all release channels in the bundle will be pointed to it.",
               "shorthand": "",
               "global": false
             },
@@ -45626,8 +45626,13 @@
               "global": false
             },
             "include-module": {
-              "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): include v1.3.0, v1.3.3, v1.4.1. In addition pulls current versions from release channels\n\nmodule-name@~1.3.0 →  semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): include only v1.3.0, v1.3.3. In addition pulls current versions from release channels\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
+              "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring how platform releases are discovered.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need a specific older patch unconditionally.\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.0, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): keep latest patch per minor — includes v1.3.3 (1.3.x) and v1.4.1 (1.4.x). Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@~1.3.0 → semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): keep latest patch per minor in range — includes v1.3.3. Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@\u003e=1.3.0 → range constraint with explicit \u003e= anchor: keep latest patch per minor AND the named anchor v1.3.0 — includes v1.3.0 (anchor), v1.3.3 (1.3.x latest), v1.4.1 (1.4.x latest).\n\nmodule-name@\u003e=1.3.0 \u003c=1.4.0 → both anchors honoured: includes v1.3.0, v1.3.3, v1.4.0; v1.4.1 is excluded by the upper bound.\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
               "shorthand": "i",
+              "global": false
+            },
+            "include-platform": {
+              "description": "Select platform releases to download by a semver constraint expression, using the same dialect as --include-module's version part.\nConflicts with --since-version and --deckhouse-tag.\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring the release-discovery rules used for full pulls.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need to pin a specific tag, optionally propagating it to a release channel via the +channel suffix.\n\nExamples (available platform versions: v1.63.x, v1.64.x, v1.65.x, v1.66.x, v1.67.x, v1.68.x, v1.69.x, v1.70.x, v1.71.x):\n\n--include-platform \"\u003e=1.64 \u003c=1.68\" → bounded range: latest patch per minor in v1.64..v1.68, anchors v1.64.0 and v1.68.0 always preserved if present in the registry.\n\n--include-platform \"~1.65.0\" → semver ~ constraint (\u003e=1.65.0 \u003c1.66.0): latest v1.65.x patch only.\n\n--include-platform \"^1.65.0\" → semver ^ constraint (\u003e=1.65.0 \u003c2.0.0): latest patch per minor starting at v1.65.x.\n\n--include-platform \"1.65.0\" → implicit caret (^1.65.0): same as above; shorthand kept for parity with --include-module.\n\n--include-platform \"=v1.65.3\" → exact-tag pin: only v1.65.3 is pulled and propagated to all default release channels, just like --deckhouse-tag.\n\n--include-platform \"=v1.65.3+stable\" → exact-tag pin with channel suffix: only v1.65.3 is pulled (channel propagation matches --deckhouse-tag).",
+              "shorthand": "",
               "global": false
             },
             "insecure": {
@@ -45677,6 +45682,11 @@
             },
             "only-extra-images": {
               "description": "Pull only extra images for modules (additional images like security databases, scanners, etc.) without pulling main module images.",
+              "shorthand": "",
+              "global": false
+            },
+            "proxy-registry": {
+              "description": "Pull from a proxy/caching registry that does not implement the registry catalog API.\n\nInstead of calling the registry's \"list tags\" endpoint (which proxy registries typically return empty), this mode probes individual tags by incrementing patch -\u003e minor -\u003e major from the version explicitly named via --include-platform / --include-module. The probe stops once both a new patch and a new minor of the current major fail to resolve, then attempts the next major; if that also fails the probe terminates and downloads what was discovered.\n\nRequires --include-platform when platform is not skipped via --no-platform, and at least one --include-module when modules are not skipped via --no-modules. --exclude-module and --no-platform are respected.\n\nCannot be combined with --deckhouse-tag or --since-version (use --include-platform's lower bound instead).",
               "shorthand": "",
               "global": false
             },
@@ -46660,10 +46670,15 @@
       },
       "subcommands": [
         {
-          "name": "collect-debug-info",
+          "name": "collect-debug-info [flags] \u003e deckhouse-debug-$(date +\"%Y_%m_%d\").tar.gz",
           "description": "Collect debug info.",
           "aliases": null,
           "flags": {
+            "command-timeout": {
+              "description": "Timeout for each individual debug command execution",
+              "shorthand": "",
+              "global": false
+            },
             "context": {
               "description": "The name of the kubeconfig context to use",
               "shorthand": "",
@@ -46682,6 +46697,11 @@
             "list-exclude": {
               "description": "List all files that can be excluded from the debug archive",
               "shorthand": "l",
+              "global": false
+            },
+            "request-interval": {
+              "description": "Minimum interval between debug command executions to avoid overloading the cluster (e.g. 200ms, 500ms, 1s). Zero disables rate limiting (default 0s)",
+              "shorthand": "",
               "global": false
             }
           },
@@ -47320,6 +47340,40 @@
           ]
         },
         {
+          "name": "pki",
+          "description": "Tools for working with control-plane PKI",
+          "aliases": null,
+          "flags": {},
+          "subcommands": [
+            {
+              "name": "certs",
+              "description": "Manage and inspect control-plane TLS certificates",
+              "aliases": null,
+              "flags": {},
+              "subcommands": [
+                {
+                  "name": "check [PATH]",
+                  "description": "Check expiration of control-plane certificates",
+                  "aliases": null,
+                  "flags": {
+                    "kubeconfig-dir": {
+                      "description": "Directory containing kubeconfig files (full-scan mode only; defaults to the parent of --path)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "path": {
+                      "description": "Directory containing the PKI certificates (used in full-scan mode only)",
+                      "shorthand": "",
+                      "global": false
+                    }
+                  },
+                  "subcommands": null
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "sig-migrate",
           "description": "Migrate Kubernetes resources by adding and removing migration annotations",
           "aliases": null,
@@ -47345,7 +47399,7 @@
               "global": false
             },
             "object": {
-              "description": "Scan only a specific object in format \u003cnamespace\u003e/\u003cname\u003e/\u003cresource_name\u003e. Use 'clusterwide' namespace for cluster-scoped resources. To get the resource name, use the 'kubectl api-resources' command.",
+              "description": "Process objects by identifier in format \u003cnamespace\u003e/\u003cname\u003e/\u003cresource_name\u003e. Use 'clusterwide' namespace for cluster-scoped resources. Resource name must match kubectl api-resources output.",
               "shorthand": "",
               "global": false
             },
