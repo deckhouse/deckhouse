@@ -22,11 +22,11 @@ import (
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
-const CloudPrefixLengthCheckName preflight.CheckName = "cloud-prefix-length"
+const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length"
 
-const maxResourceNameLength = 63
+const maxDiskNameLength = 63
 
-var providerSuffixOverhead = map[string]int{
+var providerDiskNameOverhead = map[string]int{
 	"dvp":         37,
 	"zvirt":       26,
 	"dynamix":     26,
@@ -40,23 +40,23 @@ var providerSuffixOverhead = map[string]int{
 	"vsphere":     9,
 }
 
-type CloudPrefixLengthCheck struct {
+type CloudDiskNameLengthCheck struct {
 	MetaConfig *config.MetaConfig
 }
 
-func (CloudPrefixLengthCheck) Description() string {
-	return "validate cluster prefix length for cloud provider"
+func (CloudDiskNameLengthCheck) Description() string {
+	return "validate that cluster prefix does not cause disk names to exceed the length limit"
 }
 
-func (CloudPrefixLengthCheck) Phase() preflight.Phase {
+func (CloudDiskNameLengthCheck) Phase() preflight.Phase {
 	return preflight.PhasePreInfra
 }
 
-func (CloudPrefixLengthCheck) RetryPolicy() preflight.RetryPolicy {
+func (CloudDiskNameLengthCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.RetryPolicy{Attempts: 1}
 }
 
-func (c CloudPrefixLengthCheck) Run(ctx context.Context) error {
+func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil {
 		return fmt.Errorf("meta config is nil")
 	}
@@ -64,28 +64,28 @@ func (c CloudPrefixLengthCheck) Run(ctx context.Context) error {
 	prefix := c.MetaConfig.ClusterPrefix
 	provider := c.MetaConfig.ProviderName
 
-	overhead := providerSuffixOverhead[provider]
+	overhead := providerDiskNameOverhead[provider]
 
-	maxPrefixLen := maxResourceNameLength - overhead
+	maxPrefixLen := maxDiskNameLength - overhead
 	if len(prefix) > maxPrefixLen {
 		return fmt.Errorf(
 			"cluster prefix %q is too long for provider %q: "+
 				"length %d exceeds maximum %d "+
-				"(resource names must be no more than %d characters; "+
-				"longest suffix for this provider is %d characters)",
+				"(disk names must be no more than %d characters; "+
+				"longest disk name suffix for this provider is %d characters)",
 			prefix, provider,
 			len(prefix), maxPrefixLen,
-			maxResourceNameLength, overhead,
+			maxDiskNameLength, overhead,
 		)
 	}
 
 	return nil
 }
 
-func CloudPrefixLength(metaConfig *config.MetaConfig) preflight.Check {
-	check := CloudPrefixLengthCheck{MetaConfig: metaConfig}
+func CloudDiskNameLength(metaConfig *config.MetaConfig) preflight.Check {
+	check := CloudDiskNameLengthCheck{MetaConfig: metaConfig}
 	return preflight.Check{
-		Name:        CloudPrefixLengthCheckName,
+		Name:        CloudDiskNameLengthCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),

@@ -4,9 +4,9 @@ package options
 var generatedPreflightChecks = []string{
 	"cidr-intersection",
 	"cloud-api-accessibility",
+	"cloud-disk-name-length",
 	"cloud-master-system-requirements",
 	"cloud-prefix",
-	"cloud-prefix-length",
 	"deckhouse-user",
 	"dhctl-edition",
 	"instance-class-provider",

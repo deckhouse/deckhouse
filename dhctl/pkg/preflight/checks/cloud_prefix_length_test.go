@@ -118,7 +118,7 @@ func TestCloudPrefixLength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			check := CloudPrefixLengthCheck{MetaConfig: tt.metaConfig}
+			check := CloudDiskNameLengthCheck{MetaConfig: tt.metaConfig}
 			err := check.Run(context.Background())
 
 			if tt.expectError {
