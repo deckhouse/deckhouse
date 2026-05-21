@@ -557,7 +557,6 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 		switch obj.GetKind() {
 		case InitConfigurationKind:
 			ret, err := registry.ParseYAMLInitConfig([]byte(doc))
-
 			if err != nil {
 				return nil, err
 			}

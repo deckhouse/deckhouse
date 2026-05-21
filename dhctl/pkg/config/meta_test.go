@@ -273,7 +273,8 @@ func TestPrepareRegistry(t *testing.T) {
 		})
 		t.Run("ModuleConfig Deckhouse -> from moduleConfig && not legacy", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
-				"manifests": []string{`
+				"manifests": []string{
+					`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

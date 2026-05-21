@@ -408,5 +408,4 @@ func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
 			pb.MultiPrinter.Stop()
 		}
 	}
-
 }

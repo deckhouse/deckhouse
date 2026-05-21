@@ -20,23 +20,26 @@ import (
 	"net/http"
 	"os"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 )
 
-func DefineRequirementsCommands(kpApp *kingpin.Application) {
-	requirementsCmd := kpApp.Command("requirements", "Dump all requirements from memory storage.")
-	requirementsCmd.Action(func(_ *kingpin.ParseContext) error {
-		debugServerAddr := os.Getenv("DEBUG_HTTP_SERVER_ADDR")
-		resp, err := http.Get(fmt.Sprintf("http://%s/requirements", debugServerAddr))
-		if err != nil || resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("error getting requirements")
-		}
+func DefineRequirementsCommands(rootCmd *cobra.Command) {
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "requirements",
+		Short: "Dump all requirements from memory storage.",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			debugServerAddr := os.Getenv("DEBUG_HTTP_SERVER_ADDR")
+			resp, err := http.Get(fmt.Sprintf("http://%s/requirements", debugServerAddr))
+			if err != nil || resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("error getting requirements")
+			}
 
-		defer resp.Body.Close()
-		_, err = io.Copy(os.Stdout, resp.Body)
-		if err != nil {
-			return fmt.Errorf("copy: %w", err)
-		}
-		return nil
+			defer resp.Body.Close()
+			_, err = io.Copy(os.Stdout, resp.Body)
+			if err != nil {
+				return fmt.Errorf("copy: %w", err)
+			}
+			return nil
+		},
 	})
 }

@@ -446,7 +446,6 @@ func testNodeUserExistsOnLabel(node corev1.Node) bool {
 
 	_, ok = labels["some-label"]
 	return ok
-
 }
 
 func testNodeUserOnNodeGroups(t *testing.T, nodeGroups []string) func() testNodeUserWithChecker {

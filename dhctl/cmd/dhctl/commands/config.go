@@ -33,9 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-var (
-	deckhouseDir = "/deckhouse"
-)
+var deckhouseDir = "/deckhouse"
 
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)

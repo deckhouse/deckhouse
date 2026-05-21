@@ -88,7 +88,7 @@ func waitEtcdHasNoMember(ctx context.Context, client libcon.KubeClient, nodeName
 	})
 }
 
-func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string, fieldSelector string) (bool, error) {
+func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName, fieldSelector string) (bool, error) {
 	members, err := getEtcdMembers(ctx, client, fieldSelector)
 	if err != nil {
 		return false, err
