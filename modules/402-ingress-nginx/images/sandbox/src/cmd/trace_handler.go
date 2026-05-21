@@ -32,12 +32,14 @@ type sandboxTraceHandler struct {
 	ShowDetails bool
 	Unsafe      bool
 	Base        sbptrace.Handler
+	WorkDir     string
 }
 
-func newSandboxTraceHandler(base sbptrace.Handler, debug bool) *sandboxTraceHandler {
+func newSandboxTraceHandler(base sbptrace.Handler, debug bool, workDir string) *sandboxTraceHandler {
 	return &sandboxTraceHandler{
 		ShowDetails: debug,
 		Base:        base,
+		WorkDir:     workDir,
 	}
 }
 
@@ -48,7 +50,7 @@ func (h *sandboxTraceHandler) Debug(v ...interface{}) {
 }
 
 func (h *sandboxTraceHandler) getString(ctx *ptracer.Context, addr uint) string {
-	return absPath(ctx.Pid, ctx.GetString(uintptr(addr)))
+	return absPath(ctx.Pid, ctx.GetString(uintptr(addr)), h.WorkDir)
 }
 
 func (h *sandboxTraceHandler) checkOpen(ctx *ptracer.Context, addr uint, flags uint) ptracer.TraceAction {
@@ -185,9 +187,13 @@ func getProcCwd(pid int) string {
 	return s
 }
 
-func absPath(pid int, p string) string {
+func absPath(pid int, p, fallbackCwd string) string {
 	if !filepath.IsAbs(p) {
-		return filepath.Join(getProcCwd(pid), p)
+		cwd := getProcCwd(pid)
+		if cwd == "" {
+			cwd = fallbackCwd
+		}
+		return filepath.Join(cwd, p)
 	}
 	return filepath.Clean(p)
 }

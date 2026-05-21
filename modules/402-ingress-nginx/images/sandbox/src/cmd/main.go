@@ -148,7 +148,7 @@ func runWithPtrace(
 
 		UnshareCgroupAfterSync: os.Getuid() == 0,
 	}
-	traceHandler := newSandboxTraceHandler(handler, debug)
+	traceHandler := newSandboxTraceHandler(handler, debug, workDir)
 	tracer := ptracer.Tracer{
 		Handler: traceHandler,
 		Runner:  r,
