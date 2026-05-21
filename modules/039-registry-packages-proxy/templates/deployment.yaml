@@ -160,6 +160,16 @@ spec:
                     resource: deployments
                     subresource: http
                     name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/v1/images/
+                path: /v1/images/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: cli-binary
+                    name: registry-packages-proxy
         livenessProbe:
           httpGet:
             path: /livez

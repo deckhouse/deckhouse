@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -75,19 +76,35 @@ func main() {
 	if !config.DisableCache {
 		go cache.Reconcile(ctx)
 	}
+
+	registryClient := &registry.DefaultClient{}
+
 	// init http server
 	server := app.BuildServer()
+
+	// Mount CLI download endpoints on the same default mux used by the proxy server.
+	// kube-rbac-proxy gates /v1/images/* with its own authorization rules.
+	cliHandlerOpts := app.CLIHandlerOptions{
+		Logger:             logger,
+		ClientConfigGetter: watcher,
+		RegistryClient:     registryClient,
+		SignCheck:          config.SignCheck,
+	}
+	if !config.DisableCache {
+		cliHandlerOpts.Cache = cache
+	}
+	app.NewCLIHandler(cliHandlerOpts).Register(http.DefaultServeMux)
 
 	var opts []proxy.ProxyOption
 	if !config.DisableCache {
 		opts = append(opts, proxy.WithCache(cache))
 	}
-	rp := proxy.NewProxy(server, listener, watcher, logger, &registry.DefaultClient{}, opts...)
+	rp := proxy.NewProxy(server, listener, watcher, logger, registryClient, opts...)
 	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
 		Listener:           bootstrapListener,
 		Logger:             logger,
 		ClientConfigGetter: watcher,
-		RegistryClient:     &registry.DefaultClient{},
+		RegistryClient:     registryClient,
 		SignCheck:          config.SignCheck,
 		ClusterUUID:        config.ClusterUUID,
 	})

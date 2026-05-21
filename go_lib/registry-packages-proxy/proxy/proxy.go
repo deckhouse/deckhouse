@@ -243,27 +243,42 @@ func (s *RPPClientBinaryServer) Stop() {
 }
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
-	// if cache is nil, return digest directly from registry
-	if p.cache == nil {
-		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
-		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	return GetPackageCached(ctx, p.logger, p.getter, p.registryClient, p.cache, digest, repository, path, p.config.SignCheck)
+}
+
+// GetPackageCached fetches an image package by manifest digest, first consulting the optional
+// on-disk cache and falling back to the registry. On a cache miss the registry stream is teed
+// into the cache asynchronously so the caller still gets a streaming reader.
+//
+// The returned reader must be closed by the caller.
+func GetPackageCached(
+	ctx context.Context,
+	logger log.Logger,
+	getter registry.ClientConfigGetter,
+	registryClient registry.Client,
+	pkgCache cache.Cache,
+	digest string,
+	repository string,
+	path string,
+	signCheck bool,
+) (int64, io.ReadCloser, error) {
+	if pkgCache == nil {
+		logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
+		size, _, reader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck)
 		return size, reader, err
 	}
 
-	// otherwise try to find digest in the cache
-	size, cacheReader, err := p.cache.Get(digest)
+	size, cacheReader, err := pkgCache.Get(digest)
 	if err == nil {
 		return size, cacheReader, nil
 	}
-	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
-		p.logger.Errorf("Get package from cache: %v", err)
-		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		logger.Errorf("Get package from cache: %v", err)
+		size, _, reader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck)
 		return size, reader, err
 	}
 
-	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, layerDigest, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	size, layerDigest, registryReader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -276,37 +291,41 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	pipeReader, pipeWriter := io.Pipe()
 	teeReader := io.TeeReader(registryReader, pipeWriter)
 
-	// asynchronously copy registry package to the cache
 	go func() {
 		defer registryReader.Close()
 		defer pipeWriter.Close()
 
-		err := p.cache.Set(digest, layerDigest, teeReader)
+		err := pkgCache.Set(digest, layerDigest, teeReader)
 		if err == nil {
 			return
 		}
-		p.logger.Errorf("cache set for digest %q: %v", digest, err)
+		logger.Errorf("cache set for digest %q: %v", digest, err)
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
-			p.logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
+			logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
 		}
 	}()
 
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, string, io.ReadCloser, error) {
-	registryConfig, err := p.getter.Get(repository)
+func getPackageFromRegistry(
+	ctx context.Context,
+	logger log.Logger,
+	getter registry.ClientConfigGetter,
+	registryClient registry.Client,
+	digest string,
+	repository string,
+	path string,
+	signCheck bool,
+) (int64, string, io.ReadCloser, error) {
+	registryConfig, err := getter.Get(repository)
 	if err != nil {
 		return 0, "", nil, err
 	}
-	registryConfig.SignCheck = p.config.SignCheck
+	registryConfig.SignCheck = signCheck
 
-	size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
-	if err != nil {
-		return 0, "", nil, err
-	}
-	return size, layerDigest, registryReader, nil
+	return registryClient.GetPackage(ctx, logger, registryConfig, digest, path)
 }
 
 type ProxyOption func(*Proxy)
