@@ -209,12 +209,12 @@ func mergeStorageDomains(
 
 		if v, ok := annotations[skipSCAnnotation]; ok && strings.ToLower(v) == "true" {
 			isEnabled = false
-		}
-
-		for _, annot := range annotToCheck {
-			if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
-				isDefault = true
-				break
+		} else {
+			for _, annot := range annotToCheck {
+				if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
+					isDefault = true
+					break
+				}
 			}
 		}
 
