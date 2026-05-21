@@ -98,7 +98,11 @@ var (
 	}
 )
 
-// readmeTemplateData is data for readme template
+// readmeTemplateData is data for readme template.
+// The placeholder generates only the dynamic part (aliases + per-role rule
+// blocks); static intro text lives in each README outside the placeholder so
+// the EN and RU files contain only their own language (dmt-lint forbids
+// cyrillic in README.md).
 type readmeTemplateData struct {
 	Roles   []role
 	Aliases []alias

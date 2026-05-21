@@ -119,24 +119,17 @@ The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` o
 
 ### Default access list for each role
 
+Each next role inherits permissions from the previous roles. A role block shows only the permissions added by that role.
+
+The list includes the current role-based model rules and default rules from Deckhouse modules available in the repository at documentation generation time. Permissions added by modules appear when the corresponding module is enabled and are revoked when it is disabled. External modules and user-defined ClusterRoles annotated with `user-authz.deckhouse.io/access-level` are not included; use the command below to inspect them in a cluster.
+
 `verbs` aliases:
 <!-- start user-authz roles placeholder -->
 * read - `get`, `list`, `watch`
 * read-write - `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`
 * write - `create`, `delete`, `deletecollection`, `patch`, `update`
 
-{% if page.lang == "ru" %}
-Каждая следующая роль наследует права предыдущих ролей. В блоке роли показаны только права, которые она добавляет.
-
-Список включает правила текущей ролевой модели и стандартные правила модулей Deckhouse, доступных в репозитории при генерации документации. Права, которые добавляются модулями, появляются при включении соответствующего модуля и отзываются при его выключении. Правила внешних модулей и пользовательские ClusterRole с аннотацией `user-authz.deckhouse.io/access-level` в этот список не попадают; их можно посмотреть в кластере командой ниже.
-{% else %}
-Each next role inherits permissions from the previous roles. A role block shows only the permissions added by that role.
-
-The list includes the current role-based model rules and default rules from Deckhouse modules available in the repository at documentation generation time. Permissions added by modules appear when the corresponding module is enabled and are revoked when it is disabled. External modules and user-defined ClusterRoles annotated with `user-authz.deckhouse.io/access-level` are not included; use the command below to inspect them in a cluster.
-{% endif %}
-
 {{site.data.i18n.common.role[page.lang] | capitalize }} `User`:
-
 
 ```text
 read:
@@ -301,9 +294,7 @@ read:
     - templates.gatekeeper.sh/constrainttemplates
 ```
 
-
 {{site.data.i18n.common.role[page.lang] | capitalize }} `PrivilegedUser` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`):
-
 
 ```text
 create:
@@ -317,9 +308,7 @@ read:
     - secrets
 ```
 
-
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
-
 
 ```text
 read:
@@ -382,9 +371,7 @@ write:
     - services
 ```
 
-
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
-
 
 ```text
 create,patch,update:
@@ -421,9 +408,7 @@ write:
     - telemetry.istio.io/telemetries
 ```
 
-
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
-
 
 ```text
 delete,deletecollection:
@@ -488,9 +473,7 @@ write:
     - telemetry.istio.io/telemetries
 ```
 
-
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
-
 
 ```text
 delete,deletecollection,patch,update:
