@@ -702,7 +702,9 @@ kubectl exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
 
 ### Дополнительные политики `Telemetry` (по желанию)
 
-Istio объединяет несколько ресурсов `Telemetry`. Можно задать свои настройки сбора метрик — например, в прикладном неймспейсе:
+Дополнительные **`Telemetry`** удобно задавать **с явным workload‑селектором** или `targetRef`. Два объекта **`Telemetry`** в **одном** неймспейсе **без** селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в **`d8-istio`** единственный объект без селектора (**`deckhouse-main-mesh`**); второй там же без селектора не добавляйте без осознанной замены.
+
+Пример ограниченной политики в прикладном пространстве имён:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1
@@ -725,7 +727,7 @@ spec:
 - При **`telemetryAPI.enabled: false`** и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` используется **классический** путь: `meshConfig.defaultConfig.tracing.zipkin.address` заполняется из `collector.zipkin.address`.
 - При **`telemetryAPI.enabled: true`**, **`tracing.enabled: true`** и непустом [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) блок `defaultConfig.tracing.zipkin` **не создаётся**; модуль добавляет **`deckhouse-tracing`** в `/meshConfig/extensionProviders/` и продлевает объект **`Telemetry`** `deckhouse-main-mesh`, выставив `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) отображается в `randomSamplingPercentage`, по умолчанию `1.0` если не задавали sampling в конфигурации явно).
 
-Прочие сценарии (OTLP, TLS, свой `name`, SkyWalking…) по-прежнему требуют собственных дописок к `/meshConfig/` и отдельных `Telemetry`; Istio аккуратно их мержит. См. [официальный гид](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Путь с OTLP или нестандартными провайдерами требует добавить свой **`meshConfig`** и объект **`Telemetry`**, ограниченный **`selector`/неймспейсом приложения**. Нельзя размещать **ещё один** `Telemetry` **без селектора** в **`d8-istio`** рядом с **`deckhouse-main-mesh`**, иначе снова [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). См. официально [tracing telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### Пример — Telemetry API + Jaeger через Zipkin
 
@@ -758,11 +760,11 @@ spec:
 
 {% alert level="info" %}Задача Istio [Распределённая трассировка с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (развёртывание Collector, фрагмент `meshConfig.extensionProviders.opentelemetry` и смежные шаги) рассчитана на **Istio версии 1.25 и выше** — ту ревизию, которая по умолчанию в актуальных релизах модуля. На **Istio 1.21** эта инструкция и часть YAML могут быть недоступны или отличаться; используйте классический параметр модуля [`tracing`](configuration.html#parameters-tracing) / пример с Zipkin-провайдером выше либо документацию для вашей версии.{% endalert %}
 
-После развёртывания OpenTelemetry Collector, когда нужен именно OTLP, комбинируйте **`telemetryAPI.enabled: true`** с **`tracing.enabled: false`** — чтобы не экспортировать Zipkin второй раз через встроенный `deckhouse-tracing`. Отдельно **вмержите** OTLP-провайдер в `meshConfig`, дополняя (а не удаляя целиком) то, что рендерит модуль для `deckhouse-main-mesh` и журналов доступа:
+После развёртывания OpenTelemetry Collector комбинируйте **`telemetryAPI.enabled: true`** с **`tracing.enabled: false`**, если не хотите отправлять спаны второй раз через встроенный Zipkin-провайдер **`deckhouse-tracing`**. **Допишите** в `meshConfig` CR Sail `Istio` (`spec.values.meshConfig`) или `IstioOperator` (`spec.meshConfig`) OTLP-провайдером **поверх уже существующих** ключей модулём (metrics defaults, журналы доступа, и т.д.):
 
 
 ```yaml
-# Объединить с meshConfig (CR Istio / IstioOperator), вместе с полями модуля
+# Добавить в meshConfig CR Istio / IstioOperator, сохраняя сгенерённые рядом поля
 enableTracing: true
 extensionProviders:
 - name: otel-tracing
@@ -777,20 +779,21 @@ defaultConfig:
 apiVersion: telemetry.istio.io/v1alpha1
 kind: Telemetry
 metadata:
-  name: mesh-tracing-otel
-  namespace: d8-istio
+  name: storefront-tracing-otel
+  namespace: shop-front
 spec:
+  selector:
+    matchLabels:
+      app: storefront
   tracing:
   - providers:
     - name: otel-tracing
-    randomSamplingPercentage: 5.0
-    customTags:
-      environment:
-        literal:
-          value: production
+      randomSamplingPercentage: 5.0
 ```
 
-Для передачи по HTTP задаётся `opentelemetry.http` и `path` — см. документацию Istio.
+HTTP-режим задаётся `opentelemetry.http` и `path` — см. инструкцию Istio.
+
+**Не** добавляйте второй **бесселекторный** `Telemetry` в **`d8-istio`** при уже существующем **`deckhouse-main-mesh`**: это [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Для mesh‑wide OTLP придётся либо доработать GitOps-слой, либо дождаться настроек OTLP/`extensionProviders` в **`ModuleConfig`**, либо пользоваться модульным **`deckhouse-tracing`**, пока нужен именно классический Zipkin/Jaeger-приём.
 
 #### Пример — трассировка только для части приложений
 
