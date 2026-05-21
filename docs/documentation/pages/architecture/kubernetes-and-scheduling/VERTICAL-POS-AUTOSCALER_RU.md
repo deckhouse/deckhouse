@@ -2,7 +2,7 @@
 title: Модуль vertical-pod-autoscaler
 permalink: ru/architecture/kubernetes-and-scheduling/vertical-pod-autoscaler.html
 lang: ru
-search: архитектура автомасштабирования, вертикальное масштабирование, оптимизация ресурсов, масштабирование подов, vpa
+search: архитектура автомасштабирования, вертикальное масштабирование, оптимизация ресурсов, масштабирование подов, vpa, vertical pod autoscaler, vertical-pod-autoscaler
 description: Архитектура модуля vertical-pod-autoscaler в Deckhouse Kubernetes Platform.
 relatedLinks:
  - title: "Включение вертикального масштабирования"
@@ -38,7 +38,7 @@ relatedLinks:
    Компонент vpa-admission-controller выполняет следующие действия:
 
    - валидирует кастомные ресурсы VerticalPodAutoscaler;
-   - при создании Pod (если режим VPA не [Off](./vpa.html#режимы-работы-vpa)), контроллер автоматически задает или меняет значения `requests` и `limits` в контейнерах, оптимизируя их по текущим рекомендациям. Значения `limits` изменяются контроллером только в том случае, если в политике управления ресурсами указан параметр [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues).
+   - при создании Pod (если режим VPA не [Off](./vpa.html#режимы-работы-vpa)), контроллер автоматически задает или меняет значения `requests` и `limits` в контейнерах, оптимизируя их по текущим рекомендациям. Значения `limits` изменяются контроллером только в том случае, если в параметре [`spec.resourcePolicy.containerPolicies.controlledValues`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) политики управления ресурсами установлено значение `RequestsAndLimits`.
 
    Состоит из следующих контейнеров:
 
@@ -72,7 +72,7 @@ relatedLinks:
    * вытеснение работающих подов при несоответствии спецификации ресурсов и рекомендуемых значений;
    * авторизация запросов на получение метрик.
 
-1. **Prometheus** — получение истории метрик потребления ресурсов подом (`aggregating-proxy.d8-monitoring.svc.<clusterDomain>`).
+1. **Prometheus** — получение истории метрик потребления ресурсов подом.
 
 С модулем взаимодействуют следующие внешние компоненты:
 

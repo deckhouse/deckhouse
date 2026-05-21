@@ -1,7 +1,7 @@
 ---
 title: Vertical-pod-autoscaler module
 permalink: en/architecture/kubernetes-and-scheduling/vertical-pod-autoscaler.html
-search: autoscaler architecture, vertical scaling, resource optimization, pod scaling, vpa
+search: autoscaler architecture, vertical scaling, resource optimization, pod scaling, vpa, vertical pod autoscaler, vertical-pod-autoscaler
 description: Architecture of the vertical-pod-autoscaler module in Deckhouse Kubernetes Platform.
 relatedLinks:
  - title: "Enabling vertical scaling"
@@ -37,7 +37,7 @@ The `vertical-pod-autoscaler` module consists of the following components:
    The vpa-admission-controller component performs the following actions:
 
    * Validates VerticalPodAutoscaler custom resources.
-   * When a Pod is created and the VPA mode is not [Off](./vpa.html#vpa-operating-modes), the controller automatically sets or updates `requests` and `limits` in containers, optimizing them according to the current recommendations. The controller updates `limits` values only if the resource management policy includes the [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) parameter.
+   * When a Pod is created and the VPA mode is not [Off](./vpa.html#vpa-operating-modes), the controller automatically sets or updates `requests` and `limits` in containers, optimizing them according to the current recommendations. The controller updates `limits` values only if the [`spec.resourcePolicy.containerPolicies.controlledValues`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) parameter in the resource management policy is set to `RequestsAndLimits`.
 
    It consists of the following containers:
 
@@ -71,7 +71,7 @@ The module interacts with the following components:
    * Evicts running pods when their resource specifications do not match the recommended values.
    * Authorizes requests for metrics.
 
-2. **Prometheus**: Retrieves the history of pod resource consumption metrics through `aggregating-proxy.d8-monitoring.svc.<clusterDomain>`.
+2. **Prometheus**: Retrieves the history of pod resource consumption metrics.
 
 The following external components interact with the module:
 
