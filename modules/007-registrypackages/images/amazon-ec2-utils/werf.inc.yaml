@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 {{- $version := include "get_oss_version_by_id" (list "amazon-ec2-utils" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
@@ -38,3 +39,4 @@ imageSpec:
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
+{{- end }}

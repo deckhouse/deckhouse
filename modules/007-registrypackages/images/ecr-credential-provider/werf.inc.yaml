@@ -9,6 +9,7 @@
     {{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $k8s_version) }}
         {{- $patch = true }}
     {{- end }}
+      {{- if ne $.Env "CSE" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -88,5 +89,6 @@ shell:
     - chown 64535:64535 ecr-credential-provider /install /uninstall
     - chmod 0755 ecr-credential-provider /install /uninstall
     - mv ecr-credential-provider /ecr-credential-provider
+    {{- end }}
   {{- end }}
 {{- end }}
