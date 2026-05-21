@@ -56,7 +56,7 @@ resource "openstack_compute_instance_v2" "master" {
   }
 
   dynamic "block_device" {
-    for_each = var.root_disk_size == "" ? [] : list(openstack_blockstorage_volume_v3.master[0])
+    for_each = var.root_disk_size == "" ? [] : tolist([openstack_blockstorage_volume_v3.master[0]])
     content {
       uuid                  = block_device.value["id"]
       boot_index            = 0
@@ -83,9 +83,9 @@ resource "openstack_compute_instance_v2" "master" {
   dynamic "scheduler_hints" {
     for_each = (
       local.server_group_policy == "AntiAffinity" ?
-        list(data.openstack_compute_servergroup_v2.master[0]) :
+        tolist([data.openstack_compute_servergroup_v2.master[0]]) :
       local.server_group_policy == "ManuallyManaged" ?
-        list({"id": lookup(var.server_group.manuallyManaged, "id", "")}) :
+        tolist([{"id": lookup(var.server_group.manuallyManaged, "id", "")}]) :
       []
    )
 
