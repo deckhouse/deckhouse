@@ -1,6 +1,6 @@
 ---
 title: Csi-yadro-tatlin-unified module
-permalink: en/architecture/storage/csi-yadro-tatlin-unified.html
+permalink: en/architecture/storage/external/csi-yadro-tatlin-unified.html
 search: csi-yadro-tatlin-unified, yadro tatlin unified
 description: Architecture of the csi-yadro-tatlin-unified module in Deckhouse Kubernetes Platform.
 ---

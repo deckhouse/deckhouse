@@ -1,5 +1,5 @@
 ---
-title: CSI driver (csi-huawei)
+title: Huawei CSI driver
 permalink: en/architecture/storage/csi-drivers/csi-driver-huawei.html
 search: csi-huawei, csi driver
 description: Architecture of the csi-huawei CSI driver in Deckhouse Kubernetes Platform.

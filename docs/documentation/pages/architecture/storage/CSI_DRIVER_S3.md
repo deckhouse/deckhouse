@@ -1,5 +1,5 @@
 ---
-title: CSI driver (csi-s3)
+title: S3 CSI driver
 permalink: en/architecture/storage/csi-drivers/csi-driver-s3.html
 search: csi-s3, s3, csi driver
 description: Architecture of the csi-s3 CSI driver in Deckhouse Kubernetes Platform.

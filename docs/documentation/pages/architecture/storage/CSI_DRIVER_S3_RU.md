@@ -1,5 +1,5 @@
 ---
-title: CSI-драйвер (csi-s3)
+title: CSI-драйвер S3
 permalink: ru/architecture/storage/csi-drivers/csi-driver-s3.html
 lang: ru
 search: csi-s3, s3, csi driver

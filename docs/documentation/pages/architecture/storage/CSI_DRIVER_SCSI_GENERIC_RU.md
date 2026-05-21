@@ -1,5 +1,5 @@
 ---
-title: CSI-драйвер (csi-scsi-generic)
+title: CSI-драйвер SCSI Generic
 permalink: ru/architecture/storage/csi-drivers/csi-driver-scsi-generic.html
 lang: ru
 search: csi-scsi-generic, csi driver

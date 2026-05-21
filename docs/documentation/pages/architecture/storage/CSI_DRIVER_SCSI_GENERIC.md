@@ -1,5 +1,5 @@
 ---
-title: CSI driver (csi-scsi-generic)
+title: SCSI Generic CSI driver
 permalink: en/architecture/storage/csi-drivers/csi-driver-scsi-generic.html
 search: csi-scsi-generic, csi driver
 description: Architecture of the csi-scsi-generic CSI driver in Deckhouse Kubernetes Platform.

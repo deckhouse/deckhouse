@@ -1,5 +1,5 @@
 ---
-title: CSI-драйвер (csi-huawei)
+title: CSI-драйвер Huawei
 permalink: ru/architecture/storage/csi-drivers/csi-driver-huawei.html
 lang: ru
 search: csi-huawei, csi driver
