@@ -17,21 +17,19 @@ package checks
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
-var yamlDocSeparator = regexp.MustCompile(`(?m)^---\s*$`)
-
 const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length"
 
 const maxDiskNameLength = 63
 
+// Worst-case disk name suffix parts per provider, taken from terraform templates.
+// For DVP the node group name is variable, so it is not included here and added dynamically.
+// For other providers the suffix is fully static (node group is either hardcoded or absent).
 var providerDiskSuffixParts = map[string][]string{
 	"dvp":         {"additional-disk", "0", "0", "abcdef"},
 	"zvirt":       {"master", "0", "kubernetes-data"},
@@ -44,10 +42,6 @@ var providerDiskSuffixParts = map[string][]string{
 	"openstack":   {"kubernetes-data", "0"},
 	"huaweicloud": {"kubernetes-data", "0"},
 	"vsphere":     {"master", "0"},
-}
-
-var providersWithNodeGroupInDiskName = map[string]bool{
-	"dvp": true,
 }
 
 type CloudDiskNameLengthCheck struct {
@@ -79,11 +73,11 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	if providersWithNodeGroupInDiskName[provider] {
-		nodeGroups := c.collectNodeGroupNames()
-		for _, ng := range nodeGroups {
-			parts := append([]string{ng}, suffixParts...)
-			diskName := prefix + "-" + strings.Join(parts, "-")
+	suffix := strings.Join(suffixParts, "-")
+
+	if provider == "dvp" {
+		for _, ng := range c.collectNodeGroupNames() {
+			diskName := prefix + "-" + ng + "-" + suffix
 			if len(diskName) > maxDiskNameLength {
 				return fmt.Errorf(
 					"disk name %q for node group %q exceeds %d characters (got %d); "+
@@ -93,7 +87,7 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 			}
 		}
 	} else {
-		diskName := prefix + "-" + strings.Join(suffixParts, "-")
+		diskName := prefix + "-" + suffix
 		if len(diskName) > maxDiskNameLength {
 			return fmt.Errorf(
 				"disk name %q exceeds %d characters (got %d); "+
@@ -119,43 +113,6 @@ func (c CloudDiskNameLengthCheck) collectNodeGroupNames() []string {
 		}
 	}
 
-	for _, name := range parseNodeGroupNamesFromResources(c.MetaConfig.ResourcesYAML) {
-		if _, ok := seen[name]; !ok {
-			seen[name] = struct{}{}
-			names = append(names, name)
-		}
-	}
-
-	return names
-}
-
-func parseNodeGroupNamesFromResources(resourcesYAML string) []string {
-	if resourcesYAML == "" {
-		return nil
-	}
-
-	type resource struct {
-		Kind     string `yaml:"kind"`
-		Metadata struct {
-			Name string `yaml:"name"`
-		} `yaml:"metadata"`
-	}
-
-	var names []string
-	docs := yamlDocSeparator.Split(resourcesYAML, -1)
-	for _, doc := range docs {
-		doc = strings.TrimSpace(doc)
-		if doc == "" {
-			continue
-		}
-		var r resource
-		if err := yaml.Unmarshal([]byte(doc), &r); err != nil {
-			continue
-		}
-		if r.Kind == "NodeGroup" && r.Metadata.Name != "" {
-			names = append(names, r.Metadata.Name)
-		}
-	}
 	return names
 }
 
