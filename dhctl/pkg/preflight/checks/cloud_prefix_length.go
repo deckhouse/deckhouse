@@ -27,9 +27,6 @@ const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length
 
 const maxDiskNameLength = 63
 
-// Worst-case disk name suffix parts per provider, taken from terraform templates.
-// For DVP the node group name is variable, so it is not included here and added dynamically.
-// For other providers the suffix is fully static (node group is either hardcoded or absent).
 var providerDiskSuffixParts = map[string][]string{
 	"dvp":         {"additional-disk", "0", "0", "abcdef"},
 	"zvirt":       {"master", "0", "kubernetes-data"},
