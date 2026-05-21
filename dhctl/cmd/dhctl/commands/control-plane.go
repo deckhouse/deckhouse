@@ -38,15 +38,16 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -72,9 +73,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		}
 
 		if ready {
-			log.InfoLn("Control plane manager is ready")
+			log.InteractiveInfoF("%s\n", "Control plane manager is ready")
 		} else {
-			log.WarnLn("Control plane manager is not ready")
+			log.InteractiveWarnLn("Control plane manager is not ready")
 		}
 
 		return nil
@@ -89,15 +90,16 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		params, err := app.DefaultProviderParams(&opts.Global)
-		if err != nil {
-			return err
-		}
+		loggerProvider := log.ExternalLoggerProvider(logger)
+		params := app.ProviderParams(&opts.Global, loggerProvider)
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -132,7 +134,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 			return fmt.Errorf("control plane node is not ready: %v", err)
 		}
 
-		log.InfoLn("Control plane manager node is ready")
+		log.InteractiveInfoLn("Control plane manager node is ready")
 
 		return nil
 	})

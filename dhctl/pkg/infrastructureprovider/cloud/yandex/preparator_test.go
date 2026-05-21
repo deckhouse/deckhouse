@@ -191,7 +191,7 @@ func getTestNodeGroupsSpec(t *testing.T, replicas int, externalIPs []string) jso
 	return b
 }
 
-func fillTestProviderClusterConfig(cfg *config.MetaConfig, master json.RawMessage, nodeGroups json.RawMessage) {
+func fillTestProviderClusterConfig(cfg *config.MetaConfig, master, nodeGroups json.RawMessage) {
 	cfg.ProviderClusterConfig = make(map[string]json.RawMessage)
 
 	cfg.ProviderClusterConfig["masterNodeGroup"] = master

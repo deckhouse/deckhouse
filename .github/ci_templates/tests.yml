@@ -119,7 +119,12 @@ runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/proxy" "DISTRO_PACKAGES_PROXY" "DISTRO_PACKAGES_PROXY" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   - name: Run python webhook tests
+    env:
+      DISTRO_PACKAGES_PROXY: "${{ steps.secrets.outputs.DISTRO_PACKAGES_PROXY }}"
     run: |
       make tests-webhooks
 # </template: tests_webhooks_template>
@@ -132,10 +137,14 @@ runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics" "url" "DMT_METRICS_URL" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/dmt_metrics" "token" "DMT_METRICS_TOKEN" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   - name: DMT lint
     env:
-      DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
-      DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+      DMT_METRICS_URL: "${{ steps.secrets.outputs.DMT_METRICS_URL }}"
+      DMT_METRICS_TOKEN: "${{ steps.secrets.outputs.DMT_METRICS_TOKEN }}"
     run: |
       make dmt-lint
 # </template: tests_dmt_lint>

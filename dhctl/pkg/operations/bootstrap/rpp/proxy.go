@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
+	rpp_log "github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
@@ -52,6 +53,7 @@ type RegistryPackagesProxy struct {
 	bootstrapRemotePort string
 
 	loggerProvider log.LoggerProvider
+	interactive    bool
 
 	proxy        *proxy.Proxy
 	rppGetServer *proxy.RPPClientBinaryServer
@@ -63,7 +65,7 @@ const (
 	rppGetBinaryPort          = "4282"
 )
 
-func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger log.LoggerProvider) *RegistryPackagesProxy {
+func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger log.LoggerProvider, interactive bool) *RegistryPackagesProxy {
 	return &RegistryPackagesProxy{
 		clusterDomain:       clusterDomain,
 		configGetter:        configGetter,
@@ -73,6 +75,7 @@ func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.Client
 		bootstrapRemotePort: rppGetBinaryPort,
 		signCheck:           false,
 		loggerProvider:      logger,
+		interactive:         interactive,
 	}
 }
 
@@ -208,7 +211,6 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		tlsutils.CertKeyTypeRSA,
 		oneDay,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %v", err)
 	}
@@ -217,7 +219,6 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{*cert},
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to listen registry proxy socket: %v", err)
 	}
@@ -236,7 +237,13 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	}
 
 	registryCl := &registry.DefaultClient{}
-	proxyLogger := newLogger(p.loggerProvider())
+	var proxyLogger rpp_log.Logger
+
+	if p.interactive {
+		proxyLogger = newInteractiveLogger(p.loggerProvider())
+	} else {
+		proxyLogger = newLogger(p.loggerProvider())
+	}
 
 	packagesProxy := proxy.NewProxy(srv, listener, p.configGetter, proxyLogger, registryCl)
 	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{

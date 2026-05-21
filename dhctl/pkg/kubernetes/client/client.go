@@ -30,9 +30,10 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/local"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 )
 
 type KubeClient interface {
@@ -47,8 +48,8 @@ type KubeClient interface {
 // KubernetesClient connects to kubernetes API server through ssh tunnel and kubectl proxy.
 type KubernetesClient struct {
 	KubeClient
-	NodeInterface node.Interface
-	KubeProxy     node.KubeProxy
+	NodeInterface libcon.Interface
+	KubeProxy     libcon.KubeProxy
 }
 
 type KubernetesInitParams struct {
@@ -71,7 +72,7 @@ func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]stri
 	return &KubernetesClient{KubeClient: klient.NewFake(gvr)}
 }
 
-func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesClient {
+func (k *KubernetesClient) WithNodeInterface(client libcon.Interface) *KubernetesClient {
 	if client != nil && !reflect.ValueOf(client).IsNil() {
 		k.NodeInterface = client
 	}

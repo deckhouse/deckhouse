@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -54,6 +55,9 @@ func NewManagerReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) *Ma
 }
 
 func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "ManagerReadinessChecker.IsReadyAll")
+	defer span.End()
+
 	kubeClient, err := c.getter.KubeClientCtx(ctx)
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)

@@ -420,7 +420,10 @@ federationsLoop:
 			input.Logger.Warn("public metadata for IstioFederation wasn't fetched yet", slog.String("name", federationInfo.Name))
 			continue federationsLoop
 		}
-
+		federationInfo.Public.AllianceRef = &eeCrd.PublicMetadataAllianceRef{
+			Kind: "IstioFederation",
+			Name: federationInfo.Name,
+		}
 		remotePublicMetadata[federationInfo.Public.ClusterUUID] = *federationInfo.Public
 
 		if federationInfo.PublicServices == nil {
@@ -561,7 +564,10 @@ multiclustersLoop:
 			input.Logger.Warn("public metadata for IstioMulticluster wasn't fetched yet", slog.String("name", multiclusterInfo.Name))
 			continue multiclustersLoop
 		}
-
+		multiclusterInfo.Public.AllianceRef = &eeCrd.PublicMetadataAllianceRef{
+			Kind: "IstioMulticluster",
+			Name: multiclusterInfo.Name,
+		}
 		remotePublicMetadata[multiclusterInfo.Public.ClusterUUID] = *multiclusterInfo.Public
 
 		if multiclusterInfo.APIHost == "" || multiclusterInfo.NetworkName == "" {

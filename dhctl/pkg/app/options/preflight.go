@@ -16,6 +16,8 @@ package options
 
 import (
 	"fmt"
+
+	otattribute "go.opentelemetry.io/otel/attribute"
 )
 
 // legacyPreflightSkipAliases maps deprecated --preflight-skip-... flag values
@@ -78,6 +80,13 @@ func (o *PreflightOptions) Validate() error {
 	}
 
 	return nil
+}
+
+func (o *PreflightOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.Bool("preflight.skipAll", o.SkipAll),
+		otattribute.StringSlice("preflight.skipChecks", o.SkipChecks),
+	}
 }
 
 func mapLegacyPreflightSkipAlias(name string) string {

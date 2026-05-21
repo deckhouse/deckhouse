@@ -56,4 +56,33 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
      enabled: true
    ```
 
-1. Generate a kubeconfig in [the kubeconfigurator web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html). The interface URL depends on [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (e.g., `kubeconfig.kube.my` for template `%s.kube.my`).
+1. Generate a kubeconfig to be used in the cluster initial configuration file in the next step:
+
+   ```bash
+   cat <<EOF > kubeconfig
+   apiVersion: v1
+   clusters:
+   - cluster:
+       server: https://<KUBE-APISERVER-URL>   # Replace this with the actual API server address for the cluster.
+     name: <CLUSTER-NAME>                     # Replace with the cluster name.
+   contexts:
+   - context:
+       cluster: <CLUSTER-NAME>                # Replace with the cluster name.
+       user: sa-demo
+       namespace: default
+     name: sa-demo-context
+   current-context: sa-demo-context
+   kind: Config
+   preferences: {}
+   users:
+   - name: sa-demo
+     user:
+       token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
+   EOF
+   ```
+
+   Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
+
+   ```bash
+   base64 kubeconfig | tr -d '\n'
+   ```

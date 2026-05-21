@@ -98,7 +98,6 @@ func (t *task) Execute(ctx context.Context) error {
 
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionManifestsApplied)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHooksProcessed)
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionScaled)
 
 	return nil
 }

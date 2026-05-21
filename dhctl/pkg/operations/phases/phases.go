@@ -104,9 +104,7 @@ const (
 	CommanderDetachDetachPhase OperationPhase = "Detach"
 )
 
-var (
-	ErrStopOperationCondition = errors.New("StopOperationCondition")
-)
+var ErrStopOperationCondition = errors.New("StopOperationCondition")
 
 // bootstrap sub phases
 const (

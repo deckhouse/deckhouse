@@ -19,7 +19,8 @@ lang: ru
 
 ## Балансировка на прикладном уровне (ALB)
 
-Для балансировки трафика на уровне приложений в DKP доступны два решения:
+Для балансировки трафика на уровне приложений в DKP доступны следующие решения:
 
 - [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/)),
+- [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) (модуль [`alb`](/modules/alb/)),
 - [Istio](https://istio.io/) (модуль [`istio`](/modules/istio/)).

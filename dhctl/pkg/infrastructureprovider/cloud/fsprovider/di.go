@@ -31,7 +31,7 @@ type DIParams struct {
 	PluginsDir        string
 }
 
-func isDir(dir string, errPrefix string) error {
+func isDir(dir, errPrefix string) error {
 	if !path.IsAbs(dir) {
 		return fmt.Errorf("%s is not an absolute path", dir)
 	}
@@ -43,7 +43,7 @@ func isDir(dir string, errPrefix string) error {
 	return nil
 }
 
-func isNotRootDir(dir string, errPrefix string) error {
+func isNotRootDir(dir, errPrefix string) error {
 	if path.Clean(dir) == "/" {
 		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
 	}
@@ -55,7 +55,7 @@ func isNotRootDir(dir string, errPrefix string) error {
 	return nil
 }
 
-func isFile(file string, errPrefix string) error {
+func isFile(file, errPrefix string) error {
 	if !path.IsAbs(file) {
 		return fmt.Errorf("%s is not an absolute path", file)
 	}

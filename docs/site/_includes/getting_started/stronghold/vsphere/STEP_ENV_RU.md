@@ -1,4 +1,4 @@
-{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+{%- include getting_started/stronghold/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 ## Список необходимых ресурсов vSphere
 

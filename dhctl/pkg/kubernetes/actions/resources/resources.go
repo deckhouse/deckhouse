@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -200,7 +201,6 @@ func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]st
 		}
 		return nil
 	})
-
 	if err != nil {
 		return make(map[int]struct{}), err
 	}
@@ -301,7 +301,17 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 	})
 }
 
-func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, timeout time.Duration) error {
+func CreateResourcesLoop(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	resources template.Resources,
+	checkers []Checker,
+	tasks []actions.ModuleConfigTask,
+	timeout time.Duration,
+) error {
+	ctx, span := telemetry.StartSpan(ctx, "CreateResourcesLoop")
+	defer span.End()
+
 	endChannel := time.After(timeout)
 
 	ticker := time.NewTicker(10 * time.Second)

@@ -30,7 +30,7 @@ webhooks:
 
 Инструкция по включению защиты доступна [в разделе «FAQ»](faq.html#как-защитить-чувствительные-поля-кастомных-ресурсов).
 
-1. Включение шифрования etcd с помощью параметра `apiserver.encryptionEnabled`. Это автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`.
+1. Включение шифрования etcd с помощью параметра `apiserver.encryptionEnabled`. Feature gate `CRDSensitiveData` для `kube-apiserver` включается по умолчанию.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

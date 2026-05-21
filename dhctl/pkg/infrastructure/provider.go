@@ -54,21 +54,25 @@ func (p *DummyCloudProvider) Name() string {
 
 	return "dummy"
 }
+
 func (p *DummyCloudProvider) NeedToUseTofu() bool {
 	p.logger.LogWarnLn("Call NeedToUseTofu on DummyCloudProvider")
 
 	return false
 }
+
 func (p *DummyCloudProvider) OutputExecutor(ctx context.Context, logger log.Logger) (OutputExecutor, error) {
 	p.logger.LogWarnLn("Call OutputExecutor on DummyCloudProvider")
 
 	return NewDummyOutputExecutor(p.logger), nil
 }
+
 func (p *DummyCloudProvider) Executor(ctx context.Context, step Step, logger log.Logger) (Executor, error) {
 	p.logger.LogWarnLn("Call Executor on DummyCloudProvider")
 
 	return NewDummyExecutor(logger), nil
 }
+
 func (p *DummyCloudProvider) Cleanup() error {
 	p.cleanuper.Cleanup(p.logger)
 	return nil

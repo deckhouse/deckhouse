@@ -34,7 +34,9 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
-	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type LoopsParams struct {
@@ -78,6 +80,9 @@ func (c *DependenciesChecker) WithLoopsParams(p LoopsParams) *DependenciesChecke
 }
 
 func (c *DependenciesChecker) Check(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "DependenciesChecker.Check")
+	defer span.End()
+
 	if govalue.IsNil(c.nodeInterface) {
 		return fmt.Errorf("Internal error: node is nil for dependencies checker")
 	}

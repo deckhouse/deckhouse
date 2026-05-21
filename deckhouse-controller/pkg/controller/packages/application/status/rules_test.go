@@ -294,20 +294,28 @@ func TestScaledRule(t *testing.T) {
 		{
 			name: "false when Scaled is false",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "ClusterNotReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Degraded"),
 			},
 			expected: map[string]*expectedCondition{
-				// canonicalReason has no entry for intScaled — Scaled mirrors raw status with empty reason.
-				ConditionScaled: {status: metav1.ConditionFalse, reason: ""},
+				ConditionScaled: {status: metav1.ConditionFalse, reason: "Degraded"},
 			},
 		},
 		{
-			name: "not affected by RequirementsMet",
+			name: "false when Scaled is false with Reconciling reason",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Reconciling"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: {status: metav1.ConditionFalse, reason: "Reconciling"},
+			},
+		},
+		{
+			name: "unknown when internal Scaled is absent",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "RequirementsNotMet"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionScaled: nil,
+				ConditionScaled: {status: metav1.ConditionUnknown, reason: ""},
 			},
 		},
 	}
@@ -441,9 +449,9 @@ func TestConfigurationAppliedRule(t *testing.T) {
 // TestDependencyDisabled covers the case where an installed and running
 // application loses a hard dependency (e.g. a module it depends on was
 // disabled). The cause is external, so user-facing signals (Installed, Ready)
-// go False, while runtime/configuration signals (Scaled,
-// ConfigurationApplied, Managed) go Unknown — managing is meaningless until
-// the dependency returns.
+// go False, while ConfigurationApplied and Managed go Unknown — managing is
+// meaningless until the dependency returns. Scaled is excluded: it is owned
+// by the workload health monitor and mirrors the internal condition as-is.
 func TestDependencyDisabled(t *testing.T) {
 	// Realistic runtime state: app was running with all internal conditions
 	// True from the previous successful reconcile, then RequirementsMet flipped
@@ -465,9 +473,10 @@ func TestDependencyDisabled(t *testing.T) {
 			opts: runningInternals,
 			expected: map[string]*expectedCondition{
 				// Installed overrides stickiness — the user must see the app stopped being installed.
-				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionReady:     {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				// Scaled mirrors its internal condition (True here) — the health monitor is its sole writer.
+				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
 				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				// UpdateInstalled is silent — the dependency-disabled state is the dominant signal.
@@ -480,7 +489,7 @@ func TestDependencyDisabled(t *testing.T) {
 			expected: map[string]*expectedCondition{
 				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
 				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
+				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
 				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
 				ConditionUpdateInstalled:      nil,
@@ -495,8 +504,8 @@ func TestDependencyDisabled(t *testing.T) {
 			expected: map[string]*expectedCondition{
 				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
 				ConditionReady:     {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				// Runtime/config signals stay absent for a first install — there's no running state to describe.
-				ConditionScaled:               nil,
+				// Scaled goes Unknown when its internal condition is absent — health monitor hasn't reported yet.
+				ConditionScaled:               {status: metav1.ConditionUnknown, reason: ""},
 				ConditionConfigurationApplied: nil,
 				ConditionManaged:              nil,
 				ConditionUpdateInstalled:      nil,

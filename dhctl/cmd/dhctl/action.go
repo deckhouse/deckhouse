@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 type (
@@ -147,6 +148,8 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 	i.registerOnShutdown("Cleanup providers from default cache", func() {
 		infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLoggerProvider())
 	})
+
+	i.registerOnShutdown("Cleanup progressbar", i.cleanupProgressbar())
 
 	return nil
 }
@@ -325,7 +328,9 @@ var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
 	log.SetDebugEnabled(i.params.isDebug)
-	log.InitLogger(i.params.loggerType)
+	interactive := input.IsTerminal() && !i.opts.Global.ShowProgress
+
+	log.InitLogger(i.params.loggerType, interactive)
 	if i.params.doNotWriteDebugFile {
 		return doNothingOnShutdownFunc, nil
 	}
@@ -393,4 +398,14 @@ func disableCleanupOnInterrupted(s os.Signal) {
 	}
 	// disable tmp cleaning if user pass ctrl + c
 	cache.GetGlobalTmpCleaner().DisableCleanup("Interrupted by signal " + s.String())
+}
+
+func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
+	return func() {
+		pb := progressbar.GetDefaultPb()
+		if pb != nil {
+			pb.ProgressBarPrinter.Stop()
+			pb.MultiPrinter.Stop()
+		}
+	}
 }

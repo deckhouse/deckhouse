@@ -35,7 +35,7 @@ func copyFS(dir string, fsys fs.FS, from string) error {
 
 		switch d.Type() {
 		case os.ModeDir:
-			return os.MkdirAll(newPath, 0777)
+			return os.MkdirAll(newPath, 0o777)
 		case os.ModeSymlink:
 			target, err := os.Readlink(path.Join(from, p))
 			if err != nil {
@@ -52,7 +52,7 @@ func copyFS(dir string, fsys fs.FS, from string) error {
 			if err != nil {
 				return err
 			}
-			w, err := os.OpenFile(newPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666|info.Mode()&0777)
+			w, err := os.OpenFile(newPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o666|info.Mode()&0o777)
 			if err != nil {
 				return err
 			}

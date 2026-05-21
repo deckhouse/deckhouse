@@ -1,4 +1,17 @@
 {
+  "adaptive-resource-management": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "scaling",
+      "ssdlc"
+    ]
+  },
   "alb": {
     "editions": [
       "ce",
@@ -42,7 +55,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce",
@@ -70,7 +85,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "path": "/modules/commander-agent/",
     "tags": [
@@ -627,6 +644,19 @@
     "path": "/modules/static-routing-manager/",
     "tags": [
       "network",
+      "ssdlc"
+    ]
+  },
+  "storage-foundation": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "storage",
       "ssdlc"
     ]
   },

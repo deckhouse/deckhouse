@@ -618,7 +618,6 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 				Target:        target,
 			})
 		})
-
 		if err != nil {
 			return fmt.Errorf("Can't get infrastructure plan for %s: '%w'. Exit code %d", target, err, planExitCode)
 		}
@@ -627,7 +626,6 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 			PlanPath:      tmpFileName,
 			ShowSensitive: true,
 		})
-
 		if err != nil {
 			return fmt.Errorf("Can't show infrastructure plan for %s: %w\nOutput:\n%s\n", target, err, string(resBytes))
 		}
@@ -900,7 +898,6 @@ func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string)
 		result = res
 		return 0, nil
 	})
-
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {

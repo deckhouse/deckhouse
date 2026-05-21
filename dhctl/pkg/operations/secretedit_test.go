@@ -50,7 +50,7 @@ func EditMock(data []byte, _ *directoryconfig.DirectoryConfig, _ EditOptions) ([
 }
 
 func TestSecretEdit(t *testing.T) {
-	log.InitLogger("json")
+	log.InitLogger("json", false)
 
 	f := client.NewFakeKubernetesClient()
 	retry.InTestEnvironment = true
@@ -59,7 +59,6 @@ func TestSecretEdit(t *testing.T) {
 	f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Create(context.TODO(), secretTest, metav1.CreateOptions{})
 
 	t.Run("Secret editing", func(t *testing.T) {
-
 		abstractEditing = EditMock
 		err := SecretEdit(
 			t.Context(),

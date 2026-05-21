@@ -428,17 +428,17 @@ status:
 
 			Expect(f.ValuesGet("istio.internal.remotePublicMetadata").String()).To(MatchJSON(`
 		{
-		  "aaa-bbb-f2": {"clusterUUID": "aaa-bbb-f2", "rootCA": "abc-f2", "authnKeyPub": "xyz-f2"},
-		  "aaa-bbb-f3": {"clusterUUID": "aaa-bbb-f3", "rootCA": "abc-f3", "authnKeyPub": "xyz-f3"},
-		  "aaa-bbb-f4": {"clusterUUID": "aaa-bbb-f4", "rootCA": "abc-f4", "authnKeyPub": "xyz-f4"},
-		  "aaa-bbb-f5": {"clusterUUID": "aaa-bbb-f5", "rootCA": "abc-f5", "authnKeyPub": "xyz-f5"},
-		  "aaa-bbb-m0": {"clusterUUID": "aaa-bbb-m0", "rootCA": "abc-m0", "authnKeyPub": "xyz-m0"},
-		  "aaa-bbb-m1": {"clusterUUID": "aaa-bbb-m1", "rootCA": "abc-m1", "authnKeyPub": "xyz-m1"},
-		  "aaa-bbb-m2": {"clusterUUID": "aaa-bbb-m2", "rootCA": "abc-m2", "authnKeyPub": "xyz-m2"},
-		  "aaa-bbb-m3": {"clusterUUID": "aaa-bbb-m3", "rootCA": "abc-m3", "authnKeyPub": "xyz-m3"},
-		  "aaa-bbb-m4": {"clusterUUID": "aaa-bbb-m4", "rootCA": "abc-m4", "authnKeyPub": "xyz-m4"},
-		  "aaa-bbb-m5": {"clusterUUID": "aaa-bbb-m5", "rootCA": "abc-m5", "authnKeyPub": "xyz-m5"},
-		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
+		  "aaa-bbb-f2": {"clusterUUID": "aaa-bbb-f2", "rootCA": "abc-f2", "authnKeyPub": "xyz-f2", "allianceRef": {"kind": "IstioFederation", "name": "federation-only-services"}},
+		  "aaa-bbb-f3": {"clusterUUID": "aaa-bbb-f3", "rootCA": "abc-f3", "authnKeyPub": "xyz-f3", "allianceRef": {"kind": "IstioFederation", "name": "federation-only-full-0"}},
+		  "aaa-bbb-f4": {"clusterUUID": "aaa-bbb-f4", "rootCA": "abc-f4", "authnKeyPub": "xyz-f4", "allianceRef": {"kind": "IstioFederation", "name": "federation-only-full-1"}},
+		  "aaa-bbb-f5": {"clusterUUID": "aaa-bbb-f5", "rootCA": "abc-f5", "authnKeyPub": "xyz-f5", "allianceRef": {"kind": "IstioFederation", "name": "federation-full-empty-ig-0"}},
+		  "aaa-bbb-m0": {"clusterUUID": "aaa-bbb-m0", "rootCA": "abc-m0", "authnKeyPub": "xyz-m0", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-full-0"}},
+		  "aaa-bbb-m1": {"clusterUUID": "aaa-bbb-m1", "rootCA": "abc-m1", "authnKeyPub": "xyz-m1", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-full-1"}},
+		  "aaa-bbb-m2": {"clusterUUID": "aaa-bbb-m2", "rootCA": "abc-m2", "authnKeyPub": "xyz-m2", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-only-public"}},
+		  "aaa-bbb-m3": {"clusterUUID": "aaa-bbb-m3", "rootCA": "abc-m3", "authnKeyPub": "xyz-m3", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-no-ig"}},
+		  "aaa-bbb-m4": {"clusterUUID": "aaa-bbb-m4", "rootCA": "abc-m4", "authnKeyPub": "xyz-m4", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-empty-ig"}},
+		  "aaa-bbb-m5": {"clusterUUID": "aaa-bbb-m5", "rootCA": "abc-m5", "authnKeyPub": "xyz-m5", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-no-apiHost"}},
+		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6", "allianceRef": {"kind": "IstioMulticluster", "name": "multicluster-no-networkname"}}
 		}
 `))
 

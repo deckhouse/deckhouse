@@ -54,3 +54,38 @@ func (w *loggerWrapper) Debugf(format string, args ...any) {
 func (w *loggerWrapper) Error(msg string, args ...any) {
 	w.Errorf(msg, args...)
 }
+
+type interactiveLoggerWrapper struct {
+	logger log.Logger
+}
+
+func newInteractiveLogger(logger log.Logger) *interactiveLoggerWrapper {
+	return &interactiveLoggerWrapper{
+		logger: logger,
+	}
+}
+
+func (w *interactiveLoggerWrapper) Errorf(format string, args ...any) {
+	w.logger.DebugF(format, args...)
+}
+
+func (w *interactiveLoggerWrapper) Infof(format string, args ...any) {
+	// suppress shutdown message it need for server, not for dhctl
+	if strings.HasPrefix(format, "graceful shutdown") {
+		return
+	}
+
+	w.logger.DebugF(format, args...)
+}
+
+func (w *interactiveLoggerWrapper) Warnf(format string, args ...any) {
+	w.logger.DebugF(format, args...)
+}
+
+func (w *interactiveLoggerWrapper) Debugf(format string, args ...any) {
+	w.logger.DebugF(format, args...)
+}
+
+func (w *interactiveLoggerWrapper) Error(msg string, args ...any) {
+	w.logger.DebugF("%s", msg)
+}

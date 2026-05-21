@@ -147,7 +147,6 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		},
 		Hook: &infrastructure.DummyHook{},
 	}, ctx.ChangesSettings().AutomaticSettings)
-
 	if err != nil {
 		return err
 	}

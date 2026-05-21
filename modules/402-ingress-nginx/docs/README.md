@@ -7,7 +7,13 @@ Installs and manages the [Ingress NGINX Controller](https://github.com/kubernete
 
 The module supports running and configuring several Ingress NGINX Controllers simultaneously (one of the controllers is the **primary** one; you can create any number of **additional** controllers). This approach allows you to separate extranet and intranet Ingress resources of applications.
 
-Current nginx version is 1.29.5.
+{% alert level="info" %}
+In 2025, Ingress NGINX was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
+
+This does not apply to the module as part of Deckhouse Kubernetes Platform: the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
+{% endalert %}
+
+Current nginx version is 1.30.1.
 
 ## Traffic routing
 
@@ -109,3 +115,7 @@ All the collected metrics have service labels that allow you to identify the con
   - `*_lowres_upstream_response_seconds` — same as a similar metric for overall and detail;
   - `*_responses_total` — the total number of responses (additional labels: `status_class` instead of `status`);
   - `*_upstream_bytes_received_sum` — the sum of the backend's response sizes.
+
+## Module support and security
+
+The `ingress-nginx` module is covered by Deckhouse Kubernetes Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module.

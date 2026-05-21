@@ -317,6 +317,10 @@ spec:
         - name: NODE_ADMIN_KUBECONFIG
           value: "false"
         {{- end }}
+        {{- if eq $profile "etcd-arbiter" }}
+        - name: ETCD_ARBITER
+          value: "true"
+        {{- end }}
         ports:
         - containerPort: 4296
           name: https-metrics

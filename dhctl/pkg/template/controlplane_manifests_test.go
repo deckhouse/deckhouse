@@ -175,6 +175,14 @@ func testFeatureGates(t *testing.T) {
 					}
 				}
 
+				if name == "kube-apiserver.yaml" {
+					if !strings.Contains(featureGates, "CRDSensitiveData=true") {
+						t.Errorf("Expected CRDSensitiveData=true in kube-apiserver, got: %s", featureGates)
+					}
+				} else if strings.Contains(featureGates, "CRDSensitiveData=true") {
+					t.Errorf("CRDSensitiveData must be kube-apiserver-only, found in %s: %s", name, featureGates)
+				}
+
 				if tt.k8sVersion >= "1.30" {
 					unexpectedFeatures := []string{
 						"ValidatingAdmissionPolicy=true",
@@ -987,7 +995,6 @@ func getBaseTemplateData(k8sVersion string) map[string]interface{} {
 				"patch": 1,
 			},
 		},
-		"extraArgs": map[string]interface{}{},
 		"registry": map[string]interface{}{
 			"address": "registry.deckhouse.io",
 			"path":    "/deckhouse/ce",
@@ -1199,6 +1206,9 @@ func testMissingCoverage(t *testing.T) {
 				}
 				if !strings.Contains(featureGates, "AnonymousAuthConfigurableEndpoints=true") {
 					t.Errorf("Expected feature gate not found for Kubernetes 1.31 in %s", name)
+				}
+				if name == "kube-apiserver.yaml" && !strings.Contains(featureGates, "CRDSensitiveData=true") {
+					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.31 in %s", name)
 				}
 			}
 		}
