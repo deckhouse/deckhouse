@@ -64,6 +64,8 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 			}
 		}
 
+		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
 			Logger:                 logger,
