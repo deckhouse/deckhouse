@@ -717,7 +717,7 @@ For tag removal, disabling specific metrics or modes, follow [Customizing Istio 
 
 ### Tracing with Telemetry API
 
-Distributed tracing uses the same `Telemetry` resource with `spec.tracing`. The trace exporter is always a named **extension provider** declared in `meshConfig.extensionProviders` (for example, `Zipkin`, `OpenTelemetry` exporters over `OTLP`, or `SkyWalking`). See the [Istio tracing overview](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) and [Configure tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Distributed tracing uses the same `Telemetry` resource with `spec.tracing`. The trace exporter is always a named **extension provider** declared in `meshConfig.extensionProviders` (for example, `Zipkin`, `OpenTelemetry` exporters over `OTLP`, or `SkyWalking`). See the [Istio tracing overview](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) and [Configure tracing with Telemetry API](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### How this relates to the `istio` module’s `tracing` settings
 
