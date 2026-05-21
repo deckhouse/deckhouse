@@ -26,9 +26,9 @@
                  toggleDisabled('tab_layout_{{ revision }}', '[license-token-ee]');">{{ site.data.i18n[revision] }}</li>
     {%- endfor %}
    </ul>
-</div>
 {%- endunless %}
 
+<div class="tabs__container tabs__container--descr">
 {%- for revision in site.data.getting_started.dvp_data.global.revisions %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
@@ -80,6 +80,8 @@
 {% endif %}
 
 {% endfor %}
+</div>
+</div>
 
 <script>
 $(document).ready(function() {
