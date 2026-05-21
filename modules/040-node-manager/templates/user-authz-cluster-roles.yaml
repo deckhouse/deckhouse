@@ -138,11 +138,6 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - vcdmachinetemplates
-  - huaweicloudmachinetemplates
-  - dynamixmachinetemplates
-  - zvirtmachinetemplates
-  - deckhousemachinetemplates
   - staticmachinetemplates
   verbs:
   - create

@@ -208,6 +208,51 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			cddVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 			Expect(cddVPA.Exists()).To(BeTrue())
 
+			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-dvp:user")
+			Expect(userAuthzUser.Exists()).To(BeTrue())
+			Expect(userAuthzUser.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dvpinstanceclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhouseclusters
+  - deckhousemachines
+  - deckhousemachinetemplates
+  verbs:
+  - get
+  - list
+  - watch`))
+
+			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-dvp:cluster-admin")
+			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterAdmin.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dvpinstanceclasses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhouseclusters
+  - deckhousemachines
+  - deckhousemachinetemplates
+  verbs:
+  - patch
+  - update`))
+
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
 			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
