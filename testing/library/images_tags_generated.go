@@ -293,10 +293,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"web":         "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
-		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
-		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
-		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
-		"x509CertificateExporter":    "imageHash-extendedMonitoring-x509CertificateExporter",
+		"eventsExporter":                       "imageHash-extendedMonitoring-eventsExporter",
+		"extendedMonitoringExporter":           "imageHash-extendedMonitoring-extendedMonitoringExporter",
+		"imageAvailabilityExporter":            "imageHash-extendedMonitoring-imageAvailabilityExporter",
+		"imageAvailabilityExporterVexArtifact": "imageHash-extendedMonitoring-imageAvailabilityExporterVexArtifact",
+		"x509CertificateExporter":              "imageHash-extendedMonitoring-x509CertificateExporter",
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller112":            "imageHash-ingressNginx-controller112",
@@ -363,7 +364,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"vector": "imageHash-logShipper-vector",
 	},
 	"loki": map[string]interface{}{
-		"loki": "imageHash-loki-loki",
+		"loki":            "imageHash-loki-loki",
+		"lokiVexArtifact": "imageHash-loki-lokiVexArtifact",
 	},
 	"metallb": map[string]interface{}{
 		"l2lbController":    "imageHash-metallb-l2lbController",
@@ -439,8 +441,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pmacct":              "imageHash-openvpn-pmacct",
 	},
 	"operatorPrometheus": map[string]interface{}{
-		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
-		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
+		"prometheusConfigReloader":            "imageHash-operatorPrometheus-prometheusConfigReloader",
+		"prometheusConfigReloaderVexArtifact": "imageHash-operatorPrometheus-prometheusConfigReloaderVexArtifact",
+		"prometheusOperator":                  "imageHash-operatorPrometheus-prometheusOperator",
+		"prometheusOperatorVexArtifact":       "imageHash-operatorPrometheus-prometheusOperatorVexArtifact",
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
@@ -471,6 +475,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
 		"registryProxy":       "imageHash-registry-registryProxy",
+		"syncer":              "imageHash-registry-syncer",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",

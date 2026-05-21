@@ -17,7 +17,6 @@ package commands
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -27,8 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 func connectionFlags(parent *kingpin.CmdClause, opts *options.Options) {
@@ -55,28 +53,18 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			ctx,
 			params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
 			return err
 		}
 
-		interactive := input.IsTerminal()
-		if interactive {
-			_, _, err := progressbar.InitProgressBarWithDeferredFunc("Edit", logger)
-			if err != nil {
-				return err
-			}
-		}
-
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 
-		//nolint: errcheck
-		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
-		}
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
@@ -84,12 +72,6 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		}
 
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
-
-		//nolint: errcheck
-		if interactive {
-			progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
-			progressbar.GetDefaultPb().MultiPrinter.Stop()
-		}
 
 		return operations.SecretEdit(
 			ctx,

@@ -56,7 +56,8 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -95,7 +96,7 @@ func localKubeConfig(apiServerURL string) error {
 	}
 
 	kubeconfigPath := filepath.Join(kubeconfigDir, ".kube", "config")
-	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create .kube directory: %w", err)
 	}
 

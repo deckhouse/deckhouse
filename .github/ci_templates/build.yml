@@ -54,6 +54,10 @@ steps:
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_SSH_KEY" "SOURCE_REPO_SSH_KEY" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_PRIVATE_KEY" "SVACE_ANALYZE_SSH_PRIVATE_KEY" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_HOST" "SVACE_ANALYZE_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
@@ -132,6 +136,8 @@ steps:
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -236,6 +242,7 @@ steps:
           publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
           publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
           publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+          publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
         fi
       else
         echo "Branch unset, skipping branch publish."
@@ -248,6 +255,7 @@ steps:
         publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
         publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
         publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+        publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
       else
         echo "Not a release tag, skipping tag publish."
       fi
@@ -273,6 +281,8 @@ steps:
   - name: Cleanup workdir
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
     run: rm images_tags_werf.json
-
+{!{ if not (eq $buildType "dev") -}!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 2 -}!}
+{!{ end }!}
 # </template: build_template>
 {!{ end }!}

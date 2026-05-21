@@ -79,7 +79,6 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			StatePath: statePath,
 			OutFields: []string{k},
 		})
-
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -568,7 +567,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 }
 
-func extractChangesStrings(target string, planOutput string) (string, string) {
+func extractChangesStrings(target, planOutput string) (string, string) {
 	var mapOut map[string]any
 	err := json.Unmarshal([]byte(planOutput), &mapOut)
 	if err != nil {

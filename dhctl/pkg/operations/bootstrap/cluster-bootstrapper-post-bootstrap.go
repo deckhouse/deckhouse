@@ -49,7 +49,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		intLogger, ok := b.logger.(*log.InteractiveLogger)
 		if !ok {
@@ -63,12 +63,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 			return err
 		}
 
-		onComplete := func() {
-			pb := progressbar.GetDefaultPb()
-			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-			pb.MultiPrinter.Stop()
-		}
-		defer onComplete()
+		defer progressbar.FinishDefaultProgressBar()
 	}
 
 	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).

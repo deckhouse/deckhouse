@@ -68,10 +68,11 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 	}
 
 	onComplete := func() {
-		pb := GetDefaultPb()
-		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-		pb.MultiPrinter.Stop()
+		FinishDefaultProgressBar()
 	}
+
+	defer onComplete()
+
 	return onComplete, phasesChan, nil
 }
 
@@ -91,14 +92,20 @@ func InitProgressBar(param *PbParam) error {
 		WithDelay(time.Hour).
 		WithWriter(multi.NewWriter())
 
-	multi.Start()
+	_, startErr := multi.Start()
+	if startErr != nil {
+		return startErr
+	}
 
 	var err error
 	p, err = p.Start(param.startMsg)
 	if err != nil {
 		return err
 	}
-	staticSpinner.Start("Current action: ")
+	_, err = staticSpinner.Start("Current action: ")
+	if err != nil {
+		return err
+	}
 
 	defaultpb = &Pb{
 		ProgressBarPrinter: p,
@@ -149,7 +156,7 @@ func updateProgress(
 				for _, p := range msg.Phases {
 					phasesCount += len(p.SubPhases)
 				}
-				inc = int(100 / phasesCount)
+				inc = 100 / phasesCount
 
 				text := phaseToString(msg, false)
 				if text != "" {
@@ -262,4 +269,16 @@ func replaceStatus(msg string) string {
 	}
 
 	return res
+}
+
+func FinishDefaultProgressBar() {
+	pb := GetDefaultPb()
+	if pb == nil {
+		return
+	}
+
+	pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+	if _, err := pb.MultiPrinter.Stop(); err != nil {
+		log.WarnF("failed to stop multi printer: %v", err)
+	}
 }

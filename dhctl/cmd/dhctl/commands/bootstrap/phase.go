@@ -42,6 +42,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineDeckhouseFlags(cmd, &opts.Bootstrap)
 	app.DefineDeckhouseInstallFlags(cmd, &opts.Bootstrap)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -53,7 +54,10 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 
 		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -79,6 +83,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineBashibleBundleFlags(cmd, &opts.Bootstrap)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -127,7 +132,10 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 
 		loggerProvider := log.ExternalLoggerProvider(logger)
 		params := app.ProviderParams(&opts.Global, loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
+		)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
@@ -154,6 +162,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineSanityFlags(cmd, &opts.Global)
 	app.DefineAbortFlags(cmd, &opts.Bootstrap)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -182,7 +191,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			Options:                opts,
 		})
 
-		interactive := input.IsTerminal()
+		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {
 			onComplete, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Destroy cluster", logger)
 			if err != nil {
@@ -212,6 +221,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)

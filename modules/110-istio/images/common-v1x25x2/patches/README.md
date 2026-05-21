@@ -12,3 +12,7 @@ Fix Istio CVE vulnerabilities
 
 Implement graceful transition for remote multicluster secrets. To prevent connectivity gaps during secret rotation, the old secret is no longer dismissed immediately. Instead, it remains active until the new secret is processed and all associated metadata is synced.
 Adopted upstream pr https://github.com/istio/istio/pull/58567.
+
+## 003-change-to-deckhouse-user.patch
+
+Change runAsUser from 1337 to 64535 in istio templates, changed istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml

@@ -5,7 +5,7 @@
   id: check_loop_alerting
   if: always()
   env:
-    LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+    LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
   run: |
     if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
 - name: Send loop alert on fail
@@ -15,14 +15,14 @@
   if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
 {!{- end }!}
   env:
-    LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-    LOOP_CHANEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+    LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
+    LOOP_CHANNEL_ID: ${{ steps.secrets.outputs.LOOP_E2E_REPORT_CHANNEL_ID }}
   run: |
     WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
 
     alertData=$(cat <<EOF
     {
-    "channel_id": "${LOOP_CHANEL_ID}",
+    "channel_id": "${LOOP_CHANNEL_ID}",
     "message": "🛑Daily e2e test failure🛑\n[URL](${WORKFLOW_URL})"
     }
     EOF

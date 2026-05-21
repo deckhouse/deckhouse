@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -186,6 +187,18 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
 
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
+		ctx,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
+
 	_, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
 	defer configSpan.End()
 
@@ -262,7 +275,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	printBanner()
 
-	interactive := input.IsTerminal()
+	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
 		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger)
 		if err != nil {
@@ -751,7 +764,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			// MultiPrinter must render InfoF before exit and ProgressBar must be completed
 			if interactive {
 				progressbar.GetDefaultPb().ProgressBarPrinter.Add(100 - progressbar.GetDefaultPb().ProgressBarPrinter.Current)
-				progressbar.GetDefaultPb().MultiPrinter.Stop()
+				_, err := progressbar.GetDefaultPb().MultiPrinter.Stop()
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil

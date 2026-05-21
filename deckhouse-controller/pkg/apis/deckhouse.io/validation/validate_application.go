@@ -50,6 +50,11 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return allowResult(nil)
 		}
 
+		ap := new(v1alpha1.ApplicationPackage)
+		if err := cli.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
+			return rejectResult(fmt.Sprintf("get application package: %v", err))
+		}
+
 		name := apps.BuildName(app.Namespace, app.Name)
 
 		res, err := manager.ValidateSettings(ctx, name, app.Spec.Settings.GetMap())
@@ -102,6 +107,10 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		return fmt.Errorf("get application package version: %w", err)
 	}
 
+	if apv.IsDraft() {
+		return fmt.Errorf("application package version '%s' is draft", name)
+	}
+
 	if err := validateAppSettings(apv, app); err != nil {
 		return fmt.Errorf("validate settings: %w", err)
 	}
@@ -152,8 +161,10 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		constraints.Dependencies = modules
 	}
 
-	// Delegate to the manager which checks the parsed constraints against actual cluster state.
-	return manager.CheckConstraints(constraints)
+	// Delegate to the manager which checks the parsed constraints against the
+	// actual cluster state and rejects on dependency cycles. The name is the
+	// scheduler-side identifier (namespace.name) used by the cycle simulation.
+	return manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints)
 }
 
 // validateAppSettings validates Application.spec.settings against the OpenAPI settings

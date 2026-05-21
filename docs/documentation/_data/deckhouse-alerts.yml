@@ -1331,6 +1331,36 @@ alerts:
         Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
       severity: "4"
       markupFormat: markdown
+    - name: D8DexProviderLDAPTLSConflict
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        DexProvider `{{ $labels.name }}` combines mutually exclusive LDAP TLS settings: `{{ $labels.conflict }}`. Dex silently ignores the redundant flag, which masks misconfiguration:
+
+        * `insecureNoSSL + startTLS`: TLS is disabled (ldap://, port 389), so `startTLS` is ignored.
+        * `insecureNoSSL + insecureSkipVerify`: TLS is disabled, there is no certificate to verify.
+        * `insecureNoSSL + rootCAData`: TLS is disabled, the CA chain is ignored.
+
+        The CRD schema rejects this combination on create/update; this DexProvider was created before the validation was added and remains active.
+
+        Update the DexProvider to remove the conflict:
+
+        * Plaintext LDAP (port 389): keep `spec.ldap.insecureNoSSL: true`, remove `startTLS`, `insecureSkipVerify`, and `rootCAData`.
+        * STARTTLS on port 389: set `spec.ldap.insecureNoSSL: false`, `spec.ldap.startTLS: true`. Use `insecureSkipVerify` or `rootCAData` as needed.
+        * `ldaps://` on port 636: leave `insecureNoSSL` and `startTLS` at `false`. Use `insecureSkipVerify` or `rootCAData` as appropriate.
+
+        Audit all LDAP DexProvider objects:
+
+        ```bash
+        kubectl get dexproviders.deckhouse.io -o yaml \
+          | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
+        ```
+      summary: |
+        DexProvider {{ $labels.name }} has a conflicting LDAP TLS configuration.
+      severity: "8"
+      markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
@@ -1946,13 +1976,13 @@ alerts:
       module: istio
       edition: ce
       description: |
-        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` runs as UID `{{$labels.reserved_uid}}`.
 
-        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+        UID `{{$labels.reserved_uid}}` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
 
         To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
       summary: |
-        Application container is running as UID 1337 (reserved by Istio).
+        Application container runs as Istio bypass UID {{$labels.reserved_uid}}.
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
@@ -2824,7 +2854,10 @@ alerts:
 
         **To complete the migration, follow the steps below:**
 
-        1. Review current settings for `publishAPI` in the resource `moduleconfig user-authn` resource.
+        1. Review current settings for `publishAPI` in the `moduleconfig user-authn` resource.
+
+           Note that legacy `user-authn` `spec.version: 1` uses `publishAPI.enable` instead of `publishAPI.enabled`.
+           No manual rewrite is required: the command in step 4 uses the normalized payload from the temporary ConfigMap.
 
         2. If the `moduleconfig control-plane-manager` resource exists, update its spec to `spec.version: 3`. If `settings.apiserver.loadBalancer` is set, migrate it to `settings.apiserver.publishAPI.loadBalancer`. If the resource does not exist, proceed to step 3.
 

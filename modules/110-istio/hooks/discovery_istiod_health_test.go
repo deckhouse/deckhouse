@@ -77,12 +77,14 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
         "1.33": {
           "revision": "v1x33",
           "fullVersion": "1.13.55",
-          "supportsAmbient": false
+          "supportsAmbient": false,
+          "supportsOperator": true
        },
        "1.88": {
           "revision": "v1x88",
           "fullVersion": "1.88.55",
-          "supportsAmbient": true
+          "supportsAmbient": true,
+          "supportsOperator": false
         }
       }
     }
@@ -139,7 +141,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
-			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.33":{"fullVersion":"1.13.55","revision":"v1x33","imageSuffix":"","isReady":false,"supportsAmbient":false},"1.88":{"fullVersion":"1.88.55","revision":"v1x88","imageSuffix":"","isReady":false,"supportsAmbient":true}}`))
+			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.33":{"fullVersion":"1.13.55","revision":"v1x33","imageSuffix":"","isReady":false,"supportsAmbient":false,"supportsOperator":true},"1.88":{"fullVersion":"1.88.55","revision":"v1x88","imageSuffix":"","isReady":false,"supportsAmbient":true,"supportsOperator":false}}`))
 		})
 	})
 
@@ -157,8 +159,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.33"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x33","imageSuffix": "","isReady": false,"supportsAmbient":false}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": true,"supportsAmbient":true}`))
+			Expect(versionMap["1.33"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x33","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true}`))
+			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": true,"supportsAmbient":true,"supportsOperator":false}`))
 		})
 	})
 
@@ -176,8 +178,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.33"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x33","imageSuffix": "","isReady": false,"supportsAmbient":false}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true}`))
+			Expect(versionMap["1.33"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x33","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true}`))
+			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false}`))
 		})
 	})
 
@@ -200,8 +202,8 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
 			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.33"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x33","imageSuffix": "","isReady": true,"supportsAmbient":false}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true}`))
+			Expect(versionMap["1.33"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x33","imageSuffix": "","isReady": true,"supportsAmbient":false,"supportsOperator":true}`))
+			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false}`))
 		})
 	})
 

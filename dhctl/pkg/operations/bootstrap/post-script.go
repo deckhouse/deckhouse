@@ -63,7 +63,7 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	})
 }
 
-func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, err error) {
+func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	outputFile := fs.RandomNumberSuffix("/tmp/post-bootstrap-script-output")
 	envs := map[string]string{
 		"OUTPUT": outputFile,
@@ -96,6 +96,9 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, e
 		cmd.WithStdoutHandler(nil)
 		cmd.Sudo(ctx)
 		err = cmd.Run(ctx)
+		if err != nil {
+			log.WarnF("Cannot remove output file for script: %v", err)
+		}
 	}()
 
 	script := sshClient.UploadScript(e.path)
@@ -135,7 +138,7 @@ func ValidateScriptFile(ctx context.Context, path string) error {
 
 	perm := info.Mode().Perm()
 
-	if perm&0111 != 0111 || perm&0444 != 0444 {
+	if perm&0o111 != 0o111 || perm&0o444 != 0o444 {
 		return fmt.Errorf("Post bootstrap script should be readable and executable for user group and other (-r-xr-xr-x)")
 	}
 

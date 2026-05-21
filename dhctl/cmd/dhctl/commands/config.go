@@ -29,21 +29,30 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
-)
-
-var (
-	deckhouseDir = "/deckhouse"
 )
 
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -63,10 +72,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		if input.IsTerminal() {
-			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		}
+		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
 		return template.PrepareBashibleBundle(
 			ctx,
@@ -81,14 +87,6 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render bashible bundle", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
-
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
 	})
 }
@@ -96,9 +94,23 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -113,24 +125,13 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		if input.IsTerminal() {
-			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		}
+		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
 		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render master bootstrap", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
 	})
@@ -139,9 +140,23 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -155,35 +170,24 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		if input.IsTerminal() {
-			progressbar.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		}
+		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
+		if err := template.PrepareControlPlaneManifests(templateController, controlPlaneConfig, opts.DirConfig()); err != nil {
 			return err
 		}
 		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
 		// the resulting PKI is not used to start a real cluster.
-		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
+		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", controlPlaneConfig)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Render kubeadm config", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
 	})
@@ -199,14 +203,6 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var metaConfig *config.MetaConfig
 
 		logger := log.GetDefaultLogger()
-
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster configuration", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
 
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(logger),
@@ -258,14 +254,6 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		_ = kpcontext.ExtractContext(c)
 
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Parse cluster discovery data", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
-
 		var err error
 		var data []byte
 
@@ -300,8 +288,4 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 		fmt.Print(string(output))
 		return nil
 	})
-}
-
-func InitGlobalVars(pwd string) {
-	deckhouseDir = pwd + "/deckhouse"
 }

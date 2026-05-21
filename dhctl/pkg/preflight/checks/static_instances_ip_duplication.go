@@ -29,16 +29,6 @@ type StaticInstancesIPDuplicationCheck struct {
 	MetaConfig *config.MetaConfig
 }
 
-type staticInstanceDocument struct {
-	Kind     string `yaml:"kind"`
-	Metadata struct {
-		Name string `yaml:"name"`
-	} `yaml:"metadata"`
-	Spec struct {
-		Address string `yaml:"address"`
-	} `yaml:"spec"`
-}
-
 const StaticInstancesIPDuplicationCheckName preflight.CheckName = "static-instances-ip-duplication"
 
 func (StaticInstancesIPDuplicationCheck) Description() string {

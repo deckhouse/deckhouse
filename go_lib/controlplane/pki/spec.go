@@ -205,9 +205,8 @@ func getLeafCertSpec(name LeafCertName) certSpec[LeafCertName] {
 			BuildConfig: func(cfg config) certConfig {
 				return certConfig{
 					Config: certutil.Config{
-						CommonName:   "kube-apiserver-kubelet-client",
-						Organization: []string{"kubeadm:cluster-admins"},
-						Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+						CommonName: "kube-apiserver-kubelet-client",
+						Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 					},
 					EncryptionAlgorithm:       cfg.EncryptionAlgorithmType,
 					CertificateValidityPeriod: cfg.CertValidityPeriod,

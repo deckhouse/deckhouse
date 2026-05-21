@@ -30,8 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -52,15 +50,8 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
 
-		if input.IsTerminal() {
-			onComplete, _, err := progressbar.InitProgressBarWithDeferredFunc("Test SSH connection", log.GetDefaultLogger())
-			if err != nil {
-				return err
-			}
-			defer onComplete()
-		}
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -109,7 +100,8 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -187,7 +179,8 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
@@ -248,7 +241,8 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 		if sshProviderInitializer == nil {
 			return fmt.Errorf("SSH credentials not provided")
 		}
-		defer sshProviderInitializer.Cleanup(ctx)
+
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {

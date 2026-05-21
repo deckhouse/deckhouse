@@ -36,6 +36,7 @@ type GlobalOptions struct {
 	DownloadCacheDir       string
 	ConfigPaths            []string
 	SanityCheck            bool
+	ShowProgress           bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
@@ -113,7 +114,7 @@ func LoadBuildInfo(deckhouseDir string) BuildInfo {
 }
 
 func readBuildFile(dst *string, filePath string) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
+	file, err := os.OpenFile(filePath, os.O_RDONLY, 0o644)
 	if err != nil {
 		return
 	}

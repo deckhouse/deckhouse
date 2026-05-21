@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -132,7 +133,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 		return bashible.Prepare(ctx)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -147,6 +147,19 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return nil
 	}
 
+	// Bundle registry tunnel
+	bundleRegistryTunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
+		MetaConfig: cfg,
+		Node:       params.Node,
+		Logger:     params.LoggerProvider(),
+		DirsConfig: dc,
+	})
+	if err != nil {
+		return err
+	}
+	defer bundleRegistryTunnelStop()
+
+	// RPP + RPP tunnel
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
 		MetaConfig:     cfg,
 		Node:           nodeInterface,
@@ -155,7 +168,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		DirsConfig:     dc,
 		Interactive:    input.IsTerminal(),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -252,7 +264,6 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -285,7 +296,7 @@ func PrepareControlPlaneArtifacts(
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
-		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return fmt.Errorf("get control-plane template data: %w", err)
 		}
@@ -294,11 +305,11 @@ func PrepareControlPlaneArtifacts(
 		// control-plane endpoint that goes into the apiserver SAN list.
 		// Multi-master installations re-issue certificates later via
 		// control-plane-manager once additional master endpoints are known.
-		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneConfig); err != nil {
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneConfig, dc); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
@@ -330,13 +341,15 @@ func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path st
 
 // readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
 func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	const (
-		attempts = 5
-		wait     = 3 * time.Second
+	extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+	p := retry.NewEmptyParams(
+		retry.WithName("Read remote file %s", path),
+		retry.WithAttempts(5),
+		retry.WithWait(3*time.Second),
+		retry.WithLogger(extLogger()),
 	)
-
 	var value string
-	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
+	err := retry.NewLoopWithParams(p).
 		RunContext(ctx, func() error {
 			v, err := readRemoteFile(ctx, nodeInterface, path)
 			if err != nil {
@@ -359,9 +372,12 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 			return nil
 		})
 
+		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
 			retry.WithWait(5*time.Second),
 			retry.WithAttempts(50),
+			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
@@ -529,12 +545,18 @@ func BootstrapGetNodesFromCache(
 }
 
 func applyPostBootstrapModuleConfigs(
-	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	tasks []actions.ModuleConfigTask,
 ) error {
 	for _, task := range tasks {
-		err := retry.NewLoop(task.Title, 15, 5*time.Second).
+		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+		p := retry.NewEmptyParams(
+			retry.WithName("%s", task.Title),
+			retry.WithAttempts(15),
+			retry.WithWait(5*time.Second),
+			retry.WithLogger(extLogger()),
+		)
+		err := retry.NewLoopWithParams(p).
 			Run(func() error {
 				return task.Do(kubeCl)
 			})
@@ -556,6 +578,6 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
-		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

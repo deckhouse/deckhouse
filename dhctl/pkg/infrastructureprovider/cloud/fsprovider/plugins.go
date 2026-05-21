@@ -30,9 +30,7 @@ import (
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-var (
-	versionFile = "terraform_versions.yml"
-)
+var versionFile = "terraform_versions.yml"
 
 type pluginsProvider struct {
 	m sync.Mutex
@@ -81,7 +79,7 @@ func copyTFVersionFile(downloadRootDir string) error {
 	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
 	src := filepath.Join(terraformManagerDir, versionFile)
 
-	f, err := os.OpenFile(src, os.O_RDONLY, 0644)
+	f, err := os.OpenFile(src, os.O_RDONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("could not read file %s: %w\n", src, err)
 	}

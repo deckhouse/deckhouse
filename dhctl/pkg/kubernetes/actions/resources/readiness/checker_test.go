@@ -991,7 +991,7 @@ status:
 			checkerType: checkerType,
 		},
 		{
-			//testName: "deployment without available condition",
+			// testName: "deployment without available condition",
 			testName: "a",
 
 			content: `
