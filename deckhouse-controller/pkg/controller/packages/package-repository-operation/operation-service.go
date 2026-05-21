@@ -679,9 +679,8 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 			return fmt.Errorf("create application package: %w", err)
 		}
 	} else {
-		// Existing — make sure we are listed as an owner and downgrade any legacy
-		// Controller=true PackageRepository ownerRefs so a single repo deletion does not
-		// cascade-delete the multi-source package.
+		// Existing — make sure we are listed as an owner so a single repo deletion
+		// does not cascade-delete a package that other repositories still contribute.
 		original := pkg.DeepCopy()
 		if s.ensureSharedOwnerReference(pkg) {
 			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
@@ -788,9 +787,8 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 			return fmt.Errorf("create module package: %w", err)
 		}
 	} else {
-		// Existing — make sure we are listed as an owner and downgrade any legacy
-		// Controller=true PackageRepository ownerRefs so a single repo deletion does not
-		// cascade-delete the multi-source package.
+		// Existing — make sure we are listed as an owner so a single repo deletion
+		// does not cascade-delete a package that other repositories still contribute.
 		original := pkg.DeepCopy()
 		if s.ensureSharedOwnerReference(pkg) {
 			if err := s.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
