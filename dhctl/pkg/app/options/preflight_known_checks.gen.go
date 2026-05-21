@@ -6,6 +6,7 @@ var generatedPreflightChecks = []string{
 	"cloud-api-accessibility",
 	"cloud-master-system-requirements",
 	"cloud-prefix",
+	"cloud-prefix-length",
 	"deckhouse-user",
 	"dhctl-edition",
 	"instance-class-provider",
