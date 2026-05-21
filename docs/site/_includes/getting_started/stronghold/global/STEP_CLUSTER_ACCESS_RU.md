@@ -7,18 +7,14 @@
 Deckhouse завершил процесс установки кластера. Осталось выполнить некоторые настройки, для чего необходимо подключиться к **master-узлу**.
 
 Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя веб-интерфейс или CLI&#8209;утилиты облачного провайдера):
-{% snippetcut %}
 ```shell
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
-{% endsnippetcut %}
 
 Проверьте работу kubectl, выведя список узлов кластера:
-{% snippetcut %}
 ```shell
 sudo -i d8 k get nodes
 ```
-{% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -31,11 +27,9 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 
 Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po
 ```
-{% endsnippetcut %}
 
 Дождитесь перехода Pod'ов в статус `Ready`.
 
@@ -50,11 +44,9 @@ kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 Также дождитесь готовности балансировщика:
-{% snippetcut %}
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 ```
-{% endsnippetcut %}
 
 Значение `EXTERNAL-IP` должно быть заполнено публичным IP-адресом или DNS-именем.
 
@@ -81,7 +73,6 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 
 На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
 {% if page.platform_code == 'aws' %}
-{% snippetcut %}
 {% raw %}
 ```shell
 BALANCER_IP=$(dig $(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
@@ -90,9 +81,7 @@ echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type m
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
-{% endsnippetcut %}
 {% else %}
-{% snippetcut %}
 {% raw %}
 ```shell
 BALANCER_IP=$(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
@@ -101,7 +90,6 @@ echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type m
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
-{% endsnippetcut %}
 {% endif %}
 
 Команда также выведет установленный шаблон DNS-имен. Пример вывода:
@@ -121,13 +109,13 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 {% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
 
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
-<div markdown="0">
-{% snippetcut %}
+<div markdown="1">
+{% raw %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
-{% endsnippetcut %}
+{% endraw %}
 </div>
 {% endofftopic %}
 {% endif %}
@@ -138,14 +126,14 @@ sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"module
 {% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
 
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
-{% snippetcut %}
+<div markdown="1">
 {% raw %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endraw %}
-{% endsnippetcut %}
+</div>
 {% endif %}
 
 ## Настройте удаленный доступ к кластеру 
