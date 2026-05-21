@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-func TestCloudPrefixLength(t *testing.T) {
+func TestCloudDiskNameLength(t *testing.T) {
 	tests := []struct {
 		name        string
 		metaConfig  *config.MetaConfig
@@ -39,72 +39,86 @@ func TestCloudPrefixLength(t *testing.T) {
 			errContains: "meta config is nil",
 		},
 		{
-			name: "DVP: prefix at max length (26 chars) passes",
+			// DVP: {prefix}-master-additional-disk-0-0-abcdef
+			// max prefix = 63 - len("-master-additional-disk-0-0-abcdef") = 63 - 34 = 29
+			name: "DVP: short prefix with master node group passes",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("a", 26),
+				ClusterPrefix: strings.Repeat("a", 29),
 				ProviderName:  "dvp",
 			},
 			expectError: false,
 		},
 		{
-			name: "DVP: prefix exceeds max (27 chars) fails",
+			name: "DVP: long prefix with master node group fails",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("a", 27),
+				ClusterPrefix: strings.Repeat("a", 30),
 				ProviderName:  "dvp",
 			},
 			expectError: true,
-			errContains: "too long for provider",
+			errContains: "exceeds 63 characters",
 		},
 		{
-			name: "AWS: prefix at max length (44 chars) passes",
+			// DVP: {prefix}-{long-node-group}-additional-disk-0-0-abcdef
+			// "my-long-worker-group" = 20 chars, overhead = 1+20+28 = 49, max prefix = 14
+			name: "DVP: long node group name fails",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("b", 44),
-				ProviderName:  "aws",
+				ClusterPrefix: strings.Repeat("a", 15),
+				ProviderName:  "dvp",
+				TerraNodeGroupSpecs: []config.TerraNodeGroupSpec{
+					{Name: "my-long-worker-group"},
+				},
+			},
+			expectError: true,
+			errContains: "my-long-worker-group",
+		},
+		{
+			name: "DVP: long node group name with short prefix passes",
+			metaConfig: &config.MetaConfig{
+				ClusterPrefix: strings.Repeat("a", 14),
+				ProviderName:  "dvp",
+				TerraNodeGroupSpecs: []config.TerraNodeGroupSpec{
+					{Name: "my-long-worker-group"},
+				},
 			},
 			expectError: false,
 		},
 		{
-			name: "AWS: prefix exceeds max (45 chars) fails",
+			// AWS: {prefix}-kubernetes-data-0
+			// max prefix = 63 - len("-kubernetes-data-0") = 63 - 18 = 45
+			name: "AWS: prefix at max length passes",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix: strings.Repeat("b", 45),
 				ProviderName:  "aws",
 			},
-			expectError: true,
-			errContains: "too long for provider",
-		},
-		{
-			name: "vSphere: prefix at max length (54 chars) passes",
-			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("c", 54),
-				ProviderName:  "vsphere",
-			},
 			expectError: false,
 		},
 		{
-			name: "vSphere: prefix exceeds max (55 chars) fails",
+			name: "AWS: prefix exceeds max fails",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("c", 55),
-				ProviderName:  "vsphere",
+				ClusterPrefix: strings.Repeat("b", 46),
+				ProviderName:  "aws",
 			},
 			expectError: true,
-			errContains: "too long for provider",
+			errContains: "exceeds 63 characters",
 		},
 		{
-			name: "Zvirt: prefix at max length (37 chars) passes",
+			// Zvirt: {prefix}-master-0-kubernetes-data
+			// max prefix = 63 - len("-master-0-kubernetes-data") = 63 - 25 = 38
+			name: "Zvirt: prefix at max length passes",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("d", 37),
+				ClusterPrefix: strings.Repeat("c", 38),
 				ProviderName:  "zvirt",
 			},
 			expectError: false,
 		},
 		{
-			name: "Zvirt: prefix exceeds max (38 chars) fails",
+			name: "Zvirt: prefix exceeds max fails",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("d", 38),
+				ClusterPrefix: strings.Repeat("c", 39),
 				ProviderName:  "zvirt",
 			},
 			expectError: true,
-			errContains: "too long for provider",
+			errContains: "exceeds 63 characters",
 		},
 		{
 			name: "empty prefix passes",
