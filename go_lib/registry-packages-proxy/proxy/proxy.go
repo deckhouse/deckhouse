@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -70,6 +71,18 @@ type rppBinaryHandler struct {
 
 const (
 	rppBinaryName = "rpp-get"
+
+	// cliImagesPathPrefix is the URL prefix served on the standard proxy mux for
+	// deckhouse-cli (and plugin) downloads. Paths under it look like:
+	//
+	//   /v1/images/<image>/tags                 -> list tags
+	//   /v1/images/<image>/tags/<tag>           -> download last layer as tar.gz
+	//
+	// where <image> must match the allowlist (deckhouse-cli or deckhouse-cli/plugins/<plugin>).
+	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/images/* with its
+	// own SubjectAccessReview-based authorization, so this handler intentionally does no
+	// authentication of its own.
+	cliImagesPathPrefix = "/v1/images/"
 )
 
 var errEmptyRegistryConfig = errors.New("empty registry config")
@@ -200,11 +213,40 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.logger.Infof("Package for digest %q sent successfully", digest)
 	})
 
+	p.ServeCLI()
+
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err.Error())
 	}
+}
+
+// CLIHandler returns an http.HandlerFunc that serves the /v1/images/* CLI download routes
+// (image tag listing and binary pulling) for this Proxy.
+//
+// Two URL shapes are supported under /v1/images/<image>/:
+//
+//	GET /v1/images/<image>/tags                 -> JSON list of available tags
+//	GET /v1/images/<image>/tags/<tag>           -> stream the last layer of the image tag
+//	                                                as application/x-gzip
+//
+// <image> must match the deckhouse-cli allowlist (deckhouse-cli or
+// deckhouse-cli/plugins/<plugin>); other paths return 404.
+//
+// kube-rbac-proxy (the standard sidecar listening on :4219) is responsible for authn/authz
+// before requests reach this handler, so it intentionally performs no authentication itself.
+func (p *Proxy) CLIHandler() http.HandlerFunc {
+	handler := &cliHandler{proxy: p}
+	return handler.serveHTTP
+}
+
+// ServeCLI mounts CLIHandler under /v1/images/ on http.DefaultServeMux so the routes are
+// served by the standard proxy server exposed via kube-rbac-proxy on :4219. It is invoked
+// automatically from Serve, and can also be called explicitly by callers that want to opt
+// in without starting the full proxy listener.
+func (p *Proxy) ServeCLI() {
+	http.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 }
 
 func (s *RPPClientBinaryServer) Serve() {
@@ -426,6 +468,233 @@ func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []b
 	if _, err := w.Write(binary); err != nil {
 		h.logger.Errorf("write %s response: %v", h.binaryName, err)
 	}
+}
+
+// cliHandler implements the /v1/images/* HTTP routes documented on Proxy.ServeCLI.
+// It is intentionally thin: all of the registry-config / cache state lives on the parent Proxy
+// so a single Proxy instance backs both /package and /v1/images/* on the same standard server.
+type cliHandler struct {
+	proxy *Proxy
+}
+
+type cliAction int
+
+const (
+	cliActionUnknown cliAction = iota
+	cliActionListTags
+	cliActionPullTag
+)
+
+type cliTagsResponse struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	imagePath, action, tag, err := parseCLIPath(r.URL.Path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if !isAllowedCLIImagePath(imagePath) {
+		h.proxy.logger.Warnf("CLI request for disallowed image path %q from %s", imagePath, getRequestIP(r))
+		http.NotFound(w, r)
+		return
+	}
+
+	switch action {
+	case cliActionListTags:
+		h.handleListTags(w, r, imagePath)
+	case cliActionPullTag:
+		h.handlePullTag(w, r, imagePath, tag)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imagePath string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI list-tags for image %q from client %s", imagePath, clientIP)
+
+	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
+	if err != nil {
+		logger.Errorf("get registry config: %v", err)
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	cfg.SignCheck = h.proxy.config.SignCheck
+
+	tags, err := h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "image not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("list tags for %q: %v", imagePath, err)
+		http.Error(w, "failed to list tags", http.StatusBadGateway)
+		return
+	}
+
+	body, err := json.Marshal(cliTagsResponse{Name: imagePath, Tags: tags})
+	if err != nil {
+		logger.Errorf("marshal tags: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	_, _ = w.Write(body)
+}
+
+func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, imagePath, tag string) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI pull image %q tag %q from client %s", imagePath, tag, clientIP)
+
+	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
+	if err != nil {
+		logger.Errorf("get registry config: %v", err)
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	cfg.SignCheck = h.proxy.config.SignCheck
+
+	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, tag)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "tag not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("resolve tag %q for %q: %v", tag, imagePath, err)
+		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
+		return
+	}
+
+	size, reader, err := GetPackageCached(
+		r.Context(),
+		logger,
+		h.proxy.getter,
+		h.proxy.registryClient,
+		h.proxy.cache,
+		manifestDigest,
+		registry.DefaultRepository,
+		imagePath,
+		h.proxy.config.SignCheck,
+	)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "package not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("get package for %q@%s: %v", imagePath, manifestDigest, err)
+		http.Error(w, "failed to fetch package", http.StatusBadGateway)
+		return
+	}
+
+	fileBase := imagePath
+	if i := strings.LastIndex(imagePath, "/"); i >= 0 {
+		fileBase = imagePath[i+1:]
+	}
+
+	w.Header().Set("Content-Type", "application/x-gzip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s.tar.gz"`, fileBase, tag))
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("ETag", `"`+manifestDigest+`"`)
+	w.Header().Set("Docker-Content-Digest", manifestDigest)
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	if _, err := io.Copy(w, reader); err != nil {
+		logger.Errorf("stream package for %q@%s: %v", imagePath, manifestDigest, err)
+	}
+}
+
+// parseCLIPath splits an HTTP path of the form
+//
+//	/v1/images/<image-path>/tags
+//	/v1/images/<image-path>/tags/<tag>
+//
+// into its components. <image-path> may contain slashes; the split anchors on the final
+// /tags segment.
+func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag string, err error) {
+	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
+		return "", cliActionUnknown, "", errors.New("not a CLI path")
+	}
+	rest := strings.TrimPrefix(urlPath, cliImagesPathPrefix)
+	rest = strings.Trim(rest, "/")
+	if rest == "" {
+		return "", cliActionUnknown, "", errors.New("missing image path")
+	}
+
+	const sep = "/tags"
+	idx := strings.LastIndex(rest, sep)
+	if idx < 0 {
+		return "", cliActionUnknown, "", errors.New("missing tags segment")
+	}
+
+	imagePath = rest[:idx]
+	if imagePath == "" {
+		return "", cliActionUnknown, "", errors.New("empty image path")
+	}
+
+	suffix := rest[idx+len(sep):]
+	switch {
+	case suffix == "" || suffix == "/":
+		return imagePath, cliActionListTags, "", nil
+	case strings.HasPrefix(suffix, "/"):
+		tag = strings.Trim(suffix[1:], "/")
+		if tag == "" || strings.Contains(tag, "/") {
+			return "", cliActionUnknown, "", errors.New("invalid tag")
+		}
+		return imagePath, cliActionPullTag, tag, nil
+	default:
+		return "", cliActionUnknown, "", errors.New("unexpected path suffix")
+	}
+}
+
+// isAllowedCLIImagePath enforces the allowlist:
+//   - deckhouse-cli
+//   - deckhouse-cli/plugins/<single-segment>
+func isAllowedCLIImagePath(imagePath string) bool {
+	if imagePath == "deckhouse-cli" {
+		return true
+	}
+	const pluginsPrefix = "deckhouse-cli/plugins/"
+	if !strings.HasPrefix(imagePath, pluginsPrefix) {
+		return false
+	}
+	plugin := strings.TrimPrefix(imagePath, pluginsPrefix)
+	if plugin == "" || strings.Contains(plugin, "/") {
+		return false
+	}
+	return true
 }
 
 func normalizeBootstrapClusterUUID(clusterUUID string) string {

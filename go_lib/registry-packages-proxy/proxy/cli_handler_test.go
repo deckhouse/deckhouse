@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package proxy
 
 import (
 	"bytes"
@@ -27,18 +27,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	pkgCache "github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	pkgLog "github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
-	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
-	eventuallyTimeout  = 2 * time.Second
-	eventuallyInterval = 10 * time.Millisecond
+	cliEventuallyTimeout  = 2 * time.Second
+	cliEventuallyInterval = 10 * time.Millisecond
 )
 
 func TestParseCLIPath(t *testing.T) {
@@ -51,10 +50,10 @@ func TestParseCLIPath(t *testing.T) {
 		wantTag    string
 		wantErr    bool
 	}{
-		{url: "/v1/images/deckhouse-cli/tags", wantImg: "deckhouse-cli", wantAction: actionListTags},
-		{url: "/v1/images/deckhouse-cli/tags/v1.0.1", wantImg: "deckhouse-cli", wantAction: actionPullTag, wantTag: "v1.0.1"},
-		{url: "/v1/images/deckhouse-cli/plugins/foo/tags", wantImg: "deckhouse-cli/plugins/foo", wantAction: actionListTags},
-		{url: "/v1/images/deckhouse-cli/plugins/foo/tags/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: actionPullTag, wantTag: "v2"},
+		{url: "/v1/images/deckhouse-cli/tags", wantImg: "deckhouse-cli", wantAction: cliActionListTags},
+		{url: "/v1/images/deckhouse-cli/tags/v1.0.1", wantImg: "deckhouse-cli", wantAction: cliActionPullTag, wantTag: "v1.0.1"},
+		{url: "/v1/images/deckhouse-cli/plugins/foo/tags", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionListTags},
+		{url: "/v1/images/deckhouse-cli/plugins/foo/tags/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionPullTag, wantTag: "v2"},
 		{url: "/v1/images/", wantErr: true},
 		{url: "/v1/images/just-image", wantErr: true},
 		{url: "/v1/images/img/tags/with/slashes", wantErr: true},
@@ -102,8 +101,8 @@ func TestIsAllowedCLIImagePath(t *testing.T) {
 	}
 }
 
-// fakeRegistryClient implements registry.Client for handler tests.
-type fakeRegistryClient struct {
+// fakeCLIRegistryClient implements registry.Client for handler tests.
+type fakeCLIRegistryClient struct {
 	mu                  sync.Mutex
 	tags                map[string][]string
 	tagToManifestDigest map[string]string
@@ -119,7 +118,7 @@ type fakeRegistryClient struct {
 	getPackageErr error
 }
 
-func (f *fakeRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path string) ([]string, error) {
+func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path string) ([]string, error) {
 	atomic.AddInt32(&f.listTagsCalls, 1)
 	if f.listTagsErr != nil {
 		return nil, f.listTagsErr
@@ -133,7 +132,7 @@ func (f *fakeRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, _ *reg
 	return tags, nil
 }
 
-func (f *fakeRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string) (string, error) {
+func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, path, tag string) (string, error) {
 	atomic.AddInt32(&f.resolveTagCalls, 1)
 	if f.resolveTagErr != nil {
 		return "", f.resolveTagErr
@@ -147,7 +146,7 @@ func (f *fakeRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, _ *r
 	return d, nil
 }
 
-func (f *fakeRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, _ string, _ string) (int64, string, io.ReadCloser, error) {
+func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _ *registry.ClientConfig, _ string, _ string) (int64, string, io.ReadCloser, error) {
 	atomic.AddInt32(&f.getPackageCalls, 1)
 	if f.getPackageErr != nil {
 		return 0, "", nil, f.getPackageErr
@@ -155,12 +154,12 @@ func (f *fakeRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _ *r
 	return int64(len(f.packageBody)), f.layerDigest, io.NopCloser(bytes.NewReader(f.packageBody)), nil
 }
 
-type fakeGetter struct {
+type fakeCLIGetter struct {
 	cfg *registry.ClientConfig
 	err error
 }
 
-func (g *fakeGetter) Get(_ string) (*registry.ClientConfig, error) {
+func (g *fakeCLIGetter) Get(_ string) (*registry.ClientConfig, error) {
 	if g.err != nil {
 		return nil, g.err
 	}
@@ -170,19 +169,19 @@ func (g *fakeGetter) Get(_ string) (*registry.ClientConfig, error) {
 	return &registry.ClientConfig{Repository: "registry.test/deckhouse", Scheme: "https"}, nil
 }
 
-// memCache is a simple in-memory cache.Cache used to verify cache hits.
-type memCache struct {
+// cliMemCache is a simple in-memory cache.Cache used to verify cache hits.
+type cliMemCache struct {
 	mu      sync.Mutex
 	entries map[string][]byte
 	hits    int32
 	misses  int32
 }
 
-func newMemCache() *memCache {
-	return &memCache{entries: map[string][]byte{}}
+func newCLIMemCache() *cliMemCache {
+	return &cliMemCache{entries: map[string][]byte{}}
 }
 
-func (c *memCache) Get(digest string) (int64, io.ReadCloser, error) {
+func (c *cliMemCache) Get(digest string) (int64, io.ReadCloser, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	body, ok := c.entries[digest]
@@ -194,7 +193,7 @@ func (c *memCache) Get(digest string) (int64, io.ReadCloser, error) {
 	return int64(len(body)), io.NopCloser(bytes.NewReader(body)), nil
 }
 
-func (c *memCache) Set(digest string, _ string, reader io.Reader) error {
+func (c *cliMemCache) Set(digest string, _ string, reader io.Reader) error {
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return err
@@ -205,24 +204,40 @@ func (c *memCache) Set(digest string, _ string, reader io.Reader) error {
 	return nil
 }
 
-func newTestLogger() *log.Logger {
-	return log.NewNop()
+// nopCLILogger satisfies log.Logger without producing output.
+type nopCLILogger struct{}
+
+func (nopCLILogger) Errorf(string, ...interface{}) {}
+func (nopCLILogger) Infof(string, ...interface{})  {}
+func (nopCLILogger) Warnf(string, ...interface{})  {}
+func (nopCLILogger) Debugf(string, ...interface{}) {}
+func (nopCLILogger) Error(string, ...interface{})  {}
+
+// newTestProxy builds a Proxy wired up only with the bits CLIHandler needs.
+// It deliberately avoids creating an http.Server / net.Listener so the tests can register the
+// handler on their own mux via Proxy.CLIHandler().
+func newTestProxy(t *testing.T, registryClient registry.Client, getter registry.ClientConfigGetter, c pkgCache.Cache) *Proxy {
+	t.Helper()
+	var opts []ProxyOption
+	if c != nil {
+		opts = append(opts, WithCache(c))
+	}
+	p := NewProxy(nil, nil, getter, nopCLILogger{}, registryClient, opts...)
+	// Serve() normally initializes p.config; do the equivalent for CLIHandler tests.
+	p.config = Config{}
+	return p
 }
 
 func TestCLIHandler_ListTags_HappyPath(t *testing.T) {
-	fake := &fakeRegistryClient{
+	fake := &fakeCLIRegistryClient{
 		tags: map[string][]string{
 			"deckhouse-cli": {"v1.0.0", "v1.0.1"},
 		},
 	}
-	h := NewCLIHandler(CLIHandlerOptions{
-		Logger:             newTestLogger(),
-		ClientConfigGetter: &fakeGetter{},
-		RegistryClient:     fake,
-	})
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
 
 	mux := http.NewServeMux()
-	h.Register(mux)
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -238,15 +253,11 @@ func TestCLIHandler_ListTags_HappyPath(t *testing.T) {
 }
 
 func TestCLIHandler_ListTags_NotFound(t *testing.T) {
-	fake := &fakeRegistryClient{tags: map[string][]string{}}
-	h := NewCLIHandler(CLIHandlerOptions{
-		Logger:             newTestLogger(),
-		ClientConfigGetter: &fakeGetter{},
-		RegistryClient:     fake,
-	})
+	fake := &fakeCLIRegistryClient{tags: map[string][]string{}}
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
 
 	mux := http.NewServeMux()
-	h.Register(mux)
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -257,31 +268,27 @@ func TestCLIHandler_ListTags_NotFound(t *testing.T) {
 }
 
 func TestCLIHandler_DisallowedImagePath(t *testing.T) {
-	fake := &fakeRegistryClient{
+	fake := &fakeCLIRegistryClient{
 		tags: map[string][]string{
 			"other-image": {"v1"},
 		},
 	}
-	h := NewCLIHandler(CLIHandlerOptions{
-		Logger:             newTestLogger(),
-		ClientConfigGetter: &fakeGetter{},
-		RegistryClient:     fake,
-	})
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
 
 	mux := http.NewServeMux()
-	h.Register(mux)
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	for _, p := range []string{
+	for _, urlPath := range []string{
 		"/v1/images/other-image/tags",
 		"/v1/images/deckhouse-cli/extras/tags",
 		"/v1/images/deckhouse-cli/plugins/tags",
 		"/v1/images/deckhouse-cli/plugins/a/b/tags",
 	} {
-		resp, err := http.Get(srv.URL + p)
-		require.NoError(t, err, p)
-		assert.Equal(t, http.StatusNotFound, resp.StatusCode, p)
+		resp, err := http.Get(srv.URL + urlPath)
+		require.NoError(t, err, urlPath)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode, urlPath)
 		_ = resp.Body.Close()
 	}
 
@@ -291,23 +298,18 @@ func TestCLIHandler_DisallowedImagePath(t *testing.T) {
 
 func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
 	const payload = "hello, world"
-	fake := &fakeRegistryClient{
+	fake := &fakeCLIRegistryClient{
 		tagToManifestDigest: map[string]string{
 			"deckhouse-cli:v1.0.1": "sha256:deadbeef",
 		},
 		packageBody: []byte(payload),
 		layerDigest: "abc123",
 	}
-	cache := newMemCache()
-	h := NewCLIHandler(CLIHandlerOptions{
-		Logger:             newTestLogger(),
-		ClientConfigGetter: &fakeGetter{},
-		RegistryClient:     fake,
-		Cache:              cache,
-	})
+	cache := newCLIMemCache()
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, cache)
 
 	mux := http.NewServeMux()
-	h.Register(mux)
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -333,7 +335,7 @@ func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
 			return true
 		}
 		return false
-	}, eventuallyTimeout, eventuallyInterval)
+	}, cliEventuallyTimeout, cliEventuallyInterval)
 
 	// Second request: should be served from cache, registry GetPackage NOT called again.
 	resp2, err := http.Get(srv.URL + "/v1/images/deckhouse-cli/tags/v1.0.1")
@@ -349,17 +351,13 @@ func TestCLIHandler_PullTag_HappyPathAndCache(t *testing.T) {
 }
 
 func TestCLIHandler_PullTag_NotFound(t *testing.T) {
-	fake := &fakeRegistryClient{
+	fake := &fakeCLIRegistryClient{
 		tagToManifestDigest: map[string]string{},
 	}
-	h := NewCLIHandler(CLIHandlerOptions{
-		Logger:             newTestLogger(),
-		ClientConfigGetter: &fakeGetter{},
-		RegistryClient:     fake,
-	})
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
 
 	mux := http.NewServeMux()
-	h.Register(mux)
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
@@ -370,17 +368,13 @@ func TestCLIHandler_PullTag_NotFound(t *testing.T) {
 }
 
 func TestCLIHandler_PullTag_BadGatewayOnRegistryError(t *testing.T) {
-	fake := &fakeRegistryClient{
+	fake := &fakeCLIRegistryClient{
 		resolveTagErr: errors.New("boom"),
 	}
-	h := NewCLIHandler(CLIHandlerOptions{
-		Logger:             newTestLogger(),
-		ClientConfigGetter: &fakeGetter{},
-		RegistryClient:     fake,
-	})
+	p := newTestProxy(t, fake, &fakeCLIGetter{}, nil)
 
 	mux := http.NewServeMux()
-	h.Register(mux)
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
