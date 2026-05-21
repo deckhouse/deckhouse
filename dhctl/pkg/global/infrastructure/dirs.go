@@ -38,15 +38,22 @@ func GetDhctlPath() string {
 }
 
 // GetInfrastructureProviderDir returns the directory containing the cloud
-// provider's terraform/tofu modules. Falls back to <downloadDir>/candi/cloud-providers
-// if the bundled candiDir does not exist (provider images unpack into <downloadDir>/candi/).
+// provider's terraform/tofu modules and openapi schemas.
+// External provider images unpack into <downloadDir>/<provider>/ directly.
+// Bundled providers live under candiDir/cloud-providers/<provider>.
 func GetInfrastructureProviderDir(provider, downloadDir string) string {
-	_, err := os.Stat(filepath.Join(candiDir, "cloud-providers", provider))
-	if err == nil {
+	if _, err := os.Stat(filepath.Join(candiDir, "cloud-providers", provider)); err == nil {
 		return filepath.Join(candiDir, "cloud-providers", provider)
 	}
-
+	if p := filepath.Join(downloadDir, provider); dirExists(p) {
+		return p
+	}
 	return filepath.Join(downloadDir, "candi", "cloud-providers", provider)
+}
+
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 func GetInfrastructureModulesDir(provider, downloadDir string) string {
@@ -58,12 +65,14 @@ func GetInfrastructureModulesForRunningDir(provider, layout, module, downloadDir
 }
 
 // GetInfrastructureVersions returns the path to the infrastructure-utility
-// versions file. Falls back to <downloadDir>/candi if the bundled path does not exist.
+// versions file. External provider images place it at <provider>/terraform-manager/terraform_versions.yml.
 func GetInfrastructureVersions(downloadDir string) string {
-	_, err := os.Stat(infrastructureVersions)
-	if err == nil {
+	if _, err := os.Stat(infrastructureVersions); err == nil {
 		return infrastructureVersions
 	}
-
+	matches, _ := filepath.Glob(filepath.Join(downloadDir, "*", "terraform-manager", "terraform_versions.yml"))
+	if len(matches) > 0 {
+		return matches[0]
+	}
 	return filepath.Join(downloadDir, "candi", "terraform_versions.yml")
 }

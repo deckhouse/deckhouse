@@ -120,6 +120,7 @@ func LoadConfigFromFile(
 		}
 	}
 
+	opts = append(opts, ValidateOptionDownloadRootDir(dc.DownloadDir))
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, dc, opts...)
 	if err != nil {
 		return nil, err
@@ -518,6 +519,17 @@ deckhouse: {}
 		}
 	}
 
+	var vopts validateOptions
+	for _, opt := range opts {
+		opt(&vopts)
+	}
+	if vopts.operation != "" {
+		metaConfig.Operation = vopts.operation
+	}
+	if vopts.downloadRootDir != "" {
+		metaConfig.DownloadRootDir = vopts.downloadRootDir
+	}
+
 	return metaConfig.Prepare(ctx, preparatorProvider)
 }
 
@@ -675,15 +687,14 @@ func fetchCloudProvider(docs []string) (string, error) {
 }
 
 // prepareProviderCandiDir downloads the provider's terraformManager OCI image
-// if its schemas are not already present. After download the image unpacks into
-// dc.DownloadDir/candi/cloud-providers/<provider>/ matching the layout expected
-// by cloudProviderDir.
+// if its schemas are not already present. The image is unpacked into
+// dc.DownloadDir/<provider>/ so all provider-specific files stay under one directory.
 func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.RegistryConfig, dc *directoryconfig.DirectoryConfig) error {
 	systemSchemaPath := filepath.Join(candiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(systemSchemaPath); err == nil {
 		return nil
 	}
-	downloadSchemaPath := filepath.Join(dc.DownloadDir, "candi", "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
+	downloadSchemaPath := filepath.Join(dc.DownloadDir, provider, "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(downloadSchemaPath); err == nil {
 		return nil
 	}
@@ -697,7 +708,7 @@ func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.R
 
 	imgName := conf.GetRegistry() + "@" + providerImage
 	log.DebugF("Downloading provider schemas for %s\n", provider)
-	return image.DownloadAndUnpackImage(ctx, imgName, dc.DownloadDir, dc.DownloadCacheDir, *conf)
+	return image.DownloadAndUnpackImage(ctx, imgName, filepath.Join(dc.DownloadDir, provider), dc.DownloadCacheDir, *conf)
 }
 
 // prepare CandiDir if not exists

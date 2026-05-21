@@ -794,7 +794,7 @@ func TestPullImage(t *testing.T) {
 				opts, err := getOptsFromRegistryConfig(ref, c.rc)
 				require.NoError(t, err)
 
-				_, err = pullImage(ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"))
+				_, err = pullImage(t.Context(), ref, opts, ref.Identifier(), filepath.Join(c.destDir, "cache"))
 				if !c.wantErr {
 					require.NoError(t, err)
 				} else {

@@ -22,7 +22,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
@@ -46,9 +45,6 @@ type SchemaStore struct {
 	conversionsStore   *conversion.ConversionsStore
 }
 
-var once sync.Once
-
-var store *SchemaStore
 
 type validateOptions struct {
 	omitDocInError     bool
@@ -56,6 +52,8 @@ type validateOptions struct {
 	strictUnmarshal    bool
 	validateExtensions bool
 	requiredSSHHost    bool
+	operation          string
+	downloadRootDir    string
 }
 
 type ValidateOption func(o *validateOptions)
@@ -93,6 +91,18 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
+func ValidateOptionOperation(op string) ValidateOption {
+	return func(o *validateOptions) {
+		o.operation = op
+	}
+}
+
+func ValidateOptionDownloadRootDir(dir string) ValidateOption {
+	return func(o *validateOptions) {
+		o.downloadRootDir = dir
+	}
+}
+
 func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
 	if _, err := os.Stat(candiDir); err != nil {
@@ -101,10 +111,12 @@ func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *Schem
 		}
 	}
 	if dc != nil {
-		// Provider terraformManager images unpack into dc.DownloadDir/candi/cloud-providers/<provider>/.
-		providerCandiDir := filepath.Join(dc.DownloadDir, "candi", "cloud-providers")
-		if _, err := os.Stat(providerCandiDir); err == nil {
-			paths = append(paths, providerCandiDir)
+		// External provider images unpack into dc.DownloadDir/<provider>/.
+		entries, _ := os.ReadDir(dc.DownloadDir)
+		for _, e := range entries {
+			if e.IsDir() {
+				paths = append(paths, filepath.Join(dc.DownloadDir, e.Name()))
+			}
 		}
 	}
 
@@ -116,7 +128,7 @@ func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *Schem
 		}
 	}
 
-	return newOnceSchemaStore(dc, paths)
+	return newSchemaStore(dc, paths)
 }
 
 func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
@@ -241,12 +253,6 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 	return st
 }
 
-func newOnceSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
-	once.Do(func() {
-		store = newSchemaStore(dc, schemasDir)
-	})
-	return store
-}
 
 func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
 	return s.cache[*index]

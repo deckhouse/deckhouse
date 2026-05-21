@@ -39,12 +39,15 @@ type MetaConfigPreparator interface {
 	Prepare(ctx context.Context, input ProviderInput) (providerdata.PrepareResult, error)
 }
 
-type MetaConfigPreparatorProvider func(provider string) MetaConfigPreparator
+// MetaConfigPreparatorProvider selects a MetaConfigPreparator for the given
+// provider. downloadRootDir is the directory where provider images have been
+// unpacked; external preparators look for their binary there.
+type MetaConfigPreparatorProvider func(provider, downloadRootDir string) MetaConfigPreparator
 
 type dummyPreparator struct{}
 
 func DummyPreparatorProvider() MetaConfigPreparatorProvider {
-	return func(provider string) MetaConfigPreparator {
+	return func(provider, _ string) MetaConfigPreparator {
 		return &dummyPreparator{}
 	}
 }

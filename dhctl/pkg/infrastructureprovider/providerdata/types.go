@@ -12,55 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package providerdata defines the shared data types and subprocess protocol
-// used between dhctl and external provider binaries.
-//
-// An external preparator binary receives a PrepareRequest on stdin and writes
-// a PrepareResponse (or ValidateResponse) to stdout. All messages are
-// newline-terminated JSON.
+// Package providerdata re-exports the shared protocol types from
+// go_lib/dhctl-provider-protocol. All wire types and constants are defined
+// there; this package provides stable import paths for dhctl internals.
 package providerdata
 
-const OperationBootstrap = "bootstrap"
+import proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
-type CloudProviderVars struct {
-	Settings        map[string]interface{}            `json:"settings,omitempty"`
-	NodeGroups      map[string]map[string]interface{} `json:"nodeGroups,omitempty"`
-	InstanceClasses map[string]map[string]interface{} `json:"instanceClasses,omitempty"`
-	Secrets         map[string]map[string]interface{} `json:"secrets,omitempty"`
-}
+const OperationBootstrap = proto.OperationBootstrap
 
-type PrepareInput struct {
-	ProviderName          string                 `json:"providerName"`
-	ClusterPrefix         string                 `json:"clusterPrefix,omitempty"`
-	Layout                string                 `json:"layout,omitempty"`
-	Operation             string                 `json:"operation,omitempty"`
-	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
-	ResourcesYAML         string                 `json:"resourcesYAML,omitempty"`
-	ModuleConfig          map[string]interface{} `json:"moduleConfig,omitempty"`
-}
-
-type PrepareResult struct {
-	Vars                  *CloudProviderVars     `json:"vars,omitempty"`
-	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
-}
-
-// ValidateRequest is sent to the external binary for the "validate" subcommand.
-type ValidateRequest struct {
-	Input PrepareInput `json:"input"`
-}
-
-// ValidateResponse is returned by the external binary after "validate".
-type ValidateResponse struct {
-	Error string `json:"error,omitempty"`
-}
-
-// PrepareRequest is sent to the external binary for the "prepare" subcommand.
-type PrepareRequest struct {
-	Input PrepareInput `json:"input"`
-}
-
-// PrepareResponse is returned by the external binary after "prepare".
-type PrepareResponse struct {
-	Result *PrepareResult `json:"result,omitempty"`
-	Error  string         `json:"error,omitempty"`
-}
+type CloudProviderVars = proto.CloudProviderVars
+type PrepareInput = proto.PrepareInput
+type PrepareResult = proto.PrepareResult
+type ValidateRequest = proto.ValidateRequest
+type ValidateResponse = proto.ValidateResponse
+type PrepareRequest = proto.PrepareRequest
+type PrepareResponse = proto.PrepareResponse

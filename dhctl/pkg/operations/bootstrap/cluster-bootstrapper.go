@@ -205,13 +205,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// first, parse and check cluster config
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithOperationBootstrap()
-	preparatorParams.WithDVPValidateKubeAPI(true)
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		b.DirectoryConfig,
 		config.ValidateOptionValidateExtensions(true),
+		config.ValidateOptionOperation(string(preparatorParams.Operation)),
 	)
 	if err != nil {
 		return err
@@ -383,7 +383,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				return err
 			}
 
-			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
+			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", func(ctx context.Context, r infrastructure.RunnerInterface) (*infrastructure.PipelineOutputs, error) {
+				return infrastructure.GetBaseInfraResult(ctx, r, b.DirectoryConfig)
+			})
 			if err != nil {
 				return err
 			}

@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -215,6 +216,7 @@ func CheckBaseInfrastructurePipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
+	dc *directoryconfig.DirectoryConfig,
 ) (int, plan.Plan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := plan.HasNoChanges
 
@@ -246,7 +248,7 @@ func CheckBaseInfrastructurePipeline(
 			return nil
 		}
 
-		info, err := GetBaseInfraResult(ctx, r)
+		info, err := GetBaseInfraResult(ctx, r, dc)
 		if err != nil {
 			isChange = plan.HasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
@@ -330,13 +332,13 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 	)
 }
 
-func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetBaseInfraResult(ctx context.Context, r RunnerInterface, dc *directoryconfig.DirectoryConfig) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetInfrastructureOutput(ctx, "cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
 
-	schemaStore := config.NewSchemaStore(nil)
+	schemaStore := config.NewSchemaStore(dc)
 	_, err = schemaStore.Validate(&cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)

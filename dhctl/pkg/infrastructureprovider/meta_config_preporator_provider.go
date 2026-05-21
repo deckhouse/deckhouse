@@ -23,7 +23,6 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
@@ -41,16 +40,6 @@ const (
 type PreparatorProviderParams struct {
 	logger    log.Logger
 	Operation DhctlOperation
-	DVPOptions dvp.PreparatorOptions
-	// PluginsDir is the directory where external provider binaries are stored.
-	// When set, providers not built into dhctl are looked up as
-	// dhctl-provider-<name> binaries in this directory.
-	PluginsDir string
-}
-
-func (p *PreparatorProviderParams) WithPluginsDir(dir string) *PreparatorProviderParams {
-	p.PluginsDir = dir
-	return p
 }
 
 func (p *PreparatorProviderParams) WithOperation(op DhctlOperation) {
@@ -59,10 +48,6 @@ func (p *PreparatorProviderParams) WithOperation(op DhctlOperation) {
 
 func (p *PreparatorProviderParams) WithOperationBootstrap() {
 	p.WithOperation(DhctlOperationBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithDVPValidateKubeAPI(v bool) {
-	p.DVPOptions.ValidateKubeAPI = v
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -77,7 +62,6 @@ func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
 	}
 }
 
-// looger can be nil if nil will use silent logger
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
 	logger := params.logger
 
@@ -85,11 +69,11 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		logger = log.NewSilentLogger()
 	}
 
-	return func(provider string) config.MetaConfigPreparator {
+	return func(provider, downloadRootDir string) config.MetaConfigPreparator {
 		switch provider {
 		// static cluster
 		case "":
-			return config.DummyPreparatorProvider()("")
+			return config.DummyPreparatorProvider()("", "")
 		case yandex.ProviderName:
 			return yandex.NewMetaConfigPreparator(true, string(params.Operation)).WithLogger(logger)
 		case vcd.ProviderName:
@@ -97,10 +81,8 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 				PrepareMetaConfig:     true,
 				ValidateClusterPrefix: true,
 			}, logger)
-		case dvp.ProviderName:
-			return dvp.NewPreparator(string(params.Operation), params.DVPOptions)
 		default:
-			if binaryPath := findExternalPreparatorBinary(params.PluginsDir, provider); binaryPath != "" {
+			if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
 				return external.NewBinaryPreparator(binaryPath)
 			}
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
@@ -108,15 +90,15 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 	}
 }
 
-const externalPreparatorBinaryPrefix = "dhctl-provider-"
+const externalPreparatorBinaryName = "validator"
 
-// findExternalPreparatorBinary looks for a dhctl-provider-<name> binary in pluginsDir.
-// Returns the full path if found and executable, empty string otherwise.
+// findExternalPreparatorBinary looks for a validator binary in pluginsDir/<providerName>/.
+// Returns the full path if found and is a regular file, empty string otherwise.
 func findExternalPreparatorBinary(pluginsDir, providerName string) string {
 	if pluginsDir == "" {
 		return ""
 	}
-	path := filepath.Join(pluginsDir, externalPreparatorBinaryPrefix+providerName)
+	path := filepath.Join(pluginsDir, providerName, externalPreparatorBinaryName)
 	info, err := os.Stat(path)
 	if err != nil || info.IsDir() {
 		return ""

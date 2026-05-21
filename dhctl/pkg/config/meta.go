@@ -33,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
-	ottrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -102,23 +101,20 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	ctx, span := telemetry.StartSpan(ctx, "validateAndPrepareMetaConfig")
 	defer span.End()
 
+	providerPreparator := preparatorProvider(m.ProviderName, m.DownloadRootDir)
+	providerInput := m.buildProviderInput()
+
+	rawInput, _ := json.Marshal(providerInput.ProviderClusterConfig)
+	rawVars, _ := json.Marshal(providerInput.CloudProviderVars)
 	span.SetAttributes(
 		otattribute.String("provider.name", m.ProviderName),
 		otattribute.String("provider.layout", m.Layout),
 		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
+		otattribute.String("provider.operation", m.Operation),
+		otattribute.String("provider.downloadRootDir", m.DownloadRootDir),
+		otattribute.String("provider.input.providerClusterConfig", string(rawInput)),
+		otattribute.String("provider.input.cloudProviderVars", string(rawVars)),
 	)
-
-	providerPreparator := preparatorProvider(m.ProviderName)
-	providerInput := m.buildProviderInput()
-
-	if rawInput, err := json.Marshal(providerInput.ProviderClusterConfig); err == nil {
-		span.AddEvent("provider.input", ottrace.WithAttributes(otattribute.String("providerClusterConfig", string(rawInput))))
-	}
-	if providerInput.CloudProviderVars != nil {
-		if rawVars, err := json.Marshal(providerInput.CloudProviderVars); err == nil {
-			span.AddEvent("provider.input", ottrace.WithAttributes(otattribute.String("cloudProviderVars", string(rawVars))))
-		}
-	}
 
 	if err := providerPreparator.Validate(ctx, providerInput); err != nil {
 		return nil, err
@@ -131,15 +127,15 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	}
 	span.AddEvent("provider prepared")
 
+	rawResult, _ := json.Marshal(result)
+	span.SetAttributes(otattribute.String("provider.output", string(rawResult)))
+
 	if result.Vars != nil {
 		m.CloudProviderVars = result.Vars
-		if rawVars, err := json.Marshal(result.Vars); err == nil {
-			span.AddEvent("provider.result.vars", ottrace.WithAttributes(otattribute.String("cloudProviderVars", string(rawVars))))
-		}
 		span.SetAttributes(
-			otattribute.Int("provider.nodeGroupsCount", len(result.Vars.NodeGroups)),
-			otattribute.Int("provider.instanceClassesCount", len(result.Vars.InstanceClasses)),
-			otattribute.Int("provider.secretsCount", len(result.Vars.Secrets)),
+			otattribute.Int("provider.output.nodeGroupsCount", len(result.Vars.NodeGroups)),
+			otattribute.Int("provider.output.instanceClassesCount", len(result.Vars.InstanceClasses)),
+			otattribute.Int("provider.output.secretsCount", len(result.Vars.Secrets)),
 		)
 	}
 	for k, v := range result.ProviderClusterConfig {

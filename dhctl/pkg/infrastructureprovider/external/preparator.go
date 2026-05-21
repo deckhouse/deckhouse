@@ -39,7 +39,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -58,6 +61,7 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 	span.SetAttributes(
 		otattribute.String("provider.name", input.ProviderName),
 		otattribute.String("provider.binary", p.binaryPath),
+		otattribute.String("provider.subcommand", "validate"),
 	)
 
 	wireInput, err := toWireInput(input)
@@ -65,16 +69,22 @@ func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) e
 		return fmt.Errorf("build validate request: %w", err)
 	}
 
-	req := providerdata.ValidateRequest{Input: wireInput}
+	req := providerdata.ValidateRequest{Version: proto.ProtocolVersion, Input: wireInput}
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("marshal validate request: %w", err)
 	}
 
+	span.SetAttributes(otattribute.String("validate.request", string(payload)))
+	log.DebugF("external.Validate binary=%s request=%s\n", p.binaryPath, payload)
+
 	stdout, err := p.run(ctx, "validate", payload)
 	if err != nil {
 		return err
 	}
+
+	span.SetAttributes(otattribute.String("validate.response", string(stdout)))
+	log.DebugF("external.Validate binary=%s response=%s\n", p.binaryPath, stdout)
 
 	if len(bytes.TrimSpace(stdout)) == 0 {
 		return nil
@@ -96,6 +106,7 @@ func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (p
 	span.SetAttributes(
 		otattribute.String("provider.name", input.ProviderName),
 		otattribute.String("provider.binary", p.binaryPath),
+		otattribute.String("provider.subcommand", "prepare"),
 	)
 
 	wireInput, err := toWireInput(input)
@@ -103,16 +114,22 @@ func (p *Preparator) Prepare(ctx context.Context, input config.ProviderInput) (p
 		return providerdata.PrepareResult{}, fmt.Errorf("build prepare request: %w", err)
 	}
 
-	req := providerdata.PrepareRequest{Input: wireInput}
+	req := providerdata.PrepareRequest{Version: proto.ProtocolVersion, Input: wireInput}
 	payload, err := json.Marshal(req)
 	if err != nil {
 		return providerdata.PrepareResult{}, fmt.Errorf("marshal prepare request: %w", err)
 	}
 
+	span.SetAttributes(otattribute.String("prepare.request", string(payload)))
+	log.DebugF("external.Prepare binary=%s request=%s\n", p.binaryPath, payload)
+
 	stdout, err := p.run(ctx, "prepare", payload)
 	if err != nil {
 		return providerdata.PrepareResult{}, err
 	}
+
+	span.SetAttributes(otattribute.String("prepare.response", string(stdout)))
+	log.DebugF("external.Prepare binary=%s response=%s\n", p.binaryPath, stdout)
 
 	var resp providerdata.PrepareResponse
 	if err := json.Unmarshal(stdout, &resp); err != nil {

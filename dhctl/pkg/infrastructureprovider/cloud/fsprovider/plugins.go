@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"unicode"
 
@@ -79,6 +80,14 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	}
 	if err = copyTFVersionFile(conf.DownloadRootDir); err != nil {
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
+	}
+
+	cloudName := strings.ToLower(params.Settings.CloudName())
+	providerPath := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager", params.Settings.DestinationBinary())
+	if _, err := os.Stat(providerPath); err == nil {
+		source = providerPath
+	} else {
+		source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
 	}
 
 	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
