@@ -651,8 +651,8 @@ The module can run in two modes, controlled by [`telemetryAPI.enabled`](configur
 
 | Mode | Behaviour |
 |------|-----------|
-| **`false` (default)** | Classic path: full `telemetry.v2` in the Istio Operator / `Istio` resource (including Sail’s `telemetry.v2.prometheus`). The module does **not** deploy the bundled `Telemetry` objects `main-prometheus-metrics` and `main-access-log-format`. |
-| **`true`** | Telemetry API path: `meshConfig.defaultProviders.metrics` is set to the built-in `prometheus` provider, `telemetry.v2` is turned off, and the module creates `Telemetry` resources `main-prometheus-metrics` (standard `istio_*` series for Prometheus/Grafana/Kiali) and `main-access-log-format` (stdout access logs via the `main-access-log-format` extension provider). The log line format still comes from [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+| **`false` (default)** | Classic path: full `telemetry.v2` in the Istio Operator / `Istio` resource (including Sail’s `telemetry.v2.prometheus`). The module does **not** deploy the bundled mesh-wide `Telemetry` object `deckhouse-main-mesh`. |
+| **`true`** | Telemetry API path: `meshConfig.defaultProviders.metrics` selects the built-in Prometheus provider; `telemetry.v2` integrations are toggled off; the module installs a single `Telemetry` resource **`deckhouse-main-mesh`** in `d8-istio` (Prometheus metrics, stdout access logs via provider `main-access-log-format`). When tracing is configured (see below), Zipkin ingestion from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) is wired as **`deckhouse-tracing`** in both `meshConfig.extensionProviders` and `spec.tracing` on **`deckhouse-main-mesh`**. The log template still comes from [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
 
 ### Enabling Telemetry API mode
 
@@ -717,22 +717,14 @@ For tag removal, disabling specific metrics or modes, follow [Customizing Istio 
 
 ### Tracing with Telemetry API
 
-Distributed tracing uses the same `Telemetry` resource with `spec.tracing`. The trace exporter is always a named **extension provider** declared in `meshConfig.extensionProviders` (for example, `Zipkin`, `OpenTelemetry` exporters over `OTLP`, or `SkyWalking`). See the [Istio tracing overview](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) and [Configure tracing with Telemetry API](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/telemetry-api/).
+[`tracing.collector`](configuration.html#parameters-tracing-collector) remains the ModuleConfig umbrella for exporting traces via the Zipkin-compatible wire protocol.
 
-#### How this relates to the `istio` module’s `tracing` settings
+- **`telemetryAPI.enabled: false`** plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — **legacy bootstrap only**: Istio inherits `meshConfig.defaultConfig.tracing.zipkin.address` populated from ModuleConfig (`host:port`, same field as Jaeger’s Zipkin port `9411`).
+- **`telemetryAPI.enabled: true`** plus **`tracing.enabled: true`** with a populated [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) — the module omits legacy `defaultConfig.tracing.zipkin`, registers extension provider **`deckhouse-tracing`**, and extends the bundled mesh-wide **`Telemetry`** `deckhouse-main-mesh` with `spec.tracing` referencing that provider ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) is rendered as `randomSamplingPercentage`; default `1.0` mirrors the Helm default when `ModuleConfig` does not explicitly set sampling).
 
-When [`tracing.enabled`](configuration.html#parameters-tracing-enabled) is `true`, the module fills in `meshConfig.defaultConfig.tracing` with the Zipkin endpoint and sampling (Jaeger’s Zipkin port is typical). That is the **classic** proxy bootstrap path and works for many clusters.
+Anything beyond that Zipkin path (custom exporter names, TLS, OTLP exporters, SkyWalking, and so on) still requires layering your own manifests on top—declare additional `meshConfig.extensionProviders` entries beside the manifests the chart renders **or** customize the `Istio`/`IstioOperator` CR, then attach your policies with auxiliary `Telemetry` objects. Istio merges those objects; see upstream steps in [Distributed tracing telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
-A **Telemetry API–centric** setup instead registers a provider under `extensionProviders` and selects it with a `Telemetry` object (and often clears legacy `defaultConfig.tracing` in favor of the provider), as in the upstream task. You can use both styles during migration; avoid duplicating two exporters to the same backend without meaning to.
-
-#### Kiali
-
-To see traces in the UI, keep configuring [`tracing.kiali`](configuration.html#parameters-tracing-kiali) (Jaeger URL + in-cluster gRPC endpoint) in the module when Kiali is enabled.
-
-#### Example — Zipkin provider + mesh-wide `Telemetry`
-
-1. Ensure your collector accepts Zipkin spans (e.g. Jaeger with port `9411`).
-1. Apply a [`ModuleConfig`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) for the `istio` module. **Telemetry API** for mesh metrics is enabled with [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled); for a **Telemetry API–centric** trace exporter (named extension provider + `Telemetry` below), turn off the module’s **classic** [`tracing.enabled`](configuration.html#parameters-tracing-enabled) path so the operator does not keep filling `defaultConfig.tracing.zipkin` while you switch to the provider-based flow:
+#### Example — Telemetry API bundle + bundled Zipkin/Jaeger collector
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -746,46 +738,25 @@ spec:
     telemetryAPI:
       enabled: true
     tracing:
-      enabled: false
+      enabled: true
+      sampling: 25
+      collector:
+        zipkin:
+          address: "jaeger-collector.observability.svc.cluster.local:9411"
 ```
 
-   The `istio` module does not yet expose `meshConfig.enableTracing` or `meshConfig.extensionProviders` as ModuleConfig `settings`. You still need to **merge** the trace exporter definition into the control-plane custom resource the module renders: for **Istio 1.25** (Sail) — `Istio` in `d8-istio`, under `spec.values.meshConfig`; for **older revisions** — `IstioOperator`, `spec.meshConfig`. Preserve the module-generated keys (root namespace, `main-access-log-format` provider, `defaultProviders` when Telemetry API metrics mode is on) and **append** another entry to `extensionProviders` plus the keys below — do not replace the whole `meshConfig` block.
+Roll out the Istio/`IstioOperator` manifests in `d8-istio`; confirm workloads pick up telemetry before blaming dashboards.
 
-```yaml
-# Merge into meshConfig (Istio CR / IstioOperator), together with existing module fields
-enableTracing: true
-extensionProviders:
-- name: jaeger-zipkin
-  zipkin:
-    service: jaeger-collector.observability.svc.cluster.local
-    port: 9411
-# When following this recipe, defaultConfig.tracing should not duplicate legacy zipkin config:
-defaultConfig:
-  tracing: {}
-```
+#### Kiali
 
-1. Apply tracing policy (root namespace `d8-istio` matches other module telemetry objects):
-
-```yaml
-apiVersion: telemetry.istio.io/v1alpha1
-kind: Telemetry
-metadata:
-  name: mesh-tracing-zipkin
-  namespace: d8-istio
-spec:
-  tracing:
-  - providers:
-    - name: jaeger-zipkin
-    randomSamplingPercentage: 10.0
-```
-
-Adjust `randomSamplingPercentage` (defaults in Istio are low; high values increase backend load).
+To see traces inside Kiali UI, configure [`tracing.kiali`](configuration.html#parameters-tracing-kiali) (Jaeger URL + cluster‑internal gRPC endpoint) whenever Kiali is enabled.
 
 #### Example — OTLP provider + mesh-wide `Telemetry`
 
 {% alert level="info" %}The Istio guide [Distributed tracing with OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (Collector layout, `meshConfig.extensionProviders.opentelemetry`, and related steps) matches **Istio version 1.25 and above**—the revision installed by default in current module releases. On **Istio 1.21** that upstream recipe and some YAML shapes are not applicable; use the Zipkin-based module [`tracing`](configuration.html#parameters-tracing) settings or the Zipkin extension-provider example above, or follow the docs for your installed revision.{% endalert %}
 
-After you deploy an OpenTelemetry-compatible Collector reachable from the mesh (see the task linked above), use the same [`ModuleConfig`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) pattern as for Zipkin (`telemetryAPI.enabled: true`, `tracing.enabled: false` when you rely on a named OTLP provider). Then **merge** the OTLP provider into `meshConfig` in the `Istio` / `IstioOperator` resource as for Zipkin:
+After you deploy an OpenTelemetry-compatible Collector reachable from the mesh (see the linked guide), **`telemetryAPI.enabled: true`** with **`tracing.enabled: false`** keeps Istio off the Zipkin-managed path so Envoy is not exporting twice via the bundled `deckhouse-tracing` provider. **Merge** the OTLP exporter into `/meshConfig/` on the Sail `Istio` CR (`spec.values.meshConfig`) or legacy `IstioOperator` (`spec.meshConfig`), augmenting—not replacing—the module-maintained defaults (`deckhouse-main-mesh`, Prometheus providers, stdout access-log provider):
+
 
 ```yaml
 # Merge into meshConfig (Istio CR / IstioOperator), together with existing module fields

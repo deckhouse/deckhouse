@@ -1,0 +1,27 @@
+{{- if (($.Values.istio.telemetryAPI | default dict).enabled) }}
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: deckhouse-main-mesh
+  namespace: d8-istio
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  accessLogging:
+  - disabled: false
+    providers:
+    - name: main-access-log-format
+  metrics:
+  - providers:
+    - name: prometheus
+{{- if $.Values.istio.tracing.enabled }}
+{{- with $.Values.istio.tracing.collector.zipkin }}
+{{- with .address }}
+  tracing:
+  - providers:
+    - name: deckhouse-tracing
+    randomSamplingPercentage: {{ $.Values.istio.tracing.sampling | default 1.0 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

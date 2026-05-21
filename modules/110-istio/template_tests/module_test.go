@@ -249,22 +249,58 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		It("does not create bundled Telemetry manifests when Telemetry API mode is disabled", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Telemetry", "d8-istio", "main-prometheus-metrics").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Telemetry", "d8-istio", "deckhouse-main-mesh").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting").Exists()).To(BeFalse())
 		})
 
-		It("creates bundled access log and Prometheus metrics Telemetry when Telemetry API mode is enabled", func() {
+		It("creates bundled mesh Telemetry when Telemetry API mode is enabled", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			al := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
-			Expect(al.Exists()).To(BeTrue())
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "deckhouse-main-mesh")
+			Expect(mesh.Exists()).To(BeTrue())
+			Expect(mesh.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("main-access-log-format"))
+			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
+		})
 
-			mt := f.KubernetesResource("Telemetry", "d8-istio", "main-prometheus-metrics")
-			Expect(mt.Exists()).To(BeTrue())
-			Expect(mt.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+		It("adds tracing to bundled mesh Telemetry and Zipkin extension provider when tracing uses collector.zipkin", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.ValuesSet("istio.tracing.enabled", true)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc:9411")
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "deckhouse-main-mesh")
+			Expect(mesh.Exists()).To(BeTrue())
+			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
+			Expect(mesh.Field("spec.tracing.0.randomSamplingPercentage").Num).To(Equal(float64(1)))
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders").Exists()).To(BeTrue())
+			foundZipkinEP := false
+			for _, ep := range istioV25.Field("spec.values.meshConfig.extensionProviders").Array() {
+				if ep.Get("name").String() == "deckhouse-tracing" {
+					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					foundZipkinEP = true
+				}
+			}
+			Expect(foundZipkinEP).To(BeTrue())
+			Expect(istioV25.Field("spec.values.meshConfig.defaultConfig.tracing").Exists()).To(BeFalse())
+
+			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
+			Expect(iopV21.Field("spec.meshConfig.defaultConfig.tracing").Exists()).To(BeFalse())
+			foundZipkinIOP := false
+			for _, ep := range iopV21.Field("spec.meshConfig.extensionProviders").Array() {
+				if ep.Get("name").String() == "deckhouse-tracing" {
+					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					foundZipkinIOP = true
+				}
+			}
+			Expect(foundZipkinIOP).To(BeTrue())
 		})
 
 		It("creates ingress-nginx span-disable Telemetry when ingress-nginx module is enabled", func() {

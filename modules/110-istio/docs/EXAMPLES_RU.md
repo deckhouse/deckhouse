@@ -655,8 +655,8 @@ annotations:
 
 | Режим | Поведение |
 |-------|-----------|
-| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **не** создаёт объекты `Telemetry` с именами `main-prometheus-metrics` и `main-access-log-format`. |
-| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены при включённом `telemetry.enabled`; модуль создаёт CR `Telemetry` `main-prometheus-metrics` (стандартные серии `istio_*` для Prometheus, Grafana и Kiali) и `main-access-log-format` (stdout access log через extension provider того же имени). Формат строки лога по-прежнему задаётся в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **не** создаёт mesh-wide объект `Telemetry` `deckhouse-main-mesh`. |
+| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены при включённом `telemetry.enabled`; модуль создаёт один объект **`Telemetry`** `deckhouse-main-mesh` (метрики Prometheus, stdout access log через провайдер `main-access-log-format`). При включённой трассировке адрес Zipkin задаётся в [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector); модуль регистрирует провайдер **`deckhouse-tracing`** и дополняет `deckhouse-main-mesh` блоком `spec.tracing`. Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
 
 ### Как включить режим Telemetry API
 
@@ -720,22 +720,14 @@ spec:
 
 ### Трассировка через Telemetry API
 
-Распределённая трассировка настраивается тем же ресурсом `Telemetry`, блок `spec.tracing`. Отправка записей трассировки (`span`) всегда идёт в **именованный extension provider** из `meshConfig.extensionProviders` (например, `Zipkin`, провайдер `OpenTelemetry` по протоколу `OTLP` или `SkyWalking`). Общая картина — в [обзоре трассировки Istio](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/overview/) и в задаче [Configure tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+[`tracing.collector`](configuration.html#parameters-tracing-collector) задаёт отправку трасс через протокол **Zipkin** (Jaeger принимает Zipkin ingestion, обычно порт `9411`):
 
-#### Связь с параметром `tracing` модуля `istio`
+- При **`telemetryAPI.enabled: false`** и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` используется **классический** путь: `meshConfig.defaultConfig.tracing.zipkin.address` заполняется из `collector.zipkin.address`.
+- При **`telemetryAPI.enabled: true`**, **`tracing.enabled: true`** и непустом [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) блок `defaultConfig.tracing.zipkin` **не создаётся**; модуль добавляет **`deckhouse-tracing`** в `/meshConfig/extensionProviders/` и продлевает объект **`Telemetry`** `deckhouse-main-mesh`, выставив `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) отображается в `randomSamplingPercentage`, по умолчанию `1.0` если не задавали sampling в конфигурации явно).
 
-При [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` модуль заполняет `meshConfig.defaultConfig.tracing` (endpoint Zipkin и sampling; для Jaeger обычно порт `9411`). Это **классический** путь инициализации в прокси.
+Прочие сценарии (OTLP, TLS, свой `name`, SkyWalking…) по-прежнему требуют собственных дописок к `/meshConfig/` и отдельных `Telemetry`; Istio аккуратно их мержит. См. [официальный гид](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
-**Нативный** вариант Telemetry API: провайдер в `extensionProviders` и выбор его в `Telemetry` (часто с «пустым» `defaultConfig.tracing` в пользу провайдера), как в официальной задаче. Оба подхода можно комбинировать на время миграции; не дублируйте без необходимости отправку в один и тот же бэкенд двумя путями.
-
-#### Kiali
-
-Для отображения трасс в UI по-прежнему задайте [`tracing.kiali`](configuration.html#parameters-tracing-kiali) (URL Jaeger и gRPC endpoint из кластера), если Kiali включён.
-
-#### Пример — провайдер Zipkin и mesh-wide `Telemetry`
-
-1. Убедитесь, что коллектор принимает Zipkin (например, Jaeger, порт `9411`).
-1. Задайте параметры модуля через [`ModuleConfig`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/module-config.html) ресурса `istio`. Режим **Telemetry API** для метрик включается параметром [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled); для сценария с **именованным** провайдером трассировки и ресурсом `Telemetry` ниже отключите **классический** путь [`tracing.enabled`](configuration.html#parameters-tracing-enabled), чтобы модуль не продолжал заполнять `defaultConfig.tracing.zipkin` параллельно провайдеру:
+#### Пример — Telemetry API + Jaeger через Zipkin
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -749,43 +741,25 @@ spec:
     telemetryAPI:
       enabled: true
     tracing:
-      enabled: false
+      enabled: true
+      sampling: 25
+      collector:
+        zipkin:
+          address: "jaeger-collector.observability.svc.cluster.local:9411"
 ```
 
-   Отдельных полей `settings` для `meshConfig.enableTracing` и `meshConfig.extensionProviders` в модуле пока нет. Описание экспортёра трассировки нужно **дополнительно внести** в CR `Istio` или `IstioOperator`, который формирует модуль для плоскости управления (**control plane**): для **Istio 1.25** (Sail) — CR `Istio` в `d8-istio`, `spec.values.meshConfig`; для **старых ревизий** — `IstioOperator`, `spec.meshConfig`. Сохраните уже сгенерированные модулем поля и **допишите** ещё один элемент в `extensionProviders` и ключи ниже — не заменяя весь `meshConfig`.
+Дождитесь применения CR `Istio`/`IstioOperator` из `d8-istio`; при проблемах с дашбордами перегенерируйте трафик и перепроверьте сайдкары.
 
-```yaml
-# Объединить с meshConfig (CR Istio / IstioOperator), вместе с полями модуля
-enableTracing: true
-extensionProviders:
-- name: jaeger-zipkin
-  zipkin:
-    service: jaeger-collector.observability.svc.cluster.local
-    port: 9411
-defaultConfig:
-  tracing: {}
-```
+#### Kiali
 
-1. Политика трассировки в корневом пространстве имён mesh (как у прочих `Telemetry`, создаваемых модулем):
-
-```yaml
-apiVersion: telemetry.istio.io/v1alpha1
-kind: Telemetry
-metadata:
-  name: mesh-tracing-zipkin
-  namespace: d8-istio
-spec:
-  tracing:
-  - providers:
-    - name: jaeger-zipkin
-    randomSamplingPercentage: 10.0
-```
+Для UI в Kiali задайте [`tracing.kiali`](configuration.html#parameters-tracing-kiali) (Jaeger UI + корректный gRPC endpoint для запросов Kiali из кластера).
 
 #### Пример — OTLP и mesh-wide `Telemetry`
 
 {% alert level="info" %}Задача Istio [Распределённая трассировка с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) (развёртывание Collector, фрагмент `meshConfig.extensionProviders.opentelemetry` и смежные шаги) рассчитана на **Istio версии 1.25 и выше** — ту ревизию, которая по умолчанию в актуальных релизах модуля. На **Istio 1.21** эта инструкция и часть YAML могут быть недоступны или отличаться; используйте классический параметр модуля [`tracing`](configuration.html#parameters-tracing) / пример с Zipkin-провайдером выше либо документацию для вашей версии.{% endalert %}
 
-После развёртывания коллектора трассировки (см. ссылку выше), доступного из mesh, задайте модуль тем же примером `ModuleConfig`, что и для Zipkin (`telemetryAPI.enabled: true`, `tracing.enabled: false`, если опираетесь на именованный OTLP-провайдер). Затем **объедините** OTLP-провайдер с `meshConfig` в ресурсе `Istio` / `IstioOperator`, как для Zipkin:
+После развёртывания OpenTelemetry Collector, когда нужен именно OTLP, комбинируйте **`telemetryAPI.enabled: true`** с **`tracing.enabled: false`** — чтобы не экспортировать Zipkin второй раз через встроенный `deckhouse-tracing`. Отдельно **вмержите** OTLP-провайдер в `meshConfig`, дополняя (а не удаляя целиком) то, что рендерит модуль для `deckhouse-main-mesh` и журналов доступа:
+
 
 ```yaml
 # Объединить с meshConfig (CR Istio / IstioOperator), вместе с полями модуля
