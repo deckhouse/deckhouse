@@ -57,6 +57,7 @@ func newKubeClientErrorProvider(msg string) *kubeClientErrorProvider {
 		msg: msg,
 	}
 }
+
 func (p *kubeClientErrorProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return nil, fmt.Errorf("Unable to get kube client: '%s'", p.msg)
 }

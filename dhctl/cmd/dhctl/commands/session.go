@@ -95,7 +95,7 @@ func localKubeConfig(apiServerURL string) error {
 	}
 
 	kubeconfigPath := filepath.Join(kubeconfigDir, ".kube", "config")
-	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create .kube directory: %w", err)
 	}
 

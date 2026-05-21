@@ -51,7 +51,7 @@ var emptySecret = &v1.Secret{
 
 func SecretEdit(
 	ctx context.Context,
-	kubeCl *client.KubernetesClient, name string, namespace string, secret string, dataKey string,
+	kubeCl *client.KubernetesClient, name, namespace, secret, dataKey string,
 	labels map[string]string,
 	dirConfig *directoryconfig.DirectoryConfig,
 	editOpts EditOptions,

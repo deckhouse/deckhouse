@@ -135,7 +135,7 @@ func ValidateScriptFile(ctx context.Context, path string) error {
 
 	perm := info.Mode().Perm()
 
-	if perm&0111 != 0111 || perm&0444 != 0444 {
+	if perm&0o111 != 0o111 || perm&0o444 != 0o444 {
 		return fmt.Errorf("Post bootstrap script should be readable and executable for user group and other (-r-xr-xr-x)")
 	}
 

@@ -83,8 +83,10 @@ type KubeClientProviderWithCtx interface {
 	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
 }
 
-var _ KubeClientProvider = &SimpleKubeClientGetter{}
-var _ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+var (
+	_ KubeClientProvider        = &SimpleKubeClientGetter{}
+	_ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+)
 
 type SimpleKubeClientGetter struct {
 	kubeCl *client.KubernetesClient

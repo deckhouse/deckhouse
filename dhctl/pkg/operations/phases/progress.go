@@ -343,7 +343,7 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, 
 
 func WriteProgress(path string) OnProgressFunc {
 	return func(progress Progress) error {
-		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0644)
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0o644)
 		if err != nil {
 			return err
 		}

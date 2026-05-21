@@ -21,12 +21,13 @@
 package dhctl
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	structpb "google.golang.org/protobuf/types/known/structpb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -610,20 +611,23 @@ func file_commander_detach_proto_rawDescGZIP() []byte {
 	return file_commander_detach_proto_rawDescData
 }
 
-var file_commander_detach_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_commander_detach_proto_goTypes = []interface{}{
-	(*CommanderDetachRequest)(nil),      // 0: dhctl.CommanderDetachRequest
-	(*CommanderDetachResponse)(nil),     // 1: dhctl.CommanderDetachResponse
-	(*CommanderDetachStart)(nil),        // 2: dhctl.CommanderDetachStart
-	(*CommanderDetachCancel)(nil),       // 3: dhctl.CommanderDetachCancel
-	(*CommanderDetachStartOptions)(nil), // 4: dhctl.CommanderDetachStartOptions
-	(*CommanderDetachResult)(nil),       // 5: dhctl.CommanderDetachResult
-	(*Logs)(nil),                        // 6: dhctl.Logs
-	(*Progress)(nil),                    // 7: dhctl.Progress
-	(*structpb.Struct)(nil),             // 8: google.protobuf.Struct
-	(*durationpb.Duration)(nil),         // 9: google.protobuf.Duration
-	(*OperationOptions)(nil),            // 10: dhctl.OperationOptions
-}
+var (
+	file_commander_detach_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+	file_commander_detach_proto_goTypes  = []interface{}{
+		(*CommanderDetachRequest)(nil),      // 0: dhctl.CommanderDetachRequest
+		(*CommanderDetachResponse)(nil),     // 1: dhctl.CommanderDetachResponse
+		(*CommanderDetachStart)(nil),        // 2: dhctl.CommanderDetachStart
+		(*CommanderDetachCancel)(nil),       // 3: dhctl.CommanderDetachCancel
+		(*CommanderDetachStartOptions)(nil), // 4: dhctl.CommanderDetachStartOptions
+		(*CommanderDetachResult)(nil),       // 5: dhctl.CommanderDetachResult
+		(*Logs)(nil),                        // 6: dhctl.Logs
+		(*Progress)(nil),                    // 7: dhctl.Progress
+		(*structpb.Struct)(nil),             // 8: google.protobuf.Struct
+		(*durationpb.Duration)(nil),         // 9: google.protobuf.Duration
+		(*OperationOptions)(nil),            // 10: dhctl.OperationOptions
+	}
+)
+
 var file_commander_detach_proto_depIdxs = []int32{
 	2,  // 0: dhctl.CommanderDetachRequest.start:type_name -> dhctl.CommanderDetachStart
 	3,  // 1: dhctl.CommanderDetachRequest.cancel:type_name -> dhctl.CommanderDetachCancel

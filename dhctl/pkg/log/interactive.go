@@ -410,7 +410,6 @@ func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{
 	} else {
 		i.logger.DebugFWithoutLn(format, a...)
 	}
-
 }
 
 func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
@@ -440,6 +439,7 @@ func (i *InteractiveLoggerWrapper) Fail(l string) {
 		i.logger.Fail(l)
 	}
 }
+
 func (i *InteractiveLoggerWrapper) FailRetry(l string) {
 	if !i.interactive {
 		i.logger.FailRetry(l)

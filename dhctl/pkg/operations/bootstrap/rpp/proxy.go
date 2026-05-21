@@ -211,7 +211,6 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		tlsutils.CertKeyTypeRSA,
 		oneDay,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %v", err)
 	}
@@ -220,7 +219,6 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{*cert},
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to listen registry proxy socket: %v", err)
 	}

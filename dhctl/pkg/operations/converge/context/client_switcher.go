@@ -363,7 +363,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 			state:    stateBytes,
 			settings: settings,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -411,7 +410,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	}
 
 	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
-
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
