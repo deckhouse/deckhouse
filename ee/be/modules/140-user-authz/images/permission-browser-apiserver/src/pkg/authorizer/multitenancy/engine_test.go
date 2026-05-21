@@ -7,6 +7,8 @@ package multitenancy
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -744,6 +746,311 @@ func TestEngine_GetNamespaceAccessType(t *testing.T) {
 	}
 }
 
+// writeConfigJSON is a small helper for tests that exercise renewDirectories
+// with hand-crafted JSON: it writes the supplied raw JSON into a temp file
+// and returns the path. We do not reuse coverage_test.go's writeConfig because
+// that helper requires a fully-typed UserAuthzConfig, which is awkward for
+// table-driven cases that mix CARs and ARs.
+func writeConfigJSON(t *testing.T, body string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+	return path
+}
+
+// TestEngine_RenewDirectories_AuthorizationRules verifies that AuthorizationRules
+// (namespaced) are parsed from config.json and translated into per-namespace
+// grants in the engine's directory. This is the regression test for the
+// deny-by-default bug where AR-only users lost access to their namespaces.
+func TestEngine_RenewDirectories_AuthorizationRules(t *testing.T) {
+	tests := []struct {
+		name             string
+		config           string
+		userInfo         *mockUserInfo
+		namespace        string
+		expectedDecision authorizer.Decision
+		expectedAllowed  bool
+	}{
+		{
+			name: "AR-only user gets access to AR's namespace",
+			config: `{
+				"crds": [],
+				"ars": [
+					{
+						"name": "ar0",
+						"namespace": "team-foo",
+						"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "alice", groups: []string{"developers"}},
+			namespace:        "team-foo",
+			expectedDecision: authorizer.DecisionNoOpinion,
+			expectedAllowed:  true,
+		},
+		{
+			name: "AR-only user is still denied outside AR's namespace",
+			config: `{
+				"crds": [],
+				"ars": [
+					{
+						"name": "ar0",
+						"namespace": "team-foo",
+						"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "alice", groups: []string{"developers"}},
+			namespace:        "team-bar",
+			expectedDecision: authorizer.DecisionDeny,
+			expectedAllowed:  false,
+		},
+		{
+			name: "AR with User subject grants namespace access",
+			config: `{
+				"crds": [],
+				"ars": [
+					{
+						"name": "ar0",
+						"namespace": "team-foo",
+						"spec": {"subjects": [{"kind": "User", "name": "alice"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "alice"},
+			namespace:        "team-foo",
+			expectedAllowed:  true,
+			expectedDecision: authorizer.DecisionNoOpinion,
+		},
+		{
+			name: "AR with ServiceAccount subject defaults SA namespace to AR's namespace",
+			config: `{
+				"crds": [],
+				"ars": [
+					{
+						"name": "ar0",
+						"namespace": "team-foo",
+						"spec": {"subjects": [{"kind": "ServiceAccount", "name": "my-sa"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "system:serviceaccount:team-foo:my-sa"},
+			namespace:        "team-foo",
+			expectedAllowed:  true,
+			expectedDecision: authorizer.DecisionNoOpinion,
+		},
+		{
+			name: "AR with explicit SA namespace is honoured",
+			config: `{
+				"crds": [],
+				"ars": [
+					{
+						"name": "ar0",
+						"namespace": "team-foo",
+						"spec": {"subjects": [{"kind": "ServiceAccount", "name": "my-sa", "namespace": "other-ns"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "system:serviceaccount:other-ns:my-sa"},
+			namespace:        "team-foo",
+			expectedAllowed:  true,
+			expectedDecision: authorizer.DecisionNoOpinion,
+		},
+		{
+			name: "AR in a system namespace grants access only to that exact namespace",
+			config: `{
+				"crds": [],
+				"ars": [
+					{
+						"name": "ar-sys",
+						"namespace": "d8-monitoring",
+						"spec": {"subjects": [{"kind": "User", "name": "alice"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "alice"},
+			namespace:        "d8-monitoring",
+			expectedAllowed:  true,
+			expectedDecision: authorizer.DecisionNoOpinion,
+		},
+		{
+			name: "AR + CAR: namespaces are unioned",
+			config: `{
+				"crds": [
+					{
+						"name": "car0",
+						"spec": {
+							"limitNamespaces": ["ns-a"],
+							"subjects": [{"kind": "Group", "name": "developers"}]
+						}
+					}
+				],
+				"ars": [
+					{
+						"name": "ar0",
+						"namespace": "ns-b",
+						"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+					}
+				]
+			}`,
+			userInfo:         &mockUserInfo{name: "alice", groups: []string{"developers"}},
+			namespace:        "ns-b",
+			expectedAllowed:  true,
+			expectedDecision: authorizer.DecisionNoOpinion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &Engine{
+				configPath: writeConfigJSON(t, tt.config),
+				directory:  map[string]map[string]DirectoryEntry{},
+			}
+			e.renewDirectories()
+
+			assert.Equal(t, tt.expectedAllowed, e.IsNamespaceAllowed(tt.userInfo, tt.namespace),
+				"IsNamespaceAllowed: namespace=%s", tt.namespace)
+
+			attrs := &mockAttrs{
+				userInfo:   tt.userInfo,
+				namespace:  tt.namespace,
+				resource:   "pods",
+				verb:       "get",
+				isResource: true,
+			}
+			decision, _, err := e.Authorize(context.Background(), attrs)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedDecision, decision,
+				"Authorize: namespace=%s", tt.namespace)
+		})
+	}
+}
+
+// CAR: limitNamespaces = ["d8-.*", "team-.*"], allowAccessToSystemNamespaces = false
+// AR:  namespace       = "d8-monitoring"
+func TestEngine_RenewDirectories_AR_DoesNotLiftSystemGateForCAR(t *testing.T) {
+	config := `{
+		"crds": [
+			{
+				"name": "car-d8-wide",
+				"spec": {
+					"limitNamespaces": ["d8-.*", "team-.*"],
+					"subjects": [{"kind": "Group", "name": "developers"}]
+				}
+			}
+		],
+		"ars": [
+			{
+				"name": "ar-monitoring",
+				"namespace": "d8-monitoring",
+				"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+			}
+		]
+	}`
+
+	e := &Engine{
+		configPath: writeConfigJSON(t, config),
+		directory:  map[string]map[string]DirectoryEntry{},
+	}
+	e.renewDirectories()
+
+	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
+
+	// CAR's legitimate non-system grant must keep working.
+	assert.True(t, e.IsNamespaceAllowed(userInfo, "team-foo"),
+		"non-system namespace matched by CAR must remain accessible")
+
+	// AR explicitly punches a hole only for its own system namespace.
+	assert.True(t, e.IsNamespaceAllowed(userInfo, "d8-monitoring"),
+		"AR-granted system namespace must be allowed")
+
+	// The priv-esc the reviewer flagged: every other d8-* (and any system NS)
+	// matched by CAR's wildcard must stay behind the system gate.
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "d8-system"),
+		"other d8-* system namespaces matched by CAR must NOT be unlocked by the AR")
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "kube-system"),
+		"unrelated system namespaces must remain denied")
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "default"),
+		"`default` is a system namespace and must remain denied")
+
+	// Sanity check: namespaces matched by neither CAR nor AR are denied.
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "random-ns"),
+		"namespaces outside CAR and AR scope must be denied")
+}
+
+// TestEngine_RenewDirectories_NamespaceRegexMetacharsAreEscaped is a
+// defense-in-depth check: even if a string with regex metacharacters slipped
+// through Kubernetes' DNS-1123 validation into config.json, the engine must
+// match it literally rather than as a wildcard pattern.
+func TestEngine_RenewDirectories_NamespaceRegexMetacharsAreEscaped(t *testing.T) {
+	// "te.am" contains '.' which is a regex wildcard; the literal namespace
+	// "teXam" must NOT be allowed by an AR scoped to "te.am".
+	config := `{
+		"crds": [],
+		"ars": [
+			{
+				"name": "ar-meta",
+				"namespace": "te.am",
+				"spec": {"subjects": [{"kind": "User", "name": "alice"}]}
+			}
+		]
+	}`
+
+	e := &Engine{
+		configPath: writeConfigJSON(t, config),
+		directory:  map[string]map[string]DirectoryEntry{},
+	}
+	e.renewDirectories()
+
+	userInfo := &mockUserInfo{name: "alice"}
+
+	assert.True(t, e.IsNamespaceAllowed(userInfo, "te.am"),
+		"literal namespace must still match")
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "teXam"),
+		"regex metacharacters must be escaped: 'te.am' must not match 'teXam'")
+	assert.False(t, e.IsNamespaceAllowed(userInfo, "team"),
+		"regex metacharacters must be escaped: 'te.am' must not match 'team'")
+}
+
+// TestEngine_RenewDirectories_AROnlyUser_ResolverScenario simulates the resolver's
+// path for the accessiblenamespaces API: the user has only ARs and the engine
+// must classify them as FilteredAccess (not NoNamespacesAllowed) so that the
+// AR-derived RoleBinding candidates pass through.
+func TestEngine_RenewDirectories_AROnlyUser_ResolverScenario(t *testing.T) {
+	config := `{
+		"crds": [],
+		"ars": [
+			{
+				"name": "ar0",
+				"namespace": "team-foo",
+				"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+			},
+			{
+				"name": "ar1",
+				"namespace": "team-bar",
+				"spec": {"subjects": [{"kind": "Group", "name": "developers"}]}
+			}
+		]
+	}`
+
+	e := &Engine{
+		configPath: writeConfigJSON(t, config),
+		directory:  map[string]map[string]DirectoryEntry{},
+	}
+	e.renewDirectories()
+
+	userInfo := &mockUserInfo{name: "alice", groups: []string{"developers"}}
+
+	accessType, filter := e.GetNamespaceAccessType(userInfo)
+	require.Equal(t, FilteredAccess, accessType, "AR-only user must be FilteredAccess, not NoNamespacesAllowed")
+	require.NotNil(t, filter, "filter must be returned for FilteredAccess")
+
+	assert.True(t, e.IsNamespaceAllowedWithFilter("team-foo", filter), "AR namespace must be allowed")
+	assert.True(t, e.IsNamespaceAllowedWithFilter("team-bar", filter), "second AR namespace must be allowed")
+	assert.False(t, e.IsNamespaceAllowedWithFilter("team-baz", filter), "namespaces outside ARs must be denied")
+}
+
 func TestEngine_GetAllowedNamespaces(t *testing.T) {
 	e := &Engine{
 		directory: map[string]map[string]DirectoryEntry{
@@ -765,45 +1072,45 @@ func TestEngine_GetAllowedNamespaces(t *testing.T) {
 	}
 
 	tests := []struct {
-		name               string
-		userInfo           *mockUserInfo
-		expectedNamespaces []string
+		name                    string
+		userInfo                *mockUserInfo
+		expectedNamespaces      []string
 		expectedHasRestrictions bool
 	}{
 		{
-			name:               "nil user - all allowed",
-			userInfo:           nil,
-			expectedNamespaces: nil,
+			name:                    "nil user - all allowed",
+			userInfo:                nil,
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 		{
-			name:               "system:masters without CAR - all allowed (privileged bypass)",
-			userInfo:           &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
-			expectedNamespaces: nil,
+			name:                    "system:masters without CAR - all allowed (privileged bypass)",
+			userInfo:                &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 		{
-			name:               "kubeadm:cluster-admins without CAR - all allowed (privileged bypass)",
-			userInfo:           &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
-			expectedNamespaces: nil,
+			name:                    "kubeadm:cluster-admins without CAR - all allowed (privileged bypass)",
+			userInfo:                &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 		{
-			name:               "unknown user without CAR - empty list (deny-by-default)",
-			userInfo:           &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
-			expectedNamespaces: []string{},
+			name:                    "unknown user without CAR - empty list (deny-by-default)",
+			userInfo:                &mockUserInfo{name: "unknown-user", groups: []string{"system:authenticated"}},
+			expectedNamespaces:      []string{},
 			expectedHasRestrictions: true,
 		},
 		{
-			name:               "restricted user with CAR - has restrictions",
-			userInfo:           &mockUserInfo{name: "restricted-user"},
-			expectedNamespaces: nil,
+			name:                    "restricted user with CAR - has restrictions",
+			userInfo:                &mockUserInfo{name: "restricted-user"},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: true,
 		},
 		{
-			name:               "unrestricted user with CAR (no filters) - all allowed",
-			userInfo:           &mockUserInfo{name: "unrestricted-user"},
-			expectedNamespaces: nil,
+			name:                    "unrestricted user with CAR (no filters) - all allowed",
+			userInfo:                &mockUserInfo{name: "unrestricted-user"},
+			expectedNamespaces:      nil,
 			expectedHasRestrictions: false,
 		},
 	}

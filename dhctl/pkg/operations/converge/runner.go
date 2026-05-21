@@ -102,7 +102,6 @@ func (r *runner) RunConverge(ctx *context.Context) error {
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.converge(ctx)
 		})
-
 		if err != nil {
 			return fmt.Errorf("failed to start lock runner: %w", err)
 		}
@@ -118,7 +117,6 @@ func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformSta
 		err := r.lockRunner.Run(ctx.Ctx(), func() error {
 			return r.convergeMigration(ctx, checkHasTerraformStateBeforeMigration)
 		})
-
 		if err != nil {
 			return fmt.Errorf("failed to start lock runner: %w", err)
 		}
@@ -165,7 +163,6 @@ func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrast
 		nodesState, err = loadNodesState(ctx)
 		return err
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +342,6 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		},
 			false,
 		)
-
 		if err != nil {
 			return err
 		}
@@ -513,7 +509,6 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			ClusterState:                     clusterState,
 			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{infrastructurestate.NewClusterStateSaver(ctx)},
 		}, ctx.ChangesSettings().AutomaticSettings)
-
 		if err != nil {
 			return err
 		}

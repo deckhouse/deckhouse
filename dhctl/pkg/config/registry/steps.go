@@ -174,7 +174,6 @@ func getStateSecret(ctx context.Context, kubeClient client.KubeClient) ([]metav1
 		CoreV1().
 		Secrets(secretsNamespace).
 		Get(ctx, stateSecretName, metav1.GetOptions{})
-
 	if err != nil {
 		return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
 	}
@@ -207,7 +206,6 @@ func getInitSecretStatus(ctx context.Context, kubeClient client.KubeClient) (boo
 		CoreV1().
 		Secrets(secretsNamespace).
 		Get(ctx, initSecretName, metav1.GetOptions{})
-
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, false, nil

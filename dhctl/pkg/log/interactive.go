@@ -18,9 +18,8 @@ import (
 	"bytes"
 	"context"
 
-	external "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
+	external "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 type InteractiveProcessLogger struct {
@@ -34,20 +33,16 @@ type InteractiveProcessLogger struct {
 func (i *InteractiveProcessLogger) LogProcessStart(name string) {
 	if !i.interactive {
 		i.logger.ProcessStart(name)
-	} else {
-		if i.pbStarted {
-			i.phaseChan <- name
-		}
+	} else if i.pbStarted {
+		i.phaseChan <- name
 	}
 }
 
 func (i *InteractiveProcessLogger) ProcessStart(name string) {
 	if !i.interactive {
 		i.logger.ProcessStart(name)
-	} else {
-		if i.pbStarted {
-			i.phaseChan <- name
-		}
+	} else if i.pbStarted {
+		i.phaseChan <- name
 	}
 }
 
@@ -410,7 +405,6 @@ func (i *InteractiveLoggerWrapper) WarnFWithoutLn(format string, a ...interface{
 	} else {
 		i.logger.DebugFWithoutLn(format, a...)
 	}
-
 }
 
 func (i *InteractiveLoggerWrapper) WarnLn(a ...interface{}) {
@@ -440,6 +434,7 @@ func (i *InteractiveLoggerWrapper) Fail(l string) {
 		i.logger.Fail(l)
 	}
 }
+
 func (i *InteractiveLoggerWrapper) FailRetry(l string) {
 	if !i.interactive {
 		i.logger.FailRetry(l)

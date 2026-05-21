@@ -23,6 +23,10 @@ spec:
           type: object
           description: |
             Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+
+            For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
+            the user's Dex OfflineSessions and RefreshToken objects. This terminates active
+            offline sessions and requires the user to authenticate again.
           required:
             - spec
           properties:
@@ -109,6 +113,10 @@ spec:
           type: object
           description: |
             Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+
+            For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
+            the user's Dex OfflineSessions and RefreshToken objects. This terminates active
+            offline sessions and requires the user to authenticate again.
           required:
             - spec
           properties:

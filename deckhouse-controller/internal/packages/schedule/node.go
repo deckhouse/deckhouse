@@ -48,7 +48,7 @@ type Constraints struct {
 	Order        Order                 // Scheduling priority; lower values run first.
 	Kubernetes   *semver.Constraints   // Kubernetes version constraint (e.g., ">=1.21")
 	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
-	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name.
+	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and checker inputs.
 }
 
 // Dependency describes a requirement on another package, with an optional
@@ -66,74 +66,33 @@ type Order uint
 // used to evaluate eligibility on each scheduling pass.
 type node struct {
 	name    string          // Unique package name; also used as the graph vertex key.
-	version *semver.Version // Current installed version; used by dependency checkers of followers.
+	version *semver.Version // Current installed version; used by dependency checkers of dependents.
 
 	state nodeState // Lifecycle phase: idle → scheduled → active.
 	order Order     // Scheduling priority; lower values run before higher ones.
 
 	status checker.Result // Last computed enabled/disabled result from the checker chain.
 
-	followees    map[string]struct{}   // Packages this node waits for before it can be scheduled.
-	followers    map[string]struct{}   // Packages that are waiting on this node to become active.
-	dependencies map[string]Dependency // Declared dependency constraints (version bounds, optional flag).
+	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and checker inputs.
 
 	checkers []checker.Checker // Ordered list of checkers to evaluate
 }
 
-// addNode creates a node from a Package, wires followee/follower edges in both
-// directions, attaches version/condition/dependency checkers, and inserts the
-// node into the graph. It does NOT trigger a scheduling pass — the caller is
-// responsible for that.
+// addNode creates a node from a Package, attaches the checker chain, and
+// inserts the node into the graph. It does NOT trigger a scheduling pass —
+// the caller is responsible for that.
 //
-// If a node with the same name already exists (version update), its stale
-// reverse edges are cleaned up before the new node is inserted. This prevents
-// old followees from keeping the package as a follower after its constraints change.
+// Ordering is derived from n.dependencies by topoSort; enable state is
+// computed by the checker chain.
 func (s *Scheduler) addNode(pkg Package) {
-	// Clean up stale reverse edges from the previous node (if any).
-	// Without this, a dependency dropped in the new version would still
-	// hold a followers["name"] reference and spuriously trigger this node.
-	if old, ok := s.nodes[pkg.GetName()]; ok {
-		for dep := range old.followees {
-			if parent, ok := s.nodes[dep]; ok {
-				delete(parent.followers, old.name)
-			}
-		}
-	}
+	constraints := pkg.GetConstraints()
 
 	n := &node{
 		name:         pkg.GetName(),
 		version:      pkg.GetVersion(),
 		state:        nodeStateIdle,
-		followees:    make(map[string]struct{}),
-		followers:    make(map[string]struct{}),
-		dependencies: maps.Clone(pkg.GetConstraints().Dependencies),
-	}
-
-	constraints := pkg.GetConstraints()
-
-	n.order = constraints.Order
-
-	for dep := range constraints.Dependencies {
-		n.followees[dep] = struct{}{}
-
-		if parent, ok := s.nodes[dep]; ok {
-			parent.followers[n.name] = struct{}{}
-		}
-	}
-
-	if n.name != packageGlobal {
-		n.followees[packageGlobal] = struct{}{}
-
-		// all packages should be subscribed to global
-		if global, ok := s.nodes[packageGlobal]; ok {
-			global.followers[n.name] = struct{}{}
-		}
-	}
-
-	for _, existing := range s.nodes {
-		if _, ok := existing.followees[n.name]; ok {
-			n.followers[existing.name] = struct{}{}
-		}
+		order:        constraints.Order,
+		dependencies: maps.Clone(constraints.Dependencies),
 	}
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
@@ -149,7 +108,7 @@ func (s *Scheduler) addNode(pkg Package) {
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
-		deps := make(map[string]dependency.Dependency)
+		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
 				Constraint: dep.Constraint,

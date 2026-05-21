@@ -63,7 +63,10 @@ func (m *MetaConfig) controlPlaneManagerSettings() (map[string]interface{}, erro
 	return out, nil
 }
 
-func parseResourceRequests(rr map[string]interface{}) (milliCPU, memoryBytes int64, err error) {
+func parseResourceRequests(rr map[string]interface{}) (int64, int64, error) {
+	var milliCPU int64
+	var memoryBytes int64
+
 	if cpu, _ := rr["cpu"].(string); cpu != "" {
 		q, e := resource.ParseQuantity(cpu)
 		if e != nil {

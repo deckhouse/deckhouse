@@ -98,7 +98,7 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 	return c.check(ctx, cloudAPIConfig, proxyURL)
 }
 
-func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudApiConfig, proxyURL *url.URL) error {
+func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudAPIConfig, proxyURL *url.URL) error {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
@@ -112,7 +112,7 @@ func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudApiCo
 	return nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
+func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudAPIConfig, proxyURL *url.URL) (*http.Response, error) {
 	cloudAPIUrlString := cloudAPIConfig.URL.String()
 	req, err := http.NewRequestWithContext(ctx, method, cloudAPIUrlString, nil)
 	if err != nil {
@@ -120,13 +120,13 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	}
 
 	var client *http.Client
-	if proxyUrl == nil {
+	if proxyURL == nil {
 		client, err = buildSSHTunnelHTTPClient(cloudAPIConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build HTTP client: %w", err)
 		}
 	} else {
-		client = utils.BuildHTTPClientWithLocalhostProxy(proxyUrl)
+		client = utils.BuildHTTPClientWithLocalhostProxy(proxyURL)
 	}
 
 	resp, err := client.Do(req)
@@ -136,7 +136,7 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	return resp, nil
 }
 
-func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client, error) {
+func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudAPIConfig) (*http.Client, error) {
 	tlsConfig := &tls.Config{
 		ServerName: cloudAPIConfig.URL.Hostname(),
 	}
@@ -172,7 +172,7 @@ func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client,
 	return client, nil
 }
 
-func getCloudAPIConfig(meta *config.MetaConfig) (*cca.CloudApiConfig, error) {
+func getCloudAPIConfig(meta *config.MetaConfig) (*cca.CloudAPIConfig, error) {
 	if meta == nil {
 		return nil, nil
 	}
@@ -189,7 +189,7 @@ func getCloudAPIConfig(meta *config.MetaConfig) (*cca.CloudApiConfig, error) {
 	return configProvider(providerConfig)
 }
 
-var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudApiConfig, error){
+var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudAPIConfig, error){
 	"openstack": cca.HandleOpenStackProvider,
 	"vsphere":   cca.HandleVSphereProvider,
 }

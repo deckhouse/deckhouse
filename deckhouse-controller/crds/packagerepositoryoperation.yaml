@@ -60,6 +60,8 @@ spec:
                 type: string
               type:
                 description: Type of operation to perform.
+                enum:
+                - Update
                 type: string
               update:
                 description: Configuration for update operations.
