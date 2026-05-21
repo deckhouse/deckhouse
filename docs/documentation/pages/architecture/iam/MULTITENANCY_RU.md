@@ -6,7 +6,7 @@ search: мультитенантность, ProjectTemplate, Project, изоля
 description: Как устроена мультитенантность в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) позволяет создавать изолированные проекты в Deckhouse Kubernetes Platform (DKP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных пространств имён.
+Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) позволяет создавать изолированные проекты в Deckhouse Kubernetes Platform (DKP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных неймспейсов.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/multitenancy-manager/).
 
@@ -66,7 +66,7 @@ description: Как устроена мультитенантность в Deckh
 
   - управление кастомными ресурсами Project и ProjectTemplate;
   - валидация кастомных ресурсов Project и ProjectTemplate;
-  - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано `.spec.settings.allowNamespacesWithoutProjects=false`;
+  - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects);
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
 
    > **Внимание.** Multitenancy-manager имеет права `cluster-admin`, что позволяет создавать любые объекты, описанные в ресурсе ProjectTemplate.
