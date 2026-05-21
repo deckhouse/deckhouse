@@ -76,6 +76,39 @@ func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client
 	}
 }
 
+type InstallStatus struct {
+	Name      string
+	raw       string
+	Installed bool
+}
+
+func (c *Client) Classify(packages []string) ([]InstallStatus, error) {
+	refs, err := c.newPackageRefs(packages)
+	if err != nil {
+		return nil, err
+	}
+
+	statuses := make([]InstallStatus, 0, len(refs))
+	for _, ref := range refs {
+		installed, err := c.isPackageInstalled(ref)
+		if err != nil {
+			return nil, err
+		}
+		statuses = append(statuses, InstallStatus{
+			Name:      ref.name,
+			raw:       ref.raw,
+			Installed: installed,
+		})
+	}
+	return statuses, nil
+}
+
+func (c *Client) UpdateAuth(endpoints []string, token string) {
+	c.cfg.Endpoints = endpoints
+	c.cfg.Token = token
+	c.httpClient = newHTTPClient(c.cfg)
+}
+
 func installWorkerCount() int {
 	workers := runtime.NumCPU()
 	if workers < 1 {
@@ -101,6 +134,24 @@ func (c *Client) InstallAll(ctx context.Context, args []string) error {
 	}
 
 	return c.runAll(ctx, refs, c.installPackage)
+}
+
+func (c *Client) InstallMissing(ctx context.Context, statuses []InstallStatus) error {
+	missing := make([]packageRef, 0, len(statuses))
+	for _, s := range statuses {
+		if s.Installed {
+			if err := c.writeResult(resultSkipped, s.Name); err != nil {
+				return err
+			}
+			continue
+		}
+		ref, err := c.newPackageRef(s.raw)
+		if err != nil {
+			return err
+		}
+		missing = append(missing, ref)
+	}
+	return c.runAll(ctx, missing, c.installPackage)
 }
 
 func (c *Client) runAll(ctx context.Context, refs []packageRef, action func(context.Context, packageRef) error) error {

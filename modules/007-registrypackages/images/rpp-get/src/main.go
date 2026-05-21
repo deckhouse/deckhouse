@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"rpp-get/rpp"
 )
@@ -49,7 +50,7 @@ func main() {
 }
 
 func run(ctx context.Context, logger *log.Logger) error {
-	cfg, err := loadConfig(ctx, os.Args[1:])
+	cfg, err := parseConfig(os.Args[1:])
 	if err != nil {
 		return err
 	}
@@ -62,6 +63,16 @@ func run(ctx context.Context, logger *log.Logger) error {
 			modeInstall,
 			modeUninstall,
 		)
+	}
+
+	if cfg.mode != modeUninstall {
+		if !filepath.IsAbs(cfg.tempDir) {
+			return fmt.Errorf("temp-dir must be an absolute path, got %q", cfg.tempDir)
+		}
+
+		if err := os.MkdirAll(cfg.tempDir, 0o755); err != nil {
+			return fmt.Errorf("create temp dir: %w", err)
+		}
 	}
 
 	recorder, err := rpp.NewResultRecorder(cfg.resultPath)
@@ -87,6 +98,47 @@ func run(ctx context.Context, logger *log.Logger) error {
 	}
 
 	client := rpp.NewClient(rppCfg, logger, recorder)
+
+	if cfg.mode == modeInstall && !cfg.force {
+		statuses, err := client.Classify(cfg.packages)
+		if err != nil {
+			return err
+		}
+
+		installed := make([]string, 0, len(statuses))
+		missing := make([]string, 0, len(statuses))
+		for _, s := range statuses {
+			if s.Installed {
+				installed = append(installed, s.Name)
+			} else {
+				missing = append(missing, s.Name)
+			}
+		}
+
+		logger.Printf("packages already installed (%d): %s", len(installed), strings.Join(installed, ", "))
+		logger.Printf("packages to install (%d): %s", len(missing), strings.Join(missing, ", "))
+
+		if len(missing) == 0 {
+			logger.Printf("nothing to install, skipping endpoint resolution")
+			return client.InstallMissing(ctx, statuses)
+		}
+
+		logger.Printf("resolving rpp endpoints because %d package(s) need installation: %s",
+			len(missing), strings.Join(missing, ", "))
+
+		if err := cfg.resolve(ctx); err != nil {
+			return err
+		}
+		client.UpdateAuth(cfg.endpoints, cfg.token)
+
+		return client.InstallMissing(ctx, statuses)
+	}
+
+	if err := cfg.resolve(ctx); err != nil {
+		return err
+	}
+
+	client.UpdateAuth(cfg.endpoints, cfg.token)
 
 	switch cfg.mode {
 	case modeFetch:
