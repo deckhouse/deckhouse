@@ -2579,7 +2579,33 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/proxy DISTRO_PACKAGES_PROXY | DISTRO_PACKAGES_PROXY ;
+
+      # </template: import_secrets>
       - name: Run python webhook tests
+        env:
+          DISTRO_PACKAGES_PROXY: "${{ steps.secrets.outputs.DISTRO_PACKAGES_PROXY }}"
         run: |
           make tests-webhooks
     # </template: tests_webhooks_template>
