@@ -39,7 +39,7 @@ The module consists of the following components:
    It consists of the following containers:
 
    * **controller**: Main container.
-   * **webhook**: A sidecar container that implements a webhook server for StorageClass resources validation.
+   * **webhooks**: A sidecar container that implements a webhook server for StorageClass resources validation.
 
 1. **CSI driver (`rbd/cephfs`)**: An implementation of the CSI driver for the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` provisioner. The CSI driver is selected by setting the storage class type in the CephStorageClass custom resource.
 
