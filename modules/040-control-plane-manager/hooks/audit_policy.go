@@ -168,28 +168,28 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "", Resources: []string{"endpoints", "endpointslices", "events"}},
-		"Do not log frequent updates for Endpoints, EndpointSlices, and Events.",
-		"Не логировать частые обновления Endpoints, EndpointSlice и Event.",
+		"Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.",
+		"Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.",
 	)
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "coordination.k8s.io", Resources: []string{"leases"}},
-		"Do not log leader election operations on Lease resources.",
-		"Не логировать операции выбора лидера на ресурсах Lease.",
+		"Do not log leader election operations on `Lease` resources.",
+		"Не логировать операции выбора лидера на ресурсах `Lease`.",
 	)
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "", Resources: []string{"configmaps"}, ResourceNames: []string{"cert-manager-cainjector-leader-election", "cert-manager-controller"}},
-		"Do not log cert-manager leader election ConfigMaps.",
-		"Не логировать ConfigMap cert-manager, используемые для выбора лидера.",
+		"Do not log cert-manager leader election `ConfigMaps`.",
+		"Не логировать `ConfigMap` cert-manager, используемые для выбора лидера.",
 	)
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "autoscaling.k8s.io", Resources: []string{"verticalpodautoscalercheckpoints"}},
-		"Do not log VerticalPodAutoscalerCheckpoints resources.",
-		"Не логировать ресурсы VerticalPodAutoscalerCheckpoints.",
+		"Do not log `VerticalPodAutoscalerCheckpoints` resources.",
+		"Не логировать ресурсы `VerticalPodAutoscalerCheckpoints`.",
 	)
 
 	{
-		description_en := "Do not log PATCH operations on VerticalPodAutoscaler from recommender."
-		description_ru := "Не логировать PATCH операций VerticalPodAutoscaler от recommender."
+		description_en := "Do not log PATCH operations on `VerticalPodAutoscaler` from recommender."
+		description_ru := "Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender."
 		rule := audit.PolicyRule{
 			Level: audit.LevelNone,
 			Verbs: []string{"patch"},
@@ -204,20 +204,20 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "deckhouse.io", Resources: []string{"upmeterhookprobes"}},
-		"Do not log UpmeterHookProbes resources.",
-		"Не логировать ресурсы UpmeterHookProbes.",
+		"Do not log `UpmeterHookProbes` resources.",
+		"Не логировать ресурсы `UpmeterHookProbes`.",
 	)
 
 	{
-		description_en := "Do not log any operations in d8-upmeter namespace."
-		description_ru := "Не логировать любые операции в пространстве имён d8-upmeter."
+		description_en := "Do not log any operations in `d8-upmeter` namespace."
+		description_ru := "Не логировать любые операции в пространстве имён `d8-upmeter`."
 		rule := audit.PolicyRule{Level: audit.LevelNone, Namespaces: []string{"d8-upmeter"}}
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, description_en, description_ru, rule)
 	}
 
 	{
-		description_en := "Do not log ingress-nginx leader election updates in ConfigMaps."
-		description_ru := "Не логировать обновления ConfigMap ingress-nginx для выборов лидера."
+		description_en := "Do not log ingress-nginx leader election updates in `ConfigMaps`."
+		description_ru := "Не логировать обновления `ConfigMap` ingress-nginx для выборов лидера."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
 			Verbs:      []string{"update"},
@@ -232,8 +232,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Do not log dex health-check create/delete operations on AuthRequest resources."
-		description_ru := "Не логировать операции create/delete AuthRequest от health-check dex."
+		description_en := "Do not log dex health-check create/delete operations on `AuthRequest` resources."
+		description_ru := "Не логировать операции create/delete `AuthRequest` от health-check dex."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelNone,
 			Verbs:      []string{"create", "delete"},
@@ -248,8 +248,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create and delete operations for Node resources with request/response payload."
-		description_ru := "Логировать операции create/delete для ресурсов Node с телом запроса/ответа."
+		description_en := "Log create and delete operations for `Node` resources with request/response payload."
+		description_ru := "Логировать операции create/delete для ресурсов `Node` с телом запроса/ответа."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequestResponse,
 			Verbs: []string{"create", "delete"},
@@ -275,8 +275,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create/update/patch/delete operations from system service accounts (kube-system, d8-*)."
-		description_ru := "Логировать операции create/update/patch/delete от системных ServiceAccount (kube-system, d8-*)."
+		description_en := "Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`)."
+		description_ru := "Логировать операции create/update/patch/delete от системных `ServiceAccount` (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
@@ -299,8 +299,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create/update/patch/delete operations for Pod resources."
-		description_ru := "Логировать операции create/update/patch/delete для ресурсов Pod."
+		description_en := "Log create/update/patch/delete operations for `Pod` resources."
+		description_ru := "Логировать операции create/update/patch/delete для ресурсов `Pod`."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{{
@@ -315,8 +315,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create/update/patch/delete operations in system namespaces (kube-system, d8-*)."
-		description_ru := "Логировать операции create/update/patch/delete в системных пространствах имён (kube-system, d8-*)."
+		description_en := "Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`)."
+		description_ru := "Логировать операции create/update/patch/delete в системных пространствах имён (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
@@ -340,8 +340,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create and delete operations for ServiceAccount resources."
-		description_ru := "Логировать операции create/delete для ресурсов ServiceAccount."
+		description_en := "Log create and delete operations for `ServiceAccount` resources."
+		description_ru := "Логировать операции create/delete для ресурсов `ServiceAccount`."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 			Resources: []audit.GroupResources{{
@@ -357,8 +357,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create/update/delete/patch operations for Role and ClusterRole resources."
-		description_ru := "Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole."
+		description_en := "Log create/update/delete/patch operations for `Role` and `ClusterRole` resources."
+		description_ru := "Логировать операции create/update/delete/patch для ресурсов `Role` и `ClusterRole`."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{{
@@ -374,8 +374,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		description_en := "Log create/update/delete operations for ClusterRoleBinding resources."
-		description_ru := "Логировать операции create/update/delete для ресурсов ClusterRoleBinding."
+		description_en := "Log create/update/delete operations for `ClusterRoleBinding` resources."
+		description_ru := "Логировать операции create/update/delete для ресурсов `ClusterRoleBinding`."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{{
@@ -426,8 +426,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRuleWithDescription) {
 	{
-		description_en := "Log creation of VirtualMachineOperation resources with request/response payload."
-		description_ru := "Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа."
+		description_en := "Log creation of `VirtualMachineOperation` resources with request/response payload."
+		description_ru := "Логировать создание ресурсов `VirtualMachineOperation` с телом запроса/ответа."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequestResponse,
 			Verbs: []string{"create"},
@@ -472,8 +472,8 @@ func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRu
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, description_en, description_ru, rule)
 	}
 	{
-		description_en := "Log create/update/patch/delete operations for Pod resources."
-		description_ru := "Логировать операции create/update/patch/delete для ресурсов Pod."
+		description_en := "Log create/update/patch/delete operations for `Pod` resources."
+		description_ru := "Логировать операции create/update/patch/delete для ресурсов `Pod`."
 		rule := audit.PolicyRule{
 			Level:     audit.LevelMetadata,
 			Verbs:     []string{"create", "update", "patch", "delete"},
@@ -482,8 +482,8 @@ func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRu
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, description_en, description_ru, rule)
 	}
 	{
-		description_en := "Log create/update/patch/delete operations in d8-virtualization namespace."
-		description_ru := "Логировать операции create/update/patch/delete в пространстве имён d8-virtualization."
+		description_en := "Log create/update/patch/delete operations in `d8-virtualization` namespace."
+		description_ru := "Логировать операции create/update/patch/delete в пространстве имён `d8-virtualization`."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
@@ -492,8 +492,8 @@ func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRu
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, description_en, description_ru, rule)
 	}
 	{
-		description_en := "Log create/update/patch/delete operations for ModuleConfig resources."
-		description_ru := "Логировать операции create/update/patch/delete для ресурсов ModuleConfig."
+		description_en := "Log create/update/patch/delete operations for `ModuleConfig` resources."
+		description_ru := "Логировать операции create/update/patch/delete для ресурсов `ModuleConfig`."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 			Verbs: []string{"create", "update", "patch", "delete"},
@@ -517,8 +517,8 @@ func appendUnauthenticatedRules(policy *audit.Policy, docs *[]AuditPolicyRuleWit
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionUnauthenticated, description_en, description_ru, rule)
 	}
 	{
-		description_en := "Log all remaining (unauthenticated) requests at metadata level."
-		description_ru := "Логировать все оставшиеся (неаутентифицированные) запросы на уровне metadata."
+		description_en := "Log all remaining (unauthenticated) requests at Metadata level."
+		description_ru := "Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 		}
