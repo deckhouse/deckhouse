@@ -759,7 +759,6 @@ To see traces inside Kiali UI, configure [`tracing.kiali`](configuration.html#pa
 
 After you deploy an OpenTelemetry-compatible Collector reachable from the mesh (see the linked guide), **`telemetryAPI.enabled: true`** with **`tracing.enabled: false`** keeps Istio off the Zipkin-managed path so Envoy is not exporting twice via the bundled `deckhouse-tracing` provider. **Extend** `/meshConfig/` on the Sail `Istio` CR (`spec.values.meshConfig`) or legacy `IstioOperator` (`spec.meshConfig`) with the OTLP exporter—additively, not wholesale replacement—next to keys the module renders (`deckhouse-main-mesh` providers, Prometheus defaults, stdout access-log provider):
 
-
 ```yaml
 # Add under meshConfig (Istio CR / IstioOperator), preserving sibling keys from the chart
 enableTracing: true

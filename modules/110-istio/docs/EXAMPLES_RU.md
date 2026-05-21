@@ -762,7 +762,6 @@ spec:
 
 После развёртывания OpenTelemetry Collector комбинируйте **`telemetryAPI.enabled: true`** с **`tracing.enabled: false`**, если не хотите отправлять спаны второй раз через встроенный Zipkin-провайдер **`deckhouse-tracing`**. **Допишите** в `meshConfig` CR Sail `Istio` (`spec.values.meshConfig`) или `IstioOperator` (`spec.meshConfig`) OTLP-провайдером **поверх уже существующих** ключей модулём (metrics defaults, журналы доступа, и т.д.):
 
-
 ```yaml
 # Добавить в meshConfig CR Istio / IstioOperator, сохраняя сгенерённые рядом поля
 enableTracing: true
