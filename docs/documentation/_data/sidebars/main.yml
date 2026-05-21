@@ -1239,6 +1239,10 @@ entries:
                 ru: Обзор
               url: /architecture/cluster-and-infrastructure/
             - title:
+                en: Chrony module
+                ru: Модуль chrony
+              url: /architecture/cluster-and-infrastructure/chrony.html
+            - title:
                 en: Node management
                 ru: Управление узлами
               folders:
