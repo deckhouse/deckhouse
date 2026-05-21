@@ -40,8 +40,6 @@ var providerSuffixOverhead = map[string]int{
 	"vsphere":     9,
 }
 
-const defaultSuffixOverhead = 37
-
 type CloudPrefixLengthCheck struct {
 	MetaConfig *config.MetaConfig
 }
@@ -66,10 +64,7 @@ func (c CloudPrefixLengthCheck) Run(ctx context.Context) error {
 	prefix := c.MetaConfig.ClusterPrefix
 	provider := c.MetaConfig.ProviderName
 
-	overhead, ok := providerSuffixOverhead[provider]
-	if !ok {
-		overhead = defaultSuffixOverhead
-	}
+	overhead := providerSuffixOverhead[provider]
 
 	maxPrefixLen := maxResourceNameLength - overhead
 	if len(prefix) > maxPrefixLen {

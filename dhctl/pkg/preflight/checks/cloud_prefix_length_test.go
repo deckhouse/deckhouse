@@ -107,23 +107,6 @@ func TestCloudPrefixLength(t *testing.T) {
 			errContains: "too long for provider",
 		},
 		{
-			name: "unknown provider uses default overhead (37)",
-			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("e", 27),
-				ProviderName:  "unknown-provider",
-			},
-			expectError: true,
-			errContains: "too long for provider",
-		},
-		{
-			name: "unknown provider: prefix at max (26 chars) passes",
-			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("e", 26),
-				ProviderName:  "unknown-provider",
-			},
-			expectError: false,
-		},
-		{
 			name: "empty prefix passes",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix: "",
