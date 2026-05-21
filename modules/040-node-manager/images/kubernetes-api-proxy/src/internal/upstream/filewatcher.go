@@ -75,12 +75,10 @@ func (fw *fileWatcher) Stop() {
 func (fw *fileWatcher) triggerChangedOutside() {
 	changedFile, err := os.Open(fw.filePath)
 	if err != nil {
-		if fw.logger != nil {
-			fw.logger.Warn("failed to open upstreams file, keeping existing upstreams",
-				slog.String("path", fw.filePath),
-				slog.String("error", err.Error()),
-			)
-		}
+		fw.logger.Warn("failed to open upstreams file, keeping existing upstreams",
+			slog.String("path", fw.filePath),
+			slog.String("error", err.Error()),
+		)
 		return
 	}
 	defer changedFile.Close() //nolint:errcheck
@@ -88,21 +86,18 @@ func (fw *fileWatcher) triggerChangedOutside() {
 	var upstreamRecords []string
 
 	if err := json.NewDecoder(changedFile).Decode(&upstreamRecords); err != nil {
-		if fw.logger != nil {
-			fw.logger.Warn("failed to decode upstreams file, keeping existing upstreams",
-				slog.String("path", fw.filePath),
-				slog.String("error", err.Error()),
-			)
-		}
+		fw.logger.Warn("failed to decode upstreams file, keeping existing upstreams",
+			slog.String("path", fw.filePath),
+			slog.String("error", err.Error()),
+		)
 		return
 	}
 
 	if len(upstreamRecords) == 0 {
-		if fw.logger != nil {
-			fw.logger.Warn("upstreams file is empty or null, keeping existing upstreams",
-				slog.String("path", fw.filePath),
-			)
-		}
+		fw.logger.Warn("upstreams file is empty or null, keeping existing upstreams",
+			slog.String("path", fw.filePath),
+		)
+
 		return
 	}
 
