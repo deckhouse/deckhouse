@@ -47,6 +47,16 @@ Deckhouse Kubernetes Platform follows the upstream version of Kubernetes, using 
 - [shell-operator](https://github.com/flant/shell-operator) — to create Kubernetes operators *(please check the [KubeCon NA 2020 talk](https://www.youtube.com/watch?v=we0s4ETUBLc) for details)*;
 - [addon-operator](https://github.com/flant/addon-operator) — to pack these operators into modules and manage them.
 
+## Regenerating tools-generated files
+
+To run code generators defined in the [`tools`](tools/go.mod) module (including [`tools/audit_policy.go`](tools/audit_policy.go:19)), use:
+
+```bash
+make generate-tools
+```
+
+This target is defined in [`Makefile`](Makefile:264) and executes [`go generate -v`](Makefile:265) inside the [`tools`](tools/go.mod) directory.
+
 # Trying Deckhouse Kubernetes Platform
 
 Please, refer to the project's [Getting started](https://deckhouse.io/products/kubernetes-platform/gs/) to begin your journey with Deckhouse Kubernetes Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
