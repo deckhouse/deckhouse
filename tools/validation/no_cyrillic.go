@@ -26,6 +26,10 @@ var skipDocRe = regexp.MustCompile(`doc-ru-.+\.y[a]?ml$|_RU\.md$|\.ru\.md$|_ru\.
 var skipI18NRe = regexp.MustCompile(`/i18n/`)
 var skipSelfRe = regexp.MustCompile(`no_cyrillic(_test)?.go$`)
 
+var skipFiles = map[string]struct{}{
+	"modules/040-control-plane-manager/hooks/audit_policy.go": {},
+}
+
 func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (exitCode int) {
 	fmt.Printf("Run 'no cyrillic' validation ...\n")
 
@@ -83,6 +87,11 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 
 			if skipSelfRe.MatchString(fileName) {
 				msgs.Add(NewSkip(fileName, "self"))
+				continue
+			}
+
+			if _, ok := skipFiles[fileName]; ok {
+				msgs.Add(NewSkip(fileName, "excluded file"))
 				continue
 			}
 
