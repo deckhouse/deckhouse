@@ -1,0 +1,122 @@
+diff --git a/resources/v1.25.2/charts/gateway/templates/deployment.yaml b/resources/v1.25.2/charts/gateway/templates/deployment.yaml
+index 9db59d8b..3789afb1 100644
+--- a/resources/v1.25.2/charts/gateway/templates/deployment.yaml
++++ b/resources/v1.25.2/charts/gateway/templates/deployment.yaml
+@@ -78,8 +78,8 @@ spec:
+             privileged: false
+             readOnlyRootFilesystem: true
+             {{- if not (eq (.Values.platform | default "") "openshift") }}
+-            runAsUser: 1337
+-            runAsGroup: 1337
++            runAsUser: 64535
++            runAsGroup: 64535
+             {{- end }}
+             runAsNonRoot: true
+           {{- end }}
+diff --git a/resources/v1.25.2/charts/istiod/files/gateway-injection-template.yaml b/resources/v1.25.2/charts/istiod/files/gateway-injection-template.yaml
+index dbd83cc5..46177a88 100644
+--- a/resources/v1.25.2/charts/istiod/files/gateway-injection-template.yaml
++++ b/resources/v1.25.2/charts/istiod/files/gateway-injection-template.yaml
+@@ -53,8 +53,8 @@ spec:
+       {{ toYaml .Values.global.proxy.lifecycle | indent 6 }}
+   {{- end }}
+     securityContext:
+-      runAsUser: {{ .ProxyUID | default "1337" }}
+-      runAsGroup: {{ .ProxyGID | default "1337" }}
++      runAsUser: {{ .ProxyUID | default "64535" }}
++      runAsGroup: {{ .ProxyGID | default "64535" }}
+     env:
+     - name: PILOT_CERT_PROVIDER
+       value: {{ .Values.global.pilotCertProvider }}
+diff --git a/resources/v1.25.2/charts/istiod/files/injection-template.yaml b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+index 3b3f69cd..74d87b52 100644
+--- a/resources/v1.25.2/charts/istiod/files/injection-template.yaml
++++ b/resources/v1.25.2/charts/istiod/files/injection-template.yaml
+@@ -88,7 +88,7 @@ spec:
+     - "-z"
+     - {{ .MeshConfig.ProxyInboundListenPort | default "15006" | quote }}
+     - "-u"
+-    - {{ .ProxyUID | default "1337" | quote }}
++    - {{ printf "%d,1337" (.ProxyUID | default 64535) | quote }}
+     - "-m"
+     - "{{ annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode }}"
+     - "-i"
+@@ -161,8 +161,8 @@ spec:
+       runAsUser: 0
+     {{- else }}
+       readOnlyRootFilesystem: true
+-      runAsGroup: {{ .ProxyGID | default "1337" }}
+-      runAsUser: {{ .ProxyUID | default "1337" }}
++      runAsGroup: {{ .ProxyGID | default "64535" }}
++      runAsUser: {{ .ProxyUID | default "64535" }}
+       runAsNonRoot: true
+     {{- end }}
+   {{ end -}}
+@@ -362,7 +362,7 @@ spec:
+         - ALL
+       privileged: true
+       readOnlyRootFilesystem: true
+-      runAsGroup: {{ .ProxyGID | default "1337" }}
++      runAsGroup: {{ .ProxyGID | default "64535" }}
+       runAsNonRoot: false
+       runAsUser: 0
+       {{- else }}
+@@ -381,13 +381,13 @@ spec:
+         - ALL
+       privileged: {{ .Values.global.proxy.privileged }}
+       readOnlyRootFilesystem: true
+-      runAsGroup: {{ .ProxyGID | default "1337" }}
++      runAsGroup: {{ .ProxyGID | default "64535" }}
+       {{ if or (eq (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `TPROXY`) (eq (annotation .ObjectMeta `sidecar.istio.io/capNetBindService` .Values.global.proxy.capNetBindService) `true`) -}}
+       runAsNonRoot: false
+       runAsUser: 0
+       {{- else -}}
+       runAsNonRoot: true
+-      runAsUser: {{ .ProxyUID | default "1337" }}
++      runAsUser: {{ .ProxyUID | default "64535" }}
+       {{- end }}
+       {{- end }}
+     resources:
+diff --git a/resources/v1.25.2/charts/istiod/files/kube-gateway.yaml b/resources/v1.25.2/charts/istiod/files/kube-gateway.yaml
+index dbe158de..b0564fb3 100644
+--- a/resources/v1.25.2/charts/istiod/files/kube-gateway.yaml
++++ b/resources/v1.25.2/charts/istiod/files/kube-gateway.yaml
+@@ -99,8 +99,8 @@ spec:
+           allowPrivilegeEscalation: false
+           privileged: false
+           readOnlyRootFilesystem: true
+-          runAsUser: {{ .ProxyUID | default "1337" }}
+-          runAsGroup: {{ .ProxyGID | default "1337" }}
++          runAsUser: {{ .ProxyUID | default "64535" }}
++          runAsGroup: {{ .ProxyGID | default "64535" }}
+           runAsNonRoot: true
+         ports:
+         - containerPort: 15020
+diff --git a/resources/v1.25.2/charts/istiod/files/waypoint.yaml b/resources/v1.25.2/charts/istiod/files/waypoint.yaml
+index 2600e98e..f60bd416 100644
+--- a/resources/v1.25.2/charts/istiod/files/waypoint.yaml
++++ b/resources/v1.25.2/charts/istiod/files/waypoint.yaml
+@@ -232,8 +232,8 @@ spec:
+         securityContext:
+           privileged: false
+         {{- if not (eq .Values.global.platform "openshift") }}
+-          runAsGroup: 1337
+-          runAsUser: 1337
++          runAsGroup: 64535
++          runAsUser: 64535
+         {{- end }}
+           allowPrivilegeEscalation: false
+           readOnlyRootFilesystem: true
+diff --git a/resources/v1.25.2/charts/ztunnel/templates/daemonset.yaml b/resources/v1.25.2/charts/ztunnel/templates/daemonset.yaml
+index ee5775d7..1a1cfa68 100644
+--- a/resources/v1.25.2/charts/ztunnel/templates/daemonset.yaml
++++ b/resources/v1.25.2/charts/ztunnel/templates/daemonset.yaml
+@@ -87,7 +87,7 @@ spec:
+             - SYS_ADMIN # Required for `setns` - doing things in other netns
+             - NET_RAW # Required for RAW/PACKET sockets, TPROXY
+           readOnlyRootFilesystem: true
+-          runAsGroup: 1337
++          runAsGroup: 64535
+           runAsNonRoot: false
+           runAsUser: 0
+ {{- if .Values.seLinuxOptions }}
