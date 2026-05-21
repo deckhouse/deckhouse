@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -120,41 +119,59 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		Order: schedule.FunctionalOrder,
 	}
 	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		var err error
+		reqs := apv.Status.PackageMetadata.Requirements
 
-		// Parse the minimum Kubernetes version constraint (e.g. ">=1.28").
-		var kubernetesConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
-			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
-				return fmt.Errorf("parse kubernetes requirement: %w", err)
-			}
+		// Parse the minimum Kubernetes version constraint (e.g. ">= 1.28").
+		kubernetesConstraint, err := parsePackageConstraint(reqs.Kubernetes)
+		if err != nil {
+			return fmt.Errorf("parse kubernetes requirement: %w", err)
 		}
 
 		constraints.Kubernetes = kubernetesConstraint
 
-		// Parse the minimum Deckhouse version constraint (e.g. ">=1.60").
-		var deckhouseConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
-			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
-				return fmt.Errorf("parse deckhouse requirement: %w", err)
-			}
+		// Parse the minimum Deckhouse version constraint (e.g. ">= 1.60").
+		deckhouseConstraint, err := parsePackageConstraint(reqs.Deckhouse)
+		if err != nil {
+			return fmt.Errorf("parse deckhouse requirement: %w", err)
 		}
 
 		constraints.Deckhouse = deckhouseConstraint
 
-		// Parse module dependency constraints. Each module requirement may have an
-		// "!optional" suffix indicating the dependency is not mandatory.
+		// Parse module dependency constraints. Mandatory entries must be present;
+		// conditional entries (formerly the "!optional" suffix) are skippable.
+		// A name listed in both lists is rejected — silently letting conditional
+		// overwrite mandatory would weaken the requirement without telling the user.
 		modules := make(map[string]schedule.Dependency)
-		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
-			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-			constraint, err := semver.NewConstraint(raw)
-			if err != nil {
-				return fmt.Errorf("parse module requirement '%s': %w", module, err)
-			}
+		if reqs.Modules != nil {
+			for _, dep := range reqs.Modules.Mandatory {
+				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
+				if err != nil {
+					return fmt.Errorf("parse mandatory module requirement '%s': %w", dep.Name, err)
+				}
 
-			modules[module] = schedule.Dependency{
-				Constraint: constraint,
-				Optional:   optional,
+				modules[dep.Name] = schedule.Dependency{
+					Constraint: constraint,
+					Optional:   false,
+				}
+			}
+			for _, dep := range reqs.Modules.Conditional {
+				if _, ok := modules[dep.Name]; ok {
+					return fmt.Errorf("parse conditional module requirement '%s': also listed as mandatory", dep.Name)
+				}
+
+				if len(dep.Constraint) == 0 {
+					return fmt.Errorf("parse conditional module requirement '%s': constraint is required", dep.Name)
+				}
+
+				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
+				if err != nil {
+					return fmt.Errorf("parse conditional module requirement '%s': %w", dep.Name, err)
+				}
+
+				modules[dep.Name] = schedule.Dependency{
+					Constraint: constraint,
+					Optional:   true,
+				}
 			}
 		}
 
@@ -196,4 +213,24 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.
 
 	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
 	return storage.ValidateConfigValues(app.Spec.PackageName, values)
+}
+
+// parsePackageConstraint parses the optional semver expression on a PackageConstraint,
+// returning a nil *semver.Constraints when the wrapper is nil or its constraint is empty.
+func parsePackageConstraint(c *v1alpha1.VersionConstraint) (*semver.Constraints, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	return parsePackageDependencyConstraint(c.Constraint)
+}
+
+// parsePackageDependencyConstraint parses a raw semver expression, treating an empty
+// string as "no constraint" rather than an error.
+func parsePackageDependencyConstraint(raw string) (*semver.Constraints, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	return semver.NewConstraint(raw)
 }

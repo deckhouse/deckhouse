@@ -16,7 +16,6 @@ package dto
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -25,10 +24,12 @@ import (
 )
 
 const (
-	// DefinitionFile is the filename for package metadata
+	// DefinitionFile is the filename for package metadata.
 	DefinitionFile = "package.yaml"
 
-	TypeModule      = "Module"
+	// TypeModule is the TypeMeta.Type value identifying a package as a module.
+	TypeModule = "Module"
+	// TypeApplication is the TypeMeta.Type value identifying a package as an application.
 	TypeApplication = "Application"
 )
 
@@ -44,9 +45,9 @@ type Definition struct {
 	Version string `yaml:"version" json:"version"`
 	Stage   string `yaml:"stage" json:"stage"`
 
-	Descriptions   Descriptions   `yaml:"descriptions,omitempty" json:"descriptions,omitempty"`
-	Requirements   Requirements   `yaml:"requirements,omitempty" json:"requirements,omitempty"`
-	DisableOptions DisableOptions `yaml:"disable,omitempty" json:"disable,omitempty"`
+	Descriptions   Descriptions   `yaml:"descriptions" json:"descriptions"`
+	Requirements   Requirements   `yaml:"requirements" json:"requirements"`
+	DisableOptions DisableOptions `yaml:"disable" json:"disable"`
 }
 
 // ApplicationDefinition extends Definition for application packages.
@@ -72,9 +73,31 @@ type Descriptions struct {
 
 // Requirements specifies dependencies required by this package.
 type Requirements struct {
-	Kubernetes string            `yaml:"kubernetes,omitempty" json:"kubernetes,omitempty"`
-	Deckhouse  string            `yaml:"deckhouse,omitempty" json:"deckhouse,omitempty"`
-	Modules    map[string]string `yaml:"modules,omitempty" json:"modules,omitempty"`
+	Kubernetes VersionConstraint   `yaml:"kubernetes" json:"kubernetes"`
+	Deckhouse  VersionConstraint   `yaml:"deckhouse" json:"deckhouse"`
+	Modules    ModulesRequirements `yaml:"modules" json:"modules"`
+}
+
+// VersionConstraint wraps a semver constraint expression for a single platform requirement.
+// An empty VersionConstraint means "no version constraint".
+type VersionConstraint struct {
+	Constraint string `yaml:"constraint,omitempty" json:"constraint,omitempty"`
+}
+
+// ModulesRequirements groups module dependencies by how they affect package startup.
+type ModulesRequirements struct {
+	// Mandatory lists modules that MUST be present (and satisfy constraint, if any)
+	// for the package to start.
+	Mandatory []ModuleDependency `yaml:"mandatory,omitempty" json:"mandatory,omitempty"`
+	// Conditional lists modules that are not required to be present, but if installed
+	// must satisfy the version constraint for the package to work correctly.
+	Conditional []ModuleDependency `yaml:"conditional,omitempty" json:"conditional,omitempty"`
+}
+
+// ModuleDependency is a single named module dependency with an optional semver constraint.
+type ModuleDependency struct {
+	Name       string `yaml:"name" json:"name"`
+	Constraint string `yaml:"constraint,omitempty" json:"constraint,omitempty"`
 }
 
 // DisableOptions configures package disablement behavior.
@@ -83,36 +106,26 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
-// Convert converts application definition to application domain model
+// Convert converts application definition to application domain model.
 func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
-	var err error
-
-	var kubernetesConstraint *semver.Constraints
-	if len(d.Requirements.Kubernetes) > 0 {
-		if kubernetesConstraint, err = semver.NewConstraint(d.Requirements.Kubernetes); err != nil {
-			return apps.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
-		}
+	kubernetesConstraint, err := parseOptionalConstraint(d.Requirements.Kubernetes.Constraint)
+	if err != nil {
+		return apps.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
 	}
 
-	var deckhouseConstraint *semver.Constraints
-	if len(d.Requirements.Deckhouse) > 0 {
-		if deckhouseConstraint, err = semver.NewConstraint(d.Requirements.Deckhouse); err != nil {
-			return apps.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
-		}
+	deckhouseConstraint, err := parseOptionalConstraint(d.Requirements.Deckhouse.Constraint)
+	if err != nil {
+		return apps.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
 	}
 
-	deps := make(map[string]apps.Dependency)
-	for module, rawConstraint := range d.Requirements.Modules {
-		raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-		constraint, err := semver.NewConstraint(raw)
-		if err != nil {
-			return apps.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
-		}
+	mandatory, err := buildDependencyMap(d.Requirements.Modules.Mandatory, "mandatory")
+	if err != nil {
+		return apps.Definition{}, err
+	}
 
-		deps[module] = apps.Dependency{
-			Constraints: constraint,
-			Optional:    optional,
-		}
+	conditional, err := buildDependencyMap(d.Requirements.Modules.Conditional, "conditional")
+	if err != nil {
+		return apps.Definition{}, err
 	}
 
 	return apps.Definition{
@@ -126,41 +139,34 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 		Requirements: apps.Requirements{
 			Kubernetes: kubernetesConstraint,
 			Deckhouse:  deckhouseConstraint,
-			Modules:    deps,
+			Modules: apps.ModulesRequirements{
+				Mandatory:   mandatory,
+				Conditional: conditional,
+			},
 		},
 	}, nil
 }
 
-// Convert converts module definition to module domain model
+// Convert converts module definition to module domain model.
 func (d *ModuleDefinition) Convert() (modules.Definition, error) {
-	var err error
-
-	var kubernetesConstraint *semver.Constraints
-	if len(d.Requirements.Kubernetes) > 0 {
-		if kubernetesConstraint, err = semver.NewConstraint(d.Requirements.Kubernetes); err != nil {
-			return modules.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
-		}
+	kubernetesConstraint, err := parseOptionalConstraint(d.Requirements.Kubernetes.Constraint)
+	if err != nil {
+		return modules.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
 	}
 
-	var deckhouseConstraint *semver.Constraints
-	if len(d.Requirements.Deckhouse) > 0 {
-		if deckhouseConstraint, err = semver.NewConstraint(d.Requirements.Deckhouse); err != nil {
-			return modules.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
-		}
+	deckhouseConstraint, err := parseOptionalConstraint(d.Requirements.Deckhouse.Constraint)
+	if err != nil {
+		return modules.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
 	}
 
-	deps := make(map[string]modules.Dependency)
-	for module, rawConstraint := range d.Requirements.Modules {
-		raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-		constraint, err := semver.NewConstraint(raw)
-		if err != nil {
-			return modules.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
-		}
+	mandatory, err := buildDependencyMap(d.Requirements.Modules.Mandatory, "mandatory")
+	if err != nil {
+		return modules.Definition{}, err
+	}
 
-		deps[module] = modules.Dependency{
-			Constraints: constraint,
-			Optional:    optional,
-		}
+	conditional, err := buildDependencyMap(d.Requirements.Modules.Conditional, "conditional")
+	if err != nil {
+		return modules.Definition{}, err
 	}
 
 	return modules.Definition{
@@ -176,7 +182,44 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 		Requirements: modules.Requirements{
 			Kubernetes: kubernetesConstraint,
 			Deckhouse:  deckhouseConstraint,
-			Modules:    deps,
+			Modules: modules.ModulesRequirements{
+				Mandatory:   mandatory,
+				Conditional: conditional,
+			},
 		},
 	}, nil
+}
+
+// buildDependencyMap turns a list of ModuleDependency into a name → constraint map,
+// parsing each entry's semver constraint. The kind argument ("mandatory" or
+// "conditional") is woven into error messages so failures point at the right section.
+// Mandatory entries may omit the constraint (interpreted as "any version, must be
+// installed"); conditional entries must declare one, since "if installed, no version
+// requirement" is a no-op and almost always indicates a malformed package.
+func buildDependencyMap(deps []ModuleDependency, kind string) (map[string]*semver.Constraints, error) {
+	out := make(map[string]*semver.Constraints, len(deps))
+	for _, dep := range deps {
+		if kind == "conditional" && len(dep.Constraint) == 0 {
+			return nil, fmt.Errorf("parse conditional module requirement '%s': constraint is required", dep.Name)
+		}
+
+		constraint, err := parseOptionalConstraint(dep.Constraint)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s module requirement '%s': %w", kind, dep.Name, err)
+		}
+
+		out[dep.Name] = constraint
+	}
+
+	return out, nil
+}
+
+// parseOptionalConstraint parses a semver constraint expression, returning a nil
+// pointer when the expression is empty (meaning "no version constraint").
+func parseOptionalConstraint(raw string) (*semver.Constraints, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	return semver.NewConstraint(raw)
 }

@@ -183,14 +183,61 @@ spec:
                     properties:
                       deckhouse:
                         description: Required Deckhouse version.
-                        type: string
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
                       kubernetes:
                         description: Required Kubernetes version.
-                        type: string
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
                       modules:
-                        additionalProperties:
-                          type: string
-                        description: Required versions of other modules.
+                        description: Required modules, partitioned into mandatory
+                          and conditional dependencies.
+                        properties:
+                          conditional:
+                            description: |-
+                              Conditional dependencies — not required to be present, but if installed must
+                              satisfy the constraint for the package to function correctly. Replaces the
+                              legacy "!optional" suffix from the v1 requirements format.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          mandatory:
+                            description: |-
+                              Mandatory dependencies — must be present (and satisfy the constraint, if any)
+                              for the package to start.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
                         type: object
                     type: object
                   stage:

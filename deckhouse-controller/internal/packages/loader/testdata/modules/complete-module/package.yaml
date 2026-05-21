@@ -1,11 +1,19 @@
-name: complete-module
+apiVersion: v1
 type: Module
+name: complete-module
 version: v1.0.0
 descriptions:
   en: Complete test module
 requirements:
-  kubernetes: ">=1.28"
-  deckhouse: ">=1.60"
-module:
-  weight: 900
-  critical: false
+  kubernetes:
+    constraint: ">=1.28"
+  deckhouse:
+    constraint: ">=1.60"
+  modules:
+    mandatory:
+      - name: cni-cilium
+        constraint: ">=1.14"
+      - name: registry-packages-proxy
+    conditional:
+      - name: prometheus
+        constraint: ">=2.40"

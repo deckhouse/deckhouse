@@ -30,8 +30,10 @@ status:
     description:
       en: Legacy test module
     requirements:
-      deckhouse: '>= 1.60'
-      kubernetes: '>= 1.27'
+      deckhouse:
+        constraint: '>= 1.60'
+      kubernetes:
+        constraint: '>= 1.27'
     stage: Sandbox
 ---
 apiVersion: deckhouse.io/v1alpha1

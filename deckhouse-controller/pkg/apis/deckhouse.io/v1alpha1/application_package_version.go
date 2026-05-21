@@ -251,18 +251,56 @@ type ApplicationPackageVersionList struct {
 	Items []ApplicationPackageVersion `json:"items"`
 }
 
+// PackageRequirements describes the platform and module dependencies of a package,
+// surfaced as part of the package version status.
 type PackageRequirements struct {
 	// Required Deckhouse version.
 	// +optional
-	Deckhouse string `json:"deckhouse,omitempty"`
+	Deckhouse *VersionConstraint `json:"deckhouse,omitempty"`
 
 	// Required Kubernetes version.
 	// +optional
-	Kubernetes string `json:"kubernetes,omitempty"`
+	Kubernetes *VersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required versions of other modules.
+	// Required modules, partitioned into mandatory and conditional dependencies.
 	// +optional
-	Modules map[string]string `json:"modules,omitempty"`
+	Modules *PackageModulesRequirements `json:"modules,omitempty"`
+}
+
+// VersionConstraint wraps a single semver constraint expression (e.g. ">= 1.26").
+type VersionConstraint struct {
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModulesRequirements groups module dependencies by how they affect startup.
+type PackageModulesRequirements struct {
+	// Mandatory dependencies — must be present (and satisfy the constraint, if any)
+	// for the package to start.
+	// +optional
+	Mandatory []PackageModuleDependency `json:"mandatory,omitempty"`
+
+	// Conditional dependencies — not required to be present, but if installed must
+	// satisfy the constraint for the package to function correctly. Replaces the
+	// legacy "!optional" suffix from the v1 requirements format.
+	// +optional
+	Conditional []PackageModuleDependency `json:"conditional,omitempty"`
+}
+
+// PackageModuleDependency is a single named module dependency with a semver
+// constraint. The constraint is required for entries in
+// PackageModulesRequirements.Conditional ("if installed, no version requirement"
+// is a no-op and rejected at parse time); for entries in
+// PackageModulesRequirements.Mandatory the constraint is optional and an empty
+// value means "any version".
+type PackageModuleDependency struct {
+	// Module name.
+	Name string `json:"name"`
+
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
 }
 
 type PackageDescription struct {

@@ -32,14 +32,19 @@ type Definition struct {
 
 // Requirements specifies dependencies required by the application.
 type Requirements struct {
-	Kubernetes *semver.Constraints   `json:"kubernetes" yaml:"kubernetes"`
-	Deckhouse  *semver.Constraints   `json:"deckhouse" yaml:"deckhouse"`
-	Modules    map[string]Dependency `json:"modules" yaml:"modules"`
+	Kubernetes *semver.Constraints `json:"kubernetes" yaml:"kubernetes"`
+	Deckhouse  *semver.Constraints `json:"deckhouse" yaml:"deckhouse"`
+	Modules    ModulesRequirements `json:"modules" yaml:"modules"`
 }
 
-type Dependency struct {
-	Constraints *semver.Constraints `json:"constraints" yaml:"constraints"`
-	Optional    bool                `json:"optional" yaml:"optional"`
+// ModulesRequirements groups module dependencies by how they affect application startup.
+type ModulesRequirements struct {
+	// Mandatory lists modules that MUST be present (and satisfy constraint, if any)
+	// for the application to start. The map value is nil when no version constraint applies.
+	Mandatory map[string]*semver.Constraints `json:"mandatory" yaml:"mandatory"`
+	// Conditional lists modules that are not required to be present, but if installed
+	// must satisfy the version constraint. The map value is nil when no version constraint applies.
+	Conditional map[string]*semver.Constraints `json:"conditional" yaml:"conditional"`
 }
 
 // DisableOptions configures application disablement behavior.
@@ -48,12 +53,21 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
+// Constraints projects the application definition onto the scheduler input shape,
+// flattening mandatory and conditional module requirements into a single dependency map.
+// Mandatory entries win over conditional entries when both reference the same module.
 func (d Definition) Constraints() schedule.Constraints {
-	deps := make(map[string]schedule.Dependency)
-	for module, dep := range d.Requirements.Modules {
-		deps[module] = schedule.Dependency{
-			Constraint: dep.Constraints,
-			Optional:   dep.Optional,
+	deps := make(map[string]schedule.Dependency, len(d.Requirements.Modules.Mandatory)+len(d.Requirements.Modules.Conditional))
+	for name, constraint := range d.Requirements.Modules.Conditional {
+		deps[name] = schedule.Dependency{
+			Constraint: constraint,
+			Optional:   true,
+		}
+	}
+	for name, constraint := range d.Requirements.Modules.Mandatory {
+		deps[name] = schedule.Dependency{
+			Constraint: constraint,
+			Optional:   false,
 		}
 	}
 
