@@ -488,8 +488,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
 			})
 
-			It("Should not render permission-browser availability alert", func() {
-				Expect(f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver").Exists()).To(BeFalse())
+			It("Should render permission-browser availability alert", func() {
+				rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
+				Expect(rule.Exists()).To(BeTrue())
+				Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
 			})
 		})
 
