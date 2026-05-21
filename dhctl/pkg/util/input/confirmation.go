@@ -85,7 +85,6 @@ func (c *Confirmation) Ask() bool {
 			log.InfoF("\r")
 		}
 	}
-
 }
 
 func IsTerminal() bool {

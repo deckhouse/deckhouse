@@ -545,7 +545,6 @@ func BootstrapGetNodesFromCache(
 }
 
 func applyPostBootstrapModuleConfigs(
-	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	tasks []actions.ModuleConfigTask,
 ) error {
@@ -579,6 +578,6 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
-		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

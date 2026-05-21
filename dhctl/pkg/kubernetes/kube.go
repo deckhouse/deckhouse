@@ -61,13 +61,14 @@ func GetLabelSelector(selectors []LabelSelector) (string, error) {
 }
 
 func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error) {
-	withNg := []LabelSelector{
-		{
-			Label:    global.NodeGroupLabel,
-			Operator: selection.Equals,
-			Vals:     []string{global.MasterNodeGroupName},
-		},
-	}
+	withNg := make([]LabelSelector, 0, 1+len(selectors))
+
+	withNg = append(withNg, LabelSelector{
+
+		Label:    global.NodeGroupLabel,
+		Operator: selection.Equals,
+		Vals:     []string{global.MasterNodeGroupName},
+	})
 
 	withNg = append(withNg, selectors...)
 

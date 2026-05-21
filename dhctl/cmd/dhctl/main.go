@@ -399,7 +399,6 @@ func initGlobalVars() {
 
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
-	commands.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 	infrastructure.InitGlobalVars(dhctlPath)
 }

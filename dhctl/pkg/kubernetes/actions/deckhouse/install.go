@@ -74,7 +74,6 @@ func prepareDeckhouseDeploymentForUpdate(
 }
 
 func controllerDeploymentTask(
-	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	cfg *config.DeckhouseInstaller,
 ) actions.ManifestTask {
@@ -649,17 +648,17 @@ func CreateDeckhouseManifests(
 		tasks = append(tasks, *lockCmTask)
 	}
 
-	tasks = append(tasks, controllerDeploymentTask(ctx, kubeCl, cfg))
+	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
 	result := &ManifestsResult{}
 
 	if len(cfg.ModuleConfigs) > 0 {
 		prepareModuleConfig(ctx, cfg.ModuleConfigs[0], result)
-		tasks = append(tasks, createModuleConfigManifestTask(ctx, kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
+		tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
 
 		for i := 1; i < len(cfg.ModuleConfigs); i++ {
 			prepareModuleConfig(ctx, cfg.ModuleConfigs[i], result)
-			tasks = append(tasks, createModuleConfigManifestTask(ctx, kubeCl, cfg.ModuleConfigs[i], ""))
+			tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
 		}
 	}
 
@@ -723,11 +722,9 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 }
 
 func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	task := controllerDeploymentTask(ctx, kubeCl, cfg)
+	task := controllerDeploymentTask(kubeCl, cfg)
 
-	return log.ProcessCtx(ctx, "default", "Create Deployment", func(ctx context.Context) error {
-		return task.CreateOrUpdate(ctx)
-	})
+	return log.ProcessCtx(ctx, "default", "Create Deployment", task.CreateOrUpdate)
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {

@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package phases
+package commands
 
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-type DhctlState map[string][]byte
+func cleanupSSHProvider(
+	ctx context.Context,
+	sshProviderInitializer *providerinitializer.SSHProviderInitializer,
+) {
+	if sshProviderInitializer == nil {
+		return
+	}
 
-func ExtractDhctlState(ctx context.Context, stateCache state.Cache) (DhctlState, error) {
-	var res DhctlState
-
-	err := stateCache.Iterate(ctx, func(k string, v []byte) error {
-		if res == nil {
-			res = make(map[string][]byte)
-		}
-		res[k] = v
-		return nil
-	})
-
-	return res, err
+	if err := sshProviderInitializer.Cleanup(ctx); err != nil {
+		log.WarnF("failed to cleanup ssh provider: %v", err)
+	}
 }
