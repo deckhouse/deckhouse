@@ -27,21 +27,6 @@ const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length
 
 const maxDiskNameLength = 63
 
-// providerDiskSuffixParts contains the fixed parts of the longest disk name suffix
-// for each provider, excluding prefix and node_group.
-// The parts are joined with "-" to form the suffix.
-//
-// Providers where node_group is part of the disk name (variable):
-//   DVP: {prefix}-{node_group}-additional-disk-{disk_index}-{node_index}-{hash}
-//
-// Providers where node_group is hardcoded as "master":
-//   Zvirt:   {prefix}-master-{nodeIndex}-kubernetes-data
-//   Dynamix: {prefix}-master-{nodeIndex}-kubernetes-data
-//   VCD:     {prefix}-master-{nodeIndex}-etcd-disk
-//
-// Providers without node_group in disk name:
-//   AWS, Azure, GCP, Yandex, OpenStack, Huaweicloud: {prefix}-kubernetes-data-{index}
-//   vSphere: uses clusterUUID, not prefix
 var providerDiskSuffixParts = map[string][]string{
 	"dvp":         {"additional-disk", "0", "0", "abcdef"},
 	"zvirt":       {"master", "0", "kubernetes-data"},
