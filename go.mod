@@ -172,6 +172,7 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/gosimple/slug v1.15.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
