@@ -15,8 +15,9 @@ In this mode, `sandbox` first creates an exec boundary and starts itself again i
 
 The child mode then:
 - enters `/validation-chroot`;
+- drops CAP_SYS_CHROOT
 - launches the usual ptrace/seccomp sandbox path for `nginx -t`.
 
-`/validation-chroot` is prepared in controller images as a hardlinked copy of `/chroot`. The `nginx` binary inside `/validation-chroot/usr/local/nginx/sbin/nginx` is then replaced with a separate uncapped copy so ambient capabilities survive the final `execve()` during isolated validation.
+`/validation-chroot` is prepared in controller images as a hardlinked copy of `/chroot`. 
 
 `SANDBOX_DEBUG=true` enables sandbox tracing, and `SANDBOX_DEBUG_CRASH_ON_DENY=true` additionally converts any deny into immediate sandbox termination.

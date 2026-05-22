@@ -156,7 +156,7 @@ The fix is to use registration when checking if informer has been synced.
 
 This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
 
-### 026-isolated-validation-01.patch
+### 026-isolated-validation.patch
 
 This patch switches `nginx -t` execution according to `spec.validationIsolationMode` for ingress-nginx `1.14`:
 
