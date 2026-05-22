@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0-dk"
+  WERF_VERSION: "v2.69.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -458,15 +458,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -739,15 +739,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -879,15 +879,15 @@ jobs:
           cache: false
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -998,15 +998,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -1290,15 +1290,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -1582,15 +1582,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -1874,15 +1874,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -2166,15 +2166,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
@@ -2458,15 +2458,15 @@ jobs:
       # </template: login_dev_registry_step>
 
       # <template: werf_install_step>
-      - name: Install werf CLI
+      - name: Install werf-dk CLI
         run: |
-          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
           CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
-          if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
-            echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
             mkdir -p "$WERF_PATH"
-            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
             chmod +x "$WERF_PATH/werf"
           else
             echo "Current werf is $CACHED_VERSION, skipping download"
