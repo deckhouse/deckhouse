@@ -81,9 +81,26 @@ if [[ $cp_failed -ne 0 ]]; then
   exit 1
 fi
 
-kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
-kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
+node_name="$(bb-d8-node-name)"
+
+# kubelet registers the Node object slightly after the control-plane containers
+# report running, so the label/taint below can race ahead of it. Wait for the
+# Node to appear (≤200s) before touching it.
+for _ in $(seq 1 100); do
+  if kubectl --kubeconfig=/etc/kubernetes/admin.conf get node "$node_name" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+# This step is retried by bashible on any failure, so every mutation here must
+# be idempotent — a retry must not fail because a previous attempt already
+# created the binding / applied the label or taint.
+if ! kubectl --kubeconfig=/etc/kubernetes/super-admin.conf get clusterrolebinding kubeadm:cluster-admins >/dev/null 2>&1; then
+  kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
+fi
+kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$node_name" node-role.kubernetes.io/control-plane="" --overwrite
+kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$node_name" node-role.kubernetes.io/control-plane:NoSchedule --overwrite
 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
