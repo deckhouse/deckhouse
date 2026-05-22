@@ -16,19 +16,23 @@ package checks
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
 const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length"
 
 const maxDiskNameLength = 63
 
+// Суффиксные части формируются из terraform-шаблонов каждого провайдера (join("-", [...])).
+// Для DVP суффикс зависит от наличия additionalDisks в конфиге, поэтому определяется динамически.
 var providerDiskSuffixParts = map[string][]string{
-	"dvp":         {"additional-disk", "0", "0", "abcdef"},
 	"zvirt":       {"master", "0", "kubernetes-data"},
 	"dynamix":     {"master", "0", "kubernetes-data"},
 	"vcd":         {"master", "0", "etcd-disk"},
@@ -39,6 +43,24 @@ var providerDiskSuffixParts = map[string][]string{
 	"openstack":   {"kubernetes-data", "0"},
 	"huaweicloud": {"kubernetes-data", "0"},
 	"vsphere":     {"master", "0"},
+}
+
+var (
+	dvpSuffixWithAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
+	dvpSuffixWithoutAdditionalDisk = []string{"kubernetes-data", "0", "abcdef"}
+)
+
+type dvpInstanceClass struct {
+	AdditionalDisks []json.RawMessage `json:"additionalDisks,omitempty"`
+}
+
+type dvpMasterNodeGroup struct {
+	InstanceClass dvpInstanceClass `json:"instanceClass"`
+}
+
+type dvpNodeGroup struct {
+	Name          string           `json:"name"`
+	InstanceClass dvpInstanceClass `json:"instanceClass"`
 }
 
 type CloudDiskNameLengthCheck struct {
@@ -65,31 +87,54 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 	prefix := c.MetaConfig.ClusterPrefix
 	provider := c.MetaConfig.ProviderName
 
+	if provider == "dvp" {
+		return c.runDVP(prefix)
+	}
+
 	suffixParts, ok := providerDiskSuffixParts[provider]
 	if !ok {
 		return nil
 	}
 
-	suffix := strings.Join(suffixParts, "-")
+	diskName := prefix + "-" + strings.Join(suffixParts, "-")
+	if len(diskName) > maxDiskNameLength {
+		return fmt.Errorf(
+			"disk name %q exceeds %d characters (got %d); "+
+				"use a shorter cluster prefix",
+			diskName, maxDiskNameLength, len(diskName),
+		)
+	}
 
-	if provider == "dvp" {
-		for _, ng := range c.collectNodeGroupNames() {
-			diskName := prefix + "-" + ng + "-" + suffix
-			if len(diskName) > maxDiskNameLength {
-				return fmt.Errorf(
-					"disk name %q for node group %q exceeds %d characters (got %d); "+
-						"use a shorter cluster prefix or node group name",
-					diskName, ng, maxDiskNameLength, len(diskName),
-				)
-			}
+	return nil
+}
+
+func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
+	type nodeGroupCheck struct {
+		name            string
+		hasAdditionalDisks bool
+	}
+
+	groups := []nodeGroupCheck{{name: "master", hasAdditionalDisks: c.masterHasAdditionalDisks()}}
+
+	for _, ng := range c.dvpNodeGroups() {
+		groups = append(groups, nodeGroupCheck{
+			name:            ng.Name,
+			hasAdditionalDisks: len(ng.InstanceClass.AdditionalDisks) > 0,
+		})
+	}
+
+	for _, ng := range groups {
+		suffixParts := dvpSuffixWithoutAdditionalDisk
+		if ng.hasAdditionalDisks {
+			suffixParts = dvpSuffixWithAdditionalDisk
 		}
-	} else {
-		diskName := prefix + "-" + suffix
+
+		diskName := prefix + "-" + ng.name + "-" + strings.Join(suffixParts, "-")
 		if len(diskName) > maxDiskNameLength {
 			return fmt.Errorf(
-				"disk name %q exceeds %d characters (got %d); "+
-					"use a shorter cluster prefix",
-				diskName, maxDiskNameLength, len(diskName),
+				"disk name %q for node group %q exceeds %d characters (got %d); "+
+					"use a shorter cluster prefix or node group name",
+				diskName, ng.name, maxDiskNameLength, len(diskName),
 			)
 		}
 	}
@@ -97,20 +142,27 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func (c CloudDiskNameLengthCheck) collectNodeGroupNames() []string {
-	seen := map[string]struct{}{"master": {}}
-	names := []string{"master"}
-
-	for _, ng := range c.MetaConfig.TerraNodeGroupSpecs {
-		if ng.Name != "" {
-			if _, ok := seen[ng.Name]; !ok {
-				seen[ng.Name] = struct{}{}
-				names = append(names, ng.Name)
-			}
-		}
+func (c CloudDiskNameLengthCheck) masterHasAdditionalDisks() bool {
+	master, err := dhctljson.UnmarshalToFromMessageMap[dvpMasterNodeGroup](
+		c.MetaConfig.ProviderClusterConfig, "masterNodeGroup",
+	)
+	if err != nil {
+		return false
 	}
+	return len(master.InstanceClass.AdditionalDisks) > 0
+}
 
-	return names
+func (c CloudDiskNameLengthCheck) dvpNodeGroups() []dvpNodeGroup {
+	groups, err := dhctljson.UnmarshalToFromMessageMap[[]dvpNodeGroup](
+		c.MetaConfig.ProviderClusterConfig, "nodeGroups",
+	)
+	if err != nil {
+		if errors.Is(err, dhctljson.ErrNotFound) {
+			return nil
+		}
+		return nil
+	}
+	return *groups
 }
 
 func CloudDiskNameLength(metaConfig *config.MetaConfig) preflight.Check {
