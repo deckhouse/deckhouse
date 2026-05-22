@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
@@ -178,7 +179,7 @@ func resolveSandboxTargetArgs(mode sandboxMode, argv []string) ([]string, string
 	switch mode {
 	case sandboxModeIsolatedProcess, sandboxModeIsolatedProcessChild:
 		if len(argv) != 1 {
-			return nil, "", fmt.Errorf("isolated sandbox mode expects exactly one nginx config path after --")
+			return nil, "", fmt.Errorf("isolated sandbox mode expects exactly one nginx config path after --, got %d, %s", len(argv), strings.Join(argv, ","))
 		}
 
 		return buildIsolatedNginxValidationArgs(argv[0]), argv[0], nil
