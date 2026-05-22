@@ -188,6 +188,7 @@ spec:
                   newVersionsOverall:
                     description: |-
                       Total number of newly found versions across all packages in this operation.
+                      
                       A version is counted as new if its ApplicationPackageVersion or
                       ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
                       only) existed with the "not in registry" mark and its image was found in the
@@ -206,6 +207,7 @@ spec:
                         newVersions:
                           description: |-
                             Number of newly found versions during this operation.
+                            
                             A version is counted as new if its ApplicationPackageVersion or
                             ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
                             only) existed with the "not in registry" mark and its image was found in the
