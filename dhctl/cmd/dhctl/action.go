@@ -362,7 +362,7 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 		return nil, err
 	}
 
-	log.InfoF("Debug log file: %s\n", logPath)
+	log.InteractiveInfoF("Debug log file: %s\n", logPath)
 
 	i.logFileMutex.Lock()
 	defer i.logFileMutex.Unlock()
