@@ -171,6 +171,16 @@ func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 		return err
 	}
 
+	err = deckhouse.DeleteDeckhouseClusters(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.WaitForDeckhouseClustersDeletion(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
 	err = deckhouse.DeletePDBs(ctx, kubeCl)
 	if err != nil {
 		return err

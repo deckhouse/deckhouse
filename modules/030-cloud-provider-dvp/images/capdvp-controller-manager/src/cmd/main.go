@@ -223,10 +223,11 @@ func main() {
 	}
 
 	if err = (&controller.DeckhouseClusterReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Config: mgr.GetConfig(),
-		DVP:    cloudAPI,
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		Config:      mgr.GetConfig(),
+		DVP:         cloudAPI,
+		ClusterUUID: cloudConfig.ClusterUUID,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseCluster")
 		os.Exit(1)

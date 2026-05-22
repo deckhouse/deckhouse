@@ -39,7 +39,27 @@ import (
 const (
 	deckhouseDeploymentNamespace = "d8-system"
 	deckhouseDeploymentName      = "deckhouse"
+	deckhouseClusterNamespace    = "d8-cloud-instance-manager"
 )
+
+var deckhouseClusterGVR = schema.GroupVersionResource{
+	Group:    "infrastructure.cluster.x-k8s.io",
+	Version:  "v1alpha1",
+	Resource: "deckhouseclusters",
+}
+
+func isDeckhouseClusterUnsupportedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.IsNotFound(err) {
+		return true
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "the server could not find the requested resource") ||
+		strings.Contains(msg, "no matches for kind")
+}
 
 func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete validating webhook configurations", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
@@ -69,6 +89,28 @@ func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 		if err != nil && !errors.IsNotFound(err) {
 			return err
 		}
+		return nil
+	})
+}
+
+func DeleteDeckhouseClusters(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete DeckhouseClusters", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		clusters, err := kubeCl.Dynamic().Resource(deckhouseClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if isDeckhouseClusterUnsupportedErr(err) {
+				return nil
+			}
+			return err
+		}
+
+		for _, cluster := range clusters.Items {
+			err := kubeCl.Dynamic().Resource(deckhouseClusterGVR).Namespace(cluster.GetNamespace()).Delete(ctx, cluster.GetName(), metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			log.InfoF("%s/%s\n", cluster.GetNamespace(), cluster.GetName())
+		}
+
 		return nil
 	})
 }
@@ -257,6 +299,31 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 		}
 		//goland:noinspection GoErrorStringFormat
 		return fmt.Errorf("%s", errStr)
+	})
+}
+
+func WaitForDeckhouseClustersDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Wait for DeckhouseClusters deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		resources, err := kubeCl.Dynamic().Resource(deckhouseClusterGVR).Namespace(deckhouseClusterNamespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			if isDeckhouseClusterUnsupportedErr(err) {
+				log.InfoLn("All DeckhouseClusters are deleted from the cluster")
+				return nil
+			}
+			return err
+		}
+
+		count := len(resources.Items)
+		if count != 0 {
+			builder := strings.Builder{}
+			for _, item := range resources.Items {
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
+			}
+			return fmt.Errorf("%d DeckhouseClusters left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
+		}
+
+		log.InfoLn("All DeckhouseClusters are deleted from the cluster")
+		return nil
 	})
 }
 
