@@ -746,7 +746,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     rootKubeconfigSymlink: false
@@ -780,7 +780,7 @@ This credential bypasses all RBAC checks. Use it only as a last resort and restr
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -825,7 +825,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -844,7 +844,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -904,7 +904,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
@@ -1391,7 +1391,7 @@ To enable field protection, do the following:
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      enabled: true
      settings:
        apiserver:

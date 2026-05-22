@@ -56,7 +56,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -76,7 +76,7 @@ To create an advanced Kubernetes API audit policy, follow these steps:
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 3
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -158,7 +158,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
