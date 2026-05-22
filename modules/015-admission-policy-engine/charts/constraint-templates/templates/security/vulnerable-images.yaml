@@ -33,7 +33,7 @@ spec:
           response := get_data(images)
 
           response_deny_request(response, input.review.operation)
-          msg := "request denied by external data provider"
+          msg := sprintf("request denied: %v", [response])
         }
 
         get_data(images) = response {
@@ -43,7 +43,7 @@ spec:
 
         get_data(images) = response {
           not is_test_mode
-          response := external_data_from_inventory("trivy-provider", images)
+          response := external_data({"provider": "trivy-provider", "keys": images})
         }
 
         external_data_from_inventory(provider, keys) = response {
