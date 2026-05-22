@@ -2944,7 +2944,10 @@ jobs:
       - git_info
       - build_tests
     env:
-      DIFF_BASE: HEAD~1
+      # `before` is the ref tip prior to this push — captures every commit
+      # the push introduced, regardless of merge strategy (HEAD~1 would miss
+      # all but the last commit on a multi-commit / rebase merge).
+      DIFF_BASE: ${{ github.event.before }}
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]

@@ -105,7 +105,10 @@ jobs:
       - git_info
       - build_tests
     env:
-      DIFF_BASE: HEAD~1
+      # `before` is the ref tip prior to this push — captures every commit
+      # the push introduced, regardless of merge strategy (HEAD~1 would miss
+      # all but the last commit on a multi-commit / rebase merge).
+      DIFF_BASE: ${{ github.event.before }}
 {!{ tmpl.Exec "tests_template" (slice $ctx "golint_diff" "build_tests") | strings.Indent 4 }!}
 
   openapi_test_cases:

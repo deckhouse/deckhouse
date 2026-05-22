@@ -95,14 +95,12 @@ import:
   add: /{{ .TF.gcp.artifactBinary }}
   to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $.TF.gcp.version }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
   before: setup
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/images_digests.json
-  after: setup
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/040-node-manager/images_digests.json
-  after: setup
+# NB: the `images-digests` image is intentionally NOT imported here.
+# It carries a werf `dependencies:` block over every module image, so
+# importing it forces a full deckhouse image build. Without the baked-in
+# images_digests.json, testing/library/utils.go falls back to the dummy
+# DefaultImagesDigests (tools/images_tags) — the path designed for
+# template/matrix tests.
 git:
 - add: /tools/mounts/mountfile
   to: /root/.ack-ginkgo-rc
