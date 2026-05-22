@@ -438,5 +438,3 @@ replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatibl
 replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
-
-replace github.com/flant/shell-operator => ../shell-operator
