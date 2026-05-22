@@ -203,14 +203,6 @@ jobs:
             let branchName;
             let prNum;
 
-            // Skip for events without branch/PR context (schedule, repository_dispatch, etc.).
-            // GetBranchNameFromContext reads context.payload.ref, which is undefined for such events and would throw.
-            const supportedEvents = ['pull_request', 'pull_request_target', 'workflow_dispatch', 'push'];
-            if (!supportedEvents.includes(context.eventName)) {
-              core.info(`Skip a job for unsupported event: ${context.eventName}`);
-              return true;
-            }
-
             if (context.eventName === 'pull_request' || context.eventName === 'pull_request_target') {
               branchName = context.payload.pull_request.head.ref;
               prNum = context.payload.pull_request.number;
