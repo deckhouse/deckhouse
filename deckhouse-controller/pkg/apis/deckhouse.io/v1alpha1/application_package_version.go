@@ -293,6 +293,14 @@ type PackageModulesRequirements struct {
 	// start. Groups are checker-only and add no edges to the dependency graph.
 	// +optional
 	AnyOf []PackageModuleGroup `json:"anyOf,omitempty"`
+
+	// NoneOf groups of forbidden dependencies — no member of any group may be
+	// installed for the package to start. A member with no constraint is forbidden
+	// at any version; a member with a constraint is forbidden only at versions
+	// matching that constraint. Groups are checker-only and add no edges to the
+	// dependency graph.
+	// +optional
+	NoneOf []PackageModuleGroup `json:"noneOf,omitempty"`
 }
 
 // PackageModuleDependency is a single named module dependency with a semver

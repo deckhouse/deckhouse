@@ -52,6 +52,11 @@ type ModulesRequirements struct {
 	// start. AnyOf groups are checker-only — they add no edges to the dependency
 	// graph, so fallback chains across packages do not produce cycles.
 	AnyOf []ModuleGroup `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
+	// NoneOf lists groups of forbidden dependencies; no member of any group may be
+	// present for the module to start. A nil constraint on a member forbids any
+	// installed version; a non-nil constraint narrows the forbidden range so
+	// versions outside it remain acceptable. Checker-only — adds no graph edges.
+	NoneOf []ModuleGroup `json:"noneOf,omitempty" yaml:"noneOf,omitempty"`
 }
 
 // ModuleGroup is a group of alternative module dependencies for the AnyOf bucket.
@@ -96,6 +101,14 @@ func (d Definition) Constraints() schedule.Constraints {
 		})
 	}
 
+	noneOf := make([]schedule.NoneOfGroup, 0, len(d.Requirements.Modules.NoneOf))
+	for _, g := range d.Requirements.Modules.NoneOf {
+		noneOf = append(noneOf, schedule.NoneOfGroup{
+			Name:    g.Name,
+			Members: g.Members,
+		})
+	}
+
 	order := schedule.Order(d.Weight)
 	if order == 0 {
 		order = schedule.FunctionalOrder
@@ -107,5 +120,6 @@ func (d Definition) Constraints() schedule.Constraints {
 		Deckhouse:    d.Requirements.Deckhouse,
 		Dependencies: deps,
 		AnyOf:        anyOf,
+		NoneOf:       noneOf,
 	}
 }

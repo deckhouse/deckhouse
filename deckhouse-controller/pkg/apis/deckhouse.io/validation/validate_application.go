@@ -139,12 +139,14 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 
 		// Parse module dependency constraints. Mandatory entries must be present;
 		// conditional entries (formerly the "!optional" suffix) are skippable;
-		// anyOf groups require ≥1 installed member that satisfies its constraint.
+		// anyOf groups require ≥1 installed member that satisfies its constraint;
+		// noneOf groups require zero installed members that match their constraints.
 		// A name listed in both mandatory and conditional is rejected — silently
 		// letting conditional overwrite mandatory would weaken the requirement
 		// without telling the user.
 		modules := make(map[string]schedule.Dependency)
 		var anyOfGroups []schedule.AnyOfGroup
+		var noneOfGroups []schedule.NoneOfGroup
 		if reqs.Modules != nil {
 			for _, dep := range reqs.Modules.Mandatory {
 				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
@@ -178,17 +180,17 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 			}
 
 			anyOfGroups = make([]schedule.AnyOfGroup, 0, len(reqs.Modules.AnyOf))
-			seenGroupNames := make(map[string]struct{}, len(reqs.Modules.AnyOf))
+			seenAnyOfNames := make(map[string]struct{}, len(reqs.Modules.AnyOf))
 			for i, group := range reqs.Modules.AnyOf {
 				if len(group.Name) == 0 {
 					return fmt.Errorf("parse anyOf group [%d]: name is required", i)
 				}
 
-				if _, dup := seenGroupNames[group.Name]; dup {
+				if _, dup := seenAnyOfNames[group.Name]; dup {
 					return fmt.Errorf("parse anyOf group '%s': duplicate group name", group.Name)
 				}
 
-				seenGroupNames[group.Name] = struct{}{}
+				seenAnyOfNames[group.Name] = struct{}{}
 
 				if len(group.Modules) == 0 {
 					return fmt.Errorf("parse anyOf group '%s': at least one member is required", group.Name)
@@ -226,10 +228,52 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 					Members: members,
 				})
 			}
+
+			noneOfGroups = make([]schedule.NoneOfGroup, 0, len(reqs.Modules.NoneOf))
+			seenNoneOfNames := make(map[string]struct{}, len(reqs.Modules.NoneOf))
+			for i, group := range reqs.Modules.NoneOf {
+				if len(group.Name) == 0 {
+					return fmt.Errorf("parse noneOf group [%d]: name is required", i)
+				}
+
+				if _, dup := seenNoneOfNames[group.Name]; dup {
+					return fmt.Errorf("parse noneOf group '%s': duplicate group name", group.Name)
+				}
+
+				seenNoneOfNames[group.Name] = struct{}{}
+
+				if len(group.Modules) == 0 {
+					return fmt.Errorf("parse noneOf group '%s': at least one member is required", group.Name)
+				}
+
+				members := make(map[string]*semver.Constraints, len(group.Modules))
+				for _, m := range group.Modules {
+					if len(m.Name) == 0 {
+						return fmt.Errorf("parse noneOf group '%s': member name is required", group.Name)
+					}
+
+					if _, dup := members[m.Name]; dup {
+						return fmt.Errorf("parse noneOf group '%s': duplicate member '%s'", group.Name, m.Name)
+					}
+
+					constraint, err := parsePackageDependencyConstraint(m.Constraint)
+					if err != nil {
+						return fmt.Errorf("parse noneOf group '%s' member '%s': %w", group.Name, m.Name, err)
+					}
+
+					members[m.Name] = constraint
+				}
+
+				noneOfGroups = append(noneOfGroups, schedule.NoneOfGroup{
+					Name:    group.Name,
+					Members: members,
+				})
+			}
 		}
 
 		constraints.Dependencies = modules
 		constraints.AnyOf = anyOfGroups
+		constraints.NoneOf = noneOfGroups
 	}
 
 	// Delegate to the manager which checks the parsed constraints against the

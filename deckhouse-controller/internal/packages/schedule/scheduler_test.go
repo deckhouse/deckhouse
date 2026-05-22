@@ -666,3 +666,236 @@ func (s *SchedulerSuite) TestAnyOfMemberInstallTriggersReschedule() {
 
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
 }
+
+// TestNoneOfNoInstalledMemberEnables covers the happy path: with no forbidden
+// module installed, the noneOf group passes and the consumer schedules.
+func (s *SchedulerSuite) TestNoneOfNoInstalledMemberEnables() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+					"haproxy-legacy":       nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfInstalledNilConstraintViolated pins the empty-constraint semantics
+// for noneOf: a nil constraint forbids the module at any installed version.
+// Once the module is installed, the consumer is disabled.
+func (s *SchedulerSuite) TestNoneOfInstalledNilConstraintViolated() {
+	s.activateGlobal()
+
+	// Forbidden module is installed at any version — group violated from birth.
+	s.versions["haproxy-legacy"] = mustVersion("0.0.1")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"haproxy-legacy": nil,
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfInstalledInForbiddenRangeViolated verifies that a constraint
+// narrows the forbidden range and the consumer is disabled only when a
+// matching version is installed.
+func (s *SchedulerSuite) TestNoneOfInstalledInForbiddenRangeViolated() {
+	s.activateGlobal()
+
+	// 1.9.0 matches "<2.0.0" — falls in the forbidden range.
+	s.versions["nginx-ingress-legacy"] = mustVersion("1.9.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfInstalledOutsideForbiddenRangeEnables confirms that a member
+// installed at a version *outside* the forbidden range does not violate the
+// group — the constraint is the forbidden range, not a "must not be present"
+// shortcut.
+func (s *SchedulerSuite) TestNoneOfInstalledOutsideForbiddenRangeEnables() {
+	s.activateGlobal()
+
+	// 2.0.0 is outside the "<2.0.0" forbidden range — group passes.
+	s.versions["nginx-ingress-legacy"] = mustVersion("2.0.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfMultipleGroupsAllMustPass verifies that noneOf groups are
+// evaluated independently and ALL must pass for the consumer to be enabled.
+// A violation in any one group disables the consumer.
+func (s *SchedulerSuite) TestNoneOfMultipleGroupsAllMustPass() {
+	s.activateGlobal()
+
+	// Second group violated via deprecated-storage.
+	s.versions["deprecated-storage"] = mustVersion("1.0.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{
+				{
+					Name: "legacy-ingress",
+					Members: map[string]*semver.Constraints{
+						"nginx-ingress-legacy": mustConstraint("<2.0.0"),
+					},
+				},
+				{
+					Name: "legacy-storage",
+					Members: map[string]*semver.Constraints{
+						"deprecated-storage": nil,
+					},
+				},
+			},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Removing the violator from the second group enables the consumer.
+	delete(s.versions, "deprecated-storage")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestNoneOfDoesNotCreateDependencyEdge is the load-bearing test for the
+// design property: noneOf groups must not contribute to the topological
+// graph, so two packages whose noneOf groups reference each other do not
+// produce a cycle. Symmetric to TestAnyOfDoesNotCreateDependencyEdge.
+func (s *SchedulerSuite) TestNoneOfDoesNotCreateDependencyEdge() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "conflict",
+				Members: map[string]*semver.Constraints{
+					"beta": nil,
+				},
+			}},
+		},
+	}))
+
+	// Adding beta whose NoneOf references alpha must NOT trigger a CycleError —
+	// noneOf members are not predecessors in the topo graph.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "beta",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "conflict",
+				Members: map[string]*semver.Constraints{
+					"alpha": nil,
+				},
+			}},
+		},
+	}))
+}
+
+// TestCheckConstraintsNoneOfRejectsAtAdmission pins admission-time parity:
+// CheckConstraints (the webhook path) evaluates the noneOf predicate
+// identically to the persistent node checker chain, returning an error
+// naming the violated group when a forbidden module is installed.
+func (s *SchedulerSuite) TestCheckConstraintsNoneOfRejectsAtAdmission() {
+	s.activateGlobal()
+
+	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
+
+	err := s.sched.CheckConstraints("proposed", schedule.Constraints{
+		Order: schedule.FunctionalOrder,
+		NoneOf: []schedule.NoneOfGroup{{
+			Name: "legacy-ingress",
+			Members: map[string]*semver.Constraints{
+				"haproxy-legacy": nil,
+			},
+		}},
+	})
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "legacy-ingress", "failure message must name the violated group")
+	s.Contains(err.Error(), "haproxy-legacy", "failure message must name the offending member")
+}
+
+// TestNoneOfMemberInstallTriggersDisable confirms dynamic re-evaluation:
+// a consumer is enabled while no forbidden module is installed, then flips
+// to disabled when one becomes available and the scheduler re-runs.
+func (s *SchedulerSuite) TestNoneOfMemberInstallTriggersDisable() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			NoneOf: []schedule.NoneOfGroup{{
+				Name: "legacy-ingress",
+				Members: map[string]*semver.Constraints{
+					"haproxy-legacy": nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Forbidden module appears; consumer must flip enabled→disabled.
+	s.versions["haproxy-legacy"] = mustVersion("1.0.0")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventDisable), "consumer")
+}

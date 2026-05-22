@@ -50,6 +50,7 @@ type Constraints struct {
 	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
 	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and checker inputs.
 	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Checker-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
+	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Checker-only: "must not be installed" is an admission predicate, not an ordering relation.
 }
 
 // Dependency describes a requirement on another package, with an optional
@@ -64,6 +65,16 @@ type Dependency struct {
 // constraint on a member means "any installed version is acceptable". Name is
 // the stable identifier used by the scheduler in failure diagnostics.
 type AnyOfGroup struct {
+	Name    string                         `json:"name" yaml:"name"`
+	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
+}
+
+// NoneOfGroup is a group of forbidden dependencies: no member may be installed
+// in a way that matches its constraint. A nil constraint on a member forbids
+// the module at any installed version; a non-nil constraint narrows the
+// forbidden range. Name is the stable identifier used by the scheduler in
+// failure diagnostics.
+type NoneOfGroup struct {
 	Name    string                         `json:"name" yaml:"name"`
 	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
 }
@@ -133,6 +144,10 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.checkers = append(n.checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
 	}
 
+	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
+		n.checkers = append(n.checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
 	s.nodes[pkg.GetName()] = n
 }
 
@@ -148,6 +163,22 @@ func toAnyOfGroups(in []AnyOfGroup) []dependency.AnyOfGroup {
 		out = append(out, dependency.AnyOfGroup{
 			Name:    g.Name,
 			Members: maps.Clone(g.Members),
+		})
+	}
+
+	return out
+}
+
+// toNoneOfGroups translates schedule.NoneOfGroup values into the dependency
+// package's NoneOfGroup shape. The two types are structurally identical; the
+// translation exists so the schedule package's public contract does not leak
+// the dependency package's types to callers.
+func toNoneOfGroups(in []NoneOfGroup) []dependency.NoneOfGroup {
+	out := make([]dependency.NoneOfGroup, 0, len(in))
+	for _, g := range in {
+		out = append(out, dependency.NoneOfGroup{
+			Name:    g.Name,
+			Members: g.Members,
 		})
 	}
 

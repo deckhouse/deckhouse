@@ -78,11 +78,12 @@ func (s *LoaderTestSuite) TestLoadAppConfCompletePackage() {
 	s.Contains(string(cfg.ValuesSchema), "type: object")
 }
 
-// TestLoadAppConfModulesRequirements tests that mandatory, conditional, and anyOf
-// module dependencies in an application's package.yaml are parsed into the respective
-// shapes, that constraint strings are honored, that mandatory entries may omit the
-// constraint (parsed as a nil *semver.Constraints meaning "any version"), and that
-// anyOf groups carry both the group Name and per-member constraints.
+// TestLoadAppConfModulesRequirements tests that mandatory, conditional, anyOf,
+// and noneOf module dependencies in an application's package.yaml are parsed
+// into the respective shapes, that constraint strings are honored, that
+// mandatory entries may omit the constraint (parsed as a nil *semver.Constraints
+// meaning "any version"), and that group buckets carry their Name plus
+// per-member constraints with the right empty-constraint semantics per bucket.
 func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "default.complete-app")
 
@@ -93,10 +94,12 @@ func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 	mandatory := cfg.Definition.Requirements.Modules.Mandatory
 	conditional := cfg.Definition.Requirements.Modules.Conditional
 	anyOf := cfg.Definition.Requirements.Modules.AnyOf
+	noneOf := cfg.Definition.Requirements.Modules.NoneOf
 
 	require.Len(s.T(), mandatory, 2)
 	require.Len(s.T(), conditional, 1)
 	require.Len(s.T(), anyOf, 1)
+	require.Len(s.T(), noneOf, 1)
 
 	// Mandatory with constraint: constraint accepts >=1.14, rejects 1.13.
 	cniConstraint, ok := mandatory["cni-cilium"]
@@ -135,6 +138,23 @@ func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 	require.NotNil(s.T(), awsConstraint)
 	s.True(awsConstraint.Check(semver.MustParse("2.0.0")))
 	s.False(awsConstraint.Check(semver.MustParse("1.9.0")))
+
+	// NoneOf group: forbidden modules. nginx-ingress-legacy carries a non-nil
+	// constraint scoping the forbidden range to <2.0.0 (so 2.0.0+ is fine).
+	// haproxy-legacy has a nil constraint meaning "forbidden at any version".
+	noneOfGroup := noneOf[0]
+	s.Equal("legacy-ingress", noneOfGroup.Name)
+	require.Len(s.T(), noneOfGroup.Members, 2)
+
+	nginxConstraint, ok := noneOfGroup.Members["nginx-ingress-legacy"]
+	require.True(s.T(), ok, "nginx-ingress-legacy must be in noneOf group members")
+	require.NotNil(s.T(), nginxConstraint)
+	s.True(nginxConstraint.Check(semver.MustParse("1.9.0")), "1.9.0 is in the forbidden range")
+	s.False(nginxConstraint.Check(semver.MustParse("2.0.0")), "2.0.0 is outside the forbidden range")
+
+	haproxyConstraint, ok := noneOfGroup.Members["haproxy-legacy"]
+	require.True(s.T(), ok, "haproxy-legacy must be in noneOf group members")
+	s.Nil(haproxyConstraint, "nil constraint means forbidden at any installed version")
 }
 
 // TestLoadAppConfMinimalPackage tests loading an application with only required files.
@@ -234,11 +254,12 @@ func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 	s.Contains(string(cfg.ConfigSchema), "type: object")
 }
 
-// TestLoadModuleConfModulesRequirements tests that mandatory, conditional, and anyOf
-// module dependencies in a module's package.yaml are parsed into the respective
-// shapes, that constraint strings are honored, that mandatory entries may omit the
-// constraint (parsed as a nil *semver.Constraints meaning "any version"), and that
-// anyOf groups carry both the group Name and per-member constraints.
+// TestLoadModuleConfModulesRequirements tests that mandatory, conditional, anyOf,
+// and noneOf module dependencies in a module's package.yaml are parsed into the
+// respective shapes, that constraint strings are honored, that mandatory entries
+// may omit the constraint (parsed as a nil *semver.Constraints meaning "any
+// version"), and that group buckets carry their Name plus per-member constraints
+// with the right empty-constraint semantics per bucket.
 func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "complete-module")
 
@@ -249,10 +270,12 @@ func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 	mandatory := cfg.Definition.Requirements.Modules.Mandatory
 	conditional := cfg.Definition.Requirements.Modules.Conditional
 	anyOf := cfg.Definition.Requirements.Modules.AnyOf
+	noneOf := cfg.Definition.Requirements.Modules.NoneOf
 
 	require.Len(s.T(), mandatory, 2)
 	require.Len(s.T(), conditional, 1)
 	require.Len(s.T(), anyOf, 1)
+	require.Len(s.T(), noneOf, 1)
 
 	// Mandatory with constraint: constraint accepts >=1.14, rejects 1.13.
 	cniConstraint, ok := mandatory["cni-cilium"]
@@ -291,6 +314,23 @@ func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 	require.NotNil(s.T(), awsConstraint)
 	s.True(awsConstraint.Check(semver.MustParse("2.0.0")))
 	s.False(awsConstraint.Check(semver.MustParse("1.9.0")))
+
+	// NoneOf group: forbidden modules. nginx-ingress-legacy carries a non-nil
+	// constraint scoping the forbidden range to <2.0.0 (so 2.0.0+ is fine).
+	// haproxy-legacy has a nil constraint meaning "forbidden at any version".
+	noneOfGroup := noneOf[0]
+	s.Equal("legacy-ingress", noneOfGroup.Name)
+	require.Len(s.T(), noneOfGroup.Members, 2)
+
+	nginxConstraint, ok := noneOfGroup.Members["nginx-ingress-legacy"]
+	require.True(s.T(), ok, "nginx-ingress-legacy must be in noneOf group members")
+	require.NotNil(s.T(), nginxConstraint)
+	s.True(nginxConstraint.Check(semver.MustParse("1.9.0")), "1.9.0 is in the forbidden range")
+	s.False(nginxConstraint.Check(semver.MustParse("2.0.0")), "2.0.0 is outside the forbidden range")
+
+	haproxyConstraint, ok := noneOfGroup.Members["haproxy-legacy"]
+	require.True(s.T(), ok, "haproxy-legacy must be in noneOf group members")
+	s.Nil(haproxyConstraint, "nil constraint means forbidden at any installed version")
 }
 
 // TestLoadModuleConfMinimalPackage tests loading a module with only required files.

@@ -400,16 +400,17 @@ func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
 
 // modulesRequirementsToCR projects dto.ModulesRequirements onto the v1alpha1
 // PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
-// and anyOf are all empty.
+// anyOf, and noneOf are all empty.
 func modulesRequirementsToCR(mr dto.ModulesRequirements) *v1alpha1.PackageModulesRequirements {
-	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 {
+	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 && len(mr.NoneOf) == 0 {
 		return nil
 	}
 
 	return &v1alpha1.PackageModulesRequirements{
 		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
 		Conditional: moduleDependenciesToCR(mr.Conditional),
-		AnyOf:       anyOfGroupsToCR(mr.AnyOf),
+		AnyOf:       moduleGroupsToCR(mr.AnyOf),
+		NoneOf:      moduleGroupsToCR(mr.NoneOf),
 	}
 }
 
@@ -432,10 +433,12 @@ func moduleDependenciesToCR(deps []dto.ModuleDependency) []v1alpha1.PackageModul
 	return out
 }
 
-// anyOfGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
-// PackageModuleGroup CR slice. Returns nil for empty input so the parent CR
-// omitempty field renders cleanly.
-func anyOfGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
+// moduleGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
+// PackageModuleGroup CR slice. Used for both anyOf and noneOf — the shape is
+// identical at the CR layer; the bucket semantics live on the field they're
+// attached to. Returns nil for empty input so the parent CR omitempty field
+// renders cleanly.
+func moduleGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
 	if len(groups) == 0 {
 		return nil
 	}
