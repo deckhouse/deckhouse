@@ -92,12 +92,27 @@ type ModulesRequirements struct {
 	// Conditional lists modules that are not required to be present, but if installed
 	// must satisfy the version constraint for the package to work correctly.
 	Conditional []ModuleDependency `yaml:"conditional,omitempty" json:"conditional,omitempty"`
+	// AnyOf lists groups of alternative dependencies; at least one member of each
+	// group must be installed (and satisfy its constraint, if any) for the package
+	// to start. Each group must declare a stable Name used in scheduler diagnostics.
+	AnyOf []ModuleGroup `yaml:"anyOf,omitempty" json:"anyOf,omitempty"`
 }
 
 // ModuleDependency is a single named module dependency with an optional semver constraint.
 type ModuleDependency struct {
 	Name       string `yaml:"name" json:"name"`
 	Constraint string `yaml:"constraint,omitempty" json:"constraint,omitempty"`
+}
+
+// ModuleGroup is a group of alternative module dependencies. At least one member
+// must be installed and satisfy its constraint for the package to start. Name is
+// required and surfaces in scheduler error messages; Description is optional and
+// flows through to the CR status for kubectl visibility but is not used in any
+// scheduling decision.
+type ModuleGroup struct {
+	Name        string             `yaml:"name" json:"name"`
+	Description string             `yaml:"description,omitempty" json:"description,omitempty"`
+	Modules     []ModuleDependency `yaml:"modules" json:"modules"`
 }
 
 // DisableOptions configures package disablement behavior.
@@ -128,6 +143,20 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 		return apps.Definition{}, err
 	}
 
+	anyOf, err := buildAnyOfGroups(d.Requirements.Modules.AnyOf)
+	if err != nil {
+		return apps.Definition{}, err
+	}
+
+	if err := validateBucketCollisions(mandatory, conditional, anyOf); err != nil {
+		return apps.Definition{}, err
+	}
+
+	appGroups := make([]apps.ModuleGroup, 0, len(anyOf))
+	for _, g := range anyOf {
+		appGroups = append(appGroups, apps.ModuleGroup{Name: g.Name, Members: g.Members})
+	}
+
 	return apps.Definition{
 		Name:    d.Name,
 		Version: d.Version,
@@ -142,6 +171,7 @@ func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 			Modules: apps.ModulesRequirements{
 				Mandatory:   mandatory,
 				Conditional: conditional,
+				AnyOf:       appGroups,
 			},
 		},
 	}, nil
@@ -169,6 +199,20 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 		return modules.Definition{}, err
 	}
 
+	anyOf, err := buildAnyOfGroups(d.Requirements.Modules.AnyOf)
+	if err != nil {
+		return modules.Definition{}, err
+	}
+
+	if err := validateBucketCollisions(mandatory, conditional, anyOf); err != nil {
+		return modules.Definition{}, err
+	}
+
+	moduleGroups := make([]modules.ModuleGroup, 0, len(anyOf))
+	for _, g := range anyOf {
+		moduleGroups = append(moduleGroups, modules.ModuleGroup{Name: g.Name, Members: g.Members})
+	}
+
 	return modules.Definition{
 		Name:     d.Name,
 		Version:  d.Version,
@@ -185,6 +229,7 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 			Modules: modules.ModulesRequirements{
 				Mandatory:   mandatory,
 				Conditional: conditional,
+				AnyOf:       moduleGroups,
 			},
 		},
 	}, nil
@@ -222,4 +267,91 @@ func parseOptionalConstraint(raw string) (*semver.Constraints, error) {
 	}
 
 	return semver.NewConstraint(raw)
+}
+
+// parsedGroup is the parser-internal projection of an AnyOf group with member
+// constraints already resolved to *semver.Constraints. Domain layers (apps,
+// modules) widen this into their own ModuleGroup type carrying the same shape.
+type parsedGroup struct {
+	Name    string
+	Members map[string]*semver.Constraints
+}
+
+// buildAnyOfGroups validates and parses a list of dto.ModuleGroup. Each group must
+// declare a non-empty Name (used by the scheduler in diagnostics), a unique Name
+// across the anyOf list, and at least one member. Member names must be unique
+// within a group; member constraints, when present, must be valid semver. Empty
+// member constraints are allowed and mean "any version of this alternative".
+func buildAnyOfGroups(groups []ModuleGroup) ([]parsedGroup, error) {
+	if len(groups) == 0 {
+		return nil, nil
+	}
+
+	seenGroupNames := make(map[string]struct{}, len(groups))
+	out := make([]parsedGroup, 0, len(groups))
+
+	for i, g := range groups {
+		if len(g.Name) == 0 {
+			return nil, fmt.Errorf("parse anyOf group [%d]: name is required", i)
+		}
+
+		if _, dup := seenGroupNames[g.Name]; dup {
+			return nil, fmt.Errorf("parse anyOf group '%s': duplicate group name", g.Name)
+		}
+
+		seenGroupNames[g.Name] = struct{}{}
+
+		if len(g.Modules) == 0 {
+			return nil, fmt.Errorf("parse anyOf group '%s': at least one member is required", g.Name)
+		}
+
+		members := make(map[string]*semver.Constraints, len(g.Modules))
+		for _, m := range g.Modules {
+			if len(m.Name) == 0 {
+				return nil, fmt.Errorf("parse anyOf group '%s': member name is required", g.Name)
+			}
+
+			if _, dup := members[m.Name]; dup {
+				return nil, fmt.Errorf("parse anyOf group '%s': duplicate member '%s'", g.Name, m.Name)
+			}
+
+			constraint, err := parseOptionalConstraint(m.Constraint)
+			if err != nil {
+				return nil, fmt.Errorf("parse anyOf group '%s' member '%s': %w", g.Name, m.Name, err)
+			}
+
+			members[m.Name] = constraint
+		}
+
+		out = append(out, parsedGroup{Name: g.Name, Members: members})
+	}
+
+	return out, nil
+}
+
+// validateBucketCollisions rejects module names that appear in more than one bucket.
+// Mandatory and conditional are mutually exclusive (a module cannot be both required
+// and skippable). AnyOf members cannot also appear in mandatory or conditional, since
+// the unconditional bucket subsumes the alternative — the anyOf member would be dead
+// code, almost always indicating a copy-paste mistake in the package author's hands.
+func validateBucketCollisions(mandatory, conditional map[string]*semver.Constraints, anyOf []parsedGroup) error {
+	for name := range conditional {
+		if _, clash := mandatory[name]; clash {
+			return fmt.Errorf("module '%s' appears in both mandatory and conditional", name)
+		}
+	}
+
+	for _, g := range anyOf {
+		for memberName := range g.Members {
+			if _, clash := mandatory[memberName]; clash {
+				return fmt.Errorf("module '%s' appears in both mandatory and anyOf group '%s'", memberName, g.Name)
+			}
+
+			if _, clash := conditional[memberName]; clash {
+				return fmt.Errorf("module '%s' appears in both conditional and anyOf group '%s'", memberName, g.Name)
+			}
+		}
+	}
+
+	return nil
 }

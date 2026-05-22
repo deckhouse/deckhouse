@@ -199,6 +199,49 @@ spec:
                         description: Required modules, partitioned into mandatory
                           and conditional dependencies.
                         properties:
+                          anyOf:
+                            description: |-
+                              AnyOf groups of alternative dependencies — at least one member of each group
+                              must be installed (and satisfy its constraint, if any) for the package to
+                              start. Groups are checker-only and add no edges to the dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's
+                                    purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in
+                                    this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
                           conditional:
                             description: |-
                               Conditional dependencies — not required to be present, but if installed must

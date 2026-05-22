@@ -78,10 +78,11 @@ func (s *LoaderTestSuite) TestLoadAppConfCompletePackage() {
 	s.Contains(string(cfg.ValuesSchema), "type: object")
 }
 
-// TestLoadAppConfModulesRequirements tests that mandatory and conditional module
-// dependencies in an application's package.yaml are parsed into the respective maps,
-// that constraint strings are honored, and that mandatory entries may omit the
-// constraint (parsed as a nil *semver.Constraints meaning "any version").
+// TestLoadAppConfModulesRequirements tests that mandatory, conditional, and anyOf
+// module dependencies in an application's package.yaml are parsed into the respective
+// shapes, that constraint strings are honored, that mandatory entries may omit the
+// constraint (parsed as a nil *semver.Constraints meaning "any version"), and that
+// anyOf groups carry both the group Name and per-member constraints.
 func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "default.complete-app")
 
@@ -91,9 +92,11 @@ func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 
 	mandatory := cfg.Definition.Requirements.Modules.Mandatory
 	conditional := cfg.Definition.Requirements.Modules.Conditional
+	anyOf := cfg.Definition.Requirements.Modules.AnyOf
 
 	require.Len(s.T(), mandatory, 2)
 	require.Len(s.T(), conditional, 1)
+	require.Len(s.T(), anyOf, 1)
 
 	// Mandatory with constraint: constraint accepts >=1.14, rejects 1.13.
 	cniConstraint, ok := mandatory["cni-cilium"]
@@ -113,6 +116,25 @@ func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 	require.NotNil(s.T(), promConstraint)
 	s.True(promConstraint.Check(semver.MustParse("2.40.0")))
 	s.False(promConstraint.Check(semver.MustParse("2.39.0")))
+
+	// AnyOf group: name carried through; both members present with the parsed
+	// constraints. Group is checker-only at the scheduler layer, but at the
+	// loader boundary we just verify the parse fidelity.
+	group := anyOf[0]
+	s.Equal("cloud-provider", group.Name)
+	require.Len(s.T(), group.Members, 2)
+
+	gcpConstraint, ok := group.Members["cloud-provider-gcp"]
+	require.True(s.T(), ok, "cloud-provider-gcp must be in anyOf group members")
+	require.NotNil(s.T(), gcpConstraint)
+	s.True(gcpConstraint.Check(semver.MustParse("1.5.0")))
+	s.False(gcpConstraint.Check(semver.MustParse("1.4.0")))
+
+	awsConstraint, ok := group.Members["cloud-provider-aws"]
+	require.True(s.T(), ok, "cloud-provider-aws must be in anyOf group members")
+	require.NotNil(s.T(), awsConstraint)
+	s.True(awsConstraint.Check(semver.MustParse("2.0.0")))
+	s.False(awsConstraint.Check(semver.MustParse("1.9.0")))
 }
 
 // TestLoadAppConfMinimalPackage tests loading an application with only required files.
@@ -212,10 +234,11 @@ func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 	s.Contains(string(cfg.ConfigSchema), "type: object")
 }
 
-// TestLoadModuleConfModulesRequirements tests that mandatory and conditional module
-// dependencies in a module's package.yaml are parsed into the respective maps, that
-// constraint strings are honored, and that mandatory entries may omit the constraint
-// (parsed as a nil *semver.Constraints meaning "any version").
+// TestLoadModuleConfModulesRequirements tests that mandatory, conditional, and anyOf
+// module dependencies in a module's package.yaml are parsed into the respective
+// shapes, that constraint strings are honored, that mandatory entries may omit the
+// constraint (parsed as a nil *semver.Constraints meaning "any version"), and that
+// anyOf groups carry both the group Name and per-member constraints.
 func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "complete-module")
 
@@ -225,9 +248,11 @@ func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 
 	mandatory := cfg.Definition.Requirements.Modules.Mandatory
 	conditional := cfg.Definition.Requirements.Modules.Conditional
+	anyOf := cfg.Definition.Requirements.Modules.AnyOf
 
 	require.Len(s.T(), mandatory, 2)
 	require.Len(s.T(), conditional, 1)
+	require.Len(s.T(), anyOf, 1)
 
 	// Mandatory with constraint: constraint accepts >=1.14, rejects 1.13.
 	cniConstraint, ok := mandatory["cni-cilium"]
@@ -247,6 +272,25 @@ func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 	require.NotNil(s.T(), promConstraint)
 	s.True(promConstraint.Check(semver.MustParse("2.40.0")))
 	s.False(promConstraint.Check(semver.MustParse("2.39.0")))
+
+	// AnyOf group: name carried through; both members present with the parsed
+	// constraints. Group is checker-only at the scheduler layer, but at the
+	// loader boundary we just verify the parse fidelity.
+	group := anyOf[0]
+	s.Equal("cloud-provider", group.Name)
+	require.Len(s.T(), group.Members, 2)
+
+	gcpConstraint, ok := group.Members["cloud-provider-gcp"]
+	require.True(s.T(), ok, "cloud-provider-gcp must be in anyOf group members")
+	require.NotNil(s.T(), gcpConstraint)
+	s.True(gcpConstraint.Check(semver.MustParse("1.5.0")))
+	s.False(gcpConstraint.Check(semver.MustParse("1.4.0")))
+
+	awsConstraint, ok := group.Members["cloud-provider-aws"]
+	require.True(s.T(), ok, "cloud-provider-aws must be in anyOf group members")
+	require.NotNil(s.T(), awsConstraint)
+	s.True(awsConstraint.Check(semver.MustParse("2.0.0")))
+	s.False(awsConstraint.Check(semver.MustParse("1.9.0")))
 }
 
 // TestLoadModuleConfMinimalPackage tests loading a module with only required files.

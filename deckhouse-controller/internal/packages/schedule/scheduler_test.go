@@ -422,3 +422,247 @@ func (s *SchedulerSuite) TestPauseSuppressesScheduling() {
 	s.sched.Resume()
 	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), globalName)
 }
+
+// mustConstraint parses s into a *semver.Constraints or panics; tests use
+// known-good values.
+func mustConstraint(s string) *semver.Constraints {
+	c, err := semver.NewConstraint(s)
+	if err != nil {
+		panic(err)
+	}
+
+	return c
+}
+
+// TestAnyOfSatisfiedMemberEnables covers the happy path: a single AnyOf group
+// with one installed member that meets its constraint enables the consumer.
+func (s *SchedulerSuite) TestAnyOfSatisfiedMemberEnables() {
+	s.activateGlobal()
+
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+					"aws": mustConstraint(">=2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfNoInstalledMemberDisables verifies that an AnyOf group with no
+// installed members keeps the consumer disabled. Consumer is born disabled,
+// so no EventSchedule is emitted in the first place.
+func (s *SchedulerSuite) TestAnyOfNoInstalledMemberDisables() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+					"aws": mustConstraint(">=2.0.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfInstalledButConstraintFailsDisables proves that the member's
+// constraint is actually checked: a member installed at a version that fails
+// the constraint is not counted as satisfying the group.
+func (s *SchedulerSuite) TestAnyOfInstalledButConstraintFailsDisables() {
+	s.activateGlobal()
+
+	// gcp is installed but below the required floor; group is unmet.
+	s.versions["gcp"] = mustVersion("1.4.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfNilConstraintAcceptsAnyVersion pins the empty-constraint semantics:
+// a member with nil constraint is satisfied as soon as it is installed at any
+// version. Mirrors the DTO contract where an absent constraint string yields
+// a nil *semver.Constraints meaning "any installed version is acceptable".
+func (s *SchedulerSuite) TestAnyOfNilConstraintAcceptsAnyVersion() {
+	s.activateGlobal()
+
+	s.versions["gcp"] = mustVersion("0.0.1")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfMultipleGroupsAllMustPass verifies that AnyOf groups are evaluated
+// independently and ALL groups must pass for the consumer to be enabled.
+// One satisfied group is not enough when a second group has no installed
+// member — the consumer stays disabled.
+func (s *SchedulerSuite) TestAnyOfMultipleGroupsAllMustPass() {
+	s.activateGlobal()
+
+	// First group satisfied via gcp; second group has no installed members.
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{
+				{
+					Name: "cloud-provider",
+					Members: map[string]*semver.Constraints{
+						"gcp": mustConstraint(">=1.5.0"),
+					},
+				},
+				{
+					Name: "storage-backend",
+					Members: map[string]*semver.Constraints{
+						"minio": mustConstraint(">=2.0.0"),
+						"s3":    mustConstraint(">=1.0.0"),
+					},
+				},
+			},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	// Installing a member of the second group satisfies all groups; consumer
+	// schedules on the next pass.
+	s.versions["minio"] = mustVersion("2.0.0")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfDoesNotCreateDependencyEdge is the load-bearing test for the
+// design decision in ENG-7: AnyOf groups must not contribute to the
+// topological graph, so two packages whose AnyOf groups reference each other
+// do not produce a cycle. The same scenario expressed with hard dependencies
+// would be rejected as a *CycleError.
+func (s *SchedulerSuite) TestAnyOfDoesNotCreateDependencyEdge() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "fallback",
+				Members: map[string]*semver.Constraints{
+					"beta": nil,
+				},
+			}},
+		},
+	}))
+
+	// Adding beta whose AnyOf references alpha must NOT trigger a CycleError —
+	// AnyOf members are not predecessors in the topo graph.
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "beta",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "fallback",
+				Members: map[string]*semver.Constraints{
+					"alpha": nil,
+				},
+			}},
+		},
+	}))
+}
+
+// TestCheckConstraintsAnyOfRejectsAtAdmission pins the admission-time parity:
+// CheckConstraints (the webhook path) evaluates the AnyOf predicate identically
+// to the persistent node checker chain, returning an error when no member of
+// a group is installed.
+func (s *SchedulerSuite) TestCheckConstraintsAnyOfRejectsAtAdmission() {
+	s.activateGlobal()
+
+	err := s.sched.CheckConstraints("proposed", schedule.Constraints{
+		Order: schedule.FunctionalOrder,
+		AnyOf: []schedule.AnyOfGroup{{
+			Name: "cloud-provider",
+			Members: map[string]*semver.Constraints{
+				"gcp": mustConstraint(">=1.5.0"),
+				"aws": mustConstraint(">=2.0.0"),
+			},
+		}},
+	})
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "cloud-provider", "failure message must name the unmet group")
+}
+
+// TestAnyOfMemberInstallTriggersReschedule confirms dynamic re-evaluation:
+// a consumer born disabled (no AnyOf member installed) flips to enabled when
+// a member becomes available and the scheduler re-runs.
+func (s *SchedulerSuite) TestAnyOfMemberInstallTriggersReschedule() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+				},
+			}},
+		},
+	}))
+
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+
+	s.versions["gcp"] = mustVersion("1.5.0")
+	s.sched.Schedule()
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}

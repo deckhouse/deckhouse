@@ -440,16 +440,17 @@ func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
 }
 
 // moduleRequirementsToCR projects dto.ModulesRequirements onto the v1alpha1
-// PackageModuleRequirements CR shape, returning nil when both mandatory and
-// conditional lists are empty.
+// PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
+// and anyOf are all empty.
 func moduleRequirementsToCR(mr dto.ModulesRequirements) *v1alpha1.PackageModulesRequirements {
-	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 {
+	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 {
 		return nil
 	}
 
 	return &v1alpha1.PackageModulesRequirements{
 		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
 		Conditional: moduleDependenciesToCR(mr.Conditional),
+		AnyOf:       anyOfGroupsToCR(mr.AnyOf),
 	}
 }
 
@@ -466,6 +467,28 @@ func moduleDependenciesToCR(deps []dto.ModuleDependency) []v1alpha1.PackageModul
 		out = append(out, v1alpha1.PackageModuleDependency{
 			Name:       dep.Name,
 			Constraint: dep.Constraint,
+		})
+	}
+
+	return out
+}
+
+// anyOfGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
+// PackageModuleGroup CR slice. Returns nil for empty input so the parent CR
+// omitempty field renders cleanly. The legacy module.yaml path does not carry
+// anyOf groups and never reaches this function — only the v2 package.yaml path
+// (setFromPackageDefinition) emits anyOf metadata.
+func anyOfGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleGroup, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, v1alpha1.PackageModuleGroup{
+			Name:        g.Name,
+			Description: g.Description,
+			Modules:     moduleDependenciesToCR(g.Modules),
 		})
 	}
 
