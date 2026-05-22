@@ -496,13 +496,18 @@ function main() {
   {{- end }}
 
   # Execute a single step with the legacy retry+log behaviour.
-  # Writes stderr to a per-step log file; copies the last one into step.log on
-  # failure to preserve the bb-bashible-ready-* contract.
+  # Per-step stderr goes to its own file under /var/log/d8/bashible (the
+  # dedicated bashible log dir — keeps /var/lib/bashible from being littered
+  # with one step.<name>.log per step now that steps can run in parallel).
+  # On exit the latest per-step log is copied into /var/lib/bashible/step.log,
+  # which bb-bashible-ready-steps-failed / bb-event-error-create read.
   bb-run-step() {
     local step="$1"
     local step_base="${step##*/}"
     local step_log="/var/lib/bashible/step.log"
-    local per_step_log="/var/lib/bashible/step.${step_base}.log"
+    local step_log_dir="/var/log/d8/bashible"
+    mkdir -p "$step_log_dir"
+    local per_step_log="${step_log_dir}/step.${step_base}.log"
     local attempt=0
     local sx=""
     echo ===

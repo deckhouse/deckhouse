@@ -174,6 +174,12 @@ func startProviderDaemon(pluginsDir string) (string, *exec.Cmd, error) {
 	reattachFile := filepath.Join(os.TempDir(), fmt.Sprintf("dhctl-tpk-reattach-%d.json", os.Getpid()))
 	_ = os.Remove(reattachFile)
 
+	// Deliberately exec.Command, not exec.CommandContext: the daemon must
+	// outlive the context of whichever tofu invocation happened to spawn it —
+	// it is shared across every init/plan/show/apply of the whole bootstrap.
+	// Binding it to a per-call ctx would kill the daemon as soon as that call
+	// returns. Its lifecycle is managed explicitly via StopProviderDaemon
+	// (registered in dhctl's onShutdown handlers).
 	cmd := exec.Command(binary, "-reattach-file="+reattachFile)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	// Forward stdout/stderr so panics & misconfig are visible in the dhctl debug log.
