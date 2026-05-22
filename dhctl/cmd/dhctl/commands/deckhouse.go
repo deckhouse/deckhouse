@@ -121,13 +121,13 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
 		}
 
-		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
+		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &opts.Global)
 		if err != nil {
 			return err
 		}

@@ -21,8 +21,8 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 type Cleanup func()
@@ -34,7 +34,7 @@ type InitParams struct {
 	Node           libcon.Interface
 	LoggerProvider log.LoggerProvider
 	SignCheck      bool
-	DirsConfig     *directoryconfig.DirectoryConfig
+	GlobalOpts     *options.GlobalOptions
 	Interactive    bool
 }
 
@@ -47,7 +47,7 @@ func Init(ctx context.Context, params InitParams, opts ...InitOpt) (Cleanup, err
 
 	rpp := NewRegistryPackagesProxy(clusterDomain, configGetter, params.LoggerProvider, params.Interactive).
 		WithSignCheck(params.SignCheck).
-		WithDirectoryConfig(params.DirsConfig)
+		WithGlobalOptions(params.GlobalOpts)
 
 	for _, o := range opts {
 		o(rpp)
