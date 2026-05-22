@@ -172,9 +172,17 @@ func (c *Creator) createAll(ctx context.Context) error {
 // discoverKindVersions returns versions of `group` (other than `excludeVersion`) that serve the given `kind`.
 // Used to detect apiVersion mismatches early — if the kind exists at some version, the config is wrong.
 func (c *Creator) discoverKindVersions(ctx context.Context, group, kind, excludeVersion string) ([]string, error) {
-	groups, err := c.kubeCl.Discovery().ServerGroups()
+	var groups *metav1.APIGroupList
+	err := retry.NewSilentLoop("Discover server groups", 3, 1*time.Second).RunContext(ctx, func() error {
+		var err error
+		groups, err = c.kubeCl.Discovery().ServerGroups()
+		if err != nil {
+			return fmt.Errorf("discover server groups: %w", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("discover server groups: %w", err)
+		return nil, err
 	}
 
 	var versions []string
@@ -186,9 +194,14 @@ func (c *Creator) discoverKindVersions(ctx context.Context, group, kind, exclude
 			if v.Version == excludeVersion {
 				continue
 			}
-			list, err := c.kubeCl.Discovery().ServerResourcesForGroupVersion(v.GroupVersion)
-			if err != nil {
-				log.DebugF("discoverKindVersions: skip %s: %v\n", v.GroupVersion, err)
+			var list *metav1.APIResourceList
+			lErr := retry.NewSilentLoop("Get resources for "+v.GroupVersion, 3, 1*time.Second).RunContext(ctx, func() error {
+				var err error
+				list, err = c.kubeCl.Discovery().ServerResourcesForGroupVersion(v.GroupVersion)
+				return err
+			})
+			if lErr != nil {
+				log.DebugF("discoverKindVersions: skip %s: %v\n", v.GroupVersion, lErr)
 				continue
 			}
 			for _, r := range list.APIResources {
