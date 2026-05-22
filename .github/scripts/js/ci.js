@@ -1031,12 +1031,6 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       command.workflows = ['build-and-test_dev.yml'];
       command.rerunWorkflow = true;
     }
-    if (labelType === 'security') {
-      if (labelInfo.security === 'rootless' && event.action === 'labeled') {
-        command.workflows = ['build-and-test_dev.yml'];
-        command.rerunWorkflow = true;
-      }
-    }
   } finally {
     core.endGroup();
   }
