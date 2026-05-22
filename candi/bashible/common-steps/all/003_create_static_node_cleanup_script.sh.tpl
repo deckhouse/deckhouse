@@ -242,25 +242,23 @@ fi
 log_info "Cleanup completed successfully, restoring MOTD"
 restore_motd_message
 
-# Warn if any cleaned paths are still in fstab — they will be remounted on next boot.
-# The user must remove those entries manually before rebooting.
+# Check if any of the cleaned paths are still in fstab — they will be remounted on next boot.
 FSTAB_HITS=()
 for p in "${PATHS_TO_REMOVE[@]}" /var/lib/bashible; do
-  if grep -qsF "$p" /etc/fstab 2>/dev/null; then
-    FSTAB_HITS+=("$p")
-  fi
+  while IFS= read -r hit; do
+    FSTAB_HITS+=("$hit")
+  done < <(grep -sF "$p" /etc/fstab 2>/dev/null | grep -v '^\s*#')
 done
 
 if [ "${#FSTAB_HITS[@]}" -gt 0 ]; then
   echo ""
   echo "################################################################################"
-  echo "# WARNING: the following paths are present in /etc/fstab:"
+  echo "# WARNING: the following paths are present in /etc/fstab as mountpoints:"
   for p in "${FSTAB_HITS[@]}"; do
     echo "#   $p"
   done
   echo "#"
   echo "# Remove or comment out those entries from /etc/fstab before rebooting,"
-  echo "# otherwise the devices will be remounted and bootstrap may fail again."
   echo "################################################################################"
   echo ""
   log_err "Skipping reboot: manual /etc/fstab cleanup required (see WARNING above)"
