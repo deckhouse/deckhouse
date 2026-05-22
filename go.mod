@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.21.4-0.20260522123231-0329087ea02c
+	github.com/flant/addon-operator v1.21.4-0.20260522134505-de2e6450ec39
 	github.com/flant/kube-client v1.7.0
 	github.com/flant/shell-operator v1.17.5-0.20260522120047-c77fde3b56d0
 	github.com/go-openapi/spec v0.22.0
@@ -126,7 +126,7 @@ require (
 	github.com/gosimple/slug v1.15.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
-	github.com/ldmonster/kubeclient v0.0.0-20260522082709-ed73652c723f // indirect
+	github.com/ldmonster/kubeclient v0.0.0-20260522131506-e110f782894b // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/name212/govalue v1.1.0 // indirect
