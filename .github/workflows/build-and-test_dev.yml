@@ -834,31 +834,20 @@ jobs:
 
           type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
           # Build only the `tests` image (and its transitive werf deps);
-          # cache is shared with build_fe via WERF_REPO.
+          # cache is shared with build_fe via WERF_REPO. The build report is
+          # consumed inline just to read the tests image name — it is not kept
+          # as an artifact (minimal value for a tests-only build).
           d8-build dk build tests \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          rm -f images_tags_werf.json
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
           # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
-
-          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
-          mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Save build report
-        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: build_report_tests
-          path: images_tags_werf.json
-
-      - name: Cleanup workdir
-        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        run: rm -f images_tags_werf.json
     # </template: build_tests_template>
 
 
