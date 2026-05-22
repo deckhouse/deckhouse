@@ -63,7 +63,7 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	})
 }
 
-func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, err error) {
+func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	outputFile := fs.RandomNumberSuffix("/tmp/post-bootstrap-script-output")
 	envs := map[string]string{
 		"OUTPUT": outputFile,
@@ -96,6 +96,9 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, e
 		cmd.WithStdoutHandler(nil)
 		cmd.Sudo(ctx)
 		err = cmd.Run(ctx)
+		if err != nil {
+			log.WarnF("Cannot remove output file for script: %v", err)
+		}
 	}()
 
 	script := sshClient.UploadScript(e.path)

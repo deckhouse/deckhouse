@@ -82,12 +82,13 @@ func GetClusterUUID(ctx context.Context, kubeCl *client.KubernetesClient) (strin
 }
 
 func GetNodesStateSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, action string, additionalLabels ...kubernetes.LabelSelector) ([]*v1.Secret, error) {
-	selectors := []kubernetes.LabelSelector{
-		{
-			Label:    manifests.NodeInfrastructureStateLabelKey,
-			Operator: selection.Exists,
-		},
-	}
+	selectors := make([]kubernetes.LabelSelector, 0, 1+len(additionalLabels))
+
+	selectors = append(selectors, kubernetes.LabelSelector{
+
+		Label:    manifests.NodeInfrastructureStateLabelKey,
+		Operator: selection.Exists,
+	})
 
 	selectors = append(selectors, additionalLabels...)
 

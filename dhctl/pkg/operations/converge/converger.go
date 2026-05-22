@@ -113,7 +113,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	}
 
 	if !c.CommanderMode {
-
 		if c.CacheID == "" {
 			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
@@ -420,7 +419,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	if interactive {
 		pb := progressbar.GetDefaultPb()
 		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-		pb.MultiPrinter.Stop()
+		_, err := pb.MultiPrinter.Stop()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ConvergeResult{

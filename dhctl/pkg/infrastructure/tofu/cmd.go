@@ -89,7 +89,7 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 
 	envs = append(
 		envs,
-		fmt.Sprintf("TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER=kubernetes"),
+		"TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER=kubernetes",
 		fmt.Sprintf(
 			"TF_SKIP_DEPS_FOR_DATA_SOURCES=%s",
 			strings.Join(skipDataDeps, ";"),

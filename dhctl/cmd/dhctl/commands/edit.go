@@ -64,10 +64,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 
-		//nolint: errcheck
-		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
-		}
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {

@@ -77,7 +77,7 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 		slog.String("network", params.Network),
 		slog.String("address", params.Address),
 		slog.String("tmp_dir", params.TmpDir),
-		slog.String("cache directory", cacheDir),
+		slog.String("cache_directory", cacheDir),
 	)
 
 	s := grpc.NewServer(
