@@ -16,6 +16,10 @@ limitations under the License.
 
 package provider
 
+import "context"
+
+// Provider validates user credentials against an upstream IdP and returns
+// the user's groups on success. ctx must be propagated to outbound calls.
 type Provider interface {
-	ValidateCredentials(login string, password string) ([]string, error)
+	ValidateCredentials(ctx context.Context, login, password string) ([]string, error)
 }
