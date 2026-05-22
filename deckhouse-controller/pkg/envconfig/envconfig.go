@@ -127,6 +127,25 @@ type Config struct {
 	ObjectPatcherKubeClientBurst   int           `env:"OBJECT_PATCHER_KUBE_CLIENT_BURST"`
 	ObjectPatcherKubeClientTimeout time.Duration `env:"OBJECT_PATCHER_KUBE_CLIENT_TIMEOUT"`
 
+	// Deduplicated kubeclient cache settings. Drives shell-operator's
+	// pkg/kube/dedupclient (built on github.com/ldmonster/kubeclient) which
+	// addon-operator wires into its own engine when DedupClientEnabled is
+	// true. The cache stores a single canonical copy of every repeated
+	// scalar value and subtree across all watched objects, which sharply
+	// lowers memory use in clusters with many similar resources (e.g.
+	// templated Deployments). Names mirror addon-operator's own
+	// DedupClientSettings (envPrefix DEDUP_CLIENT_) one-to-one so the
+	// deckhouse contract stays identical to upstream and surfaces in the
+	// same flag/env namespace shell-operator already documents. List-typed
+	// env vars use a comma separator; GVK strings follow the form
+	// "<group>/<version>/<kind>" (group is empty for core resources, e.g.
+	// "/v1/Pod").
+	DedupClientEnabled            bool          `env:"DEDUP_CLIENT_ENABLED"`
+	DedupClientNamespaces         []string      `env:"DEDUP_CLIENT_NAMESPACES" envSeparator:","`
+	DedupClientWatchGVKs          []string      `env:"DEDUP_CLIENT_WATCH_GVKS" envSeparator:","`
+	DedupClientReconstructLRUSize int           `env:"DEDUP_CLIENT_RECONSTRUCT_LRU_SIZE"`
+	DedupClientGCInterval         time.Duration `env:"DEDUP_CLIENT_GC_INTERVAL"`
+
 	// Debug settings (shared between addon-operator and shell-operator
 	// — addon-operator copies DebugUnixSocket into the shapp global).
 	DebugUnixSocket     string `env:"DEBUG_UNIX_SOCKET"`
@@ -234,6 +253,12 @@ func (c *Config) Apply(cfg *ad_app.Config) {
 	cfg.ObjectPatcher.KubeClientBurst = c.ObjectPatcherKubeClientBurst
 	cfg.ObjectPatcher.KubeClientTimeout = c.ObjectPatcherKubeClientTimeout
 
+	cfg.DedupClient.Enabled = c.DedupClientEnabled
+	cfg.DedupClient.Namespaces = c.DedupClientNamespaces
+	cfg.DedupClient.WatchGVKs = c.DedupClientWatchGVKs
+	cfg.DedupClient.ReconstructLRUSize = c.DedupClientReconstructLRUSize
+	cfg.DedupClient.GCInterval = c.DedupClientGCInterval
+
 	cfg.Debug.UnixSocket = c.DebugUnixSocket
 	cfg.Debug.HTTPServerAddr = c.DebugHTTPServerAddr
 	cfg.Debug.KeepTmpFiles = c.DebugKeepTmpFiles
@@ -279,6 +304,11 @@ func fromAddonOperator(cfg *ad_app.Config) *Config {
 		ObjectPatcherKubeClientQPS:     cfg.ObjectPatcher.KubeClientQPS,
 		ObjectPatcherKubeClientBurst:   cfg.ObjectPatcher.KubeClientBurst,
 		ObjectPatcherKubeClientTimeout: cfg.ObjectPatcher.KubeClientTimeout,
+		DedupClientEnabled:             cfg.DedupClient.Enabled,
+		DedupClientNamespaces:          cfg.DedupClient.Namespaces,
+		DedupClientWatchGVKs:           cfg.DedupClient.WatchGVKs,
+		DedupClientReconstructLRUSize:  cfg.DedupClient.ReconstructLRUSize,
+		DedupClientGCInterval:          cfg.DedupClient.GCInterval,
 		DebugUnixSocket:                cfg.Debug.UnixSocket,
 		DebugHTTPServerAddr:            cfg.Debug.HTTPServerAddr,
 		DebugKeepTmpFiles:              cfg.Debug.KeepTmpFiles,
