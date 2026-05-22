@@ -44,9 +44,18 @@ jobs:
 
     # <template: werf_install_step>
     - name: Install werf CLI
-      uses: werf/actions/install@v2
-      with:
-        version: ${{env.WERF_VERSION}}
+      run: |
+        WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/$WERF_VERSION"
+        echo "$WERF_PATH" >> "$GITHUB_PATH"
+        CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+        if [[ "$WERF_VERSION" != "$CACHED_VERSION" ]]; then
+          echo "Current werf is $CACHED_VERSION, downloading $WERF_VERSION";
+          mkdir -p "$WERF_PATH"
+          curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/$WERF_VERSION/werf
+          chmod +x "$WERF_PATH/werf"
+        else
+          echo "Current werf is $CACHED_VERSION, skipping download"
+        fi
     # </template: werf_install_step>
     # <template: import_secrets>
     - name: Split repository name
