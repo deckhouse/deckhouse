@@ -59,8 +59,8 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "meta config is nil",
 		},
 		{
-			// DVP master без additionalDisks: {prefix}-master-kubernetes-data-0-abcdef
-			// суффикс = "-master-kubernetes-data-0-abcdef" = 32
+			// DVP master without additionalDisks: {prefix}-master-kubernetes-data-0-abcdef
+			// suffix = "-master-kubernetes-data-0-abcdef" = 32
 			// max prefix = 63 - 32 = 31
 			name: "DVP master without additionalDisks: short prefix passes",
 			metaConfig: &config.MetaConfig{
@@ -81,8 +81,8 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "exceeds 63 characters",
 		},
 		{
-			// DVP master с additionalDisks: {prefix}-master-additional-disk-0-0-abcdef
-			// суффикс = "-master-additional-disk-0-0-abcdef" = 34
+			// DVP master with additionalDisks: {prefix}-master-additional-disk-0-0-abcdef
+			// suffix = "-master-additional-disk-0-0-abcdef" = 34
 			// max prefix = 63 - 34 = 29
 			name: "DVP master with additionalDisks: short prefix passes",
 			metaConfig: &config.MetaConfig{
@@ -103,8 +103,8 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "exceeds 63 characters",
 		},
 		{
-			// DVP nodeGroup без additionalDisks: {prefix}-cloud-permanent-0-abcdef
-			// суффикс = "-cloud-permanent-0-abcdef" = 25
+			// DVP nodeGroup without additionalDisks: {prefix}-cloud-permanent-0-abcdef
+			// suffix = "-cloud-permanent-0-abcdef" = 25
 			// max prefix = 63 - 25 = 38
 			name: "DVP nodeGroup without additionalDisks: long prefix passes",
 			metaConfig: &config.MetaConfig{
@@ -129,8 +129,8 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "cloud-permanent",
 		},
 		{
-			// DVP nodeGroup с additionalDisks: {prefix}-cloud-permanent-additional-disk-0-0-abcdef
-			// суффикс = "-cloud-permanent-additional-disk-0-0-abcdef" = 45
+			// DVP nodeGroup with additionalDisks: {prefix}-cloud-permanent-additional-disk-0-0-abcdef
+			// suffix = "-cloud-permanent-additional-disk-0-0-abcdef" = 45
 			// max prefix = 63 - 45 = 18
 			name: "DVP nodeGroup with additionalDisks: short prefix passes",
 			metaConfig: &config.MetaConfig{
