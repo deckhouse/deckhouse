@@ -88,7 +88,7 @@ func (r *RegistryConfig) SetCA(ca string) {
 }
 
 func (c *dockerConfig) GetRegistries() []string {
-	registries := []string{}
+	registries := make([]string, 0, len(c.Auths))
 	for key := range c.Auths {
 		registries = append(registries, key)
 	}
@@ -263,7 +263,7 @@ func saveHash(digest, hash, dstPath string) error {
 	return nil
 }
 
-func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string) (v1.Image, error) {
+func pullImage(ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
@@ -274,7 +274,7 @@ func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, di
 	}
 	cached := cache.Image(img, layersCache)
 
-	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, digest), cached)
+	checksum, err := saveImageAsTarGz(ref.String(), filepath.Join(dstPath, digest), cached)
 	if err != nil {
 		return cached, fmt.Errorf("saving tar.gz: %w", err)
 	}
@@ -302,7 +302,7 @@ func getEstimatedTarSize(img v1.Image) (int64, error) {
 	return total, nil
 }
 
-func saveImageAsTarGz(ctx context.Context, imageRef string, outPath string, img v1.Image) (string, error) {
+func saveImageAsTarGz(imageRef string, outPath string, img v1.Image) (string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return "", fmt.Errorf("parsing image reference %q: %w", imageRef, err)
@@ -317,7 +317,7 @@ func saveImageAsTarGz(ctx context.Context, imageRef string, outPath string, img 
 		}
 
 		p = mpb.New(mpb.WithWidth(64))
-		bar = p.New(int64(total),
+		bar = p.New(total,
 			mpb.BarStyle(),
 			mpb.PrependDecorators(
 				decor.Name("downloading image", decor.WC{C: decor.DindentRight | decor.DextraSpace}),
@@ -394,7 +394,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	}
 	log.DebugF("hash: %s\n", desc.Digest.String())
 
-	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir)
+	img, err = pullImage(ref, opts, desc.Digest.String(), destDir, cacheDir)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}

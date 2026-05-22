@@ -30,7 +30,6 @@
 Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
-{% snippetcut selector="docker-run" %}
 ```shell
  echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
@@ -38,26 +37,21 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
 registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash
 ```
-{% endsnippetcut %}
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
-{% snippetcut selector="docker-login-windows" %}
 ```shell
 docker login -u license-token registry.deckhouse.ru
 ```
-{% endsnippetcut %}
 
 Запустите контейнер с установщиком:
-{% snippetcut selector="docker-run-windows" %}
 ```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
 registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
-{% endsnippetcut %}
 </div>
 {% else %}
 
@@ -77,7 +71,6 @@ registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash -c "chmod 400
 {% endalert %}
 
 
-{% snippetcut selector="docker-run-ce" %}
 ```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
@@ -85,11 +78,9 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable{% endif %} bash
 ```
-{% endsnippetcut %}
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, CE -->
-{% snippetcut selector="docker-run-windows-ce" %}
 ```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
@@ -97,7 +88,6 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
 {%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
-{% endsnippetcut %}
 </div>
 {% endif %}
 
@@ -108,7 +98,6 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 
 Внутри контейнера выполните команду:
 
-{% snippetcut %}
 ```shell
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
@@ -120,7 +109,6 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
 dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
 {%- endif %}
 ```
-{% endsnippetcut %}
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
@@ -176,24 +164,18 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 {%- if page.platform_code == "kind" %}
 
 Осталось создать конфигурацию Ingress-контроллера. Для этого создайте файл `ingress-nginx-controller.yml` следующего содержания:
-{% snippetcut name="ingress-nginx-controller.yml" selector="ingress-nginx-controller-yml" %}
 {% include_file "_includes/getting_started/stronghold/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc" syntax="yaml" %}
-{% endsnippetcut %}
 <p>Примените его, выполнив следующую команду:</p>
-{% snippetcut %}
 ```shell
 kubectl create -f ingress-nginx-controller.yml
 ```
-{% endsnippetcut %}
 
 Запуск Ingress-контроллера может занять какое-то время.
 
 Чтобы проверить статус работы Pod'а Ingress-контроллера, выполните следующую команду:
-{% snippetcut %}
 ```shell
 kubectl -n d8-ingress-nginx get po
 ```
-{% endsnippetcut %}
 
 Дождитесь перехода Pod'а Ingress-контроллера в статус `Ready`.
 

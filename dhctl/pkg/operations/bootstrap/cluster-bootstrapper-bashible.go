@@ -67,12 +67,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 			return err
 		}
 
-		onComplete := func() {
-			pb := progressbar.GetDefaultPb()
-			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-			pb.MultiPrinter.Stop()
-		}
-		defer onComplete()
+		defer progressbar.FinishDefaultProgressBar()
 	}
 
 	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)

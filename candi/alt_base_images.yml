@@ -1,10 +1,9 @@
-# version=v1.0.22
-# REGISTRY_PATH is a special key which is concatenated with other base images
+# version=v1.0.26
 REGISTRY_PATH: registry.deckhouse.io/container-factory
-base/distroless: "sha256:830f2578a08badab64793c277663dcca8ffbb33419ea57b937142b5f87fb3878" # from: builder/scratch
-builder/golang-1.25: "sha256:d4af7b5cf2f41bfd56df3faa5c0ec7d2e9c1ae7edd314838eb7ce937515ced67" # from: base/distroless
-builder/golang-1.26: "sha256:c87825a73578d2f847d8acb5ee3acf0f1ccfca567a6197dac702728f59c10e81" # from: base/distroless
-builder/golang: "sha256:c87825a73578d2f847d8acb5ee3acf0f1ccfca567a6197dac702728f59c10e81" # from: base/distroless
+builder/distroless: "sha256:83d12c6f6960f1337f9649e4535fc767d494d26e04c24186afc3aeb4e5dde12e" # from: builder/scratch
+builder/golang-1.25: "sha256:3acf7eb6721bcc4a0b459b203d84d1e64af0534711055d34ca9a13cf8fcc41da" # from: builder/distroless
+builder/golang-1.26: "sha256:bed632efec38d434fdd01b96d16a51fb65a32a9e42990366c28d0f06dd55fc1c" # from: builder/distroless
+builder/golang: "sha256:d93250b78c1d93ad1a82b6c35062260538d17a88da383418edd6c1cf1f5cdd31" # from: builder/distroless
 coreutils-9.7: "sha256:9780e9f86c5b01d2e606518e87f27d38a98261a839e33996fc6bd5161ddbae1f" # from: builder/scratch
 coreutils: "sha256:9780e9f86c5b01d2e606518e87f27d38a98261a839e33996fc6bd5161ddbae1f" # from: builder/scratch
 grep-3.11: "sha256:1bad53a7bae766af75e61d3d7e0615a469ec4a2e34ce6b75d95c53abad6f769d" # from: builder/scratch

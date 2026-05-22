@@ -16,7 +16,6 @@ package schedule
 
 import (
 	"maps"
-	"slices"
 
 	"sigs.k8s.io/yaml"
 
@@ -34,8 +33,6 @@ type nodeDump struct {
 	Order        Order                 `json:"order" yaml:"order"`
 	State        nodeState             `json:"state" yaml:"state"`
 	Status       checker.Result        `json:"status" yaml:"status"`
-	Followees    []string              `json:"followees,omitempty" yaml:"followees,omitempty"`
-	Followers    []string              `json:"followers,omitempty" yaml:"followers,omitempty"`
 	Dependencies map[string]Dependency `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 }
 
@@ -54,8 +51,6 @@ func (s *Scheduler) Dump() []byte {
 			Order:        n.order,
 			State:        n.state,
 			Status:       n.status,
-			Followees:    slices.Collect(maps.Keys(n.followees)),
-			Followers:    slices.Collect(maps.Keys(n.followers)),
 			Dependencies: maps.Clone(n.dependencies),
 		}
 	}
@@ -83,8 +78,6 @@ func (s *Scheduler) DumpByName(name string) []byte {
 		Order:        n.order,
 		State:        n.state,
 		Status:       n.status,
-		Followees:    slices.Collect(maps.Keys(n.followees)),
-		Followers:    slices.Collect(maps.Keys(n.followers)),
 		Dependencies: maps.Clone(n.dependencies),
 	}
 

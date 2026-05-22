@@ -17,11 +17,13 @@ limitations under the License.
 package pki
 
 import (
+	"crypto/x509"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -143,6 +145,23 @@ func TestCreatePKIBundle_CustomScheme_EtcdOnly(t *testing.T) {
 		_, err := os.Stat(filepath.Join(dir, f))
 		assert.True(t, os.IsNotExist(err), "file %s should not exist in etcd-only scheme", f)
 	}
+}
+
+func TestCreatePKIBundle_ApiserverKubeletClientHasNoOrganization(t *testing.T) {
+	dir := t.TempDir()
+	_, err := CreatePKIBundle(
+		"test-node",
+		"cluster.local",
+		net.ParseIP("10.0.0.1"),
+		"10.96.0.0/12",
+		WithPKIDir(dir),
+	)
+	require.NoError(t, err)
+	cert, _, err := pkiutil.LoadCertAndKey(dir, string(ApiserverKubeletClientCertName))
+	require.NoError(t, err)
+	assert.Equal(t, "kube-apiserver-kubelet-client", cert.Subject.CommonName)
+	assert.Empty(t, cert.Subject.Organization)
+	assert.Contains(t, cert.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 }
 
 func readAllFiles(t *testing.T, dir string, files []string) map[string][]byte {
