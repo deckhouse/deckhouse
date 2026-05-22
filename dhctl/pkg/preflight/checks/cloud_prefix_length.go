@@ -30,8 +30,6 @@ const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length
 
 const maxDiskNameLength = 63
 
-// Суффиксные части формируются из terraform-шаблонов каждого провайдера (join("-", [...])).
-// Для DVP суффикс зависит от наличия additionalDisks в конфиге, поэтому определяется динамически.
 var providerDiskSuffixParts = map[string][]string{
 	"zvirt":       {"master", "0", "kubernetes-data"},
 	"dynamix":     {"master", "0", "kubernetes-data"},
@@ -46,8 +44,10 @@ var providerDiskSuffixParts = map[string][]string{
 }
 
 var (
-	dvpSuffixWithAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
-	dvpSuffixWithoutAdditionalDisk = []string{"kubernetes-data", "0", "abcdef"}
+	dvpMasterSuffixAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
+	dvpMasterSuffixDefault        = []string{"kubernetes-data", "0", "abcdef"}
+	dvpNodeGroupSuffixAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
+	dvpNodeGroupSuffixDefault        = []string{"0", "abcdef"}
 )
 
 type dvpInstanceClass struct {
@@ -109,36 +109,36 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 }
 
 func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
-	type nodeGroupCheck struct {
-		name            string
-		hasAdditionalDisks bool
+	masterSuffix := dvpMasterSuffixDefault
+	if c.masterHasAdditionalDisks() {
+		masterSuffix = dvpMasterSuffixAdditionalDisk
 	}
-
-	groups := []nodeGroupCheck{{name: "master", hasAdditionalDisks: c.masterHasAdditionalDisks()}}
+	if err := checkDVPDiskName(prefix, "master", masterSuffix); err != nil {
+		return err
+	}
 
 	for _, ng := range c.dvpNodeGroups() {
-		groups = append(groups, nodeGroupCheck{
-			name:            ng.Name,
-			hasAdditionalDisks: len(ng.InstanceClass.AdditionalDisks) > 0,
-		})
-	}
-
-	for _, ng := range groups {
-		suffixParts := dvpSuffixWithoutAdditionalDisk
-		if ng.hasAdditionalDisks {
-			suffixParts = dvpSuffixWithAdditionalDisk
+		ngSuffix := dvpNodeGroupSuffixDefault
+		if len(ng.InstanceClass.AdditionalDisks) > 0 {
+			ngSuffix = dvpNodeGroupSuffixAdditionalDisk
 		}
-
-		diskName := prefix + "-" + ng.name + "-" + strings.Join(suffixParts, "-")
-		if len(diskName) > maxDiskNameLength {
-			return fmt.Errorf(
-				"disk name %q for node group %q exceeds %d characters (got %d); "+
-					"use a shorter cluster prefix or node group name",
-				diskName, ng.name, maxDiskNameLength, len(diskName),
-			)
+		if err := checkDVPDiskName(prefix, ng.Name, ngSuffix); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+func checkDVPDiskName(prefix, nodeGroup string, suffixParts []string) error {
+	diskName := prefix + "-" + nodeGroup + "-" + strings.Join(suffixParts, "-")
+	if len(diskName) > maxDiskNameLength {
+		return fmt.Errorf(
+			"disk name %q for node group %q exceeds %d characters (got %d); "+
+				"use a shorter cluster prefix or node group name",
+			diskName, nodeGroup, maxDiskNameLength, len(diskName),
+		)
+	}
 	return nil
 }
 

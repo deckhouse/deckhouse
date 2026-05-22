@@ -59,10 +59,10 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "meta config is nil",
 		},
 		{
-			// DVP без additionalDisks: {prefix}-master-kubernetes-data-0-abcdef
-			// суффикс = "-master-kubernetes-data-0-abcdef" = 32 символа
+			// DVP master без additionalDisks: {prefix}-master-kubernetes-data-0-abcdef
+			// суффикс = "-master-kubernetes-data-0-abcdef" = 32
 			// max prefix = 63 - 32 = 31
-			name: "DVP without additionalDisks: short prefix passes",
+			name: "DVP master without additionalDisks: short prefix passes",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix:         strings.Repeat("a", 31),
 				ProviderName:          "dvp",
@@ -71,7 +71,7 @@ func TestCloudDiskNameLength(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "DVP without additionalDisks: long prefix fails",
+			name: "DVP master without additionalDisks: long prefix fails",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix:         strings.Repeat("a", 32),
 				ProviderName:          "dvp",
@@ -81,10 +81,10 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "exceeds 63 characters",
 		},
 		{
-			// DVP с additionalDisks: {prefix}-master-additional-disk-0-0-abcdef
-			// суффикс = "-master-additional-disk-0-0-abcdef" = 34 символа
+			// DVP master с additionalDisks: {prefix}-master-additional-disk-0-0-abcdef
+			// суффикс = "-master-additional-disk-0-0-abcdef" = 34
 			// max prefix = 63 - 34 = 29
-			name: "DVP with additionalDisks: short prefix passes",
+			name: "DVP master with additionalDisks: short prefix passes",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix:         strings.Repeat("a", 29),
 				ProviderName:          "dvp",
@@ -93,7 +93,7 @@ func TestCloudDiskNameLength(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "DVP with additionalDisks: long prefix fails",
+			name: "DVP master with additionalDisks: long prefix fails",
 			metaConfig: &config.MetaConfig{
 				ClusterPrefix:         strings.Repeat("a", 30),
 				ProviderName:          "dvp",
@@ -103,10 +103,52 @@ func TestCloudDiskNameLength(t *testing.T) {
 			errContains: "exceeds 63 characters",
 		},
 		{
-			// DVP nodeGroup с additionalDisks: {prefix}-cloud-permanent-additional-disk-0-0-abcdef
-			name: "DVP: nodeGroup with additionalDisks and long name fails",
+			// DVP nodeGroup без additionalDisks: {prefix}-cloud-permanent-0-abcdef
+			// суффикс = "-cloud-permanent-0-abcdef" = 25
+			// max prefix = 63 - 25 = 38
+			name: "DVP nodeGroup without additionalDisks: long prefix passes",
 			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("a", 15),
+				ClusterPrefix: strings.Repeat("a", 38),
+				ProviderName:  "dvp",
+				ProviderClusterConfig: dvpProviderConfig(false, dvpNodeGroup{
+					Name: "cloud-permanent",
+				}),
+			},
+			expectError: false,
+		},
+		{
+			name: "DVP nodeGroup without additionalDisks: too long prefix fails",
+			metaConfig: &config.MetaConfig{
+				ClusterPrefix: strings.Repeat("a", 39),
+				ProviderName:  "dvp",
+				ProviderClusterConfig: dvpProviderConfig(false, dvpNodeGroup{
+					Name: "cloud-permanent",
+				}),
+			},
+			expectError: true,
+			errContains: "cloud-permanent",
+		},
+		{
+			// DVP nodeGroup с additionalDisks: {prefix}-cloud-permanent-additional-disk-0-0-abcdef
+			// суффикс = "-cloud-permanent-additional-disk-0-0-abcdef" = 45
+			// max prefix = 63 - 45 = 18
+			name: "DVP nodeGroup with additionalDisks: short prefix passes",
+			metaConfig: &config.MetaConfig{
+				ClusterPrefix: strings.Repeat("a", 18),
+				ProviderName:  "dvp",
+				ProviderClusterConfig: dvpProviderConfig(false, dvpNodeGroup{
+					Name: "cloud-permanent",
+					InstanceClass: dvpInstanceClass{
+						AdditionalDisks: []json.RawMessage{json.RawMessage(`{"size":"10Gi","storageClass":"sc"}`)},
+					},
+				}),
+			},
+			expectError: false,
+		},
+		{
+			name: "DVP nodeGroup with additionalDisks: long prefix fails",
+			metaConfig: &config.MetaConfig{
+				ClusterPrefix: strings.Repeat("a", 19),
 				ProviderName:  "dvp",
 				ProviderClusterConfig: dvpProviderConfig(false, dvpNodeGroup{
 					Name: "cloud-permanent",
@@ -117,18 +159,6 @@ func TestCloudDiskNameLength(t *testing.T) {
 			},
 			expectError: true,
 			errContains: "cloud-permanent",
-		},
-		{
-			// DVP nodeGroup без additionalDisks: {prefix}-cloud-permanent-kubernetes-data-0-abcdef
-			name: "DVP: nodeGroup without additionalDisks uses shorter suffix",
-			metaConfig: &config.MetaConfig{
-				ClusterPrefix: strings.Repeat("a", 15),
-				ProviderName:  "dvp",
-				ProviderClusterConfig: dvpProviderConfig(false, dvpNodeGroup{
-					Name: "cloud-permanent",
-				}),
-			},
-			expectError: false,
 		},
 		{
 			// AWS: {prefix}-kubernetes-data-0
