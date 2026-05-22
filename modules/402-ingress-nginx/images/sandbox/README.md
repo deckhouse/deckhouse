@@ -5,7 +5,7 @@ This image provides `/usr/bin/sandbox` for isolated `nginx -t` execution in the 
 For `IsolatedProcess`, the controller runs:
 
 ```text
-/usr/bin/sandbox --isolated-process -- /usr/local/nginx/sbin/nginx -c ... -t -e /dev/null
+/usr/bin/sandbox --isolated-process -- /path/to/nginx.conf
 ```
 
 In this mode, `sandbox` first creates an exec boundary and starts itself again in `--isolated-process-child` mode with:

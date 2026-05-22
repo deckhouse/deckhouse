@@ -142,7 +142,7 @@ index 776440658..6f1b8f5b7 100644
 +	cmdArgs := []string{"-c", cfg, "-t", "-e", "/dev/null"}
 +	switch nc.ValidationIsolationMode {
 +	case "IsolatedProcess":
-+		sandboxArgs := append([]string{"--isolated-process", "--", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		sandboxArgs := []string{"--isolated-process", "--", cfg}
 +		klog.InfoS("Running config test with process isolation", "dir", cfg)
 +		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
 +	case "IsolatedFilesystem":

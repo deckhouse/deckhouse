@@ -32,13 +32,13 @@ func TestNormalizeSandboxArgs(t *testing.T) {
 	}{
 		{
 			name: "drops leading separator for child argv",
-			in:   []string{"--", "/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
-			want: []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
+			in:   []string{"--", "/tmp/nginx/nginx-cfg123"},
+			want: []string{"/tmp/nginx/nginx-cfg123"},
 		},
 		{
 			name: "keeps plain argv intact",
-			in:   []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
-			want: []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"},
+			in:   []string{"/tmp/nginx/nginx-cfg123"},
+			want: []string{"/tmp/nginx/nginx-cfg123"},
 		},
 	}
 
@@ -61,15 +61,15 @@ func TestParseSandboxMode(t *testing.T) {
 	}{
 		{
 			name:     "isolated process mode",
-			in:       []string{"--isolated-process", "--", "/usr/local/nginx/sbin/nginx"},
+			in:       []string{"--isolated-process", "--", "/tmp/nginx/nginx-cfg123"},
 			wantMode: sandboxModeIsolatedProcess,
-			wantArgv: []string{"--", "/usr/local/nginx/sbin/nginx"},
+			wantArgv: []string{"--", "/tmp/nginx/nginx-cfg123"},
 		},
 		{
 			name:     "isolated process child mode",
-			in:       []string{"--isolated-process-child", "--", "/usr/local/nginx/sbin/nginx"},
+			in:       []string{"--isolated-process-child", "--", "/tmp/nginx/nginx-cfg123"},
 			wantMode: sandboxModeIsolatedProcessChild,
-			wantArgv: []string{"--", "/usr/local/nginx/sbin/nginx"},
+			wantArgv: []string{"--", "/tmp/nginx/nginx-cfg123"},
 		},
 		{
 			name:     "default mode",
@@ -93,7 +93,7 @@ func TestParseSandboxMode(t *testing.T) {
 }
 
 func TestNewIsolatedProcessChildCmd(t *testing.T) {
-	cmd := newIsolatedProcessChildCmd("/usr/bin/sandbox", []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123"}, 64535, 64535)
+	cmd := newIsolatedProcessChildCmd("/usr/bin/sandbox", []string{"/tmp/nginx/nginx-cfg123"}, 64535, 64535)
 
 	if cmd.Path != "/usr/bin/sandbox" {
 		t.Fatalf("unexpected path, got %q", cmd.Path)
@@ -103,8 +103,6 @@ func TestNewIsolatedProcessChildCmd(t *testing.T) {
 		"/usr/bin/sandbox",
 		"--isolated-process-child",
 		"--",
-		"/usr/local/nginx/sbin/nginx",
-		"-c",
 		"/tmp/nginx/nginx-cfg123",
 	}
 	if !reflect.DeepEqual(cmd.Args, wantArgs) {
@@ -131,6 +129,59 @@ func TestNewIsolatedProcessChildCmd(t *testing.T) {
 	}
 
 	assertExecCmdSysProcAttrEqual(t, cmd.SysProcAttr, wantSys)
+}
+
+func TestResolveSandboxTargetArgs(t *testing.T) {
+	tests := []struct {
+		name           string
+		mode           sandboxMode
+		in             []string
+		wantArgs       []string
+		wantConfigPath string
+		wantErr        bool
+	}{
+		{
+			name:           "default mode keeps explicit nginx args",
+			mode:           sandboxModeDefault,
+			in:             []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123", "-t", "-e", "/dev/null"},
+			wantArgs:       []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123", "-t", "-e", "/dev/null"},
+			wantConfigPath: "/tmp/nginx/nginx-cfg123",
+		},
+		{
+			name:           "isolated mode bakes nginx validation args",
+			mode:           sandboxModeIsolatedProcess,
+			in:             []string{"/tmp/nginx/nginx-cfg123"},
+			wantArgs:       []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123", "-t", "-e", "/dev/null"},
+			wantConfigPath: "/tmp/nginx/nginx-cfg123",
+		},
+		{
+			name:    "isolated mode rejects extra args",
+			mode:    sandboxModeIsolatedProcessChild,
+			in:      []string{"/tmp/nginx/nginx-cfg123", "-t"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotArgs, gotConfigPath, err := resolveSandboxTargetArgs(tt.mode, tt.in)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(gotArgs, tt.wantArgs) {
+				t.Fatalf("unexpected args, got %v want %v", gotArgs, tt.wantArgs)
+			}
+			if gotConfigPath != tt.wantConfigPath {
+				t.Fatalf("unexpected config path, got %q want %q", gotConfigPath, tt.wantConfigPath)
+			}
+		})
+	}
 }
 
 func assertExecCmdSysProcAttrEqual(t *testing.T, got, want *syscall.SysProcAttr) {

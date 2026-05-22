@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -44,14 +45,9 @@ func run(argv []string) int {
 	debug := isDebug()
 	debugCrashOnDeny := isDebugCrashOnDeny()
 	argv = normalizeSandboxArgs(argv)
-	if len(argv) == 0 {
-		log.Print("not enough arguments after --")
-		return 1
-	}
-
-	nginxConfigPath := getNginxConfByArg("-c", argv)
-	if nginxConfigPath == "" {
-		log.Print("nginx config not found in args")
+	argv, nginxConfigPath, err := resolveSandboxTargetArgs(mode, argv)
+	if err != nil {
+		log.Print(err)
 		return 1
 	}
 
@@ -176,6 +172,37 @@ func normalizeSandboxArgs(argv []string) []string {
 		return argv[1:]
 	}
 	return argv
+}
+
+func resolveSandboxTargetArgs(mode sandboxMode, argv []string) ([]string, string, error) {
+	switch mode {
+	case sandboxModeIsolatedProcess, sandboxModeIsolatedProcessChild:
+		if len(argv) != 1 {
+			return nil, "", fmt.Errorf("isolated sandbox mode expects exactly one nginx config path after --")
+		}
+
+		return buildIsolatedNginxValidationArgs(argv[0]), argv[0], nil
+	default:
+		if len(argv) == 0 {
+			return nil, "", fmt.Errorf("not enough arguments after --")
+		}
+
+		nginxConfigPath := getNginxConfByArg("-c", argv)
+		if nginxConfigPath == "" {
+			return nil, "", fmt.Errorf("nginx config not found in args")
+		}
+
+		return argv, nginxConfigPath, nil
+	}
+}
+
+func buildIsolatedNginxValidationArgs(configPath string) []string {
+	return []string{
+		"/usr/local/nginx/sbin/nginx",
+		"-c", configPath,
+		"-t",
+		"-e", "/dev/null",
+	}
 }
 
 type sandboxMode uint8
