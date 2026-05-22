@@ -29,7 +29,11 @@ spec:
         memory: 50Mi
   {{- end }}
 
-{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+{{- if or
+      (.Values.global.enabledModules | has "admission-policy-engine")
+      (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException")
+      (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")
+}}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
