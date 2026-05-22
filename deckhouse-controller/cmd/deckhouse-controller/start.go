@@ -34,7 +34,6 @@ import (
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
-	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -361,52 +360,49 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					os.Exit(1)
 				}
 
-			case syscall.SIGCHLD:
-				rm.Lock()
-				if !rm.scheduled {
-					rm.scheduled = true
-					rm.Unlock()
-					go func() {
-						defer rm.Release()
-						// give some time to real parent processes to reap their children if any
-						time.Sleep(0)
+			// case syscall.SIGCHLD:
+			// 	rm.Lock()
+			// 	if !rm.scheduled {
+			// 		rm.scheduled = true
+			// 		rm.Unlock()
+			// 		go func() {
+			// 			defer rm.Release()
+			// 			processes, err := process.Processes()
+			// 			if err != nil {
+			// 				logger.Debug("get processes", log.Err(err))
+			// 				return
+			// 			}
 
-						processes, err := process.Processes()
-						if err != nil {
-							logger.Debug("get processes", log.Err(err))
-							return
-						}
+			// 			for _, ps := range processes {
+			// 				status, err := ps.Status()
+			// 				if err != nil {
+			// 					logger.Debug("get process status", log.Err(err))
+			// 					continue
+			// 				}
 
-						for _, ps := range processes {
-							status, err := ps.Status()
-							if err != nil {
-								logger.Debug("get process status", log.Err(err))
-								continue
-							}
+			// 				if slices.Contains(status, process.Zombie) {
+			// 					ppid, err := ps.Ppid()
+			// 					if err != nil {
+			// 						logger.Debug("get parent process id", log.Err(err))
+			// 						continue
+			// 					}
 
-							if slices.Contains(status, process.Zombie) {
-								ppid, err := ps.Ppid()
-								if err != nil {
-									logger.Debug("get parent process id", log.Err(err))
-									continue
-								}
-
-								if ppid == 1 {
-									var status syscall.WaitStatus
-									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
-									if err != nil {
-										// ignore if a child has already been reaped
-										if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
-											logger.Error("process SIGCHLD signal", log.Err(err))
-										}
-									}
-								}
-							}
-						}
-					}()
-				} else {
-					rm.Unlock()
-				}
+			// 					if ppid == 1 {
+			// 						var status syscall.WaitStatus
+			// 						_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
+			// 						if err != nil {
+			// 							// ignore if a child has already been reaped
+			// 							if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+			// 								logger.Error("process SIGCHLD signal", log.Err(err))
+			// 							}
+			// 						}
+			// 					}
+			// 				}
+			// 			}
+			// 		}()
+			// 	} else {
+			// 		rm.Unlock()
+			// 	}
 
 			case syscall.SIGINT, syscall.SIGTERM:
 				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is shutting down", sig.String()))
