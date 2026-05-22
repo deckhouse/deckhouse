@@ -221,7 +221,7 @@ When specifying:
 To apply the above policy, it is sufficient to add the label `security-policy: mypolicy` to the desired namespace.
 Unlike `PSS`, the label name can be anything. Only a match between the label in the policy selector and the corresponding namespace is required.
 
-You can read more detailed information about using selectors in the [documentation](/modules/015-admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+You can read more detailed information about using selectors in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
 
 It is also possible to specify the action to be applied for the policy.
 The `spec.enforcementAction` parameter is used for this.
