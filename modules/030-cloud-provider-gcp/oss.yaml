@@ -6,9 +6,6 @@
   id: ccm-gcp
   versions:
     - condition:
-        k8s: "1.31"
-      version: ccm/v30.1.4
-    - condition:
         k8s: "1.32"
       version: ccm/v32.2.5
     - condition:
@@ -20,6 +17,9 @@
     - condition:
         k8s: "1.35"
       version: ccm/v35.0.1
+    - condition:
+        k8s: "1.36"
+      version: ccm/v35.0.1
 
 - name: Google Cloud Platform CSI driver
   link: https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver
@@ -28,9 +28,6 @@
   license: Apache License 2.0
   id: csi-gcp
   versions:
-    - condition:
-        k8s: "1.31"
-      version: v1.15.4
     - condition:
         k8s: "1.32"
       version: v1.15.4
@@ -42,6 +39,9 @@
       version: v1.15.4
     - condition:
         k8s: "1.35"
+      version: v1.15.4
+    - condition:
+        k8s: "1.36"
       version: v1.15.4
 
 - name: Google Cloud Platform Terraform provider
