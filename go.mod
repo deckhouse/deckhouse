@@ -10,7 +10,59 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.21.4
+	github.com/flant/addon-operator v1.21.5
+	github.com/flant/kube-client v1.7.0
+	github.com/flant/shell-operator v1.17.5-0.20260522120424-a366e1f8eb5b
+	github.com/go-openapi/spec v0.22.0
+	github.com/gojuno/minimock/v3 v3.4.7
+	github.com/google/go-cmp v0.7.0
+	github.com/google/go-containerregistry v0.20.7
+	github.com/google/uuid v1.6.0
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/iancoleman/strcase v0.3.0
+	github.com/imdario/mergo v0.3.16
+	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/gomega v1.41.0
+	github.com/otiai10/copy v1.14.0
+	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/spaolacci/murmur3 v1.1.0
+	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
+	github.com/stretchr/testify v1.11.1
+	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/sjson v1.2.5
+	github.com/vmware/govmomi v0.51.0 // indirect
+	go.etcd.io/etcd/api/v3 v3.5.21
+	go.etcd.io/etcd/client/v3 v3.5.21
+	google.golang.org/grpc v1.80.0
+	google.golang.org/protobuf v1.36.11
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
+	helm.sh/helm/v3 v3.17.4
+	k8s.io/api v0.33.12
+	k8s.io/apiextensions-apiserver v0.33.12
+	k8s.io/apimachinery v0.33.12
+	k8s.io/apiserver v0.33.12
+	k8s.io/client-go v0.33.12
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
+	sigs.k8s.io/yaml v1.6.0
+)
+
+require (
+	github.com/caarlos0/env/v11 v11.3.1
+	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
+	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/pkg/log v0.2.1
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa
+	github.com/deckhouse/module-sdk v0.10.4
+	github.com/ettle/strcase v0.2.0
+	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gammazero/deque v1.1.0
 	github.com/go-logr/logr v1.4.3
@@ -120,7 +172,6 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/gosimple/slug v1.15.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
@@ -386,3 +437,5 @@ replace github.com/docker/docker => github.com/docker/docker v28.3.3+incompatibl
 replace github.com/docker/cli => github.com/docker/cli v28.3.3+incompatible
 
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlplane
+
+replace github.com/flant/shell-operator => ../shell-operator

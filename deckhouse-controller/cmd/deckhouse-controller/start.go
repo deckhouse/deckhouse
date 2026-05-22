@@ -33,6 +33,7 @@ import (
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
+	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
@@ -388,15 +389,15 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 									continue
 								}
 
-								if ppid == 1 {
-									// var status syscall.WaitStatus
-									// _, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
-									// if err != nil {
-									// 	// ignore if a child has already been reaped
-									// 	if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
-									// 		logger.Error("process SIGCHLD signal", log.Err(err))
-									// 	}
-									// }
+								if ppid == 1 && !executor.Registry.IsActive(int(ps.Pid)) {
+									var status syscall.WaitStatus
+									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
+									if err != nil {
+										// ignore if a child has already been reaped
+										if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+											logger.Error("process SIGCHLD signal", log.Err(err))
+										}
+									}
 								}
 							}
 						}
