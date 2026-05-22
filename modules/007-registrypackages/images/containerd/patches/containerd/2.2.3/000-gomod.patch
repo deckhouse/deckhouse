@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 648cb3e43..36a776f90 100644
+index 648cb3e43..258391915 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
