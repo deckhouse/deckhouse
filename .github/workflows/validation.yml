@@ -89,8 +89,9 @@ jobs:
       build_SE-plus: ${{ steps.pr_props.outputs.build_SE-plus }}
       build_CSE: ${{ steps.pr_props.outputs.build_CSE }}
 
-    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
-    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
+    # Run only for PR/push triggers (skipped on schedule, workflow_dispatch, etc.).
+    # Also skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ (startsWith(github.event_name, 'pull_request') || github.event_name == 'push') && ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
     steps:
       - name: Get PR info for push trigger
         id: push_info
