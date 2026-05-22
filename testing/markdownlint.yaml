@@ -107,5 +107,5 @@ MD050:
   # Strong style should be consistent
   style: "consistent"
 
-# Table column style
+# MD060 - Table column style.
 MD060: false
