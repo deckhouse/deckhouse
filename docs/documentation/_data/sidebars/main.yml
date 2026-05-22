@@ -1436,7 +1436,7 @@ entries:
               url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: Storage system modules
-                ru: Модули системы хранения
+                ru: Модули систем хранения
               folders:
                 - title:
                     en: Csi-hpe module
