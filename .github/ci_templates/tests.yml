@@ -1,8 +1,8 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
-args: 'make tests-controller tests-modules'
+args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
-# <template: unit_run_args>
+# </template: unit_run_args>
 {!{- end -}!}
 
 {!{ define "dhctl_run_args" }!}
@@ -18,9 +18,14 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
      tools/lint-changed.sh. Runs inside the project's `tests` image which
      already has golangci-lint at /usr/local/bin/golangci-lint (built from
      the golangci-lint-artifact werf target), so no install dance needed. */}!}
+{!{/* PROBE timestamps bisect the unexplained delay before `make` output:
+     "container-up" fires the moment the container shell starts, "before-make"
+     right before `make lint-changed`. Compare against the "Run tests..."
+     timestamp to tell container-startup cost from make/go cost. Remove once
+     the delay is understood. */}!}
 {!{ define "golint_diff_run_args" }!}
 # <template: golint_diff_run_args>
-args: 'sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"'
+args: 'sh -c "echo PROBE container-up \$(date -u) && git config --global --add safe.directory /deckhouse && echo PROBE before-make \$(date -u) && make lint-changed"'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
 # </template: golint_diff_run_args>
 {!{- end -}!}

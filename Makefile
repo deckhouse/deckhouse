@@ -222,7 +222,9 @@ lint-all: golangci-lint check-dhctl-cmd-drift ## Run golangci-lint run in all di
 	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: lint-changed
-lint-changed: golangci-lint check-dhctl-cmd-drift ## Lint only Go modules touched by diff against DIFF_BASE (default: HEAD~1).
+lint-changed: check-dhctl-cmd-drift ## Lint only Go modules touched by diff against DIFF_BASE (default: HEAD~1).
+  ##~ Uses the golangci-lint already on PATH (the CI tests image ships one);
+  ##~ run `make golangci-lint` first if you don't have it locally.
 	@bash tools/lint-changed.sh
 
 .PHONY: lint-fix-all
