@@ -22,6 +22,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/101-cert-manager/hooks/internal"
 )
@@ -39,28 +40,36 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "validating_webhook_configurations",
-			ApiVersion: "admissionregistration.k8s.io/v1",
-			Kind:       "ValidatingWebhookConfiguration",
-			FilterFunc: cainjectorUsageFilter,
+			Name:                         "validating_webhook_configurations",
+			ApiVersion:                   "admissionregistration.k8s.io/v1",
+			Kind:                         "ValidatingWebhookConfiguration",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   cainjectorUsageFilter,
 		},
 		{
-			Name:       "mutating_webhook_configurations",
-			ApiVersion: "admissionregistration.k8s.io/v1",
-			Kind:       "MutatingWebhookConfiguration",
-			FilterFunc: cainjectorUsageFilter,
+			Name:                         "mutating_webhook_configurations",
+			ApiVersion:                   "admissionregistration.k8s.io/v1",
+			Kind:                         "MutatingWebhookConfiguration",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   cainjectorUsageFilter,
 		},
 		{
-			Name:       "custom_resource_definitions",
-			ApiVersion: "apiextensions.k8s.io/v1",
-			Kind:       "CustomResourceDefinition",
-			FilterFunc: cainjectorUsageFilter,
+			Name:                         "custom_resource_definitions",
+			ApiVersion:                   "apiextensions.k8s.io/v1",
+			Kind:                         "CustomResourceDefinition",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   cainjectorUsageFilter,
 		},
 		{
-			Name:       "api_services",
-			ApiVersion: "apiregistration.k8s.io/v1",
-			Kind:       "APIService",
-			FilterFunc: cainjectorUsageFilter,
+			Name:                         "api_services",
+			ApiVersion:                   "apiregistration.k8s.io/v1",
+			Kind:                         "APIService",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   cainjectorUsageFilter,
 		},
 	},
 }, discoverCainjectorUsage)

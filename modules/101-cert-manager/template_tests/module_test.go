@@ -103,6 +103,19 @@ internal:
     crt: string
 `
 
+const certManagerWithoutCAInjector = `
+enableCAInjector: false
+internal:
+  enableCAInjector: false
+  selfSignedCA:
+    cert: string
+    key: string
+  webhookCert:
+    ca: string
+    key: string
+    crt: string
+`
+
 const certManagerGatewayAPI = `
 enableListenerSet: true
 `
@@ -286,6 +299,22 @@ podAntiAffinity:
         app: cert-manager
     topologyKey: kubernetes.io/hostname
 `))
+		})
+	})
+
+	Context("CAInjector disabled by internal value", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManagerWithoutCAInjector)
+			f.HelmRender()
+		})
+
+		It("Should not render cainjector resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cainjector := f.KubernetesResource("Deployment", "d8-cert-manager", "cainjector")
+			Expect(cainjector.Exists()).To(BeFalse())
 		})
 	})
 

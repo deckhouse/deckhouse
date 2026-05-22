@@ -42,6 +42,47 @@ webhooks:
         name: test
         path: /validate
 `
+	mutatingWebhookWithInjectAnnotation = `
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: test-mwc
+  annotations:
+    cert-manager.io/inject-ca-from-secret: d8-cert-manager/test-secret
+webhooks:
+  - name: test-mwc.deckhouse.io
+    sideEffects: None
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        namespace: d8-cert-manager
+        name: test
+        path: /mutate
+`
+	customResourceDefinitionWithInjectAnnotation = `
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tests.example.com
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cert-manager/test-cert
+spec:
+  group: example.com
+  names:
+    plural: tests
+    singular: test
+    kind: Test
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+`
 	apiServiceWithInjectAnnotation = `
 ---
 apiVersion: apiregistration.k8s.io/v1
@@ -121,6 +162,32 @@ var _ = Describe("Cert Manager hooks :: discover cainjector usage ::", func() {
 		})
 	})
 
+	Context("Cluster has MutatingWebhookConfiguration with inject annotation", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(mutatingWebhookWithInjectAnnotation)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should enable cainjector", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster has CustomResourceDefinition with inject annotation", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(customResourceDefinitionWithInjectAnnotation)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should enable cainjector", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeTrue())
+		})
+	})
+
 	Context("Cluster has APIService with inject-apiserver-ca annotation", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(apiServiceWithInjectAnnotation)
@@ -150,12 +217,14 @@ var _ = Describe("Cert Manager hooks :: discover cainjector usage ::", func() {
 
 	Context("Resource with annotation is removed", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(validatingWebhookWithInjectAnnotation))
+			f.KubeStateSet(validatingWebhookWithInjectAnnotation)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeTrue())
 
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet(``)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
