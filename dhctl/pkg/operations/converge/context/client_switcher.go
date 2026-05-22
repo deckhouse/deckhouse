@@ -454,7 +454,25 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	if convergeState.NodeUserCredentials != nil {
-		return convergeState, nil
+		exists, err := entity.NodeUserExists(s.ctx.Ctx(), s.ctx, convergeState.NodeUserCredentials.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		if exists {
+			return convergeState, nil
+		}
+
+		s.warn(
+			"NodeUser %q is missing while converge state exists; recreating converge state",
+			convergeState.NodeUserCredentials.Name,
+		)
+
+		if err := s.ctx.deleteConvergeState(); err != nil {
+			return nil, fmt.Errorf("Failed to delete stale converge state: %w", err)
+		}
+
+		convergeState.NodeUserCredentials = nil
 	}
 
 	s.debugStartOperation("create node user")

@@ -84,6 +84,25 @@ func DeleteNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 	})
 }
 
+func NodeUserExists(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, name string) (bool, error) {
+	kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	timeoutCtx, cancel := defaultTimeoutCtx(ctx)
+	defer cancel()
+
+	_, err = kubeCl.Dynamic().Resource(v1.NodeUserGVR).Get(timeoutCtx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("Failed to get NodeUser: %w", err)
+	}
+	return true, nil
+}
+
 type NodeUserPresentsChecker func(node corev1.Node) bool
 
 type NodeUserPresentsWaiter struct {
