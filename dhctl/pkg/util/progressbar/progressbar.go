@@ -72,8 +72,6 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 		FinishDefaultProgressBar()
 	}
 
-	defer onComplete()
-
 	return onComplete, phasesChan, nil
 }
 
@@ -114,6 +112,7 @@ func InitProgressBar(param *PbParam) error {
 		ProgressBarPrinter: p,
 		MultiPrinter:       &multi,
 		SpinnerPrinter:     staticSpinner,
+		StopCh:             stopChan,
 	}
 
 	log.WithProgressBar()
