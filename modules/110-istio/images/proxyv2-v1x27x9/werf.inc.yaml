@@ -117,6 +117,8 @@ import:
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
