@@ -210,6 +210,10 @@ endef
 lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
+.PHONY: lint-changed
+lint-changed: golangci-lint check-dhctl-cmd-drift ## Lint only Go modules touched by diff against DIFF_BASE (default: HEAD~1).
+	@bash tools/lint-changed.sh
+
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
