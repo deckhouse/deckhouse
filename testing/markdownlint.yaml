@@ -47,10 +47,6 @@ MD029:
   # List style
   style: "one_or_ordered"
 
-# MD031 - Fenced code blocks should be surrounded by blank lines
-# Disabled because it is necessary to have fenced code blocks without blank lines below in some cases, such as defining CSS classes (for Kramdown).
-MD031: false
-
 # MD033/no-inline-html - Inline HTML
 MD033: false
 
@@ -106,6 +102,3 @@ MD049:
 MD050:
   # Strong style should be consistent
   style: "consistent"
-
-# MD060 - Table column style.
-MD060: false
