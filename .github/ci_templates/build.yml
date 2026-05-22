@@ -285,6 +285,7 @@ steps:
      are reused via the shared dev-registry repo. */}!}
 {!{ define "build_tests_template" }!}
 {!{- $ctx := index . 0 -}!}
+{!{- $buildType := index . 1 -}!}
 # <template: build_tests_template>
 runs-on: [self-hosted, large]
 outputs:
@@ -326,6 +327,15 @@ steps:
       DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      # werf.yaml renders templates that read these via `env`.
+      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+      CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+{!{- if eq $buildType "dev" }!}
+      CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+{!{- else }!}
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- end }!}
     run: |
       # Same dev-registry path computation as build_template (build.yml).
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -385,7 +395,10 @@ steps:
     with:
       go-version: '1.25'
       cache: false
+{!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
 
+  {!{/* `make generate`'s generate-tools step shells out to `werf config
+       render` (tools/images_tags) to enumerate module images. */}!}
   - name: Run go generate
     run: |
       (make generate)

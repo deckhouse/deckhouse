@@ -56,7 +56,7 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-{!{ tmpl.Exec "build_tests_template" (slice $ctx) | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_tests_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   go_generate:
     name: Go Generate

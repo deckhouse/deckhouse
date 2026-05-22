@@ -50,7 +50,7 @@ jobs:
     name: Build tests image
     needs:
       - git_info
-{!{ tmpl.Exec "build_tests_template" (slice $ctx) | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_tests_template" (slice $ctx "main") | strings.Indent 4 }!}
 
   go_generate:
     name: Go Generate

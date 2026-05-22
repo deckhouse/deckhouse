@@ -588,6 +588,11 @@ jobs:
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          # werf.yaml renders templates that read these via `env`.
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
           # Same dev-registry path computation as build_template (build.yml).
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -656,6 +661,14 @@ jobs:
         with:
           go-version: '1.25'
           cache: false
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
 
       - name: Run go generate
         run: |
