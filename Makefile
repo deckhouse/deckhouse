@@ -453,23 +453,28 @@ set-build-envs:
   ifeq ($(GOPROXY),)
  		export GOPROXY=https://proxy.golang.org/
   endif
+  # NB: := (simple expansion), not = (recursive). These vars are `export`ed,
+  # so a recursive definition makes `make` re-run the `$(shell git ...)` while
+  # building the environment for *every* $(shell) call in the Makefile —
+  # thousands of `git` invocations per `make` run, ~9 min on a full-history
+  # repo. Simple expansion runs each git command exactly once at parse time.
   ifeq ($(CI_COMMIT_TAG),)
- 		export CI_COMMIT_TAG=$(shell git describe --abbrev=0 2>/dev/null)
+ 		export CI_COMMIT_TAG := $(shell git describe --abbrev=0 2>/dev/null)
   endif
   ifeq ($(CI_COMMIT_BRANCH),)
- 		export CI_COMMIT_BRANCH=$(shell git branch --show-current)
+ 		export CI_COMMIT_BRANCH := $(shell git branch --show-current)
   endif
   ifeq ($(CI_COMMIT_REF_NAME),)
- 		export CI_COMMIT_REF_NAME=$(shell git rev-parse --abbrev-ref HEAD)
+ 		export CI_COMMIT_REF_NAME := $(shell git rev-parse --abbrev-ref HEAD)
  	else
 		ifeq ($(CI_COMMIT_TAG),)
-			export CI_COMMIT_REF_NAME=$(CI_COMMIT_BRANCH)
+			export CI_COMMIT_REF_NAME := $(CI_COMMIT_BRANCH)
 		else
-			export CI_COMMIT_REF_NAME=$(CI_COMMIT_TAG)
+			export CI_COMMIT_REF_NAME := $(CI_COMMIT_TAG)
 		endif
  	endif
   ifeq ($(CI_COMMIT_REF_SLUG),)
- 		export CI_COMMIT_REF_SLUG=$(shell bin/gh pr view $$CI_COMMIT_BRANCH --json number -q .number 2>/dev/null)
+ 		export CI_COMMIT_REF_SLUG := $(shell bin/gh pr view $$CI_COMMIT_BRANCH --json number -q .number 2>/dev/null)
  	endif
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
@@ -478,9 +483,9 @@ set-build-envs:
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
   endif
 
-	export WERF_REPO=$(DEV_REGISTRY_PATH)
-	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
-	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
+	export WERF_REPO := $(DEV_REGISTRY_PATH)
+	export REGISTRY_SUFFIX := $(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
+	export SECONDARY_REPO := --secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
 build: bin/werf set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
