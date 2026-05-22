@@ -58,6 +58,13 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "build_tests_template" (slice $ctx) | strings.Indent 4 }!}
 
+  go_generate:
+    name: Go Generate
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "go_generate_template" (slice $ctx) | strings.Indent 4 }!}
+
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
   build_{!{$werfEnv}!}:
     name: Build {!{$werfEnv}!}
@@ -200,6 +207,7 @@ jobs:
       - validators
       - openapi_test_cases
       - golint
+      - go_generate
       - dhctl_tests
       - tests
     runs-on: "ubuntu-latest"

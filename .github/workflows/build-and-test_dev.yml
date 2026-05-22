@@ -517,19 +517,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -812,19 +799,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build tests image
         id: build
@@ -881,6 +855,46 @@ jobs:
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         run: rm -f images_tags_werf.json
     # </template: build_tests_template>
+
+
+  go_generate:
+    name: Go Generate
+    needs:
+      - git_info
+      - pull_request_info
+    # <template: go_generate_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5.4.0
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+    # </template: go_generate_template>
 
 
 
@@ -1034,19 +1048,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -1340,19 +1341,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -1646,19 +1634,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -1952,19 +1927,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -2258,19 +2220,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -2564,19 +2513,6 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -3765,6 +3701,7 @@ jobs:
       - validators
       - openapi_test_cases
       - golint
+      - go_generate
       - dhctl_tests
       - tests
     runs-on: "ubuntu-latest"

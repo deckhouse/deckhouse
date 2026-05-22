@@ -70,20 +70,9 @@ steps:
   {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
-  - name: Set up Go 1.25
-    uses: actions/setup-go@v5
-    with:
-      go-version: '1.25'
-      cache: false
-
-  - name: Run go generate
-    run: |
-      (make generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-  - name: Check generated code
-    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
+  {!{/* `make generate` + drift check live in the dedicated `go_generate`
+       job. werf builds committed content, so the generated-code guard does
+       not need to run inside every build_* job. */}!}
   - name: Build and push deckhouse images
     id: build
     env:
@@ -319,20 +308,8 @@ steps:
   {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
-  - name: Set up Go 1.25
-    uses: actions/setup-go@v5
-    with:
-      go-version: '1.25'
-      cache: false
-
-  - name: Run go generate
-    run: |
-      (make generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-  - name: Check generated code
-    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
+  {!{/* `make generate` + drift check live in the dedicated `go_generate`
+       job; werf builds committed content. */}!}
   - name: Build tests image
     id: build
     env:
@@ -388,4 +365,33 @@ steps:
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
     run: rm -f images_tags_werf.json
 # </template: build_tests_template>
+{!{ end }!}
+
+{!{/* go_generate_template
+     Dedicated job for the generated-code drift check. Runs `make generate`
+     (k8s deepcopy/clients, tools, docs, werf) and fails if the result
+     differs from committed sources. Extracted from build_template so it
+     runs once, in parallel with the build, instead of being repeated in
+     every build_* job. */}!}
+{!{ define "go_generate_template" }!}
+{!{- $ctx := index . 0 -}!}
+# <template: go_generate_template>
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"  $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  - name: Set up Go 1.25
+    uses: {!{ index (ds "actions") "actions/setup-go" }!}
+    with:
+      go-version: '1.25'
+      cache: false
+
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+# </template: go_generate_template>
 {!{ end }!}
