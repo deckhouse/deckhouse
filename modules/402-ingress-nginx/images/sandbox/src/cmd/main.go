@@ -24,7 +24,6 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
@@ -46,20 +45,27 @@ func run(argv []string) int {
 	debug := isDebug()
 	debugCrashOnDeny := isDebugCrashOnDeny()
 	argv = normalizeSandboxArgs(argv)
-	argv, nginxConfigPath, err := resolveSandboxTargetArgs(mode, argv)
-	if err != nil {
-		log.Print(err)
-		return 1
-	}
 
-	extraRead := getSandboxExtraRead(nginxConfigPath)
-	extraWrite := getSandboxExtraWrite()
-
-	workDir := ""
+	var (
+		err             error
+		nginxConfigPath string
+		finalArgv       []string
+		workDir         string
+	)
 	switch mode {
 	case sandboxModeIsolatedProcess:
+		if _, err := resolveIsolatedSandboxConfigPath(argv); err != nil {
+			log.Print(err)
+			return 1
+		}
 		return runIsolatedProcessHelper(argv)
 	case sandboxModeIsolatedProcessChild:
+		nginxConfigPath, err = resolveIsolatedSandboxConfigPath(argv)
+		if err != nil {
+			log.Print(err)
+			return 1
+		}
+
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
 
@@ -67,9 +73,16 @@ func run(argv []string) int {
 			log.Printf("failed to setup isolated process mode: %v", err)
 			return 1
 		}
+
+		finalArgv = buildIsolatedNginxValidationArgs(nginxConfigPath)
 		workDir = "/"
 	default:
-		var err error
+		finalArgv, nginxConfigPath, err = resolveDefaultSandboxTargetArgs(argv)
+		if err != nil {
+			log.Print(err)
+			return 1
+		}
+
 		workDir, err = os.Getwd()
 		if err != nil {
 			log.Printf("failed get pwd: %v", err)
@@ -77,7 +90,10 @@ func run(argv []string) int {
 		}
 	}
 
-	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
+	extraRead := getSandboxExtraRead(nginxConfigPath)
+	extraWrite := getSandboxExtraWrite()
+
+	args, allow, trace, handler := runprogconf.GetConf("default", workDir, finalArgv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
 	var traceHandler sbptrace.Handler = handler
 	if debug {
 		traceHandler = withDebugHandler(handler, debugCrashOnDeny)
@@ -175,26 +191,25 @@ func normalizeSandboxArgs(argv []string) []string {
 	return argv
 }
 
-func resolveSandboxTargetArgs(mode sandboxMode, argv []string) ([]string, string, error) {
-	switch mode {
-	case sandboxModeIsolatedProcess, sandboxModeIsolatedProcessChild:
-		if len(argv) != 1 {
-			return nil, "", fmt.Errorf("isolated sandbox mode expects exactly one nginx config path after --, got %d, %s", len(argv), strings.Join(argv, ","))
-		}
-
-		return buildIsolatedNginxValidationArgs(argv[0]), argv[0], nil
-	default:
-		if len(argv) == 0 {
-			return nil, "", fmt.Errorf("not enough arguments after --")
-		}
-
-		nginxConfigPath := getNginxConfByArg("-c", argv)
-		if nginxConfigPath == "" {
-			return nil, "", fmt.Errorf("nginx config not found in args")
-		}
-
-		return argv, nginxConfigPath, nil
+func resolveIsolatedSandboxConfigPath(argv []string) (string, error) {
+	if len(argv) != 1 {
+		return "", fmt.Errorf("isolated sandbox mode expects exactly one nginx config path after --")
 	}
+
+	return argv[0], nil
+}
+
+func resolveDefaultSandboxTargetArgs(argv []string) ([]string, string, error) {
+	if len(argv) == 0 {
+		return nil, "", fmt.Errorf("not enough arguments after --")
+	}
+
+	nginxConfigPath := getNginxConfByArg("-c", argv)
+	if nginxConfigPath == "" {
+		return nil, "", fmt.Errorf("nginx config not found in args")
+	}
+
+	return argv, nginxConfigPath, nil
 }
 
 func buildIsolatedNginxValidationArgs(configPath string) []string {

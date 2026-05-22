@@ -131,10 +131,9 @@ func TestNewIsolatedProcessChildCmd(t *testing.T) {
 	assertExecCmdSysProcAttrEqual(t, cmd.SysProcAttr, wantSys)
 }
 
-func TestResolveSandboxTargetArgs(t *testing.T) {
+func TestResolveDefaultSandboxTargetArgs(t *testing.T) {
 	tests := []struct {
 		name           string
-		mode           sandboxMode
 		in             []string
 		wantArgs       []string
 		wantConfigPath string
@@ -142,29 +141,20 @@ func TestResolveSandboxTargetArgs(t *testing.T) {
 	}{
 		{
 			name:           "default mode keeps explicit nginx args",
-			mode:           sandboxModeDefault,
 			in:             []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123", "-t", "-e", "/dev/null"},
 			wantArgs:       []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123", "-t", "-e", "/dev/null"},
 			wantConfigPath: "/tmp/nginx/nginx-cfg123",
 		},
 		{
-			name:           "isolated mode bakes nginx validation args",
-			mode:           sandboxModeIsolatedProcess,
-			in:             []string{"/tmp/nginx/nginx-cfg123"},
-			wantArgs:       []string{"/usr/local/nginx/sbin/nginx", "-c", "/tmp/nginx/nginx-cfg123", "-t", "-e", "/dev/null"},
-			wantConfigPath: "/tmp/nginx/nginx-cfg123",
-		},
-		{
-			name:    "isolated mode rejects extra args",
-			mode:    sandboxModeIsolatedProcessChild,
-			in:      []string{"/tmp/nginx/nginx-cfg123", "-t"},
+			name:    "default mode requires -c flag",
+			in:      []string{"/usr/local/nginx/sbin/nginx", "-t"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotArgs, gotConfigPath, err := resolveSandboxTargetArgs(tt.mode, tt.in)
+			gotArgs, gotConfigPath, err := resolveDefaultSandboxTargetArgs(tt.in)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -181,6 +171,58 @@ func TestResolveSandboxTargetArgs(t *testing.T) {
 				t.Fatalf("unexpected config path, got %q want %q", gotConfigPath, tt.wantConfigPath)
 			}
 		})
+	}
+}
+
+func TestResolveIsolatedSandboxConfigPath(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      []string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "accepts only config path",
+			in:   []string{"/tmp/nginx/nginx-cfg123"},
+			want: "/tmp/nginx/nginx-cfg123",
+		},
+		{
+			name:    "rejects extra args",
+			in:      []string{"/tmp/nginx/nginx-cfg123", "-t"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveIsolatedSandboxConfigPath(tt.in)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("unexpected config path, got %q want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildIsolatedNginxValidationArgs(t *testing.T) {
+	got := buildIsolatedNginxValidationArgs("/tmp/nginx/nginx-cfg123")
+	want := []string{
+		"/usr/local/nginx/sbin/nginx",
+		"-c", "/tmp/nginx/nginx-cfg123",
+		"-t",
+		"-e", "/dev/null",
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected args, got %v want %v", got, want)
 	}
 }
 
