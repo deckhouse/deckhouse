@@ -118,6 +118,8 @@ jobs:
       - build_fe
 {!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
 
+{!{ tmpl.Exec "set_security_rootless_requirement_status" $ctx | strings.Indent 2 }!}
+
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests

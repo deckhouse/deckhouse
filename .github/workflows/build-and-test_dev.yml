@@ -2824,6 +2824,42 @@ jobs:
     # </template: security_scan_template>
 
 
+
+  # <template: set_security_rootless_requirement_status>
+  set_security_rootless_requirement_status:
+    name: Set commit status after security rootless scan run
+    runs-on: "ubuntu-latest"
+    needs:
+      - pull_request_info
+      - security_scan_images
+    if: ${{ always() && needs.security_scan_images.result != 'skipped' }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "PR Number: $PR_NUMBER"
+          if [ "${{ needs.security_scan_images.result }}" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/rootless/success"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/rootless/failed"
+          fi
+  # </template: set_security_rootless_requirement_status>
+
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
@@ -2933,7 +2969,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-controller tests-modules
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse --user $(id -u):$(id -g) -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-controller tests-modules
     # </template: tests_before_build_template>
 
   tests_python_webhooks:

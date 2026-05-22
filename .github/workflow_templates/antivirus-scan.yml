@@ -23,9 +23,19 @@ on:
         required: true
         type: string
         default: main
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 env:
   SCAN_RESULTS_DIR: 'scans'
+
+# Cancel in-progress runs for the same PR (pull_request_target) or branch (schedule/dispatch).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
 
 
 {!{- define "if_not_test_repo" }!}
@@ -34,12 +44,16 @@ if: github.repository == 'deckhouse/deckhouse'
 {!{- define "semver_regexp" }!}^v?[0-9]+.[0-9]+.[0-9]+${!{ end }!}
 
 jobs:
+{!{ tmpl.Exec "block-until-image-is-not-ready" . | strings.Indent 2 }!}
+
   get-tags:
     name: Get tags for scanning
     runs-on: [self-hosted, regular]
-    {!{ tmpl.Exec "if_not_test_repo" . | strings.Indent 4 }!}
+    needs: block-until-image-is-not-ready
+    # Skip PRs from forks: pull_request_target exposes base-repo secrets, and dev-registry tags for fork PRs are not built.
+    if: ${{ github.repository == 'deckhouse/deckhouse' && (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) }}
     outputs:
-      tags: ${{ steps.set-manual-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
+      tags: ${{ steps.set-manual-tag.outputs.tags || steps.set-pr-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
     steps:
       {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Check event type
@@ -48,14 +62,20 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.branch }}" ]; then
             echo "Manual run with branch: ${{ github.event.inputs.branch }}"
             echo "is_manual=true" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "pull_request_target" ]; then
+            echo "PR run for #${{ github.event.pull_request.number }}"
+            echo "is_manual=false" >> $GITHUB_OUTPUT
+            echo "is_pr=true" >> $GITHUB_OUTPUT
           else
             echo "Scheduled run or manual without specific branch"
             echo "is_manual=false" >> $GITHUB_OUTPUT
+            echo "is_pr=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Get latest tags for scheduled run
-        if: steps.check-event.outputs.is_manual == 'false'
+        if: steps.check-event.outputs.is_manual == 'false' && steps.check-event.outputs.is_pr == 'false'
         id: get-tags
         run: |
           TAGS=$(git ls-remote --tags origin | grep -F tags/v | awk -F '/' '{print $3}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
@@ -101,12 +121,26 @@ jobs:
           echo "Tags to scan: $TAGS"
           echo "tags=$(echo $TAGS | jq -R -s -c 'split(" ")')" >> $GITHUB_OUTPUT
 
+      - name: Set PR tag
+        if: steps.check-event.outputs.is_pr == 'true'
+        id: set-pr-tag
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
+
       - name: Set default tag (fallback)
         if: always()
         id: set-default
         run: |
           # Fallback if no tags were set
-          if [ -z "${{ steps.set-manual-tag.outputs.tags }}${{ steps.get-tags.outputs.tags }}" ]; then
+          if [ -z "${{ steps.set-manual-tag.outputs.tags }}${{ steps.set-pr-tag.outputs.tags }}${{ steps.get-tags.outputs.tags }}" ]; then
             echo "tags=[\"main\"]" >> $GITHUB_OUTPUT
           fi
 
@@ -219,6 +253,31 @@ jobs:
       {!{- $args := dict "container_name" "kaspersky" "scan_path" "antivirus" -}!}
       {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 6 }!}
 
+  set_security_antivirus_requirement_status:
+    name: Set commit status after antivirus scan run
+    runs-on: "ubuntu-latest"
+    needs: [drweb-scan, kaspersky-scan]
+    if: ${{ always() && github.event_name == 'pull_request_target' && needs.drweb-scan.result != 'skipped' && needs.kaspersky-scan.result != 'skipped' }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "PR Number: $PR_NUMBER"
+          if [ "${{ needs.drweb-scan.result }}" == "success" ] && [ "${{ needs.kaspersky-scan.result }}" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed"
+          fi
+
   notify-failure:
     name: Send failure notification
     runs-on: [self-hosted, regular]
@@ -249,12 +308,16 @@ jobs:
       - name: Send notification
         run: |
           workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          
+
           MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
           MESSAGE+="**Failed jobs:**\n"
           MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+          if [ "${{ github.event_name }}" == "pull_request_target" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+            MESSAGE+="**PR:** [#${{ github.event.pull_request.number }}]($pr_url)\n"
+          fi
           MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
-          
+
           curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
             -H "Content-Type: application/json" \
             --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
