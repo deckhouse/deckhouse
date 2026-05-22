@@ -136,6 +136,7 @@ noises:
       image= filename=/tmp/cac912e8605cafa636a779d728e15fe9d3b45607d2125f9503e6caab2585d2eb/etc/kubernetes/deckhouse
       name=<NA> mode=S_IXUSR|S_IWUSR|S_IRUSR event=fchmodat)
 {{- end -}}
+{{- if has "loki" .Values.global.enabledModules }}
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
@@ -258,3 +259,4 @@ spec:
   type: Loki
   extraLabels:
     deckhouse_io_type: "security-event"
+{{- end }}

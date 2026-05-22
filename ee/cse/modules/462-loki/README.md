@@ -1,13 +1,5 @@
 # CSE edit
 
-## monitoring/grafana-dashboards/security
-
-Dashboards for viewing security events have been added.
-
-## monitoring/prometheus-rules/security-events/security-events-sync.yaml
-
-Adds an alert for security events.
-
 ## openapi/config-values.yaml
 
 1. remove .allowDeleteLogs
@@ -21,11 +13,3 @@ ValidatingAdmissionPolicy is not suitable because it can be bypassed if someone 
 4. set .lokiConfig.ingestionRateMB.default: 50
 5. set .lokiConfig.perStreamRateLimit.default: 30MB
 6. set .lokiConfig.perStreamRateLimitBurst.default: 50MB
-
-## templates/security-events.yaml
-
-Adds rules for collecting and transforming logs into security events
-
-## templates/audit-logs.yaml
-
-Adds log collection from /var/log/kube-audit/audit.log
