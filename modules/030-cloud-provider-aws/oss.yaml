@@ -6,9 +6,6 @@
   id: ccm-aws
   versions:
     - condition:
-        k8s: "1.31"
-      version: v1.31.6
-    - condition:
         k8s: "1.32"
       version: v1.32.3
     - condition:
@@ -17,6 +14,9 @@
     - condition:
         k8s: "1.34"
       version: v1.34.1
+    - condition:
+        k8s: "1.35"
+      version: v1.35.0
     - condition:
         k8s: "1.35"
       version: v1.35.0
@@ -29,9 +29,6 @@
   id: csi-aws
   versions:
     - condition:
-        k8s: "1.31"
-      version: v1.54.0
-    - condition:
         k8s: "1.32"
       version: v1.54.0
     - condition:
@@ -42,6 +39,9 @@
       version: v1.54.0
     - condition:
         k8s: "1.35"
+      version: v1.54.0
+    - condition:
+        k8s: "1.36"
       version: v1.54.0
 
 - name: Amazon Web Services Terraform provider
