@@ -213,7 +213,7 @@ spec:
           )
         )
       reason: Forbidden
-      messageExpression: "'Setting the `heritage` label is forbidden for non-system users'"
+      messageExpression: "'Setting the `heritage: deckhouse` label is forbidden for non-system users'"
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to set the heritage label'"
