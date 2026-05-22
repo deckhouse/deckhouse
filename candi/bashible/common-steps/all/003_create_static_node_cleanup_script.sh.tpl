@@ -130,18 +130,35 @@ kill_and_wait() {
 remove_path() {
   local path="$1"
 
-  # if it does not exist
   [ ! -e "$path" ] && return 0
 
   for i in {1..5}; do
     if [ -d "$path" ]; then
-      mount | grep -F "$path" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
+      # For each mountpoint under $path (deepest first): if it's a persistent writable volume,
+      # clear its data before unmounting so the device comes up empty on next boot.
+      while IFS= read -r mnt; do
+        local fstype
+        fstype=$(findmnt --noheadings --output FSTYPE --mountpoint "$mnt" 2>/dev/null)
+        case "$fstype" in
+          overlay|tmpfs|nsfs|autofs|erofs)
+            # No persistent data — just unmount (erofs is read-only, find -delete would fail)
+            ;;
+          *)
+            # Persistent writable volume (ext4, xfs, nfs4, etc.) — clear data first
+            log_info "Clearing data on $fstype volume at $mnt"
+            if ! find "$mnt" -mindepth 1 -delete 2>/dev/null; then
+              log_err "ERROR: failed to clear data at $mnt"
+              CLEANUP_FAILED=1
+            fi
+            ;;
+        esac
+        umount -l "$mnt" 2>/dev/null || true
+      done < <(mount | grep -F "$path" | awk '{print $3}' | sort -r)
     fi
     rm -rf "$path" 2>/dev/null && return 0
     sleep 1
   done
 
-  # if it exists after attempting to delete
   if [ -e "$path" ]; then
     log_err "ERROR: failed to remove $path"
     return 1
