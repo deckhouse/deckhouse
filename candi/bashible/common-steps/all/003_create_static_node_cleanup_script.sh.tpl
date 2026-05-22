@@ -190,12 +190,6 @@ done
 kill_and_wait "bash /var/lib/bashible/bashible"
 kill_and_wait "containerd-shim"
 
-# Unmount
-log_info "Unmounting kubelet/containerd mounts"
-for dir in /var/lib/kubelet /var/lib/containerd; do
-  mount | grep "$dir" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
-done
-
 # Remove immutable bit
 if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
   chattr -R -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs 2>/dev/null || true
@@ -245,8 +239,35 @@ if [ "$CLEANUP_FAILED" -ne 0 ]; then
   exit 2
 fi
 
-log_info "Cleanup completed successfully, restoring MOTD and rebooting"
+log_info "Cleanup completed successfully, restoring MOTD"
 restore_motd_message
+
+# Warn if any cleaned paths are still in fstab — they will be remounted on next boot.
+# The user must remove those entries manually before rebooting.
+FSTAB_HITS=()
+for p in "${PATHS_TO_REMOVE[@]}" /var/lib/bashible; do
+  if grep -qsF "$p" /etc/fstab 2>/dev/null; then
+    FSTAB_HITS+=("$p")
+  fi
+done
+
+if [ "${#FSTAB_HITS[@]}" -gt 0 ]; then
+  echo ""
+  echo "################################################################################"
+  echo "# WARNING: the following paths are present in /etc/fstab:"
+  for p in "${FSTAB_HITS[@]}"; do
+    echo "#   $p"
+  done
+  echo "#"
+  echo "# Remove or comment out those entries from /etc/fstab before rebooting,"
+  echo "# otherwise the devices will be remounted and bootstrap may fail again."
+  echo "################################################################################"
+  echo ""
+  log_err "Skipping reboot: manual /etc/fstab cleanup required (see WARNING above)"
+  exit 3
+fi
+
+log_info "Rebooting"
 shutdown -r -t 5
 EOF
 {{- end }}
