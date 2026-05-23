@@ -17,19 +17,12 @@
 # limitations under the License.
 name: Secret Scan
 
-# Scheduled full-history scan on main.
-# PR diff-scan lives in the "Security Scans" workflow (security-scans.yml).
 on:
   schedule:
     - cron: '0 0 * * *'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  gitleaks_scan:
-    name: Gitleaks full scan
+  gitleaks_full_scan:
     runs-on: ubuntu-latest
     permissions:
       contents: read

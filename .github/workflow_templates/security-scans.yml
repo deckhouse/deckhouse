@@ -122,7 +122,7 @@ jobs:
     needs:
       - pull_request_info
       - block-until-image-is-not-ready
-{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr" "with_fail_report") | strings.Indent 4 }!}
 
 {!{ tmpl.Exec "set_security_rootless_requirement_status" $ctx | strings.Indent 2 }!}
 

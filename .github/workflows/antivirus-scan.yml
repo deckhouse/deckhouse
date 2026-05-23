@@ -218,7 +218,16 @@ jobs:
 
       - name: Cleanup scan results on runner
         if: always()
-        run: rm -rf scans/${{ steps.scan.outputs.scan_id }}
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          CONTAINER_NAME=registry_drweb
+          rm -rf "scans/${SCAN_ID}"
+          docker exec ${CONTAINER_NAME} rm -rf /drweb/scans/${SCAN_ID} || true
 
   # </template: drweb_scan_job>
 
@@ -327,7 +336,16 @@ jobs:
 
       - name: Cleanup scan results on runner
         if: always()
-        run: rm -rf scans/${{ steps.scan.outputs.scan_id }}
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          CONTAINER_NAME=registry_kaspersky
+          rm -rf "scans/${SCAN_ID}"
+          docker exec ${CONTAINER_NAME} rm -rf /antivirus/scans/${SCAN_ID} || true
 
   # </template: kaspersky_scan_job>
 

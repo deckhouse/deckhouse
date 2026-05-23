@@ -1,6 +1,8 @@
 {!{ define "security_scan_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $scanType := index . 1 -}!}
+{!{- $withFailReport := false -}!}
+{!{- if gt (len .) 2 -}!}{!{- $withFailReport = (eq (index . 2) "with_fail_report") -}!}{!{- end -}!}
 # <template: security_scan_template>
 steps:
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
@@ -9,7 +11,9 @@ steps:
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- if $withFailReport -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+  {!{- end -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "link_bin_step"                     | strings.Indent 2 }!}
@@ -26,7 +30,9 @@ steps:
       echo "⚓️ 🏎 Running default user validation on ${TAG}..."
       make cve-base-images-check-default-user
   {!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 2 }!}
+  {!{- if $withFailReport }!}
   {!{ tmpl.Exec "send_fail_report" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
 # </template: security_scan_template>
 {!{ end }!}
 
