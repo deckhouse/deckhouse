@@ -12,7 +12,7 @@ require (
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/flant/addon-operator v1.21.5
 	github.com/flant/kube-client v1.7.0
-	github.com/flant/shell-operator v1.17.5-0.20260522120424-a366e1f8eb5b
+	github.com/flant/shell-operator v1.17.5-0.20260523040721-358452bef5d9
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
