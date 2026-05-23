@@ -24,12 +24,14 @@ import (
 	"strings"
 	"time"
 
+	otattribute "go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -251,6 +253,9 @@ func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 
 		if isModuleSuccess(line) {
 			log.InfoF("\tModule %q run successfully\n", line.Module)
+			_, span := telemetry.StartSpan(ctx, "deckhouse-module."+line.Module)
+			span.SetAttributes(otattribute.String("module", line.Module))
+			span.End()
 			return true
 		}
 
