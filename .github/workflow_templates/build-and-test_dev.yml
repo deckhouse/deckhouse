@@ -123,17 +123,6 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
-  security_scan_images:
-    name: Security scan images
-    runs-on: [self-hosted, large]
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
-
-{!{ tmpl.Exec "set_security_rootless_requirement_status" $ctx | strings.Indent 2 }!}
-
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests

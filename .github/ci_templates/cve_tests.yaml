@@ -10,7 +10,6 @@ set_security_scan_requirement_status:
     contents: read
     pull-requests: write
   steps:
-{!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Install GitHub CLI
       run: sudo apt-get install gh -y
     - name: Auth with GitHub CLI

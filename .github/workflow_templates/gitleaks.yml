@@ -13,22 +13,19 @@
 # limitations under the License.
 name: Secret Scan
 
+# Scheduled full-history scan on main.
+# PR diff-scan lives in the "Security Scans" workflow (security-scans.yml).
 on:
   schedule:
     - cron: '0 0 * * *'
-  pull_request_target:
-    types:
-      - opened
-      - reopened
-      - synchronize
 
-# Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (schedule event).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   gitleaks_scan:
+    name: Gitleaks full scan
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,20 +34,9 @@ jobs:
 {!{- $secrets := slice -}!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
-      # Full history scan on schedule.
       - name: Run Gitleaks full scan
-        if: github.event_name == 'schedule'
         uses: deckhouse/modules-actions/gitleaks@main
         with:
           scan_mode: full
-          gitleaks_version: v8.28.0
-
-      # Diff scan on PR. The action checks out refs/pull/<num>/merge itself,
-      # so the PR branch is scanned (not the base branch).
-      - name: Run Gitleaks diff scan
-        if: github.event_name == 'pull_request_target'
-        uses: deckhouse/modules-actions/gitleaks@main
-        with:
-          scan_mode: diff
           gitleaks_version: v8.28.0
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}

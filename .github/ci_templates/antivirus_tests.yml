@@ -61,6 +61,10 @@
     name: {!{ .container_name }!}-scan-results-${{ steps.scan.outputs.scan_id }}
     path: scans/${{ steps.scan.outputs.scan_id }}
     retention-days: 5
+
+- name: Cleanup scan results on runner
+  if: always()
+  run: rm -rf scans/${{ steps.scan.outputs.scan_id }}
 {!{ end }!}
 
 {!{ define "drweb_scan_job" }!}
@@ -114,6 +118,34 @@ kaspersky-scan:
     {!{ tmpl.Exec "av_scan_step" $args | strings.Indent 4 }!}
 # </template: kaspersky_scan_job>
 {!{ end }!}
+
+{!{ define "set_security_antivirus_requirement_status" }!}
+# <template: set_security_antivirus_requirement_status>
+set_security_antivirus_requirement_status:
+  name: Set commit status after antivirus scan run
+  runs-on: "ubuntu-latest"
+  needs: [drweb-scan, kaspersky-scan]
+  if: ${{ always() && needs.drweb-scan.result != 'skipped' && needs.kaspersky-scan.result != 'skipped' }}
+  permissions:
+    contents: read
+    pull-requests: write
+  steps:
+    - name: Install GitHub CLI
+      run: sudo apt-get install gh -y
+    - name: Auth with GitHub CLI
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Set PR Label
+      env:
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        echo "PR Number: $PR_NUMBER"
+        if [ "${{ needs.drweb-scan.result }}" == "success" ] && [ "${{ needs.kaspersky-scan.result }}" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success"
+        else
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed"
+        fi
+# </template: set_security_antivirus_requirement_status>
+{!{- end -}!}
 
 {!{ define "antivirus_notify_failure_job" }!}
 # <template: antivirus_notify_failure_job>

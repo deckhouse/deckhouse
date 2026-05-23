@@ -24,9 +24,6 @@ on:
         type: string
         default: main
 
-env:
-  SCAN_RESULTS_DIR: 'scans'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

@@ -28,9 +28,6 @@ on:
         type: string
         default: main
 
-env:
-  SCAN_RESULTS_DIR: 'scans'
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -219,6 +216,10 @@ jobs:
           path: scans/${{ steps.scan.outputs.scan_id }}
           retention-days: 5
 
+      - name: Cleanup scan results on runner
+        if: always()
+        run: rm -rf scans/${{ steps.scan.outputs.scan_id }}
+
   # </template: drweb_scan_job>
 
 
@@ -323,6 +324,10 @@ jobs:
           name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}
           path: scans/${{ steps.scan.outputs.scan_id }}
           retention-days: 5
+
+      - name: Cleanup scan results on runner
+        if: always()
+        run: rm -rf scans/${{ steps.scan.outputs.scan_id }}
 
   # </template: kaspersky_scan_job>
 
