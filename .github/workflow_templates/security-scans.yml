@@ -67,7 +67,7 @@ jobs:
     name: Set commit status after gitleaks scan run
     runs-on: "ubuntu-latest"
     needs: gitleaks_scan
-    if: ${{ always() && needs.gitleaks_scan.result != 'skipped' }}
+    if: ${{ always() }}
     permissions:
       contents: read
       pull-requests: write
@@ -79,12 +79,16 @@ jobs:
       - name: Set PR Label
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.gitleaks_scan.result }}
         run: |
-          echo "PR Number: $PR_NUMBER"
-          if [ "${{ needs.gitleaks_scan.result }}" == "success" ]; then
-            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success"
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
           else
-            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed"
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed" --remove-label "security/gitleaks/success"
           fi
 
   # ============================================================================
@@ -159,3 +163,53 @@ jobs:
 {!{ tmpl.Exec "set_security_antivirus_requirement_status" . | strings.Indent 2 }!}
 
 {!{ tmpl.Exec "antivirus_notify_failure_job" . | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if any scan did not finish with success
+  # (covers blocker failure, scan failure, and skipped due to upstream issues).
+  # ============================================================================
+  security_scans_required:
+    name: Security scans required
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+      - gitleaks_scan
+      - test_cve_report_main
+      - security_scan_images
+      - drweb-scan
+      - kaspersky-scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [blocker]="${{ needs.block-until-image-is-not-ready.result }}"
+            [gitleaks]="${{ needs.gitleaks_scan.result }}"
+            [cve]="${{ needs.test_cve_report_main.result }}"
+            [rootless]="${{ needs.security_scan_images.result }}"
+            [drweb]="${{ needs.drweb-scan.result }}"
+            [kaspersky]="${{ needs.kaspersky-scan.result }}"
+          )
+          # Antivirus jobs intentionally skip in test repositories (self-hosted antivirus runners are only in main repo).
+          IS_MAIN_REPO=false
+          if [[ "${{ github.repository }}" == "deckhouse/deckhouse" ]]; then
+            IS_MAIN_REPO=true
+          fi
+
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (allowed in test repository)"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

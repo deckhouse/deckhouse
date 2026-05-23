@@ -134,7 +134,7 @@ set_security_antivirus_requirement_status:
   name: Set commit status after antivirus scan run
   runs-on: "ubuntu-latest"
   needs: [drweb-scan, kaspersky-scan]
-  if: ${{ always() && needs.drweb-scan.result != 'skipped' && needs.kaspersky-scan.result != 'skipped' }}
+  if: ${{ always() }}
   permissions:
     contents: read
     pull-requests: write
@@ -146,12 +146,17 @@ set_security_antivirus_requirement_status:
     - name: Set PR Label
       env:
         PR_NUMBER: ${{ github.event.pull_request.number }}
+        GH_REPO: ${{ github.repository }}
+        DRWEB: ${{ needs.drweb-scan.result }}
+        KASPERSKY: ${{ needs.kaspersky-scan.result }}
       run: |
-        echo "PR Number: $PR_NUMBER"
-        if [ "${{ needs.drweb-scan.result }}" == "success" ] && [ "${{ needs.kaspersky-scan.result }}" == "success" ]; then
-          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success"
+        echo "PR Number: $PR_NUMBER | Dr.Web: $DRWEB | Kaspersky: $KASPERSKY"
+        if [ "$DRWEB" == "success" ] && [ "$KASPERSKY" == "success" ]; then
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+        elif [ "$DRWEB" == "skipped" ] && [ "$KASPERSKY" == "skipped" ]; then
+          gh pr edit "$PR_NUMBER" --remove-label "security/antivirus/success" --remove-label "security/antivirus/failed"
         else
-          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed"
+          gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed" --remove-label "security/antivirus/success"
         fi
 # </template: set_security_antivirus_requirement_status>
 {!{- end -}!}
