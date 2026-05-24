@@ -85,10 +85,28 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		pprofAddr = pprofBindAddress
 	}
 
+	// Lease parameters tuned for control-plane bootstrap.
+	//
+	// Default controller-runtime values (LeaseDuration=15s, RenewDeadline=10s,
+	// RetryPeriod=2s) assume a stable apiserver. During the very first cpm
+	// reconcile cpm itself rewrites the kube-apiserver / etcd static-pod
+	// manifests, which makes kubelet briefly restart those pods; for ~10s the
+	// local kubernetes-api-proxy returns RST and lease renewal fails. With the
+	// defaults that exceeds RenewDeadline and the manager exits with
+	// "leader election lost" — kubelet restarts cpm, progress lost.
+	//
+	// 90/60/5 covers a full apiserver restart cycle (60s renew window).
+	leaseDuration := 90 * time.Second
+	renewDeadline := 60 * time.Second
+	retryPeriod := 5 * time.Second
+
 	runtimeManager, err := controllerruntime.NewManager(cfg, controllerruntime.Options{
-		Scheme:           scheme,
-		LeaderElection:   true,
-		LeaderElectionID: constants.CpcControllerName,
+		Scheme:                  scheme,
+		LeaderElection:          true,
+		LeaderElectionID:        constants.CpcControllerName,
+		LeaseDuration:           &leaseDuration,
+		RenewDeadline:           &renewDeadline,
+		RetryPeriod:             &retryPeriod,
 		BaseContext: func() context.Context {
 			return ctx
 		},

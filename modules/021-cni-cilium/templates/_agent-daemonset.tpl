@@ -82,7 +82,11 @@ spec:
             httpHeaders:
             - name: "brief"
               value: "true"
-          periodSeconds: 30
+          # Match startupProbe granularity (2s). Default 30s adds a 30s lag
+          # between cilium /healthz first returning ok and kubelet flipping
+          # the pod to Ready — on the cluster-bootstrap critical path this
+          # gates `Wait Node Ready` and `Control-plane readiness` for nothing.
+          periodSeconds: 2
           successThreshold: 1
           failureThreshold: 3
           timeoutSeconds: 5
