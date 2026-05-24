@@ -97,7 +97,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(etcd_server_has_leader{job=\"kube-etcd3\", node=~\"$node\"})",
+          "expr": "sum(etcd_server_has_leader{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -191,7 +191,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"kube-etcd3\", node=~\"$node\"}[$__range])",
+          "expr": "changes(etcd_server_leader_changes_seen_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__range])",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -513,7 +513,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "etcd_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
+          "expr": "etcd_mvcc_db_total_size_in_bytes{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -702,7 +702,7 @@
             "uid": "$ds_prometheus"
           },
           "exemplar": true,
-          "expr": "sum(rate(etcd_server_apply_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (le)",
+          "expr": "sum(rate(etcd_server_apply_duration_seconds_bucket{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "hide": false,
           "interval": "",
@@ -800,7 +800,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} Client Traffic In",
@@ -993,7 +993,7 @@
             "uid": "$ds_prometheus"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1007,7 +1007,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} DB fsync",
@@ -1103,7 +1103,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} Client Traffic Out",
@@ -1199,7 +1199,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum(rate(etcd_server_proposals_failed_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Failure Rate",
@@ -1211,7 +1211,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(etcd_server_proposals_pending{job=\"kube-etcd3\", node=~\"$node\"})",
+          "expr": "sum(etcd_server_proposals_pending{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Pending Total",
@@ -1223,7 +1223,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum(rate(etcd_server_proposals_committed_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Commit Rate",
@@ -1235,7 +1235,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum(rate(etcd_server_proposals_applied_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Proposal Apply Rate",
@@ -1330,7 +1330,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node)",
+          "expr": "sum(rate(etcd_network_peer_received_bytes_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}} Peer Traffic In",
@@ -1426,7 +1426,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node)",
+          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1620,7 +1620,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{source=\"deckhouse\", job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
           "hide": false,
           "intervalFactor": 1,
           "legendFormat": "{{node}} Peer RTT",
