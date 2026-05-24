@@ -90,6 +90,12 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   priority: 2000001000
   priorityClassName: system-node-critical
+  # Static-pod default grace is 30s. During bootstrap control-plane-manager
+  # rewrites this manifest at least twice; each rewrite waits 30s for the old
+  # kube-apiserver to drain → 60s+ of pure restart-grace on the critical path.
+  # apiserver doesn't have meaningful in-flight work to drain on its own pod
+  # during bootstrap, so 1s is enough.
+  terminationGracePeriodSeconds: 1
   securityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -318,6 +324,16 @@ spec:
         path: /livez
         port: 6443
         scheme: HTTPS
+{{- if eq .runType "ClusterBootstrap" }}
+      # Bootstrap-only: poke /livez aggressively so kubelet flips the pod to
+      # "started" as soon as apiserver responds (sub-second on fresh master).
+      # Cluster-runtime keeps the conservative 10s+24 settings — restarts in
+      # prod tolerate slower probes safely.
+      initialDelaySeconds: 1
+      periodSeconds: 1
+      timeoutSeconds: 5
+{{- else }}
       initialDelaySeconds: 10
       periodSeconds: 10
       timeoutSeconds: 15
+{{- end }}

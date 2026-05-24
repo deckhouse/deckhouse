@@ -108,13 +108,34 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 	discoveryMasterNodeMilliCPU = hardLimitMilliCPU
 	discoveryMasterNodeMemory = hardLimitMemory
 
+	// While the cluster is still bootstrapping, kubelet hasn't yet finalized its
+	// system-reserved / kube-reserved subtractions on Node.Status.Allocatable.
+	// If we trust the fresh Allocatable now, this hook will run a second time
+	// later (after kubelet settles) with a noticeably smaller value, which then
+	// re-renders every control-plane static-pod manifest — kubelet restarts
+	// kube-apiserver/etcd/kcm/ks, and the restart cascade (60-120s per
+	// component) lands right in the middle of Deckhouse install, causing
+	// "forbidden" responses across all module hooks while the new apiserver
+	// rebuilds its RBAC cache from the also-restarting etcd. Pre-subtract the
+	// expected kubelet reservation while we're still in bootstrap so the very
+	// first calculation already matches the eventual steady-state value, and
+	// the second run finds nothing to change.
+	preReserve := !input.Values.Get("global.clusterIsBootstrapped").Bool()
+
 	for _, n := range nodes {
-		if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU && absDiff(n.AllocatableMilliCPU, discoveryMasterNodeMilliCPU) > kubeletResourceReservationCPU {
-			discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
+		effectiveMilliCPU := n.AllocatableMilliCPU
+		effectiveMemory := n.AllocatableMemory
+		if preReserve {
+			effectiveMilliCPU -= kubeletResourceReservationCPU
+			effectiveMemory -= kubeletResourceReservationMemory
 		}
 
-		if n.AllocatableMemory < discoveryMasterNodeMemory && absDiff(n.AllocatableMemory, discoveryMasterNodeMemory) > kubeletResourceReservationMemory {
-			discoveryMasterNodeMemory = n.AllocatableMemory
+		if effectiveMilliCPU < discoveryMasterNodeMilliCPU && absDiff(effectiveMilliCPU, discoveryMasterNodeMilliCPU) > kubeletResourceReservationCPU {
+			discoveryMasterNodeMilliCPU = effectiveMilliCPU
+		}
+
+		if effectiveMemory < discoveryMasterNodeMemory && absDiff(effectiveMemory, discoveryMasterNodeMemory) > kubeletResourceReservationMemory {
+			discoveryMasterNodeMemory = effectiveMemory
 		}
 	}
 
