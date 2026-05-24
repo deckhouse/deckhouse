@@ -16,9 +16,14 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // Cluster / MachineHealthCheck (cluster.x-k8s.io/v1beta1) go through a
@@ -41,24 +46,66 @@ const (
 	capiNamespace = "d8-cloud-instance-manager"
 )
 
+// capiClusterInfo carries the cloud-provider registration data the hook needs.
+// It mirrors the relevant subset of d8-node-manager-cloud-provider Secret keys.
+type capiClusterInfo struct {
+	ClusterName       string
+	ClusterKind       string
+	ClusterAPIVersion string
+}
+
+func filterCapiClusterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	data, err := decodeDataFromSecret(obj)
+	if err != nil {
+		return nil, err
+	}
+	info := capiClusterInfo{}
+	if v, ok := data["capiClusterName"].(string); ok {
+		info.ClusterName = v
+	}
+	if v, ok := data["capiClusterKind"].(string); ok {
+		info.ClusterKind = v
+	}
+	if v, ok := data["capiClusterAPIVersion"].(string); ok {
+		info.ClusterAPIVersion = v
+	}
+	return info, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	// Own queue so a transient failure to create Cluster/MHC (capi conversion
+	// webhook still warming up on first install) doesn't block the main queue.
 	Queue: "/modules/node-manager/create-capi-cluster-resources",
-	// Order > create_master_node_group (6) so it runs in the same OnStartup
-	// pass but after the CRDs ensure step (order 5) and master NG hook (6).
-	OnStartup: &go_hook.OrderedConfig{Order: 7},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			// Trigger when the cloud-provider registration secret appears or
+			// changes — that's also the moment `nodeManager.internal.cloudProvider`
+			// becomes meaningful for downstream hooks.
+			Name:       "cloud_provider_secret",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{MatchNames: []string{"kube-system"}},
+			},
+			NameSelector: &types.NameSelector{MatchNames: []string{"d8-node-manager-cloud-provider"}},
+			FilterFunc:   filterCapiClusterSecret,
+		},
+	},
 }, createCapiClusterResources)
 
 func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) error {
-	if !input.Values.Get("nodeManager.internal.capiControllerManagerEnabled").Bool() {
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[capiClusterInfo](input.Snapshots, "cloud_provider_secret")
+	if err != nil {
+		return fmt.Errorf("unmarshal cloud_provider_secret snapshot: %w", err)
+	}
+	if len(snaps) == 0 {
 		return nil
 	}
-
-	prefix := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
-	infraKind := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterKind").String()
-	if prefix == "" || infraKind == "" {
+	info := snaps[0]
+	if info.ClusterName == "" || info.ClusterKind == "" {
 		return nil
 	}
-	infraAPIVersion := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterAPIVersion").String()
+	infraAPIVersion := info.ClusterAPIVersion
 	if infraAPIVersion == "" {
 		infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 	}
@@ -67,57 +114,66 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 	serviceCIDR := input.Values.Get("global.clusterConfiguration.serviceSubnetCIDR").String()
 	serviceDomain := input.Values.Get("global.clusterConfiguration.clusterDomain").String()
 
-	commonMeta := map[string]interface{}{
-		"namespace": capiNamespace,
-		"labels": map[string]interface{}{
-			"heritage": "deckhouse",
-			"module":   "node-manager",
-			"app":      "capi-controller-manager",
+	commonLabels := map[string]interface{}{
+		"heritage": "deckhouse",
+		"module":   "node-manager",
+		"app":      "capi-controller-manager",
+	}
+
+	cluster := map[string]interface{}{
+		"apiVersion": "cluster.x-k8s.io/v1beta1",
+		"kind":       "Cluster",
+		"metadata": map[string]interface{}{
+			"name":      info.ClusterName,
+			"namespace": capiNamespace,
+			"labels":    commonLabels,
+			"finalizers": []interface{}{
+				"deckhouse.io/capi-controller-manager",
+			},
+		},
+		"spec": map[string]interface{}{
+			"clusterNetwork": map[string]interface{}{
+				"pods":          map[string]interface{}{"cidrBlocks": []interface{}{podCIDR}},
+				"services":      map[string]interface{}{"cidrBlocks": []interface{}{serviceCIDR}},
+				"serviceDomain": serviceDomain,
+			},
+			"infrastructureRef": map[string]interface{}{
+				"apiVersion": infraAPIVersion,
+				"kind":       info.ClusterKind,
+				"namespace":  capiNamespace,
+				"name":       info.ClusterName,
+			},
+			"controlPlaneRef": map[string]interface{}{
+				"apiVersion": "infrastructure.cluster.x-k8s.io/v1alpha1",
+				"kind":       "DeckhouseControlPlane",
+				"namespace":  capiNamespace,
+				"name":       info.ClusterName + "-control-plane",
+			},
 		},
 	}
 
-	clusterMeta := mergeMap(commonMeta, map[string]interface{}{
-		"name": prefix,
-		"finalizers": []interface{}{
-			"deckhouse.io/capi-controller-manager",
+	mhc := map[string]interface{}{
+		"apiVersion": "cluster.x-k8s.io/v1beta1",
+		"kind":       "MachineHealthCheck",
+		"metadata": map[string]interface{}{
+			"name":      info.ClusterName + "-machine-health-check",
+			"namespace": capiNamespace,
+			"labels":    commonLabels,
 		},
-	})
-	cluster := unstructuredFrom("cluster.x-k8s.io/v1beta1", "Cluster", clusterMeta, map[string]interface{}{
-		"clusterNetwork": map[string]interface{}{
-			"pods":          map[string]interface{}{"cidrBlocks": []interface{}{podCIDR}},
-			"services":      map[string]interface{}{"cidrBlocks": []interface{}{serviceCIDR}},
-			"serviceDomain": serviceDomain,
-		},
-		"infrastructureRef": map[string]interface{}{
-			"apiVersion": infraAPIVersion,
-			"kind":       infraKind,
-			"namespace":  capiNamespace,
-			"name":       prefix,
-		},
-		"controlPlaneRef": map[string]interface{}{
-			"apiVersion": "infrastructure.cluster.x-k8s.io/v1alpha1",
-			"kind":       "DeckhouseControlPlane",
-			"namespace":  capiNamespace,
-			"name":       prefix + "-control-plane",
-		},
-	})
-
-	mhcMeta := mergeMap(commonMeta, map[string]interface{}{
-		"name": prefix + "-machine-health-check",
-	})
-	mhc := unstructuredFrom("cluster.x-k8s.io/v1beta1", "MachineHealthCheck", mhcMeta, map[string]interface{}{
-		"clusterName":        prefix,
-		"nodeStartupTimeout": "20m",
-		"selector": map[string]interface{}{
-			"matchLabels": map[string]interface{}{
-				"cluster.x-k8s.io/cluster-name": prefix,
+		"spec": map[string]interface{}{
+			"clusterName":        info.ClusterName,
+			"nodeStartupTimeout": "20m",
+			"selector": map[string]interface{}{
+				"matchLabels": map[string]interface{}{
+					"cluster.x-k8s.io/cluster-name": info.ClusterName,
+				},
+			},
+			"unhealthyConditions": []interface{}{
+				map[string]interface{}{"type": "Ready", "status": "Unknown", "timeout": "5m"},
+				map[string]interface{}{"type": "Ready", "status": "False", "timeout": "5m"},
 			},
 		},
-		"unhealthyConditions": []interface{}{
-			map[string]interface{}{"type": "Ready", "status": "Unknown", "timeout": "5m"},
-			map[string]interface{}{"type": "Ready", "status": "False", "timeout": "5m"},
-		},
-	})
+	}
 
 	clusterU, err := sdk.ToUnstructured(&cluster)
 	if err != nil {
@@ -133,24 +189,3 @@ func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) err
 
 	return nil
 }
-
-func unstructuredFrom(apiVersion, kind string, metadata, spec map[string]interface{}) map[string]interface{} {
-	return map[string]interface{}{
-		"apiVersion": apiVersion,
-		"kind":       kind,
-		"metadata":   metadata,
-		"spec":       spec,
-	}
-}
-
-func mergeMap(a, b map[string]interface{}) map[string]interface{} {
-	out := make(map[string]interface{}, len(a)+len(b))
-	for k, v := range a {
-		out[k] = v
-	}
-	for k, v := range b {
-		out[k] = v
-	}
-	return out
-}
-
