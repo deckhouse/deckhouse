@@ -2,79 +2,19 @@
   {{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
   {{- if and $prefix .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
 
+# Cluster (cluster.x-k8s.io/v1beta1) and MachineHealthCheck (cluster.x-k8s.io/v1beta1)
+# are created by the create_capi_cluster_resources hook on its dedicated queue.
+# Both go through a conversion webhook served by capi-webhook-service →
+# capi-controller-manager; helm-rendering them here races the very first install
+# of that Deployment and triggers a ~3-minute retry storm on the main queue.
 
 {{- include "capi_infrastructure_cluster" . }}
----
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: Cluster
-metadata:
-  name: {{ $prefix }}
-  namespace: d8-cloud-instance-manager
-  annotations:
-    # Cluster/MachineHealthCheck have a conversion webhook on capi-webhook-service,
-    # backed by capi-controller-manager. During bootstrap, helm install of node-manager
-    # tries to apply these resources before capi-controller-manager Deployment is Ready
-    # — apiserver calls the conversion webhook, gets connection-refused / timeout,
-    # apply fails, helm retries with 45s backoff. Each retry hits the same wall until
-    # the controller eventually starts (~4 retries, ~3 min wasted).
-    # Tell nelm to defer these resources until the webhook backend is actually ready.
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
-  #    cluster.x-k8s.io/paused: "true"
-  # A finalizer has been added to prevent cascading removing of all capi resources after deleting the cluster resource.
-  finalizers:
-    - deckhouse.io/capi-controller-manager
-spec:
-  clusterNetwork:
-    pods:
-      cidrBlocks:
-        - {{ .Values.global.clusterConfiguration.podSubnetCIDR }}
-    services:
-      cidrBlocks:
-        - {{ .Values.global.clusterConfiguration.serviceSubnetCIDR }}
-    serviceDomain: {{ .Values.global.clusterConfiguration.clusterDomain }}
-  infrastructureRef:
-    apiVersion: {{ .Values.nodeManager.internal.cloudProvider.capiClusterAPIVersion }}
-    kind: {{ .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
-    namespace:  d8-cloud-instance-manager
-    name: {{ $prefix }}
-  controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-    kind: DeckhouseControlPlane
-    namespace: d8-cloud-instance-manager
-    name: {{ $prefix }}-control-plane
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: DeckhouseControlPlane
 metadata:
   namespace: d8-cloud-instance-manager
   name: {{ $prefix }}-control-plane
-  annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
----
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: MachineHealthCheck
-metadata:
-  namespace: d8-cloud-instance-manager
-  name: {{ $prefix }}-machine-health-check
-  annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
-spec:
-  clusterName: {{ $prefix }}
-  nodeStartupTimeout: 20m
-  selector:
-    matchLabels:
-      cluster.x-k8s.io/cluster-name: {{ $prefix }}
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 5m
-    - type: Ready
-      status: "False"
-      timeout: 5m
   {{- end }}
 {{- end }}
-
-
