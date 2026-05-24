@@ -33,6 +33,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   - scheme: https
     port: https-metrics
     path: /scheduler/metrics
@@ -51,6 +53,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   - scheme: https
     port: https-metrics
     path: /controller-manager/metrics
@@ -70,3 +74,5 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse

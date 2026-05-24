@@ -2,7 +2,7 @@
   rules:
 
   - alert: D8CertExporterTargetDown
-    expr: max by (job) (up{job="x509-certificate-exporter"} == 0)
+    expr: max by (job) (up{source="deckhouse", job="x509-certificate-exporter"} == 0)
     for: 1m
     labels:
       severity_level: "8"
@@ -31,7 +31,7 @@
           ```
 
   - alert: D8CertExporterTargetAbsent
-    expr: absent(up{job="x509-certificate-exporter"}) == 1
+    expr: absent(up{source="deckhouse", job="x509-certificate-exporter"}) == 1
     for: 15m
     labels:
       severity_level: "8"
@@ -60,7 +60,7 @@
           ```
 
   - alert: D8CertExporterPodIsNotReady
-    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"x509-certificate-exporter-.*"}) != 1
+    expr: min by (pod) (kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-monitoring", pod=~"x509-certificate-exporter-.*"}) != 1
     for: 30m
     labels:
       severity_level: "8"
@@ -89,7 +89,7 @@
            ```
 
   - alert: D8CertExporterPodIsNotRunning
-    expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"x509-certificate-exporter-.*"})
+    expr: absent(kube_pod_status_phase{source="deckhouse", namespace="d8-monitoring", phase="Running", pod=~"x509-certificate-exporter-.*"})
     for: 30m
     labels:
       severity_level: "8"

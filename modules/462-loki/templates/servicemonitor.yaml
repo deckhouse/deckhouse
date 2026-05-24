@@ -17,6 +17,9 @@ spec:
     bearerTokenSecret:
       name: "prometheus-token"
       key: "token"
+    relabelings:
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchLabels:
       app: loki

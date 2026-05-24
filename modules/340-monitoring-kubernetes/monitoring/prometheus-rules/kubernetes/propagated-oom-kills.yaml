@@ -1,7 +1,7 @@
 - name: oom-kills
   rules:
   - alert: PodOOMKilled
-    expr: increase(klog_pod_oomkill[3m]) > 0
+    expr: increase(klog_pod_oomkill{source="deckhouse"}[3m]) > 0
     for: 1m
     labels:
       severity_level: "4"

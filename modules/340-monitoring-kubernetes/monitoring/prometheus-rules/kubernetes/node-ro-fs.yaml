@@ -3,7 +3,7 @@
   - alert: NodeFilesystemIsRO
     expr: |-
       max by (node, mountpoint, device, fstype) (
-        node_filesystem_readonly{mountpoint=~"(/|/mnt/kubernetes-data|/var/lib/containerd/)"}
+        node_filesystem_readonly{source="deckhouse", mountpoint=~"(/|/mnt/kubernetes-data|/var/lib/containerd/)"}
       ) != 0
     for: 5m
     labels:
