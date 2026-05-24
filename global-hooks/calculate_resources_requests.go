@@ -36,13 +36,20 @@ const (
 	hardLimitMilliCPU       = 4 * 1000               // 4 Cpu
 	hardLimitMemory         = 8 * 1024 * 1024 * 1024 // 8G ram
 
-	// it needs for prevent multiple restarts control-plane manager on cluster bootstrap
-	// for 8x4 installations
-	kubeletResourceReservationMemory = 900 * 1024 * 1024 // 900 mb
-	kubeletResourceReservationCPU    = 100               // 0.1 cpu
+	// Minimum kubelet reservation we account for, regardless of what the kubelet
+	// has actually reported on Node.Status.Allocatable at the moment the hook
+	// runs. The hook uses Capacity (immutable) and subtracts max(actual kubelet
+	// reservation, this floor) so the result is identical before and after the
+	// kubelet finishes initialising — which avoids a second hook run later that
+	// would re-render every control-plane static-pod manifest and cascade-restart
+	// kube-apiserver/etcd/kcm/ks right in the middle of Deckhouse install.
+	kubeletResourceReservationMemoryFloor = 900 * 1024 * 1024 // 900 MiB
+	kubeletResourceReservationCPUFloor    = 100               // 0.1 cpu
 )
 
 type Node struct {
+	CapacityMilliCPU    int64
+	CapacityMemory      int64
 	AllocatableMilliCPU int64
 	AllocatableMemory   int64
 }
@@ -54,10 +61,21 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
-	n := &Node{}
-
-	n.AllocatableMilliCPU = node.Status.Allocatable.Cpu().MilliValue()
-	n.AllocatableMemory = node.Status.Allocatable.Memory().Value()
+	n := &Node{
+		AllocatableMilliCPU: node.Status.Allocatable.Cpu().MilliValue(),
+		AllocatableMemory:   node.Status.Allocatable.Memory().Value(),
+		CapacityMilliCPU:    node.Status.Capacity.Cpu().MilliValue(),
+		CapacityMemory:      node.Status.Capacity.Memory().Value(),
+	}
+	// Test fixtures and very early node objects may not report Capacity yet —
+	// fall back to Allocatable. The downstream logic treats `Capacity == Allocatable`
+	// as `kubelet has not subtracted its reservation yet` and applies the floor.
+	if n.CapacityMilliCPU == 0 {
+		n.CapacityMilliCPU = n.AllocatableMilliCPU
+	}
+	if n.CapacityMemory == 0 {
+		n.CapacityMemory = n.AllocatableMemory
+	}
 
 	return n, nil
 }
@@ -81,6 +99,23 @@ var (
 		},
 	}, calculateResourcesRequests)
 )
+
+// effectiveMasterResources returns the per-node usable CPU/memory budget the
+// control-plane allocation can be carved out of. Computed from Node.Status.Capacity
+// (immutable for the lifetime of the node) minus max(actual kubelet reservation,
+// our floor). The result is stable across the kubelet warm-up window, so the
+// hook output does not flip a few minutes into the bootstrap.
+func effectiveMasterResources(n *Node) (cpu int64, memory int64) {
+	cpuReservation := n.CapacityMilliCPU - n.AllocatableMilliCPU
+	if cpuReservation < kubeletResourceReservationCPUFloor {
+		cpuReservation = kubeletResourceReservationCPUFloor
+	}
+	memReservation := n.CapacityMemory - n.AllocatableMemory
+	if memReservation < kubeletResourceReservationMemoryFloor {
+		memReservation = kubeletResourceReservationMemoryFloor
+	}
+	return n.CapacityMilliCPU - cpuReservation, n.CapacityMemory - memReservation
+}
 
 func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) error {
 	var (
@@ -108,34 +143,13 @@ func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) err
 	discoveryMasterNodeMilliCPU = hardLimitMilliCPU
 	discoveryMasterNodeMemory = hardLimitMemory
 
-	// While the cluster is still bootstrapping, kubelet hasn't yet finalized its
-	// system-reserved / kube-reserved subtractions on Node.Status.Allocatable.
-	// If we trust the fresh Allocatable now, this hook will run a second time
-	// later (after kubelet settles) with a noticeably smaller value, which then
-	// re-renders every control-plane static-pod manifest — kubelet restarts
-	// kube-apiserver/etcd/kcm/ks, and the restart cascade (60-120s per
-	// component) lands right in the middle of Deckhouse install, causing
-	// "forbidden" responses across all module hooks while the new apiserver
-	// rebuilds its RBAC cache from the also-restarting etcd. Pre-subtract the
-	// expected kubelet reservation while we're still in bootstrap so the very
-	// first calculation already matches the eventual steady-state value, and
-	// the second run finds nothing to change.
-	preReserve := !input.Values.Get("global.clusterIsBootstrapped").Bool()
-
 	for _, n := range nodes {
-		effectiveMilliCPU := n.AllocatableMilliCPU
-		effectiveMemory := n.AllocatableMemory
-		if preReserve {
-			effectiveMilliCPU -= kubeletResourceReservationCPU
-			effectiveMemory -= kubeletResourceReservationMemory
+		effCPU, effMem := effectiveMasterResources(&n)
+		if effCPU < discoveryMasterNodeMilliCPU {
+			discoveryMasterNodeMilliCPU = effCPU
 		}
-
-		if effectiveMilliCPU < discoveryMasterNodeMilliCPU && absDiff(effectiveMilliCPU, discoveryMasterNodeMilliCPU) > kubeletResourceReservationCPU {
-			discoveryMasterNodeMilliCPU = effectiveMilliCPU
-		}
-
-		if effectiveMemory < discoveryMasterNodeMemory && absDiff(effectiveMemory, discoveryMasterNodeMemory) > kubeletResourceReservationMemory {
-			discoveryMasterNodeMemory = effectiveMemory
+		if effMem < discoveryMasterNodeMemory {
+			discoveryMasterNodeMemory = effMem
 		}
 	}
 
