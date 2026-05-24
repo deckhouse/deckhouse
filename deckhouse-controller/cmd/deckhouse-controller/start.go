@@ -389,7 +389,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 									continue
 								}
 
-								if ppid == 1 && !executor.Registry.IsActive(int(ps.Pid)) {
+								if ppid == 1 && !executor.Tracker().IsActive(int(ps.Pid)) {
 									var status syscall.WaitStatus
 									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
 									if err != nil {
