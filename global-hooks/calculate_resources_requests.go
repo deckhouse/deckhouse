@@ -105,7 +105,7 @@ var (
 // (immutable for the lifetime of the node) minus max(actual kubelet reservation,
 // our floor). The result is stable across the kubelet warm-up window, so the
 // hook output does not flip a few minutes into the bootstrap.
-func effectiveMasterResources(n *Node) (cpu int64, memory int64) {
+func effectiveMasterResources(n *Node) (int64, int64) {
 	cpuReservation := n.CapacityMilliCPU - n.AllocatableMilliCPU
 	if cpuReservation < kubeletResourceReservationCPUFloor {
 		cpuReservation = kubeletResourceReservationCPUFloor
