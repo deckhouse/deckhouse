@@ -67,6 +67,7 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	Context("Cluster with one master node, but without set global modules resourcesRequests for control-plane", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
 			f.RunHook()
 		})
@@ -80,6 +81,7 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	Context("Cluster with one master node, but without set global modules resourcesRequests for control-plane and little oscillations from maximum", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "3930m", memory: "7717366089760m"}})))
 			f.RunHook()
 		})
@@ -91,8 +93,26 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 		})
 	})
 
+	Context("Cluster still bootstrapping, with one master node: kubelet reservation pre-subtracted", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
+			f.RunHook()
+		})
+
+		It("Hook should run, discovery values are based on Allocatable minus expected kubelet system-reserved/kube-reserved", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// effectiveMilliCPU = 4000 - 100 = 3900; absDiff(3900, 4000)=100, not >100 → discovery stays at hardLimit=4000.
+			// Same numbers as the bootstrapped case here: the goal of pre-subtract is to keep the FIRST hook-run result
+			// equal to the post-kubelet-settles result, which is exactly the hardLimit path for an 8x4 master.
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.milliCpuControlPlane").Int()).To(Equal(int64((4000 - configEveryNodeMilliCPU) * controlPlanePercent / 100)))
+			Expect(f.ValuesGet("global.internal.modules.resourcesRequests.memoryControlPlane").Int()).To(Equal(int64((8192*1024*1024 - configEveryNodeMemory) * controlPlanePercent / 100)))
+		})
+	})
+
 	Context("Cluster with master node, with set global modules resourcesRequests for control-plane", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}})))
 			f.ValuesSet("global.modules.resourcesRequests.controlPlane.cpu", "2000m")
 			f.ValuesSet("global.modules.resourcesRequests.controlPlane.memory", "2Gi")
@@ -108,6 +128,7 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	Context("Cluster with two master nodes, with different resources, but without set global modules resourcesRequests for control-plane", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "4", memory: "8Gi"}, {cpu: "2000m", memory: "4Gi"}})))
 			f.RunHook()
 		})
@@ -122,6 +143,7 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	Context("Cluster with two master nodes, but with very small resources", func() {
 		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.BindingContexts.Set(f.KubeStateSet(generateMasterNodesConfig([]masterNode{{cpu: "300m", memory: "500Mi"}, {cpu: "2000m", memory: "4Gi"}})))
 			f.RunHook()
 		})
