@@ -29,3 +29,5 @@ spec:
       targetLabel: node
     - targetLabel: tier
       replacement: cluster
+    - targetLabel: source
+      replacement: deckhouse

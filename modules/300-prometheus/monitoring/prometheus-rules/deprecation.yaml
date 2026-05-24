@@ -1,7 +1,7 @@
 - name: d8.prometheus.deprecation
   rules:
     - alert: PrometheusDirectAccessDeprecated
-      expr: d8_monitoring_ingress_with_client_cert == 1
+      expr: d8_monitoring_ingress_with_client_cert{source="deckhouse"} == 1
       labels:
         tier: application
         severity_level: "6"
@@ -20,7 +20,7 @@
   rules:
     - alert: GrafanaDashboardPanelIntervalDeprecated
       expr: |
-        count(d8_grafana_dashboards_deprecated_interval > 0)
+        count(d8_grafana_dashboards_deprecated_interval{source="deckhouse"} > 0)
       labels:
         tier: cluster
         severity_level: "8"
@@ -45,7 +45,7 @@
   rules:
     - alert: GrafanaDashboardAlertRulesDeprecated
       expr: |
-        count(d8_grafana_dashboards_deprecated_alert_rule > 0)
+        count(d8_grafana_dashboards_deprecated_alert_rule{source="deckhouse"} > 0)
       labels:
         tier: cluster
         severity_level: "8"
@@ -70,7 +70,7 @@
   rules:
     - alert: GrafanaDashboardPluginsDeprecated
       expr: |
-        count(d8_grafana_dashboards_deprecated_plugin > 0)
+        count(d8_grafana_dashboards_deprecated_plugin{source="deckhouse"} > 0)
       labels:
         tier: cluster
         severity_level: "8"

@@ -26,6 +26,8 @@ spec:
       replacement: cluster
     - targetLabel: namespace
       replacement: kube-system
+    - targetLabel: source
+      replacement: deckhouse
   # CRI metrics
   - port: https-metrics
     scheme: https
@@ -43,6 +45,8 @@ spec:
       replacement: cadvisor
     - targetLabel: tier
       replacement: cluster
+    - targetLabel: source
+      replacement: deckhouse
     metricRelabelings:
     # For Containerd metrics, the `container` label is empty for pause containers, but Docker sets the POD value.
     # This relabeling rule is required to keep both CRI metrics in sync.
@@ -98,6 +102,8 @@ spec:
         replacement: probes
       - targetLabel: tier
         replacement: cluster
+      - targetLabel: source
+        replacement: deckhouse
   selector:
     matchLabels:
       k8s-app: kubelet

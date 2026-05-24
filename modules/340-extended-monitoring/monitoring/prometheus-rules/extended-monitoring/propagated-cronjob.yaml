@@ -4,16 +4,16 @@
     expr: |
       (
         max by (namespace, job_name, owner_kind, owner_name) (
-          (kube_job_status_failed > 0)
+          (kube_job_status_failed{source="deckhouse"} > 0)
           * on (namespace, job_name) group_right()
           # compare start time of a Job with the last schedule time of a CronJob
           (
-            kube_job_status_start_time
+            kube_job_status_start_time{source="deckhouse"}
             >= on (namespace, job_name) group_left(owner_name)
             (
-              max by (owner_name, namespace) (label_replace(kube_cronjob_status_last_schedule_time, "owner_name", "$1", "cronjob", "(.*)"))
+              max by (owner_name, namespace) (label_replace(kube_cronjob_status_last_schedule_time{source="deckhouse"}, "owner_name", "$1", "cronjob", "(.*)"))
               * on (namespace, owner_name) group_right()
-              max by (owner_name, namespace, job_name) (kube_job_owner{owner_kind="CronJob"})
+              max by (owner_name, namespace, job_name) (kube_job_owner{source="deckhouse", owner_kind="CronJob"})
             )
           ) ^ 0
         )
@@ -21,7 +21,7 @@
       * on (namespace, owner_name) group_left()
       (
         max by (namespace, owner_name) (
-          label_replace((extended_monitoring_cronjob_enabled == 1), "owner_name", "$1", "cronjob", "(.*)")
+          label_replace((extended_monitoring_cronjob_enabled{source="deckhouse"} == 1), "owner_name", "$1", "cronjob", "(.*)")
         ) > 0
       )
     labels:
@@ -57,19 +57,19 @@
   - alert: CronJobPodsNotCreated
     expr: |
       sum by (namespace, owner_name) (
-        (kube_job_status_active == 0)
+        (kube_job_status_active{source="deckhouse"} == 0)
         * on (namespace, job_name) group_left(owner_name) (
-          kube_job_owner{owner_kind="CronJob"}
+          kube_job_owner{source="deckhouse", owner_kind="CronJob"}
         )
         +
-        (kube_job_status_succeeded == 0)
+        (kube_job_status_succeeded{source="deckhouse"} == 0)
         * on (namespace, job_name) group_left(owner_name) (
-          kube_job_owner{owner_kind="CronJob"}
+          kube_job_owner{source="deckhouse", owner_kind="CronJob"}
         )
         +
-        (kube_job_status_failed == 0)
+        (kube_job_status_failed{source="deckhouse"} == 0)
         * on (namespace, job_name) group_left(owner_name) (
-          kube_job_owner{owner_kind="CronJob"}
+          kube_job_owner{source="deckhouse", owner_kind="CronJob"}
         )
       )
     for: 5m
@@ -107,12 +107,12 @@
   - alert: CronJobSchedulingError
     expr: |
       (
-        floor(timestamp(kube_cronjob_next_schedule_time)) - kube_cronjob_next_schedule_time > 60
+        floor(timestamp(kube_cronjob_next_schedule_time{source="deckhouse"})) - kube_cronjob_next_schedule_time{source="deckhouse"} > 60
       )
       * on (namespace, cronjob)
       (
         max by (namespace, cronjob) (
-          (extended_monitoring_cronjob_enabled == 1)
+          (extended_monitoring_cronjob_enabled{source="deckhouse"} == 1)
         )
       )
     for: 5m
