@@ -304,6 +304,16 @@ spec:
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
+        # Leader election is only needed on HA clusters (>1 master) where
+        # multiple cpm pods could otherwise race on the cluster-wide pieces.
+        # On a single-master cluster every cpm controller is already
+        # node-partitioned by `spec.nodeName`, and the lease renewal pressure
+        # is pure overhead — when cpm rewrites the apiserver/etcd manifests
+        # during the first reconcile the apiserver is unreachable for ~60s
+        # via the local kubernetes-api-proxy and the lease is lost,
+        # crashlooping cpm and forcing an extra static-pod restart.
+        - name: LEADER_ELECTION
+          value: {{ include "helm_lib_is_ha_to_value" (list $ "true" "false") | quote }}
         - name: MY_IP
           valueFrom:
             fieldRef:
