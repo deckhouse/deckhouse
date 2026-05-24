@@ -4,14 +4,14 @@
     expr: |
       (
         max by (node, mountpoint, device) (
-          (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+          (node_filesystem_size_bytes{source="deckhouse"} - node_filesystem_avail_bytes{source="deckhouse"})
           /
-          node_filesystem_size_bytes
+          node_filesystem_size_bytes{source="deckhouse"}
         ) * 100
       )
       > on (node) group_left()
       (
-        max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-warning"})
+        max by (node) (extended_monitoring_node_threshold{source="deckhouse", threshold="disk-bytes-warning"})
       )
     for: 10m
     labels:
@@ -47,14 +47,14 @@
     expr: |
       (
         max by (node, mountpoint, device) (
-          (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+          (node_filesystem_size_bytes{source="deckhouse"} - node_filesystem_avail_bytes{source="deckhouse"})
           /
-          node_filesystem_size_bytes
+          node_filesystem_size_bytes{source="deckhouse"}
         ) * 100
       )
       > on (node) group_left()
       (
-        max by (node) (extended_monitoring_node_threshold{threshold="disk-bytes-critical"})
+        max by (node) (extended_monitoring_node_threshold{source="deckhouse", threshold="disk-bytes-critical"})
       )
     for: 2m
     labels:
@@ -90,14 +90,14 @@
     expr: |
       (
         max by (node, mountpoint, device) (
-          (node_filesystem_files - node_filesystem_files_free)
+          (node_filesystem_files{source="deckhouse"} - node_filesystem_files_free{source="deckhouse"})
           /
-          node_filesystem_files
+          node_filesystem_files{source="deckhouse"}
         ) * 100
       )
       > on (node) group_left()
       (
-        max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-warning"})
+        max by (node) (extended_monitoring_node_threshold{source="deckhouse", threshold="disk-inodes-warning"})
       )
     for: 10m
     labels:
@@ -118,14 +118,14 @@
     expr: |
       (
         max by (node, mountpoint, device) (
-          (node_filesystem_files - node_filesystem_files_free)
+          (node_filesystem_files{source="deckhouse"} - node_filesystem_files_free{source="deckhouse"})
           /
-          node_filesystem_files
+          node_filesystem_files{source="deckhouse"}
         ) * 100
       )
       > on (node) group_left()
       (
-        max by (node) (extended_monitoring_node_threshold{threshold="disk-inodes-critical"})
+        max by (node) (extended_monitoring_node_threshold{source="deckhouse", threshold="disk-inodes-critical"})
       )
     for: 2m
     labels:
@@ -145,11 +145,11 @@
   - alert: LoadAverageHigh
     expr: >-
       (
-        sum by (node) (avg_over_time(node_load1[30m]))
+        sum by (node) (avg_over_time(node_load1{source="deckhouse"}[30m]))
         /
-        count by (node) (node_cpu_seconds_total{mode="idle"})
+        count by (node) (node_cpu_seconds_total{source="deckhouse", mode="idle"})
       ) > on (node) group_left() (
-        max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-warning"})
+        max by (node) (extended_monitoring_node_threshold{source="deckhouse", threshold="load-average-per-core-warning"})
       )
     for: 30m
     labels:
@@ -170,11 +170,11 @@
   - alert: LoadAverageHigh
     expr: >-
       (
-        sum by (node) (avg_over_time(node_load1[5m]))
+        sum by (node) (avg_over_time(node_load1{source="deckhouse"}[5m]))
         /
-        count by (node) (node_cpu_seconds_total{mode="idle"})
+        count by (node) (node_cpu_seconds_total{source="deckhouse", mode="idle"})
       ) > on (node) group_left() (
-        max by (node) (extended_monitoring_node_threshold{threshold="load-average-per-core-critical"})
+        max by (node) (extended_monitoring_node_threshold{source="deckhouse", threshold="load-average-per-core-critical"})
       )
     for: 5m
     labels:

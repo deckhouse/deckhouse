@@ -3,8 +3,8 @@
     - alert: D8UpmeterServerPodIsNotReady
       expr: |
         min by (pod) (
-          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
-          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
+          kube_controller_pod{source="deckhouse", namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-upmeter"}
         ) != 1
       for: 5m
       labels:
@@ -23,8 +23,8 @@
     - alert: D8UpmeterAgentPodIsNotReady
       expr: |
         min by (pod) (
-          kube_controller_pod{namespace="d8-upmeter", controller_type="DaemonSet", controller_name="upmeter-agent"}
-          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-upmeter"}
+          kube_controller_pod{source="deckhouse", namespace="d8-upmeter", controller_type="DaemonSet", controller_name="upmeter-agent"}
+          * on (pod) group_right() kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-upmeter"}
         ) != 1
       for: 5m
       labels:
@@ -44,12 +44,12 @@
       expr: |
         absent(
           max by (namespace) (
-            kube_controller_replicas{controller_name="upmeter",controller_type="StatefulSet"}
+            kube_controller_replicas{source="deckhouse", controller_name="upmeter",controller_type="StatefulSet"}
           )
           <=
           count by (namespace) (
-            kube_controller_pod{controller_name="upmeter",controller_type="StatefulSet"}
-            * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
+            kube_controller_pod{source="deckhouse", controller_name="upmeter",controller_type="StatefulSet"}
+            * on(pod) group_right() kube_pod_status_phase{source="deckhouse", namespace="d8-upmeter", phase="Running"} == 1
           )
         ) == 1
       for: 5m
@@ -86,12 +86,12 @@
       expr: |
         absent(
           max by (namespace) (
-            kube_controller_replicas{controller_name="upmeter-agent",controller_type="DaemonSet"}
+            kube_controller_replicas{source="deckhouse", controller_name="upmeter-agent",controller_type="DaemonSet"}
           )
           <=
           count by (namespace) (
-            kube_controller_pod{controller_name="upmeter-agent",controller_type="DaemonSet"}
-            * on(pod) group_right() kube_pod_status_phase{namespace="d8-upmeter", phase="Running"} == 1
+            kube_controller_pod{source="deckhouse", controller_name="upmeter-agent",controller_type="DaemonSet"}
+            * on(pod) group_right() kube_pod_status_phase{source="deckhouse", namespace="d8-upmeter", phase="Running"} == 1
           )
         ) == 1
       for: 5m
@@ -129,11 +129,11 @@
     - alert: D8UpmeterServerPodIsRestartingTooOften
       expr: |
         max by (pod) (
-          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
-          * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-upmeter"}[1h])
+          kube_controller_pod{source="deckhouse", namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() increase(kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-upmeter"}[1h])
           and
-          kube_controller_pod{namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
-          * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-upmeter"}
+          kube_controller_pod{source="deckhouse", namespace="d8-upmeter", controller_type="StatefulSet", controller_name="upmeter"}
+          * on (pod) group_right() kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-upmeter"}
         ) > 5
       for: 5m
       labels:
@@ -167,6 +167,7 @@
       expr: |
         max by (persistentvolumeclaim, phase) (
           kube_persistentvolumeclaim_status_phase{
+            source="deckhouse",
             namespace="d8-upmeter",
             persistentvolumeclaim=~"disk-smoke-mini-[a-z]-0",
             phase!="Bound"
@@ -203,9 +204,9 @@
     - alert: D8UpmeterProbeGarbageConfigmap
       expr: |
         (
-          count (kube_configmap_info{namespace="d8-upmeter", configmap=~"upmeter-basic-.*"})
+          count (kube_configmap_info{source="deckhouse", namespace="d8-upmeter", configmap=~"upmeter-basic-.*"})
           /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_app="upmeter-agent"})
         ) >= 2
       for: 10m
       labels:
@@ -250,10 +251,10 @@
     - alert: D8UpmeterProbeGarbageDeployment
       expr: |
         (
-          count (kube_deployment_labels{namespace="d8-upmeter", label_heritage="upmeter",
+          count (kube_deployment_labels{source="deckhouse", namespace="d8-upmeter", label_heritage="upmeter",
                                                                 label_upmeter_probe="controller-manager"})
           /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"} )
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_app="upmeter-agent"} )
         ) >= 2
       for: 10m
       labels:
@@ -297,9 +298,9 @@
 
     - alert: D8UpmeterProbeGarbagePodsFromDeployments
       expr: |
-        ((time() - max by (namespace, pod) (kube_pod_created{namespace="d8-upmeter"})) > 300)
+        ((time() - max by (namespace, pod) (kube_pod_created{source="deckhouse", namespace="d8-upmeter"})) > 300)
         * on (namespace, pod)
-        max by (namespace, pod) (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter", label_upmeter_probe="controller-manager"})
+        max by (namespace, pod) (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_heritage="upmeter", label_upmeter_probe="controller-manager"})
       labels:
         severity_level: "9"
         tier: cluster
@@ -341,10 +342,10 @@
     - alert: D8UpmeterProbeGarbagePods
       expr: |
         (
-          count (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter",
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_heritage="upmeter",
                                                          label_upmeter_probe="scheduler"})
           /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_app="upmeter-agent"})
         ) >= 2
       for: 10m
       labels:
@@ -389,9 +390,9 @@
     - alert: D8UpmeterProbeGarbageNamespaces
       expr: |
         (
-          sum (kube_namespace_status_phase{namespace=~"upmeter-.*"})
+          sum (kube_namespace_status_phase{source="deckhouse", namespace=~"upmeter-.*"})
           /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_app="upmeter-agent"})
         ) >= 2
       for: 10m
       labels:
@@ -436,9 +437,9 @@
     - alert: D8UpmeterTooManyHookProbeObjects
       expr: |
         (
-          sum (d8_upmeter_upmeterhookprobe_count)
+          sum (d8_upmeter_upmeterhookprobe_count{source="deckhouse"})
           /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_app="upmeter-agent"})
         ) > 1
       for: 10m
       labels:
@@ -470,9 +471,9 @@
       expr: |
         count(
           (
-            kube_persistentvolume_status_phase{phase!="Bound"}
+            kube_persistentvolume_status_phase{source="deckhouse", phase!="Bound"}
             + on(persistentvolume) group_left(name)
-            0 * label_replace(kube_persistentvolume_claim_ref{name=~"disk-smoke-mini-.*"}, "persistentvolume", "$1", "volumename", "(.+)")
+            0 * label_replace(kube_persistentvolume_claim_ref{source="deckhouse", name=~"disk-smoke-mini-.*"}, "persistentvolume", "$1", "volumename", "(.+)")
           ) > 0
         )
       for: 1h
@@ -509,9 +510,9 @@
     - alert: D8UpmeterProbeGarbageSecretsByCertManager
       expr: |
         (
-          count (kube_secret_info{namespace="d8-upmeter", secret=~"upmeter-cm-probe.*"})
+          count (kube_secret_info{source="deckhouse", namespace="d8-upmeter", secret=~"upmeter-cm-probe.*"})
           /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
+          count (kube_pod_labels{source="deckhouse", namespace="d8-upmeter", label_app="upmeter-agent"})
         ) >= 2
       for: 10m
       labels:
@@ -557,7 +558,7 @@
     - alert: D8UpmeterDiskUsage
       expr: |
         100 * (
-        kubelet_volume_stats_used_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"} / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}
+        kubelet_volume_stats_used_bytes{source="deckhouse", persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"} / kubelet_volume_stats_capacity_bytes{source="deckhouse", persistentvolumeclaim="data-upmeter-0",namespace="d8-upmeter"}
         ) > 80
       for: 10m
       labels:

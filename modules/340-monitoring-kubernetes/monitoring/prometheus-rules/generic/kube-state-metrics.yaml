@@ -1,7 +1,7 @@
 - name: kube-state-metrics
   rules:
   - alert: KubeStateMetricsDown
-    expr: absent(up{job="kube-state-metrics"} == 1)
+    expr: absent(up{source="deckhouse", job="kube-state-metrics"} == 1)
     for: 5m
     labels:
       severity_level: "3"

@@ -2,7 +2,7 @@
   rules:
     - alert: PrometheusServiceMonitorDeprecated
       expr: |
-        d8_prometheus_deprecated_servicemonitor == 1
+        d8_prometheus_deprecated_servicemonitor{source="deckhouse"} == 1
       labels:
         tier: cluster
         severity_level: "8"
@@ -34,7 +34,7 @@
           __meta_kubernetes_endpoint_address_target_name -> __meta_kubernetes_endpointslice_address_target_name
           ```
     - alert: PrometheusScapeConfigDeclarationDeprecated
-      expr: count(d8_deprecated_scrape_config) > 0
+      expr: count(d8_deprecated_scrape_config{source="deckhouse"}) > 0
       labels:
         severity_level: "8"
       annotations:

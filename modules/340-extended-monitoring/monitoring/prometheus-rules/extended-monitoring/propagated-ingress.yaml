@@ -9,7 +9,7 @@
       ) * 100
       > on (namespace, ingress) group_left()
       (
-        max by (namespace, ingress) (extended_monitoring_ingress_threshold{threshold="5xx-warning"})
+        max by (namespace, ingress) (extended_monitoring_ingress_threshold{source="deckhouse", threshold="5xx-warning"})
       )
     labels:
       severity_level: "5"
@@ -30,7 +30,7 @@
       ) * 100
       > on (namespace, ingress) group_left()
       (
-        max by (namespace, ingress) (extended_monitoring_ingress_threshold{threshold="5xx-critical"})
+        max by (namespace, ingress) (extended_monitoring_ingress_threshold{source="deckhouse", threshold="5xx-critical"})
       )
     labels:
       severity_level: "4"

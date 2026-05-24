@@ -1,7 +1,7 @@
 - name: kubernetes.extended-monitoring
   rules:
   - alert: ExtendedMonitoringTargetDown
-    expr: absent(up{job="extended-monitoring-exporter"} == 1)
+    expr: absent(up{source="deckhouse", job="extended-monitoring-exporter"} == 1)
     for: 5m
     labels:
       severity_level: "5"

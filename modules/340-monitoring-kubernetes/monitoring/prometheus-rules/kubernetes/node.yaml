@@ -1,7 +1,7 @@
 - name: kubernetes.node
   rules:
   - alert: CPUStealHigh
-    expr: max by (node) (irate(node_cpu_seconds_total{mode="steal", tier="cluster"}[30m]) * 100) > 10
+    expr: max by (node) (irate(node_cpu_seconds_total{source="deckhouse", mode="steal", tier="cluster"}[30m]) * 100) > 10
     for: 30m
     labels:
       severity_level: "4"
@@ -17,7 +17,7 @@
         Another component, such as a neighboring virtual machine, may be consuming the node's resources. This may be the result of "overselling" the hypervisor, meaning the hypervisor is hosting more virtual machines than it can handle.
 
   - alert: NodeSystemExporterDoesNotExistsForNode
-    expr: sum by (node) (kubernetes_build_info{job="kubelet"}) unless (sum by (node) (up{node=~".+", job="kubelet"}) and sum by (node) (up{node=~".+", job="node-exporter"}))
+    expr: sum by (node) (kubernetes_build_info{source="deckhouse", job="kubelet"}) unless (sum by (node) (up{source="deckhouse", node=~".+", job="kubelet"}) and sum by (node) (up{source="deckhouse", node=~".+", job="node-exporter"}))
     for: 5m
     labels:
       severity_level: "4"
@@ -46,7 +46,7 @@
         3. Verify that the kubelet is running on node `{{ $labels.node }}`.
 
   - alert: NodeConntrackTableFull
-    expr: max by (node) ( node_nf_conntrack_entries{tier="cluster"} / node_nf_conntrack_entries_limit{tier="cluster"} * 100 > 70 )
+    expr: max by (node) ( node_nf_conntrack_entries{source="deckhouse", tier="cluster"} / node_nf_conntrack_entries_limit{source="deckhouse", tier="cluster"} * 100 > 70 )
     for: 5m
     labels:
       severity_level: "4"
@@ -65,7 +65,7 @@
         To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
 
   - alert: NodeConntrackTableFull
-    expr: max by (node) ( node_nf_conntrack_entries{tier="cluster"} / node_nf_conntrack_entries_limit{tier="cluster"} * 100 > 95 )
+    expr: max by (node) ( node_nf_conntrack_entries{source="deckhouse", tier="cluster"} / node_nf_conntrack_entries_limit{source="deckhouse", tier="cluster"} * 100 > 95 )
     for: 1m
     labels:
       severity_level: "3"
@@ -82,7 +82,7 @@
         To identify the source of excessive `conntrack` entries, use Okmeter or Grafana dashboards.
 
   - alert: NodeUnschedulable
-    expr: max by (node) (kube_node_spec_unschedulable) == 1
+    expr: max by (node) (kube_node_spec_unschedulable{source="deckhouse"}) == 1
     for: 20m
     labels:
       severity_level: "8"
@@ -114,9 +114,9 @@
 
   - alert: NodeSUnreclaimBytesUsageHigh
     expr: |
-      max by (node) (predict_linear(node_memory_SUnreclaim_bytes{tier="cluster"}[2h], 43200) > node_memory_MemTotal_bytes{tier="cluster"} * 0.25)
+      max by (node) (predict_linear(node_memory_SUnreclaim_bytes{source="deckhouse", tier="cluster"}[2h], 43200) > node_memory_MemTotal_bytes{source="deckhouse", tier="cluster"} * 0.25)
       and
-      max by (node) (node_memory_SUnreclaim_bytes{tier="cluster"} > node_memory_MemTotal_bytes{tier="cluster"} * 0.1)
+      max by (node) (node_memory_SUnreclaim_bytes{source="deckhouse", tier="cluster"} > node_memory_MemTotal_bytes{source="deckhouse", tier="cluster"} * 0.1)
     for: 20m
     labels:
       severity_level: "4"
@@ -144,7 +144,7 @@
         For further details, refer to the [issue](https://github.com/deckhouse/deckhouse/issues/2152).
 
   - alert: NodeTCPMemoryExhaust
-    expr: max by (node) (node_sockstat_TCP_mem_bytes{tier="cluster"} > node_sysctl_net_ipv4_tcp_mem{index="2", tier="cluster"} * 4096 * 0.90)
+    expr: max by (node) (node_sockstat_TCP_mem_bytes{source="deckhouse", tier="cluster"} > node_sysctl_net_ipv4_tcp_mem{source="deckhouse", index="2", tier="cluster"} * 4096 * 0.90)
     for: 1m
     labels:
       severity_level: "6"
