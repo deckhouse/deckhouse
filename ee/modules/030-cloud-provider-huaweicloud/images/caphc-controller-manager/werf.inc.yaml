@@ -1,4 +1,4 @@
-{{- $version := "fix/caphc-machine-delete-flow-and-stuck-deleting-alert" }}
+{{- $version := "v0.6.2" }}
 {{- $version_common := "v0.8.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
