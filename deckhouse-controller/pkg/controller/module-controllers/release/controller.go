@@ -206,8 +206,8 @@ func (r *reconciler) preflight(ctx context.Context) error {
 
 	for _, release := range releases.Items {
 		labels := map[string]string{
-			metrics.LabelVersion: release.GetVersion().String(),
-			metrics.LabelModule:  release.GetModuleName(),
+			"version": release.GetVersion().String(),
+			"module":  release.GetModuleName(),
 		}
 
 		r.metricStorage.GaugeSet(metrics.ModulePullSecondsTotal, release.Status.PullDuration.Seconds(), labels)
@@ -783,9 +783,9 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		policy, err = r.getUpdatePolicy(ctx, policyName)
 		if err != nil {
 			r.metricStorage.CounterAdd(metrics.ModuleUpdatePolicyNotFound, 1.0, map[string]string{
-				metrics.LabelVersion:       release.GetReleaseVersion(),
-				metrics.LabelModuleRelease: release.GetName(),
-				metrics.LabelModule:        release.GetModuleName(),
+				"version":        release.GetReleaseVersion(),
+				"module_release": release.GetName(),
+				"module":         release.GetModuleName(),
 			})
 
 			if err := r.updateReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); err != nil {
@@ -939,24 +939,24 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
 	defer func() {
-		metricLabels[metrics.LabelMajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
+		metricLabels[releaseUpdater.MajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
 		if task.IsMajor {
-			metricLabels[metrics.LabelMajorReleaseName] = release.GetName()
+			metricLabels[releaseUpdater.MajorReleaseName] = release.GetName()
 		}
 
 		if task.IsFromTo {
-			metricLabels[metrics.LabelFromToName] = release.GetName()
+			metricLabels[releaseUpdater.FromToName] = release.GetName()
 		}
 
-		if metricLabels[metrics.LabelManualApprovalRequired] == "true" {
-			metricLabels[metrics.LabelReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
+		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
 		r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
 	}()
 
 	reasons := checker.MetRequirements(ctx, release)
 	if len(reasons) > 0 {
-		metricLabels.SetTrue(metrics.LabelRequirementsNotMet)
+		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -1666,7 +1666,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 	checker := releaseUpdater.NewPreApplyChecker(us, r.log)
 	reasons := checker.MetRequirements(ctx, &mr)
 	if len(reasons) > 0 {
-		metricLabels.SetTrue(metrics.LabelDisruptionApprovalRequired)
+		metricLabels.SetTrue(releaseUpdater.DisruptionApprovalRequired)
 
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {

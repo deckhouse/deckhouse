@@ -27,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
@@ -73,11 +72,11 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, rele
 	}
 
 	if !u.settings.NotificationConfig.IsEmpty() && u.settings.NotificationConfig.ReleaseType == ReleaseTypeAll {
-		metricLabels.SetFalse(metrics.LabelNotificationNotSent)
+		metricLabels.SetFalse(NotificationNotSent)
 
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
-			metricLabels.SetTrue(metrics.LabelNotificationNotSent)
+			metricLabels.SetTrue(NotificationNotSent)
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -90,11 +89,11 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, rele
 	}
 
 	if !u.settings.NotificationConfig.IsEmpty() {
-		metricLabels.SetFalse(metrics.LabelNotificationNotSent)
+		metricLabels.SetFalse(NotificationNotSent)
 
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
-			metricLabels.SetTrue(metrics.LabelNotificationNotSent)
+			metricLabels.SetTrue(NotificationNotSent)
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}

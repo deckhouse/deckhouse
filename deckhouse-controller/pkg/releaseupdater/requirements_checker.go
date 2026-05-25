@@ -499,6 +499,6 @@ func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string)
 		metrics.MigratedModuleNotFoundMetricName,
 		1,
 		map[string]string{
-			metrics.LabelModule: moduleName,
+			"module_name": moduleName,
 		})
 }
