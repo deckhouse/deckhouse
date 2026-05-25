@@ -17,21 +17,21 @@
 
     @include breakpoints.max-w(l) {
         margin: 0;
-        padding: 300px 0 160px;
+        padding: 350px 0 160px;
+    }
+
+    @include breakpoints.max-w(m) {
+        padding: 300px 0 120px;
     }
 
     @include breakpoints.max-w(s) {
-        padding: 240px 0 100px;
-    }
-
-    @include breakpoints.max-w(xxs) {
-        padding-top: 200px;
+        padding: 250px 0 100px;
     }
 
     &::before {
         content: "";
         position: absolute;
-        top: 31%;
+        top: 33%;
         left: 0;
         bottom: 0;
         width: 50%;
@@ -39,7 +39,7 @@
         background: url(/images/404.svg) top / contain no-repeat;
 
         @include breakpoints.max-w(xl) {
-            top: 27%;
+            top: 30%;
         }
 
         @include breakpoints.max-w(l) {
@@ -48,8 +48,8 @@
             top: 6%;
         }
 
-        @include breakpoints.max-w(m) {
-            height: 27%;
+        @include breakpoints.max-w(xs) {
+            top: 10%;
         }
     }
 
@@ -61,33 +61,45 @@
         color: #222A5D;
 
         @include breakpoints.max-w(xxl) {
-            margin-left: 40px;
-            font-size: 42px;
+            margin-left: 70px;
+            font-size: 43px;
         }
 
         @include breakpoints.max-w(xl) {
-            font-size: 36px;
+            margin-left: 40px;
+            font-size: 37px;
         }
 
         @include breakpoints.max-w(l) {
-            margin-left: 0;
-            font-size: 32px;
+            max-width: 718px;
+            margin: 0 auto;
+            font-size: 42px;
         }
 
-        @include breakpoints.max-w(xxs) {
+        @include breakpoints.max-w(m) {
+            font-size: 34px;
+        }
+
+        @include breakpoints.max-w(xs) {
             font-size: 28px;
         }
     }
 
     .post-content {
         margin-left: 120px;
+        max-width: 629px;
 
         @include breakpoints.max-w(xxl) {
+            margin-left: 70px;
+        }
+
+        @include breakpoints.max-w(xl) {
             margin-left: 40px;
         }
 
         @include breakpoints.max-w(l) {
-            margin-left: 0;
+            max-width: 718px;
+            margin: 0 auto;
         }
 
         p {
@@ -144,11 +156,15 @@
             gap: 24px 64px;
 
             @include breakpoints.max-w(xxl) {
-                gap: 18px;
+                gap: 20px 14px;
+            }
+
+            @include breakpoints.max-w(l) {
+                gap: 24px 64px;
             }
 
             @include breakpoints.max-w(m) {
-                gap: 24px 64px;
+                gap: 24px;
             }
 
             @include breakpoints.max-w(m) {
