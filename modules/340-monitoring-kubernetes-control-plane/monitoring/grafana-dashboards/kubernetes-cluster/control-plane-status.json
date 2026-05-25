@@ -752,7 +752,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{source=\"deckhouse\", job=\"kube-apiserver\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -842,7 +842,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"kube-apiserver\", instance=~\"$instance:.*\"}",
+          "expr": "process_resident_memory_bytes{source=\"deckhouse\", job=\"kube-apiserver\", instance=~\"$instance:.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2362,7 +2362,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{source=\"deckhouse\", job=\"kube-scheduler\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -2452,7 +2452,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"kube-scheduler\", instance=~\"$instance:.*\"}",
+          "expr": "process_resident_memory_bytes{source=\"deckhouse\", job=\"kube-scheduler\", instance=~\"$instance:.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2557,7 +2557,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total{source=\"deckhouse\", job=\"kube-controller-manager\", instance=~\"$instance:.*\"}[$__rate_interval])",
           "intervalFactor": 1,
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -2647,7 +2647,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"kube-controller-manager\", instance=~\"$instance:.*\"}",
+          "expr": "process_resident_memory_bytes{source=\"deckhouse\", job=\"kube-controller-manager\", instance=~\"$instance:.*\"}",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -2695,7 +2695,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(up{job=\"kube-apiserver\"}, instance)",
+        "definition": "label_values(up{source=\"deckhouse\", job=\"kube-apiserver\"}, instance)",
         "hide": 0,
         "includeAll": true,
         "label": "Instance",
@@ -2703,7 +2703,7 @@
         "name": "instance",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"kube-apiserver\"}, instance)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"kube-apiserver\"}, instance)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -2730,7 +2730,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(apiserver_request_total, resource)",
+        "definition": "label_values(apiserver_request_total{source=\"deckhouse\"}, resource)",
         "hide": 0,
         "includeAll": true,
         "label": "Resource",
@@ -2738,7 +2738,7 @@
         "name": "resource",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total, resource)",
+          "query": "label_values(apiserver_request_total{source=\"deckhouse\"}, resource)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -2765,7 +2765,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(apiserver_request_total{verb!~\"CONNECT|WATCH\"}, verb)",
+        "definition": "label_values(apiserver_request_total{source=\"deckhouse\", verb!~\"CONNECT|WATCH\"}, verb)",
         "hide": 0,
         "includeAll": true,
         "label": "VERB",
@@ -2773,7 +2773,7 @@
         "name": "verb",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_request_total{verb!~\"CONNECT|WATCH\"}, verb)",
+          "query": "label_values(apiserver_request_total{source=\"deckhouse\", verb!~\"CONNECT|WATCH\"}, verb)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

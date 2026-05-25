@@ -2,7 +2,7 @@
 - name: kubernetes.dns
   rules:
   - alert: KubernetesDnsTargetDown
-    expr: absent(up{job="kube-dns"} == 1)
+    expr: absent(up{source="deckhouse", job="kube-dns"} == 1)
     for: 5m
     labels:
       severity_level: "5"

@@ -252,7 +252,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (time() - process_start_time_seconds{job=\"prometheus\",pod=\"$pod\"})",
+          "expr": "max by (pod) (time() - process_start_time_seconds{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Age",
@@ -597,7 +597,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (process_resident_memory_bytes{job=\"prometheus\",pod=\"$pod\"})",
+          "expr": "max by (pod) (process_resident_memory_bytes{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"})",
           "intervalFactor": 2,
           "legendFormat": "RSS",
           "metric": "process_resident_memory_bytes",
@@ -609,7 +609,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (go_memstats_next_gc_bytes{job=\"prometheus\",pod=\"$pod\"})",
+          "expr": "max by (pod) (go_memstats_next_gc_bytes{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"})",
           "intervalFactor": 2,
           "legendFormat": "Next GC",
           "metric": "go_memstats_next_gc_bytes",
@@ -621,7 +621,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (go_memstats_alloc_bytes{job=\"prometheus\",pod=\"$pod\"})",
+          "expr": "max by (pod) (go_memstats_alloc_bytes{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"})",
           "intervalFactor": 2,
           "legendFormat": "Allocated",
           "metric": "go_memstats_alloc_bytes",
@@ -807,7 +807,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (rate(go_memstats_alloc_bytes_total{job=\"prometheus\",pod=\"$pod\"}[$__rate_interval]))",
+          "expr": "max by (pod) (rate(go_memstats_alloc_bytes_total{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"}[$__rate_interval]))",
           "intervalFactor": 2,
           "legendFormat": "Allocated Bytes/s",
           "metric": "go_memstats_alloc_bytes",
@@ -903,7 +903,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "max by (pod) (irate(process_cpu_seconds_total{job=\"prometheus\",pod=\"$pod\"}[$__rate_interval]))",
+          "expr": "max by (pod) (irate(process_cpu_seconds_total{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"}[$__rate_interval]))",
           "intervalFactor": 2,
           "legendFormat": "__auto",
           "metric": "prometheus_local_storage_ingested_samples_total",
@@ -1221,7 +1221,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (process_max_fds{job=\"prometheus\",pod=\"$pod\"})",
+          "expr": "max by (pod) (process_max_fds{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max",
@@ -1232,7 +1232,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max by (pod) (process_open_fds{job=\"prometheus\",pod=\"$pod\"})",
+          "expr": "max by (pod) (process_open_fds{source=\"deckhouse\", job=\"prometheus\",pod=\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Open",
@@ -6960,7 +6960,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(up{job=\"prometheus\"}, pod)",
+        "definition": "label_values(up{source=\"deckhouse\", job=\"prometheus\"}, pod)",
         "hide": 0,
         "includeAll": false,
         "label": "Pod",
@@ -6968,7 +6968,7 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"prometheus\"}, pod)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"prometheus\"}, pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

@@ -156,7 +156,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+          "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -166,7 +166,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n/\nsum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+          "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n/\nsum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -176,7 +176,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+          "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -306,7 +306,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+          "expr": "sum (increase(external_ping_rtt_milliseconds_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -317,7 +317,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "max (max_over_time(external_ping_rtt_max{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+          "expr": "max (max_over_time(external_ping_rtt_max{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RTT max",
@@ -327,7 +327,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "min (min_over_time(external_ping_rtt_min{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+          "expr": "min (min_over_time(external_ping_rtt_min{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "RTT min",
@@ -469,7 +469,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "( \n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+          "expr": "( \n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{destination_name}}",
@@ -570,7 +570,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+          "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{destination_name}}",
@@ -671,7 +671,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+          "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{destination_name}}",
@@ -914,7 +914,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -924,7 +924,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -934,7 +934,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__range]))",
               "format": "table",
               "instant": true,
               "intervalFactor": 1,
@@ -1071,7 +1071,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "sum (increase(external_ping_rtt_milliseconds_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT",
@@ -1081,7 +1081,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "max (max_over_time(external_ping_rtt_max{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "max (max_over_time(external_ping_rtt_max{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT max",
@@ -1091,7 +1091,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "min (min_over_time(external_ping_rtt_min{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "min (min_over_time(external_ping_rtt_min{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "RTT min",
@@ -1232,7 +1232,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "(\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n  -\n  sum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n)\n/\n  sum by (destination_name) (increase(external_ping_packets_sent_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_name}}",
@@ -1333,7 +1333,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "sum by (destination_name) (increase(external_ping_rtt_milliseconds_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))\n/\nsum by (destination_name) (increase(external_ping_packets_received_total{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_name}}",
@@ -1434,7 +1434,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
+              "expr": "avg by (destination_name) (avg_over_time(external_ping_rtt_mdev{source=\"deckhouse\", node=~\"$source_node\", destination_name=~\"$destination_name\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{destination_name}}",
@@ -1498,14 +1498,14 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(external_ping_packets_sent_total, node)",
+        "definition": "label_values(external_ping_packets_sent_total{source=\"deckhouse\"}, node)",
         "hide": 0,
         "includeAll": true,
         "label": "Source",
         "multi": true,
         "name": "source_node",
         "options": [],
-        "query": "label_values(external_ping_packets_sent_total, node)",
+        "query": "label_values(external_ping_packets_sent_total{source=\"deckhouse\"}, node)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -1529,14 +1529,14 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(external_ping_packets_sent_total, destination_name)",
+        "definition": "label_values(external_ping_packets_sent_total{source=\"deckhouse\"}, destination_name)",
         "hide": 0,
         "includeAll": true,
         "label": "Destination",
         "multi": true,
         "name": "destination_name",
         "options": [],
-        "query": "label_values(external_ping_packets_sent_total, destination_name)",
+        "query": "label_values(external_ping_packets_sent_total{source=\"deckhouse\"}, destination_name)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

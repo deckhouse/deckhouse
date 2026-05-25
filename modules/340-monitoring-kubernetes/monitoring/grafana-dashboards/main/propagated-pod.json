@@ -673,7 +673,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Off\"}[$__range]))) * 0\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Initial\"}[$__range]))) * 0 + 1\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Auto\"}[$__range]))) * 0 + 2\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Recreate\"}[$__range]))) * 0 + 3\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) * 0 + 5",
+          "expr": "sum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", update_mode=\"Off\"}[$__range]))) * 0\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", update_mode=\"Initial\"}[$__range]))) * 0 + 1\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", update_mode=\"Auto\"}[$__range]))) * 0 + 2\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", update_mode=\"Recreate\"}[$__range]))) * 0 + 3\nor\nsum by (pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) * 0 + 5",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -686,7 +686,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=~\"$container\"}[$__range]))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -711,7 +711,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -723,7 +723,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "(\n  sum by (container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  -\n  sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "(\n  sum by (container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  -\n  sum by (container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -735,7 +735,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "(\n  (\n    sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n    -\n    sum by (container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  ) or sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "(\n  (\n    sum by (container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n    -\n    sum by (container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  ) or sum by (container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n) > 0\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -747,7 +747,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "(\n  (\n    sum by (container) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range])) \n    / \n    sum by (container) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  )\n  * sum by (container) (avg_over_time(kube_pod_container_resource_limits{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n)\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "(\n  (\n    sum by (container) (rate(container_cpu_cfs_throttled_periods_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range])) \n    / \n    sum by (container) (rate(container_cpu_cfs_periods_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n  )\n  * sum by (container) (avg_over_time(kube_pod_container_resource_limits{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]))\n)\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -783,7 +783,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
+          "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (avg_over_time(kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__range])))\nor\nsum by (container) (avg_over_time(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__range]) * 0)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -820,7 +820,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on(pod)\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  sum by (pod) (rate(container_network_receive_bytes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on(pod)\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -834,7 +834,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -847,7 +847,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by(container) (rate(container_fs_reads_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
+          "expr": "sum by(container) (rate(container_fs_reads_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -860,7 +860,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by(container) (rate(container_fs_writes_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
+          "expr": "sum by(container) (rate(container_fs_writes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__range]))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -886,7 +886,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum by (container) (label_replace(increase(klog_pod_oomkill{namespace=\"$namespace\", pod_name=\"$pod\"}[$__range]), \"container\", \"$1\", \"container_name\", \"(.+)\"))",
+          "expr": "sum by (container) (label_replace(increase(klog_pod_oomkill{source=\"deckhouse\", namespace=\"$namespace\", pod_name=\"$pod\"}[$__range]), \"container\", \"$1\", \"container_name\", \"(.+)\"))",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -1347,7 +1347,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (container_name) (increase(klog_pod_oomkill{namespace=\"$namespace\", pod_name=\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (container_name) (increase(klog_pod_oomkill{source=\"deckhouse\", namespace=\"$namespace\", pod_name=\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
@@ -1503,7 +1503,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1669,7 +1669,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(pod) (rate(container_cpu_system_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "expr": "sum by(pod) (rate(container_cpu_system_seconds_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -1681,7 +1681,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(pod) (rate(container_cpu_user_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "expr": "sum by(pod) (rate(container_cpu_user_seconds_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "User",
@@ -1820,7 +1820,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (namespace, pod, container)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{container!=\"POD\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n    ) > 0\n  )",
+          "expr": "sum by (namespace, pod, container)\n  (\n    (\n      sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n      -\n      sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container!=\"POD\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n    ) > 0\n  )",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1960,7 +1960,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (namespace, pod, container)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n      ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n    ) > 0\n  )",
+          "expr": "sum by (namespace, pod, container)\n  (\n    (\n      (\n        sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n        -\n        sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n      ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}[$__rate_interval]))\n    ) > 0\n  )",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -2099,7 +2099,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "(sum by (pod, container) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"$namespace\", container=~\"$container\", pod=\"$pod\"}[$__rate_interval])) / sum by (container, pod) (rate(container_cpu_cfs_periods_total{namespace=\"$namespace\", container=~\"$container\", pod=\"$pod\"}[$__rate_interval]))) * sum by (pod, container) (kube_pod_container_resource_limits{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"})",
+          "expr": "(sum by (pod, container) (rate(container_cpu_cfs_throttled_periods_total{source=\"deckhouse\", namespace=\"$namespace\", container=~\"$container\", pod=\"$pod\"}[$__rate_interval])) / sum by (container, pod) (rate(container_cpu_cfs_periods_total{source=\"deckhouse\", namespace=\"$namespace\", container=~\"$container\", pod=\"$pod\"}[$__rate_interval]))) * sum by (pod, container) (kube_pod_container_resource_limits{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
@@ -2275,7 +2275,7 @@
           "repeatDirection": "h",
           "targets": [
             {
-              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
+              "expr": "sum by(container) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Usage",
@@ -2296,7 +2296,7 @@
               "refId": "E"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__rate_interval])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", container=~\"$container\", resource=\"cpu\"}[$__rate_interval])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -2482,7 +2482,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(container) (rate(container_cpu_system_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__rate_interval]))",
+          "expr": "sum by(container) (rate(container_cpu_system_seconds_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__rate_interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -2494,7 +2494,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(container) (rate(container_cpu_user_seconds_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__rate_interval]))",
+          "expr": "sum by(container) (rate(container_cpu_user_seconds_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\", container=\"$container\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "User",
@@ -2822,7 +2822,7 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "sum by(pod) (avg_over_time(container_memory_rss{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__rate_interval]))",
+          "expr": "sum by(pod) (avg_over_time(container_memory_rss{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__rate_interval]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -2830,14 +2830,14 @@
           "refId": "A"
         },
         {
-          "expr": "sum by(pod) (avg_over_time(container_memory_cache{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__rate_interval]))",
+          "expr": "sum by(pod) (avg_over_time(container_memory_cache{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Cache",
           "refId": "B"
         },
         {
-          "expr": "sum by(pod) (avg_over_time(container_memory_swap{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__rate_interval]))",
+          "expr": "sum by(pod) (avg_over_time(container_memory_swap{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Swap",
@@ -3437,7 +3437,7 @@
           "repeatDirection": "h",
           "targets": [
             {
-              "expr": "sum by(container) (avg_over_time(container_memory_rss{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
+              "expr": "sum by(container) (avg_over_time(container_memory_rss{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3445,7 +3445,7 @@
               "refId": "A"
             },
             {
-              "expr": "sum by(container) (avg_over_time(container_memory_cache{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
+              "expr": "sum by(container) (avg_over_time(container_memory_cache{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -3453,7 +3453,7 @@
               "refId": "B"
             },
             {
-              "expr": "sum by(container) (avg_over_time(container_memory_swap{namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
+              "expr": "sum by(container) (avg_over_time(container_memory_swap{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\", container!=\"POD\", container=\"$container\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Swap",
@@ -3481,7 +3481,7 @@
               "refId": "F"
             },
             {
-              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__rate_interval])\n  )\n)",
+              "expr": "sum by (container) (\n  sum by (controller_type, controller_name, pod) (kube_controller_pod{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"})\n  * on (controller_type, controller_name) group_right() \n  sum by (controller_type, controller_name, container) (\n    avg_over_time(vpa_target_recommendation{source=\"deckhouse\", namespace=\"$namespace\", container=~\"$container\", resource=\"memory\"}[$__rate_interval])\n  )\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "VPA Target",
@@ -3646,7 +3646,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
+          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{source=\"deckhouse\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
@@ -3795,7 +3795,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
+          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{source=\"deckhouse\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
@@ -3956,7 +3956,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(container) (rate(container_fs_reads_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "expr": "sum by(container) (rate(container_fs_reads_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
@@ -4094,7 +4094,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by(container) (rate(container_fs_writes_total{container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "expr": "sum by(container) (rate(container_fs_writes_total{source=\"deckhouse\", container!=\"POD\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
@@ -5045,7 +5045,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info, namespace)",
+          "query": "label_values(kube_pod_info{source=\"deckhouse\"}, namespace)",
           "refId": "main-namespace-Variable-Query"
         },
         "refresh": 2,
@@ -5075,7 +5075,7 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info{namespace=\"$namespace\"}, pod)",
+          "query": "label_values(kube_pod_info{source=\"deckhouse\", namespace=\"$namespace\"}, pod)",
           "refId": "main-pod-Variable-Query"
         },
         "refresh": 2,
@@ -5110,7 +5110,7 @@
         "name": "container",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_container_info{namespace=~\"$namespace\", pod=~\"$pod\"}, container)",
+          "query": "label_values(kube_pod_container_info{source=\"deckhouse\", namespace=~\"$namespace\", pod=~\"$pod\"}, container)",
           "refId": "main-container-Variable-Query"
         },
         "refresh": 2,
@@ -5137,7 +5137,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}, persistentvolumeclaim)",
+        "definition": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}, persistentvolumeclaim)",
         "hide": 2,
         "includeAll": true,
         "label": "PersistentVolumeClaim",
@@ -5145,7 +5145,7 @@
         "name": "persistentvolumeclaim",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\", pod=\"$pod\"}, persistentvolumeclaim)",
+          "query": "label_values(kube_pod_spec_volumes_persistentvolumeclaims_info{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}, persistentvolumeclaim)",
           "refId": "main-persistentvolumeclaim-Variable-Query"
         },
         "refresh": 2,
@@ -5167,7 +5167,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(kube_controller_pod{namespace=~\"$namespace\"}, controller_type)",
+        "definition": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_type)",
         "hide": 2,
         "includeAll": false,
         "label": "Controller Type",
@@ -5175,7 +5175,7 @@
         "name": "controller_type",
         "options": [],
         "query": {
-          "query": "label_values(kube_controller_pod{namespace=~\"$namespace\"}, controller_type)",
+          "query": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_type)",
           "refId": "main-controller_type-Variable-Query"
         },
         "refresh": 2,
@@ -5197,7 +5197,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(kube_controller_pod{namespace=~\"$namespace\"}, controller_name)",
+        "definition": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_name)",
         "hide": 2,
         "includeAll": false,
         "label": "Controller Name",
@@ -5205,7 +5205,7 @@
         "name": "controller_name",
         "options": [],
         "query": {
-          "query": "label_values(kube_controller_pod{namespace=~\"$namespace\"}, controller_name)",
+          "query": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_name)",
           "refId": "main-controller_name-Variable-Query"
         },
         "refresh": 2,

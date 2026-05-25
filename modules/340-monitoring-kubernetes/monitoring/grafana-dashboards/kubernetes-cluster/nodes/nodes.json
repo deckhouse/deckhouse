@@ -2063,7 +2063,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2164,7 +2164,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2265,7 +2265,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2367,7 +2367,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2468,7 +2468,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2569,7 +2569,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2671,7 +2671,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} * 100",
+              "expr": "(sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2772,7 +2772,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2873,7 +2873,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2939,7 +2939,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"node-exporter\"}, node)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"node-exporter\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,

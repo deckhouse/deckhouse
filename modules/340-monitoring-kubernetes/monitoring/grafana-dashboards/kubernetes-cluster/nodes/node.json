@@ -12139,7 +12139,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_virtual_memory_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -12147,7 +12147,7 @@
               "step": 240
             },
             {
-              "expr": "process_resident_memory_max_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_resident_memory_max_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Maximum amount of virtual memory available in bytes",
@@ -12155,7 +12155,7 @@
               "step": 240
             },
             {
-              "expr": "process_virtual_memory_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_virtual_memory_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Processes virtual memory size in bytes",
@@ -12163,7 +12163,7 @@
               "step": 240
             },
             {
-              "expr": "process_virtual_memory_max_bytes{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_virtual_memory_max_bytes{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "hide": false,
               "intervalFactor": 1,
               "legendFormat": "Maximum amount of virtual memory available in bytes",
@@ -12866,7 +12866,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "rate(process_cpu_seconds_total{node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
+              "expr": "rate(process_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Time spent",
@@ -12987,14 +12987,14 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "process_max_fds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_max_fds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "intervalFactor": 1,
               "legendFormat": "Maximum open file descriptors",
               "refId": "A",
               "step": 240
             },
             {
-              "expr": "process_open_fds{node=~\"$node\",job=\"node-exporter\"}",
+              "expr": "process_open_fds{source=\"deckhouse\", node=~\"$node\",job=\"node-exporter\"}",
               "intervalFactor": 1,
               "legendFormat": "Open file descriptors",
               "refId": "B",
@@ -17354,7 +17354,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17448,7 +17448,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17542,7 +17542,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17637,7 +17637,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17731,7 +17731,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17825,7 +17825,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17920,7 +17920,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "(sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} * 100",
+              "expr": "(sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18014,7 +18014,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18108,7 +18108,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -22258,7 +22258,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"node-exporter\"}, node)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"node-exporter\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,

@@ -366,7 +366,7 @@
         ```
 
   - alert: DeckhouseHighMemoryUsage
-    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.85)
+    expr: max by (pod, node) (container_memory_working_set_bytes{source="deckhouse", namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{source="deckhouse", namespace="d8-system", container="deckhouse"} > 0.85)
     for: 30s
     labels:
       severity_level: "3"
