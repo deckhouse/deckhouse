@@ -1,14 +1,24 @@
 version: 2
 conversions:
-  - if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace end
+  - if .provider == null then .provider = {} end
+  - if .provider.parameters == null then .provider.parameters = {} end
+  - if .provider.parameters.namespace == null then (if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace else .provider.parameters.namespace = "default" end) end
   - del(.provider.namespace)
   - del(.provider.kubeconfigDataBase64)
+  - if .nodes == null then .nodes = {} end
+  - if .nodes.parameters == null then .nodes.parameters = {} end
+  - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
+  - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
   - if .zones != null then .nodes.parameters.zones = .zones end
   - del(.zones)
 description:
   ru: |
-    Переместите `provider.namespace` в `provider.parameters.namespace`, `zones` в `nodes.parameters.zones`.
-    Удалите `provider.kubeconfigDataBase64` (теперь хранится в Secret).
+    Переход на новую схему ModuleConfig для cloud-provider-dvp.
+    Структура `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` заменена на `provider.parameters` / `nodes.parameters`.
+    Поля `kubeconfigDataBase64` больше нет в ModuleConfig (хранится в Secret типа cloud-provider.deckhouse.io/credentials).
+    Обязательные поля `nodes.parameters.layout` и `nodes.parameters.sshPublicKey` подставляются как заглушки — заполните их корректными значениями вручную.
   en: |
-    Move `provider.namespace` to `provider.parameters.namespace`, `zones` to `nodes.parameters.zones`.
-    Remove `provider.kubeconfigDataBase64` (now stored in a Secret).
+    Migration to the new ModuleConfig schema for cloud-provider-dvp.
+    Fields `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` are replaced with `provider.parameters` / `nodes.parameters`.
+    `kubeconfigDataBase64` no longer lives in ModuleConfig (moved to a cloud-provider.deckhouse.io/credentials Secret).
+    Required fields `nodes.parameters.layout` and `nodes.parameters.sshPublicKey` get placeholder values — replace them manually.
