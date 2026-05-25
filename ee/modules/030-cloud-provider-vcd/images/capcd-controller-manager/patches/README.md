@@ -166,6 +166,20 @@ Changes:
 - Add convertMetadataType helper function to convert metadata types to VCD SDK types
 - Add DeepCopy methods for VCDMachineMetadata in generated code
 
+### 009-add-vcdmachine-initialization-field.patch
+
+Files:
+
+- api/v1beta2/vcdmachine_types.go
+- controllers/vcdmachine_controller.go
+
+Changes:
+
+- Add VCDMachineInitialization struct with Provisioned field
+- Add Initialization field to VCDMachineStatus
+- Set initialization.provisioned=true in controller when machine is ready (two locations)
+- Required for CAPI v1.11.3+ contract compatibility
+
 ### 010-handle-dhcp-empty-ip.patch
 
 Files:
