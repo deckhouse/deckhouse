@@ -75,6 +75,28 @@ modules:
   placement: {}
 `
 
+	globalValuesWithAdmissionPolicyEngine = `
+deckhouseVersion: test
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "admission-policy-engine", "admission-policy-engine-crd"]
+clusterConfiguration:
+  apiVersion: deckhouse.io/v1
+  kind: ClusterConfiguration
+  clusterDomain: cluster.local
+  clusterType: Static
+  kubernetesVersion: "Automatic"
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: 10.222.0.0/16
+discovery:
+  clusterMasterCount: 3
+  prometheusScrapeInterval: 30
+  kubernetesVersion: "1.31.0"
+  d8SpecificNodeCountByRole:
+    system: 1
+modules:
+  placement: {}
+`
+
 	clusterIsBootstrapped = `
 clusterIsBootstrapped: true
 `
@@ -257,6 +279,40 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 				"#(name==\"KUBERNETES_SERVICE_PORT\").value",
 			).String()
 			Expect(servicePort).To(Equal("6443"))
+		})
+	})
+
+	Context("d8-monitoring namespace security labels without admission-policy-engine", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForDeckhouseNode)
+			f.HelmRender()
+		})
+
+		It("must render restricted policy and skip security-check label", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-monitoring")
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/pod-policy").String()).To(Equal("restricted"))
+			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("d8-monitoring namespace security labels with admission-policy-engine", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesWithAdmissionPolicyEngine)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForDeckhouseNode)
+			f.HelmRender()
+		})
+
+		It("must render restricted policy and security-check label", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-monitoring")
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/pod-policy").String()).To(Equal("restricted"))
+			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").String()).To(Equal("true"))
 		})
 	})
 })
