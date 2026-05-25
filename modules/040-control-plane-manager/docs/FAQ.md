@@ -1012,13 +1012,13 @@ Follow these steps to restore a single-master cluster on master node:
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
+1. Put the etcd backup to `~/etcd-backup.snapshot` file.
+
 1. Clean the etcd directory.
 
    ```shell
    rm -rf /var/lib/etcd
    ```
-
-1. Put the etcd backup to `~/etcd-backup.snapshot` file.
 
 1. Restore the etcd database.
 

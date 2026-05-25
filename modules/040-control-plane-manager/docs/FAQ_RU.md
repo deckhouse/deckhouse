@@ -1022,13 +1022,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
+1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
+
 1. Очистите директорию etcd.
 
    ```shell
    rm -rf /var/lib/etcd
    ```
-
-1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
 
 1. Восстановите базу данных etcd.
 

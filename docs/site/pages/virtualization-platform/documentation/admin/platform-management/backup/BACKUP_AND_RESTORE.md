@@ -61,18 +61,6 @@ To properly restore the cluster, follow these steps on the master node:
 
    This backup will allow you to roll back in case of issues.
 
-1. Clean the etcd directory. Remove old data to prepare for restore:
-
-   ```shell
-   rm -rf /var/lib/etcd
-   ```
-
-   Verify that `/var/lib/etcd` is now empty or does not exist:
-
-   ```shell
-   ls -la /var/lib/etcd
-   ```
-
 1. Place the etcd snapshot file. Copy or move the `etcd-backup.snapshot` file to the current user's (root) home directory:
 
    ```shell
@@ -83,6 +71,18 @@ To properly restore the cluster, follow these steps on the master node:
 
    ```shell
    ls -la ~/etcd-backup.snapshot
+   ```
+
+1. Clean the etcd directory. Remove old data to prepare for restore:
+
+   ```shell
+   rm -rf /var/lib/etcd
+   ```
+
+   Verify that `/var/lib/etcd` is now empty or does not exist:
+
+   ```shell
+   ls -la /var/lib/etcd
    ```
 
 1. Restore the etcd database from the snapshot using `etcdutl`:
