@@ -2,6 +2,21 @@ cilium-hubble:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
+cloud-provider-dvp:
+    - version: 2
+      description:
+        en: |
+            Move `provider.namespace` to `provider.parameters.namespace`, `zones` to `nodes.parameters.zones`.
+            Remove `provider.kubeconfigDataBase64` (now stored in a Secret).
+        ru: |
+            Переместите `provider.namespace` в `provider.parameters.namespace`, `zones` в `nodes.parameters.zones`.
+            Удалите `provider.kubeconfigDataBase64` (теперь хранится в Secret).
+      conversions:
+        - if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace end
+        - del(.provider.namespace)
+        - del(.provider.kubeconfigDataBase64)
+        - if .zones != null then .nodes.parameters.zones = .zones end
+        - del(.zones)
 cloud-provider-vsphere:
     - version: 2
       description:
