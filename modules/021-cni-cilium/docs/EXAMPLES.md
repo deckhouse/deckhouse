@@ -249,4 +249,3 @@ d8 k -n d8-cni-cilium rollout restart daemonset/agent
 ```
 
 To revert, delete the `CiliumNodeConfig` resource and restart the same pods.
-
