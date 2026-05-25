@@ -32,7 +32,8 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 		tls_certificate.ClusterDomainSAN("capi-webhook-service.d8-cloud-instance-manager.svc"),
 	}),
 
-	CN: cn,
+	CN:   cn,
+	CACN: cn + "-ca",
 
 	Namespace:            "d8-cloud-instance-manager",
 	TLSSecretName:        "capi-webhook-tls",

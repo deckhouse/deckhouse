@@ -82,6 +82,10 @@ type GenSelfSignedTLSHookConf struct {
 	// often it is module name
 	CN string
 
+	// CACN - Certificate authority common name.
+	// If empty, CN is used for backward compatibility.
+	CACN string
+
 	// Namespace - namespace for TLS secret
 	Namespace string
 	// TLSSecretName - TLS secret name
@@ -206,7 +210,10 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		var cert certificate.Certificate
 		var err error
 
-		cn, sans := conf.CN, conf.SANs(ctx, input)
+		cn, caCN, sans := conf.CN, conf.CACN, conf.SANs(ctx, input)
+		if caCN == "" {
+			caCN = cn
+		}
 
 		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, SnapshotKey)
 		if err != nil {
@@ -216,7 +223,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		if len(certs) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
-			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			cert, err = generateNewSelfSignedTLS(input, caCN, cn, sans, usages)
 			if err != nil {
 				return err
 			}
@@ -235,10 +242,15 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 				input.Logger.Error(err.Error())
 			}
 
+			certSelfIssued, err := isSelfIssuedCert(cert.Cert)
+			if err != nil {
+				input.Logger.Error(err.Error())
+			}
+
 			// In case of errors, both these flags are false to avoid regeneration loop for the
 			// certificate.
-			if caOutdated || certOutdated {
-				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			if caOutdated || certOutdated || (conf.CACN != "" && certSelfIssued) {
+				cert, err = generateNewSelfSignedTLS(input, caCN, cn, sans, usages)
 				if err != nil {
 					return err
 				}
@@ -286,6 +298,15 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	return false, nil
 }
 
+func isSelfIssuedCert(certData string) (bool, error) {
+	cert, err := certificate.ParseCertificate(certData)
+	if err != nil {
+		return false, fmt.Errorf("parse certificate: %w", err)
+	}
+
+	return cert.Subject.String() == cert.Issuer.String(), nil
+}
+
 func isOutdatedCA(ca string) (bool, error) {
 	// Issue a new certificate if there is no CA in the secret.
 	// Without CA it is not possible to validate the certificate.
@@ -305,9 +326,9 @@ func isOutdatedCA(ca string) (bool, error) {
 	return false, nil
 }
 
-func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages []string) (certificate.Certificate, error) {
+func generateNewSelfSignedTLS(input *go_hook.HookInput, caCN, cn string, sans, usages []string) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.Logger,
-		cn,
+		caCN,
 		certificate.WithKeyAlgo(keyAlgorithm),
 		certificate.WithKeySize(keySize),
 		certificate.WithCAExpiry(caExpiryDurationStr))

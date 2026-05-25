@@ -53,13 +53,14 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			certCA, err := x509.ParseCertificate(blockCA.Bytes)
 			Expect(err).To(BeNil())
 			Expect(certCA.IsCA).To(BeTrue())
-			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook-ca"))
 
 			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()))
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeFalse())
 			Expect(cert.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+			Expect(cert.Issuer.CommonName).To(Equal("capi-controller-manager-webhook-ca"))
 		})
 	})
 	Context("With secrets", func() {
@@ -92,6 +93,50 @@ data:
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()).To(Equal(caAuthority.Cert))
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
+		})
+	})
+
+	Context("With old self-issued certificate", func() {
+		caAuthority, _ := genWebhookCa(nil)
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, cn, "capi-webhook-service")
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: capi-webhook-tls
+  namespace: d8-cloud-instance-manager
+data:
+  ca.crt: %[1]s
+  tls.crt: %[2]s
+  tls.key: %[3]s
+`, base64.StdEncoding.EncodeToString([]byte(caAuthority.Cert)),
+				base64.StdEncoding.EncodeToString([]byte(tlsAuthority.Cert)),
+				base64.StdEncoding.EncodeToString([]byte(tlsAuthority.Key)))),
+			)
+			f.RunHook()
+		})
+
+		It("Should regenerate certificate with distinct CA common name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()).ToNot(Equal(caAuthority.Cert))
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()).ToNot(Equal(tlsAuthority.Cert))
+			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").String()).ToNot(Equal(tlsAuthority.Key))
+
+			blockCA, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()))
+			certCA, err := x509.ParseCertificate(blockCA.Bytes)
+			Expect(err).To(BeNil())
+			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook-ca"))
+
+			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()))
+			cert, err := x509.ParseCertificate(block.Bytes)
+			Expect(err).To(BeNil())
+			Expect(cert.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+			Expect(cert.Issuer.CommonName).To(Equal("capi-controller-manager-webhook-ca"))
 		})
 	})
 })
