@@ -21,6 +21,8 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/cel"
 )
 
 // Storage manages package values with layering, patching, and schema validation.
@@ -241,14 +243,29 @@ func (s *Storage) openapiDefaultsTransformer(schemaType validation.SchemaType) t
 }
 
 // validateValues validates values against the values OpenAPI schema.
+//
+// In addition to the upstream addon-operator JSON-Schema + self-only CEL
+// validation, this also runs Deckhouse-specific x-deckhouse-validations
+// transition rules against the previously merged result values, so that
+// rules referencing oldSelf (e.g. immutability) catch attempts to mutate
+// fields via values patches.
 func (s *Storage) validateValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
+
+	if err := s.validateTransitionRules(validation.ValuesSchema, values, s.resultValues); err != nil {
+		return err
+	}
 
 	return s.schemaStorage.ValidateValues(s.name, validatableValues)
 }
 
 // validateConfigValues validates values against the config OpenAPI schema.
 // Returns error if values are provided but no config schema is defined.
+//
+// In addition to the upstream addon-operator JSON-Schema + self-only CEL
+// validation, this also runs Deckhouse-specific x-deckhouse-validations
+// transition rules against the previously stored user config, so that
+// rules referencing oldSelf (e.g. immutability) fire on ModuleConfig updates.
 func (s *Storage) validateConfigValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
@@ -256,5 +273,38 @@ func (s *Storage) validateConfigValues(values addonutils.Values) error {
 		return errors.New("config schema is not defined but config values were provided")
 	}
 
+	if err := s.validateTransitionRules(validation.ConfigValuesSchema, values, s.configValues); err != nil {
+		return err
+	}
+
 	return s.schemaStorage.ValidateConfigValues(s.name, validatableValues)
+}
+
+// validateTransitionRules evaluates Deckhouse x-deckhouse-validations
+// transition rules (rules referencing oldSelf) for the given schemaType.
+//
+// Self-only rules are deferred to the upstream addon-operator validator;
+// see deckhouse-controller/internal/packages/values/cel for the split.
+// oldValues=nil disables transition rule evaluation at the root level
+// (e.g. when no previous values have been stored yet).
+func (s *Storage) validateTransitionRules(schemaType validation.SchemaType, values, oldValues addonutils.Values) error {
+	schema := s.schemaStorage.Schemas[schemaType]
+	if schema == nil {
+		return nil
+	}
+
+	currentMap := map[string]any(values)
+	var previousMap any
+	if oldValues != nil {
+		previousMap = map[string]any(oldValues)
+	}
+
+	validationErrs, err := cel.ValidateTransition(schema, currentMap, previousMap)
+	if err != nil {
+		return err
+	}
+	if len(validationErrs) > 0 {
+		return errors.Join(validationErrs...)
+	}
+	return nil
 }
