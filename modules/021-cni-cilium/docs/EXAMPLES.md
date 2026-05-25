@@ -239,13 +239,17 @@ Cilium reads the merged configuration once at agent startup, so the affected
 `cilium-agent` pods must be restarted after the `CiliumNodeConfig` is created
 or modified (Deckhouse does not restart agents automatically on such changes):
 
-```bash
-# single node
-d8 k -n d8-cni-cilium delete pod \
-  -l app=agent --field-selector spec.nodeName=<node-name>
+- for single node:
 
-# all nodes (rolling restart)
-d8 k -n d8-cni-cilium rollout restart daemonset/agent
-```
+  ```bash
+  d8 k -n d8-cni-cilium delete pod \
+    -l app=agent --field-selector spec.nodeName=<node-name>
+  ```
+
+- for all nodes (rolling restart):
+
+  ```bash
+  d8 k -n d8-cni-cilium rollout restart daemonset/agent
+  ```
 
 To revert, delete the `CiliumNodeConfig` resource and restart the same pods.

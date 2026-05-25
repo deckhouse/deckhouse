@@ -243,16 +243,16 @@ Cilium читает итоговую конфигурацию один раз п
 
 - на одном узле:
 
-   ```bash
-   d8 k -n d8-cni-cilium delete pod \
+  ```bash
+  d8 k -n d8-cni-cilium delete pod \
   -l app=agent --field-selector spec.nodeName=<node-name>
-   ```
+  ```
 
 - на кластере (rolling restart):
 
-   ```bash
-   d8 k -n d8-cni-cilium rollout restart daemonset/agent
-   ```
+  ```bash
+  d8 k -n d8-cni-cilium rollout restart daemonset/agent
+  ```
 
 Чтобы откатить изменения, удалите ресурс `CiliumNodeConfig` и перезапустите те же
 поды.
