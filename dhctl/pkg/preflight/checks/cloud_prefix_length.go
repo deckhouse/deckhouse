@@ -30,24 +30,24 @@ const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length
 
 const maxDiskNameLength = 63
 
-var providerDiskSuffixParts = map[string][]string{
-	"zvirt":       {"master", "0", "kubernetes-data"},
-	"dynamix":     {"master", "0", "kubernetes-data"},
-	"vcd":         {"master", "0", "etcd-disk"},
-	"aws":         {"kubernetes-data", "0"},
-	"azure":       {"kubernetes-data", "0"},
-	"gcp":         {"kubernetes-data", "0"},
-	"yandex":      {"kubernetes-data", "0"},
-	"openstack":   {"kubernetes-data", "0"},
-	"huaweicloud": {"kubernetes-data", "0"},
-	"vsphere":     {"master", "0"},
+var providerDiskSuffixParts = map[string][][]string{
+	"aws":         {{"kubernetes-data", "0"}},
+	"azure":       {{"kubernetes-data", "0"}},
+	"gcp":         {{"kubernetes-data", "0"}},
+	"yandex":      {{"kubernetes-data", "0"}},
+	"openstack":   {{"kubernetes-data", "0"}, {"master-root-volume", "0"}},
+	"huaweicloud": {{"kubernetes-data", "0"}},
+	"vsphere":     {{"kubernetes-data", "0"}},
+	"vcd":         {{"master", "0", "etcd-disk"}},
+	"zvirt":       {{"master", "0", "kubernetes-data"}},
+	"dynamix":     {{"master", "0", "kubernetes-data"}},
 }
 
 var (
-	dvpMasterSuffixAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
-	dvpMasterSuffixDefault        = []string{"kubernetes-data", "0", "abcdef"}
-	dvpNodeGroupSuffixAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
-	dvpNodeGroupSuffixDefault        = []string{"0", "abcdef"}
+	dvpMasterDisks             = [][]string{{"0", "abcdef"}, {"kubernetes-data", "0", "abcdef"}}
+	dvpMasterAdditionalDisk    = []string{"additional-disk", "0", "0", "abcdef"}
+	dvpNodeGroupDisks          = [][]string{{"0", "abcdef"}}
+	dvpNodeGroupAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
 )
 
 type dvpInstanceClass struct {
@@ -91,39 +91,44 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 		return c.runDVP(prefix)
 	}
 
-	suffixParts, ok := providerDiskSuffixParts[provider]
+	disks, ok := providerDiskSuffixParts[provider]
 	if !ok {
 		return nil
 	}
 
-	diskName := prefix + "-" + strings.Join(suffixParts, "-")
-	if len(diskName) > maxDiskNameLength {
-		return fmt.Errorf(
-			"disk name %q exceeds %d characters (got %d); "+
-				"use a shorter cluster prefix",
-			diskName, maxDiskNameLength, len(diskName),
-		)
+	for _, suffixParts := range disks {
+		diskName := prefix + "-" + strings.Join(suffixParts, "-")
+		if len(diskName) > maxDiskNameLength {
+			return fmt.Errorf(
+				"disk name %q exceeds %d characters (got %d); use a shorter cluster prefix",
+				diskName, maxDiskNameLength, len(diskName),
+			)
+		}
 	}
 
 	return nil
 }
 
 func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
-	masterSuffix := dvpMasterSuffixDefault
+	masterDisks := dvpMasterDisks
 	if c.masterHasAdditionalDisks() {
-		masterSuffix = dvpMasterSuffixAdditionalDisk
+		masterDisks = append(masterDisks, dvpMasterAdditionalDisk)
 	}
-	if err := checkDVPDiskName(prefix, "master", masterSuffix); err != nil {
-		return err
+	for _, suffixParts := range masterDisks {
+		if err := checkDVPDiskName(prefix, "master", suffixParts); err != nil {
+			return err
+		}
 	}
 
 	for _, ng := range c.dvpNodeGroups() {
-		ngSuffix := dvpNodeGroupSuffixDefault
+		ngDisks := dvpNodeGroupDisks
 		if len(ng.InstanceClass.AdditionalDisks) > 0 {
-			ngSuffix = dvpNodeGroupSuffixAdditionalDisk
+			ngDisks = append(ngDisks, dvpNodeGroupAdditionalDisk)
 		}
-		if err := checkDVPDiskName(prefix, ng.Name, ngSuffix); err != nil {
-			return err
+		for _, suffixParts := range ngDisks {
+			if err := checkDVPDiskName(prefix, ng.Name, suffixParts); err != nil {
+				return err
+			}
 		}
 	}
 
