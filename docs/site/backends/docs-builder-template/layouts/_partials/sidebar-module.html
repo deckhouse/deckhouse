@@ -21,7 +21,7 @@
 {{- define "moduleSidebarPage" }}
 
   {{- $pageTitle := "" }}
-  {{- if in .ctx.Site.Data.helpers.knownPageNames .Page.File.TranslationBaseName }}
+  {{- if in hugo.Data.helpers.knownPageNames .Page.File.TranslationBaseName }}
     {{- $pageTitle = T (printf "moduleLinkTitle%s" .Page.File.TranslationBaseName) }}
   {{- else if .Page.LinkTitle }}
     {{- $pageTitle = strings.TrimSpace .Page.LinkTitle }}
