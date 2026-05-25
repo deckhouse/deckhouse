@@ -121,7 +121,16 @@ The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` o
 
 Each next role inherits permissions from the previous roles. A role block shows only the permissions added by that role.
 
-The list includes the current role-based model rules and default rules from Deckhouse modules available in the repository at documentation generation time. Permissions added by modules appear when the corresponding module is enabled and are revoked when it is disabled. External modules and user-defined ClusterRoles annotated with `user-authz.deckhouse.io/access-level` are not included; use the command below to inspect them in a cluster.
+The list below includes:
+
+- standard permissions from the current role-based model (k8s permissions);
+- permissions created by Deckhouse’s built-in modules.
+
+It does not include permissions for [modules from source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source).
+
+When enabled in a cluster, modules from source create permissions for the resources they provide. When a module from source is disabled, the permissions it created are removed.
+
+To view the permissions created by source modules, use the [command](#get_rules).
 
 `verbs` aliases:
 <!-- start user-authz roles placeholder -->
@@ -577,6 +586,8 @@ write:
     - templates.gatekeeper.sh/constrainttemplates
 ```
 <!-- end user-authz roles placeholder -->
+
+{: #get_rules .anchored}
 
 You can get additional list of access rules for module role from cluster ([existing user defined rules](usage.html#customizing-rights-of-high-level-roles) and non-default rules from other deckhouse modules):
 
