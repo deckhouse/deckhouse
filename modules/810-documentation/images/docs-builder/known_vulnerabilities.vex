@@ -1,0 +1,70 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-docsbuilder-1",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42499"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.9"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в пакете net/mail (consumePhrase, RFC 5322 parsing) Go stdlib версии 1.25.9 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента docs-builder. Образ docs-builder служит только для генерации статической документации Deckhouse и не выполняет парсинг email-адресов из недоверенных источников. Бамп Go stdlib до версии 1.25.10 запланирован после обновления соответствующих базовых образов в registry.",
+      "timestamp": "2026-05-25T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33811"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.9"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-415 (Double Free) в функции net.LookupCNAME (cgo resolver) Go stdlib версии 1.25.9 не достижима в docs-builder. Компонент собирается с CGO_ENABLED=0 и не выполняет DNS CNAME-резолюции через cgo-резолвер. Бамп Go stdlib до версии 1.25.10 запланирован после обновления соответствующих базовых образов в registry.",
+      "timestamp": "2026-05-25T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.9"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-835 (HTTP/2 infinite CONTINUATION loop через SETTINGS_MAX_FRAME_SIZE=0) Go stdlib версии 1.25.9 не достижима в docs-builder. Компонент работает как HTTP-сервер для статической документации и не выступает HTTP/2-клиентом по отношению к недоверенным серверам. Бамп Go stdlib до версии 1.25.10 запланирован после обновления соответствующих базовых образов в registry.",
+      "timestamp": "2026-05-25T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39820"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.9"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-770 (quadratic complexity в net/mail ParseAddress/ParseAddressList/ParseDate) Go stdlib версии 1.25.9 не используется в docs-builder. Компонент не выполняет парсинг email-заголовков из недоверенных источников. Бамп Go stdlib до версии 1.25.10 запланирован после обновления соответствующих базовых образов в registry.",
+      "timestamp": "2026-05-25T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39836"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.9"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-476 (panic в net.Dial/LookupPort при NUL-байтах во входе на Windows) Go stdlib версии 1.25.9 не достижима в docs-builder. Образ собирается и эксплуатируется в Linux-окружении Kubernetes, а уязвимый код относится исключительно к Windows-платформе. Бамп Go stdlib до версии 1.25.10 запланирован после обновления соответствующих базовых образов в registry.",
+      "timestamp": "2026-05-25T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-05-25T12:00:00Z",
+  "last_updated": "2026-05-25T12:00:00Z"
+}
