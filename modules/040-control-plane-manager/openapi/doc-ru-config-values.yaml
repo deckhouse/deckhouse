@@ -245,3 +245,16 @@ properties:
 
       Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
       Список поддерживаемых в DKP feature gates доступен на [странице описания модуля](./#feature-gates).
+  resourcesRequests:
+    description: |
+      Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
+
+      Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
+      Подробнее об единицах измерения ресурсов см. в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
+    properties:
+      cpu:
+        description: |
+          Суммарные запросы CPU для компонентов control plane на каждом master-узле.
+      memory:
+        description: |
+          Суммарные запросы памяти для компонентов control plane на каждом master-узле.
