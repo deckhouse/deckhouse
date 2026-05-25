@@ -538,3 +538,25 @@ function get_rpp_address() {
   fi
 }
 {{- end }}
+
+{{- define "bb-telemetry" -}}
+bb-telemetry-start-span() {
+  [[ "${DHCTL_TELEMETRY_ENABLED}" != "true" ]] && return
+  local span_name="$1" trace_id span_id
+  trace_id=$(od -vAn -N16 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+  trace_id=${trace_id:-$(printf '%032x' $RANDOM$RANDOM$RANDOM)}
+  span_id=$(od -vAn -N8 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+  span_id=${span_id:-$(printf '%016x' $RANDOM$RANDOM)}
+  echo "${trace_id}:${span_id}:$(date +%s%N)"
+}
+
+bb-telemetry-end-span() {
+  [[ "${DHCTL_TELEMETRY_ENABLED}" != "true" ]] && return
+  IFS=':' read -r trace_id span_id start_time <<< "$1"
+  local end_time=$(date +%s%N) curl_cmd=curl
+  command -v d8-curl &>/dev/null && curl_cmd=d8-curl
+  local endpoint="${BB_TELEMETRY_ENDPOINT:-${OTEL_RELAY_ADDRESS:-http://127.0.0.1:4318}/v1/traces}"
+  local payload="{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"bashible\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"bashbooster\"},\"spans\":[{\"traceId\":\"${trace_id}\",\"spanId\":\"${span_id}\",\"name\":\"${2}\",\"kind\":1,\"startTimeUnixNano\":\"${start_time}\",\"endTimeUnixNano\":\"${end_time}\"}]}]}]}"
+  $curl_cmd -s -S -X POST -H "Content-Type: application/json" -d "$payload" "$endpoint"
+}
+{{- end }}

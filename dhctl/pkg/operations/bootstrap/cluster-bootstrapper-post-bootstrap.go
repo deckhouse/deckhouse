@@ -44,7 +44,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	}
 
 	if err := cache.InitWithOptions(ctx, wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
-		return fmt.Errorf("Can not init cache: %v", err)
+		return fmt.Errorf("Can not init cache: %w", err)
 	}
 
 	bootstrapState := NewBootstrapState(cache.Global())
