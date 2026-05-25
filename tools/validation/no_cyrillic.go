@@ -27,9 +27,9 @@ var skipI18NRe = regexp.MustCompile(`/i18n/`)
 var skipSelfRe = regexp.MustCompile(`no_cyrillic(_test)?.go$`)
 
 var skipFiles = map[string]struct{}{
-	"modules/040-control-plane-manager/hooks/audit_policy.go":    {},
-	"tools/audit_policy/templates/short_block_ru.gotmpl":         {},
-	"tools/audit_policy/templates/detailed_rules_page_ru.gotmpl": {},
+	"modules/040-control-plane-manager/hooks/audit_policy.go":    {}, // The code contains a description in Russian and English in the body of each object. This is necessary for autodoc.
+	"tools/audit_policy/templates/short_block_ru.gotmpl":         {}, // Gotemplate for autodoc, contain russian text
+	"tools/audit_policy/templates/detailed_rules_page_ru.gotmpl": {}, // Gotemplate for autodoc, contain russian text
 }
 
 func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (exitCode int) {
