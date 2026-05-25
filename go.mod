@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.20.9
+	github.com/flant/addon-operator v1.20.10
 	github.com/flant/kube-client v1.6.0
 	github.com/flant/shell-operator v1.16.6
 	github.com/go-openapi/spec v0.22.0
@@ -36,7 +36,7 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.21
 	go.etcd.io/etcd/client/v3 v3.5.21
 	google.golang.org/grpc v1.80.0
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -220,7 +220,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.23.2 // indirect
+	github.com/google/cel-go v0.23.2
 	github.com/google/certificate-transparency-go v1.3.2-0.20250507091337-0eddb39e94f8 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
