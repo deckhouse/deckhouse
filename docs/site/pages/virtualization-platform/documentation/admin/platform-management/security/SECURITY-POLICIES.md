@@ -72,7 +72,7 @@ by adding extra checks to the existing ones.
 
 To extend a policy:
 
-1. Create a validation template using ConstraintTemplate.
+1. Create a validation template using `ConstraintTemplate`.
 1. Apply the template to the `baseline` or `restricted` policy.
 
 Example template for validating the container image repository address:
