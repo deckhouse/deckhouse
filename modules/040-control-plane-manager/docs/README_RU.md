@@ -76,6 +76,32 @@ description: Deckhouse управляет компонентами control plane
 Эта функция применяется только в средах, где параметр `--terminated-pod-gc-threshold` можно настраивать. В управляемых Kubernetes-кластерах, таких как EKS, GKE, AKS, это значение контролируется провайдером.
 {% endalert %}
 
+## Настройка ресурсных запросов control plane
+
+Модуль позволяет задать суммарные ресурсные запросы CPU и памяти для компонентов control plane на каждом master-узле: `kube-apiserver`, `etcd`, `kube-controller-manager` и `kube-scheduler`.
+
+Для настройки используйте параметр [`resourcesRequests`](configuration.html#parameters-resourcesrequests) в ModuleConfig `control-plane-manager`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    resourcesRequests:
+      cpu: 1000m
+      memory: 500Mi
+```
+
+Указанные значения используются как общий бюджет requests для компонентов control plane на каждом master-узле. Deckhouse распределяет этот бюджет между static pod'ами control plane при формировании их манифестов.
+
+{% alert level="info" %}
+Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например в GKE, AKS или EKS.
+{% endalert %}
+
 ## Управление версиями
 
 Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.

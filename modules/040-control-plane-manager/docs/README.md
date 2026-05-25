@@ -76,6 +76,32 @@ Automatically configures the optimal `--terminated-pod-gc-threshold` based on cl
 Note. This feature only takes effect in environments where the `--terminated-pod-gc-threshold` parameter is configurable. On managed Kubernetes services (such as EKS, GKE, AKS), this setting is controlled by managed provider.
 {% endalert %}
 
+## Configuring Control Plane Resource Requests
+
+The module allows you to configure the total CPU and memory resource requests for control plane components on each master node: `kube-apiserver`, `etcd`, `kube-controller-manager`, and `kube-scheduler`.
+
+Use the [`resourcesRequests`](configuration.html#parameters-resourcesrequests) parameter in the `control-plane-manager` ModuleConfig:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    resourcesRequests:
+      cpu: 1000m
+      memory: 500Mi
+```
+
+The specified values are used as a common requests budget for control plane components on each master node. Deckhouse distributes this budget between control plane static pods when rendering their manifests.
+
+{% alert level="info" %}
+These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
+{% endalert %}
+
 ## Version control
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the Deckhouse version updates. You can't manage patch version upgrades.

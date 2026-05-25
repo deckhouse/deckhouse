@@ -5,8 +5,12 @@
 {{- $initialAdvertisePeer := printf "https://%s:2380" $nodeIP -}}
 {{- $listenClient := printf "https://127.0.0.1:2379,https://%s:2379" $nodeIP -}}
 {{- $initialCluster := printf "%s=%s" $etcdName $initialAdvertisePeer -}}
-{{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
-{{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $resourcesRequests := dict -}}
+{{- if and .settings .settings.resourcesRequests -}}
+  {{- $resourcesRequests = .settings.resourcesRequests -}}
+{{- end -}}
+{{- $millicpu := $resourcesRequests.milliCPU | default 512 -}}
+{{- $memory := $resourcesRequests.memoryBytes | default 536870912 }}
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod

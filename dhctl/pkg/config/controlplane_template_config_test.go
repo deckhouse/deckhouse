@@ -149,6 +149,4 @@ func TestConfigForControlPlaneTemplates_ToMap(t *testing.T) {
 	tm := cfg.ToMap()
 	require.NotNil(t, tm["settings"])
 	require.NotNil(t, tm["clusterConfiguration"])
-	require.NotContains(t, tm, "resourcesRequestsMilliCpuControlPlane")
-	require.NotContains(t, tm, "resourcesRequestsMemoryControlPlane")
 }
