@@ -41,7 +41,7 @@
         k8s: "1.35"
       version: v1.34.2
     - condition:
-        k8s: "1.35"
+        k8s: "1.36"
       version: v1.34.2
 
 - name: Microsoft Azure Terraform provider
