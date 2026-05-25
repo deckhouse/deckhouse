@@ -790,7 +790,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(process_cpu_seconds_total{job=\"deckhouse\"}[$__rate_interval])",
+              "expr": "rate(process_cpu_seconds_total{source=\"deckhouse\", job=\"deckhouse\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -948,7 +948,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "go_memstats_sys_bytes{job=\"deckhouse\"}",
+              "expr": "go_memstats_sys_bytes{source=\"deckhouse\", job=\"deckhouse\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1109,7 +1109,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "process_resident_memory_bytes{job=\"deckhouse\"}",
+              "expr": "process_resident_memory_bytes{source=\"deckhouse\", job=\"deckhouse\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1119,7 +1119,7 @@
               "step": 4
             },
             {
-              "expr": "process_virtual_memory_bytes{job=\"deckhouse\"}",
+              "expr": "process_virtual_memory_bytes{source=\"deckhouse\", job=\"deckhouse\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1270,7 +1270,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "go_goroutines{job=\"deckhouse\"}",
+              "expr": "go_goroutines{source=\"deckhouse\", job=\"deckhouse\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1420,7 +1420,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "process_open_fds{job=\"deckhouse\"}",
+              "expr": "process_open_fds{source=\"deckhouse\", job=\"deckhouse\"}",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1582,7 +1582,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(go_memstats_mallocs_total{job=\"deckhouse\"}[$__rate_interval])",
+              "expr": "rate(go_memstats_mallocs_total{source=\"deckhouse\", job=\"deckhouse\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1734,7 +1734,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "max by (job, quantile) (go_gc_duration_seconds{job=\"deckhouse\"})",
+              "expr": "max by (job, quantile) (go_gc_duration_seconds{source=\"deckhouse\", job=\"deckhouse\"})",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
