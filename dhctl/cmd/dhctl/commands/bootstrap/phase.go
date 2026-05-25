@@ -64,7 +64,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 			}
 		}
 
-		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -104,7 +104,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 			}
 		}
 
-		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -146,7 +146,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 			}
 		}
 
-		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -187,7 +187,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			}
 		}
 
-		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -248,7 +248,7 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 			}
 		}
 
-		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -288,7 +288,7 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 			}
 		}
 
-		defer cleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,

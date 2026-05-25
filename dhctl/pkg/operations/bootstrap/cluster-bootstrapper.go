@@ -435,9 +435,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 			connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
 
-			sshProviderInitializer := providerinitializer.NewSSHProviderInitializer(baseSettings, connectionConfig)
-			b.SSHProviderInitializer = sshProviderInitializer
-			b.KubeProvider = sshProviderInitializer.GetKubeProvider(ctx)
+			b.SSHProviderInitializer.Reinitialize(
+				ctx,
+				b.logger,
+				baseSettings,
+				connectionConfig,
+			)
+			b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
 
 			nodeIP = masterOutputs.NodeInternalIP
 			devicePath = masterOutputs.KubeDataDevicePath

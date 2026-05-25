@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bootstrap
+package providerinitializer
 
 import (
 	"context"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func cleanupSSHProvider(
+func CleanupSSHProvider(
 	ctx context.Context,
 	logger log.Logger,
-	sshProviderInitializer *providerinitializer.SSHProviderInitializer,
+	sshProviderInitializer *SSHProviderInitializer,
 ) {
 	if sshProviderInitializer == nil {
 		return
 	}
 
-	if err := sshProviderInitializer.Cleanup(ctx); err != nil {
+	if err := sshProviderInitializer.Cleanup(ctx); err != nil && logger != nil {
 		logger.LogWarnF("failed to cleanup ssh provider: %v\n", err)
 	}
 }
