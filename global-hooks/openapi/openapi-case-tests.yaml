@@ -43,12 +43,7 @@ positive:
         publicDomainTemplate: "example-%s.com"
   values:
     # all-in
-    - internal:
-        modules:
-          resourcesRequests:
-            milliCpuControlPlane: 1024
-            memoryControlPlane: 536870912
-      clusterConfiguration:
+    - clusterConfiguration:
         apiVersion: deckhouse.io/v1
         kind: ClusterConfiguration
         podSubnetNodeCIDRPrefix: "24"

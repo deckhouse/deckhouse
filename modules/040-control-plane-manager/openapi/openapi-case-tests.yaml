@@ -13,8 +13,14 @@ positive:
         backup:
           cronSchedule: "0 0 * * *"
           hostPath: "/var/backup/etcd"
+    - resourcesRequests:
+        cpu: "1000m"
+        memory: "500Mi"
   values:
     - internal:
+        resourcesRequests:
+          milliCpuControlPlane: 1024
+          memoryControlPlane: 536870912
         effectiveKubernetesVersion: "1.31"
         etcdServers:
         - 1.2.3.4
