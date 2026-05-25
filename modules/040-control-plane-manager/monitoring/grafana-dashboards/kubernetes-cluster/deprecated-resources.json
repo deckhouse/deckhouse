@@ -88,7 +88,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "topk(1, sum by (git_version) (kubernetes_build_info{job=\"kube-apiserver\"}))",
+          "expr": "topk(1, sum by (git_version) (kubernetes_build_info{source=\"deckhouse\", job=\"kube-apiserver\"}))",
           "legendFormat": "{{ git_version }}",
           "range": true,
           "refId": "A"
@@ -185,7 +185,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(\n    ceil(\n        sum by(removed_release, resource, group, version) (\n            sum by(removed_release, resource, group, version) \n            (apiserver_requested_deprecated_apis{source=\"deckhouse\", removed_release=\"$k8s\"}) \n            *\n            on(group,version,resource,subresource)\n            group_right() (increase(apiserver_request_total{source=\"deckhouse\"}[1h]))\n        )\n    )\n) or vector(0)\n+ \nsum(\n    sum by (api_version, kind, helm_release_name, helm_release_namespace)\n    (resource_versions_compatibility{k8s_version=~\"$k8s\"})\n) or vector(0)\n> 0",
+          "expr": "sum(\n    ceil(\n        sum by(removed_release, resource, group, version) (\n            sum by(removed_release, resource, group, version) \n            (apiserver_requested_deprecated_apis{source=\"deckhouse\", removed_release=\"$k8s\"}) \n            *\n            on(group,version,resource,subresource)\n            group_right() (increase(apiserver_request_total{source=\"deckhouse\"}[1h]))\n        )\n    )\n) or vector(0)\n+ \nsum(\n    sum by (api_version, kind, helm_release_name, helm_release_namespace)\n    (resource_versions_compatibility{source=\"deckhouse\", k8s_version=~\"$k8s\"})\n) or vector(0)\n> 0",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -521,7 +521,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (api_version, kind, helm_release_name, helm_release_namespace) (resource_versions_compatibility{k8s_version=~\"$k8s\"})",
+          "expr": "sum by (api_version, kind, helm_release_name, helm_release_namespace) (resource_versions_compatibility{source=\"deckhouse\", k8s_version=~\"$k8s\"})",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -574,7 +574,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(apiserver_requested_deprecated_apis, removed_release)",
+        "definition": "label_values(apiserver_requested_deprecated_apis{source=\"deckhouse\"}, removed_release)",
         "hide": 0,
         "includeAll": false,
         "label": "Desired K8s version",
@@ -582,7 +582,7 @@
         "name": "k8s",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_requested_deprecated_apis, removed_release)",
+          "query": "label_values(apiserver_requested_deprecated_apis{source=\"deckhouse\"}, removed_release)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
