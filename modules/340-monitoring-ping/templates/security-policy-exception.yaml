@@ -8,22 +8,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
 spec:
   securityContext:
-    runAsUser:
-      allowedValues:
-        - 0
-      metadata:
-        description: |
-          The cleanup init container runs as root to remove stale host textfile metrics.
-    runAsNonRoot:
-      allowedValue: false
-      metadata:
-        description: |
-          Root execution is required for the cleanup init container.
-    allowPrivilegeEscalation:
-      allowedValue: true
-      metadata:
-        description: |
-          Default runtime behavior for the root cleanup init container.
     capabilities:
       allowedValues:
         add:
@@ -32,7 +16,7 @@ spec:
           - ALL
       metadata:
         description: |
-          NET_RAW capability is required for ICMP probe operations.
+          NET_RAW capability is required by the monitoring-ping container for ICMP probe operations.
   network:
     hostNetwork:
       allowedValue: true
@@ -57,4 +41,29 @@ spec:
           readOnly: false
           metadata:
             description: Shared textfile directory with node-exporter.
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: monitoring-ping-root-init
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "monitoring-ping")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          The cleanup init container runs as root to remove stale host textfile metrics.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Root execution is required for the cleanup init container.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Default runtime behavior for the root cleanup init container.
 {{- end }}

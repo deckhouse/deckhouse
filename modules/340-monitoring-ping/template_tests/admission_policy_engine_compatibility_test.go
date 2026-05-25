@@ -43,13 +43,15 @@ enabledModules: ["monitoring-ping", "monitoring-kubernetes"]
 			f.HelmRender()
 		})
 
-		It("must not render SPE and exception label", func() {
+		It("must not render SPE pair and exception labels", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			daemonSet := f.KubernetesResource("DaemonSet", "d8-monitoring", "monitoring-ping")
 			Expect(daemonSet.Exists()).To(BeTrue())
 			Expect(daemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+			Expect(daemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception/monitoring-ping-clean-node-exporter-stale").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "monitoring-ping").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "monitoring-ping-root-init").Exists()).To(BeFalse())
 		})
 	})
 
@@ -66,16 +68,26 @@ discovery:
 			f.HelmRender()
 		})
 
-		It("must render SPE and exception label", func() {
+		It("must render SPE pair and pod-wide + per-container exception labels", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			daemonSet := f.KubernetesResource("DaemonSet", "d8-monitoring", "monitoring-ping")
 			Expect(daemonSet.Exists()).To(BeTrue())
 			Expect(daemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("monitoring-ping"))
+			Expect(daemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception/monitoring-ping-clean-node-exporter-stale").String()).To(Equal("monitoring-ping-root-init"))
 
-			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "monitoring-ping")
-			Expect(securityPolicyException.Exists()).To(BeTrue())
-			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			pseBase := f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "monitoring-ping")
+			Expect(pseBase.Exists()).To(BeTrue())
+			Expect(pseBase.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(pseBase.Field("spec.securityContext.runAsUser").Exists()).To(BeFalse())
+			Expect(pseBase.Field("spec.securityContext.runAsNonRoot").Exists()).To(BeFalse())
+
+			pseInit := f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "monitoring-ping-root-init")
+			Expect(pseInit.Exists()).To(BeTrue())
+			Expect(pseInit.Field("spec.securityContext.runAsUser.allowedValues").String()).To(MatchYAML(`
+- 0
+`))
+			Expect(pseInit.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
 		})
 	})
 })

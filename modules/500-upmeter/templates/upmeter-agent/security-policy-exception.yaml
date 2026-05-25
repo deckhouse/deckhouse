@@ -7,23 +7,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | nindent 2 }}
 spec:
-  securityContext:
-    runAsUser:
-      allowedValues:
-        - 0
-      metadata:
-        description: |
-          The chown init container runs as root to initialize ownership on the hostPath data directory.
-    runAsNonRoot:
-      allowedValue: false
-      metadata:
-        description: |
-          Root execution is required only for the volume ownership bootstrap init container.
-    allowPrivilegeEscalation:
-      allowedValue: true
-      metadata:
-        description: |
-          Default container runtime behavior for the root init container is required.
   network:
     hostNetwork:
       allowedValue: true
@@ -43,4 +26,29 @@ spec:
           readOnly: false
           metadata:
             description: Node-local persistent storage for upmeter-agent.
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: upmeter-agent-chown-init
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "upmeter")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          The chown init container runs as root to initialize ownership on the hostPath data directory.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Root execution is required only for the volume ownership bootstrap init container.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Default container runtime behavior for the root init container is required.
 {{- end }}

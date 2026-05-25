@@ -47,6 +47,7 @@ spec:
         app: upmeter-agent
         {{- if $securityPolicyExceptionEnabled }}
         security.deckhouse.io/security-policy-exception: upmeter-agent
+        security.deckhouse.io/security-policy-exception/chown-volume-data: upmeter-agent-chown-init
         {{- end }}
     spec:
       imagePullSecrets:
@@ -57,12 +58,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 64535
-        runAsGroup: 64535
-        seccompProfile:
-          type: RuntimeDefault
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_runtime_default" . | nindent 6 }}
       volumes:
       - name: data
         hostPath:
