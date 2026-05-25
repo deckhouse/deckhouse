@@ -30,6 +30,11 @@ var _ = Describe("Module :: monitoring-kubernetes-control-plane :: admission-pol
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", `
 enabledModules: ["monitoring-kubernetes-control-plane", "control-plane-manager"]
+discovery:
+  clusterMasterCount: 0
+  d8SpecificNodeCountByRole:
+    master: 0
+    system: 1
 `)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.HelmRender()
@@ -50,6 +55,10 @@ enabledModules: ["monitoring-kubernetes-control-plane", "control-plane-manager"]
 			f.ValuesSetFromYaml("global", `
 enabledModules: ["monitoring-kubernetes-control-plane", "control-plane-manager", "admission-policy-engine", "admission-policy-engine-crd"]
 discovery:
+  clusterMasterCount: 0
+  d8SpecificNodeCountByRole:
+    master: 0
+    system: 1
   apiVersions:
     - deckhouse.io/v1alpha1/SecurityPolicyException
 `)

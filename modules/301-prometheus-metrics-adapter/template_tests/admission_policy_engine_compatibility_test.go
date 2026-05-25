@@ -40,6 +40,7 @@ discovery:
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("prometheusMetricsAdapter", `
 internal:
+  customMetrics: {}
   adapterCert:
     ca: test-ca
     crt: test-crt

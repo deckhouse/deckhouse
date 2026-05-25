@@ -38,6 +38,9 @@ discovery:
     - deckhouse.io/v1alpha1/SecurityPolicyException
 `)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("loki", `
+lokiConfig: {}
+`)
 		f.HelmRender()
 	})
 
