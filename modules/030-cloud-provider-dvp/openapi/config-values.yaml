@@ -114,5 +114,4 @@ properties:
 required:
   - nodes
   - provider
-  - storage
 type: object

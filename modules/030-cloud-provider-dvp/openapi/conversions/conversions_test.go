@@ -32,11 +32,11 @@ func TestCloudProviderDvpConversions(t *testing.T) {
 		expectedVersion int
 	}{
 		{
-			name: "should convert provider.namespace, drop kubeconfigDataBase64, move zones",
+			name: "full v1 settings: move namespace, drop kubeconfigDataBase64, move zones, fill placeholders",
 			settings: `
 provider:
   kubeconfigDataBase64: ZXhhbXBsZQo=
-  namespace: default
+  namespace: my-ns
 zones:
   - zone-a
   - zone-b
@@ -44,9 +44,11 @@ zones:
 			expected: `
 provider:
   parameters:
-    namespace: default
+    namespace: my-ns
 nodes:
   parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
     zones:
       - zone-a
       - zone-b
@@ -55,7 +57,23 @@ nodes:
 			expectedVersion: 2,
 		},
 		{
-			name: "should drop kubeconfigDataBase64 only",
+			name: "empty v1 settings: synthesize placeholders for all required v2 fields",
+			settings: `{}
+`,
+			expected: `
+provider:
+  parameters:
+    namespace: default
+nodes:
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
+`,
+			currentVersion:  1,
+			expectedVersion: 2,
+		},
+		{
+			name: "only provider in v1: keep namespace, drop kubeconfigDataBase64, synthesize nodes",
 			settings: `
 provider:
   kubeconfigDataBase64: ZXhhbXBsZQo=
@@ -65,19 +83,28 @@ provider:
 provider:
   parameters:
     namespace: ns1
+nodes:
+  parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
 		},
 		{
-			name: "should convert zones only when provider absent",
+			name: "only zones in v1: synthesize provider, move zones into nodes",
 			settings: `
 zones:
   - z1
 `,
 			expected: `
+provider:
+  parameters:
+    namespace: default
 nodes:
   parameters:
+    layout: Standard
+    sshPublicKey: ssh-rsa PLACEHOLDER_REPLACE_ME
     zones:
       - z1
 `,
