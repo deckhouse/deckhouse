@@ -242,14 +242,17 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 				input.Logger.Error(err.Error())
 			}
 
-			certSelfIssued, err := isSelfIssuedCert(cert.Cert)
-			if err != nil {
-				input.Logger.Error(err.Error())
+			certSelfIssued := false
+			if conf.CACN != "" {
+				certSelfIssued, err = isSelfIssuedCert(cert.Cert)
+				if err != nil {
+					input.Logger.Error(err.Error())
+				}
 			}
 
-			// In case of errors, both these flags are false to avoid regeneration loop for the
+			// In case of errors, these flags are false to avoid regeneration loop for the
 			// certificate.
-			if caOutdated || certOutdated || (conf.CACN != "" && certSelfIssued) {
+			if caOutdated || certOutdated || certSelfIssued {
 				cert, err = generateNewSelfSignedTLS(input, caCN, cn, sans, usages)
 				if err != nil {
 					return err
