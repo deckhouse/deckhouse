@@ -36,9 +36,9 @@ CSI-драйвер `csi-rbd` состоит из следующих компон
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие CSI RPC-методы, предоставляемые контейнером `rbdplugin`. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие CSI RPC-методы, предоставляемые контейнером rbdplugin. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
-     Внешние контроллеры взаимодействуют c контейнером `rbdplugin` по gRPC через Unix-сокеты.
+     Внешние контроллеры взаимодействуют c контейнером rbdplugin по gRPC через Unix-сокеты.
 
      В csi-controller входят следующие внешние контроллеры:
 

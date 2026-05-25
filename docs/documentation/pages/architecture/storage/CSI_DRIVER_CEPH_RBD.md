@@ -35,9 +35,9 @@ The `csi-rbd` CSI driver consists of the following components:
 
    * **controller sidecar containers**: Kubernetes community-maintained external controllers.
 
-     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI RPC methods exposed by the `rbdplugin` container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
+     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI RPC methods exposed by the rbdplugin container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
 
-     External controllers communicate with the `rbdplugin` container over gRPC via Unix sockets.
+     External controllers communicate with the rbdplugin container over gRPC via Unix sockets.
 
      Csi-controller includes the following external controllers:
 
