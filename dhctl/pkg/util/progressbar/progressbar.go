@@ -51,6 +51,7 @@ type Pb struct {
 	ProgressBarPrinter *pterm.ProgressbarPrinter
 	MultiPrinter       *pterm.MultiPrinter
 	SpinnerPrinter     *pterm.SpinnerPrinter
+	StopCh             chan struct{}
 }
 
 func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), chan phases.Progress, error) {
@@ -70,8 +71,6 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 	onComplete := func() {
 		FinishDefaultProgressBar()
 	}
-
-	defer onComplete()
 
 	return onComplete, phasesChan, nil
 }
@@ -107,15 +106,18 @@ func InitProgressBar(param *PbParam) error {
 		return err
 	}
 
+	stopChan := make(chan struct{}, 2)
+
 	defaultpb = &Pb{
 		ProgressBarPrinter: p,
 		MultiPrinter:       &multi,
 		SpinnerPrinter:     staticSpinner,
+		StopCh:             stopChan,
 	}
 
 	log.WithProgressBar()
 
-	go updateProgress(p, param.labelChan, param.phasesChan, staticSpinner, &multi)
+	go updateProgress(p, param.labelChan, param.phasesChan, stopChan, staticSpinner, &multi)
 
 	return nil
 }
@@ -124,6 +126,7 @@ func updateProgress(
 	p *pterm.ProgressbarPrinter,
 	labelChan chan string,
 	successChan chan phases.Progress,
+	stopChan chan struct{},
 	spinner *pterm.SpinnerPrinter,
 	mp *pterm.MultiPrinter,
 ) {
@@ -140,6 +143,8 @@ func updateProgress(
 
 	for {
 		select {
+		case <-stopChan:
+			return
 		case msg, ok := <-labelChan:
 			if !ok {
 				return
@@ -276,6 +281,10 @@ func FinishDefaultProgressBar() {
 	if pb == nil {
 		return
 	}
+
+	// stopping the updateProgress goroutine
+	pb.StopCh <- struct{}{}
+	time.Sleep(50 * time.Millisecond)
 
 	pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
 	if _, err := pb.MultiPrinter.Stop(); err != nil {

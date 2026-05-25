@@ -25,8 +25,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
-  WERF_VERSION: "v2.63.1"
+  WERF_VERSION: "v2.69.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -97,20 +96,20 @@ jobs:
     # </template: checkout_step>
 
     # <template: werf_install_step>
-    - name: Install werf CLI
-      uses: werf/actions/install@v2
-      with:
-        version: ${{env.WERF_VERSION}}
-    # </template: werf_install_step>
-
-    # <template: d8cli_install_step>
-    - name: Install d8 CLI
+    - name: Install werf-dk CLI
       run: |
-        mkdir -p bin
-        INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-        mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-        echo "$(pwd)/bin" >> "$GITHUB_PATH"
-    # </template: d8cli_install_step>
+        WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+        echo "$WERF_PATH" >> "$GITHUB_PATH"
+        CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+        if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          mkdir -p "$WERF_PATH"
+          curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+          chmod +x "$WERF_PATH/werf"
+        else
+          echo "Current werf is $CACHED_VERSION, skipping download"
+        fi
+    # </template: werf_install_step>
 
     # <template: login_stage_registry_step>
     - name: Check stage registry credentials
