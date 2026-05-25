@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -298,6 +299,7 @@ func main() {
 	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
+	registerOnShutdown("Stop kubernetes provider daemon", tofu.StopProviderDaemon)
 
 	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
 		disableCleanupOnInterrupted,
@@ -399,7 +401,6 @@ func initGlobalVars() {
 
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
-	commands.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 	infrastructure.InitGlobalVars(dhctlPath)
 }

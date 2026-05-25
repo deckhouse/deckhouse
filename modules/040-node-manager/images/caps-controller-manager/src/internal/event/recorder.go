@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package event
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,12 +130,12 @@ func (r *Recorder) getNodeGroupRef(nodeGroupName string) (*corev1.ObjectReferenc
 
 	err := r.client.Get(ctx, client.ObjectKey{Name: nodeGroupName}, nodeGroup)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to get node group")
+		return nil, false, fmt.Errorf("failed to get node group: %w", err)
 	}
 
 	nodeGroupRef, err := ref.GetReference(scheme.Scheme, nodeGroup)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to construct reference")
+		return nil, false, fmt.Errorf("failed to construct reference: %w", err)
 	}
 
 	return nodeGroupRef, true, nil

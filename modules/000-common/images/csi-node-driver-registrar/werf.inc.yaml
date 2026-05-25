@@ -48,7 +48,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -61,9 +61,6 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash
   install:
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src

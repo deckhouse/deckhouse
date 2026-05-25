@@ -14,4 +14,11 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesMajorVersion := .kubernetesVersion | toString | replace "." "" }}
 {{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+
+# Per-step prefetch wait: block on the three packages this step installs.
+# Fallthrough is safe — if prefetch never ran, rpp-get install below fetches inline.
+bb-rpp-wait-fetched "kubelet" "{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) }}" || true
+bb-rpp-wait-fetched "crictl" "{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" || true
+bb-rpp-wait-fetched "kubernetes-cni" "{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}" || true
+
 rpp-get install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}"

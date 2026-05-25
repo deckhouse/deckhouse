@@ -18,6 +18,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
 const (
@@ -84,5 +85,5 @@ func DefineSanityFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
 }
 
 func configEnvName(name string) string {
-	return "DHCTL_CLI_" + name
+	return global.SSHEnvsPrefix + name
 }

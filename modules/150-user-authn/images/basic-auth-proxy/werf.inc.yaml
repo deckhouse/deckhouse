@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -48,3 +49,4 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o basic-auth-proxy ./cmd/main.go`) | indent 6 }}
     - chown 64535:64535 basic-auth-proxy
     - chmod 0700 basic-auth-proxy
+{{- end }}

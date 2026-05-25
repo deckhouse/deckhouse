@@ -693,7 +693,10 @@ func (r *Runtime) ResumeScheduler() {
 	r.scheduler.Resume()
 }
 
-// CheckConstraints checks constraints in scheduler
-func (r *Runtime) CheckConstraints(constraints schedule.Constraints) error {
-	return r.scheduler.CheckConstraints(constraints)
+// CheckConstraints validates the proposed package constraints against the
+// current cluster state and dependency graph. The `name` is the scheduler-side
+// identifier (apps.BuildName for applications, module name for modules) and is
+// used by the cycle simulation step to identify the proposed graph vertex.
+func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints) error {
+	return r.scheduler.CheckConstraints(name, constraints)
 }

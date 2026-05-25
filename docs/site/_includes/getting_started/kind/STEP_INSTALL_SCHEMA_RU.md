@@ -15,8 +15,8 @@ Deckhouse будет установлен в **минимальной** конф
 {% offtopic title="Минимальные требования к компьютеру..." %}
 - Операционная система macOS или Linux (работа на Windows не поддерживается).
 - Установленный container runtime (docker, containerd) и docker-клиент.
-    - Для работы контейнеров должно быть выделено не менее 4 CPU и 8 Гб оперативной памяти (_Settings -> Resources_ в Docker Desktop)
-    - В macOS должен быть включен параметр `Enable privileged port mapping` (_Settings -> Advanced -> Enable privileged port mapping_ в Docker Desktop).
+  - Для работы контейнеров должно быть выделено не менее 4 CPU и 8 Гб оперативной памяти (_Settings → Resources_ в Docker Desktop)
+  - В macOS должен быть включен параметр `Enable privileged port mapping` (_Settings → Advanced → Enable privileged port mapping_ в Docker Desktop).
 - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`.
 {% endofftopic %}
 
@@ -29,10 +29,13 @@ Deckhouse будет установлен в **минимальной** конф
 
 Развертывание кластера Kubernetes и установка в него Deckhouse выполняются с помощью [Shell-скрипта](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Выполните следующую команду для установки Deckhouse **Community Edition**:
+
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
+
 - Либо выполните следующую команду для установки коммерческой редакции Deckhouse Kubernetes Platform, указав лицензионный ключ:
+
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.ru
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
@@ -41,6 +44,7 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 По окончании установки инсталлятор выведет пароль пользователя `admin` для доступа в Grafana, которая будет доступна по адресу [http://grafana.127.0.0.1.sslip.io](http://grafana.127.0.0.1.sslip.io).
 
 {% offtopic title="Пример вывода..." %}
+
 ```text
 Waiting for the Ingress controller to be ready.........................................
 Ingress controller is running.
@@ -61,9 +65,11 @@ The information above is saved to /home/user/.kind-d8/info.txt file.
 
 Good luck!
 ```
+
 {% endofftopic %}
 
 Пароль пользователя `admin` для Grafana также можно узнать выполнив команду:
+
 ```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 ```

@@ -70,9 +70,8 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
-		}
+
+		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
