@@ -186,7 +186,7 @@ spec:
 BPF trace events (`bpf-events-trace-enabled`) are disabled cluster-wide by
 default. They are the dominant source of `cilium-agent` CPU and memory on nodes
 with high pod density: each forwarded packet (subject to `monitor-aggregation`)
-produces a perf-ring entry that the agent has to parse, label and feed into
+produces an entry in the BPF event buffer that the agent has to parse, label and feed into
 Hubble. `drop` and `policy verdict` events are not affected by this setting and
 remain available in Hubble.
 
@@ -210,9 +210,9 @@ spec:
       kubernetes.io/hostname: <node-name>
   defaults:
     bpf-events-trace-enabled: "true"
-    # Optional: disable monitor aggregation for the full per-packet picture.
-    # Without this override, the cluster default ("medium") still aggregates
-    # consecutive packets of the same flow.
+    # Aggregation level "none" disables aggregation of trace events for packets of the
+    # same session: a separate trace event is created for each packet.
+    # If this line is omitted, the cluster default "medium" remains on the node.
     monitor-aggregation: "none"
 ```
 
