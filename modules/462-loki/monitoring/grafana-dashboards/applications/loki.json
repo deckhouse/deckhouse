@@ -85,7 +85,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "loki_build_info{namespace=\"$namespace\"}",
+          "expr": "loki_build_info{source=\"deckhouse\", namespace=\"$namespace\"}",
           "format": "table",
           "instant": false,
           "interval": "",
@@ -150,7 +150,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum(loki_log_messages_total{namespace=\"$namespace\"})",
+          "expr": "sum(loki_log_messages_total{source=\"deckhouse\", namespace=\"$namespace\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -218,7 +218,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "cortex_prometheus_notifications_alertmanagers_discovered{namespace=\"$namespace\"}",
+          "expr": "cortex_prometheus_notifications_alertmanagers_discovered{source=\"deckhouse\", namespace=\"$namespace\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -287,7 +287,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "cortex_prometheus_notifications_sent_total{namespace=\"$namespace\"}",
+          "expr": "cortex_prometheus_notifications_sent_total{source=\"deckhouse\", namespace=\"$namespace\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -352,7 +352,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum(loki_store_series_total{namespace=\"$namespace\"})",
+          "expr": "sum(loki_store_series_total{source=\"deckhouse\", namespace=\"$namespace\"})",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -416,7 +416,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum(loki_ingester_chunk_stored_bytes_total{namespace=\"$namespace\"})",
+          "expr": "sum(loki_ingester_chunk_stored_bytes_total{source=\"deckhouse\", namespace=\"$namespace\"})",
           "instant": true,
           "interval": "",
           "legendFormat": "",
@@ -484,7 +484,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum(cortex_prometheus_rule_group_rules{namespace=\"$namespace\"})",
+          "expr": "sum(cortex_prometheus_rule_group_rules{source=\"deckhouse\", namespace=\"$namespace\"})",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -549,7 +549,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "loki_panic_total{namespace=\"$namespace\"}",
+          "expr": "loki_panic_total{source=\"deckhouse\", namespace=\"$namespace\"}",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -645,7 +645,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "topk(10,sum by (reason) (rate(loki_discarded_samples_total[1m])))",
+          "expr": "topk(10,sum by (reason) (rate(loki_discarded_samples_total{source=\"deckhouse\"}[1m])))",
           "interval": "",
           "legendFormat": "{{ reason }}",
           "range": true,
@@ -774,7 +774,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "topk(10, sum by (reason) (sum_over_time(increase(loki_discarded_samples_total{namespace=\"$namespace\"}[1m])[$__range:1m])))",
+          "expr": "topk(10, sum by (reason) (sum_over_time(increase(loki_discarded_samples_total{source=\"deckhouse\", namespace=\"$namespace\"}[1m])[$__range:1m])))",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -886,7 +886,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "sum(irate(loki_log_messages_total{namespace=\"$namespace\"}[$__rate_interval])) by (level)",
+          "expr": "sum(irate(loki_log_messages_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (level)",
           "interval": "",
           "legendFormat": "{{ level }}",
           "refId": "A"
@@ -985,7 +985,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(loki_s3_request_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,operation))",
+          "expr": "histogram_quantile(0.95, sum(rate(loki_s3_request_duration_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,operation))",
           "interval": "",
           "legendFormat": "{{operation}}",
           "refId": "A"
@@ -1087,7 +1087,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(loki_request_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,route))",
+          "expr": "histogram_quantile(0.95, sum(rate(loki_request_duration_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,route))",
           "interval": "",
           "legendFormat": "{{ route }}",
           "refId": "A"
@@ -1189,7 +1189,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(loki_logql_querystats_latency_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,type))",
+          "expr": "histogram_quantile(0.95, sum(rate(loki_logql_querystats_latency_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,type))",
           "interval": "",
           "legendFormat": "{{ type }}",
           "refId": "A"
@@ -1291,7 +1291,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(loki_logql_querystats_bytes_processed_per_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,type))",
+          "expr": "histogram_quantile(0.95, sum(rate(loki_logql_querystats_bytes_processed_per_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,type))",
           "interval": "",
           "legendFormat": "{{ type }}",
           "refId": "A"
@@ -1388,7 +1388,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum by (service) (rate(process_cpu_seconds_total{namespace=\"$namespace\",job=~\".*loki.*\"}[$__rate_interval]))",
+          "expr": "sum by (service) (rate(process_cpu_seconds_total{source=\"deckhouse\", namespace=\"$namespace\",job=~\".*loki.*\"}[$__rate_interval]))",
           "legendFormat": "{{service}}",
           "range": true,
           "refId": "A"
@@ -1502,7 +1502,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "sum by (tenant) (rate(loki_distributor_lines_received_total{namespace=\"$namespace\"}[$__rate_interval]))",
+              "expr": "sum by (tenant) (rate(loki_distributor_lines_received_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "{{ tenant }}",
               "range": true,
@@ -1603,7 +1603,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "sum(rate(loki_distributor_bytes_received_total{namespace=\"$namespace\"}[$__rate_interval])) by (tenant)",
+              "expr": "sum(rate(loki_distributor_bytes_received_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (tenant)",
               "interval": "",
               "legendFormat": "{{ tenant }}",
               "range": true,
@@ -1701,7 +1701,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(loki_distributor_ingester_appends_total{namespace=\"$namespace\"}[$__rate_interval]))",
+              "expr": "sum(rate(loki_distributor_ingester_appends_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "successed",
               "refId": "A"
@@ -1711,7 +1711,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(loki_distributor_ingester_append_failures_total{namespace=\"$namespace\"}[$__rate_interval]))",
+              "expr": "sum(rate(loki_distributor_ingester_append_failures_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "failed",
               "refId": "B"
@@ -1810,7 +1810,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum by (status) (rate(loki_store_series_total{namespace=\"$namespace\"}[$__rate_interval]))",
+              "expr": "sum by (status) (rate(loki_store_series_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))",
               "instant": false,
               "interval": "",
               "legendFormat": "{{status}}",
@@ -1928,7 +1928,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_blocks_per_chunk_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_blocks_per_chunk_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "blocks",
               "refId": "A"
@@ -2027,7 +2027,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_size_bytes_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_size_bytes_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "chunk size",
               "refId": "A"
@@ -2127,7 +2127,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_age_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_age_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "age",
               "range": true,
@@ -2227,7 +2227,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_compression_ratio_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_compression_ratio_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "ratio",
               "refId": "A"
@@ -2327,7 +2327,7 @@
                 "uid": "${ds_prometheus}"
               },
               "editorMode": "code",
-              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_encode_time_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_encode_time_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "duration",
               "range": true,
@@ -2427,7 +2427,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_entries_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_ingester_chunk_entries_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "lines",
               "refId": "A"
@@ -2526,7 +2526,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(loki_ingester_chunks_created_total{namespace=\"$namespace\"}[$__rate_interval])",
+              "expr": "rate(loki_ingester_chunks_created_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "create",
               "refId": "A"
@@ -2536,7 +2536,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum by (reason) (rate(loki_ingester_chunks_flushed_total{namespace=\"$namespace\"}[$__rate_interval]))",
+              "expr": "sum by (reason) (rate(loki_ingester_chunks_flushed_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "flush / {{ reason }}",
               "refId": "B"
@@ -2546,7 +2546,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum by (fake) (rate(loki_ingester_chunks_stored_total{namespace=\"$namespace\"}[$__rate_interval]))",
+              "expr": "sum by (fake) (rate(loki_ingester_chunks_stored_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "stored",
               "refId": "C"
@@ -2643,7 +2643,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "loki_ingester_memory_chunks{namespace=\"$namespace\"}",
+              "expr": "loki_ingester_memory_chunks{source=\"deckhouse\", namespace=\"$namespace\"}",
               "interval": "",
               "legendFormat": "chunks",
               "refId": "A"
@@ -2740,7 +2740,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum by (tenan) (loki_ingester_memory_streams{namespace=\"$namespace\"})",
+              "expr": "sum by (tenan) (loki_ingester_memory_streams{source=\"deckhouse\", namespace=\"$namespace\"})",
               "interval": "",
               "legendFormat": "streams",
               "refId": "A"
@@ -2839,7 +2839,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(loki_ingester_streams_created_total{namespace=\"$namespace\"}[$__rate_interval])",
+              "expr": "rate(loki_ingester_streams_created_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "create",
               "refId": "A"
@@ -2849,7 +2849,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(loki_ingester_streams_removed_total{namespace=\"$namespace\"}[$__rate_interval])",
+              "expr": "rate(loki_ingester_streams_removed_total{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "delete",
               "refId": "B"
@@ -2966,7 +2966,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(cortex_cassandra_request_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,operation))",
+              "expr": "histogram_quantile(0.95, sum(rate(cortex_cassandra_request_duration_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,operation))",
               "interval": "",
               "legendFormat": "{{operation}}",
               "refId": "A"
@@ -3065,7 +3065,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_chunk_store_chunks_per_query_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_chunk_store_chunks_per_query_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "chunks",
               "refId": "A"
@@ -3165,7 +3165,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(cortex_table_manager_sync_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le))",
+              "expr": "histogram_quantile(0.95, sum(rate(cortex_table_manager_sync_duration_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le))",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
@@ -3284,7 +3284,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_cache_request_duration_seconds_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,name,method))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_cache_request_duration_seconds_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,name,method))",
               "interval": "",
               "legendFormat": "{{method}}",
               "refId": "A"
@@ -3385,7 +3385,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "histogram_quantile(0.95, sum(rate(loki_cache_value_size_bytes_bucket{namespace=\"$namespace\"}[$__rate_interval])) by (le,name,method))",
+              "expr": "histogram_quantile(0.95, sum(rate(loki_cache_value_size_bytes_bucket{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])) by (le,name,method))",
               "interval": "",
               "legendFormat": "{{name}} / {{method}}",
               "refId": "A"
@@ -3481,7 +3481,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(loki_cache_hits{namespace=\"$namespace\"}[$__rate_interval])",
+              "expr": "rate(loki_cache_hits{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{name}}",
               "refId": "A"
@@ -3578,7 +3578,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "loki_cache_background_queue_length{namespace=\"$namespace\"}",
+              "expr": "loki_cache_background_queue_length{source=\"deckhouse\", namespace=\"$namespace\"}",
               "interval": "",
               "legendFormat": "{{name}}",
               "refId": "A"
@@ -3674,7 +3674,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "rate(loki_cache_fetched_keys{namespace=\"$namespace\"}[$__rate_interval])",
+              "expr": "rate(loki_cache_fetched_keys{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{name}}",
               "refId": "A"
@@ -3763,7 +3763,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "cortex_prometheus_rule_evaluations_total{namespace=\"$namespace\"}",
+              "expr": "cortex_prometheus_rule_evaluations_total{source=\"deckhouse\", namespace=\"$namespace\"}",
               "format": "time_series",
               "instant": true,
               "interval": "",
@@ -3776,7 +3776,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "cortex_prometheus_notifications_sent_total{namespace=\"$namespace\"}",
+              "expr": "cortex_prometheus_notifications_sent_total{source=\"deckhouse\", namespace=\"$namespace\"}",
               "instant": true,
               "interval": "1m",
               "legendFormat": "Notifications",
@@ -3875,7 +3875,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(cortex_prometheus_notifications_latency_seconds{namespace=\"$namespace\"}[$__rate_interval]))  by (quantile)",
+              "expr": "sum(rate(cortex_prometheus_notifications_latency_seconds{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))  by (quantile)",
               "interval": "",
               "legendFormat": "TP {{quantile}}",
               "refId": "A"
@@ -3973,7 +3973,7 @@
                 "type": "prometheus",
                 "uid": "${ds_prometheus}"
               },
-              "expr": "sum(rate(cortex_prometheus_rule_evaluation_duration_seconds{namespace=\"$namespace\"}[$__rate_interval]))  by (quantile)",
+              "expr": "sum(rate(cortex_prometheus_rule_evaluation_duration_seconds{source=\"deckhouse\", namespace=\"$namespace\"}[$__rate_interval]))  by (quantile)",
               "interval": "",
               "legendFormat": "TP {{quantile}}",
               "refId": "A"
@@ -4021,7 +4021,7 @@
           "type": "prometheus",
           "uid": "${ds_prometheus}"
         },
-        "definition": "label_values(loki_build_info, namespace)",
+        "definition": "label_values(loki_build_info{source=\"deckhouse\"}, namespace)",
         "hide": 0,
         "includeAll": false,
         "label": "Namespace",
@@ -4029,7 +4029,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(loki_build_info, namespace)",
+          "query": "label_values(loki_build_info{source=\"deckhouse\"}, namespace)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
