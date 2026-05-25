@@ -29,17 +29,17 @@
   # Versions mirror ee/se-plus/modules/030-cloud-provider-vsphere/oss.yaml (id: csi-vsphere); update via tools/sync_versions/sync_oss_versions.sh (wired in tools/generate_sync_versions.go).
   versions:
     - condition:
-        k8s: "1.31"
-      version: v3.5.1
-    - condition:
         k8s: "1.32"
-      version: v3.6.2
+      version: v3.0.3
     - condition:
         k8s: "1.33"
-      version: v3.7.1
+      version: v3.0.3
     - condition:
         k8s: "1.34"
-      version: v3.7.1
+      version: v3.0.3
     - condition:
         k8s: "1.35"
-      version: v3.7.1
+      version: v3.0.3
+    - condition:
+        k8s: "1.36"
+      version: v3.0.3
