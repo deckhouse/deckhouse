@@ -39,6 +39,8 @@ import:
   add: /geoproxy
   to: /geoproxy
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/geoproxy"]
