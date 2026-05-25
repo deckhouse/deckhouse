@@ -823,7 +823,16 @@ func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName 
 func (s *OperationService) ensureSharedOwnerReference(obj client.Object) bool {
 	refs := obj.GetOwnerReferences()
 	for _, ref := range refs {
-		if ref.UID == s.repo.UID {
+		if ref.Kind != v1alpha1.PackageRepositoryKind {
+			continue
+		}
+		// Match by UID when both sides have one (real cluster); otherwise fall back
+		// to Name (PackageRepository names are cluster-unique, and UIDs may be empty
+		// in test fixtures).
+		if ref.UID != "" && ref.UID == s.repo.UID {
+			return false
+		}
+		if ref.Name == s.repo.Name {
 			return false
 		}
 	}
