@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -528,7 +527,7 @@ func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context,
 		ctx,
 		configData,
 		config.DummyPreparatorProvider(),
-		&options.New().Global,
+		nil,
 	)
 
 	require.NoError(t, err)

@@ -21,7 +21,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
@@ -50,7 +49,7 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.New().Global)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), nil)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}

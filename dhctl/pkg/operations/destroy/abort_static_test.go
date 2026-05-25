@@ -30,7 +30,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
@@ -129,7 +128,7 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), &options.New().Global)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), nil)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 

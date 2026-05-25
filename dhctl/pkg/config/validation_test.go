@@ -81,7 +81,7 @@ metadata:
 func TestValidateInitConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
 	const deckhouseSchemasDir = "./../../../modules/002-deckhouse/openapi"
-	newStore := newSchemaStore(&options.New().Global, []string{schemasDir, deckhouseSchemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir, deckhouseSchemasDir})
 
 	tests := map[string]struct {
 		config      string

@@ -95,12 +95,8 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
-	pwd, err := os.Getwd()
-	if err != nil {
-		pwd = "/"
-	}
-	candiDir := filepath.Join(pwd, options.DefaultCandiDir)
-	if globalOptions != nil {
+	candiDir := options.DefaultCandiDir
+	if globalOptions != nil && globalOptions.CandiDir != "" {
 		candiDir = globalOptions.CandiDir
 	}
 	paths = append([]string{candiDir}, paths...)
@@ -157,7 +153,7 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	// fallback to default
 	modulesDir := options.DefaultModulesDir
 	globalHookModule := options.DefaultGlobalHooksModule
-	if globalOptions != nil {
+	if globalOptions != nil && globalOptions.ModulesDir != "" {
 		modulesDir = globalOptions.ModulesDir
 		globalHookModule = globalOptions.GlobalHooksModule
 	}

@@ -94,16 +94,35 @@ func LoadConfigFromFile(
 	if err != nil {
 		return nil, err
 	}
-	metaConfig.DownloadRootDir = globalOptions.DownloadDir
-	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
-	metaConfig.VersionFilePath = filepath.Join(globalOptions.DeckhouseDir, "version")
+
+	if globalOptions.DownloadDir != "" {
+		metaConfig.DownloadRootDir = globalOptions.DownloadDir
+	} else {
+		metaConfig.DownloadRootDir = options.DefaultTmpDir()
+	}
+	if globalOptions.DownloadCacheDir != "" {
+		metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
+	} else {
+		metaConfig.DownloadCacheDir = filepath.Join(metaConfig.DownloadRootDir, "cache")
+	}
+	if globalOptions.DeckhouseDir != "" {
+		metaConfig.VersionFilePath = filepath.Join(globalOptions.DeckhouseDir, "version")
+	} else {
+		metaConfig.VersionFilePath = filepath.Join(options.DefaultDeckhouseDir, "version")
+	}
+
 	metaConfig.ShowProgress = globalOptions.ShowProgress
 
 	if metaConfig.ClusterConfig == nil {
 		return nil, fmt.Errorf("ClusterConfiguration must be provided")
 	}
 
-	if err := metaConfig.LoadVersionMap(globalOptions.VersionMap); err != nil {
+	versionMapFile := options.DefaultVersionMap
+	if globalOptions.VersionMap != "" {
+		versionMapFile = globalOptions.VersionMap
+	}
+
+	if err := metaConfig.LoadVersionMap(versionMapFile); err != nil {
 		return nil, err
 	}
 
@@ -199,6 +218,11 @@ func ParseConfigInCluster(
 
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, globalOptions *options.GlobalOptions) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{}
+
+	// panic mitigation
+	if globalOptions == nil {
+		globalOptions = &options.GlobalOptions{}
+	}
 
 	if globalOptions.NeedDownload {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
@@ -545,6 +569,11 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOpti
 
 // prepare CandiDir if not exists
 func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, globalOptions *options.GlobalOptions) error {
+	// test only
+	if globalOptions == nil {
+		return nil
+	}
+
 	if !globalOptions.NeedDownload {
 		return nil
 	}
