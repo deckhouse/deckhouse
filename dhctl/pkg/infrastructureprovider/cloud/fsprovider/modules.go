@@ -24,9 +24,9 @@ import (
 	"strings"
 	"sync"
 
+	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -112,4 +112,3 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 
 	return nil
 }
-

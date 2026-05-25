@@ -38,7 +38,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
-
 	otattribute "go.opentelemetry.io/otel/attribute"
 	ottrace "go.opentelemetry.io/otel/trace"
 

@@ -43,7 +43,6 @@ func isDir(dir, errPrefix string) error {
 	return nil
 }
 
-
 func isFile(file, errPrefix string) error {
 	if !path.IsAbs(file) {
 		return fmt.Errorf("%s is not an absolute path", file)

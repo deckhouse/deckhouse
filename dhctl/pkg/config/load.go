@@ -252,7 +252,6 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 	return st
 }
 
-
 func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {
 	return s.cache[*index]
 }

@@ -26,13 +26,12 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
+	otattribute "go.opentelemetry.io/otel/attribute"
 	"sigs.k8s.io/yaml"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
-
-	otattribute "go.opentelemetry.io/otel/attribute"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
