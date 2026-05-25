@@ -37,7 +37,7 @@ func certConfigFromX509(cert *x509.Certificate) certConfig {
 			},
 			Usages: cert.ExtKeyUsage,
 		},
-		EncryptionAlgorithm: DetectEncryptionAlgorithm(cert),
+		EncryptionAlgorithm: pkiutil.DetectEncryptionAlgorithm(cert),
 	}
 }
 

@@ -17,8 +17,6 @@ limitations under the License.
 package pki
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
 	"time"
@@ -95,29 +93,5 @@ func certificateEncryptionAlgoIsEqual(oldCert *x509.Certificate, newCertCfg cert
 }
 
 func detectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
-	return DetectEncryptionAlgorithm(cert)
-}
-
-// DetectEncryptionAlgorithm returns the EncryptionAlgorithmType corresponding to the public key of cert.
-// Returns "" for unknown key types or sizes.
-func DetectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
-	switch pub := cert.PublicKey.(type) {
-	case *rsa.PublicKey:
-		switch pub.N.BitLen() {
-		case 2048:
-			return constants.EncryptionAlgorithmRSA2048
-		case 3072:
-			return constants.EncryptionAlgorithmRSA3072
-		case 4096:
-			return constants.EncryptionAlgorithmRSA4096
-		}
-	case *ecdsa.PublicKey:
-		switch pub.Curve.Params().BitSize {
-		case 256:
-			return constants.EncryptionAlgorithmECDSAP256
-		case 384:
-			return constants.EncryptionAlgorithmECDSAP384
-		}
-	}
-	return ""
+	return pkiutil.DetectEncryptionAlgorithm(cert)
 }
