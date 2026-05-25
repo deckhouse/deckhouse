@@ -285,12 +285,16 @@ func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 }
 
 func (m ModeModel) toProxyLocalBashibleHosts(pki PKI) map[string]bashible.ConfigHosts {
+	endpoints := m.toProxyLocalEndpoints()
+
+	hosts := make([]string, 0, 1+len(endpoints))
+
 	// ProxyHost is the main endpoint for accessing the registry-proxy service.
-	hosts := []string{constant.ProxyHost}
+	hosts = append(hosts, constant.ProxyHost)
 
 	// Append endpoints for direct access.
 	// These are used when the registry-proxy is not yet running (during bootstrap).
-	hosts = append(hosts, m.toProxyLocalEndpoints()...)
+	hosts = append(hosts, endpoints...)
 
 	scheme := strings.ToLower(string(constant.SchemeHTTPS))
 	mirrors := make([]bashible.ConfigMirrorHost, 0, len(hosts))

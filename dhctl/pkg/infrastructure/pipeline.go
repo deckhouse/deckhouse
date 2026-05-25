@@ -79,7 +79,6 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			StatePath: statePath,
 			OutFields: []string{k},
 		})
-
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -128,7 +127,11 @@ func ApplyPipeline(
 		}
 		span.AddEvent("Plan done")
 
-		defer func() { extractedData, err = extractFn(ctx, r) }()
+		defer func() {
+			if err == nil {
+				extractedData, err = extractFn(ctx, r)
+			}
+		}()
 
 		if err := r.Apply(ctx); err != nil {
 			return err
@@ -568,7 +571,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 }
 
-func extractChangesStrings(target string, planOutput string) (string, string) {
+func extractChangesStrings(target, planOutput string) (string, string) {
 	var mapOut map[string]any
 	err := json.Unmarshal([]byte(planOutput), &mapOut)
 	if err != nil {

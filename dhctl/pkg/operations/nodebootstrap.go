@@ -67,7 +67,6 @@ func BootstrapAdditionalNode(
 		kubeCl: kubeCl,
 		logger: log.GetDefaultLogger(),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -128,7 +127,6 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 			}
 			return nil
 		})
-
 		if err != nil {
 			return err
 		}
@@ -162,7 +160,6 @@ func BootstrapAdditionalNodeForParallelRun(
 		// allow use state cache because in parallel run we cannot get correct output from user
 		AllowUseStateCache: true,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -221,7 +218,6 @@ func ParallelBootstrapAdditionalNodes(
 			kubeCl: kubeCl,
 			logger: ngLogger,
 		})
-
 		if err != nil {
 			nodesCheckErrors = multierror.Append(nodesCheckErrors, err)
 		}
@@ -441,7 +437,6 @@ func BootstrapAdditionalMasterNode(
 		kubeCl: kubeCl,
 		logger: log.GetDefaultLogger(),
 	})
-
 	if err != nil {
 		return nil, err
 	}

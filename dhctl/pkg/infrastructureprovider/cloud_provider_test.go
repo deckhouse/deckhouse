@@ -947,7 +947,7 @@ func prepareLocalRun(t *testing.T, logger log.Logger) {
 		require.NoError(t, err, "Could not stat cloud-provider directory %s", cloudProvidersDir)
 	}
 
-	err = os.MkdirAll(cloudProvidersDir, 0755)
+	err = os.MkdirAll(cloudProvidersDir, 0o755)
 	require.NoError(t, err, "Could not create cloud-provider directory %s", cloudProvidersDir)
 
 	t.Cleanup(func() {
@@ -1230,7 +1230,7 @@ func assertCorrectExecutorStatesDir(t *testing.T, executor infrastructure.Execut
 	require.Equal(t, executorStatesDir, filepath.Join(provider.RootDir(), pluginVersion))
 }
 
-func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
+func assertFileExistsAndSymlink(t *testing.T, source, destination string) {
 	t.Helper()
 
 	stat, err := os.Lstat(destination)
@@ -1266,7 +1266,7 @@ func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
 	require.True(t, len(content) > 0, filePath)
 }
 
-func assertFileExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+func assertFileExistsAndHasContent(t *testing.T, filePath, expectedContent string) {
 	t.Helper()
 
 	assertFileExists(t, filePath)

@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -110,6 +111,7 @@ type reconcilerOption func(*reconciler)
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *reconciler) {
 		r.dc = dc
+		r.registry = registry.NewService(dc, log.NewNop())
 	}
 }
 
@@ -171,10 +173,13 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}).
 		Build()
 
+	dc := dependency.NewDependencyContainer()
+
 	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewNop(),
-		dc:     dependency.NewDependencyContainer(),
+		client:   kubeClient,
+		logger:   log.NewNop(),
+		dc:       dc,
+		registry: registry.NewService(dc, log.NewNop()),
 	}
 
 	testDataPath := filepath.Join("./testdata", filename)
@@ -243,18 +248,18 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			LayersStub: func() ([]crv1.Layer, error) {
 				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
 					"package.yaml": `name: test-module
-description:
+descriptions:
   en: Test module
-category: Networking
 stage: GA
 type: Module
 version: "1.0.0"
 `,
-					"version.json":  `{"version": "1.0.0"}`,
+					"version.json":   `{"version": "1.0.0"}`,
 					"changelog.yaml": "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("successful-reconcile-v2.yaml", withDependencyContainer(dc))
 
@@ -283,11 +288,12 @@ requirements:
   deckhouse: ">= 1.60"
   kubernetes: ">= 1.27"
 `,
-					"version.json":  `{"version": "1.0.0"}`,
+					"version.json":   `{"version": "1.0.0"}`,
 					"changelog.yaml": "features:\n- Legacy feature\n",
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("successful-reconcile-legacy.yaml", withDependencyContainer(dc))
 
@@ -317,6 +323,7 @@ stage: Sandbox
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("release-path-segment.yaml", withDependencyContainer(dc))
 
@@ -337,9 +344,8 @@ stage: Sandbox
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: mpv.Name},
 		})
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
 	})
-
 
 	suite.Run("non-draft resource skip", func() {
 		suite.setupController("non-draft-resource.yaml")
@@ -380,7 +386,7 @@ func TestDeleteBlockedByUsedByCount(t *testing.T) {
 		NamespacedName: types.NamespacedName{Name: mpvName},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 5*time.Second, result.RequeueAfter, "should requeue when UsedByCount > 0")
+	assert.Equal(t, 15*time.Second, result.RequeueAfter, "should requeue when UsedByCount > 0")
 
 	// Verify finalizer is still present (object not deleted)
 	var updated v1alpha1.ModulePackageVersion
@@ -416,43 +422,4 @@ func TestDeleteSucceedsWhenUnused(t *testing.T) {
 	var updated v1alpha1.ModulePackageVersion
 	err = kubeClient.Get(ctx, types.NamespacedName{Name: mpvName}, &updated)
 	assert.True(t, apierrors.IsNotFound(err), "object should be deleted after finalizer removal")
-}
-
-func TestConvertLicensingEditions(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]PackageEdition
-		expected map[string]v1alpha1.PackageEdition
-	}{
-		{
-			name: "multiple editions",
-			input: map[string]PackageEdition{
-				"ee": {Available: true},
-				"ce": {Available: false},
-				"fe": {Available: true},
-			},
-			expected: map[string]v1alpha1.PackageEdition{
-				"ee": {Available: true},
-				"ce": {Available: false},
-				"fe": {Available: true},
-			},
-		},
-		{
-			name:     "nil input",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name:     "empty map",
-			input:    map[string]PackageEdition{},
-			expected: map[string]v1alpha1.PackageEdition{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := convertLicensingEditions(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }

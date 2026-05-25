@@ -58,8 +58,8 @@ secrets:
 shell:
   install:
     - cd /src/
-    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOPROXY=$(cat /run/secrets/GOPROXY)
+    - go mod download
     - cd server
     - |
       {{- $buildContext := deepCopy $ -}}

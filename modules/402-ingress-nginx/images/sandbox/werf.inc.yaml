@@ -10,6 +10,9 @@ git:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/sandbox-artifact
 from: {{ index $.Images "builder/golang-alpine" }}

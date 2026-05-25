@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -25,6 +26,9 @@ git:
     - '**/*.go'
     - '**/go.mod'
     - '**/go.sum'
+shell:
+  install:
+    - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-artifact
 from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" ) }}
@@ -48,3 +52,4 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o basic-auth-proxy ./cmd/main.go`) | indent 6 }}
     - chown 64535:64535 basic-auth-proxy
     - chmod 0700 basic-auth-proxy
+{{- end }}

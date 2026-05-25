@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/090809/oteljsonl"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -34,6 +33,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type exporterType string

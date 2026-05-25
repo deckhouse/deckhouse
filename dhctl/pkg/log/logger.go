@@ -19,9 +19,8 @@ import (
 	"context"
 	"io"
 
-	external "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
+	external "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 var (
@@ -123,12 +122,18 @@ func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 
 	if ok {
 		ext = &ExternalLogger{logger: tee}
-		initExternalKlog(ext)
+		err := initExternalKlog(ext)
+		if err != nil {
+			return err
+		}
 
 		defaultLogger = ext
 	} else {
 		i := newInteractiveLogger(tee, true)
-		initInteractiveKlog(i)
+		err := initInteractiveKlog(i)
+		if err != nil {
+			return err
+		}
 
 		defaultLogger = i
 	}

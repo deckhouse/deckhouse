@@ -30,7 +30,7 @@ The following example demonstrates how to protect sensitive fields in resources 
 
 For instructions on enabling this feature, see [FAQ](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources).
 
-1. Enabling etcd encryption with the `encryptionEnabled` parameter. This automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver`.
+1. Enabling etcd encryption with the `encryptionEnabled` parameter. The `CRDSensitiveData` feature gate for `kube-apiserver` is enabled by default.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

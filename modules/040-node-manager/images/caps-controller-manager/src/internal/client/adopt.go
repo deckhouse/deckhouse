@@ -24,100 +24,126 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
+	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/providerid"
-	"caps-controller-manager/internal/scope"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
-func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
-	instanceScope.Logger.Info(
-		fmt.Sprintf("adopting node for StaticInstance with '%s' annotation", deckhousev1.SkipBootstrapPhaseAnnotation),
-	)
+func (c *Client) AdoptStaticInstance(ctx context.Context,
+	staticInstance *deckhousev1.StaticInstance,
+	staticMachine *infrav1.StaticMachine,
+	machine *clusterv1.Machine,
+) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("adopting node for StaticInstance", "annotation", deckhousev1.SkipBootstrapPhaseAnnotation)
 
-	if instanceScope.MachineScope.StaticMachine.Spec.ProviderID == "" {
-		providerID := providerid.GenerateProviderID(instanceScope.Instance.Name)
+	credentials := &deckhousev1.SSHCredentials{}
+	if err := c.client.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to load SSHCredentials: %w", err)
+	}
 
-		instanceScope.MachineScope.StaticMachine.Spec.ProviderID = providerID
+	sshLegacyMode := true //nolint:staticcheck
+	if len(credentials.Spec.PrivateSSHKey) == 0 {
+		sshLegacyMode = false
+	}
 
-		err := instanceScope.MachineScope.Patch(ctx)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrapf(err, "failed to set StaticMachine provider id to '%s'", providerID)
+	if staticMachine.Spec.ProviderID == "" {
+		providerID := providerid.GenerateProviderID(staticInstance.Name)
+		staticMachine.Spec.ProviderID = providerID
+	}
+
+	staticInstance.Status.MachineRef = &corev1.ObjectReference{
+		APIVersion: staticMachine.APIVersion,
+		Kind:       staticMachine.Kind,
+		Namespace:  staticMachine.Namespace,
+		Name:       staticMachine.Name,
+		UID:        staticMachine.UID,
+	}
+
+	type taskDataStr struct {
+		address       string
+		credentials   deckhousev1.SSHCredentialsSpec
+		sshLegacyMode bool
+
+		providerID  string
+		machineName string
+	}
+
+	taskFunc := func(tCtx context.Context, tAny any) error {
+		tLogger := ctrl.LoggerFrom(tCtx)
+		t, ok := tAny.(taskDataStr)
+		if !ok {
+			return errors.New("invalid task data")
 		}
-	}
 
-	instanceScope.Instance.Status.MachineRef = &corev1.ObjectReference{
-		APIVersion: instanceScope.MachineScope.StaticMachine.APIVersion,
-		Kind:       instanceScope.MachineScope.StaticMachine.Kind,
-		Namespace:  instanceScope.MachineScope.StaticMachine.Namespace,
-		Name:       instanceScope.MachineScope.StaticMachine.Name,
-		UID:        instanceScope.MachineScope.StaticMachine.UID,
-	}
-
-	err := instanceScope.Patch(ctx)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef")
-	}
-
-	ok := c.adoptStaticInstance(instanceScope)
-	if !ok {
-		return ctrl.Result{}, nil
-	}
-
-	delete(instanceScope.Instance.Annotations, deckhousev1.SkipBootstrapPhaseAnnotation)
-
-	err = c.setStaticInstancePhaseToRunning(ctx, instanceScope)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance phase to Running")
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) bool {
-	done := c.adoptTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
 		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.V(1).Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
+		if t.sshLegacyMode {
+			tLogger.Info("using clissh")
+			sshCl = clissh.CreateSSHClient(t.address, t.credentials)
 		} else {
-			instanceScope.Logger.V(1).Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
+			tLogger.Info("using gossh")
+			sshCl, err = gossh.CreateSSHClient(t.address, t.credentials)
 		}
 
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to adopt StaticInstance: failed to create ssh client")
-			return false
+			tLogger.Error(err, "failed to create ssh client")
+			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
-		data, err := sshCl.ExecSSHCommandToString(instanceScope,
+
+		data, err := sshCl.ExecSSHCommandToString(
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name",
-				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name))
+				t.providerID, t.machineName))
 		if err != nil {
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
 				if strings.Contains(str, "debug1: Exit status 2") {
-					return true
+					return nil
 				}
 			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			instanceScope.Logger.Error(err, "Failed to adopt StaticInstance: failed to exec ssh command")
-			return false
+			tLogger.Error(err, "failed to exec ssh command")
+			return fmt.Errorf("failed to exec ssh command: %w", err)
 		}
-
-		return true
-	})
-	if done == nil || !*done {
-		instanceScope.Logger.V(1).Info("Adopting is not finished yet, waiting...")
-		return false
+		return nil
 	}
 
-	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
+	taskData := taskDataStr{
+		address:       staticInstance.Spec.Address,
+		credentials:   credentials.Spec,
+		sshLegacyMode: sshLegacyMode,
+		providerID:    machine.Spec.ProviderID,
+		machineName:   machine.Name,
+	}
 
-	return true
+	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger.Info("Running adopt task")
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "adopt", taskData, taskFunc)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to adopt StaticInstance: %w", err)
+	}
+
+	if !finished {
+		logger.Info("Adopting is not finished yet, waiting...")
+		return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
+	}
+
+	logger.Info("Adoption script executed successfully")
+	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
+
+	delete(staticInstance.Annotations, deckhousev1.SkipBootstrapPhaseAnnotation)
+
+	if err := c.setStaticInstancePhaseToRunning(ctx, staticInstance, staticMachine); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to set StaticInstance phase to Running: %w", err)
+	}
+
+	return ctrl.Result{}, nil
 }

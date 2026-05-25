@@ -38,7 +38,7 @@ import (
 const (
 	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
 	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
-	skipSCAnnotation		= "cloud-provider.deckhouse.io/skip-storage-class"
+	skipSCAnnotation        = "cloud-provider.deckhouse.io/skip-storage-class"
 )
 
 type CloudConfig struct {
@@ -209,13 +209,12 @@ func mergeStorageDomains(
 
 		if v, ok := annotations[skipSCAnnotation]; ok && strings.ToLower(v) == "true" {
 			isEnabled = false
-			break
-		}
-		
-		for _, annot := range annotToCheck {
-			if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
-				isDefault = true
-				break
+		} else {
+			for _, annot := range annotToCheck {
+				if v, ok := annotations[annot]; ok && strings.ToLower(v) == "true" {
+					isDefault = true
+					break
+				}
 			}
 		}
 

@@ -9,6 +9,7 @@
  - Istiod now enforces trust domain validation. Each remote root CA is now scoped to its declared trust domain in the meshConfig caCertificates. Verify that all IstioFederation resources have correct `trustDomain` values matching the remote cluster configuration.
  - ServiceEntry and DestinationRule resources for federated public services will be recreated with new names. This causes a brief traffic interruption for cross-cluster federated service routing during the first reconciliation after the update.
  - Unnecessary or destructive plan updates that could occur when updating labels and annotations via OpenTofu should be prevented now. If you encounter unexpected converge plans or cluster bootstrap issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report them to Deckhouse Technical Support.
+ - When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
 
 ## Features
 
@@ -129,6 +130,7 @@
 ## Fixes
 
 
+ - **[candi]** fix cve node-manager and opentofu. [#19940](https://github.com/deckhouse/deckhouse/pull/19940)
  - **[candi]** Added deletion of webhook configurations before destroying a Deckhouse deployment. [#19041](https://github.com/deckhouse/deckhouse/pull/19041)
  - **[candi]** Fixed internal node IP discovery for static nodes in DVP clusters. [#18441](https://github.com/deckhouse/deckhouse/pull/18441)
  - **[candi]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
@@ -170,6 +172,7 @@
  - **[deckhouse]** Fixed a race condition in ModuleConfig processing during startup. [#18280](https://github.com/deckhouse/deckhouse/pull/18280)
  - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[deckhouse-controller]** Fixed error logging for MPO validation. [#18698](https://github.com/deckhouse/deckhouse/pull/18698)
+ - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19793](https://github.com/deckhouse/deckhouse/pull/19793)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
  - **[dhctl]** Fix CVEs in `dhctl`. [#19344](https://github.com/deckhouse/deckhouse/pull/19344)
  - **[dhctl]** Fixed `LogInfoLn` behavior for external loggers. [#19234](https://github.com/deckhouse/deckhouse/pull/19234)
@@ -188,6 +191,9 @@
     All Ingress-NGINX controller pods of 1.12 and 1.14 will be restarted.
  - **[ingress-nginx]** Initial ingress store sync is  fixed. [#19031](https://github.com/deckhouse/deckhouse/pull/19031)
     All Ingress-NGINX controller pods will be restarted.
+ - **[istio]** CNI-node readonly root filesystem enable fix [#19920](https://github.com/deckhouse/deckhouse/pull/19920)
+    When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
+ - **[istio]** fixed discovery_operator_versions_to_install.go hook to migrate from 1.21 to 1.25 [#19648](https://github.com/deckhouse/deckhouse/pull/19648)
  - **[istio]** fixed CVEs in module images [#19584](https://github.com/deckhouse/deckhouse/pull/19584)
     module pods will be restarted
  - **[istio]** ingressGateway advertise FQDN does not create a ServiceEntry due to an error [#19528](https://github.com/deckhouse/deckhouse/pull/19528)
@@ -201,6 +207,7 @@
  - **[istio]** Deduplicated federation ServiceEntry and DestinationRule resources by hostname across multiple IstioFederation CRs. [#18375](https://github.com/deckhouse/deckhouse/pull/18375)
     ServiceEntry and DestinationRule resources for federated public services will be recreated with new names. This causes a brief traffic interruption for cross-cluster federated service routing during the first reconciliation after the update.
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
+ - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#18673](https://github.com/deckhouse/deckhouse/pull/18673)
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
  - **[node-manager]** Improve fencing-agent health monitor logging — warn on fallback feeding, error on watchdog starvation, add diagnostic context to all feeding log messages. [#19400](https://github.com/deckhouse/deckhouse/pull/19400)

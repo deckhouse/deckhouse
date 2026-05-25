@@ -20,12 +20,11 @@ import (
 	"net"
 	"strings"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
-
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
