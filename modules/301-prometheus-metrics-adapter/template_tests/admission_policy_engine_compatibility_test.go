@@ -34,6 +34,10 @@ modules:
 discovery:
   prometheusScrapeInterval: 30
   clusterDomain: cluster.local
+  clusterMasterCount: 1
+  d8SpecificNodeCountByRole:
+    master: 1
+    system: 1
   extensionAPIServerAuthenticationRequestheaderClientCA: test-ca
   apiVersions:
     - deckhouse.io/v1alpha1/SecurityPolicyException
