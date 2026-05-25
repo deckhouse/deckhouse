@@ -494,16 +494,16 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
 	defer func() {
-		metricLabels[releaseUpdater.MajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
-		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
+		metricLabels[metrics.LabelMajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
+		if metricLabels[metrics.LabelManualApprovalRequired] == "true" {
+			metricLabels[metrics.LabelReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
 		r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
 	}()
 
 	reasons := checker.MetRequirements(ctx, dr)
 	if len(reasons) > 0 {
-		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
+		metricLabels.SetTrue(metrics.LabelRequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
 			msgs = append(msgs, reason.Message)
@@ -658,7 +658,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	checker := releaseUpdater.NewPreApplyChecker(dus, r.logger)
 	reasons := checker.MetRequirements(ctx, &dr)
 	if len(reasons) > 0 {
-		metricLabels.SetTrue(releaseUpdater.DisruptionApprovalRequired)
+		metricLabels.SetTrue(metrics.LabelDisruptionApprovalRequired)
 
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
@@ -1120,7 +1120,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 	}
 
 	if dr.GetIsUpdating() {
-		r.metricStorage.Grouped().GaugeSet(metrics.D8Updating, metrics.D8IsUpdating, 1, map[string]string{"deployingRelease": dr.GetName()})
+		r.metricStorage.Grouped().GaugeSet(metrics.D8Updating, metrics.D8IsUpdating, 1, map[string]string{metrics.LabelDeployingRelease: dr.GetName()})
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
