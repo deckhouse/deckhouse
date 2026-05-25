@@ -150,16 +150,12 @@ func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.Kuber
 		if secret.Type != CloudProviderCredentialsSecretType {
 			continue
 		}
-		obj, err := secretToMap(&secret)
-		if err != nil {
-			return nil, fmt.Errorf("marshal secret %s/%s: %w", secret.Namespace, secret.Name, err)
-		}
-		result[secret.Name] = obj
+		result[secret.Name] = secretToMap(&secret)
 	}
 	return result, nil
 }
 
-func secretToMap(secret *corev1.Secret) (map[string]interface{}, error) {
+func secretToMap(secret *corev1.Secret) map[string]interface{} {
 	stringData := make(map[string]string, len(secret.Data))
 	for k, v := range secret.Data {
 		stringData[k] = string(v)
@@ -174,5 +170,5 @@ func secretToMap(secret *corev1.Secret) (map[string]interface{}, error) {
 		},
 		"type":       string(secret.Type),
 		"stringData": stringData,
-	}, nil
+	}
 }

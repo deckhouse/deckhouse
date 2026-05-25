@@ -43,17 +43,6 @@ func isDir(dir, errPrefix string) error {
 	return nil
 }
 
-func isNotRootDir(dir, errPrefix string) error {
-	if path.Clean(dir) == "/" {
-		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
-	}
-
-	if err := isDir(dir, errPrefix); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func isFile(file, errPrefix string) error {
 	if !path.IsAbs(file) {

@@ -45,7 +45,6 @@ type SchemaStore struct {
 	conversionsStore   *conversion.ConversionsStore
 }
 
-
 type validateOptions struct {
 	omitDocInError     bool
 	commanderMode      bool

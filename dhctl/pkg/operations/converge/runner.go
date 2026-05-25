@@ -29,7 +29,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	convergecontext "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"

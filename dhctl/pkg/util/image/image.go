@@ -267,7 +267,7 @@ func saveHash(digest, hash, dstPath string) error {
 	return nil
 }
 
-func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, cacheDir string) (v1.Image, error) {
+func pullImage(_ context.Context, ref name.Reference, opts []remote.Option, digest, cacheDir string) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
