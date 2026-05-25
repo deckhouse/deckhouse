@@ -506,6 +506,7 @@ To enable container image signature verification in a DVP cluster:
                -----END PUBLIC KEY-----
            reference: registry.private.ru/labs/application/*
    ```
+
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
    More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
@@ -528,6 +529,7 @@ To enable container image signature verification in a DVP cluster:
        allowedRepos:
        - registry.private.ru
    ```
+
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
    More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
@@ -559,6 +561,7 @@ Example error output when creating a pod with an image that fails signature veri
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
+
 ## Using alternative security policy management tools
 
 If you use an alternative solution for security policy management in a DVP cluster

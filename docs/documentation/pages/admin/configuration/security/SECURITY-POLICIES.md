@@ -674,6 +674,7 @@ To enable container image signature verification in a DKP cluster:
                -----END PUBLIC KEY-----
            reference: registry.private.ru/labs/application/*
    ```
+
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
    More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
@@ -696,6 +697,7 @@ To enable container image signature verification in a DKP cluster:
        allowedRepos:
        - registry.private.ru
    ```
+
    The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
 
    More details about selector usage are available in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
