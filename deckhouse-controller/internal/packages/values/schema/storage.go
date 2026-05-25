@@ -162,8 +162,18 @@ func loadSchemaFromBytes(openAPIContent []byte) (*spec.Schema, error) {
 
 // Validate validates values against the schema registered for valuesType.
 // It extracts the value under root and runs both CEL rule checks and JSON-Schema
-// validation. Returns nil if no schema is registered for valuesType.
+// validation. Transition rules referencing oldSelf are skipped because no
+// previous values are provided; use ValidateTransition for that.
+// Returns nil if no schema is registered for valuesType.
 func (s *Storage) Validate(valuesType Type, root string, values utils.Values) error {
+	return s.ValidateTransition(valuesType, root, values, nil)
+}
+
+// ValidateTransition is like Validate but additionally accepts the previously
+// stored values, enabling x-deckhouse-validations transition rules (rules
+// that reference oldSelf) to fire on updates. Pass oldValues=nil for the
+// initial create / when previous values are not available.
+func (s *Storage) ValidateTransition(valuesType Type, root string, values, oldValues utils.Values) error {
 	scheme := s.schemas[valuesType]
 	if scheme == nil {
 		return nil
@@ -174,14 +184,22 @@ func (s *Storage) Validate(valuesType Type, root string, values utils.Values) er
 		return fmt.Errorf("root key '%s' not found in values", root)
 	}
 
-	return validateObject(obj, scheme, root)
+	var oldObj interface{}
+	if oldValues != nil {
+		if v, ok := oldValues[root]; ok {
+			oldObj = v
+		}
+	}
+
+	return validateObject(obj, oldObj, scheme, root)
 }
 
 // validateObject runs CEL rule checks and JSON-Schema validation on dataObj
-// using schema s, attributing errors to rootName in messages.
+// using schema s, attributing errors to rootName in messages. oldDataObj is
+// the previous value (or nil) and is used by CEL transition rules.
 // dataObj must be utils.Values or map[string]interface{}.
 // See https://github.com/kubernetes/apiextensions-apiserver/blob/1bb376f70aa2c6f2dec9a8c7f05384adbfac7fbb/pkg/apiserver/validation/validation.go#L47
-func validateObject(dataObj interface{}, s *spec.Schema, rootName string) error {
+func validateObject(dataObj, oldDataObj interface{}, s *spec.Schema, rootName string) error {
 	validator := validate.NewSchemaValidator(s, nil, rootName, strfmt.Default) // , validate.DisableObjectArrayTypeCheck(true)
 
 	switch v := dataObj.(type) {
@@ -195,9 +213,17 @@ func validateObject(dataObj interface{}, s *spec.Schema, rootName string) error 
 		return fmt.Errorf("validated data object have to be utils.Values or map[string]interface{}, got %v instead", reflect.TypeOf(v))
 	}
 
-	// Validate values against x-deckhouse-validation rules.
+	// Normalize the optional old value: utils.Values is just a typed alias
+	// for map[string]interface{}, but cel.ValidateTransition expects the
+	// untyped map so it can recurse uniformly.
+	if v, ok := oldDataObj.(utils.Values); ok {
+		oldDataObj = map[string]interface{}(v)
+	}
+
+	// Validate values against x-deckhouse-validation rules, threading the
+	// previous values so transition rules (oldSelf) can be evaluated.
 	if values, ok := dataObj.(map[string]interface{}); ok {
-		validationErrs, err := cel.Validate(s, values)
+		validationErrs, err := cel.ValidateTransition(s, values, oldDataObj)
 		if err != nil {
 			return err
 		}

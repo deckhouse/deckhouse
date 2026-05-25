@@ -1399,6 +1399,10 @@ entries:
                 ru: Модуль metallb
               url: /architecture/network/metallb.html
             - title:
+                en: DNS modules
+                ru: Модули управления DNS
+              url: /architecture/network/dns-modules.html
+            - title:
                 en: Cluster-level Istio architecture
                 ru: Архитектура Istio на уровне кластера
               url: /architecture/network/cluster-with-istio.html
@@ -1474,6 +1478,10 @@ entries:
                 en: Overview
                 ru: Обзор
               url: /architecture/virtualization/
+            - title:
+                en: Deckhouse Virtualization Container Registry (DVCR)
+                ru: Deckhouse Virtualization Container Registry (DVCR)
+              url: /architecture/virtualization/dvcr.html
             - title:
                 en: Containerized Data Importer (CDI)
                 ru: Containerized Data Importer (CDI)

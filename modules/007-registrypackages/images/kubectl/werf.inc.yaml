@@ -37,6 +37,9 @@ import:
   add: /src/_output/bin/kubectl
   to: /kubectl
   before: setup
+shell:
+  setup:
+  - /kubectl version --client=true
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
