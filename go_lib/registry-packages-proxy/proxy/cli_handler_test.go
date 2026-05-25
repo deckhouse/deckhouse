@@ -52,6 +52,7 @@ func TestParseCLIPath(t *testing.T) {
 	}{
 		{url: "/v1/images/deckhouse-cli/tags", wantImg: "deckhouse-cli", wantAction: cliActionListTags},
 		{url: "/v1/images/deckhouse-cli/tags/v1.0.1", wantImg: "deckhouse-cli", wantAction: cliActionPullTag, wantTag: "v1.0.1"},
+		{url: "/v1/images/deckhouse-cli/plugins/tags", wantImg: "deckhouse-cli/plugins", wantAction: cliActionListTags},
 		{url: "/v1/images/deckhouse-cli/plugins/foo/tags", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionListTags},
 		{url: "/v1/images/deckhouse-cli/plugins/foo/tags/v2", wantImg: "deckhouse-cli/plugins/foo", wantAction: cliActionPullTag, wantTag: "v2"},
 		{url: "/v1/images/", wantErr: true},
@@ -80,6 +81,8 @@ func TestIsAllowedCLIImagePath(t *testing.T) {
 
 	allowed := []string{
 		"deckhouse-cli",
+		"deckhouse-cli/plugins",
+		"deckhouse-cli/plugins/",
 		"deckhouse-cli/plugins/foo",
 		"deckhouse-cli/plugins/some-plugin",
 	}
@@ -91,8 +94,6 @@ func TestIsAllowedCLIImagePath(t *testing.T) {
 		"",
 		"other",
 		"deckhouse-cli/extras",
-		"deckhouse-cli/plugins",
-		"deckhouse-cli/plugins/",
 		"deckhouse-cli/plugins/a/b",
 		"/deckhouse-cli",
 	}

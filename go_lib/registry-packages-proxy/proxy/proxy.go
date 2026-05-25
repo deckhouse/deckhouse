@@ -647,6 +647,7 @@ func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag strin
 	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
 		return "", cliActionUnknown, "", errors.New("not a CLI path")
 	}
+	// rest is the part of the path after the /v1/images/ prefix
 	rest := strings.TrimPrefix(urlPath, cliImagesPathPrefix)
 	rest = strings.Trim(rest, "/")
 	if rest == "" {
@@ -659,11 +660,13 @@ func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag strin
 		return "", cliActionUnknown, "", errors.New("missing tags segment")
 	}
 
+	// imagePath is the part of the path before the tags segment
 	imagePath = rest[:idx]
 	if imagePath == "" {
 		return "", cliActionUnknown, "", errors.New("empty image path")
 	}
 
+	// suffix is the part of the path after the tags segment
 	suffix := rest[idx+len(sep):]
 	switch {
 	case suffix == "" || suffix == "/":
@@ -686,12 +689,14 @@ func isAllowedCLIImagePath(imagePath string) bool {
 	if imagePath == "deckhouse-cli" {
 		return true
 	}
-	const pluginsPrefix = "deckhouse-cli/plugins/"
+	const pluginsPrefix = "deckhouse-cli/plugins"
 	if !strings.HasPrefix(imagePath, pluginsPrefix) {
 		return false
 	}
 	plugin := strings.TrimPrefix(imagePath, pluginsPrefix)
-	if plugin == "" || strings.Contains(plugin, "/") {
+	// remove leading slash if present (/plugin -> plugin)
+	plugin = strings.TrimPrefix(plugin, "/")
+	if strings.Contains(plugin, "/") {
 		return false
 	}
 	return true
