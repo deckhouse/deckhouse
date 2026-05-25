@@ -57,7 +57,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 3
+  version: 1
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -76,7 +76,7 @@ spec:
    metadata:
      name: control-plane-manager
    spec:
-     version: 3
+     version: 1
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -158,7 +158,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 3
+  version: 1
   settings:
     apiserver:
       auditPolicyEnabled: true

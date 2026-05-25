@@ -558,7 +558,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 3
+  version: 2
   enabled: true
   settings:
     etcd:
