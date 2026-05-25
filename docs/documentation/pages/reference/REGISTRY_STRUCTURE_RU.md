@@ -37,9 +37,9 @@ search: хранилище контейнеров, container registry
 
 Хранилище содержит [модули и компоненты](/products/kubernetes-platform/features/), доступные в коммерческих редакциях DKP:
 
- - EE (адрес `registry.deckhouse.ru/deckhouse/ee`);
- - SE (адрес `registry.deckhouse.ru/deckhouse/se`);
- - CE (адрес `registry.deckhouse.ru/deckhouse/ce`).
+- EE (адрес `registry.deckhouse.ru/deckhouse/ee`);
+- SE (адрес `registry.deckhouse.ru/deckhouse/se`);
+- CE (адрес `registry.deckhouse.ru/deckhouse/ce`).
 
 Ключевые особенности:
 
