@@ -91,5 +91,8 @@ Manual unlock is performed by patching the user's `OfflineSessions` resource
 ### 011-fix-cve.patch
 
 Update Go module dependencies to fix:
-- CVE-2026-32952 (`github.com/Azure/go-ntlmssp` -> `v0.1.1`)
 - CVE-2026-29181 (`go.opentelemetry.io/otel` -> `v1.41.0`)
+
+
+### 012-fix-cve.patch
+- CVE-2026-32952 (`github.com/Azure/go-ntlmssp` -> `v0.1.1`)

@@ -1,0 +1,28 @@
+diff --git a/go.mod b/go.mod
+index d8e7ba5..609a615 100644
+--- a/go.mod
++++ b/go.mod
+@@ -48,7 +48,7 @@ require (
+ 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
+ 	dario.cat/mergo v1.0.1 // indirect
+ 	filippo.io/edwards25519 v1.1.1 // indirect
+-	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
++	github.com/Azure/go-ntlmssp v0.1.1 // indirect
+ 	github.com/Masterminds/goutils v1.1.1 // indirect
+ 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
+ 	github.com/agext/levenshtein v1.2.3 // indirect
+diff --git a/go.sum b/go.sum
+index f00fbbf..4e6d4ac 100644
+--- a/go.sum
++++ b/go.sum
+@@ -14,8 +14,8 @@ filippo.io/edwards25519 v1.1.1 h1:YpjwWWlNmGIDyXOn8zLzqiD+9TyIlPhGFG96P39uBpw=
+ filippo.io/edwards25519 v1.1.1/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+ github.com/AppsFlyer/go-sundheit v0.6.0 h1:d2hBvCjBSb2lUsEWGfPigr4MCOt04sxB+Rppl0yUMSk=
+ github.com/AppsFlyer/go-sundheit v0.6.0/go.mod h1:LDdBHD6tQBtmHsdW+i1GwdTt6Wqc0qazf5ZEJVTbTME=
+-github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 h1:mFRzDkZVAjdal+s7s0MwaRv9igoPqLRdzOLzw/8Xvq8=
+-github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358/go.mod h1:chxPXzSsl7ZWRAuOIE23GDNzjWuZquvFlgA8xmpunjU=
++github.com/Azure/go-ntlmssp v0.1.1 h1:l+FM/EEMb0U9QZE7mKNEDw5Mu3mFiaa2GKOoTSsNDPw=
++github.com/Azure/go-ntlmssp v0.1.1/go.mod h1:NYqdhxd/8aAct/s4qSYZEerdPuH1liG2/X9DiVTbhpk=
+ github.com/DATA-DOG/go-sqlmock v1.5.0 h1:Shsta01QNfFxHCfpW6YH2STWB0MudeXXEWMr20OEh60=
+ github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
+ github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
