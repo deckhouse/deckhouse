@@ -14,7 +14,7 @@ spec:
       try:
         - description: Check cluster-autoscaler deployment has ready replicas
           assert:
-            file: .../common/asserts/assert-ca-exists.yaml
+            file: ../common/asserts/assert-ca-exists.yaml
       cleanup:
         - description: Wait until all test nodes are removed (runs last in cleanup chain)
           script:
@@ -50,7 +50,7 @@ spec:
       try:
         - description: Assert YandexInstanceClass worker resource exists
           assert:
-            file: .../common/asserts/assert-yandex-instanceclass.yaml
+            file: ../common/asserts/assert-yandex-instanceclass.yaml
 
     - name: cleanup-leftover-resources
       try:
@@ -166,7 +166,7 @@ spec:
       try:
         - description: Apply NodeGroup e2e-worker-50 manifest
           apply:
-            file: .../common/manifests/nodegroup-50.yaml
+            file: ../common/manifests/nodegroup-50-yandex.yaml
       cleanup:
         - description: Delete NodeGroup e2e-worker-50
           delete:
@@ -179,7 +179,7 @@ spec:
       try:
         - description: Apply shared Deployment manifest
           apply:
-            file: .../common/manifests/deployment.yaml
+            file: ../common/manifests/deployment.yaml
       cleanup:
         - description: Delete e2e-nginx Deployment
           delete:
@@ -264,7 +264,7 @@ spec:
       try:
         - description: Assert Deployment has 3 ready replicas
           assert:
-            file: .../common/asserts/assert-deployment-ready.yaml
+            file: ../common/asserts/assert-deployment-ready.yaml
       catch:
         - description: Collect test namespace events on failure
           events: {}
