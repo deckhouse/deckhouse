@@ -22,11 +22,13 @@ import (
 	"syscall"
 
 	"github.com/name212/govalue"
+	otattribute "go.opentelemetry.io/otel/attribute"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type ExecutorParams struct {
@@ -97,6 +99,18 @@ func (e *Executor) Step() infrastructure.Step {
 }
 
 func (e *Executor) Init(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "tofu.init")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("pipeline_step", string(e.params.Step)),
+		otattribute.String("working_dir", e.params.WorkingDir),
+	)
+
+	// Start (or reuse) the persistent kubernetes provider daemon before the
+	// first tofu invocation so plan/apply across this and later pipelines
+	// share one warm provider process.
+	EnableProviderDaemon(e.params.PluginsDir)
+
 	args := []string{
 		"init",
 		fmt.Sprintf("-plugin-dir=%s", e.params.PluginsDir),
@@ -111,6 +125,14 @@ func (e *Executor) Init(ctx context.Context) error {
 }
 
 func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) error {
+	ctx, span := telemetry.StartSpan(ctx, "tofu.apply")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("pipeline_step", string(e.params.Step)),
+		otattribute.String("working_dir", e.params.WorkingDir),
+		otattribute.Bool("from_plan", opts.PlanPath != ""),
+	)
+
 	args := []string{
 		"apply",
 		"-input=false",
@@ -138,6 +160,15 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 }
 
 func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
+	ctx, span := telemetry.StartSpan(ctx, "tofu.plan")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("pipeline_step", string(e.params.Step)),
+		otattribute.String("working_dir", e.params.WorkingDir),
+		otattribute.Bool("destroy", opts.Destroy),
+		otattribute.Bool("detailed_exitcode", opts.DetailedExitCode),
+	)
+
 	args := []string{
 		"plan",
 		"-input=false",
@@ -182,6 +213,13 @@ func (e *Executor) Output(ctx context.Context, opts infrastructure.OutputOpts) (
 }
 
 func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts) error {
+	ctx, span := telemetry.StartSpan(ctx, "tofu.destroy")
+	defer span.End()
+	span.SetAttributes(
+		otattribute.String("pipeline_step", string(e.params.Step)),
+		otattribute.String("working_dir", e.params.WorkingDir),
+	)
+
 	args := []string{
 		"destroy",
 		"-no-color",

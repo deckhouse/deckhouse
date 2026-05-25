@@ -100,8 +100,8 @@ resource "kubernetes_resource_ready_v1" "additional_disk" {
     reason = format("^(%s)$", join("|", local.not_ready_fail_reasons))
   }
 
-  # wait 15 seconds appearance of the conditions to fail fast
-  fail_conditions_appearance_duration = "15s"
+  # 3s instead of 15s: fail conditions (ProvisioningFailed, BlockDeviceLimitExceeded, PVCLost, etc.) appear within ~1s of the controller reconcile — 3s is enough to catch them. Cuts ~12s from master apply since disks gate VM creation.
+  fail_conditions_appearance_duration = "3s"
 }
 
 data "kubernetes_resource" "additional_disk" {

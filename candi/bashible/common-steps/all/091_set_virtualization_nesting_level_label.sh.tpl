@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=light-labels
+
 {{- if eq .runType "Normal" }}
 mkdir -p /var/lib/node_labels/
 echo "node.deckhouse.io/dvp-nesting-level=$(bb-dvp-nesting-level)" > /var/lib/node_labels/dvp-nesting-level

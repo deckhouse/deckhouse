@@ -140,7 +140,7 @@ func numerateManifestLines(manifest []byte) string {
 	builder := strings.Builder{}
 
 	for index, line := range manifestLines {
-		builder.WriteString(fmt.Sprintf("%d\t%s\n", index+1, line))
+		fmt.Fprintf(&builder, "%d\t%s\n", index+1, line)
 	}
 
 	return builder.String()
@@ -480,7 +480,7 @@ func InitGlobalVars(pwd string) {
 	versionMap = candiDir + "/version_map.yml"
 }
 
-// check for existance deckhouse dir
+// check for existence deckhouse dir
 func checkDirs() error {
 	absDh, err := os.Stat("/deckhouse")
 	if err != nil {
@@ -557,7 +557,6 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 		switch obj.GetKind() {
 		case InitConfigurationKind:
 			ret, err := registry.ParseYAMLInitConfig([]byte(doc))
-
 			if err != nil {
 				return nil, err
 			}

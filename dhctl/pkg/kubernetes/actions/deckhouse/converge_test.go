@@ -87,9 +87,7 @@ provider:
 `
 )
 
-var (
-	yandexProviderClusterDataDiscovery = []byte(`{"a": "b"}`)
-)
+var yandexProviderClusterDataDiscovery = []byte(`{"a": "b"}`)
 
 func TestStaticClusterClusterManifestConverge(t *testing.T) {
 	// need for prevent set equal versions during add new k8s version
@@ -588,7 +586,7 @@ func assertConfigMap(t *testing.T, kubeCl *client.KubernetesClient, configMap *c
 	}
 }
 
-func assertKV(t *testing.T, k string, expectedV []byte, v []byte) {
+func assertKV(t *testing.T, k string, expectedV, v []byte) {
 	var yamlV any
 	err := yaml.Unmarshal(v, &yamlV)
 	if err != nil {

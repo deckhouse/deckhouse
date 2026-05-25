@@ -189,10 +189,10 @@ properties:
 
           При включении создаётся Secret `kube-system/d8-secret-encryption-key` с ключом шифрования.
 
-          Включение этого параметра автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`,
-          который защищает поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`,
-          через шифрование в etcd, фильтрацию полей через субресурс `<resource>/sensitive` на основе RBAC
-          и маскировку значений в журнале аудита.
+          Поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`, защищаются feature gate
+          `CRDSensitiveData` для `kube-apiserver`, который включён по умолчанию. Включение этого параметра добавляет
+          шифрование в etcd к фильтрации полей через субресурс `<resource>/sensitive` на основе RBAC и маскировке
+          значений в журнале аудита.
 
           > **Внимание.** После включения этот параметр нельзя отключить.
   rootKubeconfigSymlink:

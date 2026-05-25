@@ -19,7 +19,9 @@
       This tutorial assumes the use of a public domain pointing to a public cluster address.
       It is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
       If the existing certificates (including self-signed ones) are used, you need to adjust the <a href="/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https"><code>modules.https</code></a> section in the global settings.<br />
+      {%- unless page.platform_code == 'bm-private' %}
       We recommend using the <a href="https://sslip.io/">sslip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
+      {%- endunless %}
     </span>
   </div>
 {%- endif %}

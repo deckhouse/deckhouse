@@ -60,7 +60,6 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 		if err != nil {
 			return nil, fmt.Errorf("get incluster data: %w", err)
 		}
-
 	} else {
 		// For managed clusters in unmanaged mode, pkiProvider cannot get PKI
 		// because the PKI secret doesn't exist in the cluster.

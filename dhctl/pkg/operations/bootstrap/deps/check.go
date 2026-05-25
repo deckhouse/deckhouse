@@ -28,7 +28,6 @@ import (
 	tplt "text/template"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
@@ -36,6 +35,8 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type LoopsParams struct {
@@ -61,8 +62,7 @@ var (
 		"join", "cat", "ps", "kill",
 	}
 
-	checkDepsDefaultOpts  = retry.AttemptsWithWaitOpts(10, 5*time.Second)
-	checkShellDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
+	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
 )
 
 func NewDependenciesChecker(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *DependenciesChecker {

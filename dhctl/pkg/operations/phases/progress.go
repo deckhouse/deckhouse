@@ -84,7 +84,7 @@ type ProgressOpts struct {
 }
 
 func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error) *ProgressTracker {
-	phases, _ := operationPhases(operation, phasesOpts{})
+	phases := operationPhases(operation, phasesOpts{})
 
 	return &ProgressTracker{
 		progress:       Progress{Operation: operation, Progress: 0, Phases: phases},
@@ -102,7 +102,7 @@ func (p *ProgressTracker) SetClusterConfig(cfg ClusterConfig) {
 		return
 	}
 
-	phases, _ := operationPhases(p.progress.Operation, phasesOpts{clusterConfig: cfg})
+	phases := operationPhases(p.progress.Operation, phasesOpts{clusterConfig: cfg})
 	p.clusterConfig = cfg
 	p.progress.Phases = phases
 }
@@ -343,7 +343,7 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, 
 
 func WriteProgress(path string) OnProgressFunc {
 	return func(progress Progress) error {
-		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0644)
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0o644)
 		if err != nil {
 			return err
 		}

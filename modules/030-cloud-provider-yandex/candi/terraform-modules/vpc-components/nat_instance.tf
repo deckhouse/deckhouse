@@ -36,6 +36,7 @@ locals {
   zone_to_subnet_id = tomap({
     "ru-central1-a" = local.should_create_subnets ? yandex_vpc_subnet.kube_a[0].id : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].id)
     "ru-central1-b" = local.should_create_subnets ? yandex_vpc_subnet.kube_b[0].id : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].id)
+    "ru-central1-e" = local.should_create_subnets ? yandex_vpc_subnet.kube_e[0].id : (local.not_have_existing_subnet_e ? null : data.yandex_vpc_subnet.kube_e[0].id)
     "ru-central1-d" = local.should_create_subnets ? yandex_vpc_subnet.kube_d[0].id : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].id)
   })
 
@@ -45,6 +46,7 @@ locals {
   zone_to_cidr = tomap({
     "ru-central1-a" = local.should_create_subnets ? local.kube_a_v4_cidr_block : (local.not_have_existing_subnet_a ? null : data.yandex_vpc_subnet.kube_a[0].v4_cidr_blocks[0])
     "ru-central1-b" = local.should_create_subnets ? local.kube_b_v4_cidr_block : (local.not_have_existing_subnet_b ? null : data.yandex_vpc_subnet.kube_b[0].v4_cidr_blocks[0])
+    "ru-central1-e" = local.should_create_subnets ? local.kube_e_v4_cidr_block : (local.not_have_existing_subnet_e ? null : data.yandex_vpc_subnet.kube_e[0].v4_cidr_blocks[0])
     "ru-central1-d" = local.should_create_subnets ? local.kube_d_v4_cidr_block : (local.not_have_existing_subnet_d ? null : data.yandex_vpc_subnet.kube_d[0].v4_cidr_blocks[0])
   })
 

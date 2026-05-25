@@ -684,18 +684,18 @@ func (v *ValidationError) Error() string {
 	for _, e := range v.Errors {
 		b := strings.Builder{}
 		if e.Index != nil {
-			b.WriteString(fmt.Sprintf("[%d]", *e.Index))
+			fmt.Fprintf(&b, "[%d]", *e.Index)
 		}
 
 		if e.Group != "" {
-			b.WriteString(fmt.Sprintf(" %s", schema.GroupVersionKind{
+			fmt.Fprintf(&b, " %s", schema.GroupVersionKind{
 				Group:   e.Group,
 				Version: e.Version,
 				Kind:    e.Kind,
-			}.String()))
+			}.String())
 		}
 		if e.Name != "" {
-			b.WriteString(fmt.Sprintf(" %q", e.Name))
+			fmt.Fprintf(&b, " %q", e.Name)
 		}
 		if b.Len() != 0 {
 			b.WriteString(": ")

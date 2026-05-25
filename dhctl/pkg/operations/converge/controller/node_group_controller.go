@@ -258,7 +258,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	return allErrs.ErrorOrNil()
 }
 
-func getNodeTemplateDiff(fromNG map[string]any, fromConfig map[string]any) string {
+func getNodeTemplateDiff(fromNG, fromConfig map[string]any) string {
 	// prevent compare nil and empty map
 	// this case generates diff for gcmp.Diff
 	if len(fromNG) == 0 && len(fromConfig) == 0 {

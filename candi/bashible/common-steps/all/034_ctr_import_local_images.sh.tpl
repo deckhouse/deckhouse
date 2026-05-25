@@ -49,6 +49,11 @@ post-install-import() {
 
 bb-event-on 'bb-package-installed' 'post-install-import'
 
+# Per-step prefetch wait: all three packages below are prefetched by step 001.
+bb-rpp-wait-fetched "pause" "{{ $.images.registrypackages.pause }}" || true
+bb-rpp-wait-fetched "kubernetes-api-proxy" "{{ $.images.registrypackages.kubernetesApiProxy }}" || true
+bb-rpp-wait-fetched "registry-proxy" "{{ $.images.registrypackages.registryProxy }}" || true
+
 bb-package-install "pause:{{ $.images.registrypackages.pause }}"
 bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
 bb-package-install "registry-proxy:{{ $.images.registrypackages.registryProxy }}"

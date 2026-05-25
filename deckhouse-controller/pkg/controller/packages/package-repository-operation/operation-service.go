@@ -383,15 +383,17 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	}
 
 	var failedVersions = make([]failedVersion, 0)
+	var newVersions int
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()
 
 		var ensureErr error
+		var isNew bool
 		switch pkgType {
 		case packageTypeModule:
-			ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
+			isNew, ensureErr = s.ensureModulePackageVersion(ctx, packageName, version, nil)
 		default:
-			ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
+			isNew, ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
 		}
 
 		if ensureErr != nil {
@@ -409,6 +411,10 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 
 			continue
 		}
+
+		if isNew {
+			newVersions++
+		}
 	}
 
 	return &PackageProcessResult{
@@ -416,6 +422,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
+		NewVersions:   newVersions,
 	}, nil
 }
 
@@ -469,10 +476,11 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 	}
 
 	var failedVersions []failedVersion
+	var newVersions int
 	for _, versionTag := range foundTags {
 		version := "v" + versionTag.String()
 
-		ensureErr := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
+		isNew, ensureErr := s.ensureModulePackageVersion(ctx, packageName, version, legacyLabels)
 		if ensureErr != nil {
 			s.logger.Warn(
 				"failed to create legacy module package version",
@@ -486,6 +494,10 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 			})
 			continue
 		}
+
+		if isNew {
+			newVersions++
+		}
 	}
 
 	return &PackageProcessResult{
@@ -493,6 +505,7 @@ func (s *OperationService) handleMissingVersionPath(ctx context.Context, package
 		Done:          foundTags,
 		Failed:        failedVersions,
 		FoundVersions: len(foundTags),
+		NewVersions:   newVersions,
 	}, nil
 }
 
@@ -568,6 +581,11 @@ type PackageProcessResult struct {
 	Done          []*semver.Version
 	Failed        []failedVersion
 	FoundVersions int
+	// NewVersions counts package versions that were either created for the
+	// first time during this operation, or (for ApplicationPackageVersion)
+	// transitioned from the "not in registry" state because their image was
+	// rediscovered in the registry.
+	NewVersions int
 }
 
 type failedVersion struct {
@@ -575,7 +593,12 @@ type failedVersion struct {
 	Error string
 }
 
-func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) error {
+// ensureApplicationPackageVersion creates an ApplicationPackageVersion or, if one already
+// exists with the "not in registry" mark, rediscovers its image and clears that mark.
+// The bool return reports whether the version was counted as newly found during this call:
+// true for a fresh Create, true for a successful "not in registry" → "in registry" transition,
+// false otherwise (including all error paths).
+func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, packageName, version string) (bool, error) {
 	apvName := v1alpha1.MakeApplicationPackageVersionName(s.repo.Name, packageName, version)
 
 	logger := s.logger.With(slog.String("package version", apvName))
@@ -583,13 +606,13 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 	pkgVersion := &v1alpha1.ApplicationPackageVersion{}
 	err := s.client.Get(ctx, types.NamespacedName{Name: apvName}, pkgVersion)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("get application package version: %w", err)
+		return false, fmt.Errorf("get application package version: %w", err)
 	}
 	// Version already exists
 	if err == nil {
 		isBundleExistInRegistry, ok := pkgVersion.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry]
 		if !ok || isBundleExistInRegistry != "false" {
-			return nil
+			return false, nil
 		}
 		// Version marked as not exist in registry
 		logger.Debug("version marked as not exist in registry, checking if bundle image exists")
@@ -597,9 +620,9 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 		if err := s.svc.Package(packageName).CheckImageExists(ctx, version); err != nil {
 			if errors.Is(err, regClient.ErrImageNotFound) {
 				logger.Debug("bundle image not found")
-				return nil
+				return false, nil
 			}
-			return fmt.Errorf("check bundle image exists: %w", err)
+			return false, fmt.Errorf("check bundle image exists: %w", err)
 		}
 
 		logger.Debug("bundle image exists, marking package version as draft")
@@ -611,10 +634,10 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 
 		err = s.client.Patch(ctx, pkgVersion, client.MergeFrom(original))
 		if err != nil {
-			return fmt.Errorf("update application package version: %w", err)
+			return false, fmt.Errorf("update application package version: %w", err)
 		}
 
-		return nil
+		return true, nil
 	}
 
 	// Create new ApplicationPackageVersion with draft label
@@ -644,10 +667,10 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 
 	err = s.client.Create(ctx, pkgVersion)
 	if err != nil {
-		return fmt.Errorf("create application package version: %w", err)
+		return false, fmt.Errorf("create application package version: %w", err)
 	}
 
-	return nil
+	return true, nil
 }
 
 func (s *OperationService) EnsureApplicationPackage(ctx context.Context, packageName string) error {
@@ -700,18 +723,23 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 	return nil
 }
 
-func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packageName, version string, extraLabels map[string]string) error {
+// ensureModulePackageVersion creates a ModulePackageVersion if one does not yet
+// exist for the given package and version. The bool return reports whether the
+// version was counted as newly found during this call: true on a successful Create,
+// false otherwise (including all error paths and the no-op case where the version
+// already exists).
+func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packageName, version string, extraLabels map[string]string) (bool, error) {
 	mpvName := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
 
 	pkgVersion := &v1alpha1.ModulePackageVersion{}
 	err := s.client.Get(ctx, types.NamespacedName{Name: mpvName}, pkgVersion)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("get module package version: %w", err)
+		return false, fmt.Errorf("get module package version: %w", err)
 	}
 
 	// Version already exists
 	if err == nil {
-		return nil
+		return false, nil
 	}
 
 	labels := map[string]string{
@@ -745,10 +773,10 @@ func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packa
 
 	err = s.client.Create(ctx, pkgVersion)
 	if err != nil {
-		return fmt.Errorf("create module package version: %w", err)
+		return false, fmt.Errorf("create module package version: %w", err)
 	}
 
-	return nil
+	return true, nil
 }
 
 func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName string) error {

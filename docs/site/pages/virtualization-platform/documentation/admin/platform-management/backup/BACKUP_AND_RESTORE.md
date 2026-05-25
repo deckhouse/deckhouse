@@ -555,14 +555,18 @@ To configure automatic etcd backups, use the `control-plane-manager` module. The
 Example configuration fragment:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
 spec:
-  etcd:
-    backup:
-      enabled: true
-      cronSchedule: "0 1 * * *"
-      hostPath: "/var/lib/etcd"
+  version: 2
+  enabled: true
+  settings:
+    etcd:
+      backup:
+        cronSchedule: 0 14 * * *
+        enabled: true
 ```
 
 ### Cluster configuration backup

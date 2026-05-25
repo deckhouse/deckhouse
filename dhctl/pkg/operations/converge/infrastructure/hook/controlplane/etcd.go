@@ -88,7 +88,7 @@ func waitEtcdHasNoMember(ctx context.Context, client libcon.KubeClient, nodeName
 	})
 }
 
-func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string, fieldSelector string) (bool, error) {
+func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName, fieldSelector string) (bool, error) {
 	members, err := getEtcdMembers(ctx, client, fieldSelector)
 	if err != nil {
 		return false, err
@@ -151,7 +151,10 @@ func getEtcdMembers(ctx context.Context, client libcon.KubeClient, fieldSelector
 		Stdout:    &stdout,
 	}
 
-	client.Exec(ctx, &params)
+	err = client.Exec(ctx, &params)
+	if err != nil {
+		return nil, err
+	}
 
 	var members memberListOutput
 	if err = json.Unmarshal(stdout.Bytes(), &members); err != nil {

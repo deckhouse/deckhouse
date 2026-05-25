@@ -1,3 +1,8 @@
+{{- define "alt change repos" }}
+{{- $new_date := "2026/05/17" }}
+- sed -i "s|/archive/p11/date/[^/]*/[^/]*/[^/]*/|/archive/p11/date/{{ $new_date }}/|g" /etc/apt/sources.list.d/alt.list
+{{- end }}
+
 {{- $binaries := "/usr/lib64/libsqlite3.so* /usr/sbin/dnsmasq /lib64/libnss_*" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
@@ -5,6 +10,10 @@ fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
+  {{- include "alt change repos" . | nindent 2 }}
+  {{- include "alt packages proxy" . | nindent 2 }}
+  {{- include "alt dist upgrade" . | nindent 2 }}
+  - apt-get update
   - apt-get install -y dnsmasq libsqlite3
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate

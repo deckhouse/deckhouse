@@ -94,7 +94,7 @@ func prepareRegistryRequest(ctx context.Context, metaConfig *config.MetaConfig, 
 	return req, nil
 }
 
-func prepareAuthRequest(ctx context.Context, authURL string, registryService string, authData string, metaConfig *config.MetaConfig) (*http.Request, error) {
+func prepareAuthRequest(ctx context.Context, authURL, registryService, authData string, metaConfig *config.MetaConfig) (*http.Request, error) {
 	registry := metaConfig.Registry.Settings.RemoteData
 	_, registryPath := registry.AddressAndPath()
 

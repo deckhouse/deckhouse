@@ -133,7 +133,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 		return bashible.Prepare(ctx)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -169,7 +168,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		DirsConfig:     dc,
 		Interactive:    input.IsTerminal(),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -266,7 +264,6 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -299,7 +296,7 @@ func PrepareControlPlaneArtifacts(
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
-		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return fmt.Errorf("get control-plane template data: %w", err)
 		}
@@ -308,11 +305,11 @@ func PrepareControlPlaneArtifacts(
 		// control-plane endpoint that goes into the apiserver SAN list.
 		// Multi-master installations re-issue certificates later via
 		// control-plane-manager once additional master endpoints are known.
-		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneConfig); err != nil {
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneConfig, dc); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
@@ -377,9 +374,11 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 
+		// Poll every 2s instead of 5s — VM SSH typically comes up within ~10s after
+		// cloud-init finishes. Total timeout preserved at ~250s via larger attempt count.
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
-			retry.WithWait(5*time.Second),
-			retry.WithAttempts(50),
+			retry.WithWait(2*time.Second),
+			retry.WithAttempts(125),
 			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
@@ -415,7 +414,9 @@ func InstallDeckhouse(
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
+		resManifests, err := withSpan(ctx, "InstallDeckhouse.CreateManifests", func(ctx context.Context) (*deckhouse.ManifestsResult, error) {
+			return deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
+		})
 		if err != nil {
 			return fmt.Errorf("Deckhouse create manifests: %w", err)
 		}
@@ -426,21 +427,35 @@ func InstallDeckhouse(
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
-		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
-		if err != nil {
+		if err := withSpanErr(ctx, "InstallDeckhouse.WaitDeckhouseReady", func(ctx context.Context) error {
+			return deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
+		}); err != nil {
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
 		// Warning! This function must be called at the end of the Deckhouse installation phase.
 		// At the end of this function, the registry-init secret is deleted,
 		// which is used during DeckhouseInstall for certain registry operation modes.
-		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
-		if err != nil {
+		if err := withSpanErr(ctx, "InstallDeckhouse.WaitRegistryReady", func(ctx context.Context) error {
+			return registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		}); err != nil {
 			return fmt.Errorf("registry initialization: %v", err)
 		}
 
 		return nil
 	})
+}
+
+func withSpan[T any](ctx context.Context, name string, fn func(ctx context.Context) (T, error)) (T, error) {
+	ctx, span := telemetry.StartSpan(ctx, name)
+	defer span.End()
+	return fn(ctx)
+}
+
+func withSpanErr(ctx context.Context, name string, fn func(ctx context.Context) error) error {
+	ctx, span := telemetry.StartSpan(ctx, name)
+	defer span.End()
+	return fn(ctx)
 }
 
 func BootstrapTerraNodes(
@@ -548,7 +563,6 @@ func BootstrapGetNodesFromCache(
 }
 
 func applyPostBootstrapModuleConfigs(
-	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	tasks []actions.ModuleConfigTask,
 ) error {
@@ -582,6 +596,6 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
-		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }
