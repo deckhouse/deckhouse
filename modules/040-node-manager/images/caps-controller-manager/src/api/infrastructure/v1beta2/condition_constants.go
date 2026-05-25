@@ -34,6 +34,8 @@ const (
 
 	StaticInstanceCheckPassedReason = "CheckPassed"
 
+	StaticInstanceCheckFailedReason = "CheckFailed"
+
 	StaticInstanceReadyReason = "InstanceReady"
 
 	StaticInstanceBootstrapSucceededCondition = "BootstrapSucceeded"
