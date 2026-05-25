@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -135,7 +136,7 @@ func (c *DeployTimeService) checkNotify(dtr *DeployTimeResult, release v1alpha1.
 func (c *DeployTimeService) processManualApproved(dtr *DeployTimeResult, release v1alpha1.Release, metricLabels MetricLabels) {
 	c.logger.Info("release is waiting for manual approval", slog.String("name", release.GetName()))
 
-	metricLabels.SetTrue(ManualApprovalRequired)
+	metricLabels.SetTrue(metrics.LabelManualApprovalRequired)
 
 	dtr.ReleaseApplyTime = c.now
 	dtr.Reason = manualApprovalRequiredReason
