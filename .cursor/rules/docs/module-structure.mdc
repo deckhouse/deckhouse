@@ -1,0 +1,31 @@
+---
+description: Module documentation structure and conditional pages
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Module Pages
+
+- Required page: `docs/README.md` (and `docs/README.ru.md` for RU).
+- README content creation rules:
+  - first paragraphs should describe module purpose without a heading;
+  - in the first 1-2 sentences explicitly state module audience and scope (who it is for and what task it solves), without implementation details;
+  - keep introductory part within 2-3 short paragraphs to avoid a mini-manual;
+  - `## Main Features` (RU: `## Основные возможности`) should be present as second-level heading;
+  - `Main Features` should contain up to 7 bullet points;
+  - each feature bullet must describe user value ("what it gives the user"), avoid generic wording and marketing language;
+  - do not add information about how to enable or disable the module.
+  - keep README overview-oriented; move detailed setup/operations instructions to dedicated pages (`USAGE`, `USER_GUIDE`, `ADMIN_GUIDE`, etc.).
+  - if usage limitations exist, add a dedicated second-level section (`## Limitations` / `## Ограничения`) with explicit non-covered cases.
+- `CR` pages are required only if YAML files exist directly in `crds/` root (no subfolders).
+- `CONFIGURATION` pages are required only if `openapi/config-values.yaml` exists in `openapi/` root (no subfolders).
+
+# Optional Pages
+
+- Optional: `USAGE`, `EXAMPLES`, `FAQ`, `ADVANCED_USAGE`, `ARCHITECTURE`.
+- Optional: `USER_GUIDE`, `ADMIN_GUIDE`.
+- Create optional pages only when they add real reader value for module scenarios.
+
+# Notes
+
+- If a conditional page is not applicable, do not create an empty placeholder page.

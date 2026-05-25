@@ -97,7 +97,7 @@ The `vertical-pod-autoscaler` module consists of the following components:
 
 1. **Vpa-recommender** (Deployment): A [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) component that calculates recommendations for `requests` based on past and current pod resource consumption.
 
-   Vpa-admission-controller and vpa-updater recalculate `limits` values proportionally to `requests` values if the resource management policy includes the [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) parameter.
+   Vpa-admission-controller and vpa-updater recalculate `limits` values proportionally to `requests` values if the [`spec.resourcePolicy.containerPolicies.controlledValues`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) parameter in resource management policy is set to `RequestsAndLimits`.
 
    It consists of the following containers:
 
