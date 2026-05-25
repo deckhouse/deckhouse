@@ -18,7 +18,7 @@
         kube_persistentvolumeclaim_status_phase{source="deckhouse", phase="Bound"}
         * on (namespace, persistentvolumeclaim) group_left()
         (
-          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          label_replace((kube_persistentvolume_is_local{source="deckhouse"}==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
           kube_persistentvolumeclaim_info{source="deckhouse", volumemode!="Block"}
         )
@@ -60,7 +60,7 @@
         kube_persistentvolumeclaim_status_phase{source="deckhouse", phase="Bound"}
         * on (namespace, persistentvolumeclaim) group_left()
         (
-          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          label_replace((kube_persistentvolume_is_local{source="deckhouse"}==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
           kube_persistentvolumeclaim_info{source="deckhouse", volumemode!="Block"}
         )
@@ -102,7 +102,7 @@
         kube_persistentvolumeclaim_status_phase{source="deckhouse", phase="Bound"}
         * on (namespace, persistentvolumeclaim) group_left()
         (
-          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          label_replace((kube_persistentvolume_is_local{source="deckhouse"}==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
           kube_persistentvolumeclaim_info{source="deckhouse", volumemode!="Block"}
         )
@@ -144,7 +144,7 @@
         kube_persistentvolumeclaim_status_phase{source="deckhouse", phase="Bound"}
         * on (namespace, persistentvolumeclaim) group_left()
         (
-          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          label_replace((kube_persistentvolume_is_local{source="deckhouse"}==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
           * on (volumename) group_right()
           kube_persistentvolumeclaim_info{source="deckhouse", volumemode!="Block"}
         )

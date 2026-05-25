@@ -97,7 +97,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_current_bytes{job=\"memcached\",namespace=\"d8-monitoring\"}) / sum by (pod) (memcached_limit_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_current_bytes{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"}) / sum by (pod) (memcached_limit_bytes{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -196,7 +196,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",status=\"hit\",command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]\n))",
+          "expr": "sum by (pod) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\",status=\"hit\",command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]\n))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -342,7 +342,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (rate(memcached_items_evicted_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(memcached_items_evicted_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "evicts: {{pod}}",
@@ -356,7 +356,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (rate(memcached_items_reclaimed_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(memcached_items_reclaimed_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -439,7 +439,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_current_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_current_bytes{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -521,7 +521,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_limit_bytes{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_limit_bytes{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -635,7 +635,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", status=\"hit\", command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\", status=\"hit\", command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -647,7 +647,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", status=\"miss\", command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\", status=\"miss\", command=\"get\"}[$__rate_interval])) / sum by (pod) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\", command=\"get\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "miss",
@@ -727,7 +727,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_items_evicted_total{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_items_evicted_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -808,7 +808,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_items_reclaimed_total{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_items_reclaimed_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -922,7 +922,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_current_items{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_current_items{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -1028,7 +1028,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate (memcached_read_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval])) by(pod)",
+          "expr": "sum(rate (memcached_read_bytes_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval])) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -1134,7 +1134,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate (memcached_written_bytes_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval])) by(pod)",
+          "expr": "sum(rate (memcached_written_bytes_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval])) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -1238,7 +1238,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (pod) (memcached_current_connections{job=\"memcached\",namespace=\"d8-monitoring\"})",
+          "expr": "sum by (pod) (memcached_current_connections{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -1353,7 +1353,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) / (sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) + sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\", command=\"set\"}))",
+          "expr": "sum by (pod) (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) / (sum by (pod) (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) + sum by (pod) (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\", command=\"set\"}))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Get",
@@ -1365,7 +1365,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"set\"})  / (sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) + sum by (pod) (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\",command=\"set\"}))",
+          "expr": "sum by (pod) (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\",command=\"set\"})  / (sum by (pod) (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\",command=\"get\"}) + sum by (pod) (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\",command=\"set\"}))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Set",
@@ -1467,7 +1467,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (command) (rate (memcached_commands_total{job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
+          "expr": "sum by (command) (rate (memcached_commands_total{source=\"deckhouse\", job=\"memcached\",namespace=\"d8-monitoring\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{command}}",

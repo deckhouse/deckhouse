@@ -3,9 +3,9 @@
   - alert: IngressResponses5xx
     expr: |
       (
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{status=~"5.*"}[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse", status=~"5.*"}[5m]))
         /
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse"}[5m]))
       ) * 100
       > on (namespace, ingress) group_left()
       (
@@ -24,9 +24,9 @@
   - alert: IngressResponses5xx
     expr: |
       (
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{status=~"5.*"}[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse", status=~"5.*"}[5m]))
         /
-        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total[5m]))
+        sum by (namespace, ingress, controller, vhost, location, service, service_port) (rate(ingress_nginx_detail_responses_total{source="deckhouse"}[5m]))
       ) * 100
       > on (namespace, ingress) group_left()
       (

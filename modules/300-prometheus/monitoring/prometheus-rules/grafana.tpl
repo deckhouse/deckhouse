@@ -4,8 +4,8 @@
   - alert: D8GrafanaPodIsNotReady
     expr: |
       min by (pod) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10"}
-        * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-monitoring"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10", source="deckhouse"}
+        * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-monitoring", source="deckhouse"}
       ) != 1
     for: 5m
     labels:
@@ -25,12 +25,12 @@
     expr: |
       absent(
         max by (namespace) (
-          kube_controller_replicas{controller_name="grafana-v10",controller_type="Deployment"}
+          kube_controller_replicas{controller_name="grafana-v10",controller_type="Deployment", source="deckhouse"}
         )
         <=
         count by (namespace) (
-          kube_controller_pod{controller_name="grafana-v10",controller_type="Deployment"}
-          * on(pod) group_right() kube_pod_status_phase{namespace="d8-monitoring", phase="Running"} == 1
+          kube_controller_pod{controller_name="grafana-v10",controller_type="Deployment", source="deckhouse"}
+          * on(pod) group_right() kube_pod_status_phase{namespace="d8-monitoring", phase="Running", source="deckhouse"} == 1
         )
       ) == 1
     for: 5m
@@ -66,7 +66,7 @@
           ```
 
   - alert: D8GrafanaTargetDown
-    expr: max by (job) (up{job="grafana-v10", namespace="d8-monitoring"} == 0)
+    expr: max by (job) (up{job="grafana-v10", namespace="d8-monitoring", source="deckhouse"} == 0)
     for: 5m
     labels:
       severity_level: "6"
@@ -83,7 +83,7 @@
       summary: Prometheus is unable to scrape Grafana metrics.
 
   - alert: D8GrafanaTargetAbsent
-    expr: absent(up{job="grafana-v10", namespace="d8-monitoring"} == 1)
+    expr: absent(up{job="grafana-v10", namespace="d8-monitoring", source="deckhouse"} == 1)
     for: 5m
     labels:
       severity_level: "6"
@@ -126,11 +126,11 @@
   - alert: D8GrafanaPodIsRestartingTooOften
     expr: |
       max by (pod) (
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10"}
-        * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-monitoring"}[1h])
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10", source="deckhouse"}
+        * on (pod) group_right() increase(kube_pod_container_status_restarts_total{namespace="d8-monitoring", source="deckhouse"}[1h])
         and
-        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10"}
-        * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-monitoring"}
+        kube_controller_pod{namespace="d8-monitoring", controller_type="Deployment", controller_name="grafana-v10", source="deckhouse"}
+        * on (pod) group_right() kube_pod_container_status_restarts_total{namespace="d8-monitoring", source="deckhouse"}
       ) > 5
     labels:
       severity_level: "9"
@@ -157,7 +157,7 @@
 
   - alert: D8GrafanaDeprecatedCustomDashboardDefinition
     expr: |
-      max(kube_configmap_created{namespace="d8-monitoring",configmap="grafana-dashboard-definitions-custom"}) > 0
+      max(kube_configmap_created{namespace="d8-monitoring",configmap="grafana-dashboard-definitions-custom", source="deckhouse"}) > 0
     labels:
       severity_level: "9"
       tier: application
