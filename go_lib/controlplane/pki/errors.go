@@ -16,7 +16,10 @@ limitations under the License.
 
 package pki
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // CertValidationError is returned by createRootCertIfNotExists when an existing CA
 // certificate does not satisfy the current configuration. The caller should treat
@@ -28,4 +31,31 @@ type CertValidationError struct {
 
 func (e *CertValidationError) Error() string {
 	return fmt.Sprintf("certificate %q are not valid: %s", e.BaseName, e.Reason)
+}
+
+type CertMissingError struct {
+	BaseName string
+}
+
+func (e *CertMissingError) Error() string {
+	return fmt.Sprintf("certificate %q not found on disk", e.BaseName)
+}
+
+type CAExternalError struct {
+	CAName string
+}
+
+func (e *CAExternalError) Error() string {
+	return fmt.Sprintf("CA %q private key not found (external CA — renewal skipped)", e.CAName)
+}
+
+type CAExpiredError struct {
+	CAName    string
+	ExpiredAt time.Time
+}
+
+func (e *CAExpiredError) Error() string {
+	return fmt.Sprintf("CA %q expired at %s — renewing leaf certs against an expired CA is pointless; rotate the CA first",
+		e.CAName, e.ExpiredAt.UTC().Format(time.RFC3339),
+	)
 }

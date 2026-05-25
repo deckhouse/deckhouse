@@ -95,6 +95,12 @@ func certificateEncryptionAlgoIsEqual(oldCert *x509.Certificate, newCertCfg cert
 }
 
 func detectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
+	return DetectEncryptionAlgorithm(cert)
+}
+
+// DetectEncryptionAlgorithm returns the EncryptionAlgorithmType corresponding to the public key of cert.
+// Returns "" for unknown key types or sizes.
+func DetectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
 	switch pub := cert.PublicKey.(type) {
 	case *rsa.PublicKey:
 		switch pub.N.BitLen() {
@@ -113,6 +119,5 @@ func detectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgor
 			return constants.EncryptionAlgorithmECDSAP384
 		}
 	}
-
 	return ""
 }
