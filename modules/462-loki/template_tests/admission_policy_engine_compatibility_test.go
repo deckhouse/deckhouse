@@ -40,6 +40,14 @@ discovery:
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("loki", `
 lokiConfig: {}
+internal:
+  cleanupThreshold: 0
+  stsStorageSize: 0
+  pvcSize: 0
+  kubeRbacProxyTLS:
+    cert: test-cert
+    key: test-key
+    ca: test-ca
 `)
 		f.HelmRender()
 	})
