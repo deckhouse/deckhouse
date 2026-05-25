@@ -3,7 +3,7 @@ title: "Cloud provider — Azure"
 description: "Cloud resource management in Deckhouse Kubernetes Platform using Microsoft Azure."
 ---
 
-The `cloud-provider-azure` module is responsible for interacting with the [Azure](https://portal.azure.com/) cloud resources. It allows the [node manager](../../modules/node-manager/) module to use Azure resources for provisioning nodes for the defined [node group](../../modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-azure` module is responsible for interacting with the [Azure](https://portal.azure.com/) cloud resources. It allows the [node manager](/modules/node-manager/) module to use Azure resources for provisioning nodes for the defined [node group](/modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
 
 Features of the `cloud-provider-azure` module:
 
@@ -12,13 +12,13 @@ Features of the `cloud-provider-azure` module:
   - The CCM module creates LoadBalancers for Kubernetes Service objects that have the `LoadBalancer` type;
   - The CCM module updates the metadata of the cluster nodes according to the configuration parameters and deletes nodes that are no longer in Azure;
 - Provisioning nodes in Azure using the `CSI storage` component;
-- Enabling the necessary CNI plugin (using [`cni-cilium`](../../modules/cni-cilium/));
-- Registering with the [node-manager](../../modules/node-manager/) module so that [AzureInstanceClasses](cr.html#azureinstanceclass) can be used when creating the [NodeGroup](../../modules/node-manager/cr.html#nodegroup).
+- Enabling the necessary CNI plugin (using [`cni-cilium`](/modules/cni-cilium/));
+- Registering with the [node-manager](/modules/node-manager/) module so that [AzureInstanceClasses](cr.html#azureinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 {% alert level="warning" %}
 Starting with DKP version 1.77, Azure uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
 
-New clusters require Linux kernel version `5.8` or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
+New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 {% alert level="warning" %}

@@ -8,7 +8,7 @@ description: "Configuring GCP for Deckhouse cloud provider operation."
 You need to create a service account so that Deckhouse Kubernetes Platform can manage resources in the Google Cloud. Below is a brief sequence of steps to create a service account. If you need detailed instructions, you can find them in the [provider's documentation](https://cloud.google.com/iam/docs/service-accounts).
 
 {% alert level="warning" %}
-**Note!** The created `service account key` cannot be restored, you can only delete and create a new one.
+The created `service account key` cannot be restored, you can only delete and create a new one.
 {% endalert %}
 
 {% alert level="warning" %}

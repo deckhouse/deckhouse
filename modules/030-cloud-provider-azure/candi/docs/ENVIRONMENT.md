@@ -6,7 +6,7 @@ description: "Configuring Azure for Deckhouse cloud provider operation."
 {% include notice_envinronment.liquid %}
 
 {% alert level="warning" %}
-**Caution!** Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
+Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-region) where `Availability Zones` are available are supported.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -16,7 +16,7 @@ The provider supports working with only one disk in the virtual machine template
 {% alert level="warning" %}
 Starting with DKP version 1.77, Azure uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
 
-New clusters require Linux kernel version `5.8` or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
+New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 To rule the Microsoft Azure cloud, you need an account and at least a single [Subscription connected to id](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).

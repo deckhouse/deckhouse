@@ -6,7 +6,7 @@ description: "Настройка Azure для работы облачного п
 {% include notice_envinronment.liquid %}
 
 {% alert level="warning" %}
-**Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
+Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -14,9 +14,11 @@ description: "Настройка Azure для работы облачного п
 {% endalert %}
 
 {% alert level="warning" %}
-Начиная с версии DKP 1.77, в Azure CNI `cilium` используется по умолчанию для новых кластеров. В существующих кластерах текущая конфигурация CNI сохраняется.
+Начиная с DKP 1.77, для новых кластеров в Azure по умолчанию используется CNI `cilium`. В существующих кластерах текущая конфигурация CNI сохраняется.
 
-Для новых кластеров требуется ядро Linux версии `5.8` или новее на всех узлах. Также убедитесь, что правила межсетевого экрана и группы безопасности разрешают межузловой UDP-трафик для Cilium VXLAN. Подробнее см. [требования к установке](/products/kubernetes-platform/documentation/v1/installing/), [раздел «Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html) и [документацию модуля `cni-cilium`](/modules/cni-cilium/).
+Для новых кластеров на всех узлах требуется ядро Linux версии 5.8 или новее. Также убедитесь, что правила межсетевого экрана разрешают межузловой UDP-трафик, необходимый для работы Cilium VXLAN.
+
+Подробнее в разделах [«Требования к установке»](/products/kubernetes-platform/documentation/v1/installing/), [«Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html) и [документации модуля `cni-cilium`](/modules/cni-cilium/).
 {% endalert %}
 
 Для управления облаком Microsoft Azure необходимо иметь соответствующую учетную запись и хотя бы одну привязанную [подписку (Subscription)](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
