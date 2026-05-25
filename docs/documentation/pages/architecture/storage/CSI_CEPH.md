@@ -27,10 +27,10 @@ The Level 2 C4 architecture of the [`csi-ceph`](/modules/csi-ceph/) module and i
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-ceph/stable/cr.html):
+1. **Controller**: A controller that reconciles the following custom resources:
 
-   * CephClusterConnection: Ceph cluster connection parameters.
-   * CephStorageClass: Defines the configuration for the Kubernetes StorageClass that will be created.
+   * [CephClusterConnection](/modules/csi-ceph/stable/cr.html#cephclusterconnection): Ceph cluster connection parameters.
+   * [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass): Defines the configuration for the Kubernetes StorageClass that will be created.
 
    CephStorageClass specifies the storage class type (`CephFS` or `RBD`), reclaim policy, Ceph cluster connection parameters, and additional parameters specific to each storage class type. Depending on the storage class type, these parameters are used by the provisioner of either the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` CSI driver when managing volumes.
 
@@ -41,11 +41,11 @@ The module consists of the following components:
    * **controller**: Main container.
    * **webhooks**: A sidecar container that implements a webhook server for StorageClass resources validation.
 
-1. **CSI driver (`rbd/cephfs`)**: An implementation of the CSI driver for the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` provisioner. The CSI driver is selected by setting the storage class type in the CephStorageClass custom resource.
+1. **CSI driver (rbd/cephfs)**: An implementation of the CSI driver for the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` provisioner. The CSI driver is selected by setting the storage class type in the CephStorageClass custom resource.
 
-   The `csi-cephfs` CSI driver follows the standard CSI driver architecture used in DKP. For details, see [the standard CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+   The `csi-cephfs` CSI driver follows [the standard CSI driver architecture used in DKP](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-   The `csi-rbd` CSI driver uses an architecture that differs from the standard CSI driver architecture. For details, see [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
+   The `csi-rbd` CSI driver uses [an architecture that differs from the standard CSI driver architecture](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
 
 ## Module interactions
 

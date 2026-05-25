@@ -28,10 +28,10 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-ceph/stable/cr.html):
+1. **Controller** — контроллер, обслуживающий следующие кастомные ресурсы:
 
-    * CephClusterConnection — параметры подключения к кластеру Ceph;
-    * CephStorageClass —  определяет конфигурацию для создаваемого Kubernetes StorageClass.
+    * [CephClusterConnection](/modules/csi-ceph/stable/cr.html#cephclusterconnection) — параметры подключения к кластеру Ceph;
+    * [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass) —  определяет конфигурацию для создаваемого Kubernetes StorageClass.
 
     В CephStorageClass задается тип storage-класса (`CephFS`, `RBD`), reclaim policy, параметры подключения к кластеру Ceph, а также специфичные для каждого storage-класса дополнительные параметры. В зависимости от типа storage-класса эти параметры используются provisioner’ом CSI-драйвера `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` при управлении томами.
 
@@ -42,11 +42,11 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
    * **controller** — основной контейнер;
    * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки стандартных ресурсов StorageClass.
 
-1. **CSI-драйвер (`rbd/cephfs`)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner. Выбор CSI-драйвера выполняется путём задания storage-класса в кастомном ресурсе CephStorageClass.
+1. **CSI-драйвер (rbd/cephfs)** — реализация CSI-драйвера для `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` provisioner. Выбор CSI-драйвера выполняется путём задания storage-класса в кастомном ресурсе CephStorageClass.
 
-  CSI-драйвер `csi-cephfs` реализован по типовой архитектуре CSI-драйвера, используемого в DKP, с которой можно ознакомиться [на странице описания типового CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+  CSI-драйвер `csi-cephfs` реализован [по типовой архитектуре CSI-драйвера, используемого в DKP](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-  CSI-драйвер `csi-rbd` реализован по отличной от типового CSI-драйвера архитектуре, которая приведена [на странице описания CSI-драйвера](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
+  CSI-драйвер `csi-rbd` реализован [по отличной от типового CSI-драйвера архитектуре](../../storage/csi-drivers/csi-driver-ceph-rbd.html).
 
 ## Взаимодействия модуля
 
@@ -54,10 +54,10 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
 
 * **Kube-apiserver**:
 
-  * мониторинг стандартных ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment и StorageClass;
+  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment и StorageClass;
   * работа с кастомными ресурсами CephClusterConnection и CephStorageClass;
   * создание ресурса StorageClass.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-* **Kube-apiserver** — валидация стандартных ресурсов StorageClass.
+* **Kube-apiserver** — валидация ресурсов StorageClass.
