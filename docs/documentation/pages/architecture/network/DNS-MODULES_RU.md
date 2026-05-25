@@ -10,7 +10,7 @@ relatedLinks:
   - title: "Модуль node-local-dns: настройки"
     url: /modules/node-local-dns/configuration.html
   - title: "Кеширующий DNS-сервер в кластере"
-    url: /architecture/network/dns-caching.html
+    url: /products/kubernetes-platform/documentation/v1/architecture/network/dns-caching.html
 ---
 
 Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [CoreDNS](https://coredns.io/) в Deckhouse Kubernetes Platform (DKP).
@@ -50,7 +50,7 @@ relatedLinks:
 
    Deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse/) создаёт этот компонент, если в ModuleConfig задан параметр `.spec.settings.clusterDomainAliases`.
 
-   Компонент реализует мутирующий вебхук-сервер, добавляющий init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в Pod, созданный StatefulSet-контроллером, если в спецификации Pod указана опция `.spec.subdomain`.
+   Компонент реализует мутирующий вебхук-сервер, добавляющий init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в под, созданный StatefulSet-контроллером, если в спецификации пода указана опция `.spec.subdomain`.
 
    Init-контейнер изменяет файл `/etc/hosts`, чтобы подсистема разрешения имён корректно работала с алиасами домена кластера.
 

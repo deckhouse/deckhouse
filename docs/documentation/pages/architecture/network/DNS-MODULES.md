@@ -10,7 +10,7 @@ relatedLinks:
   - title: "node-local-dns module configuration"
     url: /modules/node-local-dns/configuration.html
   - title: "Caching DNS server in a cluster"
-    url: /architecture/network/dns-caching.html
+    url: /products/kubernetes-platform/documentation/v1/architecture/network/dns-caching.html
 ---
 
 The [`kube-dns`](/modules/kube-dns/) module provides domain name resolution based on [CoreDNS](https://coredns.io/) in Deckhouse Kubernetes Platform (DKP).
@@ -50,7 +50,7 @@ The `kube-dns` module consists of the following components:
 
    The Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module creates this component if the `.spec.settings.clusterDomainAliases` parameter is set in ModuleConfig.
 
-   The component implements a mutating webhook server that adds the **render-etc-hosts-with-cluster-domain-aliases** init container to a Pod created by a StatefulSet controller if the `.spec.subdomain` option is specified in the Pod spec.
+   The component implements a mutating webhook server that adds the **render-etc-hosts-with-cluster-domain-aliases** init container to a pod created by a StatefulSet controller if the `.spec.subdomain` option is specified in the pod spec.
 
    The init container modifies the `/etc/hosts` file so that the name resolution subsystem works correctly with cluster domain aliases.
 
