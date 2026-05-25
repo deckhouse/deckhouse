@@ -88,7 +88,6 @@ func LoadConfigFromFile(
 		if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
 			return nil, err
 		}
-
 	}
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, globalOptions, opts...)
 	if err != nil {

@@ -22,7 +22,6 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	optsdefault "github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -142,7 +141,7 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 	tmpDir := p.TmpDir
 	logMsg := "Use passed tmp dir."
 	if tmpDir == "" {
-		tmpDir = optsdefault.DefaultTmpDir()
+		tmpDir = options.DefaultTmpDir()
 		logMsg = "CloudProviderGetterParams tmp dir is empty. Using default."
 	}
 

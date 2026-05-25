@@ -216,11 +216,8 @@ func CheckDirs() bool {
 	}
 
 	_, err = os.Stat(versionMap)
-	if err != nil {
-		return false
-	}
 
-	return true
+	return err == nil
 }
 
 func SetPaths(root string, o *GlobalOptions) {

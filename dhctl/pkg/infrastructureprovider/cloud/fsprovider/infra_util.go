@@ -21,13 +21,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
-	"github.com/name212/govalue"
 )
 
 var (
@@ -80,7 +81,7 @@ func (p *InfrastructureUtilProvider) DownloadOpenTofu(ctx context.Context, _ clo
 }
 
 func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
-	regConfig := &image.RegistryConfig{}
+	var regConfig *image.RegistryConfig
 	var err error
 	var imageName string
 	if govalue.NotNil(conf.DeckhouseConfig) {
@@ -110,7 +111,7 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 	if err != nil {
 		return err
 	}
-	imageName = imageName + tfImage
+	imageName += tfImage
 
 	return image.DownloadAndUnpackImage(ctx, imageName, conf.DownloadRootDir, conf.DownloadCacheDir, *regConfig, showProgress)
 }

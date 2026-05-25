@@ -69,7 +69,7 @@ type MetaConfig struct {
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
 	DownloadCacheDir          string                  `json:"-"`
-	ShowProgress              bool
+	ShowProgress              bool                    `json:"-"`
 
 	// VersionFilePath is the absolute path to the deckhouse version file
 	// embedded in the installer image. Required by LoadInstallerVersion and

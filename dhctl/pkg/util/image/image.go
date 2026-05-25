@@ -302,7 +302,7 @@ func getEstimatedTarSize(img v1.Image) (int64, error) {
 	return total, nil
 }
 
-func saveImageAsTarGz(ctx context.Context, imageRef string, outPath string, img v1.Image, showProgress bool) (string, error) {
+func saveImageAsTarGz(_ context.Context, imageRef string, outPath string, img v1.Image, showProgress bool) (string, error) {
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
 		return "", fmt.Errorf("parsing image reference %q: %w", imageRef, err)

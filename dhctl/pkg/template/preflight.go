@@ -27,7 +27,7 @@ var (
 	checkProxyRevTunnelOpenScriptPath = filepath.Join("preflight", "check_reverse_tunnel_open.sh.tpl")
 	killReverseTunnelPath             = filepath.Join("preflight", "kill_reverse_tunnel.sh.tpl")
 	checkDeckhouseUserScriptPath      = filepath.Join("preflight", "check_deckhouse_user.sh.tpl")
-	preflightScriptDirPath            = filepath.Join("preflight")
+	preflightScriptDirPath            = "preflight"
 )
 
 func RenderAndSavePreflightCheckPortsScript(globalOptions *options.GlobalOptions) (string, error) {
