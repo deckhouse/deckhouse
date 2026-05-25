@@ -5,7 +5,7 @@ search: deckhouse virtualization container registry, dvcr
 description: Architecture of the DVCR component of virtualization module in Deckhouse Kubernetes Platform.
 ---
 
-Deckhouse Virtualization Container Registry (DVCR) component of the [`virtualization`](/modules/virtualization/) module is a specialized repository for storing and caching virtual machine images. CDI component of the [`virtualization`](/modules/virtualization/) module uses images stored in DVCR as a source for InternalVirtualizationDataVolume resources, which are used to create disks for KubeVirt-managed virtual machines.
+The Deckhouse Virtualization Container Registry (DVCR) component of the [`virtualization`](/modules/virtualization/) module is a specialized container registry for storing and caching virtual machine images. The [CDI](cdi.html) component of the [`virtualization`](/modules/virtualization/) module uses images stored in DVCR as a source for InternalVirtualizationDataVolume resources, which are used to create disks for KubeVirt-managed virtual machines.
 
 ## DVCR architecture
 
@@ -19,7 +19,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the DVCR component of [`virtualization`](/modules/virtualization/) module and its interactions with other components of DKP are shown in the following diagrams:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Architecture of the CDI component of virtualization module](../../../images/architecture/virtualization/c4-l2-virtualization-dvcr.png)
+![Architecture of the DVCR component of virtualization module](../../../images/architecture/virtualization/c4-l2-virtualization-dvcr.png)
 
 ## DVCR components
 
@@ -31,7 +31,7 @@ DVCR consists of the following components:
 
    - **dvcr**:  Main container.
    - **dvcr-garbage-collection**: Sidecar container that periodically deletes images which do not have the appropriate resources in the cluster.
-   - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the metrics of the proxy container. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
+   - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the metrics of the dvcr container. It is an [open-source project](https://github.com/brancz/kube-rbac-proxy).
 
 1. **Dvcr-importer**: *Temporary* pod that consists of a single container, run by the virtualization controller to implement various scenarios for importing VM images and disks, such as:
 
@@ -48,7 +48,7 @@ DVCR consists of the following components:
 
 DVCR interacts with the following components:
 
-1. **Kube-apiserver**: Sends get/list/watch-requests for VirtualImages, ClusterVirtualImages and VirtualDisks to clean up unused images and for coordination.
+1. **Kube-apiserver**: Sends `get`/`list`/`watch`-requests for VirtualImages, ClusterVirtualImages, and VirtualDisks to clean up unused images and for coordination.
 1. **External disks or VM images sources**: Reads VM disks or images when implementing some scenarios of import to DVCR storage.
 
 The following external components interact with the DVCR component:
