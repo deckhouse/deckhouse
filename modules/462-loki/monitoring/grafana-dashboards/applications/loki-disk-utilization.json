@@ -78,7 +78,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "max(rate(force_expiration_hook_dir_usage_evaluation_duration_sum[1m])/rate(force_expiration_hook_dir_usage_evaluation_duration_count[1m])) by (working_dir)",
+          "expr": "max(rate(force_expiration_hook_dir_usage_evaluation_duration_sum{source=\"deckhouse\"}[1m])/rate(force_expiration_hook_dir_usage_evaluation_duration_count{source=\"deckhouse\"}[1m])) by (working_dir)",
           "instant": false,
           "legendFormat": "{{ working_dir }}",
           "range": true,
@@ -144,7 +144,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "time() - force_expiration_hook_last_expired_chunk_timestamp_seconds > 0",
+          "expr": "time() - force_expiration_hook_last_expired_chunk_timestamp_seconds{source=\"deckhouse\"} > 0",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -258,7 +258,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "force_expiration_hook_dir_usage_bytes",
+          "expr": "force_expiration_hook_dir_usage_bytes{source=\"deckhouse\"}",
           "instant": false,
           "legendFormat": "{{ working_dir }}",
           "range": true,
@@ -271,7 +271,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "force_expiration_hook_dir_usage_threshold_bytes",
+          "expr": "force_expiration_hook_dir_usage_threshold_bytes{source=\"deckhouse\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -371,7 +371,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(increase(force_expiration_hook_expired_chunks_count[1m])) by (instance)",
+          "expr": "sum(increase(force_expiration_hook_expired_chunks_count{source=\"deckhouse\"}[1m])) by (instance)",
           "hide": false,
           "instant": false,
           "legendFormat": "__auto",
@@ -469,7 +469,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "sum(increase(force_expiration_hook_expired_chunks_size_bytes[1m])) by (instance)",
+          "expr": "sum(increase(force_expiration_hook_expired_chunks_size_bytes{source=\"deckhouse\"}[1m])) by (instance)",
           "instant": false,
           "legendFormat": "{{ instance }}",
           "range": true,
