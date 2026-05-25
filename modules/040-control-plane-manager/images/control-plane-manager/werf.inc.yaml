@@ -64,3 +64,6 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+shell:
+  install:
+  - cd /src

@@ -12,6 +12,9 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+shell:
+  setup:
+  - cd /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "builder/scratch" }}
