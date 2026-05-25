@@ -90,12 +90,14 @@ spec:
   dnsPolicy: ClusterFirstWithHostNet
   priority: 2000001000
   priorityClassName: system-node-critical
-  # Static-pod default grace is 30s. During bootstrap control-plane-manager
-  # rewrites this manifest at least twice; each rewrite waits 30s for the old
-  # kube-apiserver to drain → 60s+ of pure restart-grace on the critical path.
-  # apiserver doesn't have meaningful in-flight work to drain on its own pod
-  # during bootstrap, so 1s is enough.
+{{- if eq .runType "ClusterBootstrap" }}
+  # Bootstrap-only: cpm rewrites this manifest once during initial install and
+  # the default 30s grace would burn most of a minute waiting for the old
+  # kube-apiserver to drain (no real in-flight work on a fresh master anyway).
+  # Runtime restarts keep the static-pod default 30s so production drains
+  # in-flight requests gracefully.
   terminationGracePeriodSeconds: 1
+{{- end }}
   securityContext:
     seccompProfile:
       type: RuntimeDefault

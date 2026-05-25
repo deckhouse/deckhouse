@@ -85,7 +85,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 
 		allPassedHosts := ""
 		if len(apiserverHosts) > 0 {
-			strings.Join(apiserverHosts, ",")
+			allPassedHosts = strings.Join(apiserverHosts, ",")
 		}
 
 		err := retry.NewSilentLoop(name, 45, 5*time.Second).RunContext(ctx, func() error {
