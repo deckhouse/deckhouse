@@ -65,13 +65,12 @@ func (vm IstioVersionsMap) DoesSupportAmbient(fullVer string) bool {
 	return false
 }
 
-func (vm IstioVersionsMap) DoesSupportOperator(fullVer string) bool {
-	for _, istioVerInfo := range vm {
-		if istioVerInfo.FullVersion == fullVer {
-			return istioVerInfo.SupportsOperator
-		}
+func (vm IstioVersionsMap) DoesSupportOperator(version string) bool {
+	istioVerInfo, ok := vm[version]
+	if !ok {
+		return false
 	}
-	return false
+	return istioVerInfo.SupportsOperator
 }
 
 func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {

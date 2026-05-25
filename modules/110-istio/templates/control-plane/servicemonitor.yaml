@@ -1,6 +1,7 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- if get $versionInfo "supportsOperator" }}
     {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -34,5 +35,6 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    {{- end }}
   {{- end }}
 {{- end }}

@@ -9,6 +9,7 @@
 
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if get $versionInfo "supportsOperator" }}
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
@@ -259,5 +260,6 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
+  {{- end }}
   {{- end }}
 {{- end }}
