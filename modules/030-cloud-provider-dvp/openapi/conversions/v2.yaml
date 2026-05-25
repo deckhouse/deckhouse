@@ -1,0 +1,14 @@
+version: 2
+conversions:
+  - if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace end
+  - del(.provider.namespace)
+  - del(.provider.kubeconfigDataBase64)
+  - if .zones != null then .nodes.parameters.zones = .zones end
+  - del(.zones)
+description:
+  ru: |
+    Переместите `provider.namespace` в `provider.parameters.namespace`, `zones` в `nodes.parameters.zones`.
+    Удалите `provider.kubeconfigDataBase64` (теперь хранится в Secret).
+  en: |
+    Move `provider.namespace` to `provider.parameters.namespace`, `zones` to `nodes.parameters.zones`.
+    Remove `provider.kubeconfigDataBase64` (now stored in a Secret).
