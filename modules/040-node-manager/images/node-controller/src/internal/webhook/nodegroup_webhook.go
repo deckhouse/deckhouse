@@ -284,8 +284,8 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	if req.Operation == "UPDATE" && oldNG != nil {
-		oldCRIType := getCRIType(oldNG, "")
-		newCRIType := getCRIType(ng, "")
+		oldCRIType := getCRIType(oldNG, clusterConfig.DefaultCRI)
+		newCRIType := getCRIType(ng, clusterConfig.DefaultCRI)
 		if oldCRIType != newCRIType {
 			customNodes, err := w.getNodesWithCustomContainerd(ctx, ng.Name)
 			if err != nil {
@@ -301,7 +301,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	if req.Operation == "UPDATE" {
-		if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerdV2 {
+		if getCRIType(ng, clusterConfig.DefaultCRI) == string(v1.CRITypeContainerdV2) {
 			unsupportedNodes, err := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
 			if err != nil {
 				webhookLog.Error(err, "failed to get nodes without containerd v2 support")
