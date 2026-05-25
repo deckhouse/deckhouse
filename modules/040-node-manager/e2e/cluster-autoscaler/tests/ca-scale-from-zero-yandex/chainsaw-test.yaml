@@ -13,7 +13,7 @@ spec:
       try:
         - description: Check cluster-autoscaler deployment has ready replicas
           assert:
-            file: asserts/assert-ca-exists.yaml
+            file: .../common/asserts/assert-ca-exists.yaml
       cleanup:
         - description: Wait until all test nodes are removed (runs last in cleanup chain)
           script:
@@ -49,7 +49,7 @@ spec:
       try:
         - description: Assert YandexInstanceClass worker resource exists
           assert:
-            file: asserts/assert-yandex-instanceclass.yaml
+            file: .../asserts/assert-yandex-instanceclass.yaml
 
     - name: cleanup-leftover-resources
       try:
@@ -121,7 +121,7 @@ spec:
       try:
         - description: Apply NodeGroup e2e-worker-100 manifest
           apply:
-            file: manifests/nodegroup-100.yaml
+            file: .../manifests/nodegroup-100.yaml
       cleanup:
         - description: Delete NodeGroup e2e-worker-100
           delete:
@@ -134,7 +134,7 @@ spec:
       try:
         - description: Apply NodeGroup e2e-worker-50 manifest
           apply:
-            file: manifests/nodegroup-50.yaml
+            file: .../manifests/nodegroup-50.yaml
       cleanup:
         - description: Delete NodeGroup e2e-worker-50
           delete:
@@ -203,7 +203,7 @@ spec:
       try:
         - description: Assert Deployment has 3 ready replicas
           assert:
-            file: asserts/assert-deployment-ready.yaml
+            file: .../asserts/assert-deployment-ready.yaml
       catch:
         - description: Collect test namespace events on failure
           events: {}
@@ -261,4 +261,4 @@ spec:
       try:
         - description: Assert no nodes exist with label node.deckhouse.io/group=e2e-worker-50
           error:
-            file: asserts/assert-no-worker-50-nodes.yaml
+            file: .../common/asserts/assert-no-worker-50-nodes.yaml
