@@ -104,6 +104,8 @@ check_requirements() {
     exit 1
   fi
 
+  REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
+
   OSS_FILE="${REPO_ROOT}/${MODULE}/oss.yaml"
   GLOBAL_TF_YAML_FILE="${REPO_ROOT}/${TF_YAML_FILE}"
   MODULE_TF_YAML_FILE="${REPO_ROOT}/${MODULE}/${TF_YAML_FILE}"
