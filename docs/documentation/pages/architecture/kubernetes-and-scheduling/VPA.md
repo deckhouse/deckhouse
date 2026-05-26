@@ -42,9 +42,9 @@ Before using the vertical pod autoscaler (VPA), you need to consider several lim
   - Updating requested resources is an experimental feature. Each time VPA changes the resources, it recreates the pod, which may then be scheduled on a different node.
   - Pods can be rescheduled on other nodes.
 
-- Compatibility with [Horizontal Pod Autoscaler (HPA)](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/hpa.html):
-  - It is not recommended to use VPA together with HPA based on CPU and memory.
-  - VPA can be used with HPA based on custom or external metrics.
+- Compatibility with [Horizontal Pod Autoscaler (HPA)](../../admin/configuration/app-scaling/hpa.html):
+  - It is not recommended to use VPA together with HPA that is set for scaling based on CPU and memory.
+  - VPA can be used with HPA that is set for scaling based on custom or external metrics.
 
 - Issues in large clusters: VPA can work in large clusters, but the load on VPA increases as the number of pods grows.
 
@@ -67,7 +67,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module and its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
+The Level 2 C4 architecture of the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module and its interactions with other DKP components are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![vertical-pod-autoscaler module architecture](../../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.png)
@@ -88,7 +88,7 @@ The `vertical-pod-autoscaler` module consists of the following components:
    * **admission-controller**: Main container.
    * **kube-rbac-proxy**: Sidecar container with a Kubernetes RBAC-based authorization proxy that provides secure access to admission-controller metrics. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Vpa-updater** (Deployment): A [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) component that checks whether pods with VPA have the correct resource settings. Vpa-updater performs in-place resource updates through `pods/resize`; if that is not possible or does not fit the resource management policy, it evicts the Pod.
+1. **Vpa-updater** (Deployment): A [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler) component that checks whether pods with VPA have the correct resource settings. Vpa-updater performs in-place resource updates through the `pods/resize` Kubernetes subresource; if that is not possible or does not fit the resource management policy, it evicts the Pod.
 
    It consists of the following containers:
 
@@ -111,7 +111,7 @@ The module interacts with the following components:
 1. **Kube-apiserver**:
 
    * Watches standard resources such as ConfigMap, Node, LimitRange, and Pod, as well as VerticalPodAutoscaler and VerticalPodAutoscalerCheckpoint custom resources.
-   * Retrieves current resource consumption through [the Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md).
+   * Retrieves current resource consumption through the [Metrics API](https://github.com/kubernetes/design-proposals-archive/blob/main/instrumentation/resource-metrics-api.md).
    * Evicts running pods when their resource specifications do not match the recommended values.
    * Authorizes requests for metrics.
 

@@ -43,9 +43,9 @@ VPA может работать в двух режимах:
   - Обновление запрашиваемых ресурсов — экспериментальная функция, каждый раз при изменении ресурсов VPA пересоздаёт под, и он может быть назначен на другой узел;
   - Поды могут пересоздаваться на других узлах.
 
-- Совместимость с [Horizontal Pod Autoscaler (HPA)](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/hpa.html):
-  - VPA не рекомендуется использовать совместно с HPA по CPU и памяти;
-  - VPA можно использовать с HPA с custom/external метриками.
+- Совместимость с [Horizontal Pod Autoscaler (HPA)](../../admin/configuration/app-scaling/hpa.html):
+  - VPA не рекомендуется использовать совместно с HPA, выполняющим масштабирование по CPU или памяти;
+  - VPA можно использовать совместно с HPA, выполняющим масштабирование по custom- или external-метрикам.
 
 - Проблемы с большими кластерами — VPA может работать и в больших кластерах, но нагрузка на VPA возрастает при росте числа подов.
 
@@ -68,7 +68,7 @@ VPA может работать в двух режимах:
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
+Архитектура модуля [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля vertical-pod-autoscaler](../../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.ru.png)
@@ -82,14 +82,14 @@ VPA может работать в двух режимах:
    Компонент vpa-admission-controller выполняет следующие действия:
 
    - валидирует кастомные ресурсы VerticalPodAutoscaler;
-   - при создании Pod (если режим VPA не [Off](./vpa.html#режимы-работы-vpa)), контроллер автоматически задает или меняет значения `requests` и `limits` в контейнерах, оптимизируя их по текущим рекомендациям. Значения `limits` изменяются контроллером только в том случае, если в параметре [`spec.resourcePolicy.containerPolicies.controlledValues`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) политики управления ресурсами установлено значение `RequestsAndLimits`.
+   - при создании пода (если для VPA не установлен режим [**Off**](./vpa.html#режимы-работы-vpa)) контроллер автоматически задаёт или меняет значения `requests` и `limits` в контейнерах, оптимизируя их по текущим рекомендациям. Значения `limits` контроллер изменяет только в том случае, если в параметре [`spec.resourcePolicy.containerPolicies.controlledValues`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues) политики управления ресурсами установлено значение `RequestsAndLimits`.
 
    Состоит из следующих контейнеров:
 
    * **admission-controller** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам admission-controller. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Vpa-updater** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), проверяющий, что у подов с VPA выставлены корректные ресурсы. Vpa-updater выполняет in-place обновление ресурсов через `pods/resize`, а если это невозможно или не подходит по политике управления ресурсами, вытесняет Pod.
+1. **Vpa-updater** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), проверяющий, что у подов с VPA выставлены корректные ресурсы. Vpa-updater выполняет in-place-обновление ресурсов через субресурс Kubernetes `pods/resize`, а если это невозможно или не подходит по политике управления ресурсами, вытесняет под.
 
    Состоит из следующих контейнеров:
 
@@ -122,5 +122,5 @@ VPA может работать в двух режимах:
 
 1. **Kube-apiserver**:
      - валидация кастомных ресурсов VerticalPodAutoscaler;
-     - изменение `requests` и `limits` в спецификации Pod.
+     - изменение `requests` и `limits` в спецификации подов.
 1. **Prometheus** — собирает метрики модуля.
