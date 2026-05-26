@@ -832,7 +832,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	}
 	p.logger.Debugf("resolved tag %q for %q: %q", version, imagePath, manifestDigest)
 
-	size, reader, err := GetPackageCached(
+	_, reader, err := GetPackageCached(
 		r.Context(),
 		p.logger,
 		p.getter,
@@ -861,7 +861,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 		fileBase = imagePath[i+1:]
 	}
 
-	w.Header().Set("Content-Type", "image/svg")
+	w.Header().Set("Content-Type", "image/svg+xml")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.svg"`, fileBase))
 
 	if r.Method == http.MethodHead {
