@@ -126,7 +126,7 @@ spec:
 #### Включение расширенных метрик и экспорта flow logs (с фильтрами и маской полей)
 
 {% alert level="warning" %}
-Ресурс [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) **должен иметь имя** `hubble-monitoring-config`.
+Ресурс [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) должен иметь имя `hubble-monitoring-config`.
 {% endalert %}
 
 Пример включения метрик и экспорта:
@@ -185,11 +185,11 @@ spec:
 
 ## Включение BPF-трейсов по требованию
 
-BPF-трейс-события (`bpf-events-trace-enabled`) отключены во всём кластере по
+Отслеживание событий BPF (`bpf-events-trace-enabled`) отключено во всём кластере по
 умолчанию. На нагруженных узлах с высокой плотностью подов они являются основным
 источником потребления CPU и памяти `cilium-agent`: каждый пересланный пакет
-(с учётом `monitor-aggregation`) генерирует запись в буфер событий BPF, которую агент
-должен распарсить, навесить лейблы и передать в Hubble. События `drop` и
+(с учётом `monitor-aggregation`) генерирует запись в буфер событий BPF, которую агент Cilium
+должен распарсить, добавить лейблы и передать в Hubble. События `drop` и
 `policy verdict` не зависят от этой опции и остаются доступными в Hubble.
 
 Если требуется увидеть forwarded-flow (например, для диагностики проблемы со

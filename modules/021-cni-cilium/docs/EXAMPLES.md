@@ -5,7 +5,9 @@ description: Examples of configuring Egress Gateway, Hubble data export, and per
 
 ## Egress Gateway
 
-{% alert level="warning" %}This feature is available in the following editions: SE+, EE.{% endalert %}
+{% alert level="warning" %}
+This feature is available in the following editions: SE+, EE.
+{% endalert %}
 
 ### Operation principle
 
@@ -20,7 +22,7 @@ Configuring an egress gateway requires two custom resources:
        - The `cilium-agent` on the node is in the `Ready` state.
      - When using EgressGateway in `VirtualIP` mode, an agent is launched on the active node which emulates a "virtual" IP address using the ARP protocol. The status of this agent's pod is also taken into account when determining the eligibility of a node.
      - Different EgressGateways can use the same nodes for operation. The active node is selected independently for each EgressGateway, which allows for load balancing between them.
-1. EgressGatewayPolicy — describes the policy for routing network requests from pods in the cluster to a specific egress gateway defined using EgressGateway.
+2. EgressGatewayPolicy — describes the policy for routing network requests from pods in the cluster to a specific egress gateway defined using EgressGateway.
 
 ### Node maintenance
 
@@ -126,7 +128,7 @@ The cluster-scoped [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) reso
 #### Enabling extended metrics and flow logs export (with filters and field mask)
 
 {% alert level="warning" %}
-The [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) resource **must be named** `hubble-monitoring-config`.
+The [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) resource must be named `hubble-monitoring-config`.
 {% endalert %}
 
 Example of enabling metrics and export:
