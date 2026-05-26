@@ -666,6 +666,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 final: false
 mount:
 - from: build_dir
@@ -902,6 +903,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 mount:
 - from: build_dir
   to: /apps
