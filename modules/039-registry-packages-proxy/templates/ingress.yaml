@@ -27,7 +27,7 @@ spec:
             name: registry-packages-proxy
             port:
               name: https
-      - path: /packages/v1/(metadata|images)/
+      - path: /v1/packages/
         pathType: ImplementationSpecific
         backend:
           service:
