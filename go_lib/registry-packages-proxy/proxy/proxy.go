@@ -822,7 +822,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 			http.Error(w, "no valid tags found", http.StatusNotFound)
 			return
 		}
-		version = latestVersion.String()
+		version = latestVersion.Original()
 	}
 
 	// get icon of package specific version
