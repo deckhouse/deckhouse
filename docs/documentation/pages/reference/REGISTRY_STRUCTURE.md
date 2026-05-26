@@ -5,7 +5,7 @@ toc: false
 search: container registry, image registry
 ---
 
-This page provides a general overview of the container image registries used to install the Deckhouse Kubernetes Platform.
+This page provides a general overview of the container image registries used to install the Deckhouse Kubernetes Platform (DKP).
 
 ## Commercial editions container registry
 
@@ -27,7 +27,6 @@ Image build and update specifics:
 
 * built from open-source software [included in DKP](./oss_info.html):
   * from upstream (as-is);
-  * with modifications for use in DKP CSE;
   * with deep modernization (fork).
 * includes proprietary company developments;
 * vulnerability remediation and package updates are performed only when upstream open-source packages are updated;
