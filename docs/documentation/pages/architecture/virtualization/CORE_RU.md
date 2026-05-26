@@ -6,7 +6,7 @@ search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, с
 description: Архитектура ядра (CORE) модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
-Ядро (CORE) модуля [`virtualization`](/modules/virtualization/) непосредственно отвечает за работу с виртуальными машинами (ВМ). Ядро основано на проекте KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это открытый проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он позволяет сосуществовать традиционным ВМ и контейнерным рабочим нагрузкам в одном кластере Kubernetes, обеспечивая единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
+Ядро (CORE) модуля [`virtualization`](/modules/virtualization/) непосредственно отвечает за работу с виртуальными машинами (ВМ). Ядро основано на проекте KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять виртуальными машинами с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных виртуальных машин и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
 
 Для управления ВМ компонент CORE использует кастомные ресурсы следующих API-групп:
 
