@@ -34,5 +34,7 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   {{- end }}
 {{- end }}

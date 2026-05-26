@@ -1,7 +1,7 @@
 - name: d8.dex.availability
   rules:
   - alert: D8DexAllTargetsDown
-    expr: sum(up{job="dex", namespace="d8-user-authn"}) == 0
+    expr: sum(up{source="deckhouse", job="dex", namespace="d8-user-authn"}) == 0
     for: 5m
     labels:
       severity_level: "6"
@@ -19,7 +19,7 @@
     expr: |
       (
         100 *
-        kube_resourcequota{
+        kube_resourcequota{source="deckhouse", 
           namespace="d8-user-authn",
           resourcequota="authrequest-quota",
           resource="count/authrequests.dex.coreos.com",
@@ -27,7 +27,7 @@
         }
         /
         ignoring(type)
-        kube_resourcequota{
+        kube_resourcequota{source="deckhouse", 
           namespace="d8-user-authn",
           resourcequota="authrequest-quota",
           resource="count/authrequests.dex.coreos.com",
@@ -36,7 +36,7 @@
       ) > 80
       and
       ignoring(type)
-      kube_resourcequota{
+      kube_resourcequota{source="deckhouse", 
         namespace="d8-user-authn",
         resourcequota="authrequest-quota",
         resource="count/authrequests.dex.coreos.com",
@@ -76,7 +76,7 @@
     expr: |
       (
         100 *
-        kube_resourcequota{
+        kube_resourcequota{source="deckhouse", 
           namespace="d8-user-authn",
           resourcequota="authrequest-quota",
           resource="count/authrequests.dex.coreos.com",
@@ -84,7 +84,7 @@
         }
         /
         ignoring(type)
-        kube_resourcequota{
+        kube_resourcequota{source="deckhouse", 
           namespace="d8-user-authn",
           resourcequota="authrequest-quota",
           resource="count/authrequests.dex.coreos.com",
@@ -93,7 +93,7 @@
       ) >= 100
       and
       ignoring(type)
-      kube_resourcequota{
+      kube_resourcequota{source="deckhouse", 
         namespace="d8-user-authn",
         resourcequota="authrequest-quota",
         resource="count/authrequests.dex.coreos.com",

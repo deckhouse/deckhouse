@@ -2,7 +2,7 @@
   rules:
   - alert: CustomServiceMonitorFoundInD8Namespace
     expr: |
-      max(d8_monitoring_custom_unknown_service_monitor_total{job="deckhouse"} > 0)
+      max(d8_monitoring_custom_unknown_service_monitor_total{source="deckhouse", job="deckhouse"} > 0)
     labels:
       severity_level: "9"
     annotations:
@@ -26,7 +26,7 @@
 
   - alert: CustomPodMonitorFoundInCluster
     expr: |
-      max(d8_monitoring_custom_unknown_pod_monitor_total{job="deckhouse"} > 0)
+      max(d8_monitoring_custom_unknown_pod_monitor_total{source="deckhouse", job="deckhouse"} > 0)
     labels:
       severity_level: "9"
     annotations:
@@ -50,7 +50,7 @@
 
   - alert: D8CustomPrometheusRuleFoundInCluster
     expr: |
-      max(d8_monitoring_custom_unknown_prometheus_rules_total{job="deckhouse"} > 0)
+      max(d8_monitoring_custom_unknown_prometheus_rules_total{source="deckhouse", job="deckhouse"} > 0)
     labels:
       severity_level: "9"
     annotations:
@@ -74,7 +74,7 @@
 
   - alert: D8OldPrometheusCustomTargetFormat
     expr: |
-      max(d8_monitoring_custom_old_prometheus_custom_targets_total{job="deckhouse"} > 0)
+      max(d8_monitoring_custom_old_prometheus_custom_targets_total{source="deckhouse", job="deckhouse"} > 0)
     labels:
       severity_level: "9"
     annotations:

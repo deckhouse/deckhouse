@@ -32,6 +32,8 @@ spec:
       targetLabel: controller
       regex: proxy-(\w+)-failover-[\w\d]+
       replacement: ${1}
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchLabels:
       app: proxy-failover

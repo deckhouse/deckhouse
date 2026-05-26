@@ -1,7 +1,7 @@
 - name: d8.istio.alliance
   rules:
     - alert: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
-      expr: sum by (alliance_kind, remote_uuid, name, requested_to_hostname) (rate(d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain[5m])) > 0
+      expr: sum by (alliance_kind, remote_uuid, name, requested_to_hostname) (rate(d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain{source="deckhouse"}[5m])) > 0
       for: 5m
       labels:
         severity_level: "5"

@@ -3,7 +3,7 @@
     - alert: D8ObsoletePublishAPIinUserAuthn
       for: 5m
       expr: |
-        d8_obsolete_publishapi_in_user_authn == 1
+        d8_obsolete_publishapi_in_user_authn{source="deckhouse"} == 1
       labels:
         d8_component: control-plane-manager
         d8_module: control-plane-manager

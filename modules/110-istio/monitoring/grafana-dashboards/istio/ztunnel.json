@@ -58,7 +58,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (tag) (istio_build{component=\"ztunnel\"})",
+          "expr": "sum by (tag) (istio_build{source=\"deckhouse\", component=\"ztunnel\"})",
           "legendFormat": "Version ({{tag}})"
         }
       ],
@@ -105,7 +105,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (container_memory_working_set_bytes{container=\"istio-proxy\",pod=~\"ztunnel-.*\"})",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{source=\"deckhouse\", container=\"istio-proxy\",pod=~\"ztunnel-.*\"})",
           "legendFormat": "Container ({{pod}})"
         }
       ],
@@ -151,7 +151,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (irate(container_cpu_usage_seconds_total{container=\"istio-proxy\",pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (irate(container_cpu_usage_seconds_total{source=\"deckhouse\", container=\"istio-proxy\",pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "Container ({{pod}})"
         }
       ],
@@ -211,7 +211,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate(istio_tcp_connections_opened_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(istio_tcp_connections_opened_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "Opened ({{pod}})"
         },
         {
@@ -219,7 +219,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "-sum by (pod) (rate(istio_tcp_connections_closed_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "-sum by (pod) (rate(istio_tcp_connections_closed_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "Closed ({{pod}})"
         }
       ],
@@ -266,7 +266,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate(istio_tcp_sent_bytes_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(istio_tcp_sent_bytes_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "Sent ({{pod}})"
         },
         {
@@ -274,7 +274,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate(istio_tcp_received_bytes_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(istio_tcp_received_bytes_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "Received ({{pod}})"
         }
       ],
@@ -321,7 +321,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate(istio_dns_requests_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(istio_dns_requests_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "Request ({{pod}})"
         }
       ],
@@ -380,7 +380,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (rate(istio_xds_connection_terminations_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (pod) (rate(istio_xds_connection_terminations_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "XDS Connection Terminations ({{pod}})"
         }
       ],
@@ -561,7 +561,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (url) (irate(istio_xds_message_total{pod=~\"ztunnel-.*\"}[$__rate_interval]))",
+          "expr": "sum by (url) (irate(istio_xds_message_total{source=\"deckhouse\", pod=~\"ztunnel-.*\"}[$__rate_interval]))",
           "legendFormat": "{{url}}"
         }
       ],
@@ -607,7 +607,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (workload_manager_active_proxy_count{pod=~\"ztunnel-.*\"})",
+          "expr": "sum by (pod) (workload_manager_active_proxy_count{source=\"deckhouse\", pod=~\"ztunnel-.*\"})",
           "legendFormat": "Active Proxies ({{pod}})"
         },
         {
@@ -615,7 +615,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (pod) (workload_manager_pending_proxy_count{pod=~\"ztunnel-.*\"})",
+          "expr": "sum by (pod) (workload_manager_pending_proxy_count{source=\"deckhouse\", pod=~\"ztunnel-.*\"})",
           "legendFormat": "Pending Proxies ({{pod}})"
         }
       ],
