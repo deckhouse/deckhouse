@@ -35,6 +35,10 @@ verboseStatus: true
 	goodModuleValuesB = `
 verboseStatus: false
 `
+	goodModuleValuesC = `
+debug: true
+verboseStatus: true
+`
 	desiredDaemonSetContainerSpecA = `
 - args:
   - --verbose-status=true
@@ -153,6 +157,34 @@ var _ = Describe("Module :: serviceWithHealthchecks :: helm template ::", func()
 			Expect(ds.Exists()).To(BeTrue())
 
 			Expect(ds.Field("spec.template.spec.containers").String()).To(MatchYAML(desiredDaemonSetContainerSpecA))
+
+			containers := ds.Field("spec.template.spec.containers").String()
+			Expect(containers).NotTo(ContainSubstring("--debugging"))
+		})
+	})
+
+	Context("debug=true, verboseStatus=true", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("serviceWithHealthchecks", goodModuleValuesC)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with --debugging=true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ds := f.KubernetesResource("DaemonSet", "d8-service-with-healthchecks", "agent")
+			Expect(ds.Exists()).To(BeTrue())
+
+			containers := ds.Field("spec.template.spec.containers").String()
+			Expect(containers).To(ContainSubstring("--debugging=true"))
+			Expect(containers).To(ContainSubstring("--verbose-status=true"))
+
+			deploy := f.KubernetesResource("Deployment", "d8-service-with-healthchecks", "controller")
+			Expect(deploy.Exists()).To(BeTrue())
+
+			deployContainers := deploy.Field("spec.template.spec.containers").String()
+			Expect(deployContainers).To(ContainSubstring("--debugging=true"))
 		})
 	})
 

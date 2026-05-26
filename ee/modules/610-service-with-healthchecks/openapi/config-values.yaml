@@ -1,5 +1,10 @@
 type: object
 properties:
+  debug:
+    type: boolean
+    default: false
+    description: |
+      If set, enables debug logging level for the controller and agent, providing more verbose log output including caller information.
   verboseStatus:
     type: boolean
     default: false

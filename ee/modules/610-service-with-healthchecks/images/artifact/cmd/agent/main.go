@@ -49,6 +49,7 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var verboseStatus bool
+	var debugging bool
 	var workersCount int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":9874", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":9873", "The controller healthz bind address.")
@@ -58,6 +59,7 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	flag.BoolVar(&verboseStatus, "verbose-status", false, "If set, lastProbeTime is updated on every probe (causes high API load)")
+	flag.BoolVar(&debugging, "debugging", false, "If set, enables debugging")
 	flag.IntVar(&workersCount, "workers-count", 4, "The number of workers to run")
 
 	nodeName := os.Getenv("NODE_NAME")
@@ -67,6 +69,10 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if debugging {
+		log.SetDefaultLevel(log.LevelDebug)
+	}
 
 	// Set Deckhouse standard logger for controller-runtime
 	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))

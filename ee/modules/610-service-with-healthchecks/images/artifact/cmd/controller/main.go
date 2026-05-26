@@ -43,6 +43,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var debugging bool
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":4250", "The address the probe endpoint binds to.")
@@ -53,7 +54,12 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.BoolVar(&debugging, "debugging", false, "If set, enables debugging")
 	flag.Parse()
+
+	if debugging {
+		log.SetDefaultLevel(log.LevelDebug)
+	}
 
 	// Set Deckhouse standard logger for controller-runtime
 	ctrl.SetLogger(logr.FromSlogHandler(log.Default().Handler()))
