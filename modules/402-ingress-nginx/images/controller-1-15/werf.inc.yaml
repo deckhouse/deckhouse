@@ -978,10 +978,6 @@ import:
   add: /usr/sbin/setcap
   to: /apps/setcap
   before: install
-- image: werf-mountpoints
-  add: /tools/mounts/mountfile
-  to: /apps/setcap
-  before: setup
 shell:
   install:
   - /usr/bin/cp -alf /chroot/. /validation-chroot/
