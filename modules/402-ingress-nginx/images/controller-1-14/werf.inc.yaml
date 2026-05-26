@@ -667,9 +667,6 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
-mount:
-- from: build_dir
-  to: /apps
 import:
 - from: {{ index $.Images "tools/libcap" }}
   add: /usr/sbin/setcap
@@ -902,9 +899,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
-mount:
-- from: build_dir
-  to: /apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -1001,6 +995,10 @@ import:
   - usr/bin/tail
   before: install
 {{- include "image mount points" . }}
+- image: werf-mountpoints
+  add: /tools/mounts/mountfile
+  to: /apps/setcap
+  before: setup
 shell:
   install:
   - /usr/bin/cp -alf /chroot/. /validation-chroot/
