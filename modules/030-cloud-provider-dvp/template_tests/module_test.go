@@ -78,35 +78,13 @@ storage:
   enabled: true
   parameters: {}
 internal:
-  providerClusterConfiguration:
-    apiVersion: deckhouse.io/v1
-    kind: DVPClusterConfiguration
-    layout: Standard
-    masterNodeGroup:
-      instanceClass:
-        etcdDisk:
-          size: 15Gi
-          storageClass: ceph-pool-r2-csi-rbd-immediate
-        rootDisk:
-          image:
-            kind: ClusterVirtualImage
-            name: ubuntu-2204
-          size: 50Gi
-          storageClass: ceph-pool-r2-csi-rbd-immediate
-        virtualMachine:
-          bootloader: EFI
-          cpu:
-            coreFraction: 100%
-            cores: 4
-          ipAddresses:
-            - Auto
-          memory:
-            size: 8Gi
-      replicas: 3
-    provider:
-      kubeconfigDataBase64: YXBpVmV=
-      namespace: cloud-provider01
-    sshPublicKey: ssh-rsa AAAAB3N
+  credentialSecrets:
+    d8-credentials:
+      authScheme: Kubeconfig
+      secret: YXBpVmV=
+  discoveryData:
+    loadBalancer:
+      enabled: false
   providerDiscoveryData:
     apiVersion: deckhouse.io/v1
     kind: DVPCloudDiscoveryData
