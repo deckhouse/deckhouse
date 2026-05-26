@@ -1,18 +1,18 @@
 ---
-title: KubeVirt
-permalink: ru/architecture/virtualization/kubevirt.html
+title: Ядро (CORE) модуля
+permalink: ru/architecture/virtualization/core.html
 lang: ru
-search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, сабресурсы, kubevirt, virt-operator
-description: Архитектура компонента KubeVirt модуля virtualization в Deckhouse Kubernetes Platform.
+search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, сабресурсы, kubevirt, virt-operator, core
+description: Архитектура ядра (CORE) модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
-В модуле [`virtualization`](/modules/virtualization/) непосредственно за работу с ВМ отвечает компонент KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это открытый проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он позволяет сосуществовать традиционным виртуальным машинам и контейнерным рабочим нагрузкам в одном кластере Kubernetes, обеспечивая единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
+Ядро (CORE) модуля [`virtualization`](/modules/virtualization/) непосредственно отвечает за работу с виртуальными машинами (ВМ). Ядро основано на проекте KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это открытый проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он позволяет сосуществовать традиционным ВМ и контейнерным рабочим нагрузкам в одном кластере Kubernetes, обеспечивая единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
 
-Для управления ВМ KubeVirt использует кастомные ресурсы следующих API-групп:
+Для управления ВМ компонент CORE использует кастомные ресурсы следующих API-групп:
 
 1. `internal.virtualization.deckhouse.io` — основная группа, аналог API-группы `kubevirt.io` оригинального KubeVirt, включает в себя следующие кастомные ресурсы:
 
-   - InternalVirtualizationVirtualMachine — ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ);
+   - InternalVirtualizationVirtualMachine — ресурс, описывающий конфигурацию и статус ВМ;
    - InternalVirtualizationVirtualMachineInstance - ресурс, описывающий работающую ВМ. После выключения ВМ ресурс InternalVirtualizationVirtualMachineInstance удаляется, но остается ресурс InternalVirtualizationVirtualMachine, который управляет жизненным циклом InternalVirtualizationVirtualMachineInstance;
 
    Ресурсами основной группы управляет компонент virt-сontroller. Ресурс InternalVirtualizationVirtualMachine основной API-группы `internal.virtualization.deckhouse.io` KubeVirt используется в качестве бэкенда для ресурса VirtualMachine API-группы `virtualization.deckhouse.io`, управляемой virtualization-controller.
@@ -22,7 +22,7 @@ description: Архитектура компонента KubeVirt модуля v
 {% endalert %}
 
 2. `subresources.kubevirt.io` — группа сабресурсов. Сабресурсы — это дополнительные операции или действия, которые можно выполнять над основными ресурсами (например, VirtualMachineInstance) через API Kubernetes. Они предоставляют интерфейсы для управления конкретными аспектами ресурсов, не затрагивая весь объект. Вместо привычного для Kubernetes декларативного ресурса они представляют собой эндпойнт для императивных операций. В модуле [`virtualization`](/modules/virtualization/) используются следующие сабресурсы KubeVirt:
-   
+
    - virtualmachines/{name}/addvolume;
    - virtualmachines/{name}/removevolume;
    - virtualmachines/{name}/addresourceclaim;
@@ -33,9 +33,10 @@ description: Архитектура компонента KubeVirt модуля v
    - virtualmachineinstances/{name}/freeze;
    - virtualmachineinstances/{name}/unfreeze.
 
-   Сабресурсами управляет компонент virt-api. Перечисленные выше сабресурсы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `subresources.virtualization.deckhouse.io` API-групп, управляемых virtualization-api.
+   Сабресурсами управляет компонент virt-api. Перечисленные выше сабресурсы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `subresources.virtualization.deckhouse.io` API-групп, управляемых компонентом virtualization-api.
 
-## Архитектура KubeVirt
+## Архитектура ядра (CORE) модуля
+
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
 
@@ -43,14 +44,14 @@ description: Архитектура компонента KubeVirt модуля v
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонента KubeVirt модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура компонента CORE модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента virt сontroller/API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-kubevirt.ru.png)
+![Архитектура компонента CORE модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-kubevirt.ru.png)
 
-## Компоненты KubeVirt
+## Компоненты ядра (CORE) модуля
 
-KubeVirt состоит из следующих компонентов:
+Ядро (CORE) модуля состоит из следующих компонентов:
 
 1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API-группы. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API-группы с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API-группы `internal.virtualization.deckhouse.io` в API-группу `kubevirt.io` и проксирует их на эндпойнт virt-api.
 
@@ -70,7 +71,7 @@ KubeVirt состоит из следующих компонентов:
 
 1. **Virt-handler** (DaemonSet) — отдельный контроллер, запускающийся на всех узлах кластера. Virt-handler выполняет следующие функции:
 
-   - расширяет функционал [kubelet](../kubernetes-and-scheduling/kubelet.html), донастраивая окружение пода для запуска виртуальной машины внутри него. На данный момент virt-handler отвечает за создание сетевых интерфейсов, а также используется для проброса `dev/kvm` и других устройств с узла внутрь пода. Для проброса устройств virt-handler использует [kubelet device plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/);
+   - расширяет функционал [kubelet](../kubernetes-and-scheduling/kubelet.html), донастраивая окружение пода для запуска ВМ внутри него. На данный момент virt-handler отвечает за создание сетевых интерфейсов, а также используется для проброса `dev/kvm` и других устройств с узла внутрь пода. Для проброса устройств virt-handler использует [kubelet device plugins](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/);
 
    - как и virt-controller, virt-handler следит за VirtualMachineInstance ресурсами, соответствующими запущенным на узле ВМ. При обнаружении изменений virt-handler отправляет команду процессу virt-launcher, запущенному в контейнере compute пода ВМ. Virt-launcher изменяет состояние ВМ в соответствии с полученной командой. Virt-handler также следит за событиями ВМ, которые возвращает virt-launcher, и синхронизирует состояние соответствующего VirtualMachineInstance ресурса;
 
@@ -97,18 +98,18 @@ KubeVirt состоит из следующих компонентов:
    Cостоит из одного контейнера:
 
    - **compute** — контейнер, в котором запускается virt-launcher. Virt-launcher реализует cmd-server (gRPC-срвер для удалённого выполнения команд).
-   
-     Virt-launcher в зависимости от поступающей от virt-handler команды формирует XML-спецификацию запускаемой или обновляемой ВМ и отправляет ее в libvirtd. Libvirtd — это демон серверной части системы управления виртуализацией libvirt. Он работает на хост-серверах и выполняет задачи управления для виртуальных гостевых систем. 
+
+     Virt-launcher в зависимости от поступающей от virt-handler команды формирует XML-спецификацию запускаемой или обновляемой ВМ и отправляет ее в libvirtd. Libvirtd — это демон серверной части системы управления виртуализацией libvirt. Он работает на хост-серверах и выполняет задачи управления для виртуальных гостевых систем.
 
      Libvirtd в свою очередь запускает ВМ и управляет ее жизненным циклом. ВМ запускается при помощи QEMU и KVM. [QEMU](https://www.qemu.org/) — свободно разрабатываемый эмулятор, который поддерживает аппаратную виртуализацию и работает в связке с гипервизором [KVM](https://linux-kvm.org/page/Main_Page).
 
      Фактически libvirtd запускает процесс QEMU, который и есть ВМ (точнее VirtualMachineInstance).
 
      Также virt-handler постоянно следит за состоянием запущенной ВМ, которое возвращает libvirtd через virt-launcher, и обновляет статус VirtualMachineInstance.
-   
-## Взаимодействия KubeVirt
 
-KubeVirt взаимодействует со следующими компонентами:
+## Взаимодействия ядра (CORE) модуля
+
+Ядро (CORE) модуля взаимодействует со следующими компонентами:
 
 1. **Kube-apiserver**:
 
@@ -116,9 +117,9 @@ KubeVirt взаимодействует со следующими компоне
    - следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами;
    - выполняет авторизацию запросов на получение метрик.
 
-1. [**CDI (Containerized-Data-Importer)**](cdi.html) — KubeVirt на основе спецификации диска и ссылки на образ виртуальной машины в секции DataVolumeTemplate ресурса VirtualMachine создает DataVolume. CDI импортирует в PVC образ диска из указанного в DataVolume источника. Созданный PVC является диском виртуальной машины, управляемой KubeVirt. 
+1. [**CDI (Containerized-Data-Importer)**](cdi.html) — KubeVirt на основе спецификации диска и ссылки на образ ВМ в секции DataVolumeTemplate ресурса VirtualMachine создает DataVolume. CDI импортирует в PVC образ диска из указанного в DataVolume источника. Созданный PVC является диском ВМ, управляемой KubeVirt.
 
-С KubeVirt взаимодействуют следующие внешние компоненты:
+С ядром (CORE) модуля взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver**:
 
