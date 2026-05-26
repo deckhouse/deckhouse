@@ -17,9 +17,9 @@ description: Архитектура ядра (CORE) модуля virtualization 
 
    Ресурсами основной группы управляет компонент virt-controller. Ресурс InternalVirtualizationVirtualMachine основной API-группы `internal.virtualization.deckhouse.io` KubeVirt используется в качестве бэкенда для ресурса VirtualMachine API-группы `virtualization.deckhouse.io`, управляемой virtualization-controller.
 
-{% alert level="info" %}
-Для упрощения для ресурсов InternalVirtualizationVirtualMachine и InternalVirtualizationVirtualMachineInstance далее будут использоваться сокращенные наименования VirtualMachine и VirtualMachineInstance соответственно (из API-группы `kubevirt.io` оригинального KubeVirt).
-{% endalert %}
+   {% alert level="info" %}
+   Для упрощения для ресурсов InternalVirtualizationVirtualMachine и InternalVirtualizationVirtualMachineInstance далее будут использоваться сокращенные наименования VirtualMachine и VirtualMachineInstance соответственно (из API-группы `kubevirt.io` оригинального KubeVirt).
+   {% endalert %}
 
 2. `subresources.kubevirt.io` — группа сабресурсов. Сабресурсы — это дополнительные операции или действия, которые можно выполнять над основными ресурсами (например, VirtualMachineInstance) через API Kubernetes. Они предоставляют интерфейсы для управления конкретными аспектами ресурсов, не затрагивая весь объект. Вместо привычного для Kubernetes декларативного ресурса они представляют собой эндпоинт для императивных операций. В модуле [`virtualization`](/modules/virtualization/) используются следующие сабресурсы KubeVirt:
 
