@@ -41,6 +41,8 @@ spec:
       regex: "true"
       sourceLabels:
       - __meta_kubernetes_pod_ready
+    - replacement: deckhouse
+      targetLabel: source
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
@@ -72,6 +74,8 @@ spec:
       regex: "true"
       sourceLabels:
       - __meta_kubernetes_pod_ready
+    - replacement: deckhouse
+      targetLabel: source
     scheme: https
     tlsConfig:
       insecureSkipVerify: true
