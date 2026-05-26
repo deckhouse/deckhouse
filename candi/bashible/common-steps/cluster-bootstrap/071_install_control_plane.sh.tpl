@@ -15,6 +15,19 @@
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 {{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
+# Sub-step timing — emit `[bashible-timing] step=071_install_control_plane.sh
+# section=<name> dur=<sec>` so dhctl-side parsing can attribute the (often >200s)
+# total of this step to one of: image-pull waits, kubelet Node registration,
+# RBAC/label/taint setup, or PKI upload.
+__sec_start=$(date +%s.%N)
+__sec() {
+  local now dur
+  now=$(date +%s.%N)
+  dur=$(awk -v s="$__sec_start" -v e="$now" 'BEGIN{printf "%.3f", e-s}')
+  echo "[bashible-timing] step=071_install_control_plane.sh section=$1 dur=${dur}s"
+  __sec_start=$now
+}
+
 # Poll crictl every 2s instead of every 10s — kubelet starts static pods within seconds,
 # so 10s granularity wasted 8-10s per container in practice. Total timeout preserved at 200s.
 check_container_running() {
@@ -40,11 +53,13 @@ check_container_running() {
 }
 
 check_container_running "kubernetes-api-proxy" || exit 1
+__sec wait_api_proxy
 
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd" || exit 1
+__sec wait_etcd
 
 mkdir -p /etc/kubernetes/deckhouse/extra-files
 bb-sync-file /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml - << EOF
@@ -80,8 +95,23 @@ if [[ $cp_failed -ne 0 ]]; then
   echo "one or more control-plane containers failed to start" >&2
   exit 1
 fi
+__sec wait_cp_trio
 
 node_name="$(bb-d8-node-name)"
+
+# admin.conf authenticates as user "kubernetes-admin" in group
+# "kubeadm:cluster-admins" — but that group has NO permissions until the
+# kubeadm:cluster-admins ClusterRoleBinding (created below via super-admin.conf)
+# exists. If we used admin.conf for the Node-wait loop before creating the
+# binding, every `kubectl get node` would 403, and the loop would burn its full
+# 200s timeout instead of breaking on the first successful poll. Measured cost
+# of that bug: ~220s on every fresh bootstrap. So: bind first, then wait.
+#
+# Step is bashible-retried on failure, so every mutation must be idempotent —
+# the `get … || create` guard and `--overwrite` cover that.
+if ! kubectl --kubeconfig=/etc/kubernetes/super-admin.conf get clusterrolebinding kubeadm:cluster-admins >/dev/null 2>&1; then
+  kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
+fi
 
 # kubelet registers the Node object slightly after the control-plane containers
 # report running, so the label/taint below can race ahead of it. Wait for the
@@ -92,15 +122,11 @@ for _ in $(seq 1 100); do
   fi
   sleep 2
 done
+__sec wait_node_register
 
-# This step is retried by bashible on any failure, so every mutation here must
-# be idempotent — a retry must not fail because a previous attempt already
-# created the binding / applied the label or taint.
-if ! kubectl --kubeconfig=/etc/kubernetes/super-admin.conf get clusterrolebinding kubeadm:cluster-admins >/dev/null 2>&1; then
-  kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
-fi
 kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$node_name" node-role.kubernetes.io/control-plane="" --overwrite
 kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$node_name" node-role.kubernetes.io/control-plane:NoSchedule --overwrite
+__sec rbac_label_taint
 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
@@ -138,6 +164,7 @@ bb-curl-kube "/api/v1/namespaces/kube-system/secrets" \
   -H "Content-Type: application/json" \
   --data "$(jq -nc --argjson data "$pki_data" \
     '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"d8-pki","namespace":"kube-system"},"type":"Opaque","data":$data}')"
+__sec pki_upload
 
 # Setup kubectl for root user during bootstrap.
 # The control-plane-manager manages this symlink; when the user-authz module is enabled, see controlPlaneManager.rootKubeconfigSymlink.
