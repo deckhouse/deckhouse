@@ -31,6 +31,9 @@ import:
   add: /relocate
   to: /
   before: setup
+shell:
+  install:
+  - set -e
 imageSpec:
   config:
     workingDir: "/app"

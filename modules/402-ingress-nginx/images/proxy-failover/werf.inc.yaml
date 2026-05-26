@@ -46,6 +46,9 @@ git:
   stageDependencies:
     install:
     - '**/*.tpl'
+shell:
+  install:
+  - set -e
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
