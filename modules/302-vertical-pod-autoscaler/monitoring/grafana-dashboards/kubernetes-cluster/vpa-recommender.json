@@ -287,7 +287,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(container_memory_working_set_bytes{namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}) by (container,pod)",
+          "expr": "sum(container_memory_working_set_bytes{source=\"deckhouse\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}) by (container,pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage: {{pod}}/{{container}}",
@@ -300,7 +300,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "request: {{pod}}/{{container}}",
@@ -313,7 +313,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
+          "expr": "sum(kube_pod_container_resource_limits{source=\"deckhouse\", resource=\"memory\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod)",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -566,7 +566,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}[$__rate_interval])) by (container,pod) * 1000",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", container!=\"POD\", job=\"kubelet\"}[$__rate_interval])) by (container,pod) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage: {{pod}}/{{container}}",
@@ -579,7 +579,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "request: {{pod}}/{{container}}",
@@ -592,7 +592,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(kube_pod_container_resource_limits{resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
+          "expr": "sum(kube_pod_container_resource_limits{source=\"deckhouse\", resource=\"cpu\", namespace=\"$namespace\", pod=~\"$pod\", container=~\"$container\", job=\"kube-state-metrics\"}) by (container,pod) * 1000",
           "hide": false,
           "instant": false,
           "legendFormat": "limit: {{pod}}/{{container}}",
@@ -702,7 +702,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(increase(vpa_updater_evicted_pods_total[$__rate_interval])) by (job)",
+          "expr": "sum(increase(vpa_updater_evicted_pods_total{source=\"deckhouse\"}[$__rate_interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "__auto",
@@ -760,7 +760,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(kube_pod_info{node=~\".*\"},namespace)",
+          "query": "label_values(kube_pod_info{source=\"deckhouse\", node=~\".*\"},namespace)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,
@@ -789,7 +789,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(vpa_target_recommendation{namespace=\"$namespace\"},target_name)",
+          "query": "label_values(vpa_target_recommendation{namespace=\"$namespace\"},target_name{source=\"deckhouse\"})",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 1,
@@ -855,7 +855,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(kube_pod_container_info{namespace=\"$namespace\", pod=~\"$pod\"},container)",
+          "query": "label_values(kube_pod_container_info{source=\"deckhouse\", namespace=\"$namespace\", pod=~\"$pod\"},container)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,

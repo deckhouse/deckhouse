@@ -4,11 +4,11 @@
     for: 10m
     expr: |
       max by (node) (
-        kube_node_role{role="master"}
+        kube_node_role{source="deckhouse", role="master"}
         unless
-        kube_node_role{role="master"}
+        kube_node_role{source="deckhouse", role="master"}
         * on(node) group_left() (
-          (kube_pod_status_ready{condition="true"} == 1)
+          (kube_pod_status_ready{source="deckhouse", condition="true"} == 1)
           * on (pod, namespace) group_right()
           kube_controller_pod{
             controller_type="DaemonSet",
@@ -40,7 +40,7 @@
     for: 5m
     expr: |
       max by (node) (
-        d8_control_plane_manager_maintenance_mode_enabled == 1
+        d8_control_plane_manager_maintenance_mode_enabled{source="deckhouse"} == 1
       ) > 0
     labels:
       d8_component: control-plane-manager
@@ -62,7 +62,7 @@
         ```
   - alert: D8KubernetesVersionIsDeprecated
     for: 10m
-    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.32"}) == 1
+    expr: max by (k8s_version) (d8_kubernetes_version{source="deckhouse", k8s_version="1.32"}) == 1
     labels:
       severity_level: "7"
       tier: cluster
@@ -78,7 +78,7 @@
         Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
   - alert: D8KubernetesStaleTokensDetected
     for: 10m
-    expr: sum(rate(serviceaccount_stale_tokens_total[10m])) by (token_namespace, token_name) > 0
+    expr: sum(rate(serviceaccount_stale_tokens_total{source="deckhouse"}[10m])) by (token_namespace, token_name) > 0
     labels:
       severity_level: "8"
       tier: cluster
@@ -108,7 +108,7 @@
     for: 5m
     expr: |
       max by (feature_gate, deprecated_version, current_version, status) (
-        d8_control_plane_manager_problematic_feature_gate{feature_gate!="", status=~"deprecated|forbidden|unknown"} == 1
+        d8_control_plane_manager_problematic_feature_gate{source="deckhouse", feature_gate!="", status=~"deprecated|forbidden|unknown"} == 1
       )
     labels:
       d8_component: control-plane-manager
@@ -140,7 +140,7 @@
     for: 5m
     expr: |
       max by (feature_gate, deprecated_version, current_version) (
-        d8_control_plane_manager_problematic_feature_gate{feature_gate!="", status="will_be_deprecated"} == 1
+        d8_control_plane_manager_problematic_feature_gate{source="deckhouse", feature_gate!="", status="will_be_deprecated"} == 1
       )
     labels:
       d8_component: control-plane-manager
@@ -172,7 +172,7 @@
   rules:
   - alert: D8ControlPlaneOperationRunningTooLong
     expr: |
-      d8_control_plane_manager_operation_too_long == 1
+      d8_control_plane_manager_operation_too_long{source="deckhouse"} == 1
     labels:
       d8_component: control-plane-manager
       d8_module: control-plane-manager

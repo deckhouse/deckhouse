@@ -3,8 +3,8 @@
   - alert: D8NodeIsNotUpdating
     expr: |
       max by (node,node_group) (
-        node_group_node_status{status="ToBeUpdated"} *
-        on(node) group_left() (max by(node) ((kube_node_status_condition{condition="Ready", status="true"} == 1)))
+        node_group_node_status{source="deckhouse", status="ToBeUpdated"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse", condition="Ready", status="true"} == 1)))
       ) > 0
     for: 5m
     labels:
@@ -45,8 +45,8 @@
   - alert: D8NodeIsNotUpdating
     expr: |
       max by (node,node_group) (
-        node_group_node_status{status="Approved"} *
-        on(node) group_left() (max by(node) ((kube_node_status_condition{condition="Ready", status="true"} == 1)))
+        node_group_node_status{source="deckhouse", status="Approved"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse", condition="Ready", status="true"} == 1)))
       )> 0
     for: 10m
     labels:
@@ -70,8 +70,8 @@
   - alert: D8NodeIsNotUpdating
     expr: |
       max by (node,node_group) (
-        node_group_node_status{status="DisruptionApproved"} *
-        on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+        node_group_node_status{source="deckhouse", status="DisruptionApproved"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse"} == 1)))
       )> 0
     for: 20m
     labels:
@@ -97,8 +97,8 @@
   - alert: D8NodeUpdateStuckWaitingForDisruptionApproval
     expr: |
       max by (node,node_group) (
-        node_group_node_status{status="WaitingForDisruptionApproval"} *
-        on(node) group_left() (max by(node) (kube_node_status_condition == 1))
+        node_group_node_status{source="deckhouse", status="WaitingForDisruptionApproval"} *
+        on(node) group_left() (max by(node) (kube_node_status_condition{source="deckhouse"} == 1))
       )> 0
     for: 5m
     labels:
@@ -120,12 +120,12 @@
   - alert: D8NodeGroupIsNotUpdating
     expr: |
       count by (node_group) (
-        node_group_node_status{status="WaitingForApproval"} *
-        on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+        node_group_node_status{source="deckhouse", status="WaitingForApproval"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse"} == 1)))
       ) > 0 and (
         count by (node_group) (
-          node_group_node_status{status="Approved"} *
-          on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+          node_group_node_status{source="deckhouse", status="Approved"} *
+          on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse"} == 1)))
         ) == 0
       )
     for: 5m
@@ -146,7 +146,7 @@
 
   - alert: D8ProblematicNodeGroupConfiguration
     expr: |
-      max by (status, node_group, node) (node_group_node_status{status="UpdateFailedNoConfigChecksum"}) == 1
+      max by (status, node_group, node) (node_group_node_status{source="deckhouse", status="UpdateFailedNoConfigChecksum"}) == 1
     for: 5m
     labels:
       tier: cluster
@@ -171,8 +171,8 @@
   - alert: NodeRequiresDisruptionApprovalForUpdate
     expr: |
       max by (node,node_group) (
-        node_group_node_status{status="WaitingForManualDisruptionApproval"} *
-        on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+        node_group_node_status{source="deckhouse", status="WaitingForManualDisruptionApproval"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse"} == 1)))
       )> 0
     labels:
       tier: cluster
@@ -214,8 +214,8 @@
   - alert: NodeStuckInDrainingForDisruptionDuringUpdate
     expr: |
       max by (node,node_group) (
-        node_group_node_status{status="DrainingForDisruption"} *
-        on(node) group_left() (max by(node) ((kube_node_status_condition == 1)))
+        node_group_node_status{source="deckhouse", status="DrainingForDisruption"} *
+        on(node) group_left() (max by(node) ((kube_node_status_condition{source="deckhouse"} == 1)))
       )> 0
     for: 2h
     labels:
@@ -240,9 +240,9 @@
   - alert: NodeStuckInDraining
     expr: |
       max by (message, node, node_group) (
-        d8_node_draining *
-        on (node) group_left (node_group) node_group_node_status{status="Draining"} *
-        on (node) group_left () (max by (node) ((kube_node_status_condition == 1)))
+        d8_node_draining{source="deckhouse"} *
+        on (node) group_left (node_group) node_group_node_status{source="deckhouse", status="Draining"} *
+        on (node) group_left () (max by (node) ((kube_node_status_condition{source="deckhouse"} == 1)))
       ) > 0
     for: 5m
     labels:
@@ -267,7 +267,7 @@
         Error message: {{ $labels.message }}
 
   - alert: D8BashibleApiserverLocked
-    expr: d8_bashible_apiserver_locked == 1
+    expr: d8_bashible_apiserver_locked{source="deckhouse"} == 1
     for: 15m
     labels:
       tier: cluster
