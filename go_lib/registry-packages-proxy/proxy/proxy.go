@@ -16,6 +16,7 @@ package proxy
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -860,12 +861,8 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 		fileBase = imagePath[i+1:]
 	}
 
-	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.png"`, fileBase))
-	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("ETag", `"`+manifestDigest+`"`)
-	w.Header().Set("Docker-Content-Digest", manifestDigest)
+	w.Header().Set("Content-Type", "image/svg")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.svg"`, fileBase))
 
 	if r.Method == http.MethodHead {
 		return
@@ -878,7 +875,12 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 		http.Error(w, "failed to extract icon", http.StatusBadGateway)
 		return
 	}
-	_, _ = w.Write(icon)
+
+	w.Header().Set("Content-Length", strconv.Itoa(len(icon)))
+
+	if _, err := io.Copy(w, bytes.NewReader(icon)); err != nil {
+		p.logger.Errorf("stream package for %q@%s: %v", imagePath, manifestDigest, err)
+	}
 }
 
 // parsePackagesPath splits an HTTP path of the form:
