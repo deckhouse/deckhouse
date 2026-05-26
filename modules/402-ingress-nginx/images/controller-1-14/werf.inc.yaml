@@ -992,7 +992,7 @@ import:
   add: /usr/sbin/setcap
   to: /apps/setcap
   before: install
-- from: werf-mountpoints
+- image: werf-mountpoints
   add: /tools/mounts/mountfile
   to: /apps/setcap
   before: setup
