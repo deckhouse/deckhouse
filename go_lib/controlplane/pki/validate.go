@@ -23,7 +23,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
@@ -89,9 +88,5 @@ func certificateSubjectAndSansIsEqual(oldCert *x509.Certificate, newCertCfg cert
 }
 
 func certificateEncryptionAlgoIsEqual(oldCert *x509.Certificate, newCertCfg certConfig) bool {
-	return detectEncryptionAlgorithm(oldCert) == newCertCfg.EncryptionAlgorithm
-}
-
-func detectEncryptionAlgorithm(cert *x509.Certificate) constants.EncryptionAlgorithmType {
-	return pkiutil.DetectEncryptionAlgorithm(cert)
+	return pkiutil.DetectEncryptionAlgorithm(oldCert) == newCertCfg.EncryptionAlgorithm
 }

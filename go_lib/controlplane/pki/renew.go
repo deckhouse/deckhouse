@@ -18,13 +18,98 @@ package pki
 
 import (
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"time"
 
+	certutil "k8s.io/client-go/util/cert"
+
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
-	certutil "k8s.io/client-go/util/cert"
 )
+
+type LeafCertificateInfo struct {
+	Name        LeafCertName
+	Description string
+}
+
+// DefaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
+func DefaultLeafCertificates() []LeafCertificateInfo {
+	return []LeafCertificateInfo{
+		{ApiserverCertName, "certificate for serving the Kubernetes API"},
+		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
+		{ApiserverEtcdClientCertName, "certificate the apiserver uses to access etcd"},
+		{FrontProxyClientCertName, "certificate for the front proxy client"},
+		{EtcdServerCertName, "certificate for serving etcd"},
+		{EtcdPeerCertName, "certificate for etcd nodes to communicate with each other"},
+		{EtcdHealthcheckClientCertName, "certificate for liveness probes to healthcheck etcd"},
+	}
+}
+
+type RenewOption func(*renewOptions)
+
+type renewOptions struct {
+	certificatesDir  string
+	leafCertificates []LeafCertName
+}
+
+// WithRenewDir overrides the PKI directory used by Renew*.
+// Defaults to constants.DefaultCertificatesDir (e.g. /etc/kubernetes/pki).
+func WithRenewDir(dir string) RenewOption {
+	return func(o *renewOptions) {
+		o.certificatesDir = dir
+	}
+}
+
+// WithRenewLeafs restricts RenewCertificates to the provided leaf names.
+// When empty, the full DefaultLeafCertificates() inventory is used.
+func WithRenewLeafs(names ...LeafCertName) RenewOption {
+	return func(o *renewOptions) {
+		o.leafCertificates = append(o.leafCertificates, names...)
+	}
+}
+
+func newRenewOptions(opts ...RenewOption) *renewOptions {
+	o := &renewOptions{certificatesDir: constants.DefaultCertificatesDir}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
+}
+
+// PKIRenewReport describes per-certificate outcomes of a RenewCertificates call.
+type PKIRenewReport struct {
+	Entries []PKIRenewEntry
+}
+
+// PKIRenewEntry is one row of PKIRenewReport. Mirrors CertificateExpiration struct.
+type PKIRenewEntry struct {
+	Name      LeafCertName
+	Path      string
+	Authority RootCertName
+	Action    PKIRenewAction
+}
+
+// PKIRenewAction describes what happened to a single leaf certificate.
+type PKIRenewAction uint8
+
+const (
+	// PKIRenewActionRenewed - certificate was renewed.
+	PKIRenewActionRenewed PKIRenewAction = iota
+	// PKIRenewActionSkippedMissing - certificate was skipped because it was missing.
+	PKIRenewActionSkippedMissing
+	// external CA scenario; the leaf is left untouched.
+	PKIRenewActionSkippedExternalCA
+)
+
+func (r *PKIRenewReport) add(name LeafCertName, path string, authority RootCertName, action PKIRenewAction) {
+	r.Entries = append(r.Entries, PKIRenewEntry{
+		Name:      name,
+		Path:      path,
+		Authority: authority,
+		Action:    action,
+	})
+}
 
 func certConfigFromX509(cert *x509.Certificate) certConfig {
 	return certConfig{
@@ -52,14 +137,7 @@ func caForLeaf(name LeafCertName) (RootCertName, bool) {
 	return "", false
 }
 
-// RenewLeafCert renews a leaf certificate by re-signing it with the same private key.
-// All Subject/SAN/Usage/Algorithm fields are preserved from the current certificate file.
-// The new certificate is issued with constants.CertificateValidityPeriod (1 year).
-// Sentinel errors:
-//   - *CertMissingError  — leaf cert file absent (skippable)
-//   - *CAExternalError   — CA key absent (skippable)
-//   - *CAExpiredError    — CA cert expired (hard stop; renewal is pointless)
-func RenewLeafCert(pkiDir string, name LeafCertName) error {
+func renewLeafCert(pkiDir string, name LeafCertName) error {
 	caName, ok := caForLeaf(name)
 	if !ok {
 		return fmt.Errorf("unknown leaf certificate %q", name)
@@ -111,4 +189,73 @@ func RenewLeafCert(pkiDir string, name LeafCertName) error {
 		return fmt.Errorf("write cert %q: %w", name, err)
 	}
 	return nil
+}
+
+// RenewLeafCert renews a leaf certificate by re-signing it with the same private key.
+// All Subject/SAN/Usage/Algorithm fields are preserved from the current certificate file.
+// The new certificate is issued with constants.CertificateValidityPeriod (1 year).
+// Sentinel errors:
+//   - *CertMissingError  — leaf cert file absent (skippable)
+//   - *CAExternalError   — CA key absent (skippable)
+//   - *CAExpiredError    — CA cert expired (hard stop; renewal is pointless)
+func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
+	o := newRenewOptions(opts...)
+	return renewLeafCert(o.certificatesDir, name)
+}
+
+// RenewCertificates iterates the inventory (or the subset chosen via WithRenewLeafs) and renews each leaf certificate in turn.
+// On *CertMissingError or *CAExternalError: an entry is appended to the report with the corresponding skip action and iteration continues.
+// On *CAExpiredError or any other error (I/O, permissions, signing failure): iteration aborts and the partial report gathered so far is returned together with the fatal error.
+func RenewCertificates(opts ...RenewOption) (PKIRenewReport, error) {
+	o := newRenewOptions(opts...)
+
+	inventory := selectLeafs(o.leafCertificates)
+
+	var report PKIRenewReport
+	for _, info := range inventory {
+		authority, _ := caForLeaf(info.Name)
+		path := certPath(o.certificatesDir, string(info.Name))
+
+		err := renewLeafCert(o.certificatesDir, info.Name)
+		if err == nil {
+			report.add(info.Name, path, authority, PKIRenewActionRenewed)
+			continue
+		}
+
+		var missingCert *CertMissingError
+		var externalCA *CAExternalError
+		switch {
+		case errors.As(err, &missingCert):
+			report.add(info.Name, path, authority, PKIRenewActionSkippedMissing)
+		case errors.As(err, &externalCA):
+			report.add(info.Name, path, authority, PKIRenewActionSkippedExternalCA)
+		default:
+			// *CAExpiredError or any non-sentinel error is fatal.
+			return report, err
+		}
+	}
+
+	return report, nil
+}
+
+// selectLeafs returns the inventory with only the given names, preserving the canonical DefaultLeafCertificates() order.
+// When names is empty, returned default inventory.
+func selectLeafs(names []LeafCertName) []LeafCertificateInfo {
+	full := DefaultLeafCertificates()
+	if len(names) == 0 {
+		return full
+	}
+
+	wanted := make(map[LeafCertName]struct{}, len(names))
+	for _, n := range names {
+		wanted[n] = struct{}{}
+	}
+
+	result := make([]LeafCertificateInfo, 0, len(names))
+	for _, info := range full {
+		if _, ok := wanted[info.Name]; ok {
+			result = append(result, info)
+		}
+	}
+	return result
 }
