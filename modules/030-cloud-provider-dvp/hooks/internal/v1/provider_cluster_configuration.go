@@ -55,7 +55,7 @@ type DvpProviderParameters struct {
 
 // DvpNodesV2 represents the v2 schema nodes section (from ModuleConfig).
 type DvpNodesV2 struct {
-	Enabled    *bool            `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Enabled    *bool               `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Parameters *DvpNodesParameters `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 }
 
@@ -68,7 +68,7 @@ type DvpNodesParameters struct {
 
 // DvpStorageV2 represents the v2 schema storage section (from ModuleConfig).
 type DvpStorageV2 struct {
-	Enabled    *bool             `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Enabled    *bool                 `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Parameters *DvpStorageParameters `json:"parameters,omitempty" yaml:"parameters,omitempty"`
 }
 
