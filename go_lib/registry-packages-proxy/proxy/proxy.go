@@ -77,7 +77,7 @@ const (
 	// deckhouse-cli (and plugin) downloads. Paths under it look like:
 	//
 	//   /v1/images/<image>/tags                 -> list tags
-	//   /v1/images/<image>/tags/<tag>           -> download last layer as tar.gz
+	//   /v1/images/<image>/tags/<tag>           -> download OCI image tar.gz
 	//
 	// where <image> must match the allowlist (deckhouse-cli or deckhouse-cli/plugins/<plugin>).
 	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/images/* with its
@@ -243,7 +243,7 @@ func (p *Proxy) Serve(cfg *Config) {
 // Two URL shapes are supported under /v1/images/<image>/:
 //
 //	GET /v1/images/<image>/tags                 -> JSON list of available tags
-//	GET /v1/images/<image>/tags/<tag>           -> stream the last layer of the image tag
+//	GET /v1/images/<image>/tags/<tag>           -> stream OCI image tar.gz
 //	                                                as application/x-gzip
 //
 // <image> must match the deckhouse-cli allowlist (deckhouse-cli or
