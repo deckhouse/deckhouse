@@ -10,7 +10,6 @@ import:
     add: /src/healthcheck
     to: /healthcheck
     before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

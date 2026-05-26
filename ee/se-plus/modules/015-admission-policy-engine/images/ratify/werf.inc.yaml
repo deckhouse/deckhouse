@@ -7,7 +7,6 @@ import:
     add: /ratify
     to: /ratify
     before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
