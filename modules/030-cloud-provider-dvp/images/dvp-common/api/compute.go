@@ -390,7 +390,6 @@ func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	return &vmbdas.Items[0], nil
 }
 
-
 func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte, vmName string, vmUID types.UID) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
