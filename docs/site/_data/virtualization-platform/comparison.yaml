@@ -402,7 +402,7 @@ featureSections:
       dvp-ee: supported
       dvp-cse: planned
       dkp-ce: not_supported
-      dkp-se-plus: not_supported
+      dkp-se-plus: supported
       dkp-ee: supported
       dkp-cse-pro: planned
     restriction_message:
