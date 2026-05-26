@@ -17,23 +17,30 @@ limitations under the License.
 package hooks
 
 import (
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {"clusterDomain": "`+clusterDomain+`"}},"nodeManager":{"internal":{"capiControllerManagerWebhookCert": {}}}}`, "")
+
+	expectedSANs := []string{
+		"capi-webhook-service.d8-cloud-instance-manager",
+		"capi-webhook-service.d8-cloud-instance-manager.svc",
+		"capi-webhook-service.d8-cloud-instance-manager." + clusterDomain,
+		"capi-webhook-service.d8-cloud-instance-manager.svc." + clusterDomain,
+	}
 
 	Context("Without secret", func() {
 		BeforeEach(func() {
@@ -45,26 +52,46 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").Exists()).To(BeTrue())
+			caPEM := f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()
+			crtPEM := f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()
+			keyPEM := f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").String()
+			Expect(caPEM).ToNot(BeEmpty())
+			Expect(crtPEM).ToNot(BeEmpty())
+			Expect(keyPEM).ToNot(BeEmpty())
 
-			blockCA, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()))
-			certCA, err := x509.ParseCertificate(blockCA.Bytes)
-			Expect(err).To(BeNil())
-			Expect(certCA.IsCA).To(BeTrue())
-			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+			tls_certificate.AssertCertBundleValid(GinkgoT(), caPEM, crtPEM, keyPEM, cn, expectedSANs)
+		})
 
-			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()))
-			cert, err := x509.ParseCertificate(block.Bytes)
-			Expect(err).To(BeNil())
-			Expect(cert.IsCA).To(BeFalse())
-			Expect(cert.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+		// Direct in-test reproduction of the original bug report:
+		//
+		//   kubectl -n d8-cloud-instance-manager get secret capi-webhook-tls \
+		//     -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/capi-ca.crt
+		//   kubectl -n d8-cloud-instance-manager get secret capi-webhook-tls \
+		//     -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/capi-tls.crt
+		//   openssl verify -CAfile /tmp/capi-ca.crt /tmp/capi-tls.crt
+		//   # error 18 at 0 depth lookup: self-signed certificate
+		//
+		// crypto/x509 silently passed the legacy collision (so kube-apiserver
+		// was happy), openssl rejected with error 18.
+		// AssertOpensslVerifyOK reproduces both checks; see its godoc.
+		It("issued bundle must pass `openssl verify -CAfile ca.crt tls.crt`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ca, leaf := tls_certificate.AssertOpensslVerifyOK(
+				GinkgoT(),
+				f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String(),
+				f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String(),
+			)
+
+			Expect(ca.Subject.String()).To(ContainSubstring("O=Deckhouse"))
+			Expect(leaf.Subject.String()).ToNot(ContainSubstring("O=Deckhouse"))
 		})
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capi-manager-webhook", "capi-webhook-service")
+		// CN must match the central hook's configured CN, otherwise CN drift
+		// triggers a re-issue and the test cert in the secret is replaced.
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, cn, "capi-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
@@ -92,14 +119,27 @@ data:
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String()).To(Equal(caAuthority.Cert))
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").String()).To(Equal(tlsAuthority.Key))
 			Expect(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()).To(Equal(tlsAuthority.Cert))
+
+			tls_certificate.AssertCertBundleValid(
+				GinkgoT(),
+				f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.ca").String(),
+				f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String(),
+				f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.key").String(),
+				cn,
+				expectedSANs,
+			)
 		})
 	})
 })
 
 func genWebhookCa(logEntry *log.Logger) (*certificate.Authority, error) {
-	ca, err := certificate.GenerateCA(logEntry, cn, certificate.WithKeyAlgo("ecdsa"),
+	ca, err := certificate.GenerateCA(logEntry, cn,
+		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
-		certificate.WithCAExpiry("87600h"))
+		certificate.WithCAExpiry("87600h"),
+		// Match the central hook contract: O=Deckhouse, OU=<module>.
+		certificate.WithNames(csr.Name{O: "Deckhouse", OU: "cloud-instance-manager"}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate CA: %v", err)
 	}
@@ -114,9 +154,10 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn strin
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
 		certificate.WithSigningDefaultExpiry((24*time.Hour)*365*10),
-		certificate.WithSigningDefaultUsage([]string{"signing",
+		certificate.WithSigningDefaultUsage([]string{
+			"signing",
 			"key encipherment",
-			"requestheader-client",
+			"server auth",
 		}),
 		certificate.WithSANs(
 			sanPrefix+".d8-cloud-instance-manager",

@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -140,7 +141,9 @@ func generateTestCert(expired bool) certificate.Certificate {
 		"webhook-handler.d8-system.svc",
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
-		certificate.WithCAExpiry(expireStr))
+		certificate.WithCAExpiry(expireStr),
+		certificate.WithNames(csr.Name{O: "Deckhouse", OU: "system"}),
+	)
 
 	webhookServiceFQDN := fmt.Sprintf(
 		"%s.%s",
@@ -167,7 +170,7 @@ func generateTestCert(expired bool) certificate.Certificate {
 		certificate.WithSigningDefaultUsage([]string{
 			"signing",
 			"key encipherment",
-			"requestheader-client",
+			"server auth",
 		}),
 	)
 
