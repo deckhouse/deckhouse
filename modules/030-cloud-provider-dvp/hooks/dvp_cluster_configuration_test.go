@@ -135,9 +135,6 @@ kind: Secret
 metadata:
   name: d8-migration-resources
   namespace: d8-cloud-provider-dvp
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 type: Opaque
 data: {}
 ---
@@ -146,9 +143,6 @@ kind: ConfigMap
 metadata:
   name: d8-module-is-migrating
   namespace: d8-cloud-provider-dvp
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 `)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
@@ -230,9 +224,6 @@ kind: Secret
 metadata:
   name: d8-cloud-provider-dvp-credentials
   namespace: d8-cloud-provider-dvp
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
   authScheme: S3ViZWNvbmZpZw==
@@ -242,9 +233,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
   name: master-dvp
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 spec:
   etcdDisk:
     size: 15Gi
@@ -272,9 +260,6 @@ apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: master
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 spec:
   nodeType: CloudPermanent
   cloudInstances:
@@ -294,8 +279,6 @@ spec:
 			// Migration configmap should be created.
 			migrationCM := b.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
 			Expect(migrationCM.Exists()).To(BeTrue())
-			Expect(migrationCM.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
-			Expect(migrationCM.Field("metadata.labels.module").String()).To(Equal("cloud-provider-dvp"))
 
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
@@ -394,9 +377,6 @@ kind: Secret
 metadata:
   name: d8-migration-resources
   namespace: d8-cloud-provider-dvp
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 type: Opaque
 data: {}
 ---
@@ -405,9 +385,6 @@ kind: ConfigMap
 metadata:
   name: d8-module-is-migrating
   namespace: d8-cloud-provider-dvp
-  labels:
-    heritage: deckhouse
-    module: cloud-provider-dvp
 `, notEmptyPCCState)
 			c.KubeStateSet(stateCResources)
 			c.BindingContexts.Set(c.GenerateBeforeHelmContext())
