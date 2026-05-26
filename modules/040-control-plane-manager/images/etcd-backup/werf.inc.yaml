@@ -21,6 +21,9 @@ import:
   add: /relocate
   to: /
   before: setup
+shell:
+  setup:
+  - set -e
 imageSpec:
   config:
     entrypoint: ["/entrypoint.sh"]
