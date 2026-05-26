@@ -842,7 +842,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	}
 
 	// find icon in the oci image and copy it to the response
-	icon, err := extractTarGzFile(reader, "docs/icon/extension.png")
+	icon, err := extractTarGzFile(reader, "docs/icon.svg")
 	if err != nil {
 		p.logger.Errorf("extract icon from package for %q@%s: %v", packageName, manifestDigest, err)
 		http.Error(w, "failed to extract icon", http.StatusBadGateway)
