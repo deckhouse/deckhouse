@@ -33,6 +33,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
     metricRelabelings:
     # remove ingress_class, we have "controller" label
     - regex: ingress_class
@@ -64,6 +66,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchLabels:
       app: controller

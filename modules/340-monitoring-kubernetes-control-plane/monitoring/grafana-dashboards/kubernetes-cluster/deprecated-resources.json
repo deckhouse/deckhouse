@@ -582,7 +582,7 @@
         "name": "k8s",
         "options": [],
         "query": {
-          "query": "label_values(apiserver_requested_deprecated_apis{source=\"deckhouse\"}, removed_release)",
+          "query": "label_values(apiserver_requested_deprecated_apis{source=\"deckhouse\"}, removed_release{source=\"deckhouse\"})",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

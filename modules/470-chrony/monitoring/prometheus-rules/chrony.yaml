@@ -1,12 +1,12 @@
 - name: kubernetes.node.chrony
   rules:
   - record: chrony_tracking_last_offset_seconds:abs
-    expr: abs(chrony_tracking_last_offset_seconds)
+    expr: abs(chrony_tracking_last_offset_seconds{source="deckhouse"})
   - record: chrony_rtt_seconds
-    expr: chrony_tracking_last_offset_seconds - chrony_serverstats_ntp_timestamps_held
+    expr: chrony_tracking_last_offset_seconds{source="deckhouse"} - chrony_serverstats_ntp_timestamps_held{source="deckhouse"}
 
   - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
-    expr: (min by (node) (node_timex_sync_status{job="node-exporter"})) == 0
+    expr: (min by (node) (node_timex_sync_status{source="deckhouse", job="node-exporter"})) == 0
     for: 30m
     labels:
       severity_level: "5"
@@ -37,7 +37,7 @@
            - Modify the NTP servers list defined in the [chrony configuration](https://deckhouse.io/modules/chrony/configuration.html).
 
   - alert: NodeTimeOutOfSync
-    expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
+    expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds{source="deckhouse"}/2)) > 0.05
     for: 30m
     labels:
       severity_level: "5"

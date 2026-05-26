@@ -2,7 +2,7 @@
   rules:
     - alert: D8NodeHasUnmetKernelRequirements
       expr: >-
-        count(d8_node_kernel_does_not_satisfy_requirements) > 0
+        count(d8_node_kernel_does_not_satisfy_requirements{source="deckhouse"}) > 0
       for: 5m
       labels:
         severity_level: "4"

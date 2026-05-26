@@ -148,7 +148,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(cilium_errors_warnings_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, level) * 60",
+          "expr": "sum(rate(cilium_errors_warnings_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, level) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{level}} {{ pod }}",
@@ -291,7 +291,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "min(irate(cilium_process_cpu_seconds_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 100",
+          "expr": "min(irate(cilium_process_cpu_seconds_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 100",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -305,7 +305,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(irate(cilium_process_cpu_seconds_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 100",
+          "expr": "avg(irate(cilium_process_cpu_seconds_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg {{ pod }}",
@@ -318,7 +318,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "max(irate(cilium_process_cpu_seconds_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 100",
+          "expr": "max(irate(cilium_process_cpu_seconds_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max {{ pod }}",
@@ -531,7 +531,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_process_virtual_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "min(cilium_process_virtual_memory_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Min Virtual Memory",
@@ -542,7 +542,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_process_virtual_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "avg(cilium_process_virtual_memory_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Average Virtual Memory",
@@ -553,7 +553,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_process_virtual_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "max(cilium_process_virtual_memory_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max Virtual Memory",
@@ -666,7 +666,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_process_resident_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "avg(cilium_process_resident_memory_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -678,7 +678,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_process_resident_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "max(cilium_process_resident_memory_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -690,7 +690,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_process_resident_memory_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "min(cilium_process_resident_memory_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "MIN_resident_memory_bytes_min",
@@ -803,7 +803,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "sum(cilium_process_open_fds{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "all nodes",
@@ -814,7 +814,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "min(cilium_process_open_fds{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "min/node",
@@ -825,7 +825,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "avg(cilium_process_open_fds{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg/node",
@@ -836,7 +836,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_process_open_fds{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "max(cilium_process_open_fds{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max/node",
@@ -950,7 +950,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_bpf_maps_virtual_memory_max_bytes{job=\"cilium-agent\",pod=~\"$pod\"} + cilium_bpf_progs_virtual_memory_max_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "avg(cilium_bpf_maps_virtual_memory_max_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"} + cilium_bpf_progs_virtual_memory_max_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -963,7 +963,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_bpf_maps_virtual_memory_max_bytes{job=\"cilium-agent\",pod=~\"$pod\"} + cilium_bpf_progs_virtual_memory_max_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "max(cilium_bpf_maps_virtual_memory_max_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"} + cilium_bpf_progs_virtual_memory_max_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -976,7 +976,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_bpf_maps_virtual_memory_max_bytes{job=\"cilium-agent\",pod=~\"$pod\"} + cilium_bpf_progs_virtual_memory_max_bytes{job=\"cilium-agent\",pod=~\"$pod\"})",
+          "expr": "min(cilium_bpf_maps_virtual_memory_max_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"} + cilium_bpf_progs_virtual_memory_max_bytes{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"})",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1078,7 +1078,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "cilium_bpf_map_pressure{job=\"cilium-agent\",pod=~\"$pod\"}",
+          "expr": "cilium_bpf_map_pressure{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1243,7 +1243,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_agent_api_process_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "avg(rate(cilium_agent_api_process_time_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])\/rate(cilium_agent_api_process_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}}",
@@ -1383,7 +1383,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_agent_api_process_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "max(rate(cilium_agent_api_process_time_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])\/rate(cilium_agent_api_process_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}}",
@@ -1523,7 +1523,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "avg(rate(cilium_agent_api_process_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}} ",
@@ -1663,7 +1663,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "max(rate(cilium_agent_api_process_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}} ",
@@ -1803,7 +1803,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path, return_code)",
+          "expr": "avg(rate(cilium_agent_api_process_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path, return_code)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{return_code}} ({{method}} {{path}} )",
@@ -1943,7 +1943,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_agent_api_process_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path, return_code)",
+          "expr": "sum(rate(cilium_agent_api_process_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path, return_code)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{return_code}} ({{method}} {{path}} )",
@@ -2145,7 +2145,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
+          "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
@@ -2288,7 +2288,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
+          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
@@ -2429,7 +2429,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/ rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
+          "expr": "avg(rate(cilium_bpf_syscall_duration_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])\/ rate(cilium_bpf_syscall_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
@@ -2529,7 +2529,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/ rate(cilium_bpf_syscall_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
+          "expr": "max(rate(cilium_bpf_syscall_duration_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])\/ rate(cilium_bpf_syscall_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{operation}}",
@@ -2647,7 +2647,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "topk(5, avg(rate(cilium_bpf_map_ops_total{job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (pod, map_name, operation))",
+          "expr": "topk(5, avg(rate(cilium_bpf_map_ops_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (pod, map_name, operation))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{map_name}} {{operation}}",
@@ -2765,7 +2765,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "topk(5, max(rate(cilium_bpf_map_ops_total{job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (pod, map_name, operation))",
+          "expr": "topk(5, max(rate(cilium_bpf_map_ops_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (pod, map_name, operation))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{map_name}} {{operation}}",
@@ -2903,7 +2903,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_bpf_map_ops_total{job=\"cilium-agent\",pod=~\"$pod\",outcome=\"fail\"}[5m])) by (pod, map_name, operation)",
+          "expr": "sum(rate(cilium_bpf_map_ops_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\",outcome=\"fail\"}[5m])) by (pod, map_name, operation)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{map_name}} {{operation}}",
@@ -3079,7 +3079,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(kvstore_operations_total{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
+          "expr": "sum(rate(kvstore_operations_total{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}} {{action}}",
@@ -3221,7 +3221,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(kvstore_operations_total{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
+          "expr": "max(rate(kvstore_operations_total{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}} {{action}}",
@@ -3362,7 +3362,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "topk(5, avg(rate(cilium_kvstore_operations_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod, action, scope) / avg(rate(cilium_kvstore_operations_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod, action, scope))",
+          "expr": "topk(5, avg(rate(cilium_kvstore_operations_duration_seconds_sum{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, action, scope) \/ avg(rate(cilium_kvstore_operations_duration_seconds_count{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, action, scope))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -3503,7 +3503,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "topk(5, max(rate(cilium_kvstore_operations_duration_seconds_sum{pod=~\"$pod\"}[1m])) by (pod, action, scope) / avg(rate(cilium_kvstore_operations_duration_seconds_count{pod=~\"$pod\"}[1m])) by (pod, action, scope))",
+          "expr": "topk(5, max(rate(cilium_kvstore_operations_duration_seconds_sum{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, action, scope) \/ avg(rate(cilium_kvstore_operations_duration_seconds_count{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, action, scope))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -3641,7 +3641,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kvstore_events_queue_seconds_count{pod=~\"$pod\"}[1m])) by (pod, scope, action)",
+          "expr": "avg(rate(cilium_kvstore_events_queue_seconds_count{source=\"deckhouse\", pod=~\"$pod\"}[1m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -3772,7 +3772,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_forward_count_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, direction)",
+          "expr": "sum(rate(cilium_forward_count_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, direction)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{direction}}",
@@ -3869,7 +3869,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_forward_bytes_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, direction) * 8",
+          "expr": "sum(rate(cilium_forward_bytes_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, direction) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{direction}}",
@@ -4250,7 +4250,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
+          "expr": "min(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -4262,7 +4262,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -4273,7 +4273,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", status=\"alive\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -4284,7 +4284,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted",
@@ -4295,7 +4295,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", status=\"deleted\", family=\"ipv4\", protocol=\"TCP\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted max",
@@ -4676,7 +4676,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "min(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -4688,7 +4688,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -4699,7 +4699,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -4710,7 +4710,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted",
@@ -4721,7 +4721,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted max",
@@ -5102,7 +5102,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "min(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -5114,7 +5114,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -5125,7 +5125,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",status=\"alive\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -5136,7 +5136,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted",
@@ -5147,7 +5147,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\",status=\"deleted\", family=\"ipv4\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted max",
@@ -5528,7 +5528,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "min(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -5540,7 +5540,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -5551,7 +5551,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"alive\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -5562,7 +5562,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "avg(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted",
@@ -5573,7 +5573,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_datapath_conntrack_gc_entries{job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
+          "expr": "max(cilium_datapath_conntrack_gc_entries{source=\"deckhouse\", job=\"cilium-agent\", status=\"deleted\", family=\"ipv6\", protocol=\"non-TCP\", pod=~\"$pod\"}) by (family,status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "deleted max",
@@ -5707,7 +5707,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(cilium_ip_addresses{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, family)\n",
+          "expr": "sum(cilium_ip_addresses{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, family)\n",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{family}} {{pod}}",
@@ -5836,7 +5836,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_datapath_conntrack_dump_resets_total{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, area, family, name)",
+          "expr": "sum(cilium_datapath_conntrack_dump_resets_total{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod, area, family, name)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{name}} {{area}} {{family}}",
@@ -5933,7 +5933,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_services_events_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, action)",
+          "expr": "avg(rate(cilium_services_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -6030,7 +6030,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_unreachable_nodes{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "expr": "sum(cilium_unreachable_nodes{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "unreachable nodes",
@@ -6041,7 +6041,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_unreachable_health_endpoints{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "expr": "sum(cilium_unreachable_health_endpoints{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "unreachable health endpoints",
@@ -6138,7 +6138,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_drop_count_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason)",
+          "expr": "sum(rate(cilium_drop_count_total{source=\"deckhouse\", direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{reason}}",
@@ -6342,7 +6342,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_nodes_all_events_received_total{job=\"cilium-agent\", pod=~\"$pod\"}[1m])) by (pod, event_type, source) * 60",
+          "expr": "avg(rate(cilium_nodes_all_events_received_total{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}[1m])) by (pod, event_type, source) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{eventType}} {{source}}",
@@ -6439,7 +6439,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_drop_bytes_total{direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason) * 8",
+          "expr": "sum(rate(cilium_drop_bytes_total{source=\"deckhouse\", direction=\"EGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{reason}}",
@@ -6596,7 +6596,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_nodes_all_num{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Average Nodes {{ pod }}",
@@ -6609,7 +6609,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "min(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "expr": "min(cilium_nodes_all_num{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Min Nodes {{ pod }}",
@@ -6622,7 +6622,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "max(cilium_nodes_all_num{job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
+          "expr": "max(cilium_nodes_all_num{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max Nodes {{ pod }}",
@@ -6800,7 +6800,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"denied\"}[$__rate_interval]))",
+          "expr": "sum(rate(cilium_policy_l7_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", rule=\"denied\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "denied",
@@ -6811,7 +6811,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"forwarded\"}[$__rate_interval]))",
+          "expr": "sum(rate(cilium_policy_l7_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", rule=\"forwarded\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "forwarded",
@@ -6822,7 +6822,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"received\"}[$__rate_interval]))",
+          "expr": "sum(rate(cilium_policy_l7_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", rule=\"received\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "received",
@@ -6919,7 +6919,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_drop_count_total{direction=\"INGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (reason)",
+          "expr": "sum(rate(cilium_drop_count_total{source=\"deckhouse\", direction=\"INGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[5m])) by (reason)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{reason}}",
@@ -7127,7 +7127,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_sum{job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
+          "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) \/ sum(rate(cilium_proxy_upstream_reply_seconds_count{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -7139,7 +7139,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_policy_l7_total{job=\"cilium-agent\", pod=~\"$pod\", rule=\"parse_errors\"}) by (pod)",
+          "expr": "avg(cilium_policy_l7_total{source=\"deckhouse\", job=\"cilium-agent\", pod=~\"$pod\", rule=\"parse_errors\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "parse errors",
@@ -7236,7 +7236,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_drop_bytes_total{direction=\"INGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason) * 8",
+          "expr": "sum(rate(cilium_drop_bytes_total{source=\"deckhouse\", direction=\"INGRESS\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (reason) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{reason}}",
@@ -7446,7 +7446,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(rate(cilium_triggers_policy_update_call_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
+          "expr": "min(rate(cilium_triggers_policy_update_call_duration_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) \/ sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "min",
@@ -7457,7 +7457,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_triggers_policy_update_call_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
+          "expr": "avg(rate(cilium_triggers_policy_update_call_duration_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) \/ sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -7468,7 +7468,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_triggers_policy_update_call_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
+          "expr": "max(rate(cilium_triggers_policy_update_call_duration_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) \/ sum(rate(cilium_triggers_policy_update_call_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -7625,7 +7625,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_proxy_upstream_reply_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) / sum(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
+          "expr": "max(rate(cilium_proxy_upstream_reply_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope) \/ sum(rate(cilium_proxy_upstream_reply_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Max {{scope}}",
@@ -7636,7 +7636,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_policy_l7_total{job=\"cilium-agent\",pod=~\"$pod\", rule=\"parse_errors\"}[$__rate_interval])) by (pod)",
+          "expr": "max(rate(cilium_policy_l7_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", rule=\"parse_errors\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "parse errors",
@@ -7796,7 +7796,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_policy_endpoint_enforcement_status{job=\"cilium-agent\",pod=~\"$pod\"}) by (enforcement)",
+          "expr": "sum(cilium_policy_endpoint_enforcement_status{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (enforcement)",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -7970,7 +7970,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_proxy_redirects{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "min(cilium_proxy_redirects{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "min",
@@ -7981,7 +7981,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_proxy_redirects{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_proxy_redirects{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -7992,7 +7992,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_proxy_redirects{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "max(cilium_proxy_redirects{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -8220,7 +8220,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(rate(cilium_triggers_policy_update_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
+          "expr": "min(rate(cilium_triggers_policy_update_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "min trigger",
@@ -8231,7 +8231,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_triggers_policy_update_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
+          "expr": "avg(rate(cilium_triggers_policy_update_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "average trigger",
@@ -8242,7 +8242,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_triggers_policy_update_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
+          "expr": "max(rate(cilium_triggers_policy_update_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max trigger",
@@ -8253,7 +8253,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_triggers_policy_update_folds{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
+          "expr": "max(rate(cilium_triggers_policy_update_folds{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "folds",
@@ -8427,7 +8427,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "min(cilium_policy{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
+          "expr": "min(cilium_policy{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "min {{ pod }}",
@@ -8440,7 +8440,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg(cilium_policy{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
+          "expr": "avg(cilium_policy{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg {{ pod }}",
@@ -8453,7 +8453,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "max(cilium_policy{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
+          "expr": "max(cilium_policy{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max {{ pod }}",
@@ -8466,7 +8466,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(cilium_policy_change_total{job=\"cilium-agent\",pod=~\"$pod\", outcome=\"fail\"}) by (pod)",
+          "expr": "sum(cilium_policy_change_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", outcome=\"fail\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "policy change errors",
@@ -8628,7 +8628,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
+          "expr": "avg(rate(cilium_proxy_upstream_reply_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}}",
@@ -8799,7 +8799,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "min(cilium_policy_max_revision{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "min(cilium_policy_max_revision{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "min",
@@ -8810,7 +8810,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(cilium_policy_max_revision{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "avg(cilium_policy_max_revision{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "avg",
@@ -8821,7 +8821,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(cilium_policy_max_revision{job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
+          "expr": "max(cilium_policy_max_revision{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "max",
@@ -8954,7 +8954,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(histogram_quantile(0.90, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\", scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
+          "expr": "avg(histogram_quantile(0.90, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{source=\"deckhouse\", job=\"cilium-agent\", scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}}",
@@ -9053,7 +9053,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(histogram_quantile(0.99, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{job=\"cilium-agent\",scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
+          "expr": "avg(histogram_quantile(0.99, rate(cilium_endpoint_regeneration_time_stats_seconds_bucket{source=\"deckhouse\", job=\"cilium-agent\",scope!=\"total\", pod=~\"$pod\"}[5m]))) by (scope)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scope}}",
@@ -9214,7 +9214,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_endpoint_regenerations_total{job=\"cilium-agent\",pod=~\"$pod\"}[30s])) by(outcome)",
+          "expr": "sum(rate(cilium_endpoint_regenerations_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[30s])) by(outcome)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -9360,7 +9360,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_endpoint_state{job=\"cilium-agent\",pod=~\"$pod\"}) by (endpoint_state)",
+          "expr": "sum(cilium_endpoint_state{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by (endpoint_state)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{endpoint_state}}",
@@ -9540,7 +9540,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_controllers_runs_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(cilium_controllers_runs_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Runs",
@@ -9551,7 +9551,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(cilium_controllers_failing{job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
+          "expr": "sum(cilium_controllers_failing{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}) by(pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Failed",
@@ -9744,7 +9744,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_controllers_runs_duration_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, status) / sum(rate(cilium_controllers_runs_duration_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, status)",
+          "expr": "sum(rate(cilium_controllers_runs_duration_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, status) \/ sum(rate(cilium_controllers_runs_duration_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, status)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status}}",
@@ -9916,7 +9916,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_k8s_client_api_latency_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_k8s_client_api_latency_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "avg(rate(cilium_k8s_client_api_latency_time_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])\/rate(cilium_k8s_client_api_latency_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}}",
@@ -10054,7 +10054,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "max(rate(cilium_k8s_client_api_latency_time_seconds_sum{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])/rate(cilium_k8s_client_api_latency_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "max(rate(cilium_k8s_client_api_latency_time_seconds_sum{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])\/rate(cilium_k8s_client_api_latency_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}}",
@@ -10195,7 +10195,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_k8s_client_api_latency_time_seconds_count{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
+          "expr": "sum(rate(cilium_k8s_client_api_latency_time_seconds_count{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, path)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{path}}",
@@ -10335,7 +10335,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_k8s_client_api_calls_total{job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, return_code)",
+          "expr": "sum(rate(cilium_k8s_client_api_calls_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\"}[$__rate_interval])) by (pod, method, return_code)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{method}} {{return_code}}",
@@ -10475,7 +10475,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"true\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{source=\"deckhouse\", job=\"cilium-agent\",equal=\"true\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -10615,7 +10615,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"true\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{source=\"deckhouse\", job=\"cilium-agent\",equal=\"true\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -10755,7 +10755,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"false\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action, valid)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{source=\"deckhouse\", job=\"cilium-agent\",equal=\"false\", valid=\"true\", pod=~\"$pod\"}[5m])) by (pod, scope, action, valid)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -10895,7 +10895,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(cilium_kubernetes_events_received_total{job=\"cilium-agent\",equal=\"false\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
+          "expr": "sum(rate(cilium_kubernetes_events_received_total{source=\"deckhouse\", job=\"cilium-agent\",equal=\"false\", valid=\"false\", pod=~\"$pod\"}[5m])) by (pod, scope, action)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} {{scope}}",
@@ -10992,7 +10992,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"CiliumNetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", scope=\"CiliumNetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -11135,7 +11135,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"NetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", scope=\"NetworkPolicy\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -11278,7 +11278,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Pod\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", scope=\"Pod\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -11421,7 +11421,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",scope=\"Node\", pod=~\"$pod\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",scope=\"Node\", pod=~\"$pod\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}} avg",
@@ -11518,7 +11518,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Service\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", scope=\"Service\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -11615,7 +11615,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Endpoint\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", scope=\"Endpoint\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -11712,7 +11712,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "avg(rate(cilium_kubernetes_events_total{job=\"cilium-agent\",pod=~\"$pod\", scope=\"Namespace\"}[$__rate_interval])) by (pod, action) * 60",
+          "expr": "avg(rate(cilium_kubernetes_events_total{source=\"deckhouse\", job=\"cilium-agent\",pod=~\"$pod\", scope=\"Namespace\"}[$__rate_interval])) by (pod, action) * 60",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{action}}",
@@ -11765,7 +11765,7 @@
         "name": "pod",
         "options": [],
         "query": {
-          "query": "label_values(cilium_version, pod)",
+          "query": "label_values(cilium_version{source=\"deckhouse\"}, pod)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,

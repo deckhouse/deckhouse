@@ -9,18 +9,18 @@
           label_replace (
           # lowercase Deployment
             label_replace (
-            # rename owner_kind to controller_type
+            # rename owner_kind{source="deckhouse"} to controller_type{source="deckhouse"}
               label_replace (
-              # rename owner_name to controller_name
+              # rename owner_name{source="deckhouse"} to controller_name{source="deckhouse"}
                 label_replace (
-                # rename owner_kind_name to controller
+                # rename owner_kind_name{source="deckhouse"} to controller
                   max by(job, namespace, replicaset, owner_kind_name, owner_kind, owner_name) (
                     label_replace (
-                    # rename temp label to owner_kind_name
+                    # rename temp label to owner_kind_name{source="deckhouse"}
                       label_join (
-                      # generate owner_kind_name
+                      # generate owner_kind_name{source="deckhouse"}
                         label_join (
-                        # generate temp label for  owner_kind_name
+                        # generate temp label for  owner_kind_name{source="deckhouse"}
                           label_replace(
                           # rename ReplicaSet
                             kube_replicaset_owner{source="deckhouse", owner_kind=~"Deployment|<none>"},
@@ -56,13 +56,13 @@
               label_replace (
                 # none controller
                 label_replace (
-                  # controller_type for static pods
+                  # controller_type{source="deckhouse"} for static pods
                   label_replace (
                     # controller
                     label_join (
-                      # controller_name
+                      # controller_name{source="deckhouse"}
                       label_replace (
-                        # controller_type
+                        # controller_type{source="deckhouse"}
                         label_replace (
                           kube_pod_owner{source="deckhouse", owner_kind!~"ReplicaSet|Internal.*", pod!~"d8[a-z0-9]+-.*"}
                           * on (namespace, pod) group_left(node) sum by (node, namespace, pod) (kube_pod_info{source="deckhouse"}),
@@ -86,7 +86,7 @@
           label_replace (
           # controller_type = VirtualMachine
             label_replace (
-            # controller_name = VM name (from owner_name)
+            # controller_name = VM name (from owner_name{source="deckhouse"})
               kube_pod_owner{source="deckhouse", owner_kind="InternalVirtualizationVirtualMachineInstance"}
               * on (namespace, pod) group_left(node) sum by (node, namespace, pod) (kube_pod_info{source="deckhouse"}),
             "controller_name", "$1", "owner_name", "(.*)"),
@@ -103,12 +103,12 @@
           label_replace (
           # controller_type = VirtualMachine
             label_replace (
-            # controller_name = VM name (from vm_name label obtained through join)
+            # controller_name = VM name (from vm_name{source="deckhouse"} label obtained through join)
               (
                 kube_pod_owner{source="deckhouse", owner_kind="Pod"}
                 * on(namespace, owner_name) group_left(vm_name)
-                # rename pod -> owner_name on virt-launcher side for join,
-                # save original owner_name (VM name) as vm_name
+                # rename pod -> owner_name{source="deckhouse"} on virt-launcher side for join,
+                # save original owner_name{source="deckhouse"} (VM name) as vm_name{source="deckhouse"}
                 label_replace(
                   label_replace(
                     kube_pod_owner{source="deckhouse", owner_kind="InternalVirtualizationVirtualMachineInstance"},
@@ -126,9 +126,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_daemonset_status_desired_number_scheduled{source="deckhouse"},
          "controller_type", "DaemonSet", "", ""),
        "controller_name", "$1", "daemonset", "(.*)")
@@ -138,9 +138,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_deployment_spec_replicas{source="deckhouse"},
          "controller_type", "Deployment", "", ""),
        "controller_name", "$1", "deployment", "(.*)"))
@@ -150,9 +150,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_statefulset_replicas{source="deckhouse"},
          "controller_type", "StatefulSet", "", ""),
        "controller_name", "$1", "statefulset", "(.*)"))
@@ -162,9 +162,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_replicaset_spec_replicas{source="deckhouse"},
          "controller_type", "ReplicaSet", "", ""),
        "controller_name", "$1", "replicaset", "(.*)"))
@@ -175,9 +175,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_daemonset_status_number_ready{source="deckhouse"},
          "controller_type", "DaemonSet", "", ""),
        "controller_name", "$1", "daemonset", "(.*)")
@@ -187,9 +187,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_deployment_status_replicas_available{source="deckhouse"},
          "controller_type", "Deployment", "", ""),
        "controller_name", "$1", "deployment", "(.*)"))
@@ -199,9 +199,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_statefulset_status_replicas_ready{source="deckhouse"},
          "controller_type", "StatefulSet", "", ""),
        "controller_name", "$1", "statefulset", "(.*)"))
@@ -211,9 +211,9 @@
      max by(job, namespace, controller_type, controller_name)
      (
        label_replace (
-       # set controller_name
+       # set controller_name{source="deckhouse"}
          label_replace (
-         # set controller_type
+         # set controller_type{source="deckhouse"}
            kube_replicaset_status_ready_replicas{source="deckhouse"},
          "controller_type", "ReplicaSet", "", ""),
        "controller_name", "$1", "replicaset", "(.*)"))

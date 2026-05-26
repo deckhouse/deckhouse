@@ -820,7 +820,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  sum by (pod) (rate(container_network_receive_bytes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on(pod)\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork:{source=\"deckhouse\"} false during the selected period.\n  sum by (pod) (rate(container_network_receive_bytes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n  * on(pod)\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n) or (\n  # Else return -1 if the Pod had hostNetwork:{source=\"deckhouse\"} true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -834,7 +834,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork: false during the selected period.\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork: true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
+          "expr": "(\n  # Show data rate for the Pod if it had hostNetwork:{source=\"deckhouse\"} false during the selected period.\n  max(max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"false\", namespace=\"$namespace\", pod=\"$pod\"}[$__range])) by(pod)\n  * on(pod)\n  sum by (pod) (rate(container_network_transmit_bytes_total{source=\"deckhouse\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]))\n) or (\n  # Else return -1 if the Pod had hostNetwork:{source=\"deckhouse\"} true during the selecte period.\n  max_over_time(kube_pod_info{source=\"deckhouse\", host_network=\"true\", namespace=\"$namespace\", pod=\"$pod\"}[$__range]) * -1\n)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -3646,7 +3646,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{source=\"deckhouse\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
+          "expr": "# Select Pods with hostNetwork:{source=\"deckhouse\"} false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{source=\"deckhouse\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
@@ -3795,7 +3795,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{source=\"deckhouse\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
+          "expr": "# Select Pods with hostNetwork:{source=\"deckhouse\"} false.\nkube_pod_info{source=\"deckhouse\", host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{source=\"deckhouse\", pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
@@ -5175,7 +5175,7 @@
         "name": "controller_type",
         "options": [],
         "query": {
-          "query": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_type)",
+          "query": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_type{source=\"deckhouse\"})",
           "refId": "main-controller_type-Variable-Query"
         },
         "refresh": 2,
@@ -5205,7 +5205,7 @@
         "name": "controller_name",
         "options": [],
         "query": {
-          "query": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_name)",
+          "query": "label_values(kube_controller_pod{source=\"deckhouse\", namespace=~\"$namespace\"}, controller_name{source=\"deckhouse\"})",
           "refId": "main-controller_name-Variable-Query"
         },
         "refresh": 2,

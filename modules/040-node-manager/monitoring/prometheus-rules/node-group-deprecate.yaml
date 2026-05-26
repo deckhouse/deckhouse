@@ -2,7 +2,7 @@
   rules:
   - alert: NodeGroupHasStaticInternalNetworkCIDRsField
     expr: |
-      max by (name) (d8_node_group_internal_network_cidrs) > 0
+      max by (name) (d8_node_group_internal_network_cidrs{source="deckhouse"}) > 0
     for: 5m
     labels:
       tier: cluster

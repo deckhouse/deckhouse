@@ -1,7 +1,7 @@
 - name: admission-policy-engine.audit
   rules:
     - alert: PodSecurityStandardsViolation
-      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",violating_kind="Pod",violating_namespace=~".*",source_type="PSS"})) > 0
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{source="deckhouse", violation_enforcement="deny",violating_kind="Pod",violating_namespace=~".*",source_type="PSS"})) > 0
       for: 10m
       labels:
         severity_level: "3"
@@ -31,7 +31,7 @@
 
           - Alternatively, check the admission-policy-engine Grafana dashboard.
     - alert: OperationPolicyViolation
-      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})) > 0
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{source="deckhouse", violation_enforcement="deny",source_type="OperationPolicy"})) > 0
       for: 10m
       labels:
         severity_level: "3"
@@ -59,7 +59,7 @@
 
           - Alternatively, check the admission-policy-engine Grafana dashboard.
     - alert: SecurityPolicyViolation
-      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})) > 0
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{source="deckhouse", violation_enforcement="deny",source_type="SecurityPolicy"})) > 0
       for: 10m
       labels:
         severity_level: "3"

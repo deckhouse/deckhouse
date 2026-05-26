@@ -2,7 +2,7 @@
   rules:
   - alert: ModuleDocumentationRenderError
     expr: |
-      max by (module) (docs_builder_module_render_error) > 0
+      max by (module) (docs_builder_module_render_error{source="deckhouse"}) > 0
     for: 5m
     labels:
       severity_level: "6"
