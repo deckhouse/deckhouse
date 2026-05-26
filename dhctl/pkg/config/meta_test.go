@@ -77,7 +77,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.31"
+kubernetesVersion: "1.32"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
