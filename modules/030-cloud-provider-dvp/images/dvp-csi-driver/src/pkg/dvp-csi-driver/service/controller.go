@@ -83,7 +83,7 @@ func (c *ControllerService) CreateVolume(
 
 	diskName := req.Name
 	if len(diskName) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "required request parameter Name was not provide")
+		return nil, status.Error(codes.InvalidArgument, "required request parameter Name was not provided")
 	}
 
 	// Check access mode
