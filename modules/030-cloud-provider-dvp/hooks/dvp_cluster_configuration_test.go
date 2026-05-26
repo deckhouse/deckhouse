@@ -130,7 +130,7 @@ metadata:
   name: cloud-provider-dvp
 spec:
   enabled: true
-  version: 1
+  version: 2
   settings:
     provider:
       parameters:
