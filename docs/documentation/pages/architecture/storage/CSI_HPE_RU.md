@@ -33,16 +33,16 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
     * HPEStorageConnection — параметры подключения к СХД HPE;
     * HPEStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
-    В HPEStorageClass задается протокол подключения, название пула ресурсов, тип файловой системы и reclaim policy.
+    В HPEStorageClass задается протокол подключения, название пула ресурсов, тип файловой системы и политика обработки тома при удалении PVC (reclaim policy).
 
-    Также controller синхронизирует метку `storage.deckhouse.io/csi-hpe-node` для узлов кластера в соответствии со значением селектора узлов [`spec.settings.nodeSelector`](/modules/csi-hpe/configuration.html) кастомного ресурса ModuleConfig.
+    Также controller синхронизирует лейбл `storage.deckhouse.io/csi-hpe-node` для узлов кластера в соответствии со значением селектора узлов [`spec.settings.nodeSelector`](/modules/csi-hpe/configuration.html) кастомного ресурса ModuleConfig.
 
     Состоит из следующих контейнеров:
 
     * **controller** — основной контейнер;
     * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки StorageClass.
 
-1. **CSI-драйвер (hpe)** — реализация CSI-драйвера для `csi.hpe.com` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI-драйвер (hpe)** — реализация CSI-драйвера, использующего provisioner `csi.hpe.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
 1. **Primera3par-csp** — сервисный контейнер-провайдер (Container Storage Provider, CSP), обеспечивающий интеграцию CSI-драйвера с системами хранения данных HPE Primera и 3PAR. Выполняет функции взаимодействия между Kubernetes и СХД, а также управляет сессиями и репликацией путей.
 

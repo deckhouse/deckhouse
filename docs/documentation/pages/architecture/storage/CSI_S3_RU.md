@@ -6,7 +6,7 @@ search: csi-s3, s3
 description: Архитектура модуля csi-s3 в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`csi-s3`](/modules/csi-s3/) предназначен для управления томами на основе `S3-хранилищ`. Он использует [geeseFS](https://github.com/yandex-cloud/geesefs) — файловую систему FUSE на основе S3. Модуль позволяет создавать StorageClass в Kubernetes с помощью ресурса S3StorageClass.
+Модуль [`csi-s3`](/modules/csi-s3/) предназначен для управления томами на основе S3-хранилищ. Модуль использует [geeseFS](https://github.com/yandex-cloud/geesefs) — файловую систему FUSE на основе S3. Модуль позволяет создавать StorageClass в Kubernetes с помощью ресурса S3StorageClass.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/csi-s3/).
 
@@ -28,14 +28,14 @@ description: Архитектура модуля csi-s3 в Deckhouse Kubernetes 
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий кастомный ресурс [S3StorageClass](/modules/csi-s3/cr.html). Ресурс S3StorageClass определяет  конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `ru.yandex.s3.csi`.
+1. **Controller** — контроллер, обслуживающий кастомный ресурс [S3StorageClass](/modules/csi-s3/cr.html). Ресурс S3StorageClass определяет конфигурацию для создаваемого Kubernetes StorageClass, использующего provisioner `ru.yandex.s3.csi`.
 
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер;
    * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомного ресурса ModuleConfig.
 
-1. **CSI-драйвер (s3)** — реализация CSI-драйвера для provisioner `ru.yandex.s3.csi`. С архитектурой CSI-драйвера `csi-s3` можно ознакомиться [на странице описания CSI-драйвера](../../storage/csi-drivers/csi-driver-s3.html).
+1. **CSI-драйвер (s3)** — реализация CSI-драйвера, использующего provisioner `ru.yandex.s3.csi`. С архитектурой CSI-драйвера `csi-s3` можно ознакомиться [на странице описания CSI-драйвера](../../storage/csi-drivers/csi-driver-s3.html).
 
 ## Взаимодействия модуля
 

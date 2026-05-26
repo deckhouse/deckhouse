@@ -7,7 +7,7 @@ description: Architecture of the csi-yadro-tatlin-unified module in Deckhouse Ku
 
 The [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) module is designed to manage volumes using TATLIN.UNIFIED storage systems. It enables creating StorageClass resources in Kubernetes using the YadroTatlinUnifiedStorageClass custom resource.
 
-For more details about the module, refer to [the module documentation](/modules/csi-yadro-tatlin-unified/).
+For more details about the module, refer to the [module documentation](/modules/csi-yadro-tatlin-unified/).
 
 ## Module architecture
 
@@ -29,21 +29,21 @@ The module consists of the following components:
 
 1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-yadro-tatlin-unified/cr.html):
 
-    * YadroTatlinUnifiedStorageConnection: Parameters for connecting to YADRO TATLIN.UNIFIED storage systems.
+    * YadroTatlinUnifiedStorageConnection: Parameters for connecting to TATLIN.UNIFIED storage systems.
     * YadroTatlinUnifiedStorageClass: Defines configuration for creating Kubernetes StorageClass that uses the `csi-tatlinunified.yadro.com` provisioner.
 
-    YadroTatlinUnifiedStorageClass defines connection parameters (YadroTatlinUnifiedStorageConnection), as well as resource pool name, filesystem type, and reclaim policy.
+    YadroTatlinUnifiedStorageClass defines connection parameters, as well as resource pool name, filesystem type, and reclaim policy.
 
     It consists of the following containers:
 
     * **controller**: Main container.
     * **webhook**: Sidecar container implementing a webhook server for StorageClass resource validation.
 
-1. **CSI driver (yadro-tatlin-unified)**: CSI driver implementation for the `csi-tatlinunified.yadro.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-nfs.html).
+1. **CSI driver (yadro-tatlin-unified)**: CSI driver implementation for the `csi-tatlinunified.yadro.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to the [CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-1. **Scheduler-extender**: A single-container component that acts as an extender for kube-scheduler. It implements scheduling logic specific to pods using volumes from YADRO TATLIN.UNIFIED storage systems. During scheduling, node selectors defined in the YadroTatlinUnifiedStorageConnection custom resource under the `controlPlane` and `dataPlane` parameters are taken into account.
+1. **Scheduler-extender**: A single-container component that acts as an extender for kube-scheduler. It implements scheduling logic specific to pods using volumes from TATLIN.UNIFIED storage systems. During scheduling, node selectors defined in the YadroTatlinUnifiedStorageConnection custom resource under the [`controlPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-controlplane) and [`dataPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-dataplane) parameters are taken into account.
 
-    The component may be absent if node selectors are not set in the YadroTatlinUnifiedStorageConnection custom resource.
+   The component may be absent if node selectors are not set in the YadroTatlinUnifiedStorageConnection custom resource.
 
 ## Module interactions
 

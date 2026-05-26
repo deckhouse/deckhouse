@@ -36,14 +36,14 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
     * [SCSIStorageClass](/modules/csi-scsi-generic/cr.html#scsistorageclass) — определяет конфигурацию для Kubernetes StorageClass;
     * BlockDeviceFilter — определяет фильтры для выбора физических SCSI-устройств, которые можно использовать для создания томов системой. Позволяет гибко управлять пулом доступных устройств путем задания правил по атрибутам устройств и исключения/разрешения отдельных устройств.
 
-    В SCSIStorageClass задаются селектор устройств (`scsiDeviceSelector`), reclaim policy и параметры очистки тома.
+    В SCSIStorageClass задаются селектор устройств (`scsiDeviceSelector`), политика обработки тома при удалении PVC (reclaim policy) и параметры очистки тома.
 
     Состоит из следующих контейнеров:
 
     * **controller** — основной контейнер;
     * **iscsi-command-service** — сайдкар-контейнер, реализующий обнаружение SCSI-устройств.
 
-1. **CSI-драйвер (`csi-scsi-generic`)** — реализация CSI-драйвера для `scsi-generic.csi.storage.deckhouse.io` provisioner. С архитектурой CSI-драйвера `scsi-scsi-generic` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-scsi-generic.html).
+1. **CSI-драйвер (`csi-scsi-generic`)** — реализация CSI-драйвера, использующего provisioner `scsi-generic.csi.storage.deckhouse.io`. С архитектурой CSI-драйвера `csi-scsi-generic` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-scsi-generic.html).
 
 ## Взаимодействия модуля
 
@@ -55,4 +55,4 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
     * работа с кастомными ресурсами BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest и SCSIStorageClass;
     * создание ресурса StorageClass.
 
-1. **СХД с подключением по SCSI** — оркестрация использования уже доступных SCSI-устройств, их привязка/очистка и подключение на узлах.
+1. **СХД с подключением по SCSI** — координация использования уже доступных SCSI-устройств, их привязка, очистка и подключение на узлах.

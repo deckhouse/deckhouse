@@ -7,7 +7,7 @@ description: Architecture of the csi-hpe module in Deckhouse Kubernetes Platform
 
 The [`csi-hpe`](/modules/csi-hpe/) module is designed to manage volumes using HPE storage systems. It enables creating StorageClass resources in Kubernetes using the HPEStorageClass custom resource.
 
-For more details about the module, refer to [the module documentation](/modules/csi-hpe/).
+For more details about the module, refer to the [module documentation](/modules/csi-hpe/).
 
 ## Module architecture
 

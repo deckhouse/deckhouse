@@ -30,19 +30,19 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-yadro-tatlin-unified/cr.html):
 
-    * YadroTatlinUnifiedStorageConnection — параметры подключения к СХД Yadro.Tatlin;
+    * YadroTatlinUnifiedStorageConnection — параметры подключения к СХД TATLIN.UNIFIED;
     * YadroTatlinUnifiedStorageClass — определяет конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `csi-tatlinunified.yadro.com`.
 
-    В YadroTatlinUnifiedStorageClass задаются параметры подключения (YadroTatlinUnifiedStorageConnection), а так же название пула ресурсов, тип файловой системы и reclaim policy.
+    В YadroTatlinUnifiedStorageClass задаются параметры подключения, а также название пула ресурсов, тип файловой системы и политика обработки тома при удалении PVC (reclaim policy).
 
     Состоит из следующих контейнеров:
 
     * **controller** — основной контейнер;
     * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки ресурсов StorageClass.
 
-1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера для provisioner `csi-tatlinunified.yadro.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [на странице описания CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера, использующего provisioner `csi-tatlinunified.yadro.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [на странице описания CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
-1. **Scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании томов СХД Yadro.Tatlin. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе YadroTatlinUnifiedStorageConnection в параметрах `controlPlane` и `dataPlane`.
+1. **Scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании томов СХД TATLIN.UNIFIED. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе YadroTatlinUnifiedStorageConnection в параметрах [`controlPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-controlplane) и [`dataPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-dataplane).
 
     Компонент может отсутствовать если селекторы узлов в кастомном ресурсе YadroTatlinUnifiedStorageConnection не заданы.
 

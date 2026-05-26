@@ -16,7 +16,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the `csi-scsi-generic` CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the `csi-scsi-generic` CSI driver and its interactions with other components of DKP are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![CSI driver architecture (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.png)
@@ -69,14 +69,14 @@ The driver interacts with the following components:
 
 1. **Kube-apiserver**: Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, PendingResizeRequest, SCSIDevice, and SCSITarget resources.
 
-1. **SCSI-connected storage systems**: Orchestrates the use of already available SCSI devices, including their binding/cleanup and node attachment.
+1. **SCSI-connected storage systems**: Coordinates the usage of already available SCSI devices, including their binding/cleanup and node attachment.
 
 The following external components interact with the driver:
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-* Checks CSI driver livenessProbe.
-* Registers the Node Plugin.
-* Calls `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, and `NodeUnpublishVolume` RPCs in the Node Plugin.
+   * Checks CSI driver livenessProbe.
+   * Registers the Node Plugin.
+   * Calls `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, and `NodeUnpublishVolume` RPCs in the Node Plugin.
 
    [Kubelet](../../kubernetes-and-scheduling/kubelet.html) interacts with the Node Plugin over gRPC via a Unix socket.

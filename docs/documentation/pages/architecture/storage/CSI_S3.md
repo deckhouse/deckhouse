@@ -5,7 +5,7 @@ search: csi-s3, s3
 description: Architecture of the csi-s3 module in Deckhouse Kubernetes Platform.
 ---
 
-The [`csi-s3`](/modules/csi-s3/) module is designed to manage volumes based on S3 storage. It uses [geeseFS](https://github.com/yandex-cloud/geesefs), an S3-backed FUSE filesystem. The module enables creating StorageClass resources in Kubernetes using the S3StorageClass custom resource.
+The [`csi-s3`](/modules/csi-s3/) module is designed to manage volumes based on S3 storage. The module uses [geeseFS](https://github.com/yandex-cloud/geesefs), an S3-backed FUSE filesystem. The module enables creating StorageClass resources in Kubernetes using the S3StorageClass custom resource.
 
 For more details about the module, refer to [the module documentation](/modules/csi-s3/).
 
@@ -34,7 +34,7 @@ The module consists of the following components:
    * **controller**: Main container.
    * **webhooks**: Sidecar container implementing a webhook server for ModuleConfig custom resource validation.
 
-1. **CSI driver (s3)**: CSI driver implementation for the `ru.yandex.s3.csi` provisioner. To study the architecture of the `csi-s3` CSI driver, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-s3.html).
+1. **CSI driver (s3)**: CSI driver implementation for the `ru.yandex.s3.csi` provisioner. To study the architecture of the `csi-s3` CSI driver, refer to the [CSI driver documentation page](../../storage/csi-drivers/csi-driver-s3.html).
 
 ## Module interactions
 

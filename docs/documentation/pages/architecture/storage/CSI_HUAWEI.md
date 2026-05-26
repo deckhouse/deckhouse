@@ -7,7 +7,7 @@ description: Architecture of the csi-huawei module in Deckhouse Kubernetes Platf
 
 The [`csi-huawei`](/modules/csi-huawei/) module is designed to manage volumes using Huawei storage systems. It enables creating StorageClass resources in Kubernetes using the HuaweiStorageClass custom resource.
 
-For more details about the module, refer to [the module documentation](/modules/csi-huawei/).
+For more details about the module, refer to the [module documentation](/modules/csi-huawei/).
 
 ## Module architecture
 
@@ -39,7 +39,7 @@ The module consists of the following components:
     * **controller**: Main container.
     * **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
 
-1. **CSI driver (huawei)**: CSI driver implementation for the `csi.huawei.com` provisioner. To study the architecture of the `csi-huawei` CSI driver, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-huawei.html).
+1. **CSI driver (huawei)**: CSI driver implementation for the `csi.huawei.com` provisioner. To study the architecture of the `csi-huawei` CSI driver, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver-huawei.html).
 
     The `csi-huawei` CSI driver reconciles the following [custom resources](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
 

@@ -7,7 +7,7 @@ description: Architecture of the csi-scsi-generic module in Deckhouse Kubernetes
 
 The [`csi-scsi-generic`](/modules/csi-scsi-generic/) module is designed to manage volumes on storage systems connected over SCSI. It enables creating StorageClass resources in Kubernetes using the SCSIStorageClass custom resource.
 
-For more details about the module, refer to [the module documentation](/modules/csi-scsi-generic/).
+For more details about the module, refer to the [module documentation](/modules/csi-scsi-generic/).
 
 ## Module architecture
 
@@ -27,7 +27,7 @@ The Level 2 C4 architecture of the [`csi-scsi-generic`](/modules/csi-scsi-generi
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-scsi-generic/cr.html):
+1. **Controller**: A controller that reconciles the following custom resources:
 
     * [SCSITarget](/modules/csi-scsi-generic/cr.html#scsitarget): Describes a storage connection endpoint (iSCSI/FC).
     * [SCSIDevice](/modules/csi-scsi-generic/cr.html#scsidevice): Describes a discovered SCSI device.
@@ -42,7 +42,7 @@ The module consists of the following components:
     * **controller**: Main container.
     * **iscsi-command-service**: Sidecar container implementing SCSI device discovery.
 
-1. **CSI driver (`csi-scsi-generic`)**: CSI driver implementation for the `scsi-generic.csi.storage.deckhouse.io` provisioner. To study the architecture of the `csi-scsi-generic` CSI driver, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-scsi-generic.html).
+1. **CSI driver (`csi-scsi-generic`)**: CSI driver implementation for the `scsi-generic.csi.storage.deckhouse.io` provisioner. To study the architecture of the `csi-scsi-generic` CSI driver, refer to the [CSI driver documentation page](../../storage/csi-drivers/csi-driver-scsi-generic.html).
 
 ## Module interactions
 
@@ -54,4 +54,4 @@ The module interacts with the following components:
     * Reconciles BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest, and SCSIStorageClass custom resources.
     * Creates StorageClass resources.
 
-1. **SCSI-connected storage systems**: Orchestrates the use of available SCSI devices, including their binding and cleanup, as well as node attachment.
+1. **SCSI-connected storage systems**: Coordinates the usage of available SCSI devices, including their binding and cleanup, as well as node attachment.
