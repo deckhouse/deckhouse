@@ -41,11 +41,7 @@ See the official Deckhouse docs:
 7. On the detached nodes, start kubelet again (if you stopped it).
 
 8. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.  
-   `control-plane-manager` will detect the new nodes, create `ControlPlaneOperation` objects, and rejoin them to etcd automatically. Monitor progress with:
-   ```shell
-   kubectl get controlplaneoperations -o wide
-   kubectl -n kube-system get pod -l app=d8-control-plane-manager -o wide
-   ```
+   `control-plane-manager` will detect the new nodes, create `ControlPlaneOperation` objects, and rejoin them to etcd automatically.
 
 9. If there are persistent errors for these nodes in the Deckhouse main queue, consider running `kubectl -n d8-system rollout restart deployment deckhouse` and wait until everything becomes `Ready`.
 
