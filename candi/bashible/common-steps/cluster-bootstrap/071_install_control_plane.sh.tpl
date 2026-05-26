@@ -15,10 +15,25 @@
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 {{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
+# Sub-step timing — emit `[bashible-timing] step=071_install_control_plane.sh
+# section=<name> dur=<sec>` so dhctl-side parsing can attribute the (often >200s)
+# total of this step to one of: image-pull waits, kubelet Node registration,
+# RBAC/label/taint setup, or PKI upload.
+__sec_start=$(date +%s.%N)
+__sec() {
+  local now dur
+  now=$(date +%s.%N)
+  dur=$(awk -v s="$__sec_start" -v e="$now" 'BEGIN{printf "%.3f", e-s}')
+  echo "[bashible-timing] step=071_install_control_plane.sh section=$1 dur=${dur}s"
+  __sec_start=$now
+}
+
+# Poll crictl every 2s instead of every 10s — kubelet starts static pods within seconds,
+# so 10s granularity wasted 8-10s per container in practice. Total timeout preserved at 200s.
 check_container_running() {
   local container_name=$1
-  local max_retries=20
-  local sleep_interval=10
+  local max_retries=100
+  local sleep_interval=2
   local count=0
 
   while [[ $count -lt $max_retries ]]; do
@@ -29,21 +44,22 @@ check_container_running() {
     count=$((count + 1))
 
     if [[ $count -ge $max_retries ]]; then
-      echo "$container_name not running in $sleep_interval*$max_retries"
-      exit 1
+      echo "$container_name not running after $((sleep_interval * max_retries))s" >&2
+      return 1
     fi
 
     sleep $sleep_interval
-    echo "wait for the $container_name to start $count"
   done
 }
 
-check_container_running "kubernetes-api-proxy"
+check_container_running "kubernetes-api-proxy" || exit 1
+__sec wait_api_proxy
 
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-check_container_running "etcd"
+check_container_running "etcd" || exit 1
+__sec wait_etcd
 
 mkdir -p /etc/kubernetes/deckhouse/extra-files
 bb-sync-file /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml - << EOF
@@ -57,17 +73,60 @@ anonymous:
   - path: /healthz
 EOF
 
+# Copy all three manifests at once — kubelet starts the static pods concurrently,
+# so we can wait for them concurrently too. Without this each check_container_running
+# blocked for the full kubelet/container start latency serially (~3-5s each wasted).
 cp {{ $manifestsDir}}/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
 cp {{ $manifestsDir}}/kube-scheduler.yaml /etc/kubernetes/manifests/kube-scheduler.yaml
 cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kube-controller-manager.yaml
 
-check_container_running "kube-apiserver"
-check_container_running "kube-controller-manager"
-check_container_running "kube-scheduler"
+check_container_running "kube-apiserver" &
+pid_api=$!
+check_container_running "kube-controller-manager" &
+pid_cm=$!
+check_container_running "kube-scheduler" &
+pid_sched=$!
 
-kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
-kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
+cp_failed=0
+wait $pid_api || cp_failed=1
+wait $pid_cm || cp_failed=1
+wait $pid_sched || cp_failed=1
+if [[ $cp_failed -ne 0 ]]; then
+  echo "one or more control-plane containers failed to start" >&2
+  exit 1
+fi
+__sec wait_cp_trio
+
+node_name="$(bb-d8-node-name)"
+
+# admin.conf authenticates as user "kubernetes-admin" in group
+# "kubeadm:cluster-admins" — but that group has NO permissions until the
+# kubeadm:cluster-admins ClusterRoleBinding (created below via super-admin.conf)
+# exists. If we used admin.conf for the Node-wait loop before creating the
+# binding, every `kubectl get node` would 403, and the loop would burn its full
+# 200s timeout instead of breaking on the first successful poll. Measured cost
+# of that bug: ~220s on every fresh bootstrap. So: bind first, then wait.
+#
+# Step is bashible-retried on failure, so every mutation must be idempotent —
+# the `get … || create` guard and `--overwrite` cover that.
+if ! kubectl --kubeconfig=/etc/kubernetes/super-admin.conf get clusterrolebinding kubeadm:cluster-admins >/dev/null 2>&1; then
+  kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
+fi
+
+# kubelet registers the Node object slightly after the control-plane containers
+# report running, so the label/taint below can race ahead of it. Wait for the
+# Node to appear (≤200s) before touching it.
+for _ in $(seq 1 100); do
+  if kubectl --kubeconfig=/etc/kubernetes/admin.conf get node "$node_name" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+__sec wait_node_register
+
+kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$node_name" node-role.kubernetes.io/control-plane="" --overwrite
+kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$node_name" node-role.kubernetes.io/control-plane:NoSchedule --overwrite
+__sec rbac_label_taint
 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
@@ -105,6 +164,7 @@ bb-curl-kube "/api/v1/namespaces/kube-system/secrets" \
   -H "Content-Type: application/json" \
   --data "$(jq -nc --argjson data "$pki_data" \
     '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"d8-pki","namespace":"kube-system"},"type":"Opaque","data":$data}')"
+__sec pki_upload
 
 # Setup kubectl for root user during bootstrap.
 # The control-plane-manager manages this symlink; when the user-authz module is enabled, see controlPlaneManager.rootKubeconfigSymlink.

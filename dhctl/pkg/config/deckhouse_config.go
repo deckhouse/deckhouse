@@ -24,12 +24,12 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (

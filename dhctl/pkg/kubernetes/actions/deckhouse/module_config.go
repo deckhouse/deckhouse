@@ -36,7 +36,7 @@ func removeResourceVersion(mc *unstructured.Unstructured) {
 	unstructured.RemoveNestedField(mc.Object, "metadata", "resourceVersion")
 }
 
-func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.KubernetesClient, mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
+func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
 	mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
 	if err != nil {
 		panic(err)

@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -63,7 +63,11 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	return retry.NewLoop("Control-plane readiness", 50, 10*time.Second).RunContext(ctx, func() error {
+	// Poll every 1s instead of 10s: cpm typically flips conditions one by one
+	// (Etcd → APIServer → KCM → Scheduler → CertificatesHealthy) within a few
+	// seconds of each other, and the previous 10s granularity smeared 10-40s of
+	// false-wait on the critical path. Total budget unchanged (500 attempts × 1s = ~8 min).
+	return retry.NewLoop("Control-plane readiness", 500, 1*time.Second).RunContext(ctx, func() error {
 		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
 
 		// all ControlPlaneNodes are ready

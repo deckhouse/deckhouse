@@ -34,7 +34,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
@@ -62,7 +61,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{}  `json:"-"`
 	Images                    imagesDigests           `json:"-"`
-	Registry                  registry_config.Config  `json:"-"`
+	Registry                  registry.Config         `json:"-"`
 	UUID                      string                  `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                  `json:"-"`
 	ResourcesYAML             string                  `json:"-"`
@@ -479,7 +478,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	// Registry
 	registryContext, err := m.Registry.
 		Manifest().
-		BashibleContext(registry_config.GeneratePKI)
+		BashibleContext(registry.GeneratePKI)
 	if err != nil {
 		return nil, fmt.Errorf("create registry bashible context: %s", err)
 	}

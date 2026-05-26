@@ -364,6 +364,26 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzUser.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - vsphereinstanceclasses
+  verbs:
+  - get
+  - list
+  - watch`))
+			Expect(userAuthzClusterAdmin.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - vsphereinstanceclasses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update`))
 
 			// user story #1
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")

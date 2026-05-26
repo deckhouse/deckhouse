@@ -103,10 +103,7 @@ func (c DhctlEditionCheck) deckhouseImageConfig(ctx context.Context) (*v1.Config
 		return nil, err
 	}
 
-	creds, err := registryAuth(registry)
-	if err != nil {
-		return nil, err
-	}
+	creds := registryAuth(registry)
 
 	return c.provider().ConfigFile(
 		ref,
@@ -123,14 +120,14 @@ func (DhctlEditionCheck) parseReference(image, scheme string) (name.Reference, e
 	return name.ParseReference(image)
 }
 
-func registryAuth(registry cfgregistry.Data) (authn.Authenticator, error) {
+func registryAuth(registry cfgregistry.Data) authn.Authenticator {
 	if registry.Username != "" && registry.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
 			Username: registry.Username,
 			Password: registry.Password,
-		}), nil
+		})
 	}
-	return authn.Anonymous, nil
+	return authn.Anonymous
 }
 
 func (c DhctlEditionCheck) provider() imageDescriptorProvider {

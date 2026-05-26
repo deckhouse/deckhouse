@@ -33,10 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-var (
-	deckhouseDir = "/deckhouse"
-)
-
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
@@ -292,8 +288,4 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 		fmt.Print(string(output))
 		return nil
 	})
-}
-
-func InitGlobalVars(pwd string) {
-	deckhouseDir = pwd + "/deckhouse"
 }

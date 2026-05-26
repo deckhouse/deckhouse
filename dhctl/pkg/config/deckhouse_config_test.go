@@ -134,7 +134,7 @@ spec:
         ca: "-----BEGIN CERTIFICATE-----"
   version: 1
 `
-	assert := func(t *testing.T, tplCtx map[string]any, expect map[string]any) {
+	assert := func(t *testing.T, tplCtx, expect map[string]any) {
 		metaConfig := generateMetaConfig(t, tpl, tplCtx, false)
 		installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig)
 		require.NoError(t, err)

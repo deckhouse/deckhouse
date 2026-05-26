@@ -164,7 +164,7 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 		return st
 	}
 
-	loadConversions := func(path string, moduleName string) error {
+	loadConversions := func(path, moduleName string) error {
 		conversionPath := filepath.Join(filepath.Dir(path), "conversions")
 		stat, err := os.Stat(conversionPath)
 		if err == nil && stat.IsDir() {
@@ -176,7 +176,7 @@ func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *S
 		return nil
 	}
 
-	loadConfigValuesSchema := func(path string, moduleName string) error {
+	loadConfigValuesSchema := func(path, moduleName string) error {
 		content, err := os.ReadFile(path)
 		var schema *spec.Schema
 

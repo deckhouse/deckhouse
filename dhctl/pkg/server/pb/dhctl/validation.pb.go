@@ -21,10 +21,11 @@
 package dhctl
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -970,24 +971,27 @@ func file_validation_proto_rawDescGZIP() []byte {
 	return file_validation_proto_rawDescData
 }
 
-var file_validation_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
-var file_validation_proto_goTypes = []interface{}{
-	(*ValidateOptions)(nil),                               // 0: dhctl.ValidateOptions
-	(*ValidateResourcesRequest)(nil),                      // 1: dhctl.ValidateResourcesRequest
-	(*ValidateResourcesResponse)(nil),                     // 2: dhctl.ValidateResourcesResponse
-	(*ValidateInitConfigRequest)(nil),                     // 3: dhctl.ValidateInitConfigRequest
-	(*ValidateInitConfigResponse)(nil),                    // 4: dhctl.ValidateInitConfigResponse
-	(*ValidateClusterConfigRequest)(nil),                  // 5: dhctl.ValidateClusterConfigRequest
-	(*ValidateClusterConfigResponse)(nil),                 // 6: dhctl.ValidateClusterConfigResponse
-	(*ValidateStaticClusterConfigRequest)(nil),            // 7: dhctl.ValidateStaticClusterConfigRequest
-	(*ValidateStaticClusterConfigResponse)(nil),           // 8: dhctl.ValidateStaticClusterConfigResponse
-	(*ValidateProviderSpecificClusterConfigRequest)(nil),  // 9: dhctl.ValidateProviderSpecificClusterConfigRequest
-	(*ValidateProviderSpecificClusterConfigResponse)(nil), // 10: dhctl.ValidateProviderSpecificClusterConfigResponse
-	(*ValidateChangesRequest)(nil),                        // 11: dhctl.ValidateChangesRequest
-	(*ValidateChangesResponse)(nil),                       // 12: dhctl.ValidateChangesResponse
-	(*ParseConnectionConfigRequest)(nil),                  // 13: dhctl.ParseConnectionConfigRequest
-	(*ParseConnectionConfigResponse)(nil),                 // 14: dhctl.ParseConnectionConfigResponse
-}
+var (
+	file_validation_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+	file_validation_proto_goTypes  = []interface{}{
+		(*ValidateOptions)(nil),                               // 0: dhctl.ValidateOptions
+		(*ValidateResourcesRequest)(nil),                      // 1: dhctl.ValidateResourcesRequest
+		(*ValidateResourcesResponse)(nil),                     // 2: dhctl.ValidateResourcesResponse
+		(*ValidateInitConfigRequest)(nil),                     // 3: dhctl.ValidateInitConfigRequest
+		(*ValidateInitConfigResponse)(nil),                    // 4: dhctl.ValidateInitConfigResponse
+		(*ValidateClusterConfigRequest)(nil),                  // 5: dhctl.ValidateClusterConfigRequest
+		(*ValidateClusterConfigResponse)(nil),                 // 6: dhctl.ValidateClusterConfigResponse
+		(*ValidateStaticClusterConfigRequest)(nil),            // 7: dhctl.ValidateStaticClusterConfigRequest
+		(*ValidateStaticClusterConfigResponse)(nil),           // 8: dhctl.ValidateStaticClusterConfigResponse
+		(*ValidateProviderSpecificClusterConfigRequest)(nil),  // 9: dhctl.ValidateProviderSpecificClusterConfigRequest
+		(*ValidateProviderSpecificClusterConfigResponse)(nil), // 10: dhctl.ValidateProviderSpecificClusterConfigResponse
+		(*ValidateChangesRequest)(nil),                        // 11: dhctl.ValidateChangesRequest
+		(*ValidateChangesResponse)(nil),                       // 12: dhctl.ValidateChangesResponse
+		(*ParseConnectionConfigRequest)(nil),                  // 13: dhctl.ParseConnectionConfigRequest
+		(*ParseConnectionConfigResponse)(nil),                 // 14: dhctl.ParseConnectionConfigResponse
+	}
+)
+
 var file_validation_proto_depIdxs = []int32{
 	0, // 0: dhctl.ValidateResourcesRequest.opts:type_name -> dhctl.ValidateOptions
 	0, // 1: dhctl.ValidateInitConfigRequest.opts:type_name -> dhctl.ValidateOptions

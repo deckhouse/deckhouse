@@ -10,59 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.21.3
-	github.com/flant/kube-client v1.7.0
-	github.com/flant/shell-operator v1.17.4
-	github.com/go-openapi/spec v0.22.0
-	github.com/gojuno/minimock/v3 v3.4.7
-	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.20.7
-	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-multierror v1.1.1
-	github.com/iancoleman/strcase v0.3.0
-	github.com/imdario/mergo v0.3.16
-	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.41.0
-	github.com/otiai10/copy v1.14.0
-	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/spaolacci/murmur3 v1.1.0
-	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
-	github.com/stretchr/testify v1.11.1
-	github.com/tidwall/gjson v1.18.0
-	github.com/tidwall/sjson v1.2.5
-	github.com/vmware/govmomi v0.51.0 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.21
-	go.etcd.io/etcd/client/v3 v3.5.21
-	google.golang.org/grpc v1.80.0
-	google.golang.org/protobuf v1.36.11
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.4
-	k8s.io/api v0.33.12
-	k8s.io/apiextensions-apiserver v0.33.12
-	k8s.io/apimachinery v0.33.12
-	k8s.io/apiserver v0.33.12
-	k8s.io/client-go v0.33.12
-	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	sigs.k8s.io/yaml v1.6.0
-)
-
-require (
-	github.com/caarlos0/env/v11 v11.3.1
-	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
-	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.2.1
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa
-	github.com/deckhouse/module-sdk v0.10.4
-	github.com/ettle/strcase v0.2.0
-	github.com/evanphx/json-patch v5.9.0+incompatible
+	github.com/flant/addon-operator v1.21.4
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gammazero/deque v1.1.0
 	github.com/go-logr/logr v1.4.3
@@ -92,6 +40,56 @@ require (
 )
 
 require k8s.io/klog v1.0.0 // indirect
+
+require (
+	github.com/caarlos0/env/v11 v11.3.1
+	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/pkg/log v0.2.1
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
+	github.com/deckhouse/module-sdk v0.10.4
+	github.com/ettle/strcase v0.2.0
+	github.com/evanphx/json-patch v5.9.0+incompatible
+	github.com/flant/kube-client v1.7.0
+	github.com/flant/shell-operator v1.17.4
+	github.com/go-openapi/spec v0.22.0
+	github.com/gojuno/minimock/v3 v3.4.7
+	github.com/google/go-cmp v0.7.0
+	github.com/google/go-containerregistry v0.20.7
+	github.com/google/uuid v1.6.0
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/iancoleman/strcase v0.3.0
+	github.com/imdario/mergo v0.3.16
+	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/gomega v1.41.0
+	github.com/otiai10/copy v1.14.1
+	github.com/pkg/errors v0.9.1
+	github.com/spaolacci/murmur3 v1.1.0
+	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
+	github.com/stretchr/testify v1.11.1
+	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/sjson v1.2.5
+	go.etcd.io/etcd/api/v3 v3.5.21
+	go.etcd.io/etcd/client/v3 v3.5.21
+	google.golang.org/grpc v1.80.0
+	google.golang.org/protobuf v1.36.11
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
+	helm.sh/helm/v3 v3.15.4
+	k8s.io/api v0.33.12
+	k8s.io/apiextensions-apiserver v0.33.12
+	k8s.io/apimachinery v0.33.12
+	k8s.io/apiserver v0.33.12
+	k8s.io/client-go v0.33.12
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
+	sigs.k8s.io/yaml v1.6.0
+)
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
@@ -130,12 +128,15 @@ require (
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/name212/govalue v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pterm/pterm v0.12.83 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.5.3 // indirect
 	github.com/redis/go-redis/v9 v9.10.0 // indirect
 	github.com/samber/lo v1.51.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/vbauerster/mpb/v8 v8.12.0 // indirect
+	github.com/vmware/govmomi v0.51.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yannh/kubeconform v0.6.7 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
