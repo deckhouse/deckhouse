@@ -44,7 +44,7 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
 
 1. **Scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании томов СХД TATLIN.UNIFIED. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе YadroTatlinUnifiedStorageConnection в параметрах [`controlPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-controlplane) и [`dataPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-dataplane).
 
-    Компонент может отсутствовать если селекторы узлов в кастомном ресурсе YadroTatlinUnifiedStorageConnection не заданы.
+   Компонент может отсутствовать, если селекторы узлов в кастомном ресурсе YadroTatlinUnifiedStorageConnection не заданы.
 
 ## Взаимодействия модуля
 
