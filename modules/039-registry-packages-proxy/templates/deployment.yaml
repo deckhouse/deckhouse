@@ -83,8 +83,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "registryPackagesProxy") }}
         imagePullPolicy: IfNotPresent
         args:
-        - "--cli-listen-address=127.0.0.1:5080"
-        - "--packages-listen-address=127.0.0.1:5081"
+        - "--listen-address=127.0.0.1:5080"
         - "--rpp-get-binary-listen-address=:{{ $rppGetBootstrapPort }}"
         - "--cache-directory=/cache"
         - "--cache-retention-size=1Gi"
