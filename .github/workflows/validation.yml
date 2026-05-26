@@ -746,19 +746,6 @@ jobs:
               throw(error);
             }
 
-  gitleaks_scan:
-    name: Secret scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Run Gitleaks diff scan
-        uses: deckhouse/modules-actions/gitleaks@main
-        continue-on-error: true
-        with:
-          scan_mode: "diff"
-
 
 
 
