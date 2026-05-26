@@ -172,7 +172,7 @@ func IsSpecForServiceEqual(service corev1.Service, shc *networkv1alpha1.ServiceW
 	if service.Spec.ExternalTrafficPolicy != shc.Spec.ExternalTrafficPolicy {
 		return false
 	}
-	if *service.Spec.InternalTrafficPolicy != *shc.Spec.InternalTrafficPolicy {
+	if !reflect.DeepEqual(service.Spec.InternalTrafficPolicy, shc.Spec.InternalTrafficPolicy) {
 		return false
 	}
 	return true

@@ -89,11 +89,12 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	)
 	r.logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	if err = r.Get(ctx, req.NamespacedName, &serviceWithHC); err != nil {
-		r.logger.Error(err, "unable to fetch ServiceWithHealthchecks")
 		if errors.IsNotFound(err) {
+			r.logger.V(1).Info("ServiceWithHealthchecks not found, assuming deleted", "name", req.NamespacedName)
 			r.deleteServiceWithHealthchecks(req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
+		r.logger.Error(err, "unable to fetch ServiceWithHealthchecks")
 		return ctrl.Result{}, err
 	}
 
@@ -129,7 +130,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 	// update status
 	updatedServiceWithHC := serviceWithHC.DeepCopy()
-	patch := client.MergeFrom(serviceWithHC.DeepCopy())
+	patch := client.MergeFrom(&serviceWithHC)
 
 	newStatus := r.buildRenewedStatus(updatedServiceWithHC)
 	updatedServiceWithHC.Status.HealthcheckCondition = newStatus.HealthcheckCondition
