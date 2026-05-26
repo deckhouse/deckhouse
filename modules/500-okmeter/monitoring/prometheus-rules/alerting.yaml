@@ -4,7 +4,7 @@
       expr: |
         min by (pod) (
           kube_controller_pod{namespace="d8-okmeter", controller_type="DaemonSet", controller_name="okmeter"}
-          * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-okmeter"}
+          * on (pod) group_right() kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-okmeter"}
         ) != 1
       for: 5m
       labels:

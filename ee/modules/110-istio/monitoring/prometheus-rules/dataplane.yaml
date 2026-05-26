@@ -21,18 +21,18 @@
       (
         max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
         (
-          d8_istio_dataplane_metadata{ revision!="absent" }
+          d8_istio_dataplane_metadata{source="deckhouse",  revision!="absent" }
           unless on (revision)
           (
-            istio_build{ component="pilot" }
+            istio_build{source="deckhouse",  component="pilot" }
             * on (pod,namespace) group_left(revision)
             (
-              label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+              label_replace(kube_pod_labels{source="deckhouse"}, "revision", "$1", "label_istio_io_rev", "(.+)")
             )
           )
         )
       # labels kube-state-metrics should exist
-      ) and on() count( up{ job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
+      ) and on() count( up{source="deckhouse",  job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
     for: 5m
     labels:
       severity_level: "4"
@@ -64,18 +64,18 @@
       (
         max by (dataplane_pod, namespace, revision, version, desired_version)
         (
-          label_replace( d8_istio_dataplane_metadata{ desired_revision!="absent" }, "revision", "$1", "desired_revision", "(.+)" )
+          label_replace( d8_istio_dataplane_metadata{source="deckhouse",  desired_revision!="absent" }, "revision", "$1", "desired_revision", "(.+)" )
           unless on (revision)
           (
-            istio_build{ component="pilot" }
+            istio_build{source="deckhouse",  component="pilot" }
             * on (pod,namespace) group_left(revision)
             (
-              label_replace(kube_pod_labels, "revision", "$1", "label_istio_io_rev", "(.+)")
+              label_replace(kube_pod_labels{source="deckhouse"}, "revision", "$1", "label_istio_io_rev", "(.+)")
             )
           )
         )
       # labels kube-state-metrics should exist
-      ) and on() count( up{ job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
+      ) and on() count( up{source="deckhouse",  job="kube-state-metrics", scrape_endpoint="main" } == 1 ) > 0
     for: 5m
     labels:
       severity_level: "6"
@@ -98,7 +98,7 @@
     expr: |
       max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
         (
-           d8_istio_dataplane_metadata{desired_revision="absent",revision!="absent"}
+           d8_istio_dataplane_metadata{source="deckhouse", desired_revision="absent",revision!="absent"}
         )
     for: 5m
     labels:
@@ -122,7 +122,7 @@
     expr: |
       max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
         (
-           d8_istio_dataplane_metadata{revision="absent", desired_revision!=""}
+           d8_istio_dataplane_metadata{source="deckhouse", revision="absent", desired_revision!=""}
         )
     for: 5m
     labels:
@@ -154,9 +154,9 @@
     expr: |
       max by (dataplane_pod, namespace, revision, desired_revision, version, desired_version)
       (
-        d8_istio_dataplane_metadata{revision!="absent", desired_revision!="absent"}
+        d8_istio_dataplane_metadata{source="deckhouse", revision!="absent", desired_revision!="absent"}
       )
-      unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
+      unless on (revision, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{source="deckhouse"}, "revision", "$1", "desired_revision", "(.+)")
     for: 5m
     labels:
       severity_level: "8"
@@ -184,11 +184,11 @@
       max by (dataplane_pod, namespace, full_version, desired_full_version)
       (
         (
-          d8_istio_dataplane_metadata{full_version!~"(unknown|absent)", desired_full_version!="absent"}
+          d8_istio_dataplane_metadata{source="deckhouse", full_version!~"(unknown|absent)", desired_full_version!="absent"}
           # ignore pods with different revisions
-          * on (namespace, dataplane_pod, full_version, desired_full_version, revision) label_replace(d8_istio_dataplane_metadata{}, "revision", "$1", "desired_revision", "(.+)")
+          * on (namespace, dataplane_pod, full_version, desired_full_version, revision) label_replace(d8_istio_dataplane_metadata{source="deckhouse"}, "revision", "$1", "desired_revision", "(.+)")
         )
-        unless on (full_version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{}, "full_version", "$1", "desired_full_version", "(.+)")
+        unless on (full_version, dataplane_pod, namespace) label_replace(d8_istio_dataplane_metadata{source="deckhouse"}, "full_version", "$1", "desired_full_version", "(.+)")
       )
     for: 5m
     labels:

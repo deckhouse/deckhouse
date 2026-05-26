@@ -1,7 +1,7 @@
 - name: admission-policy-engine.boostrap
   rules:
     - alert: D8AdmissionPolicyEngineNotBootstrapped
-      expr: d8_admission_policy_engine_not_bootstrapped == 1
+      expr: d8_admission_policy_engine_not_bootstrapped{source="deckhouse"} == 1
       for: 10m
       labels:
         severity_level: "7"

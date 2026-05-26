@@ -2,7 +2,7 @@
   rules:
 
   - alert: D8TerraformStateExporterTargetDown
-    expr: max by (job) (up{job="terraform-state-exporter"} == 0)
+    expr: max by (job) (up{source="deckhouse", job="terraform-state-exporter"} == 0)
     for: 10m
     labels:
       severity_level: "8"
@@ -34,7 +34,7 @@
           ```
 
   - alert: D8TerraformStateExporterTargetAbsent
-    expr: absent(up{job="terraform-state-exporter"}) == 1
+    expr: absent(up{source="deckhouse", job="terraform-state-exporter"}) == 1
     for: 10m
     labels:
       severity_level: "8"
@@ -69,7 +69,7 @@
     expr: |
       min by (pod) (
         kube_controller_pod{namespace="d8-system", controller_type="Deployment", controller_name="terraform-state-exporter"}
-        * on (pod) group_right() kube_pod_status_ready{condition="true", namespace="d8-system"}
+        * on (pod) group_right() kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-system"}
       ) != 1
     for: 10m
     labels:
@@ -102,7 +102,7 @@
            ```
 
   - alert: D8TerraformStateExporterPodIsNotRunning
-    expr: absent(kube_pod_status_phase{namespace="d8-system",phase="Running",pod=~"terraform-state-exporter-.*"})
+    expr: absent(kube_pod_status_phase{source="deckhouse", namespace="d8-system",phase="Running",pod=~"terraform-state-exporter-.*"})
     for: 10m
     labels:
       severity_level: "8"
@@ -137,7 +137,7 @@
 
   - alert: D8TerraformStateExporterHasErrors
     expr: |
-      increase(candi_converge_exporter_errors{job="terraform-state-exporter"}[5m]) == 3
+      increase(candi_converge_exporter_errors{source="deckhouse", job="terraform-state-exporter"}[5m]) == 3
     for: 10m
     labels:
       severity_level: "8"
@@ -161,7 +161,7 @@
 
   - alert: D8TerraformStateExporterClusterStateChanged
     expr: |
-      max by(job, status) (candi_converge_cluster_status{status=~"changed|destructively_changed", job="terraform-state-exporter"} == 1)
+      max by(job, status) (candi_converge_cluster_status{source="deckhouse", status=~"changed|destructively_changed", job="terraform-state-exporter"} == 1)
     for: 10m
     labels:
       severity_level: "8"
@@ -195,7 +195,7 @@
 
   - alert: D8TerraformStateExporterNodeStateChanged
     expr: |
-      max by(node_group, name, status) (candi_converge_node_status{status=~"changed|destructively_changed|absent|abandoned", job="terraform-state-exporter"} == 1)
+      max by(node_group, name, status) (candi_converge_node_status{source="deckhouse", status=~"changed|destructively_changed|absent|abandoned", job="terraform-state-exporter"} == 1)
     for: 10m
     labels:
       severity_level: "8"
@@ -229,7 +229,7 @@
 
   - alert: D8TerraformStateExporterClusterStateError
     expr: |
-      max by(job) (candi_converge_cluster_status{status="error", job="terraform-state-exporter"} == 1)
+      max by(job) (candi_converge_cluster_status{source="deckhouse", status="error", job="terraform-state-exporter"} == 1)
     for: 10m
     labels:
       severity_level: "8"
@@ -273,7 +273,7 @@
 
   - alert: D8TerraformStateExporterNodeStateError
     expr: |
-      max by(node_group, name) (candi_converge_node_status{status="error", job="terraform-state-exporter"} == 1)
+      max by(node_group, name) (candi_converge_node_status{source="deckhouse", status="error", job="terraform-state-exporter"} == 1)
     for: 10m
     labels:
       severity_level: "8"
@@ -317,7 +317,7 @@
 
   - alert: D8TerraformStateExporterNodeTemplateChanged
     expr: |
-      max by(job) (candi_converge_node_template_status{status!="ok", job="terraform-state-exporter"} == 1)
+      max by(job) (candi_converge_node_template_status{source="deckhouse", status!="ok", job="terraform-state-exporter"} == 1)
     for: 10m
     labels:
       severity_level: "8"

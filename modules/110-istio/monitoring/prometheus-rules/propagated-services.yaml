@@ -1,7 +1,7 @@
 - name: d8.istio.services
   rules:
   - alert: IstioIrrelevantExternalServiceFound
-    expr: max by (namespace, name) (d8_istio_irrelevant_service == 1)
+    expr: max by (namespace, name) (d8_istio_irrelevant_service{source="deckhouse"} == 1)
     for: 5m
     labels:
       severity_level: "5"

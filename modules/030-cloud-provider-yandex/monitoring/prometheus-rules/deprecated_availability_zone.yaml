@@ -2,7 +2,7 @@
   rules:
     - alert: NodeGroupNodeWithDeprecatedAvailabilityZone
       expr: |
-        max by (node_group) (d8_node_group_node_with_deprecated_availability_zone) > 0
+        max by (node_group) (d8_node_group_node_with_deprecated_availability_zone{source="deckhouse"}) > 0
       for: 1m
       labels:
         tier: cluster
@@ -29,7 +29,7 @@
              > You can't migrate public IP addresses between zones. For details, refer to the migration guide.
     - alert: NATInstanceWithDeprecatedAvailabilityZone
       expr: |
-        d8_cloud_provider_yandex_nat_instance_zone_deprecated > 0
+        d8_cloud_provider_yandex_nat_instance_zone_deprecated{source="deckhouse"} > 0
       for: 1m
       labels:
         tier: cluster

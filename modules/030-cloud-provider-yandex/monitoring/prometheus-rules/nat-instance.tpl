@@ -2,7 +2,7 @@
   rules:
   - alert: D8YandexNatInstanceConnectionsQuotaUtilization
     expr: >-
-      max_over_time(network_connections_quota_utilization{nat_instance="true"}[5m]) > 85
+      max_over_time(network_connections_quota_utilization{source="deckhouse", nat_instance="true"}[5m]) > 85
     for: 5m
     labels:
       severity_level: "4"

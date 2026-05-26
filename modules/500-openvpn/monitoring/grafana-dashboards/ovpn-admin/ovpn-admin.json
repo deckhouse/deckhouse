@@ -78,7 +78,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "ovpn_server_cert_expire",
+          "expr": "ovpn_server_cert_expire{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -137,7 +137,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "ovpn_server_ca_cert_expire",
+          "expr": "ovpn_server_ca_cert_expire{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -194,7 +194,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "ovpn_clients_total",
+          "expr": "ovpn_clients_total{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -251,7 +251,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "ovpn_clients_connected",
+          "expr": "ovpn_clients_connected{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -308,7 +308,7 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "ovpn_clients_expired",
+          "expr": "ovpn_clients_expired{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -365,7 +365,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
-          "expr": "ovpn_clients_expired",
+          "expr": "ovpn_clients_expired{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -406,7 +406,7 @@
       },
       "targets": [
         {
-          "expr": "ovpn_client_bytes_received",
+          "expr": "ovpn_client_bytes_received{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "{{ client }}",
           "refId": "A"
@@ -447,7 +447,7 @@
       },
       "targets": [
         {
-          "expr": "ovpn_client_bytes_sent",
+          "expr": "ovpn_client_bytes_sent{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "{{ client }}",
           "refId": "A"
@@ -488,7 +488,7 @@
       },
       "targets": [
         {
-          "expr": "rate(ovpn_client_bytes_received[1m])",
+          "expr": "rate(ovpn_client_bytes_received{source=\"deckhouse\"}[1m])",
           "interval": "",
           "legendFormat": "{{ client }}",
           "refId": "A"
@@ -529,7 +529,7 @@
       },
       "targets": [
         {
-          "expr": "rate(ovpn_client_bytes_sent[1m])",
+          "expr": "rate(ovpn_client_bytes_sent{source=\"deckhouse\"}[1m])",
           "interval": "",
           "legendFormat": "{{ client }}",
           "refId": "A"
@@ -589,7 +589,7 @@
       "pluginVersion": "7.0.6",
       "targets": [
         {
-          "expr": "ovpn_client_connection_info * 1000",
+          "expr": "ovpn_client_connection_info{source=\"deckhouse\"} * 1000",
           "format": "time_series",
           "interval": "",
           "legendFormat": "{{ client }}-{{ip}}",
@@ -650,7 +650,7 @@
       "pluginVersion": "7.0.6",
       "targets": [
         {
-          "expr": "ovpn_client_connection_from * 1000",
+          "expr": "ovpn_client_connection_from{source=\"deckhouse\"} * 1000",
           "format": "time_series",
           "interval": "",
           "legendFormat": "{{ client }}-{{ip}}",
@@ -720,7 +720,7 @@
       "pluginVersion": "7.0.6",
       "targets": [
         {
-          "expr": "ovpn_client_cert_expire ",
+          "expr": "ovpn_client_cert_expire{source=\"deckhouse\"} ",
           "format": "time_series",
           "interval": "",
           "legendFormat": "{{ client }}",

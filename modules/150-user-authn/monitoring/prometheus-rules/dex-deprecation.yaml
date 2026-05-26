@@ -1,7 +1,7 @@
 - name: d8.user-authn.deprecation
   rules:
   - alert: D8DexProviderLDAPTLSConflict
-    expr: d8_dex_provider_ldap_tls_conflict == 1
+    expr: d8_dex_provider_ldap_tls_conflict{source="deckhouse"} == 1
     labels:
       severity_level: "8"
       tier: cluster

@@ -102,7 +102,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (status) (gatekeeper_constraint_templates{pod=~\"gatekeeper-controller-manager-.+\"})",
+          "expr": "sum by (status) (gatekeeper_constraint_templates{source=\"deckhouse\", pod=~\"gatekeeper-controller-manager-.+\"})",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -167,7 +167,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violating_namespace=~\"$namespace\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -349,7 +349,7 @@
             "uid": "$ds_prometheus"
           },
           "exemplar": false,
-          "expr": "group(kube_namespace_labels{namespace!~\"(d8-.+|kube-.+)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\"(restricted|baseline|privileged)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action)\nor\nlabel_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")\nor\nlabel_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\")\nor\nlabel_replace(label_replace(group(kube_namespace_labels{namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\"), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")",
+          "expr": "group(kube_namespace_labels{source=\"deckhouse\", namespace!~\"(d8-.+|kube-.+)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\"(restricted|baseline|privileged)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action)\nor\nlabel_replace(group(kube_namespace_labels{source=\"deckhouse\", namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy=~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")\nor\nlabel_replace(group(kube_namespace_labels{source=\"deckhouse\", namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action=~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\")\nor\nlabel_replace(label_replace(group(kube_namespace_labels{source=\"deckhouse\", namespace!~\"(d8-.+|kube-system)\",namespace=~\"$namespace\",label_security_deckhouse_io_pod_policy!~\n\"(privileged|restricted|baseline)\",label_security_deckhouse_io_pod_policy_action!~\"(deny|warn|dryrun)\"}) by (namespace, label_security_deckhouse_io_pod_policy, label_security_deckhouse_io_pod_policy_action), \"label_security_deckhouse_io_pod_policy\", \"$default_policy\", \"label_security_deckhouse_io_pod_policy\", \".*\"), \"label_security_deckhouse_io_pod_policy_action\", \"$default_action\", \"label_security_deckhouse_io_pod_policy_action\", \".*\")",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -514,7 +514,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (enforcement_action) (gatekeeper_violations)",
+          "expr": "sum by (enforcement_action) (gatekeeper_violations{source=\"deckhouse\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -754,7 +754,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\", violating_name!=\"\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violating_namespace=~\"$namespace\", violating_name!=\"\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -928,7 +928,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count by (violating_name,violating_namespace) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "count by (violating_name,violating_namespace) (d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violating_namespace=~\"$namespace\"})",
           "interval": "",
           "legendFormat": "{{violating_namespace }}/{{violating_name}}",
           "refId": "A"
@@ -1022,7 +1022,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violating_namespace=~\"$namespace\"})",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1100,14 +1100,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"warn\",violating_namespace=~\"$namespace\"})",
+          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violation_enforcement=\"warn\",violating_namespace=~\"$namespace\"})",
           "interval": "",
           "legendFormat": "warn",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"deny\",violating_namespace=~\"$namespace\"})",
+          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violation_enforcement=\"deny\",violating_namespace=~\"$namespace\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "deny",
@@ -1115,7 +1115,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"dryrun\",violating_namespace=~\"$namespace\"})",
+          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violation_enforcement=\"dryrun\",violating_namespace=~\"$namespace\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "dryrun",
@@ -1123,7 +1123,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"unrecognized\",violating_namespace=~\"$namespace\"})",
+          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{source=\"deckhouse\", violation_enforcement=\"unrecognized\",violating_namespace=~\"$namespace\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "unrecognized",
@@ -1268,7 +1268,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (enforcement_action) (gatekeeper_violations)",
+          "expr": "sum by (enforcement_action) (gatekeeper_violations{source=\"deckhouse\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1336,7 +1336,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(gatekeeper_audit_duration_seconds_count[10m])",
+          "expr": "rate(gatekeeper_audit_duration_seconds_count{source=\"deckhouse\"}[10m])",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1402,7 +1402,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "time() - gatekeeper_audit_last_run_time",
+          "expr": "time() - gatekeeper_audit_last_run_time{source=\"deckhouse\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1468,7 +1468,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(gatekeeper_watch_manager_watched_gvk{pod=~\"gatekeeper-controller.+\"}) / sum(gatekeeper_watch_manager_watched_gvk{pod=~\"gatekeeper-controller.+\"})",
+          "expr": "sum(gatekeeper_watch_manager_watched_gvk{source=\"deckhouse\", pod=~\"gatekeeper-controller.+\"}) \/ sum(gatekeeper_watch_manager_watched_gvk{source=\"deckhouse\", pod=~\"gatekeeper-controller.+\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1534,7 +1534,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(gatekeeper_watch_manager_intended_watch_gvk{pod=~\"gatekeeper-controller.+\"}) / sum(gatekeeper_watch_manager_intended_watch_gvk{pod=~\"gatekeeper-controller.+\"})",
+          "expr": "sum(gatekeeper_watch_manager_intended_watch_gvk{source=\"deckhouse\", pod=~\"gatekeeper-controller.+\"}) \/ sum(gatekeeper_watch_manager_intended_watch_gvk{source=\"deckhouse\", pod=~\"gatekeeper-controller.+\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1646,7 +1646,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count{namespace=~\"$namespace\"}[20m]))",
+          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count{source=\"deckhouse\", namespace=~\"$namespace\"}[20m]))",
           "interval": "",
           "legendFormat": "{{mutation_status}}",
           "refId": "A"
@@ -1741,7 +1741,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (admission_status, pod) (rate(gatekeeper_validation_request_count[20m]))",
+          "expr": "sum by (admission_status, pod) (rate(gatekeeper_validation_request_count{source=\"deckhouse\"}[20m]))",
           "interval": "",
           "legendFormat": "{{admission_status}}",
           "refId": "A"
@@ -1822,7 +1822,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (status) (gatekeeper_constraint_templates{pod=~\"gatekeeper-controller-manager-.+\"})",
+          "expr": "sum by (status) (gatekeeper_constraint_templates{source=\"deckhouse\", pod=~\"gatekeeper-controller-manager-.+\"})",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -1949,7 +1949,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (enforcement_action) (gatekeeper_constraints)",
+          "expr": "sum by (enforcement_action) (gatekeeper_constraints{source=\"deckhouse\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -2024,7 +2024,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(gatekeeper_constraint_template_ingestion_count{namespace!=\"d8-admission-policy-engine\", pod!~\"gatekeeper.+\"} [10m]) or vector(0)",
+          "expr": "rate(gatekeeper_constraint_template_ingestion_count{source=\"deckhouse\", namespace!=\"d8-admission-policy-engine\", pod!~\"gatekeeper.+\"} [10m]) or vector(0)",
           "interval": "",
           "legendFormat": "{{pod}}",
           "range": true,
@@ -2078,7 +2078,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info{}, namespace)",
+          "query": "label_values(kube_pod_info{source=\"deckhouse\"}, namespace)",
           "refId": "Prometheus-namespace-Variable-Query"
         },
         "refresh": 2,

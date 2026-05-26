@@ -156,7 +156,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(metallb_allocator_addresses_total{job=\"controller\"} unless metallb_allocator_addresses_total{job=\"l2lb-controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
+          "expr": "(metallb_allocator_addresses_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0",
           "format": "table",
           "range": true,
           "refId": "A"
@@ -167,7 +167,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
+          "expr": "(metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0",
           "format": "table",
           "hide": false,
           "range": true,
@@ -345,7 +345,7 @@
             "type": "prometheus",
             "uid": "${ds_prometheus}"
           },
-          "expr": "((metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0) / ((metallb_allocator_addresses_total{job=\"controller\"} unless metallb_allocator_addresses_total{job=\"l2lb-controller\"}) > 0) * 100",
+          "expr": "((metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0) \/ ((metallb_allocator_addresses_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0) * 100",
           "refId": "A"
         }
       ],
@@ -435,7 +435,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(metallb_allocator_addresses_total{job=\"controller\"} unless metallb_allocator_addresses_total{job=\"l2lb-controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
+          "expr": "(metallb_allocator_addresses_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0 and (metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0",
           "instant": false,
           "interval": "",
           "legendFormat": "Total addresses in pool: {{pool}}",
@@ -447,7 +447,7 @@
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "(metallb_allocator_addresses_in_use_total{job=\"controller\"} unless metallb_allocator_addresses_in_use_total{job=\"l2lb-controller\"}) > 0",
+          "expr": "(metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"controller\"} unless metallb_allocator_addresses_in_use_total{source=\"deckhouse\", job=\"l2lb-controller\"}) > 0",
           "interval": "",
           "legendFormat": "Used addresses in pool: {{pool}}",
           "range": true,
@@ -515,7 +515,7 @@
           },
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "sum by(pod, ip, node) (metallb_speaker_announced{protocol=\"bgp\"})",
+          "expr": "sum by(pod, ip, node) (metallb_speaker_announced{source=\"deckhouse\", protocol=\"bgp\"})",
           "format": "table",
           "instant": false,
           "legendFormat": "",
@@ -643,7 +643,7 @@
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "metallb_bgp_session_up",
+              "expr": "metallb_bgp_session_up{source=\"deckhouse\"}",
               "format": "time_series",
               "instant": false,
               "legendFormat": "{{pod}}->{{peer}}",
@@ -709,7 +709,7 @@
         "name": "layer2instance",
         "options": [],
         "query": {
-          "query": "label_values(metallb_layer2_gratuitous_sent,instance)",
+          "query": "label_values(metallb_layer2_gratuitous_sent{source=\"deckhouse\"},instance)",
           "refId": "main-layer2instance-Variable-Query"
         },
         "refresh": 2,

@@ -2,7 +2,7 @@
   rules:
   - alert: D8CloudDataDiscovererCloudRequestError
     for: 1h
-    expr: max by(job, namespace)(cloud_data_discovery_cloud_request_error == 1)
+    expr: max by(job, namespace)(cloud_data_discovery_cloud_request_error{source="deckhouse"} == 1)
     labels:
       severity_level: "6"
       d8_module: node-manager
@@ -22,7 +22,7 @@
 
   - alert: D8CloudDataDiscovererSaveError
     for: 1h
-    expr: max by(job, namespace)(cloud_data_discovery_update_resource_error == 1)
+    expr: max by(job, namespace)(cloud_data_discovery_update_resource_error{source="deckhouse"} == 1)
     labels:
       severity_level: "6"
       d8_module: node-manager
@@ -42,7 +42,7 @@
 
   - alert: ClusterHasOrphanedDisks
     for: 1h
-    expr: max by(job, id, name, namespace)(cloud_data_discovery_orphaned_disk_info == 1)
+    expr: max by(job, id, name, namespace)(cloud_data_discovery_orphaned_disk_info{source="deckhouse"} == 1)
     labels:
       severity_level: "6"
       d8_module: node-manager
@@ -62,7 +62,7 @@
 
   - alert: UnmetCloudConditions
     for: 1h
-    expr: max by(job, id, name, namespace)(cloud_data_discovery_cloud_conditions_error == 1)
+    expr: max by(job, id, name, namespace)(cloud_data_discovery_cloud_conditions_error{source="deckhouse"} == 1)
     labels:
       severity_level: "6"
       d8_module: node-manager
