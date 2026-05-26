@@ -12,6 +12,8 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "{{ include "helm_lib_module_public_domain" (list . "console") }}"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
 spec:
