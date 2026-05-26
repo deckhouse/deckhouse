@@ -1360,11 +1360,7 @@ There may be a situation when the cluster's master nodes are powered off for an 
 
 **Automatic renewal (normal operation)**: `control-plane-manager` monitors certificate expiry and automatically renews control-plane certificates when they are within 30 days of their expiry date. No manual action is required while the cluster is running.
 
-**When nodes come back online after extended downtime**: Once the master nodes start and the Kubernetes API becomes available, `control-plane-manager` detects expired or soon-to-expire certificates and creates renewal operations automatically. Wait for all `d8-control-plane-manager` pods in the `kube-system` namespace to become `Ready`:
-
-```shell
-kubectl -n kube-system wait --for=condition=Ready pod -l app=d8-control-plane-manager --timeout=600s
-```
+**When nodes come back online after extended downtime**: Once the master nodes start and the Kubernetes API becomes available, `control-plane-manager` detects expired or soon-to-expire certificates and creates renewal operations automatically. Wait for all `d8-control-plane-manager` pods in the `kube-system` namespace to become `Ready`.
 
 **If the cluster cannot recover automatically** (for example, if all control-plane certificates are expired and the API server cannot start): this is a disaster recovery scenario. Use the cluster backup and restore procedures described in the [official Deckhouse documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html).
 
