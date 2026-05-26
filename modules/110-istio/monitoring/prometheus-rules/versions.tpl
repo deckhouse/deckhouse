@@ -13,7 +13,7 @@
         plk_labels_as_annotations: pod,instance
         plk_protocol_version: "1"
       expr: |
-        d8_istio_deprecated_version_installed{}
+        d8_istio_deprecated_version_installed{source="deckhouse"}
       for: 5m
       labels:
         severity_level: "{{"{{$labels.alert_severity}}"}}"
@@ -31,7 +31,7 @@
         plk_labels_as_annotations: pod,instance
         plk_protocol_version: "1"
       expr: |
-        d8_telemetry_istio_version_incompatible_with_k8s_version{}
+        d8_telemetry_istio_version_incompatible_with_k8s_version{source="deckhouse"}
       for: 5m
       labels:
         severity_level: "3"

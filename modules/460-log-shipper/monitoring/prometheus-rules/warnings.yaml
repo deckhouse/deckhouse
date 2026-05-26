@@ -2,7 +2,7 @@
   rules:
     - alert: D8LogShipperClusterLogDestinationD8LokiAuthorizationRequired
       expr: |
-        max by (resource_name) (d8_log_shipper_cluster_log_destination_d8_loki_authorization_required) == 1
+        max by (resource_name) (d8_log_shipper_cluster_log_destination_d8_loki_authorization_required{source="deckhouse"}) == 1
       for: 5m
       labels:
         severity_level: "9"

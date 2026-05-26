@@ -1,7 +1,7 @@
 - name: d8.node-local-dns.forward
   rules:
     - alert: D8NodeLocalDNSUpstreamHealthcheckFailed
-      expr: increase(coredns_forward_healthcheck_broken_total{job="node-local-dns"}[5m]) > 10
+      expr: increase(coredns_forward_healthcheck_broken_total{source="deckhouse", job="node-local-dns"}[5m]) > 10
       for: 2m
       labels:
         severity_level: "5"
@@ -13,7 +13,7 @@
           As a result, all upstreams were considered unhealthy.
 
     - alert: D8NodeLocalDNSForwardMaxConcurrentRejects
-      expr: increase(coredns_forward_max_concurrent_rejects_total{job="node-local-dns"}[5m]) > 20
+      expr: increase(coredns_forward_max_concurrent_rejects_total{source="deckhouse", job="node-local-dns"}[5m]) > 20
       for: 1m
       labels:
         severity_level: "5"

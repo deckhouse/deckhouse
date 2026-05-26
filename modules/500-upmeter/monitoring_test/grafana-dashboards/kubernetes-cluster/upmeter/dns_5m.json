@@ -72,28 +72,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"up\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"up\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "up"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"unknown\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"unknown\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"nodata\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "nodata"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\", status=\"down\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\", status=\"down\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
@@ -194,7 +194,7 @@
       "strokeWidth": 1,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\"}",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -258,28 +258,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"up\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"up\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "up"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"unknown\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"unknown\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"nodata\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "nodata"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\", status=\"down\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\", status=\"down\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
@@ -380,7 +380,7 @@
       "strokeWidth": 1,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\"}",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
@@ -444,28 +444,28 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"up\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"up\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "up"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"unknown\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"unknown\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "unknown"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\",status=\"nodata\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\",status=\"nodata\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "nodata"
         },
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\", status=\"down\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\", status=\"down\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
@@ -566,7 +566,7 @@
       "strokeWidth": 1,
       "targets": [
         {
-          "expr": "statustime{probe_ref=\"synthetic/dns\"}",
+          "expr": "statustime{source=\"deckhouse\", probe_ref=\"synthetic\/dns\"}",
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"

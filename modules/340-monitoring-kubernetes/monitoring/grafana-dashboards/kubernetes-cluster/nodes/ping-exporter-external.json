@@ -1536,7 +1536,7 @@
         "multi": true,
         "name": "destination_name",
         "options": [],
-        "query": "label_values(external_ping_packets_sent_total{source=\"deckhouse\"}, destination_name)",
+        "query": "label_values(external_ping_packets_sent_total{source=\"deckhouse\"}, destination_name{source=\"deckhouse\"})",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

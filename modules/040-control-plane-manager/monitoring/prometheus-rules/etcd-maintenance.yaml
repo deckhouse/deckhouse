@@ -4,11 +4,11 @@
       expr: |
         histogram_quantile(0.99,
           sum by (instance, le) (
-            rate(etcd_request_duration_seconds_bucket{job="kube-apiserver"}[5m])
+            rate(etcd_request_duration_seconds_bucket{source="deckhouse", job="kube-apiserver"}[5m])
           )
         )
     - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
-      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
+      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{source="deckhouse", job="kube-etcd3"}) >= scalar(max(last_over_time(d8_etcd_quota_backend_total{source="deckhouse"}[6h])) * 0.95)
       labels:
         severity_level: "3"
         tier: cluster
@@ -51,7 +51,7 @@
             | 72 GB       | 8589934592 (8 GB)   |
             | ...         | ...                 |
     - alert: D8NeedDecreaseEtcdQuotaBackendBytes
-      expr: max(d8_etcd_quota_backend_should_decrease) > 0
+      expr: max(d8_etcd_quota_backend_should_decrease{source="deckhouse"}) > 0
       labels:
         tier: cluster
         d8_component: control-plane-manager
@@ -98,7 +98,7 @@
             | 72 GB       | 8589934592 (8 GB)   |
             | ...         | ...                 |
     - alert: D8EtcdExcessiveDatabaseGrowth
-      expr: predict_linear(etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}[6h], 24*3600) >= scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.95)
+      expr: predict_linear(etcd_mvcc_db_total_size_in_bytes{source="deckhouse", job="kube-etcd3"}[6h], 24*3600) >= scalar(max(last_over_time(d8_etcd_quota_backend_total{source="deckhouse"}[6h])) * 0.95)
       for: "30m"
       labels:
         severity_level: "4"
@@ -114,7 +114,7 @@
 
           To prevent disruptions, investigate the cause and take necessary action.
     - alert: D8EtcdDatabaseHighFragmentationRatio
-      expr: max by (node) (last_over_time(etcd_mvcc_db_total_size_in_use_in_bytes[5m]) / last_over_time(etcd_mvcc_db_total_size_in_bytes[5m])) < 0.5 and max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) > scalar(max(last_over_time(d8_etcd_quota_backend_total[6h])) * 0.75)
+      expr: max by (node) (last_over_time(etcd_mvcc_db_total_size_in_use_in_bytes{source="deckhouse"}[5m]) / last_over_time(etcd_mvcc_db_total_size_in_bytes{source="deckhouse"}[5m])) < 0.5 and max by (node) (etcd_mvcc_db_total_size_in_bytes{source="deckhouse", job="kube-etcd3"}) > scalar(max(last_over_time(d8_etcd_quota_backend_total{source="deckhouse"}[6h])) * 0.75)
       for: "10m"
       labels:
         severity_level: "7"

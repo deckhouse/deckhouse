@@ -1,7 +1,7 @@
 - name: d8.l2-load-balancer.services
   rules:
     - alert: L2LoadBalancerOrphanServiceFound
-      expr: max by (namespace, name) (d8_l2_load_balancer_orphan_service == 1)
+      expr: max by (namespace, name) (d8_l2_load_balancer_orphan_service{source="deckhouse"} == 1)
       for: 5m
       labels:
         severity_level: "4"
@@ -20,7 +20,7 @@
 - name: d8.metallb.migrate
   rules:
     - alert: D8MetallbUpdateMCVersionRequired
-      expr: d8_metallb_update_mc_version_required == 1
+      expr: d8_metallb_update_mc_version_required{source="deckhouse"} == 1
       for: 1m
       labels:
         severity_level: "5"
@@ -37,7 +37,7 @@
           To resolve this issue, increase version in the ModuleConfig `metallb`.
 
     - alert: D8MetallbNotSupportedServiceAnnotationsDetected
-      expr: d8_metallb_not_supported_service_annotations_detected == 1
+      expr: d8_metallb_not_supported_service_annotations_detected{source="deckhouse"} == 1
       for: 1m
       labels:
         severity_level: "4"
@@ -64,7 +64,7 @@
           **Please note.** Existing LoadBalancer services of Deckhouse have been migrated automatically, but the new ones will not be.
 
     - alert: D8MetallbObsoleteLayer2PoolsAreUsed
-      expr: d8_metallb_obsolete_layer2_pools_are_used == 1
+      expr: d8_metallb_obsolete_layer2_pools_are_used{source="deckhouse"} == 1
       for: 1m
       labels:
         severity_level: "7"

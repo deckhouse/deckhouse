@@ -27,6 +27,8 @@ spec:
         action: labeldrop
       - targetLabel: tier
         replacement: cluster
+      - targetLabel: source
+        replacement: deckhouse
 {{/*    metricRelabelings:*/}}
 {{/*    # Vector has a problem with internal metrics registry grows unbounded.*/}}
 {{/*    # Drop metrics with high cardinality labels here to avoid overloading Prometheus instances.*/}}

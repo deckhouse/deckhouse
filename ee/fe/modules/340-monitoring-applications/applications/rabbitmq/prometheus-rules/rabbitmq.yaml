@@ -85,7 +85,7 @@
         RabbitMQ High TCP Socket Usage Alert in `{{$labels.namespace}}/{{$labels.pod}}`.
 
   - alert: ApplicationRabbitMQOneOrMoreReplicaUnavailable
-    expr: kube_statefulset_status_replicas{statefulset=~"(rabbitmq|rmq).*"} - kube_statefulset_status_replicas_ready{statefulset=~"(rabbitmq|rmq).*"} >= 1
+    expr: kube_statefulset_status_replicas{source="deckhouse", statefulset=~"(rabbitmq|rmq).*"} - kube_statefulset_status_replicas_ready{source="deckhouse", statefulset=~"(rabbitmq|rmq).*"} >= 1
     for: 5m
     labels:
       severity_level: "4"

@@ -33,6 +33,8 @@ spec:
       targetLabel: pod
     - sourceLabels: [__meta_kubernetes_namespace]
       targetLabel: namespace
+    - targetLabel: source
+      replacement: deckhouse
   selector:
     matchExpressions:
     - key: service.istio.io/canonical-name
