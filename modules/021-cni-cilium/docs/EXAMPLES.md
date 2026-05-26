@@ -237,7 +237,7 @@ spec:
 
 ### Applying the change
 
-Cilium reads the merged configuration once at agent startup, so the affected
+Cilium agent at startup reads the merged configuration, so the affected
 `cilium-agent` pods must be restarted after the `CiliumNodeConfig` is created
 or modified (Deckhouse does not restart agents automatically on such changes):
 
