@@ -68,6 +68,9 @@ git:
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - set -e
 imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}
@@ -88,6 +91,9 @@ git:
     - '**/*.go'
     - '**/go.mod'
     - '**/go.sum'
+shell:
+  install:
+  - set -e
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 final: false
