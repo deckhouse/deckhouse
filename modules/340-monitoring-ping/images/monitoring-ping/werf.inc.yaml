@@ -12,7 +12,6 @@ import:
     add: /usr/sbin/setcap
     to: /tools/setcap
     before: setup
-git:
 {{- include "image mount points" . }}
 shell:
   setup:

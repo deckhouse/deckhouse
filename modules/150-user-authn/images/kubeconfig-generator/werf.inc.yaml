@@ -18,7 +18,6 @@ import:
     add: /src/templates
     to: /app/templates
     before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

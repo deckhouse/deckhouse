@@ -10,7 +10,6 @@ import:
     add: /src/url-exec-prober
     to: /usr/local/bin/url-exec-prober
     before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

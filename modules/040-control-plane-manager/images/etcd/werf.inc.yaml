@@ -36,7 +36,6 @@ import:
   - etcdctl
   - etcdutl
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

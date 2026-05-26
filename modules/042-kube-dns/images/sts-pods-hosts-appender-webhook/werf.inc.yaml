@@ -42,7 +42,6 @@ import:
     add: /src/sts-pods-hosts-appender-webhook
     to: /sts-pods-hosts-appender-webhook
     before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

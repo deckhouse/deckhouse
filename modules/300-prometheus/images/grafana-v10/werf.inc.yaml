@@ -169,7 +169,6 @@ import:
   add: /var/log/grafana/
   to: /var/log/grafana
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

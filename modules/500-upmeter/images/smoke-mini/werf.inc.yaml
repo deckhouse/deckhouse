@@ -45,7 +45,6 @@ import:
   add: /smoke-mini
   to: /smoke-mini
   before: setup
-git:
 {{- include "image mount points" . }}  
 imageSpec:
   config:

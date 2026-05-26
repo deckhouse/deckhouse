@@ -6,7 +6,6 @@ import:
   add: /app/alerts-receiver
   to: /alerts-receiver
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

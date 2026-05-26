@@ -68,7 +68,7 @@ import:
     add: /pause
     to: /pause
     before: setup
-git:
+git
 {{- include "image mount points" . }}
 imageSpec:
   config:

@@ -7,7 +7,6 @@ import:
     add: /gatekeeper
     to: /bin/gatekeeper
     before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
