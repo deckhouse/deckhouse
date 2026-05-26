@@ -992,7 +992,7 @@ git:
 {{- include "image mount points" $ }}
 shell:
   install:
-  - /usr/bin/cp -alf /chroot/. /validation-chroot/
+  - /usr/bin/cp -af /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
