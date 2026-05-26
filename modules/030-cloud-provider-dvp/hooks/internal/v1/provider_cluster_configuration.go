@@ -36,4 +36,42 @@ type DvpProvider struct {
 type DvpModuleConfiguration struct {
 	Provider *DvpProvider `json:"provider,omitempty" yaml:"provider,omitempty"`
 	Zones    *[]string    `json:"zones,omitempty" yaml:"zones,omitempty"`
+
+	// v2 fields: provider.parameters, nodes.parameters, storage.parameters
+	ProviderV2 *DvpProviderV2 `json:"providerV2,omitempty" yaml:"providerV2,omitempty"`
+	Nodes      *DvpNodesV2    `json:"nodes,omitempty" yaml:"nodes,omitempty"`
+	Storage    *DvpStorageV2  `json:"storage,omitempty" yaml:"storage,omitempty"`
+}
+
+// DvpProviderV2 represents the v2 schema provider section (from ModuleConfig).
+type DvpProviderV2 struct {
+	Parameters *DvpProviderParameters `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+}
+
+type DvpProviderParameters struct {
+	Namespace     *string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	NetworkPolicy *string `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
+}
+
+// DvpNodesV2 represents the v2 schema nodes section (from ModuleConfig).
+type DvpNodesV2 struct {
+	Enabled    *bool            `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Parameters *DvpNodesParameters `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+}
+
+type DvpNodesParameters struct {
+	Layout       *string   `json:"layout,omitempty" yaml:"layout,omitempty"`
+	SSHPublicKey *string   `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	Region       *string   `json:"region,omitempty" yaml:"region,omitempty"`
+	Zones        *[]string `json:"zones,omitempty" yaml:"zones,omitempty"`
+}
+
+// DvpStorageV2 represents the v2 schema storage section (from ModuleConfig).
+type DvpStorageV2 struct {
+	Enabled    *bool             `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Parameters *DvpStorageParameters `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+}
+
+type DvpStorageParameters struct {
+	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty" yaml:"excludedStorageClasses,omitempty"`
 }
