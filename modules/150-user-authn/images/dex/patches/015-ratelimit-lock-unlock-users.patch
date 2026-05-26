@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index 0c4f7f55..7976877e 100644
+index 4d90083d..7d3792f5 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -35,6 +35,7 @@ type Config struct {
@@ -10,10 +10,10 @@ index 0c4f7f55..7976877e 100644
  	Logger         Logger          `json:"logger"`
  
  	Frontend server.WebConfig `json:"frontend"`
-@@ -497,8 +498,9 @@ type PasswordPolicy struct {
- 	ID              string  `json:"id"`
- 	ComplexityLevel *string `json:"complexityLevel,omitempty"`
- 	Lockout         *struct {
+@@ -506,8 +507,9 @@ type PasswordPolicy struct {
+ 		RepeatedChars     bool `json:"repeatedChars"`
+ 	} `json:"custom,omitempty"`
+ 	Lockout *struct {
 -		MaxAttempts  uint64        `json:"maxAttempts"`
 -		LockDuration time.Duration `json:"lockDuration"`
 +		MaxAttempts       uint64        `json:"maxAttempts"`
@@ -22,7 +22,7 @@ index 0c4f7f55..7976877e 100644
  	} `json:"lockout,omitempty"`
  	Rotation *struct {
  		Interval    time.Duration `json:"interval"`
-@@ -511,8 +513,9 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
+@@ -520,8 +522,9 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
  	type Alias PasswordPolicy
  	aux := &struct {
  		Lockout *struct {
@@ -34,7 +34,7 @@ index 0c4f7f55..7976877e 100644
  		} `json:"lockout,omitempty"`
  		Rotation *struct {
  			IntervalStr string  `json:"interval"`
-@@ -535,12 +538,14 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
+@@ -544,12 +547,14 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
  		}
  		if p.Lockout == nil {
  			p.Lockout = &struct {
@@ -51,7 +51,7 @@ index 0c4f7f55..7976877e 100644
  	}
  
  	// Parse rotation interval
-@@ -561,3 +566,32 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
+@@ -570,3 +575,32 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
  
  	return nil
  }
@@ -85,10 +85,10 @@ index 0c4f7f55..7976877e 100644
 +	Burst int `json:"burst"`
 +}
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index 8558314f..4a525b7f 100644
+index 18477fe3..0140d117 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -364,6 +364,11 @@ func runServe(options serveOptions) error {
+@@ -373,6 +373,11 @@ func runServe(options serveOptions) error {
  			opts = append(opts, server.WithLockoutSettings(
  				c.PasswordPolicy.Lockout.MaxAttempts, c.PasswordPolicy.Lockout.LockDuration,
  			))
@@ -100,7 +100,7 @@ index 8558314f..4a525b7f 100644
  		}
  		if c.PasswordPolicy.Rotation != nil {
  			opts = append(opts, server.WithRotationSettings(
-@@ -387,6 +392,21 @@ func runServe(options serveOptions) error {
+@@ -396,6 +401,21 @@ func runServe(options serveOptions) error {
  		return fmt.Errorf("failed to parse client remote IP settings: %v", err)
  	}
  
@@ -200,7 +200,7 @@ index e8e5a783..e04ff083 100644
 +        type: date
 +        jsonPath: .metadata.creationTimestamp
 diff --git a/server/handlers.go b/server/handlers.go
-index 04c391e2..03aa996f 100644
+index 166e6d95..d0c7f708 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -422,6 +422,27 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
@@ -697,10 +697,10 @@ index 00000000..37a42aeb
 +	}
 +}
 diff --git a/server/passwordpolicy.go b/server/passwordpolicy.go
-index ea87beb5..b007f2d2 100644
+index 2d1b8ab4..adf54fc1 100644
 --- a/server/passwordpolicy.go
 +++ b/server/passwordpolicy.go
-@@ -244,6 +244,14 @@ func WithComplexityLevel(complexityLevel string) PasswordPolicyOption {
+@@ -276,6 +276,14 @@ func WithCustomComplexity(settings CustomComplexitySettings) PasswordPolicyOptio
  type LockoutSettings struct {
  	maxAttempts  uint64
  	lockDuration time.Duration
@@ -715,7 +715,7 @@ index ea87beb5..b007f2d2 100644
  }
  
  func WithLockoutSettings(maxAttempts uint64, lockDuration time.Duration) PasswordPolicyOption {
-@@ -256,6 +264,18 @@ func WithLockoutSettings(maxAttempts uint64, lockDuration time.Duration) Passwor
+@@ -288,6 +296,18 @@ func WithLockoutSettings(maxAttempts uint64, lockDuration time.Duration) Passwor
  	}
  }
  
@@ -734,25 +734,19 @@ index ea87beb5..b007f2d2 100644
  type RotationSettings struct {
  	passwordRotationInterval time.Duration
  	redirectURL              *string
-@@ -316,6 +336,16 @@ func (pp PasswordPolicy) IsPasswordLocked(p storage.Password) bool {
- 	return false
+@@ -325,10 +345,45 @@ func (pp PasswordPolicy) IsPasswordLocked(p storage.Password) bool {
+ 	return pp.lockout != nil && p.LockedUntil != nil && p.LockedUntil.After(time.Now())
  }
  
 +// IsOfflineSessionLocked reports whether the given OfflineSessions object is
 +// currently within an active lockout window. Used for connector types where
 +// the failed-attempt state is stored in OfflineSessions (LDAP, Crowd, ...).
 +func (pp PasswordPolicy) IsOfflineSessionLocked(o storage.OfflineSessions) bool {
-+	if pp.lockout != nil && o.LockedUntil != nil && o.LockedUntil.After(time.Now()) {
-+		return true
-+	}
-+	return false
++	return pp.lockout != nil && o.LockedUntil != nil && o.LockedUntil.After(time.Now())
 +}
 +
  func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {
- 	if pp.lockout != nil && pp.lockout.maxAttempts <= attempts {
- 		return true
-@@ -323,6 +353,34 @@ func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {
- 	return false
+ 	return pp.lockout != nil && pp.lockout.maxAttempts <= attempts
  }
  
 +// AppliesToConnectorType reports whether lockout enforcement is active for the
