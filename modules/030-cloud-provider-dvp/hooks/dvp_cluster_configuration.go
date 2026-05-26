@@ -32,6 +32,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
@@ -105,21 +106,18 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	result := moduleConfigFilterResult{}
-
-	if v, ok, _ := unstructured.NestedFieldNoCopy(obj.Object, "spec", "version"); ok {
-		if val, ok := v.(int64); ok {
-			result.Version = val
-		}
+	mc := &deckhousev1alpha1.ModuleConfig{}
+	if err := sdk.FromUnstructured(obj, mc); err != nil {
+		return nil, fmt.Errorf("convert ModuleConfig from unstructured: %w", err)
 	}
 
-	if e, ok, _ := unstructured.NestedBool(obj.Object, "spec", "enabled"); ok {
-		result.Enabled = e
+	result := moduleConfigFilterResult{
+		Version: int64(mc.Spec.Version),
+		Enabled: mc.Spec.Enabled != nil && *mc.Spec.Enabled,
 	}
 
-	settingsRaw, found, err := unstructured.NestedMap(obj.Object, "spec", "settings")
-	if err == nil && found {
-		if providerRaw, ok := settingsRaw["provider"]; ok {
+	if mc.Spec.Settings != nil {
+		if providerRaw, ok := mc.Spec.Settings.GetMap()["provider"]; ok {
 			providerBytes, err := json.Marshal(providerRaw)
 			if err == nil {
 				result.Provider = json.RawMessage(providerBytes)
