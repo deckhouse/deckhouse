@@ -137,6 +137,10 @@ spec:
             value: |
               excludePaths:
               - /healthz
+              # Package icons are public metadata; no Bearer token or RBAC required.
+              - /v1/packages/*/metadata/icon
+              - /v1/packages/*/metadata/icon/
+              - /v1/packages/*/metadata/icon/*
               upstreams:
               - upstream: http://127.0.0.1:5080/healthz
                 path: /healthz

@@ -93,9 +93,9 @@ const (
 	//   /v1/packages/<package-name>/metadata/icon/<version>        -> get icon of package specific version
 	//
 	// where <package-name> is the name of the package.
-	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/packages/* with its
-	// own SubjectAccessReview-based authorization, so this handler intentionally does no
-	// authentication of its own.
+	// kube-rbac-proxy (the standard sidecar listening on :4219) serves icon URLs without
+	// authentication (see excludePaths in the module deployment). This handler intentionally
+	// does no authentication of its own.
 	packagesPathPrefix = "/v1/packages/"
 )
 
