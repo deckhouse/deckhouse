@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -29,14 +30,14 @@ const (
 
 type PostgreSQLCredentialsReconciler struct {
 	client.Client
-	Logger logr.Logger
+	Logger *log.Logger
 	Scheme *runtime.Scheme
 
 	secretsCache sync.Map
 }
 
 func (r *PostgreSQLCredentialsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Logger.V(1).Info("reconcile secret", "name", req.Name, "namespace", req.Namespace)
+	r.Logger.Debug("reconcile secret", "name", req.Name, "namespace", req.Namespace)
 
 	var creds PostgreSQLCredentials
 
@@ -45,7 +46,7 @@ func (r *PostgreSQLCredentialsReconciler) Reconcile(ctx context.Context, req ctr
 		Namespace: req.Namespace,
 		Name:      req.Name,
 	}, &secret); err != nil {
-		r.Logger.V(0).Error(err, "unable to fetch Secret", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.Error("unable to fetch Secret", log.Err(err), "name", req.Name, "namespace", req.Namespace)
 		return ctrl.Result{}, err
 	}
 

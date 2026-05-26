@@ -110,7 +110,7 @@ func main() {
 	if err = (&controller.ServiceWithHealthchecksReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Logger: ctrl.Log.WithName("controller"),
+		Logger: log.Default().With("logger", "controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error("unable to create controller", log.Err(err), "controller", "ServiceWithHealthchecks")
 		os.Exit(1)

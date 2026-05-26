@@ -111,7 +111,7 @@ func main() {
 
 	secretController := &agent.PostgreSQLCredentialsReconciler{
 		Client: mgr.GetClient(),
-		Logger: ctrl.Log.WithName("secret-controller"),
+		Logger: log.Default().With("logger", "secret-controller"),
 		Scheme: mgr.GetScheme(),
 	}
 	if err = secretController.SetupWithManager(mgr); err != nil {
@@ -125,7 +125,7 @@ func main() {
 		nodeName,
 		verboseStatus,
 		mgr.GetScheme(),
-		ctrl.Log.WithName("service-with-healthchecks-controller"),
+		log.Default().With("logger", "service-with-healthchecks-controller"),
 		secretController,
 	)
 	if err = serviceWithHealthchecksController.RunWorkers(context.Background()); err != nil {

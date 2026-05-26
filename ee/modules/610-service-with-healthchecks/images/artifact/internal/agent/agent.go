@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -30,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
 	"service-with-healthchecks/internal/kubernetes"
@@ -49,7 +50,7 @@ type ServiceWithHealthchecksReconciler struct {
 	mu            sync.RWMutex
 	client.Client
 	Scheme                                       *runtime.Scheme
-	logger                                       logr.Logger
+	logger                                       *log.Logger
 	taskQueue                                    *TaskQueue
 	tasksResults                                 chan ProbeResult
 	events                                       chan event.GenericEvent
@@ -59,7 +60,7 @@ type ServiceWithHealthchecksReconciler struct {
 	secretController                             *PostgreSQLCredentialsReconciler
 }
 
-func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, verboseStatus bool, scheme *runtime.Scheme, logger logr.Logger, secretController *PostgreSQLCredentialsReconciler) *ServiceWithHealthchecksReconciler {
+func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, verboseStatus bool, scheme *runtime.Scheme, logger *log.Logger, secretController *PostgreSQLCredentialsReconciler) *ServiceWithHealthchecksReconciler {
 	return &ServiceWithHealthchecksReconciler{
 		workersCount:  workersCount,
 		nodeName:      nodeName,
@@ -87,20 +88,20 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		podList       corev1.PodList
 		err           error
 	)
-	r.logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+	r.logger.Debug("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	if err = r.Get(ctx, req.NamespacedName, &serviceWithHC); err != nil {
 		if errors.IsNotFound(err) {
-			r.logger.V(1).Info("ServiceWithHealthchecks not found, assuming deleted", "name", req.NamespacedName)
+			r.logger.Debug("ServiceWithHealthchecks not found, assuming deleted", "name", req.NamespacedName)
 			r.deleteServiceWithHealthchecks(req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
-		r.logger.Error(err, "unable to fetch ServiceWithHealthchecks")
+		r.logger.Error("unable to fetch ServiceWithHealthchecks", log.Err(err))
 		return ctrl.Result{}, err
 	}
 
 	// Delete helthchecks from internal map because ServiceWithHealthchecks was deleted
 	if serviceWithHC.DeletionTimestamp != nil {
-		r.logger.V(1).Info("ServiceWithHealthchecks is being deleted")
+		r.logger.Debug("ServiceWithHealthchecks is being deleted")
 		r.deleteServiceWithHealthchecks(req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
@@ -123,7 +124,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	if serviceWithHC.Spec.ClusterIP != "None" {
 		err = r.updateEPSForServiceWithHealthchecks(ctx, serviceWithHC)
 		if err != nil {
-			r.logger.Error(err, "unable to update EPS for ServiceWithHealthchecks")
+			r.logger.Error("unable to update EPS for ServiceWithHealthchecks", log.Err(err))
 			return ctrl.Result{}, err
 		}
 	}
@@ -268,7 +269,7 @@ func (r *ServiceWithHealthchecksReconciler) getExposedServiceWithHCForPod(ctx co
 }
 
 func (r *ServiceWithHealthchecksReconciler) RunWorkers(ctx context.Context) error {
-	r.logger.V(1).Info("starting workers", "workersCount", r.workersCount)
+	r.logger.Debug("starting workers", "workers_count", r.workersCount)
 
 	ctx, cancel := context.WithCancel(ctx)
 	r.cancelFunc = cancel
@@ -368,10 +369,10 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 }
 
 func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
-	r.logger.V(1).Info("running task")
+	r.logger.Debug("running task")
 	for {
 		task := r.taskQueue.Dequeue()
-		r.logger.V(1).Info("running task", "host", task.host, "swhName", task.swhName.String())
+		r.logger.Debug("running task", "host", task.host, "swh_name", task.swhName.String())
 		g, _ := errgroup.WithContext(ctx)
 		probesResultDetails := make([]ProbeResultDetail, len(task.probes))
 		for i, probe := range task.probes {
@@ -400,7 +401,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
 		}
 		err := g.Wait()
 		if err != nil {
-			r.logger.V(1).Error(err, "error performing probes", "host", task.host, "swhName", task.swhName.String())
+			r.logger.Debug("error performing probes", "error", err.Error(), "host", task.host, "swh_name", task.swhName.String())
 		}
 		r.tasksResults <- ProbeResult{
 			host:         task.host,
@@ -427,7 +428,7 @@ func (r *ServiceWithHealthchecksReconciler) GetNodeName() string {
 }
 
 func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(ctx context.Context, svc networkv1alpha1.ServiceWithHealthchecks) error {
-	r.logger.V(1).Info("updating endpoints for service", "swhName", svc.GetName(), "namespace", svc.GetNamespace())
+	r.logger.Debug("updating endpoints for service", "swh_name", svc.GetName(), "namespace", svc.GetNamespace())
 	desiredNameForEndpointSlice := svc.GetName() + "-" + r.nodeName
 
 	// Build the desired state
@@ -443,7 +444,7 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 		}
 		err := r.Delete(ctx, epsToDelete)
 		if err != nil && !errors.IsNotFound(err) {
-			r.logger.Error(err, "could not delete EndpointSlice", "name", desiredNameForEndpointSlice)
+			r.logger.Error("could not delete EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 			return err
 		}
 		return nil // Exit here after deleting (or if already deleted), do not proceed to Get/Update.
@@ -457,13 +458,13 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 	if errors.IsNotFound(err) {
 		r.logger.Info("creating new EndpointSlice", "name", desiredNameForEndpointSlice)
 		if err = r.Create(ctx, &desiredEPS); err != nil {
-			r.logger.Error(err, "couldn't create EndpointSlice", "name", desiredNameForEndpointSlice)
+			r.logger.Error("couldn't create EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 			return err
 		}
 		return nil
 	}
 	if err != nil {
-		r.logger.Error(err, "couldn't get EndpointSlice", "name", desiredNameForEndpointSlice)
+		r.logger.Error("couldn't get EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 		return err
 	}
 
@@ -472,7 +473,7 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 		patch := client.MergeFrom(existingEPS.DeepCopy())
 		existingEPS.Endpoints = desiredEPS.Endpoints
 		if err := r.Patch(ctx, existingEPS, patch); err != nil {
-			r.logger.Error(err, "couldn't patch EndpointSlice", "name", desiredNameForEndpointSlice)
+			r.logger.Error("couldn't patch EndpointSlice", log.Err(err), "name", desiredNameForEndpointSlice)
 			return err
 		}
 	}
@@ -586,7 +587,7 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 		case "postgresql":
 			creds, err := r.getPostgreSQLCredentials(serviceProbe.PostgreSQL, namespace)
 			if err != nil {
-				r.logger.Error(err, "failed to get PostgreSQL credentials")
+				r.logger.Error("failed to get PostgreSQL credentials", log.Err(err))
 				continue
 			}
 			probes = append(probes, PostgreSQLProbeTarget{
@@ -635,7 +636,7 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 	for _, pod := range podList.Items {
 		if pod.Status.PodIP == "" {
 			// pod has no IP address (for example, it's in pending state), skipping
-			r.logger.V(1).Info("pod has no IP address, skipping", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
+			r.logger.Debug("pod has no IP address, skipping", "pod_name", pod.GetName(), "swh_name", hc.Name, "namespace", hc.Namespace)
 			continue
 		}
 		targetNotFound := true
@@ -650,7 +651,7 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 
 		if targetNotFound {
 			// append new target
-			r.logger.Info("append target pod for service", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
+			r.logger.Info("append target pod for service", "pod_name", pod.GetName(), "swh_name", hc.Name, "namespace", hc.Namespace)
 			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] = append(r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey], HealthcheckTarget{
 				targetHost:         pod.Status.PodIP,
 				creationTime:       pod.CreationTimestamp.Time,
@@ -666,7 +667,7 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podReady = podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
 			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].targetHost = pod.Status.PodIP
 			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].creationTime = pod.CreationTimestamp.Time
-			r.logger.V(1).Info("update target pod for service", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
+			r.logger.Debug("update target pod for service", "pod_name", pod.GetName(), "swh_name", hc.Name, "namespace", hc.Namespace)
 		}
 	}
 	r.mu.Unlock()

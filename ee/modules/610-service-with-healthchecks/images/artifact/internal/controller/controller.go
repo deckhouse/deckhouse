@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
 	"service-with-healthchecks/internal/kubernetes"
@@ -35,7 +36,7 @@ const (
 type ServiceWithHealthchecksReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Logger logr.Logger
+	Logger *log.Logger
 }
 
 // +kubebuilder:rbac:groups=network.deckhouse.io,resources=servicewithhealthchecks,verbs=get;list;watch;create;update;patch;delete
@@ -45,19 +46,19 @@ type ServiceWithHealthchecksReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+	r.Logger.Debug("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	serviceWithHC := &networkv1alpha1.ServiceWithHealthchecks{}
 	if err := r.Get(ctx, req.NamespacedName, serviceWithHC); err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		r.Logger.Error(err, "failed to reconcile ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.Error("failed to reconcile ServiceWithHealthchecks", log.Err(err), "name", req.Name, "namespace", req.Namespace)
 		return ctrl.Result{}, err
 	}
 
 	// clear EPS for disappeared Nodes
 	deletedCount := r.clearNotUsedEPS(ctx, req)
-	r.Logger.V(1).Info("deleted orphan EndpointSlices", "namespace", req.Namespace, "count", deletedCount)
+	r.Logger.Debug("deleted orphan EndpointSlices", "namespace", req.Namespace, "count", deletedCount)
 
 	// create or update child service (skip if spec already matches)
 	var childService corev1.Service
@@ -68,7 +69,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	var service corev1.Service
 	err := r.Get(ctx, req.NamespacedName, &service)
 	if err == nil && IsSpecForServiceEqual(service, serviceWithHC) {
-		r.Logger.V(1).Info("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.Debug("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
 		childService = service
 	} else {
 		var op controllerutil.OperationResult
@@ -105,11 +106,11 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 			failedCondition.ObservedGeneration = serviceWithHC.Generation
 			serviceWithHC.Status.Conditions = kubernetes.UpdateStatusWithCondition(serviceWithHC.Status.Conditions, failedCondition)
 			if patchErr := r.Status().Patch(ctx, serviceWithHC, patch); patchErr != nil {
-				r.Logger.Error(patchErr, "failed to patch failure condition into status", "name", req.Name, "namespace", req.Namespace)
+				r.Logger.Error("failed to patch failure condition into status", log.Err(patchErr), "name", req.Name, "namespace", req.Namespace)
 			}
 			return ctrl.Result{}, fmt.Errorf("failed to create/update child Service for ServiceWithHealthchecks %s/%s: %w", req.Namespace, req.Name, errUpdatingSvc)
 		}
-		r.Logger.V(1).Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
+		r.Logger.Debug("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
 	}
 
 	// Always update status — even if the child Service spec didn't change,
@@ -118,7 +119,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	patch := client.MergeFrom(originalServiceWithHC)
 
 	if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		r.Logger.V(1).Info("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
+		r.Logger.Debug("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 		serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
 	} else {
 		serviceWithHC.Status.LoadBalancer = corev1.LoadBalancerStatus{}
@@ -191,21 +192,21 @@ func (r *ServiceWithHealthchecksReconciler) clearNotUsedEPS(ctx context.Context,
 	nodeList := &corev1.NodeList{}
 	err := r.List(ctx, nodeList)
 	if err != nil {
-		r.Logger.Error(err, "failed to list Nodes")
+		r.Logger.Error("failed to list Nodes", log.Err(err))
 		return 0
 	}
 
 	swhList := &networkv1alpha1.ServiceWithHealthchecksList{}
 	err = r.List(ctx, swhList, client.InNamespace(req.Namespace))
 	if err != nil {
-		r.Logger.Error(err, "failed to list Services")
+		r.Logger.Error("failed to list Services", log.Err(err))
 		return 0
 	}
 
 	epsList := &discoveryv1.EndpointSliceList{}
 	err = r.List(ctx, epsList, client.InNamespace(req.Namespace), client.MatchingLabels{endpointControllerLabelKey: controllerName})
 	if err != nil {
-		r.Logger.Error(err, "failed to list EndpointSlices")
+		r.Logger.Error("failed to list EndpointSlices", log.Err(err))
 		return 0
 	}
 
@@ -221,9 +222,9 @@ func (r *ServiceWithHealthchecksReconciler) clearNotUsedEPS(ctx context.Context,
 
 		err := r.Delete(ctx, &eps)
 		if err != nil {
-			r.Logger.Error(err, "failed to delete EndpointSlice", "name", eps.Name, "namespace", eps.Namespace)
+			r.Logger.Error("failed to delete EndpointSlice", log.Err(err), "name", eps.Name, "namespace", eps.Namespace)
 		} else {
-			r.Logger.V(1).Info("deleted EndpointSlice", "name", eps.Name, "namespace", eps.Namespace)
+			r.Logger.Debug("deleted EndpointSlice", "name", eps.Name, "namespace", eps.Namespace)
 			deletedCount++
 		}
 	}
