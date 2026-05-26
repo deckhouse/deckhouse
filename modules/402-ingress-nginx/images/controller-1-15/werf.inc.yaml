@@ -663,10 +663,6 @@ import:
   - bin/bash
   - bin/sh
   before: install
-- from: {{ index $.Images "tools/libcap" }}
-  add: /usr/sbin/setcap
-  to: /tools/setcap
-  before: install
 - from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
   to: /chroot/usr/bin/curl
@@ -879,9 +875,6 @@ shell:
   - ln -sf /chroot/var/log/nginx /var/log/nginx
   - chown -R deckhouse:deckhouse /chroot/var/log/nginx
   - ln -s /chroot/modules_mount /modules_mount
-
-  # Utils for final image
-  - cp -a /tools/setcap /apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
@@ -897,7 +890,6 @@ import:
   - tmp
   - var/log/nginx
   - sbin/nginx
-  - apps
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/dbg
@@ -982,7 +974,11 @@ import:
   - usr/bin/tail
   before: install
 {{- include "image mount points" . }}
-- image: werf-mountpoints
+- from: {{ index $.Images "tools/libcap" }}
+  add: /usr/sbin/setcap
+  to: /apps/setcap
+  before: install
+- from: werf-mountpoints
   add: /tools/mounts/mountfile
   to: /apps/setcap
   before: setup
