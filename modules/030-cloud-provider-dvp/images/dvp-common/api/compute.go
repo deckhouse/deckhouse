@@ -390,23 +390,6 @@ func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	return &vmbdas.Items[0], nil
 }
 
-func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname string) ([]v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", attachmentMachineNameLabel, vmHostname))
-	if err != nil {
-		return nil, err
-	}
-
-	var vmbdas v1alpha2.VirtualMachineBlockDeviceAttachmentList
-	err = c.client.List(ctx, &vmbdas, &client.ListOptions{
-		LabelSelector: selector,
-		Namespace:     c.namespace,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return vmbdas.Items, nil
-}
 
 func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte, vmName string, vmUID types.UID) error {
 	s := &corev1.Secret{
