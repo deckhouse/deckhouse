@@ -1,10 +1,8 @@
 diff --git a/go.mod b/go.mod
-index 628cbe10..eae1f507 100644
+index 227eefbe..b0394986 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -234,4 +234,5 @@ replace (
- 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.35.1
- 	k8s.io/sample-controller => k8s.io/sample-controller v0.35.1
+@@ -234,2 +234,3 @@
  	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.1
 +	github.com/akutz/gofsutil => ../gofsutil
  )
