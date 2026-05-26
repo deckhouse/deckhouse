@@ -432,6 +432,11 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, conf GenSelfSignedTLSHoo
 		certificate.WithSigningDefaultExpiry(certExpiryDuration),
 		certificate.WithSigningDefaultUsage(usages),
 	)
+	if err != nil {
+		return certificate.Certificate{}, err
+	}
+
+	return cert, nil
 }
 
 // SANsGenerator function for generating sans
