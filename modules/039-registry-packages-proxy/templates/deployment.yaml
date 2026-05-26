@@ -114,7 +114,7 @@ spec:
           - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
           - "--v=2"
           - "--logtostderr=true"
-          - "--stale-cache-interval=1h30m"
+          - "--stale-cache-interval=5m"
           - "--livez-path=/livez"
         ports:
           - containerPort: 4219
@@ -151,6 +151,16 @@ spec:
                     apiVersion: v1
                     resource: deployments
                     subresource: http
+                    name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/v1/images/
+                path: /v1/images/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: cli-binary
                     name: registry-packages-proxy
         livenessProbe:
           httpGet:

@@ -105,6 +105,70 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	return size, hash.Hex, reader, nil
 }
 
+func (c *DefaultClient) ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (string, error) {
+	repo := config.Repository
+	if path != "" {
+		repo = fmt.Sprintf("%s/%s", repo, path)
+	}
+
+	nameOpts := newNameOptions(config.Scheme)
+	repository, err := name.NewRepository(repo, nameOpts...)
+	if err != nil {
+		return "", err
+	}
+
+	remoteOpts, err := newRemoteOptions(ctx, config)
+	if err != nil {
+		return "", err
+	}
+
+	desc, err := remote.Get(repository.Tag(tag), remoteOpts...)
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return "", ErrPackageNotFound
+			}
+		}
+		return "", err
+	}
+
+	return desc.Digest.String(), nil
+}
+
+func (c *DefaultClient) ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error) {
+	repo := config.Repository
+	if path != "" {
+		repo = fmt.Sprintf("%s/%s", repo, path)
+	}
+
+	nameOpts := newNameOptions(config.Scheme)
+	repository, err := name.NewRepository(repo, nameOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	remoteOpts, err := newRemoteOptions(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+
+	tags, err := remote.List(repository, remoteOpts...)
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return nil, ErrPackageNotFound
+			}
+		}
+		return nil, err
+	}
+
+	return tags, nil
+}
+
 func newNameOptions(scheme string) []name.Option {
 	opts := []name.Option{name.StrictValidation}
 	if strings.ToLower(scheme) == "http" {

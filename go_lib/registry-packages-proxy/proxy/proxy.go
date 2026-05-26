@@ -15,14 +15,20 @@
 package proxy
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -39,11 +45,54 @@ type Proxy struct {
 	config         Config
 }
 
+type RPPClientBinaryServer struct {
+	server   *http.Server
+	listener net.Listener
+	logger   log.Logger
+}
+
+type RPPClientBinaryServerOptions struct {
+	Listener           net.Listener
+	Logger             log.Logger
+	ClientConfigGetter registry.ClientConfigGetter
+	RegistryClient     registry.Client
+	SignCheck          bool
+	ClusterUUID        string
+}
+
+type rppBinaryHandler struct {
+	logger         log.Logger
+	configGetter   registry.ClientConfigGetter
+	registryClient registry.Client
+	signCheck      bool
+	binaryName     string
+	expectedPath   string
+}
+
+const (
+	rppBinaryName = "rpp-get"
+
+	// cliImagesPathPrefix is the URL prefix served on the standard proxy mux for
+	// deckhouse-cli (and plugin) downloads. Paths under it look like:
+	//
+	//   /v1/images/<image>/tags                 -> list tags
+	//   /v1/images/<image>/tags/<tag>           -> download last layer as tar.gz
+	//
+	// where <image> must match the allowlist (deckhouse-cli or deckhouse-cli/plugins/<plugin>).
+	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/images/* with its
+	// own SubjectAccessReview-based authorization, so this handler intentionally does no
+	// authentication of its own.
+	cliImagesPathPrefix = "/v1/images/"
+)
+
+var errEmptyRegistryConfig = errors.New("empty registry config")
+
 func NewProxy(server *http.Server,
 	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
 	logger log.Logger,
-	registryClient registry.Client, opts ...ProxyOption) *Proxy {
+	registryClient registry.Client, opts ...ProxyOption,
+) *Proxy {
 	p := &Proxy{
 		server:         server,
 		listener:       listener,
@@ -63,6 +112,30 @@ func NewProxy(server *http.Server,
 	return p
 }
 
+func NewRPPClientBinaryServerFromRegistry(opts RPPClientBinaryServerOptions) *RPPClientBinaryServer {
+	handler := &rppBinaryHandler{
+		logger:         opts.Logger,
+		configGetter:   opts.ClientConfigGetter,
+		registryClient: opts.RegistryClient,
+		signCheck:      opts.SignCheck,
+		binaryName:     rppBinaryName,
+		expectedPath:   path.Join("/", normalizeBootstrapClusterUUID(opts.ClusterUUID), rppBinaryName),
+	}
+
+	return &RPPClientBinaryServer{
+		server: &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      300 * time.Second,
+			IdleTimeout:       30 * time.Second,
+			MaxHeaderBytes:    4 << 10,
+		},
+		listener: opts.Listener,
+		logger:   opts.Logger,
+	}
+}
+
 type Config struct {
 	SignCheck bool
 }
@@ -75,13 +148,14 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.config = Config{}
 	}
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+		requestIP := getRequestIP(r)
+
 		if r.Method != http.MethodHead && r.Method != http.MethodGet {
-			p.logger.Error("method not allowed")
+			p.logger.Errorf("method %s from client %s is not allowed", r.Method, requestIP)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		requestIP := getRequestIP(r)
 		digest := r.URL.Query().Get("digest")
 		repository := r.URL.Query().Get("repository")
 		additionalPath := r.URL.Query().Get("path")
@@ -99,8 +173,8 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.logger.Infof("%s", logEntry)
 
 		if digest == "" {
-			p.logger.Error("missing digest")
-			http.Error(w, "missing digest", http.StatusBadRequest)
+			p.logger.Errorf("request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+			http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
 			return
 		}
 
@@ -109,7 +183,7 @@ func (p *Proxy) Serve(cfg *Config) {
 			defer packageReader.Close()
 		}
 		if err != nil {
-			p.logger.Error(err.Error())
+			p.logger.Errorf("get package %q for client %s: %v", digest, requestIP, err)
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
@@ -139,10 +213,47 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.logger.Infof("Package for digest %q sent successfully", digest)
 	})
 
+	p.ServeCLI()
+
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err.Error())
+	}
+}
+
+// CLIHandler returns an http.HandlerFunc that serves the /v1/images/* CLI download routes
+// (image tag listing and binary pulling) for this Proxy.
+//
+// Two URL shapes are supported under /v1/images/<image>/:
+//
+//	GET /v1/images/<image>/tags                 -> JSON list of available tags
+//	GET /v1/images/<image>/tags/<tag>           -> stream the last layer of the image tag
+//	                                                as application/x-gzip
+//
+// <image> must match the deckhouse-cli allowlist (deckhouse-cli or
+// deckhouse-cli/plugins/<plugin>); other paths return 404.
+//
+// kube-rbac-proxy (the standard sidecar listening on :4219) is responsible for authn/authz
+// before requests reach this handler, so it intentionally performs no authentication itself.
+func (p *Proxy) CLIHandler() http.HandlerFunc {
+	handler := &cliHandler{proxy: p}
+	return handler.serveHTTP
+}
+
+// ServeCLI mounts CLIHandler under /v1/images/ on http.DefaultServeMux so the routes are
+// served by the standard proxy server exposed via kube-rbac-proxy on :4219. It is invoked
+// automatically from Serve, and can also be called explicitly by callers that want to opt
+// in without starting the full proxy listener.
+func (p *Proxy) ServeCLI() {
+	http.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+}
+
+func (s *RPPClientBinaryServer) Serve() {
+	s.logger.Debugf("Starting rpp-get listener: %s", s.listener.Addr())
+
+	if err := s.server.Serve(s.listener); err != nil && err != http.ErrServerClosed {
+		s.logger.Error(err.Error())
 	}
 }
 
@@ -164,28 +275,52 @@ func (p *Proxy) Stop() {
 	}
 }
 
+func (s *RPPClientBinaryServer) Stop() {
+	s.logger.Infof("graceful shutdown rpp-get listener: %s", s.listener.Addr())
+
+	err := s.server.Shutdown(context.Background())
+	if err != nil && err != http.ErrServerClosed {
+		s.logger.Error(err.Error())
+	}
+}
+
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
-	// if cache is nil, return digest directly from registry
-	if p.cache == nil {
-		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
-		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	return GetPackageCached(ctx, p.logger, p.getter, p.registryClient, p.cache, digest, repository, path, p.config.SignCheck)
+}
+
+// GetPackageCached fetches an image package by manifest digest, first consulting the optional
+// on-disk cache and falling back to the registry. On a cache miss the registry stream is teed
+// into the cache asynchronously so the caller still gets a streaming reader.
+//
+// The returned reader must be closed by the caller.
+func GetPackageCached(
+	ctx context.Context,
+	logger log.Logger,
+	getter registry.ClientConfigGetter,
+	registryClient registry.Client,
+	pkgCache cache.Cache,
+	digest string,
+	repository string,
+	path string,
+	signCheck bool,
+) (int64, io.ReadCloser, error) {
+	if pkgCache == nil {
+		logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
+		size, _, reader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck)
 		return size, reader, err
 	}
 
-	// otherwise try to find digest in the cache
-	size, cacheReader, err := p.cache.Get(digest)
+	size, cacheReader, err := pkgCache.Get(digest)
 	if err == nil {
 		return size, cacheReader, nil
 	}
-	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
-		p.logger.Errorf("Get package from cache: %v", err)
-		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		logger.Errorf("Get package from cache: %v", err)
+		size, _, reader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck)
 		return size, reader, err
 	}
 
-	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, layerDigest, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	size, layerDigest, registryReader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -198,39 +333,41 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	pipeReader, pipeWriter := io.Pipe()
 	teeReader := io.TeeReader(registryReader, pipeWriter)
 
-	// asynchronously copy registry package to the cache
 	go func() {
 		defer registryReader.Close()
 		defer pipeWriter.Close()
 
-		err := p.cache.Set(digest, layerDigest, teeReader)
+		err := pkgCache.Set(digest, layerDigest, teeReader)
 		if err == nil {
 			return
 		}
-		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
-		p.logger.Error(err.Error())
-		// Copy remaining data to pipe
+		logger.Errorf("cache set for digest %q: %v", digest, err)
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
-			p.logger.Error(err.Error())
+			logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
 		}
 	}()
 
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, string, io.ReadCloser, error) {
-	registryConfig, err := p.getter.Get(repository)
+func getPackageFromRegistry(
+	ctx context.Context,
+	logger log.Logger,
+	getter registry.ClientConfigGetter,
+	registryClient registry.Client,
+	digest string,
+	repository string,
+	path string,
+	signCheck bool,
+) (int64, string, io.ReadCloser, error) {
+	registryConfig, err := getter.Get(repository)
 	if err != nil {
 		return 0, "", nil, err
 	}
-	registryConfig.SignCheck = p.config.SignCheck
+	registryConfig.SignCheck = signCheck
 
-	size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
-	if err != nil {
-		return 0, "", nil, err
-	}
-	return size, layerDigest, registryReader, nil
+	return registryClient.GetPackage(ctx, logger, registryConfig, digest, path)
 }
 
 type ProxyOption func(*Proxy)
@@ -250,4 +387,347 @@ func getRequestIP(r *http.Request) string {
 		IPAddress = r.RemoteAddr
 	}
 	return IPAddress
+}
+
+func (h *rppBinaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestIP := getRequestIP(r)
+
+	if r.URL.Path != h.expectedPath {
+		h.logger.Warnf("rpp-get request from client %s for unexpected path %q, expected %q", requestIP, r.URL.Path, h.expectedPath)
+		http.NotFound(w, r)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		h.logger.Warnf("rpp-get request from client %s with method %s is not allowed", requestIP, r.Method)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	digest := r.URL.Query().Get("digest")
+	if digest == "" {
+		h.logger.Warnf("rpp-get request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+		http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Infof("Received rpp-get request with digest %q from client %s", digest, requestIP)
+
+	binary, err := h.fetchBinary(r.Context(), digest)
+	if err != nil {
+		h.writeFetchError(w, digest, requestIP, err)
+		return
+	}
+
+	h.writeBinaryResponse(w, binary)
+	h.logger.Infof("rpp-get binary for digest %q sent successfully to client %s, size %d", digest, requestIP, len(binary))
+}
+
+func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]byte, error) {
+	registryConfig, err := h.configGetter.Get(registry.DefaultRepository)
+	if err != nil {
+		return nil, fmt.Errorf("get registry config: %w", err)
+	}
+	if registryConfig == nil {
+		return nil, errEmptyRegistryConfig
+	}
+	registryConfig.SignCheck = h.signCheck
+
+	_, _, packageReader, err := h.registryClient.GetPackage(ctx, h.logger, registryConfig, digest, "")
+	if err != nil {
+		return nil, err
+	}
+	defer packageReader.Close()
+
+	binary, err := extractTarGzFile(packageReader, h.binaryName)
+	if err != nil {
+		return nil, fmt.Errorf("extract %s binary: %w", h.binaryName, err)
+	}
+
+	return binary, nil
+}
+
+func (h *rppBinaryHandler) writeFetchError(w http.ResponseWriter, digest, requestIP string, err error) {
+	if errors.Is(err, registry.ErrPackageNotFound) {
+		h.logger.Warnf("rpp-get package %q requested by client %s was not found", digest, requestIP)
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	h.logger.Errorf("fetch %s package %q requested by client %s: %v", h.binaryName, digest, requestIP, err)
+	http.Error(w, "internal server error", http.StatusInternalServerError)
+}
+
+func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []byte) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, h.binaryName))
+	w.Header().Set("Content-Length", strconv.Itoa(len(binary)))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	if _, err := w.Write(binary); err != nil {
+		h.logger.Errorf("write %s response: %v", h.binaryName, err)
+	}
+}
+
+// cliHandler implements the /v1/images/* HTTP routes documented on Proxy.ServeCLI.
+// It is intentionally thin: all of the registry-config / cache state lives on the parent Proxy
+// so a single Proxy instance backs both /package and /v1/images/* on the same standard server.
+type cliHandler struct {
+	proxy *Proxy
+}
+
+type cliAction int
+
+const (
+	cliActionUnknown cliAction = iota
+	cliActionListTags
+	cliActionPullTag
+)
+
+type cliTagsResponse struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	imagePath, action, tag, err := parseCLIPath(r.URL.Path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if !isAllowedCLIImagePath(imagePath) {
+		h.proxy.logger.Warnf("CLI request for disallowed image path %q from %s", imagePath, getRequestIP(r))
+		http.NotFound(w, r)
+		return
+	}
+
+	switch action {
+	case cliActionListTags:
+		h.handleListTags(w, r, imagePath)
+	case cliActionPullTag:
+		h.handlePullTag(w, r, imagePath, tag)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imagePath string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI list-tags for image %q from client %s", imagePath, clientIP)
+
+	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
+	if err != nil {
+		logger.Errorf("get registry config: %v", err)
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	cfg.SignCheck = h.proxy.config.SignCheck
+
+	tags, err := h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "image not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("list tags for %q: %v", imagePath, err)
+		http.Error(w, "failed to list tags", http.StatusBadGateway)
+		return
+	}
+
+	body, err := json.Marshal(cliTagsResponse{Name: imagePath, Tags: tags})
+	if err != nil {
+		logger.Errorf("marshal tags: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	_, _ = w.Write(body)
+}
+
+func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, imagePath, tag string) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI pull image %q tag %q from client %s", imagePath, tag, clientIP)
+
+	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
+	if err != nil {
+		logger.Errorf("get registry config: %v", err)
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	cfg.SignCheck = h.proxy.config.SignCheck
+
+	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, tag)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "tag not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("resolve tag %q for %q: %v", tag, imagePath, err)
+		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
+		return
+	}
+
+	size, reader, err := GetPackageCached(
+		r.Context(),
+		logger,
+		h.proxy.getter,
+		h.proxy.registryClient,
+		h.proxy.cache,
+		manifestDigest,
+		registry.DefaultRepository,
+		imagePath,
+		h.proxy.config.SignCheck,
+	)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "package not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("get package for %q@%s: %v", imagePath, manifestDigest, err)
+		http.Error(w, "failed to fetch package", http.StatusBadGateway)
+		return
+	}
+
+	fileBase := imagePath
+	if i := strings.LastIndex(imagePath, "/"); i >= 0 {
+		fileBase = imagePath[i+1:]
+	}
+
+	w.Header().Set("Content-Type", "application/x-gzip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s.tar.gz"`, fileBase, tag))
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("ETag", `"`+manifestDigest+`"`)
+	w.Header().Set("Docker-Content-Digest", manifestDigest)
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	if _, err := io.Copy(w, reader); err != nil {
+		logger.Errorf("stream package for %q@%s: %v", imagePath, manifestDigest, err)
+	}
+}
+
+// parseCLIPath splits an HTTP path of the form
+//
+//	/v1/images/<image-path>/tags
+//	/v1/images/<image-path>/tags/<tag>
+//
+// into its components. <image-path> may contain slashes; the split anchors on the final
+// /tags segment.
+func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag string, err error) {
+	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
+		return "", cliActionUnknown, "", errors.New("not a CLI path")
+	}
+	// rest is the part of the path after the /v1/images/ prefix
+	rest := strings.TrimPrefix(urlPath, cliImagesPathPrefix)
+	rest = strings.Trim(rest, "/")
+	if rest == "" {
+		return "", cliActionUnknown, "", errors.New("missing image path")
+	}
+
+	const sep = "/tags"
+	idx := strings.LastIndex(rest, sep)
+	if idx < 0 {
+		return "", cliActionUnknown, "", errors.New("missing tags segment")
+	}
+
+	// imagePath is the part of the path before the tags segment
+	imagePath = rest[:idx]
+	if imagePath == "" {
+		return "", cliActionUnknown, "", errors.New("empty image path")
+	}
+
+	// suffix is the part of the path after the tags segment
+	suffix := rest[idx+len(sep):]
+	switch {
+	case suffix == "" || suffix == "/":
+		return imagePath, cliActionListTags, "", nil
+	case strings.HasPrefix(suffix, "/"):
+		tag = strings.Trim(suffix[1:], "/")
+		if tag == "" || strings.Contains(tag, "/") {
+			return "", cliActionUnknown, "", errors.New("invalid tag")
+		}
+		return imagePath, cliActionPullTag, tag, nil
+	default:
+		return "", cliActionUnknown, "", errors.New("unexpected path suffix")
+	}
+}
+
+// isAllowedCLIImagePath enforces the allowlist:
+//   - deckhouse-cli
+//   - deckhouse-cli/plugins/<single-segment>
+func isAllowedCLIImagePath(imagePath string) bool {
+	if imagePath == "deckhouse-cli" {
+		return true
+	}
+	const pluginsPrefix = "deckhouse-cli/plugins"
+	if !strings.HasPrefix(imagePath, pluginsPrefix) {
+		return false
+	}
+	plugin := strings.TrimPrefix(imagePath, pluginsPrefix)
+	// remove leading slash if present (/plugin -> plugin)
+	plugin = strings.TrimPrefix(plugin, "/")
+	if strings.Contains(plugin, "/") {
+		return false
+	}
+	return true
+}
+
+func normalizeBootstrapClusterUUID(clusterUUID string) string {
+	return strings.Trim(strings.TrimSpace(clusterUUID), "/")
+}
+
+func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, fmt.Errorf("read gzip stream: %w", err)
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, fmt.Errorf("file %q not found in archive", fileName)
+			}
+
+			return nil, err
+		}
+
+		if header.Typeflag != tar.TypeReg || path.Base(header.Name) != fileName {
+			continue
+		}
+
+		return io.ReadAll(tarReader)
+	}
 }
