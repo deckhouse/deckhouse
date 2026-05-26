@@ -824,8 +824,8 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 			http.Error(w, "no valid tags found", http.StatusNotFound)
 			return
 		}
-		p.logger.Debugf("found latest version for %q: %q", imagePath, latestVersion.Original())
 		version = latestVersion.Original()
+		p.logger.Debugf("found latest version for %q: %q", imagePath, version)
 	}
 
 	// get icon of package specific version
@@ -921,11 +921,11 @@ func parsePackagesPath(urlPath string) (action packagesAction, packageName, vers
 			if tag == "" || strings.Contains(tag, "/") {
 				return packagesMetadataActionUnknown, "", "", errors.New("invalid version segment")
 			}
-			v, err := semver.NewVersion(tag)
+			_, err := semver.NewVersion(tag)
 			if err != nil {
 				return packagesMetadataActionUnknown, "", "", fmt.Errorf("invalid semantic version: %w", err)
 			}
-			return actionType, packageName, v.String(), nil
+			return actionType, packageName, tag, nil
 		}
 	}
 
