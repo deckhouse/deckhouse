@@ -882,7 +882,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	}
 
 	// find icon in the oci image and copy it to the response
-	icon, err := extractTarGzFile(reader, "docs/icon.svg")
+	icon, err := extractTarGzFileFromPath(reader, "docs/icon.svg")
 	if err != nil {
 		p.logger.Errorf("extract icon from package for %q@%s: %v", imagePath, manifestDigest, err)
 		http.Error(w, "failed to extract icon", http.StatusBadGateway)
@@ -955,6 +955,32 @@ func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
 		}
 
 		if header.Typeflag != tar.TypeReg || path.Base(header.Name) != fileName {
+			continue
+		}
+
+		return io.ReadAll(tarReader)
+	}
+}
+
+func extractTarGzFileFromPath(reader io.Reader, filePath string) ([]byte, error) {
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, fmt.Errorf("read gzip stream: %w", err)
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, fmt.Errorf("file %q not found in archive", filePath)
+			}
+
+			return nil, err
+		}
+
+		if header.Typeflag != tar.TypeReg || header.Name != filePath {
 			continue
 		}
 
