@@ -39,7 +39,7 @@ search: хранилище контейнеров, container registry
 
 - EE (адрес `registry.deckhouse.ru/deckhouse/ee`);
 - SE (адрес `registry.deckhouse.ru/deckhouse/se`);
-- CE (адрес `registry.deckhouse.ru/deckhouse/ce`).
+- BE (адрес `registry.deckhouse.ru/deckhouse/be`).
 
 Ключевые особенности:
 

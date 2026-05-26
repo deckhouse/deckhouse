@@ -13,7 +13,7 @@ The registry contains modules and components available in the commercial DKP edi
 
 - EE (address `registry.deckhouse.io/deckhouse/ee`).
 - SE (address `registry.deckhouse.io/deckhouse/se`).
-- CE (address `registry.deckhouse.io/deckhouse/ce`).
+- BE (address `registry.deckhouse.io/deckhouse/be`).
 
 Key features:
 
