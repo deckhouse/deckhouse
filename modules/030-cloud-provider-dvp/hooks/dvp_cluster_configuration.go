@@ -77,9 +77,6 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 
 	additionalOpenAPISchemasPaths := []string{
 		"/deckhouse/modules/030-cloud-provider-dvp/candi/openapi",
-		"/deckhouse/modules/030-cloud-provider-yandex/candi/openapi",
-		"/deckhouse/modules/030-cloud-provider-gcp/candi/openapi",
-		"/deckhouse/modules/030-cloud-provider-azure/candi/openapi",
 	}
 
 	result := &pccSecretFilterResult{}
@@ -110,15 +107,12 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	result := moduleConfigFilterResult{}
 
-	// Use NestedFieldNoCopy to handle both int64 and float64 (JSON numbers may be either).
 	if v, ok, _ := unstructured.NestedFieldNoCopy(obj.Object, "spec", "version"); ok {
-		switch val := v.(type) {
-		case int64:
+		if val, ok := v.(int64); ok {
 			result.Version = val
-		case float64:
-			result.Version = int64(val)
 		}
 	}
+
 	if e, ok, _ := unstructured.NestedBool(obj.Object, "spec", "enabled"); ok {
 		result.Enabled = e
 	}
