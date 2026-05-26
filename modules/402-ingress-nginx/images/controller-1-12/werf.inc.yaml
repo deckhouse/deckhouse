@@ -667,7 +667,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
-fromCacheVersion: "2026-05-26"
 final: false
 import:
 - from: {{ index $.Images "tools/libcap" }}
@@ -896,7 +895,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
-fromCacheVersion: "2026-05-26"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -910,6 +908,7 @@ import:
   - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
+  - apps
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/dbg
