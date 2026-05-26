@@ -47,7 +47,7 @@ description: Архитектура ядра (CORE) модуля virtualization 
 Архитектура компонента CORE модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента CORE модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-kubevirt.ru.png)
+![Архитектура компонента CORE модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-core.ru.png)
 
 ## Компоненты ядра (CORE) модуля
 
