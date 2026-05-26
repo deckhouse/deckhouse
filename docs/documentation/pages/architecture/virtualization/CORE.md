@@ -1,11 +1,11 @@
 ---
-title: A module core (CORE)
+title: The module core (CORE)
 permalink: en/architecture/virtualization/core.html
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, kubevirt, virt-operator, core
 description: Architecture of the virtualization module core (CORE) in Deckhouse Kubernetes Platform.
 ---
 
-[`Virtualization`](/modules/virtualization/) module core (CORE) is directly responsible for working with virtual machines (VMs). The core is based on the KubeVirt project. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage virtual machines using Kubernetes as an orchestration platform. It enables a cooperation between traditional virtual machines and container workloads in the same Kubernetes cluster, providing a single control plane. A [fork](https://github.com/deckhouse/3p-kubevirt) of KubeVirt from the company "Flant" is used in the [`virtualization`](/modules/virtualization/) module.
+The [`Virtualization`](/modules/virtualization/) module core (CORE) is directly responsible for working with virtual machines (VMs). The core is based on the KubeVirt project. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage virtual machines using Kubernetes as an orchestration platform. It enables a cooperation between traditional virtual machines and container workloads in the same Kubernetes cluster, providing a single control plane. A [fork](https://github.com/deckhouse/3p-kubevirt) of KubeVirt from the company "Flant" is used in the [`virtualization`](/modules/virtualization/) module.
 
 To manage VMs CORE component uses custom resources of the following API groups:
 
@@ -50,7 +50,7 @@ The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) 
 
 ## Module core (CORE) components
 
-Module core (CORE) consists of the following components:
+The module core (CORE) consists of the following components:
 
 1. **Virt-api**: A [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) that serves requests to the `subresources.kubevirt.io` API groups. Virt-api component performs `internal.virtualization.deckhouse.io` API groups custom resources validation and mutation serving requests to `subresources.kubevirt.io` API groups. Virt-api component performs validation and mutation of custom resources of `internal.virtualization.deckhouse.io` API groups using the [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism. Requests pass through the **proxy** sidecar container that renames metadata from the `internal.virtualization.deckhouse.io` API group to the `kubevirt.io` API group and proxies them to the virt-api component endpoint.
 
@@ -108,7 +108,7 @@ Module core (CORE) consists of the following components:
 
 ## Module core (CORE) interactions
 
-Module core (CORE) interacts with the following components:
+The module core (CORE) interacts with the following components:
 
 1. **Kube-apiserver**:
 

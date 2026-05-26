@@ -1479,6 +1479,10 @@ entries:
                 ru: Обзор
               url: /architecture/virtualization/
             - title:
+                en: Module core (CORE)
+                ru: Ядро модуля (CORE)
+              url: /architecture/virtualization/core.html              
+            - title:
                 en: Deckhouse Virtualization Container Registry (DVCR)
                 ru: Deckhouse Virtualization Container Registry (DVCR)
               url: /architecture/virtualization/dvcr.html
