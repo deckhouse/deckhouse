@@ -10,7 +10,7 @@ import:
   add: /control-plane-manager
   to: /control-plane-manager
   before: install
-{{- include "image mount points" . }}
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/control-plane-manager"]
