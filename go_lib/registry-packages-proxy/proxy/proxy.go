@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
@@ -83,6 +84,18 @@ const (
 	// own SubjectAccessReview-based authorization, so this handler intentionally does no
 	// authentication of its own.
 	cliImagesPathPrefix = "/v1/images/"
+
+	// packagesPathPrefix is the URL prefix served on the standard proxy mux for
+	// deckhouse-cli (and plugin) downloads. Paths under it look like:
+	//
+	//   /v1/packages/<package-name>/metadata/icon/                 -> get icon of package latest version
+	//   /v1/packages/<package-name>/metadata/icon/<version>        -> get icon of package specific version
+	//
+	// where <package-name> is the name of the package.
+	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/packages/* with its
+	// own SubjectAccessReview-based authorization, so this handler intentionally does no
+	// authentication of its own.
+	packagesPathPrefix = "/v1/packages/"
 )
 
 var errEmptyRegistryConfig = errors.New("empty registry config")
@@ -147,6 +160,7 @@ func (p *Proxy) Serve(cfg *Config) {
 	} else {
 		p.config = Config{}
 	}
+
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
 		requestIP := getRequestIP(r)
 
@@ -214,6 +228,7 @@ func (p *Proxy) Serve(cfg *Config) {
 	})
 
 	p.ServeCLI()
+	p.ServePackages()
 
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
@@ -700,6 +715,196 @@ func isAllowedCLIImagePath(imagePath string) bool {
 		return false
 	}
 	return true
+}
+
+func (p *Proxy) ServePackages() {
+	http.HandleFunc(packagesPathPrefix, p.PackagesHandler())
+}
+
+// get icon from release image
+// folder docs/icon/extention (in the task)
+// 2 urls in rpp will be:
+//   - with version
+//   - without version (I pull the latest one)
+//
+// # get icon of package latest version
+// https://deckhouse-cli.<publicDomain>/packages/v1/metadata/icon/<package-name>
+// # get icon of package specific version
+// https://deckhouse-cli.<publicDomain>/packages/v1/metadata/icon/<package-name>/v0.0.1
+func (p *Proxy) PackagesHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		action, packageName, version, err := parsePackagesPath(r.URL.Path)
+		if err != nil {
+			p.logger.Errorf("parse packages path: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		clientIP := getRequestIP(r)
+		logger := p.logger
+		logger.Infof("Packages request from client %s", clientIP)
+
+		switch action {
+		case packagesMetadataActionGetIcon:
+			p.handleGetIcon(w, r, packageName, version)
+		default:
+			http.NotFound(w, r)
+		}
+	}
+}
+
+func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageName, version string) {
+	cfg, err := p.getter.Get(registry.DefaultRepository)
+	if err != nil {
+		p.logger.Errorf("get registry config: %v", err)
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+	cfg.SignCheck = p.config.SignCheck
+
+	// get icon of package specific version
+	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, packageName, version)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "tag not found", http.StatusNotFound)
+			return
+		}
+		p.logger.Errorf("resolve tag %q for %q: %v", version, packageName, err)
+		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
+		return
+	}
+
+	size, reader, err := GetPackageCached(
+		r.Context(),
+		p.logger,
+		p.getter,
+		p.registryClient,
+		p.cache,
+		manifestDigest,
+		registry.DefaultRepository,
+		packageName,
+		p.config.SignCheck,
+	)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "package not found", http.StatusNotFound)
+			return
+		}
+		p.logger.Errorf("get package for %q@%s: %v", packageName, manifestDigest, err)
+		http.Error(w, "failed to fetch package", http.StatusBadGateway)
+		return
+	}
+
+	fileBase := packageName
+	if i := strings.LastIndex(packageName, "/"); i >= 0 {
+		fileBase = packageName[i+1:]
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.png"`, fileBase))
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("ETag", `"`+manifestDigest+`"`)
+	w.Header().Set("Docker-Content-Digest", manifestDigest)
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	// find icon in the oci image and copy it to the response
+	icon, err := extractTarGzFile(reader, "docs/icon/extension.png")
+	if err != nil {
+		p.logger.Errorf("extract icon from package for %q@%s: %v", packageName, manifestDigest, err)
+		http.Error(w, "failed to extract icon", http.StatusBadGateway)
+		return
+	}
+	_, _ = w.Write(icon)
+}
+
+type packagesAction int
+
+const (
+	packagesMetadataActionUnknown packagesAction = iota
+	packagesMetadataActionGetIcon
+)
+
+var (
+	packagesActionToSegment = map[packagesAction]string{
+		packagesMetadataActionGetIcon: "metadata/icon",
+	}
+)
+
+// parsePackagesPath splits an HTTP path of the form
+//
+// runtime.example.com/v1/packages/<package-name>/metadata/icon/
+// runtime.example.com/v1/packages/<package-name>/metadata/icon/v0.0.1
+//
+// into its components. <package-name> may contain slashes; the split anchors on the final
+// /icon segment.
+func parsePackagesPath(urlPath string) (action packagesAction, packageName, version string, err error) {
+	if !strings.HasPrefix(urlPath, packagesPathPrefix) {
+		return packagesMetadataActionUnknown, "", "", errors.New("not a packages metadata path")
+	}
+
+	// rest is the part of the path after the /v1/packages/ prefix
+	rest := strings.TrimPrefix(urlPath, packagesPathPrefix)
+	rest = strings.Trim(rest, "/")
+	if rest == "" {
+		return packagesMetadataActionUnknown, "", "", errors.New("missing package segment")
+	}
+
+	const sep = "/"
+
+	idx := strings.Index(rest, sep)
+	if idx < 0 {
+		return packagesMetadataActionUnknown, "", "", errors.New("missing package segment")
+	}
+	packageName = rest[:idx]
+	if packageName == "" {
+		return packagesMetadataActionUnknown, "", "", errors.New("empty package name")
+	}
+
+	// rest is the part of the path after the <package-name> segment
+	rest = rest[idx+len(sep):]
+	if rest == "" {
+		return packagesMetadataActionUnknown, "", "", errors.New("missing action segment")
+	}
+
+	for actionType, segment := range packagesActionToSegment {
+		if !strings.HasPrefix(rest, segment) {
+			continue
+		}
+		action = actionType
+		rest = strings.TrimPrefix(rest, segment)
+		rest = strings.Trim(rest, "/")
+		break
+	}
+
+	if action == packagesMetadataActionUnknown {
+		return packagesMetadataActionUnknown, "", "", errors.New("unknown action")
+	}
+
+	if rest != "" {
+		v, err := semver.NewVersion(rest)
+		if err != nil {
+			return packagesMetadataActionUnknown, "", "", fmt.Errorf("invalid semantic version: %w", err)
+		}
+		version = v.String()
+	}
+
+	return action, packageName, version, nil
 }
 
 func normalizeBootstrapClusterUUID(clusterUUID string) string {

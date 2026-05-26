@@ -83,7 +83,8 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "registryPackagesProxy") }}
         imagePullPolicy: IfNotPresent
         args:
-        - "--listen-address=127.0.0.1:5080"
+        - "--cli-listen-address=127.0.0.1:5080"
+        - "--packages-listen-address=127.0.0.1:5081"
         - "--rpp-get-binary-listen-address=:{{ $rppGetBootstrapPort }}"
         - "--cache-directory=/cache"
         - "--cache-retention-size=1Gi"
@@ -169,6 +170,16 @@ spec:
                     apiVersion: v1
                     resource: deployments
                     subresource: cli-binary
+                    name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/packages/v1/metadata/
+                path: /packages/v1/metadata/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: packages
                     name: registry-packages-proxy
         livenessProbe:
           httpGet:

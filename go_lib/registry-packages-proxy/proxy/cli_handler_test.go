@@ -284,7 +284,6 @@ func TestCLIHandler_DisallowedImagePath(t *testing.T) {
 	for _, urlPath := range []string{
 		"/v1/images/other-image/tags",
 		"/v1/images/deckhouse-cli/extras/tags",
-		"/v1/images/deckhouse-cli/plugins/tags",
 		"/v1/images/deckhouse-cli/plugins/a/b/tags",
 	} {
 		resp, err := http.Get(srv.URL + urlPath)

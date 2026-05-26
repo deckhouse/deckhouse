@@ -27,10 +27,21 @@ spec:
             name: registry-packages-proxy
             port:
               name: https
+  - host: {{ include "helm_lib_module_public_domain" (list . "packages") }}
+    http:
+      paths:
+      - path: /packages/v1/(metadata|images)/
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: registry-packages-proxy
+            port:
+              name: https
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:
         - {{ include "helm_lib_module_public_domain" (list . "deckhouse-cli") }}
+        - {{ include "helm_lib_module_public_domain" (list . "packages") }}
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
 {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
@@ -45,8 +56,10 @@ spec:
   certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{ include "helm_lib_module_generate_common_name" (list . "deckhouse-cli") | nindent 2 }}
+  {{ include "helm_lib_module_generate_common_name" (list . "packages") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "deckhouse-cli") }}
+  - {{ include "helm_lib_module_public_domain" (list . "packages") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
