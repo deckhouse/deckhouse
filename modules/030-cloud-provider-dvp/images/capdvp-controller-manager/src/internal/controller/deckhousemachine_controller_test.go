@@ -35,14 +35,31 @@ import (
 )
 
 var _ = Describe("DeckhouseMachine Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+	Context("When reconciling a resource that does not exist", func() {
+		It("should return no error (idempotent not-found)", func() {
+			controllerReconciler := &DeckhouseMachineReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
 
-		ctx := context.Background()
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "nonexistent-machine",
+					Namespace: "default",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.Requeue).To(BeFalse())
+			Expect(result.RequeueAfter).To(BeZero())
+		})
+	})
+
+	Context("When reconciling a resource that has no owner Machine", func() {
+		const resourceName = "test-resource"
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: "default",
 		}
 		deckhousemachine := &infrastructurev1alpha1.DeckhouseMachine{}
 
@@ -55,14 +72,12 @@ var _ = Describe("DeckhouseMachine Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
 			resource := &infrastructurev1alpha1.DeckhouseMachine{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
@@ -70,19 +85,24 @@ var _ = Describe("DeckhouseMachine Controller", func() {
 			By("Cleanup the specific resource instance DeckhouseMachine")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
-		It("should successfully reconcile the resource", func() {
+
+		It("should return no error and not add a finalizer when owner Machine is absent", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &DeckhouseMachineReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+			result, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespacedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+			Expect(result.Requeue).To(BeFalse())
+
+			// No owner Machine → controller must not add the MachineFinalizer.
+			fetched := &infrastructurev1alpha1.DeckhouseMachine{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, fetched)).To(Succeed())
+			Expect(fetched.Finalizers).NotTo(ContainElement(infrastructurev1alpha1.MachineFinalizer))
 		})
 	})
 })

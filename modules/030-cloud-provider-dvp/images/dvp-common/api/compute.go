@@ -181,35 +181,21 @@ func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
 	return nil
 }
 
-func (c *ComputeService) GetDisksForDetachAndDelete(ctx context.Context, vm *v1alpha2.VirtualMachine, detachDisks bool) ([]string, []string, error) {
+func (c *ComputeService) GetDisksForDetachAndDelete(_ context.Context, vm *v1alpha2.VirtualMachine, detachDisks bool) ([]string, []string, error) {
 	disksToDetach := make([]string, 0)
 	disksToDelete := make([]string, 0)
-	vmHostname, err := c.GetVMHostname(vm)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	vmbdas, err := c.listVMBDAByHostname(ctx, vmHostname)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	vmbdasMap := make(map[string]struct{})
-
-	for _, vdbda := range vmbdas {
-		vmbdasMap[vdbda.Spec.BlockDeviceRef.Name] = struct{}{}
-	}
 
 	for _, device := range vm.Status.BlockDeviceRefs {
-		if !device.Attached || device.Kind != v1alpha2.DiskDevice {
+		if device.Kind != v1alpha2.DiskDevice {
 			continue
 		}
-		if _, ok := vmbdasMap[device.Name]; !ok || !detachDisks {
-			disksToDelete = append(disksToDelete, device.Name)
+		if device.Hotplugged {
+			if detachDisks {
+				disksToDetach = append(disksToDetach, device.Name)
+			}
 			continue
 		}
-
-		disksToDetach = append(disksToDetach, device.Name)
+		disksToDelete = append(disksToDelete, device.Name)
 	}
 
 	return disksToDetach, disksToDelete, nil
