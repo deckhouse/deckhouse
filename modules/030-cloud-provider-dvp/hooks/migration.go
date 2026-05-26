@@ -205,7 +205,7 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 		"apiVersion": dvpInstanceClassAPI,
 		"kind":       dvpInstanceClassKind,
 		"metadata": map[string]any{
-			"name":   instanceClassName,
+			"name": instanceClassName,
 		},
 		"spec": instanceClassSpec,
 	}
@@ -246,7 +246,7 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]any{
-			"name":   name,
+			"name": name,
 		},
 		"spec": nodeGroupSpec,
 	}
