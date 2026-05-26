@@ -32,10 +32,10 @@ import (
 
 const (
 	controlPlanePercent     = 40                     // %
-	configEveryNodeMilliCPU = 300                    // 0.3 CPU
-	configEveryNodeMemory   = 512 * 1024 * 1024      // 512 MiB
-	hardLimitMilliCPU       = 4 * 1000               // 4 CPU
-	hardLimitMemory         = 8 * 1024 * 1024 * 1024 // 8 GiB
+	configEveryNodeMilliCPU = 300                    // 0.3 Cpu
+	configEveryNodeMemory   = 512 * 1024 * 1024      // 512Mb
+	hardLimitMilliCPU       = 4 * 1000               // 4 Cpu
+	hardLimitMemory         = 8 * 1024 * 1024 * 1024 // 8G ram
 
 	// Minimum kubelet reservation we account for, regardless of what the kubelet
 	// has actually reported on Node.Status.Allocatable at the moment the hook
@@ -84,24 +84,25 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	return n, nil
 }
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        moduleQueue,
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "NodesResources",
-			ApiVersion: "v1",
-			Kind:       "Node",
-			LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-				{
-					Key:      "node-role.kubernetes.io/control-plane",
-					Operator: metav1.LabelSelectorOpExists,
-				},
-			}},
-			FilterFunc: applyNodesResourcesFilter,
+var (
+	_ = sdk.RegisterFunc(&go_hook.HookConfig{
+		OnBeforeAll: &go_hook.OrderedConfig{Order: 20},
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       "NodesResources",
+				ApiVersion: "v1",
+				Kind:       "Node",
+				LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "node-role.kubernetes.io/control-plane",
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				}},
+				FilterFunc: applyNodesResourcesFilter,
+			},
 		},
-	},
-}, calculateResourcesRequests)
+	}, calculateResourcesRequests)
+)
 
 // effectiveMasterResources returns the per-node usable CPU/memory budget the
 // control-plane allocation can be carved out of. Computed from Node.Status.Capacity
