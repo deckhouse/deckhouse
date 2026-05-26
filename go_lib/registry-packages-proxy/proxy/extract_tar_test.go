@@ -85,7 +85,7 @@ func TestExtractTarGzFileFromPath_extractsFromIntermediateLayer(t *testing.T) {
 		reader := flattenedPackageReader(t, img)
 		defer reader.Close()
 
-		got, err := extractTarGzFileFromPath(reader, iconPath, extractTestLogger{})
+		got, err := extractTarGzFileFromPath(reader, iconPath)
 		require.NoError(t, err)
 		assert.Equal(t, iconContent, string(got))
 	})
@@ -99,7 +99,7 @@ func TestExtractTarGzFileFromPath_extractsFromIntermediateLayer(t *testing.T) {
 		require.NoError(t, err)
 		defer reader.Close()
 
-		_, err = extractTarGzFileFromPath(reader, iconPath, extractTestLogger{})
+		_, err = extractTarGzFileFromPath(reader, iconPath)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `file "docs/icon.svg" not found in archive`)
 	})
