@@ -653,6 +653,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
+fromCacheVersion: "2026-05-26"
 final: false
 import:
 #/bin/sh is required for modsecurity lib to work
