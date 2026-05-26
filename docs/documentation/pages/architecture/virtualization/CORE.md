@@ -17,7 +17,7 @@ To manage VMs CORE component uses custom resources of the following API groups:
    The resources of the main group are managed by the virt-controller component. The InternalVirtualizationVirtualMachine resources of the KubeVirt `internal.virtualization.deckhouse.io` main API group are used as the backend for the VirtualMachine resources of `virtualization.deckhouse.io` API group managed by the virtualization-controller.
 
 {% alert level="info" %}
-For simplification, the reduced VirtualMachine and VirtualMachineInstance names will be used for the InternalVirtualizationVirtualMachine и InternalVirtualizationVirtualMachineInstance resources (of the original KubeVirt `kubevirt.io` API group) respectively.
+For simplification, the reduced VirtualMachine and VirtualMachineInstance names will be used for the InternalVirtualizationVirtualMachine and InternalVirtualizationVirtualMachineInstance resources (of the original KubeVirt `kubevirt.io` API group) respectively.
 {% endalert %}
 
 2. `Subresources.kubevirt.io`: Subresources group. Subresources are additional operations or actions that can be performed on core resources (for example, VirtualMachineInstance) via the Kubernetes API. They provide interfaces for managing specific aspects of resources without affecting the entire object. Instead of the declarative resource familiar to Kubernetes, they are an endpoint for imperative operations. Following KubeVirt subresources are used in the [`virtualization`](/modules/virtualization/) module:
