@@ -735,16 +735,6 @@ var (
 )
 
 // PackagesHandler returns an http.HandlerFunc that serves the /v1/packages/* packages routes
-// (icon fetching) for this Proxy.
-//
-// Two URL shapes are supported under /v1/packages/<package-name>/:
-//
-//	GET /v1/packages/<package-name>/metadata/icon/                 -> get icon of package latest version
-//	GET /v1/packages/<package-name>/metadata/icon/<version>        -> get icon of package specific version
-//
-// <package-name> must not contain slashes;
-// <version> is a semantic version, eg. v0.0.1.
-// other paths return 404.
 func (p *Proxy) PackagesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -778,6 +768,7 @@ func (p *Proxy) PackagesHandler() http.HandlerFunc {
 // If version is empty, it finds the latest version and fetches the icon of the latest version.
 func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageName, version string) {
 	p.logger.Debugf("handleGetIcon for %q:%q", packageName, version)
+
 	cfg, err := p.getter.Get(registry.DefaultRepository)
 	if err != nil {
 		p.logger.Errorf("get registry config: %v", err)
@@ -788,7 +779,6 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
 		return
 	}
-	cfg.SignCheck = p.config.SignCheck
 
 	imagePath := fmt.Sprintf("packages/%s", packageName)
 
@@ -882,7 +872,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	}
 
 	// find icon in the oci image and copy it to the response
-	icon, err := extractTarGzFileFromPath(reader, "docs/icon.svg")
+	icon, err := extractTarGzFileFromPath(reader, "docs/icon.svg", p.logger)
 	if err != nil {
 		p.logger.Errorf("extract icon from package for %q@%s: %v", imagePath, manifestDigest, err)
 		http.Error(w, "failed to extract icon", http.StatusBadGateway)
@@ -962,7 +952,7 @@ func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
 	}
 }
 
-func extractTarGzFileFromPath(reader io.Reader, filePath string) ([]byte, error) {
+func extractTarGzFileFromPath(reader io.Reader, filePath string, logger log.Logger) ([]byte, error) {
 	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read gzip stream: %w", err)
@@ -980,9 +970,14 @@ func extractTarGzFileFromPath(reader io.Reader, filePath string) ([]byte, error)
 			return nil, err
 		}
 
+		logger.Debugf("processing file %q from archive", header.Name)
+
 		if header.Typeflag != tar.TypeReg || header.Name != filePath {
+			logger.Debugf("skipping file %q from archive", header.Name)
 			continue
 		}
+
+		logger.Debugf("found file %q in archive", header.Name)
 
 		return io.ReadAll(tarReader)
 	}

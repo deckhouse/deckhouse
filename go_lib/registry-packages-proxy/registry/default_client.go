@@ -25,8 +25,10 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/pkg/errors"
 
 	ddk "github.com/deckhouse/delivery-kit-sdk/pkg/signature/image"
@@ -82,22 +84,25 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		}
 	}
 
-	layers, err := image.Layers()
+	// Flatten all image layers into a single resulting layer (not just the last diff).
+	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return mutate.Extract(image), nil
+	})
 	if err != nil {
 		return 0, "", nil, err
 	}
 
-	size, err := layers[len(layers)-1].Size()
+	size, err := layer.Size()
 	if err != nil {
 		return 0, "", nil, err
 	}
 
-	hash, err := layers[len(layers)-1].Digest()
+	hash, err := layer.Digest()
 	if err != nil {
 		return 0, "", nil, err
 	}
 
-	reader, err := layers[len(layers)-1].Compressed()
+	reader, err := layer.Compressed()
 	if err != nil {
 		return 0, "", nil, err
 	}
