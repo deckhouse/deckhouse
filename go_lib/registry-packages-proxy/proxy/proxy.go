@@ -789,14 +789,50 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	}
 	cfg.SignCheck = p.config.SignCheck
 
+	imagePath := fmt.Sprintf("packages/%s", packageName)
+
+	// if version is empty, find the latest version
+	if version == "" {
+		tags, err := p.registryClient.ListTags(r.Context(), p.logger, cfg, imagePath)
+		if err != nil {
+			if errors.Is(err, registry.ErrPackageNotFound) {
+				http.Error(w, "package not found", http.StatusNotFound)
+				return
+			}
+			p.logger.Errorf("list tags for %q: %v", imagePath, err)
+			http.Error(w, "failed to list tags", http.StatusInternalServerError)
+			return
+		}
+		if len(tags) == 0 {
+			http.Error(w, "no tags found", http.StatusNotFound)
+			return
+		}
+
+		var latestVersion *semver.Version
+		for _, tag := range tags {
+			v, err := semver.NewVersion(tag)
+			if err != nil {
+				continue
+			}
+			if latestVersion == nil || latestVersion.LessThan(v) {
+				latestVersion = v
+			}
+		}
+		if latestVersion == nil {
+			http.Error(w, "no valid tags found", http.StatusNotFound)
+			return
+		}
+		version = latestVersion.String()
+	}
+
 	// get icon of package specific version
-	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, packageName, version)
+	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, imagePath, version)
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "tag not found", http.StatusNotFound)
 			return
 		}
-		p.logger.Errorf("resolve tag %q for %q: %v", version, packageName, err)
+		p.logger.Errorf("resolve tag %q for %q: %v", version, imagePath, err)
 		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
 		return
 	}
@@ -809,7 +845,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 		p.cache,
 		manifestDigest,
 		registry.DefaultRepository,
-		packageName,
+		imagePath,
 		p.config.SignCheck,
 	)
 	if reader != nil {
@@ -820,14 +856,14 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 			http.Error(w, "package not found", http.StatusNotFound)
 			return
 		}
-		p.logger.Errorf("get package for %q@%s: %v", packageName, manifestDigest, err)
+		p.logger.Errorf("get package for %q@%s: %v", imagePath, manifestDigest, err)
 		http.Error(w, "failed to fetch package", http.StatusBadGateway)
 		return
 	}
 
-	fileBase := packageName
-	if i := strings.LastIndex(packageName, "/"); i >= 0 {
-		fileBase = packageName[i+1:]
+	fileBase := imagePath
+	if i := strings.LastIndex(imagePath, "/"); i >= 0 {
+		fileBase = imagePath[i+1:]
 	}
 
 	w.Header().Set("Content-Type", "image/png")
@@ -844,7 +880,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	// find icon in the oci image and copy it to the response
 	icon, err := extractTarGzFile(reader, "docs/icon.svg")
 	if err != nil {
-		p.logger.Errorf("extract icon from package for %q@%s: %v", packageName, manifestDigest, err)
+		p.logger.Errorf("extract icon from package for %q@%s: %v", imagePath, manifestDigest, err)
 		http.Error(w, "failed to extract icon", http.StatusBadGateway)
 		return
 	}
