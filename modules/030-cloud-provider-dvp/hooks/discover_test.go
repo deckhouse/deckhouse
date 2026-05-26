@@ -342,7 +342,7 @@ data:
 			storageClass{
 				Name:                 "replicated",
 				DVPStorageClass:      "replicated",
-				VolumeBindingMode:    string(desiredVolumeBindingMode),
+				VolumeBindingMode:    string(defaultVolumeBindingMode),
 				ReclaimPolicy:        string(corev1.PersistentVolumeReclaimDelete),
 				AllowVolumeExpansion: false,
 				IsDefault:            false,
@@ -365,7 +365,7 @@ data:
 			storageClass{
 				Name:                 "stable-default",
 				DVPStorageClass:      "stable-default",
-				VolumeBindingMode:    string(desiredVolumeBindingMode),
+				VolumeBindingMode:    string(defaultVolumeBindingMode),
 				ReclaimPolicy:        string(corev1.PersistentVolumeReclaimRetain),
 				AllowVolumeExpansion: true,
 				IsDefault:            true,
@@ -386,7 +386,7 @@ data:
 			storageClass{
 				Name:                 "beta-default",
 				DVPStorageClass:      "beta-default",
-				VolumeBindingMode:    string(desiredVolumeBindingMode),
+				VolumeBindingMode:    string(defaultVolumeBindingMode),
 				ReclaimPolicy:        string(corev1.PersistentVolumeReclaimDelete),
 				AllowVolumeExpansion: false,
 				IsDefault:            true,

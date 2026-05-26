@@ -43,7 +43,7 @@ import (
 const (
 	stableDefaultAnnotation  = "storageclass.kubernetes.io/is-default-class"
 	betaDefaultAnnotation    = "storageclass.beta.kubernetes.io/is-default-class"
-	desiredVolumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
+	defaultVolumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -201,7 +201,7 @@ func handleDiscoveryDataStorageClasses(
 		sc := storageClass{
 			Name:                 name,
 			DVPStorageClass:      sc.Name,
-			VolumeBindingMode:    string(desiredVolumeBindingMode),
+			VolumeBindingMode:    string(defaultVolumeBindingMode),
 			ReclaimPolicy:        sc.ReclaimPolicy,
 			AllowVolumeExpansion: sc.AllowVolumeExpansion,
 			IsDefault:            sc.IsDefault,
@@ -293,7 +293,7 @@ func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
 	return storageClass{
 		Name:                 sc.Name,
 		DVPStorageClass:      sc.Parameters["dvpStorageClass"],
-		VolumeBindingMode:    string(desiredVolumeBindingMode),
+		VolumeBindingMode:    string(defaultVolumeBindingMode),
 		ReclaimPolicy:        string(reclaimPolicy),
 		AllowVolumeExpansion: allowVolumeExpansion,
 		IsDefault:            isDefault,
@@ -301,7 +301,7 @@ func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
 }
 
 func deleteOldStorageClass(input *go_hook.HookInput, sc *storagev1.StorageClass) {
-	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == desiredVolumeBindingMode {
+	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == defaultVolumeBindingMode {
 		return
 	}
 
