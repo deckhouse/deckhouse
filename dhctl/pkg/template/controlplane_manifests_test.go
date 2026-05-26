@@ -1203,7 +1203,7 @@ func testMissingCoverage(t *testing.T) {
 				if strings.Contains(featureGates, "ValidatingAdmissionPolicy=true") {
 					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.32 in %s", name)
 				}
-				if !strings.Contains(featureGates, "AnonymousAuthConfigurableEndpoints=true") {
+				if !strings.Contains(featureGates, "DynamicResourceAllocation=true") {
 					t.Errorf("Expected feature gate not found for Kubernetes 1.32 in %s", name)
 				}
 				if name == "kube-apiserver.yaml" && !strings.Contains(featureGates, "CRDSensitiveData=true") {
