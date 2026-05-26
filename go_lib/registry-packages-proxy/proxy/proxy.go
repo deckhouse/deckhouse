@@ -721,16 +721,30 @@ func (p *Proxy) ServePackages() {
 	http.HandleFunc(packagesPathPrefix, p.PackagesHandler())
 }
 
-// get icon from release image
-// folder docs/icon/extention (in the task)
-// 2 urls in rpp will be:
-//   - with version
-//   - without version (I pull the latest one)
+type packagesAction int
+
+const (
+	packagesMetadataActionUnknown packagesAction = iota
+	packagesMetadataActionGetIcon
+)
+
+var (
+	packagesActionToSegment = map[packagesAction]string{
+		packagesMetadataActionGetIcon: "metadata/icon",
+	}
+)
+
+// PackagesHandler returns an http.HandlerFunc that serves the /v1/packages/* packages routes
+// (icon fetching) for this Proxy.
 //
-// # get icon of package latest version
-// https://deckhouse-cli.<publicDomain>/packages/v1/metadata/icon/<package-name>
-// # get icon of package specific version
-// https://deckhouse-cli.<publicDomain>/packages/v1/metadata/icon/<package-name>/v0.0.1
+// Two URL shapes are supported under /v1/packages/<package-name>/:
+//
+//	GET /v1/packages/<package-name>/metadata/icon/                 -> get icon of package latest version
+//	GET /v1/packages/<package-name>/metadata/icon/<version>        -> get icon of package specific version
+//
+// <package-name> must not contain slashes;
+// <version> is a semantic version, eg. v0.0.1.
+// other paths return 404.
 func (p *Proxy) PackagesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -758,6 +772,10 @@ func (p *Proxy) PackagesHandler() http.HandlerFunc {
 	}
 }
 
+// handleGetIcon handles the GET /v1/packages/<package-name>/metadata/icon/ or
+// GET /v1/packages/<package-name>/metadata/icon/<version> request.
+// It fetches the icon of the package and writes it to the response.
+// If version is empty, it finds the latest version and fetches the icon of the latest version.
 func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageName, version string) {
 	cfg, err := p.getter.Get(registry.DefaultRepository)
 	if err != nil {
@@ -832,19 +850,6 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 	}
 	_, _ = w.Write(icon)
 }
-
-type packagesAction int
-
-const (
-	packagesMetadataActionUnknown packagesAction = iota
-	packagesMetadataActionGetIcon
-)
-
-var (
-	packagesActionToSegment = map[packagesAction]string{
-		packagesMetadataActionGetIcon: "metadata/icon",
-	}
-)
 
 // parsePackagesPath splits an HTTP path of the form:
 // - /v1/packages/<package-name>/<action>/
