@@ -43,13 +43,6 @@ const (
 	dvpAuthSchemeKubeconfig = "S3ViZWNvbmZpZw=="
 )
 
-func deckhouseLabels() map[string]any {
-	return map[string]any{
-		"heritage": "deckhouse",
-		"module":   "cloud-provider-dvp",
-	}
-}
-
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
 	if cfg == nil || cfg.Provider == nil || cfg.Provider.KubeconfigDataBase64 == nil || cfg.Provider.Namespace == nil {
 		return nil
@@ -113,7 +106,6 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 		"metadata": map[string]any{
 			"name":      dvpCredentialSecretName,
 			"namespace": dvpNamespace,
-			"labels":    deckhouseLabels(),
 		},
 		"type": "cloud-provider.deckhouse.io/credentials",
 		"data": map[string]any{
@@ -214,7 +206,6 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 		"kind":       dvpInstanceClassKind,
 		"metadata": map[string]any{
 			"name":   instanceClassName,
-			"labels": deckhouseLabels(),
 		},
 		"spec": instanceClassSpec,
 	}
@@ -256,7 +247,6 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 		"kind":       "NodeGroup",
 		"metadata": map[string]any{
 			"name":   name,
-			"labels": deckhouseLabels(),
 		},
 		"spec": nodeGroupSpec,
 	}
