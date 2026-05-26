@@ -289,6 +289,31 @@ spec:
         - mountPath: /tmp
           name: tmp
         env:
+        # cpm is hostNetwork on every control-plane node and talks to the
+        # apiserver via controller-runtime. The auto-injected env vars point
+        # at the apiserver ClusterIP (10.233.0.1:443), which during the first
+        # bootstrap is unreachable for the few seconds while cilium installs
+        # its eBPF/iptables rules — cpm's leader-election lease renewal hits
+        # `EPERM` and the container dies with "leader election lost". Each
+        # restart loses progress and forces cpm to redo manifest application,
+        # which then triggers an extra cpm-rewrite of the static-pod manifests.
+        # Route apiserver traffic through the local kubernetes-api-proxy
+        # static pod (the same path cilium-agent itself uses) so cpm never
+        # depends on cilium being initialised.
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        # Leader election is only needed on HA clusters (>1 master) where
+        # multiple cpm pods could otherwise race on the cluster-wide pieces.
+        # On a single-master cluster every cpm controller is already
+        # node-partitioned by `spec.nodeName`, and the lease renewal pressure
+        # is pure overhead — when cpm rewrites the apiserver/etcd manifests
+        # during the first reconcile the apiserver is unreachable for ~60s
+        # via the local kubernetes-api-proxy and the lease is lost,
+        # crashlooping cpm and forcing an extra static-pod restart.
+        - name: LEADER_ELECTION
+          value: {{ include "helm_lib_is_ha_to_value" (list $ "true" "false") | quote }}
         - name: MY_IP
           valueFrom:
             fieldRef:
