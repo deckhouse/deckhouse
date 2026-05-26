@@ -15,7 +15,7 @@ build:
 ---
 # revisions settings
 {{- $editionsSettings := (.Files.Get "editions.yaml" | fromYaml) }}
-# convert []map[any]any to []map[string]any.
+# convert []map[any]any to []map[string]any
 {{- $editionsToSet := list }}
 {{- range $_, $rawEdition := $editionsSettings.editions }}
   {{- $editionsToSet = append $editionsToSet ($rawEdition | toYaml | fromYaml) }}
