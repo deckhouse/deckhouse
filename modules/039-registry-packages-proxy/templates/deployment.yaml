@@ -170,8 +170,8 @@ spec:
                     resource: deployments
                     subresource: cli-binary
                     name: registry-packages-proxy
-              - upstream: http://127.0.0.1:5080/packages/v1/metadata/
-                path: /packages/v1/metadata/
+              - upstream: http://127.0.0.1:5080/v1/packages/
+                path: /v1/packages/
                 authorization:
                   resourceAttributes:
                     namespace: d8-cloud-instance-manager
