@@ -846,65 +846,45 @@ var (
 	}
 )
 
-// parsePackagesPath splits an HTTP path of the form
-//
-// runtime.example.com/v1/packages/<package-name>/metadata/icon/
-// runtime.example.com/v1/packages/<package-name>/metadata/icon/v0.0.1
-//
-// into its components. <package-name> may contain slashes; the split anchors on the final
-// /icon segment.
+// parsePackagesPath splits an HTTP path of the form:
+// - /v1/packages/<package-name>/<action>/
+// - /v1/packages/<package-name>/<action>/<version>
+// into its components:
+// - <package-name> must not contain slashes;
+// - <action> must match packagesActionToSegment, eg. metadata/icon;
+// - optional <version> is a semantic version, eg. v0.0.1.
+// example:
+// - /v1/packages/my-package/metadata/icon/ -> packagesMetadataActionGetIcon, my-package, ""
+// - /v1/packages/my-package/metadata/icon/v0.0.1 -> packagesMetadataActionGetIcon, my-package, "v0.0.1"
 func parsePackagesPath(urlPath string) (action packagesAction, packageName, version string, err error) {
 	if !strings.HasPrefix(urlPath, packagesPathPrefix) {
 		return packagesMetadataActionUnknown, "", "", errors.New("not a packages metadata path")
 	}
 
-	// rest is the part of the path after the /v1/packages/ prefix
-	rest := strings.TrimPrefix(urlPath, packagesPathPrefix)
-	rest = strings.Trim(rest, "/")
-	if rest == "" {
+	rest := strings.Trim(strings.TrimPrefix(urlPath, packagesPathPrefix), "/")
+	packageName, afterPackage, ok := strings.Cut(rest, "/")
+	if !ok || packageName == "" {
 		return packagesMetadataActionUnknown, "", "", errors.New("missing package segment")
-	}
-
-	const sep = "/"
-
-	idx := strings.Index(rest, sep)
-	if idx < 0 {
-		return packagesMetadataActionUnknown, "", "", errors.New("missing package segment")
-	}
-	packageName = rest[:idx]
-	if packageName == "" {
-		return packagesMetadataActionUnknown, "", "", errors.New("empty package name")
-	}
-
-	// rest is the part of the path after the <package-name> segment
-	rest = rest[idx+len(sep):]
-	if rest == "" {
-		return packagesMetadataActionUnknown, "", "", errors.New("missing action segment")
 	}
 
 	for actionType, segment := range packagesActionToSegment {
-		if !strings.HasPrefix(rest, segment) {
-			continue
+		switch {
+		case afterPackage == segment:
+			return actionType, packageName, "", nil
+		case strings.HasPrefix(afterPackage, segment+"/"):
+			tag := strings.TrimPrefix(afterPackage, segment+"/")
+			if tag == "" || strings.Contains(tag, "/") {
+				return packagesMetadataActionUnknown, "", "", errors.New("invalid version segment")
+			}
+			v, err := semver.NewVersion(tag)
+			if err != nil {
+				return packagesMetadataActionUnknown, "", "", fmt.Errorf("invalid semantic version: %w", err)
+			}
+			return actionType, packageName, v.String(), nil
 		}
-		action = actionType
-		rest = strings.TrimPrefix(rest, segment)
-		rest = strings.Trim(rest, "/")
-		break
 	}
 
-	if action == packagesMetadataActionUnknown {
-		return packagesMetadataActionUnknown, "", "", errors.New("unknown action")
-	}
-
-	if rest != "" {
-		v, err := semver.NewVersion(rest)
-		if err != nil {
-			return packagesMetadataActionUnknown, "", "", fmt.Errorf("invalid semantic version: %w", err)
-		}
-		version = v.String()
-	}
-
-	return action, packageName, version, nil
+	return packagesMetadataActionUnknown, "", "", errors.New("unknown action")
 }
 
 func normalizeBootstrapClusterUUID(clusterUUID string) string {
