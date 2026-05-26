@@ -777,6 +777,7 @@ func (p *Proxy) PackagesHandler() http.HandlerFunc {
 // It fetches the icon of the package and writes it to the response.
 // If version is empty, it finds the latest version and fetches the icon of the latest version.
 func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageName, version string) {
+	p.logger.Debugf("handleGetIcon for %q:%q", packageName, version)
 	cfg, err := p.getter.Get(registry.DefaultRepository)
 	if err != nil {
 		p.logger.Errorf("get registry config: %v", err)
@@ -793,6 +794,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 
 	// if version is empty, find the latest version
 	if version == "" {
+		p.logger.Debugf("version is empty, finding the latest version for %q", imagePath)
 		tags, err := p.registryClient.ListTags(r.Context(), p.logger, cfg, imagePath)
 		if err != nil {
 			if errors.Is(err, registry.ErrPackageNotFound) {
@@ -822,6 +824,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 			http.Error(w, "no valid tags found", http.StatusNotFound)
 			return
 		}
+		p.logger.Debugf("found latest version for %q: %q", imagePath, latestVersion.Original())
 		version = latestVersion.Original()
 	}
 
@@ -836,6 +839,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, packageNam
 		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
 		return
 	}
+	p.logger.Debugf("resolved tag %q for %q: %q", version, imagePath, manifestDigest)
 
 	size, reader, err := GetPackageCached(
 		r.Context(),
