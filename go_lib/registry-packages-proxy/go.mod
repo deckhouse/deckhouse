@@ -3,7 +3,6 @@ module github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy
 go 1.25.8
 
 require (
-	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3
