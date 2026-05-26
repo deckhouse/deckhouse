@@ -991,8 +991,7 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
 shell:
   install:
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller

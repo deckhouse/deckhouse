@@ -1000,8 +1000,7 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
 shell:
   install:
   - /usr/bin/cp -alf /chroot/. /validation-chroot/
