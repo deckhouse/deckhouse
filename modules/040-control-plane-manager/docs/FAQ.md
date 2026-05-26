@@ -1372,8 +1372,6 @@ The `ControlPlaneNode` object's `CERTIFICATES` column also shows `True` once all
 kubectl get cpn
 ```
 
-**If the cluster cannot recover automatically** (for example, if all control-plane certificates are expired and the API server cannot start): this is a disaster recovery scenario. Use the cluster backup and restore procedures described in the [official Deckhouse documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html).
-
 ## How do I protect sensitive fields in custom resources?
 
 To protect sensitive fields (such as passwords, tokens, or keys) in resource schemas from unauthorized access via the API, unencrypted storage in etcd, or exposure in audit logs, use the `CRDSensitiveData` feature gate together with the `x-kubernetes-sensitive-data` schema marker.
