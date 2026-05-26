@@ -411,7 +411,22 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 		StringData: map[string]string{"userData": string(userData)},
 	}
 
+	// Try to create; if the secret already exists, update its cloud-init payload.
 	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+			if getErr != nil {
+				return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
+			}
+
+			existing.StringData = map[string]string{"userData": string(userData)}
+			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+				return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+			}
+
+			return nil
+		}
+
 		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
 	}
 	return nil
