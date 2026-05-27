@@ -34,7 +34,7 @@ The module consists of the following components:
 
    CephStorageClass specifies the storage class type (`CephFS` or `RBD`), reclaim policy, Ceph cluster connection parameters, and additional parameters specific to each storage class type. Depending on the storage class type, these parameters are used by the provisioner of either the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` CSI driver when managing volumes.
 
-   The `CephMetadataBackup` custom resource is used in migration and recovery workflows implemented by module hooks, rather than by the main runtime controller.
+   The [CephMetadataBackup](/modules/csi-ceph/cr.html#cephmetadatabackup) custom resource is used in migration and recovery workflows implemented by module hooks, rather than by the main runtime controller.
 
    It consists of the following containers:
 
