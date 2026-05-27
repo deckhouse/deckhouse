@@ -6,12 +6,12 @@
 - image: werf-mountpoints
   add: /tools/mounts/mountdir
   to: {{ trimSuffix "/" $v }}
-  before: install
+  after: setup
   {{- end }}
   {{- range $v := $mountPoints.files }}
 - image: werf-mountpoints
   add: /tools/mounts/mountfile
   to: {{ $v }}
-  before: install
+  after: setup
   {{- end }}
 {{- end }}
