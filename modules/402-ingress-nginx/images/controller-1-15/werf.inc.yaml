@@ -993,6 +993,8 @@ git:
 shell:
   install:
   - /usr/bin/cp -af /chroot/. /validation-chroot/
+  - /usr/bin/cp -af /chroot/bin/bash /validation-chroot/bin/bash
+  - /usr/bin/cp -af /chroot/bin/sh /validation-chroot/bin/sh
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
