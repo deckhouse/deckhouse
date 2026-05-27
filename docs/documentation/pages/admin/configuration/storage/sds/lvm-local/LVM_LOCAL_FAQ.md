@@ -3,6 +3,8 @@ title: "Managing local storage based on LVM"
 permalink: en/admin/configuration/storage/sds/lvm-local-faq.html
 ---
 
+For structured answers to common administration scenarios, see the [Deckhouse Kubernetes Platform Administration](https://deckhouse.io/courses/basics-administration-deckhouse-kubernetes-platform/) course in [Deckhouse Academy](https://deckhouse.io/academy/).
+
 ## Selecting specific nodes for module usage
 
 To restrict the module's usage to specific cluster nodes, you need to set labels in the [`nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) field in the module settings.
