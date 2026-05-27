@@ -1551,6 +1551,10 @@ entries:
             ru: Сравнение редакций
           url: /reference/revision-comparison.html
         - title:
+            en: Container registry structure
+            ru: Структура хранилища образов контейнеров
+          url: /reference/container-registry-structure.html
+        - title:
             en: Network interaction
             ru: Сетевое взаимодействие
           url: /reference/network_interaction.html
