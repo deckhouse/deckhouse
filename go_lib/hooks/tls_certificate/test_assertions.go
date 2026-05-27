@@ -68,7 +68,7 @@ type AssertT interface {
 //	kubectl -n <ns> get secret <name> -o jsonpath='{.data.ca\.crt}'  | base64 -d > /tmp/ca.crt
 //	kubectl -n <ns> get secret <name> -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/tls.crt
 //	openssl verify -CAfile /tmp/ca.crt /tmp/tls.crt
-func AssertOpensslVerifyOK(t AssertT, caPEM, leafPEM string) (caCert, leafCert *x509.Certificate) {
+func AssertOpensslVerifyOK(t AssertT, caPEM, leafPEM string) (*x509.Certificate, *x509.Certificate) {
 	t.Helper()
 
 	caBlock, _ := pem.Decode([]byte(caPEM))
@@ -76,8 +76,7 @@ func AssertOpensslVerifyOK(t AssertT, caPEM, leafPEM string) (caCert, leafCert *
 		t.Fatalf("ca.crt PEM must decode")
 		return nil, nil
 	}
-	var err error
-	caCert, err = x509.ParseCertificate(caBlock.Bytes)
+	caCert, err := x509.ParseCertificate(caBlock.Bytes)
 	if err != nil {
 		t.Fatalf("parse ca.crt: %v", err)
 		return nil, nil
@@ -88,7 +87,7 @@ func AssertOpensslVerifyOK(t AssertT, caPEM, leafPEM string) (caCert, leafCert *
 		t.Fatalf("tls.crt PEM must decode")
 		return nil, nil
 	}
-	leafCert, err = x509.ParseCertificate(leafBlock.Bytes)
+	leafCert, err := x509.ParseCertificate(leafBlock.Bytes)
 	if err != nil {
 		t.Fatalf("parse tls.crt: %v", err)
 		return nil, nil

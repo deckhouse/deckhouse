@@ -249,7 +249,7 @@ func (s *Storage) validateValues(values addonutils.Values) error {
 
 	var oldValidatable addonutils.Values
 	if s.resultValues != nil {
-		oldValidatable = addonutils.Values{s.name: addonutils.Values(s.resultValues)}
+		oldValidatable = addonutils.Values{s.name: s.resultValues}
 	}
 
 	return s.schemaStorage.ValidateTransition(schema.TypeValues, s.name, validatableValues, oldValidatable)
@@ -269,7 +269,7 @@ func (s *Storage) validateSettings(values addonutils.Values) error {
 
 	var oldValidatable addonutils.Values
 	if s.settings != nil {
-		oldValidatable = addonutils.Values{s.name: addonutils.Values(s.settings)}
+		oldValidatable = addonutils.Values{s.name: s.settings}
 	}
 
 	return s.schemaStorage.ValidateTransition(schema.TypeSettings, s.name, validatableValues, oldValidatable)
