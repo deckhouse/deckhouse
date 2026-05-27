@@ -19,12 +19,14 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -32,6 +34,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -776,10 +780,17 @@ func (p *Proxy) PackagesHandler() http.HandlerFunc {
 			return
 		}
 
+		authCfg, err := readAuthFromDockerCfg(packageRepository.Spec.Registry.Repo, packageRepository.Spec.Registry.DockerCFG)
+		if err != nil {
+			p.logger.Errorf("read auth from docker cfg: %v", err)
+			http.Error(w, "failed to read auth from docker cfg", http.StatusInternalServerError)
+			return
+		}
 		cfg := &registry.ClientConfig{
 			Repository: packageRepository.Spec.Registry.Repo,
 			Scheme:     packageRepository.Spec.Registry.Scheme,
-			Auth:       packageRepository.Spec.Registry.DockerCFG,
+			Auth:       authCfg.Auth,
+			SignCheck:  p.config.SignCheck,
 		}
 		if packageRepository.Spec.Registry.CA != "" {
 			cfg.CA = packageRepository.Spec.Registry.CA
@@ -1012,4 +1023,46 @@ func extractTarGzFileFromPath(reader io.Reader, filePath string) ([]byte, error)
 
 		return io.ReadAll(tarReader)
 	}
+}
+
+func readAuthFromDockerCfg(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
+	r, err := parse(repo)
+	if err != nil {
+		return authn.AuthConfig{}, fmt.Errorf("parse repo: %w", err)
+	}
+
+	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
+	if err != nil {
+		// if base64 decoding failed, try to use input as it is
+		dockerCfg = []byte(dockerCfgBase64)
+	}
+	auths := gjson.Get(string(dockerCfg), "auths").Map()
+	authConfig := authn.AuthConfig{}
+
+	// The config should have at least one .auths.* entry
+	for repoName, repoAuth := range auths {
+		repoNameURL, err := parse(repoName)
+		if err != nil {
+			return authn.AuthConfig{}, fmt.Errorf("parse repo name: %w", err)
+		}
+
+		if repoNameURL.Host == r.Host {
+			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
+			if err != nil {
+				return authn.AuthConfig{}, fmt.Errorf("unmarshal json: %w", err)
+			}
+			return authConfig, nil
+		}
+	}
+
+	return authn.AuthConfig{}, fmt.Errorf("%q credentials not found in the dockerCfg", repo)
+}
+
+// parse parses url without scheme://
+// if we pass url without scheme ve've got url back with two leading slashes
+func parse(rawURL string) (*url.URL, error) {
+	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
+		return url.ParseRequestURI(rawURL)
+	}
+	return url.Parse("//" + rawURL)
 }
