@@ -2922,13 +2922,6 @@ alerts:
 
            ```bash
            d8 k patch mc global --type merge \
-             -p '{"spec":{"settings":{"modules":{"resourcesRequests":{"controlPlane":null}}}}}'
-           ```
-
-           If `resourcesRequests` becomes empty after removing `controlPlane`, you can remove the whole obsolete section instead:
-
-           ```bash
-           d8 k patch mc global --type merge \
              -p '{"spec":{"settings":{"modules":{"resourcesRequests":null}}}}'
            ```
       summary: |
