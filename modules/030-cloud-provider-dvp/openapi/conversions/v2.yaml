@@ -15,10 +15,12 @@ description:
   ru: |
     Переход на новую схему ModuleConfig для cloud-provider-dvp.
     Структура `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` заменена на `provider.parameters` / `nodes.parameters`.
-    Поля `kubeconfigDataBase64` больше нет в ModuleConfig (хранится в Secret типа cloud-provider.deckhouse.io/credentials).
-    Обязательные поля `nodes.parameters.layout` и `nodes.parameters.sshPublicKey` подставляются как заглушки — заполните их корректными значениями вручную.
+    Поле `kubeconfigDataBase64` больше нет в ModuleConfig (хранится в Secret типа cloud-provider.deckhouse.io/credentials).
+    Поле `nodes.parameters.layout` подставляется как "Standard" — заполните корректным значением вручную при необходимости.
+    Поле `nodes.parameters.sshPublicKey` получает placeholder значение — обязательно замените его реальным публичным ключом SSH.
   en: |
     Migration to the new ModuleConfig schema for cloud-provider-dvp.
     Fields `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` are replaced with `provider.parameters` / `nodes.parameters`.
     `kubeconfigDataBase64` no longer lives in ModuleConfig (moved to a cloud-provider.deckhouse.io/credentials Secret).
-    Required fields `nodes.parameters.layout` and `nodes.parameters.sshPublicKey` get placeholder values — replace them manually.
+    `nodes.parameters.layout` gets a default value of "Standard" — update it manually if needed.
+    `nodes.parameters.sshPublicKey` gets a placeholder value — replace it with a real SSH public key.

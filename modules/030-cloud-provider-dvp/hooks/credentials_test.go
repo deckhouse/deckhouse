@@ -34,7 +34,7 @@ cloudProviderDvp:
 `
 	)
 
-	// S3ViZWNvbmZpZw== = base64("kubeconfig"), YXBpVmV= = base64("apiVe")
+	// a3ViZWNvbmZpZw== = base64("kubeconfig"), YXBpVmV= = base64("apiVe")
 	credSecret1 := `
 apiVersion: v1
 kind: Secret
@@ -46,7 +46,7 @@ metadata:
     module: cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
-  authScheme: S3ViZWNvbmZpZw==
+  authScheme: a3ViZWNvbmZpZw==
   secret: YXBpVmV=
 `
 
@@ -92,8 +92,8 @@ data:
 			Expect(secrets.Map()).To(HaveLen(1))
 
 			entry := secrets.Get("d8-credentials")
-			// S3ViZWNvbmZpZw== decodes to "Kubeconfig"
-			Expect(entry.Get("authScheme").String()).To(Equal("Kubeconfig"))
+			// a3ViZWNvbmZpZw== decodes to "kubeconfig"
+			Expect(entry.Get("authScheme").String()).To(Equal("kubeconfig"))
 			// YXBpVmV= decodes to "apiVe"
 			Expect(entry.Get("secret").String()).To(Equal("apiVe"))
 			Expect(entry.Get("identity").Exists()).To(BeFalse())
@@ -114,8 +114,8 @@ data:
 			Expect(secrets.Map()).To(HaveLen(2))
 
 			entry1 := secrets.Get("d8-credentials")
-			// S3ViZWNvbmZpZw== decodes to "Kubeconfig"
-			Expect(entry1.Get("authScheme").String()).To(Equal("Kubeconfig"))
+			// a3ViZWNvbmZpZw== decodes to "kubeconfig"
+			Expect(entry1.Get("authScheme").String()).To(Equal("kubeconfig"))
 
 			entry2 := secrets.Get("d8-credentials-extra")
 			Expect(entry2.Get("authScheme").String()).To(Equal("userpass"))
