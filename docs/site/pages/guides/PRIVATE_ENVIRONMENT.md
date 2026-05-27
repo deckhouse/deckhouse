@@ -1244,7 +1244,7 @@ spec:
         # The password for authenticating with the container image repository.
         password: <PASSWORD>
         scheme: HTTPS
-        # [<en>] The root CA certificate (in PEM format) for validating the container registry’s server certificate.
+        # The root CA certificate (in PEM format) for validating the container registry’s server certificate.
         ca: <REGISTRY_CA>
 ---
 # Global Deckhouse settings.
