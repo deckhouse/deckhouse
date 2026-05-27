@@ -291,6 +291,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -442,240 +455,6 @@ jobs:
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
-  build_tests:
-    name: Build tests image
-    needs:
-      - git_info
-    # <template: build_tests_template>
-    runs-on: [self-hosted, large]
-    outputs:
-      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-    steps:
-
-      # </template: docker-config-isolation>
-      - name: Isolate docker config
-        id: docker-config-isolation
-        run: |
-          mkdir -p $RUNNER_TEMP/.docker
-          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
-
-      # </template: docker_config_isolation>
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: |
-          if [ $REPO == "deckhouse/deckhouse" ]; then
-            echo "name=deckhouse" >> $GITHUB_OUTPUT
-          else
-            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
-          fi
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
-
-      # </template: import_secrets>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
-      # <template: add_ssh_keys>
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
-            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
-      - name: Add ssh_known_hosts
-        run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
-          echo "::add-mask::$HOST"
-          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
-          for IP in $IPS; do
-            echo "::add-mask::$IP"
-          done
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
-      - name: Add svace analyze server to ssh_known_hosts
-        continue-on-error: true
-        run: |
-          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
-          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
-          echo "::add-mask::$host_ip"
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-                  ssh-keygen -R $host
-                  ssh-keygen -R $host_ip
-              fi
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"
-      # </template: add_ssh_keys>
-
-
-      - name: Build tests image
-        id: build
-        env:
-          WERF_ENV: FE
-          WERF_PARALLEL_TASKS_LIMIT: 3
-          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
-          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
-          DECKHOUSE_DEV_REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
-          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
-          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          # werf.yaml renders templates that read these via `env`.
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-        run: |
-          # Same dev-registry path computation as build_template (build.yml).
-          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-            REPO_SUFFIX=
-          fi
-          REGISTRY_SUFFIX=fe
-          DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
-
-          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-          # Build only the `tests` image (and its transitive werf deps);
-          # cache is shared with build_fe via WERF_REPO. The build report is
-          # consumed inline just to read the tests image name — it is not kept
-          # as an artifact (minimal value for a tests-only build).
-          d8-build dk build tests \
-            --parallel=true --parallel-tasks-limit=10 \
-            --save-build-report=true \
-            --build-report-path images_tags_werf.json
-
-          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-          rm -f images_tags_werf.json
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
-          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
-    # </template: build_tests_template>
-
-
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-    # <template: go_generate_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-      - name: Set up Go 1.25
-        uses: actions/setup-go@v5.4.0
-        with:
-          go-version: '1.25'
-          cache: false
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-    # </template: go_generate_template>
-
-
 
   build_CE:
     name: Build CE
@@ -821,6 +600,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -1116,6 +908,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -1411,6 +1216,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -1706,6 +1524,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -2001,6 +1832,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -2296,6 +2140,19 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
 
       - name: Build and push deckhouse images
         id: build
@@ -2734,7 +2591,7 @@ jobs:
     name: Dhctl Tests
     needs:
       - git_info
-      - build_tests
+      - build_fe
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -2830,7 +2687,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: ${{needs.build_tests.outputs.tests_image_name}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
           if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
             echo "TESTS_IMAGE_NAME is empty"
@@ -2848,16 +2705,11 @@ jobs:
           docker run -w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make ci
     # </template: tests_template>
 
-  golint:
-    name: Go Lint Warning
+  golangci_lint:
+    name: GolangCI Lint
     needs:
       - git_info
-      - build_tests
-    env:
-      # `before` is the ref tip prior to this push — captures every commit
-      # the push introduced, regardless of merge strategy (HEAD~1 would miss
-      # all but the last commit on a multi-commit / rebase merge).
-      DIFF_BASE: ${{ github.event.before }}
+      - build_fe
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -2953,7 +2805,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: ${{needs.build_tests.outputs.tests_image_name}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
           if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
             echo "TESTS_IMAGE_NAME is empty"
@@ -2968,14 +2820,15 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "go generate tools/register.go && golangci-lint version && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"
     # </template: tests_template>
 
-  openapi_test_cases:
-    name: OpenAPI Test Cases
+  golint:
+    name: Go Lint Warning
+    continue-on-error: true
     needs:
       - git_info
-      - build_tests
+      - build_fe
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -3071,7 +2924,125 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: ${{needs.build_tests.outputs.tests_image_name}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
+        run: |
+          if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
+            echo "TESTS_IMAGE_NAME is empty"
+            exit 1
+          fi
+
+          # Decode image name from gzip+base64.
+          TESTS_IMAGE_NAME=$(echo ${TESTS_IMAGE_NAME} | base64 -d | gunzip)
+
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          echo "⚓️ 🏎 [$(date -u)] Run tests..."
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && go generate tools/register.go && golangci-lint version && make lint-all"
+    # </template: tests_template>
+
+  openapi_test_cases:
+    name: OpenAPI Test Cases
+    needs:
+      - git_info
+      - build_fe
+
+    # <template: tests_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
+      - name: Run tests
+        env:
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
           if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
             echo "TESTS_IMAGE_NAME is empty"
@@ -3181,7 +3152,7 @@ jobs:
     name: Validators
     needs:
       - git_info
-      - build_tests
+      - build_fe
 
     # <template: tests_template>
     runs-on: [self-hosted, regular]
@@ -3277,7 +3248,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: ${{needs.build_tests.outputs.tests_image_name}}
+          TESTS_IMAGE_NAME: ${{needs.build_fe.outputs.tests_image_name}}
         run: |
           if [[ -z ${TESTS_IMAGE_NAME} ]] ; then
             echo "TESTS_IMAGE_NAME is empty"
