@@ -241,11 +241,3 @@ func getAndParseResourceQuantity(input gjson.Result) (resource.Quantity, error) 
 
 	return quantity, nil
 }
-
-func absDiff(a, b int64) int64 {
-	d := a - b
-	if d > 0 {
-		return d
-	}
-	return b - a
-}

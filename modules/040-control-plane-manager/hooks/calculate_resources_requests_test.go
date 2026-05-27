@@ -260,3 +260,11 @@ var _ = Describe("Module hooks :: control-plane-manager :: calculate_resources_r
 		})
 	})
 })
+
+func absDiff(a, b int64) int64 {
+	d := a - b
+	if d > 0 {
+		return d
+	}
+	return b - a
+}
