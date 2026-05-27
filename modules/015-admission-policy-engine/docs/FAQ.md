@@ -14,7 +14,11 @@ For DKP to work correctly, extended privileges are required to run and operate s
 
 In `OperationPolicy` and `SecurityPolicy`, the `spec.match` field determines which specific objects (pods) in the cluster the policy will apply to. It must be present in the configuration. Filtering is performed by combining two main criteria: a pod selector (`labelSelector`) and a namespace selector (`namespaceSelector`).
 
-If both selectors are specified, the policy is applied only to those pods that **simultaneously** satisfy the pod selection conditions **and** are located in namespaces that passed the filtering. If either selector is omitted, the corresponding check is not performed (all pods or namespaces will be used).
+If both selectors are specified, the policy is applied only to those pods that **simultaneously**:
+- satisfy the pod selection conditions.
+- located in namespaces that passed the filtering.
+
+If either selector is omitted, the corresponding check is not performed (all pods or namespaces will be used).
 
 ### `spec.match.labelSelector` – pod selection
 
@@ -146,7 +150,9 @@ Here, the policy covers pods where the `security` label value is not equal to `l
 
 ## How do I extend Pod Security Standards policies?
 
-> Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
+{% alert level="info" %}
+Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
+{% endalert %}
 
 To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
 - Create a constraint template for the check (`ConstraintTemplate`).

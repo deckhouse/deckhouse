@@ -118,7 +118,7 @@ When specifying:
 To apply the above policy, it is sufficient to add the label `custom-operation-policy/enabled: "true"` to the desired namespace.
 Unlike `PSS`, the label name can be anything. Only a match between the label in the policy selector and the corresponding namespace is required.
 
-You can read more detailed information about using selectors in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+You can read more detailed information about using selectors in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
 
 It is also possible to specify the action to be applied for the policy.
 The `spec.enforcementAction` parameter is used for this.
@@ -127,12 +127,9 @@ The following modes are supported:
   - `Warn` - start pods that do not satisfy the policy, but issue a warning;
   - `Dryrun` - start pods that do not satisfy the policy, do not issue a warning to the user, but record violations in security reports.
 
-The policy provided in the example is recommended for use by the Deckhouse team. Similarly, you can create your own policy with the necessary settings.
-
-
+Based on this example, you can create your own policy with the necessary settings.
 
 ## Security policies
-
 
 Security policies are rules aimed at achieving application security best practices by validating the values of security-related parameters.
 
@@ -221,7 +218,7 @@ When specifying:
 To apply the above policy, it is sufficient to add the label `security-policy: mypolicy` to the desired namespace.
 Unlike `PSS`, the label name can be anything. Only a match between the label in the policy selector and the corresponding namespace is required.
 
-You can read more detailed information about using selectors in the [documentation](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
+You can read more detailed information about using selectors in the [selector setup description](/modules/admission-policy-engine/docs/faq.html#how-to-configure-policy-selectors).
 
 It is also possible to specify the action to be applied for the policy.
 The `spec.enforcementAction` parameter is used for this.
