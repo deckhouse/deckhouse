@@ -386,9 +386,10 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 }
 
 // mapPCCtoRootValues writes PCC fields into the root module values path
-// (cloudProviderDvp.provider/nodes/storage) in v2 format so templates can read them.
-// Sets the whole provider/nodes/storage objects at once to avoid JSON-patch
-// "missing path" errors when the parent keys don't exist yet.
+// (cloudProviderDvp.provider/nodes) in v2 format so templates can render during migration.
+// Only individual leaf values are written so that fields populated by addon-operator from
+// config-values defaults (e.g. nodes.enabled, storage.enabled) are never overwritten.
+// storage is left entirely untouched — PCC does not control subsystem enablement.
 //
 // It also injects a synthetic cloudProviderDvp.internal.credentialSecrets["d8-credentials"]
 // entry built from PCC.provider.kubeconfigDataBase64, but ONLY when the key is absent.
@@ -399,17 +400,17 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 		return nil
 	}
 
-	// provider
+	// provider — set the whole object (provider has no enabled flag, so overwriting is safe).
 	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
-		providerParams := map[string]any{
-			"namespace": *pcc.Provider.Namespace,
-		}
 		input.Values.Set("cloudProviderDvp.provider", map[string]any{
-			"parameters": providerParams,
+			"parameters": map[string]any{
+				"namespace": *pcc.Provider.Namespace,
+			},
 		})
 	}
 
-	// nodes.parameters
+	// nodes.parameters — only PCC-derived fields; nodes.enabled is intentionally not touched
+	// so the default from config-values is preserved.
 	nodesParams := map[string]any{}
 	if pcc.Layout != nil {
 		nodesParams["layout"] = *pcc.Layout
@@ -423,14 +424,11 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 	if pcc.Zones != nil && len(*pcc.Zones) > 0 {
 		nodesParams["zones"] = *pcc.Zones
 	}
-	input.Values.Set("cloudProviderDvp.nodes", map[string]any{
-		"parameters": nodesParams,
-	})
+	if len(nodesParams) > 0 {
+		input.Values.Set("cloudProviderDvp.nodes.parameters", nodesParams)
+	}
 
-	// storage
-	input.Values.Set("cloudProviderDvp.storage", map[string]any{
-		"parameters": map[string]any{},
-	})
+	// storage — not touched; PCC does not control subsystem enablement.
 
 	// Inject synthetic d8-credentials from PCC kubeconfig only when the real Secret
 	// is not yet present (i.e. credentials.go did not populate it at Order 19).
