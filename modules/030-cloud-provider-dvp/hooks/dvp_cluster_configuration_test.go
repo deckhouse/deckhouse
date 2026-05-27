@@ -218,6 +218,9 @@ spec:
         region: ru-msk-1
         zones:
         - default
+        ipAddresses:
+          master:
+          - Auto
 ---
 apiVersion: v1
 kind: Secret
@@ -251,8 +254,6 @@ spec:
       cores: 4
     liveMigrationPolicy: PreferForced
     runPolicy: AlwaysOnUnlessStoppedManually
-    ipAddresses:
-    - Auto
     memory:
       size: 8Gi
 ---

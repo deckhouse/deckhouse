@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	corev1 "k8s.io/api/core/v1"
@@ -77,6 +78,31 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 
 	resources := make([]any, 0, 4+len(cfg.NodeGroups))
 
+	masterNodeGroup, err := mapFromAny(cfg.MasterNodeGroup)
+	if err != nil {
+		return fmt.Errorf("convert masterNodeGroup: %w", err)
+	}
+
+	ipAddressesMap := make(map[string][]string)
+	if addrs := extractIPAddresses("master", masterNodeGroup); len(addrs) > 0 {
+		ipAddressesMap["master"] = addrs
+	}
+	for _, rawNodeGroup := range cfg.NodeGroups {
+		nodeGroup, err := mapFromAny(rawNodeGroup)
+		if err != nil {
+			return fmt.Errorf("convert nodeGroup: %w", err)
+		}
+		ngName, _ := nodeGroup["name"].(string)
+		if ngName != "" {
+			if addrs := extractIPAddresses(ngName, nodeGroup); len(addrs) > 0 {
+				ipAddressesMap[ngName] = addrs
+			}
+		}
+	}
+	if len(ipAddressesMap) > 0 {
+		nodesParameters["ipAddresses"] = ipAddressesMap
+	}
+
 	moduleConfig := map[string]any{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "ModuleConfig",
@@ -113,10 +139,6 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 	}
 	resources = append(resources, credentialSecret)
 
-	masterNodeGroup, err := mapFromAny(cfg.MasterNodeGroup)
-	if err != nil {
-		return fmt.Errorf("convert masterNodeGroup: %w", err)
-	}
 	if len(masterNodeGroup) != 0 {
 		masterResources, err := createNodeGroupResources("master", masterNodeGroup, true, cfg.Zones)
 		if err != nil {
@@ -192,6 +214,18 @@ func createNodeGroupResources(name string, nodeGroup map[string]any, master bool
 	instanceClassSpec, ok := nodeGroup["instanceClass"].(map[string]any)
 	if !ok || len(instanceClassSpec) == 0 {
 		return nil, fmt.Errorf("%s.instanceClass cannot be empty", name)
+	}
+
+	if vm, ok := instanceClassSpec["virtualMachine"].(map[string]any); ok {
+		if _, hasIP := vm["ipAddresses"]; hasIP {
+			vmCopy := make(map[string]any, len(vm))
+			maps.Copy(vmCopy, vm)
+			delete(vmCopy, "ipAddresses")
+			specCopy := make(map[string]any, len(instanceClassSpec))
+			maps.Copy(specCopy, instanceClassSpec)
+			specCopy["virtualMachine"] = vmCopy
+			instanceClassSpec = specCopy
+		}
 	}
 
 	instanceClassName := fmt.Sprintf("%s-dvp", name)
@@ -306,4 +340,26 @@ func stringsToAnySlice(values []string) []any {
 		result = append(result, value)
 	}
 	return result
+}
+
+func extractIPAddresses(_ string, nodeGroup map[string]any) []string {
+	ic, ok := nodeGroup["instanceClass"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	vm, ok := ic["virtualMachine"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	raw, ok := vm["ipAddresses"].([]any)
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	addrs := make([]string, 0, len(raw))
+	for _, v := range raw {
+		if s, ok := v.(string); ok {
+			addrs = append(addrs, s)
+		}
+	}
+	return addrs
 }
