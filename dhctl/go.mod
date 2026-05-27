@@ -6,7 +6,7 @@ require (
 	github.com/090809/oteljsonl v0.0.2
 	github.com/BurntSushi/toml v1.4.0
 	github.com/GehirnInc/crypt v0.0.0-20230320061759-8cc1b52080c5
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -20,7 +20,7 @@ require (
 	github.com/deckhouse/lib-connection v0.7.0
 	github.com/deckhouse/lib-dhctl v0.17.0
 	github.com/deckhouse/lib-gossh v0.3.0
-	github.com/deckhouse/module-sdk v0.5.0
+	github.com/deckhouse/module-sdk v0.10.4
 	github.com/flant/kube-client v1.6.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-openapi/spec v0.22.0
@@ -52,13 +52,14 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.19.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.43.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0
 	go.opentelemetry.io/otel/log v0.19.0
 	go.opentelemetry.io/otel/sdk v1.43.0
 	go.opentelemetry.io/otel/sdk/log v0.19.0
 	go.opentelemetry.io/otel/sdk/metric v1.43.0
 	go.opentelemetry.io/otel/trace v1.43.0
+	golang.org/x/sync v0.20.0
 	golang.org/x/term v0.42.0
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
@@ -67,7 +68,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.8
 	k8s.io/apiextensions-apiserver v0.33.8
-	k8s.io/apimachinery v0.33.8
+	k8s.io/apimachinery v0.33.12
 	k8s.io/client-go v0.33.8
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
@@ -106,6 +107,7 @@ require (
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/deckhouse/deckhouse v1.76.0 // indirect
 	github.com/deckhouse/delivery-kit-sdk v1.1.0 // indirect
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 // indirect
 	github.com/docker/cli v29.2.0+incompatible // indirect
@@ -114,6 +116,7 @@ require (
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
@@ -220,7 +223,7 @@ require (
 	github.com/zmap/zlint/v3 v3.6.6 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.33.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
@@ -230,7 +233,6 @@ require (
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
@@ -241,7 +243,8 @@ require (
 	k8s.io/cli-runtime v0.33.8 // indirect
 	k8s.io/component-base v0.33.8 // indirect
 	k8s.io/kube-openapi v0.0.0-20250701173324-9bd5c66d9911 // indirect
-	k8s.io/kubectl v0.32.10 // indirect
+	k8s.io/kubectl v0.33.8 // indirect
+	sigs.k8s.io/controller-runtime v0.20.4 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.19.0 // indirect
