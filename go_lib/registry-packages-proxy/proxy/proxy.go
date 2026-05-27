@@ -820,7 +820,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, cfg *regis
 		return
 	}
 
-	imagePath := fmt.Sprintf("packages/%s", packageName)
+	imagePath := packageName
 
 	// if version is empty, find the latest version
 	if version == "" {
