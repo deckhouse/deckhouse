@@ -37,29 +37,27 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	certExpiry := make(map[string]metav1.Time)
 
 	if leafNames := deps.leafCertFiles(); len(leafNames) > 0 {
-		expirations, err := pki.ListCertificateExpirations(
+		report, err := pki.ListCertificateExpirations(
 			pki.WithCertificatesDir(constants.KubernetesPkiPath),
 			pki.WithLeafCertificates(leafNames...),
-			pki.WithIgnoreReadErrors(),
 		)
 		for _, e := range joinedErrors(err) {
 			logger.Warn("cannot read cert expiration", log.Err(e))
 		}
-		for _, exp := range expirations {
+		for _, exp := range report.Entries {
 			certExpiry[exp.Name+".crt"] = metav1.NewTime(exp.NotAfter)
 		}
 	}
 
 	if len(deps.KubeconfigFiles) > 0 {
-		expirations, err := kubeconfig.ListClientCertificateExpirations(
+		report, err := kubeconfig.ListClientCertificateExpirations(
 			kubeconfig.WithKubeconfigDir(kubeconfigDir),
 			kubeconfig.WithFiles(deps.KubeconfigFiles...),
-			kubeconfig.WithIgnoreReadErrors(),
 		)
 		for _, e := range joinedErrors(err) {
 			logger.Warn("cannot read kubeconfig cert expiration", log.Err(e))
 		}
-		for _, exp := range expirations {
+		for _, exp := range report.Entries {
 			certExpiry[string(exp.File)] = metav1.NewTime(exp.NotAfter)
 		}
 	}

@@ -98,9 +98,9 @@ type KubeconfigRenewReport struct {
 }
 
 type KubeconfigRenewEntry struct {
-	File   File
-	Path   string
-	Action KubeconfigRenewAction
+	File File
+	Path string
+	Err  error
 }
 
 // KubeconfigRenewAction describes what happened to a single kubeconfig file.
@@ -115,11 +115,11 @@ const (
 	KubeconfigRenewActionSkippedExternalCA
 )
 
-func (r *KubeconfigRenewReport) add(file File, path string, action KubeconfigRenewAction) {
+func (r *KubeconfigRenewReport) add(file File, path string, err error) {
 	r.Entries = append(r.Entries, KubeconfigRenewEntry{
-		File:   file,
-		Path:   path,
-		Action: action,
+		File: file,
+		Path: path,
+		Err:  err,
 	})
 }
 
@@ -227,7 +227,7 @@ func RenewClientCerts(opts ...RenewOption) (KubeconfigRenewReport, error) {
 
 		err := renewClientCert(o.kubeconfigDir, o.pkiDir, info.File)
 		if err == nil {
-			report.add(info.File, path, KubeconfigRenewActionRenewed)
+			report.add(info.File, path, nil)
 			continue
 		}
 
@@ -235,9 +235,9 @@ func RenewClientCerts(opts ...RenewOption) (KubeconfigRenewReport, error) {
 		var external *CAExternalError
 		switch {
 		case errors.As(err, &missing):
-			report.add(info.File, path, KubeconfigRenewActionSkippedMissing)
+			report.add(info.File, path, missing)
 		case errors.As(err, &external):
-			report.add(info.File, path, KubeconfigRenewActionSkippedExternalCA)
+			report.add(info.File, path, external)
 		default:
 			// *CAExpiredError or any non-sentinel error is fatal.
 			return report, err

@@ -33,19 +33,6 @@ type LeafCertificateInfo struct {
 	Description string
 }
 
-// DefaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
-func DefaultLeafCertificates() []LeafCertificateInfo {
-	return []LeafCertificateInfo{
-		{ApiserverCertName, "certificate for serving the Kubernetes API"},
-		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
-		{ApiserverEtcdClientCertName, "certificate the apiserver uses to access etcd"},
-		{FrontProxyClientCertName, "certificate for the front proxy client"},
-		{EtcdServerCertName, "certificate for serving etcd"},
-		{EtcdPeerCertName, "certificate for etcd nodes to communicate with each other"},
-		{EtcdHealthcheckClientCertName, "certificate for liveness probes to healthcheck etcd"},
-	}
-}
-
 type RenewOption func(*renewOptions)
 
 type renewOptions struct {
@@ -238,10 +225,23 @@ func RenewCertificates(opts ...RenewOption) (PKIRenewReport, error) {
 	return report, nil
 }
 
+// defaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
+func defaultLeafCertificates() []LeafCertificateInfo {
+	return []LeafCertificateInfo{
+		{ApiserverCertName, "certificate for serving the Kubernetes API"},
+		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
+		{ApiserverEtcdClientCertName, "certificate the apiserver uses to access etcd"},
+		{FrontProxyClientCertName, "certificate for the front proxy client"},
+		{EtcdServerCertName, "certificate for serving etcd"},
+		{EtcdPeerCertName, "certificate for etcd nodes to communicate with each other"},
+		{EtcdHealthcheckClientCertName, "certificate for liveness probes to healthcheck etcd"},
+	}
+}
+
 // selectLeafs returns the inventory with only the given names, preserving the canonical DefaultLeafCertificates() order.
 // When names is empty, returned default inventory.
 func selectLeafs(names []LeafCertName) []LeafCertificateInfo {
-	full := DefaultLeafCertificates()
+	full := defaultLeafCertificates()
 	if len(names) == 0 {
 		return full
 	}
