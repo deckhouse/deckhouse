@@ -26,6 +26,7 @@ relatedLinks:
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
+Параллельно с прохождением [«Быстрого старта»](/products/kubernetes-platform/gs/) можно пройти курс [«Администрирование Deckhouse Kubernetes Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
 
 ## Способы установки
 
