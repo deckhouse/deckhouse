@@ -38,6 +38,9 @@ const (
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
 	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
+
+	DeckhouseManagedByLabelKey   = "deckhouse.io/managed-by"
+	DeckhouseManagedByLabelValue = "deckhouse"
 )
 
 type ComputeService struct {
@@ -401,17 +404,50 @@ func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname str
 	return vmbdas.Items, nil
 }
 
+func (c *ComputeService) isDeckhouseManagedCloudInitSecret(secret *corev1.Secret) bool {
+	if secret.Labels == nil {
+		return false
+	}
+	return secret.Labels[DeckhouseManagedByLabelKey] == DeckhouseManagedByLabelValue
+}
+
 func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.namespace,
+			Labels: map[string]string{
+				DeckhouseManagedByLabelKey: DeckhouseManagedByLabelValue,
+			},
 		},
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},
 	}
 
+	// Try to create; if the secret already exists, update only when it is managed by Deckhouse.
 	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+			if getErr != nil {
+				return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
+			}
+
+			if !c.isDeckhouseManagedCloudInitSecret(existing) {
+				klog.Warningf(
+					"cloud-init secret %s/%s already exists and is not managed by Deckhouse (%s=%s); leaving it unchanged and continuing with existing userData",
+					c.namespace, name, DeckhouseManagedByLabelKey, DeckhouseManagedByLabelValue,
+				)
+				return nil
+			}
+
+			existing.StringData = map[string]string{"userData": string(userData)}
+			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+				return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+			}
+
+			return nil
+		}
+
 		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
 	}
 	return nil
