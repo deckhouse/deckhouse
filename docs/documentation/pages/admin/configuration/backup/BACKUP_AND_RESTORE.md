@@ -461,7 +461,7 @@ If you prefer to manually make changes during cluster recovery after the master 
 1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig. `control-plane-manager` will detect the change in `cert-sans` inside `d8-control-plane-manager-config`, create a `ControlPlaneOperation` with a `RenewPKICerts` step, and regenerate the `kube-apiserver` certificate with the updated SAN list:
 
    ```shell
-   kubectl edit mc control-plane-manager
+   d8 k edit mc control-plane-manager
    ```
 
    Add the new IP to `spec.settings.apiserver.certSANs`:
@@ -483,13 +483,13 @@ If you prefer to manually make changes during cluster recovery after the master 
    Monitor the certificate renewal progress:
 
    ```shell
-   kubectl get cpo -o wide -w
+   d8 k get cpo -o wide -w
    ```
 
    Wait until the renewal operation reaches `Phase=Succeeded`. Then verify that the `ControlPlaneNode` shows healthy certificates:
 
    ```shell
-   kubectl get cpn
+   d8 k get cpn
    ```
 
    The `CERTIFICATES` column must show `True`.
