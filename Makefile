@@ -267,7 +267,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 generate: generate-kubernetes generate-tools generate-docs generate-werf
 
 .PHONY: generate-tools
-generate-tools:
+generate-tools: yq
 	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
