@@ -41,7 +41,12 @@ secrets:
 shell:
   install:
     - cd /src/cmd/control-plane-manager
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /control-plane-manager .
+    {{ if $.isEE}}
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=true"
+    {{ else }}
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=false"
+    {{ end }}
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $BUILD_TAGS -ldflags="-s -w $ETCD_SIGN_ENABLED" -o /control-plane-manager .
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025-07-25-3"
