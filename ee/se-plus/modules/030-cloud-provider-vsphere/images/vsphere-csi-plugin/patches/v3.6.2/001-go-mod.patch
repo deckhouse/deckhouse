@@ -45,12 +45,13 @@ index 227eefbe..3052d440 100644
  	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
  	sigs.k8s.io/cluster-api v1.9.7
  	sigs.k8s.io/controller-runtime v0.19.7
-@@ -60,7 +60,7 @@ require (
+@@ -60,7 +60,8 @@ require (
  )
  
  require (
 -	cel.dev/expr v0.24.0 // indirect
 +	cel.dev/expr v0.25.1 // indirect
++	cyphar.com/go-pathrs v0.2.1 // indirect
  	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
  	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
  	github.com/MakeNowJust/heredoc v1.0.0 // indirect
@@ -72,6 +73,24 @@ index 227eefbe..3052d440 100644
  	github.com/moby/sys/mountinfo v0.7.2 // indirect
  	github.com/moby/sys/userns v0.1.0 // indirect
  	github.com/moby/term v0.5.0 // indirect
+@@ -126,7 +127,7 @@ require (
+ 	github.com/opencontainers/go-digest v1.0.0 // indirect
+ 	github.com/opencontainers/image-spec v1.1.1 // indirect
+ 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
+-	github.com/opencontainers/selinux v1.11.1 // indirect
++	github.com/opencontainers/selinux v1.13.0 // indirect
+ 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
+ 	github.com/pkg/errors v0.9.1 // indirect
+ 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+@@ -81,7 +82,7 @@ require (
+ 	github.com/containerd/typeurl/v2 v2.2.2 // indirect
+ 	github.com/coreos/go-semver v0.3.1 // indirect
+ 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
++	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
+ 	github.com/docker/go-units v0.5.0 // indirect
+ 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
+ 	github.com/euank/go-kmsg-parser v2.0.0+incompatible // indirect
 @@ -144,49 +144,49 @@ require (
  	go.etcd.io/etcd/api/v3 v3.6.4 // indirect
  	go.etcd.io/etcd/client/pkg/v3 v3.6.4 // indirect
@@ -214,14 +233,21 @@ diff --git a/go.sum b/go.sum
 index 5dc7727d..a080cc0a 100644
 --- a/go.sum
 +++ b/go.sum
-@@ -1,5 +1,5 @@
+@@ -1,5 +1,7 @@
 -cel.dev/expr v0.24.0 h1:56OvJKSH3hDGL0ml5uSxZmz3/3Pq4tJ+fb1unVLAFcY=
 -cel.dev/expr v0.24.0/go.mod h1:hLPLo1W4QUmuYdA72RBX06QTs6MXw941piREPl3Yfiw=
 +cel.dev/expr v0.25.1 h1:1KrZg61W6TWSxuNZ37Xy49ps13NUovb66QLprthtwi4=
 +cel.dev/expr v0.25.1/go.mod h1:hrXvqGP6G6gyx8UAHSHJ5RGk//1Oj5nXQ2NI02Nrsg4=
++cyphar.com/go-pathrs v0.2.1 h1:9nx1vOgwVvX1mNBWDu93+vaceedpbsDqo+XuBGL40b8=
++cyphar.com/go-pathrs v0.2.1/go.mod h1:y8f1EMG7r+hCuFf/rXsKqMJrJAUoADZGNh5/vZPKcGc=
  github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 h1:L/gRVlceqvL25UVaW/CKtUDjefjrs0SPonmDGUVOYP0=
  github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
  github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab h1:UKkYhof1njT1/xq4SEg5z+VpTgjmNeHwPGRQl7takDI=
+@@ -54,8 +56,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6N
+-github.com/cyphar/filepath-securejoin v0.4.1 h1:JyxxyPEaktOD+GAnqIqTf9A8tHyAG22rowi7HkoSU1s=
+-github.com/cyphar/filepath-securejoin v0.4.1/go.mod h1:Sdj7gXlvMcPZsbhwhQ33GguGLDGQL7h7bg04C/+u9jI=
++github.com/cyphar/filepath-securejoin v0.6.0 h1:BtGB77njd6SVO6VztOHfPxKitJvd/VPT+OFBFMOi1Is=
++github.com/cyphar/filepath-securejoin v0.6.0/go.mod h1:A8hd4EnAeyujCJRrICiOWqjS1AX0a9kM5XL+NwKoYSc=
 @@ -194,8 +194,8 @@ github.com/mitchellh/go-wordwrap v1.0.1 h1:TLuKupo69TCn6TQSyGxwI1EblZZEsQ0vMlAFQ
  github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTSsCt+hzestvNj0=
  github.com/moby/docker-image-spec v1.3.1 h1:jMKff3w6PgbfSa69GfNg+zN/XLhfXJGnEx3Nl2EsFP0=
@@ -233,6 +259,11 @@ index 5dc7727d..a080cc0a 100644
  github.com/moby/sys/mountinfo v0.7.2 h1:1shs6aH5s4o5H2zQLn796ADW1wMrIwHsyJ2v9KouLrg=
  github.com/moby/sys/mountinfo v0.7.2/go.mod h1:1YOa8w8Ih7uW0wALDUgT1dTTSBrZ+HiBLGws92L2RU4=
  github.com/moby/sys/userns v0.1.0 h1:tVLXkFOxVu9A64/yh59slHVv9ahO9UIev4JZusOLG/g=
+@@ -228,8 +230,8 @@ github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJw
+-github.com/opencontainers/selinux v1.11.1 h1:nHFvthhM0qY8/m+vfhJylliSshm8G1jJ2jDMcgULaH8=
+-github.com/opencontainers/selinux v1.11.1/go.mod h1:E5dMC3VPuVvVHDYmi78qvhJp8+M586T4DlDRYpFkyec=
++github.com/opencontainers/selinux v1.13.0 h1:Zza88GWezyT7RLql12URvoxsbLfjFx988+LGaWfbL84=
++github.com/opencontainers/selinux v1.13.0/go.mod h1:XxWTed+A/s5NNq4GmYScVy+9jzXhGBVEOAyucdRUY8s=
 @@ -250,8 +250,8 @@ github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
  github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
  github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=

@@ -48,7 +48,9 @@ index 47f82e06a..e3fa302aa 100644
  	github.com/go-logr/stdr v1.2.2 // indirect
  	github.com/go-openapi/jsonpointer v0.21.0 // indirect
  	github.com/go-openapi/jsonreference v0.21.0 // indirect
-@@ -65,10 +63,10 @@ require (
+@@ -65,11 +63,12 @@ require (
+-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
++	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
  	github.com/google/cel-go v0.20.1 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
@@ -141,6 +143,8 @@ index ee1b04e89..7c28653eb 100644
  github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
  github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
  github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
+github.com/golang-jwt/jwt/v4 v4.5.2 h1:YtQM7lnr8iZ+j5q71MGKkNw9Mn7AjHM68uc9g5fXeUI=
+github.com/golang-jwt/jwt/v4 v4.5.2/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
 @@ -79,8 +79,8 @@ github.com/google/cel-go v0.20.1/go.mod h1:kWcIzTsPX0zmQ+H3TirHstLLf9ep5QTsZBN9u
  github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
  github.com/google/gnostic-models v0.6.8/go.mod h1:5n7qKqH0f5wFt+aWF8CW6pZLLNOfYuF5OpfBSENuI8U=
