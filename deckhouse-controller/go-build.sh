@@ -49,8 +49,8 @@ LDFLAGS="${LDFLAGS} -X 'main.ShellOperatorVersion=${shellOpVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.NelmVersion=${nelmVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.DefaultReleaseChannel=${defaultReleaseChannel}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=${defaultKubernetesVer}'"
-LDFLAGS="${LDFLAGS} -X 'ggithub.com/deckhouse/deckhouse/global-hooks.CommaSeparatedEEEditions=${eeEditions}'"
-LDFLAGS="${LDFLAGS} -X 'ggithub.com/deckhouse/deckhouse/global-hooks.CommaSeparatedEditionsInOrder=${allEditionsInOrder}'"
+LDFLAGS="${LDFLAGS} -X 'github.com/deckhouse/deckhouse/global-hooks.CommaSeparatedEEEditions=${eeEditions}'"
+LDFLAGS="${LDFLAGS} -X 'github.com/deckhouse/deckhouse/global-hooks.CommaSeparatedEditionsInOrder=${allEditionsInOrder}'"
 
 # Build the binary
 CGO_ENABLED=0 \

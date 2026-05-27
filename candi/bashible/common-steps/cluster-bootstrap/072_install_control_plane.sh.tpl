@@ -140,7 +140,6 @@ export BB_KUBE_APISERVER_URL=""
 bb-curl-helper-extract-admin-certs
 
 # Upload pki for deckhouse
-# Upload pki for deckhouse
 declare -A pki_secret_files=(
   ["ca.crt"]="/etc/kubernetes/pki/ca.crt"
   ["ca.key"]="/etc/kubernetes/pki/ca.key"

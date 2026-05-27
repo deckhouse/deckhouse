@@ -112,7 +112,7 @@ func (s *RegularRenewer) Renew(k8sInterface kubernetes.Interface) error {
 	isFilesExists := errPriv == nil && errPub == nil
 
 	if !isSecretRecordsExists && !isFilesExists {
-		logger.Info("no signature records in secret d8-pki, and files exists, generating new")
+		logger.Info("no signature records in secret d8-pki, and no files exists, generating new")
 		return generateNewSignatureCerts(pkiDir, k8sInterface, true)
 	}
 
@@ -151,9 +151,9 @@ func (s *RegularRenewer) Renew(k8sInterface kubernetes.Interface) error {
 		return fmt.Errorf("certificate with KeyID %s not found in JWKS", privJWK.KeyID)
 	}
 
-	daysHours := s.leftDaysToRenew * 24 * int(time.Hour)
+	daysHours := time.Duration(s.leftDaysToRenew * 24 * int(time.Hour))
 
-	if pkiutil.CertificateExpiresSoon(targetCert, time.Duration(daysHours)) {
+	if pkiutil.CertificateExpiresSoon(targetCert, daysHours) {
 		logger.Info("certificate is expiring soon, renewing...")
 		return generateNewSignatureCerts(pkiDir, k8sInterface, false)
 	}
@@ -270,7 +270,7 @@ func generateTLSCertificate(serviceName, clusterDomain string, keyType CertKeyTy
 	now := time.Now()
 	subjectKeyId := make([]byte, 10)
 	if _, err := rand.Read(subjectKeyId); err != nil {
-		return nil, fmt.Errorf("Cannot get rand subjectKeyId")
+		return nil, fmt.Errorf("cannot generate random subjectKeyId: %w", err)
 	}
 	commonName := fmt.Sprintf("%s.%s", serviceName, clusterDomain)
 	certTemplate := &x509.Certificate{
