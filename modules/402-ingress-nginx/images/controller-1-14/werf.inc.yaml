@@ -856,7 +856,7 @@ shell:
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R deckhouse:deckhouse /chroot/etc
   - chown root:root /chroot/etc/passwd /chroot/etc/group
-  - /usr/bin/cp -af /bin/bash /chroot/bin/bash
+  - cp -af /bin/bash /chroot/bin/bash
   - ln -sf /bin/bash /chroot/bin/sh
 
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
@@ -1005,7 +1005,7 @@ git:
 {{- include "image mount points" $ }}
 shell:
   install:
-  - /usr/bin/cp -af /chroot/. /validation-chroot/
+  - cp -af /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
