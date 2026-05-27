@@ -659,7 +659,18 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 ## Download deckhouse-cli locally if necessary.
 .PHONY: deckhouse-cli
 deckhouse-cli:
-	$(call go-install-tool,$(DECKHOUSE_CLI),github.com/deckhouse/deckhouse-cli,$(DECKHOUSE_CLI_VERSION))
+	@if [ -f "$(DECKHOUSE_CLI)" ]; then \
+		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
+		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
+			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
+			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
+		else \
+			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+		fi; \
+	else \
+		echo "d8 not found, downloading..."; \
+		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
+	fi
 
 ## Download client-gen locally if necessary.
 .PHONY: client-gen
