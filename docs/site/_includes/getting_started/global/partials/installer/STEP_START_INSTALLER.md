@@ -3,18 +3,50 @@
 <li>Start Docker on your computer</li>
 <li>
   <p>Run the installer</p>
-  <div class="tabs">
-<button id="tab-button-mac" class="tab-button active" onclick="openTab(event, 'tab-mac'); openMacTab(event, 'tab-mac-content-container'); openMacDefaultTab();">macOS</button>
-<button id="tab-button-linux" class="tab-button" onclick="openTab(event, 'tab-linux'); openLinuxTab(event, 'tab-linux-content-container'); openLinuxDefaultTab();">Linux</button>
-<button id="tab-button-windows" class="tab-button" onclick="openTab(event, 'tab-windows')">Windows</button>
-  </div>
-  <div id="tab-mac" class="tab-content active">
-<div class="tabs">
-  <button id="tab-buttons-mac-container" class="tab-button active" onclick="openMacTab(event, 'tab-mac-content-container')">Container</button>
-  <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-trdl')">Using trdl</button>
-  <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">File</button>
-</div>
-<div id="tab-mac-content-container" class="tab-content active">
+  <div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id="tab-button-mac"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title active"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__panel-os','tab-mac'); activateTabBtn(document.getElementById('tab-installer-mac-container'));">
+      macOS
+    </li>
+    <li id="tab-button-linux"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__panel-os','tab-linux'); activateTabBtn(document.getElementById('tab-installer-linux-container'));">
+      Linux
+    </li>
+    <li id="tab-button-windows"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__panel-os','tab-windows');">
+      Windows
+    </li>
+  </ul>
+  <div id="tab-mac" class="tabs__container tabs__container--descr tabs__panel-os active" markdown="1">
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id="tab-installer-mac-container"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title active"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','tab-mac-content-container');">
+      Container
+    </li>
+    <li id="tab-installer-mac-trdl"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','tab-mac-content-trdl');">
+      Using trdl
+    </li>
+    <li id="tab-installer-mac-file"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','tab-mac-content-file');">
+      File
+    </li>
+  </ul>
+<div id="tab-mac-content-container" class="tabs__container tabs__container--descr active" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
   <p>Run the command:</p>
   <p><b>If the installer container cannot access the network while VPN is enabled, follow this <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">instruction</a>.</b></p>
@@ -25,7 +57,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 {% endcapture %}
 {{ command | markdownify }}
 </div>
-<div id="tab-mac-content-trdl" class="tab-content">
+<div id="tab-mac-content-trdl" class="tabs__container tabs__container--descr" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
   <p>Starting from version 0.5.0, the installer can be installed on your machine using <a href="https://ru.trdl.dev/">trdl</a>.</p>
   <ol>
@@ -54,7 +86,7 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 </li>
   </ol>
 </div>
-<div id="tab-mac-content-file" class="tab-content">
+<div id="tab-mac-content-file" class="tabs__container tabs__container--descr" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
   <p>Download the installer:
 <a href="/downloads/installer/latest/darwin-arm64/d8install" class="download-btn">darwin-arm64</a>
@@ -70,14 +102,31 @@ xattr -c d8install
 {% endcapture %}
 {{ command | markdownify }}
 </div>
-  </div>
-  <div id="tab-linux" class="tab-content">
-<div class="tabs">
-  <button id="tab-buttons-linux-container" class="tab-button active" onclick="openLinuxTab(event, 'tab-linux-content-container')">Container</button>
-  <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-trdl')">Using trdl</button>
-  <button id="tab-buttons-linux-file" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-file')">File</button>
 </div>
-<div id="tab-linux-content-container" class="tab-content active">
+  </div>
+  <div id="tab-linux" class="tabs__container tabs__container--descr tabs__panel-os" markdown="1">
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id="tab-installer-linux-container"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title active"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','tab-linux-content-container');">
+      Container
+    </li>
+    <li id="tab-installer-linux-trdl"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','tab-linux-content-trdl');">
+      Using trdl
+    </li>
+    <li id="tab-installer-linux-file"
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','tab-linux-content-file');">
+      File
+    </li>
+  </ul>
+<div id="tab-linux-content-container" class="tabs__container tabs__container--descr active" markdown="1">
   <p>Run the command:</p>
   <p><b>If the installer container cannot access the network while VPN is enabled, follow this <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">instruction</a>.</b></p>
 {% capture command %}
@@ -87,7 +136,7 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 {% endcapture %}
 {{ command | markdownify }}
 </div>
-<div id="tab-linux-content-trdl" class="tab-content">
+<div id="tab-linux-content-trdl" class="tabs__container tabs__container--descr" markdown="1">
   <p>Starting from version 0.5.0, the installer can be installed on your machine using <a href="https://ru.trdl.dev/">trdl</a>.</p>
   <ol>
 <li>Install the <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">trdl client</a>.</li>
@@ -115,7 +164,7 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 </li>
   </ol>
 </div>
-<div id="tab-linux-content-file" class="tab-content">
+<div id="tab-linux-content-file" class="tabs__container tabs__container--descr" markdown="1">
   <p>Download the installer: <a href="/downloads/installer/latest/linux-amd64/d8install" class="download-btn">amd64</a></p>
   <p>Run it with the following commands:</p>
 {% capture command %}
@@ -126,8 +175,9 @@ chmod +x d8install
 {% endcapture %}
 {{ command | markdownify }}
 </div>
+</div>
   </div>
-  <div id="tab-windows" class="tab-content">
+  <div id="tab-windows" class="tabs__container tabs__container--descr tabs__panel-os" markdown="1">
 {% alert level="info" %}
 Before starting the container, make sure [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) is installed and [WSL2 is enabled](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
 {% endalert %}
@@ -146,66 +196,8 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 {% endcapture %}
 {{ command | markdownify }}
   </div>
+  </div>
 </li>
 <li>Open <a href="http://localhost:8080">http://localhost:8080</a></li>
 </ol>
 </div>
-
-<script>
-  function openTab(evt, tabName) {
-  document.getElementById("tab-mac").classList.remove("active");
-  document.getElementById("tab-linux").classList.remove("active");
-  document.getElementById("tab-windows").classList.remove("active");
-
-  document.getElementById("tab-button-mac").classList.remove("active");
-  document.getElementById("tab-button-linux").classList.remove("active");
-  document.getElementById("tab-button-windows").classList.remove("active");
-
-  document.getElementById(tabName).classList.add("active");
-  evt.currentTarget.classList.add("active");
-  }
-
-  function openMacTab(evt, subTabName) {
-  document.getElementById("tab-mac-content-container").classList.remove("active");
-  document.getElementById("tab-mac-content-trdl").classList.remove("active");
-  document.getElementById("tab-mac-content-file").classList.remove("active");
-
-  document.getElementById("tab-buttons-mac-container").classList.remove("active");
-  document.getElementById("tab-buttons-mac-script").classList.remove("active");
-  document.getElementById("tab-buttons-mac-file").classList.remove("active");
-
-  document.getElementById(subTabName).classList.add("active");
-  evt.currentTarget.classList.add("active");
-  }
-
-  function openLinuxTab(evt, subTabName) {
-  document.getElementById("tab-linux-content-container").classList.remove("active");
-  document.getElementById("tab-linux-content-trdl").classList.remove("active");
-  document.getElementById("tab-linux-content-file").classList.remove("active");
-
-  document.getElementById("tab-buttons-linux-container").classList.remove("active");
-  document.getElementById("tab-buttons-linux-script").classList.remove("active");
-  document.getElementById("tab-buttons-linux-file").classList.remove("active");
-
-  document.getElementById(subTabName).classList.add("active");
-  evt.currentTarget.classList.add("active");
-  }
-
-  function openInstallerTypeTab(evt, subTabName) {
-  document.getElementById("tab-bare-metal-content").classList.remove("active");
-  document.getElementById("tab-cloud-content").classList.remove("active");
-
-  document.getElementById("tab-button-bare-metal").classList.remove("active");
-  document.getElementById("tab-button-cloud").classList.remove("active");
-
-  document.getElementById(subTabName).classList.add("active");
-  evt.currentTarget.classList.add("active");
-  }
-
-  function openLinuxDefaultTab() {
-  document.getElementById("tab-buttons-linux-container").classList.add("active");
-  }
-  function openMacDefaultTab() {
-  document.getElementById("tab-buttons-mac-container").classList.add("active");
-  }
-</script>

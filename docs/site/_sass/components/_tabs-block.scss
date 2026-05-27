@@ -16,6 +16,32 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+
+            > .tabs__item {
+                padding: 8px 25px;
+                margin-bottom: 22px;
+                color: #222A5D;
+                font-size: 16px;
+                font-weight: 400;
+                cursor: pointer;
+
+                &.active {
+                    font-weight: 600;
+                    color: #FFF;
+                    border-radius: 8px;
+                    background-color: #408BFF;
+                }
+
+                &:not(.active):hover {
+                    border-radius: 8px;
+                    background: linear-gradient(0deg, #FFF 0%, #FFF 100%), #f5f9ff;
+                    box-shadow: 0 2.881px 8.643px .96px rgba(59, 66, 109, .15);
+                }
+
+                @include breakpoints.max-w(xxl) {
+                    padding: 7px 20px;
+                }
+            }
         }
 
         &--descr {
@@ -27,6 +53,14 @@
             letter-spacing: 0.3px;
             background: linear-gradient(0deg, #FFF 0%, #FFF 100%), #F5F9FF;
             box-shadow: 0 2.881px 8.643px 0.96px rgba(59, 66, 109, 0.15);
+        }
+    }
+
+    > .tabs__container.tabs__container--descr[id] {
+        display: none;
+
+        &.active {
+            display: block;
         }
     }
 

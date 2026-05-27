@@ -33,16 +33,16 @@ module Jekyll
           block_id  = "block_#{@group}_#{slugify(tab[:label])}"
           store_val = slugify(tab[:label])
           active    = i == 0 ? " active" : ""
-          %Q(<a href="javascript:void(0)" class="tabs__btn #{btn_class}#{active}" data-store-key="#{@group}" data-store-val="#{store_val}" onclick="openTabAndSaveStatus(event, '#{btn_class}', '#{cont_class}', '#{block_id}', '#{@group}', '#{store_val}');">#{tab[:label]}</a>)
+          %Q(<li href="javascript:void(0)" class="tabs__item  #{btn_class}#{active}" data-store-key="#{@group}" data-store-val="#{store_val}" onclick="openTabAndSaveStatus(event, '#{btn_class}', '#{cont_class}', '#{block_id}', '#{@group}', '#{store_val}');">#{tab[:label]}</li>)
         end
 
         panels = tabs.each_with_index.map do |tab, i|
           block_id = "block_#{@group}_#{slugify(tab[:label])}"
           active   = i == 0 ? " active" : ""
-          %Q(<div id="#{block_id}" class="tabs__content #{cont_class}#{active}" markdown="0">#{tab[:html]}</div>)
+          %Q(<div id="#{block_id}" class="tabs__container tabs__container--descr #{cont_class}#{active}" markdown="0">#{tab[:html]}</div>)
         end
 
-        %Q(<div markdown="0"><div class="tabs">#{buttons.join}</div>#{panels.join}</div>)
+        %Q(<div markdown="0" class="tabs-block"><ul class="tabs tabs__container tabs__container--title">#{buttons.join}</ul>#{panels.join}</div>)
       end
 
     end
