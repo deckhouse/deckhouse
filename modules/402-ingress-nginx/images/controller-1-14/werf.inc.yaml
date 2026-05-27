@@ -679,7 +679,7 @@ import:
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
-  to: /chroot/bin/bash
+  to: /bin/bash
   before: install
 - from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
@@ -856,6 +856,7 @@ shell:
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R deckhouse:deckhouse /chroot/etc
   - chown root:root /chroot/etc/passwd /chroot/etc/group
+  - /usr/bin/cp -af /bin/bash /chroot/bin/bash
   - ln -sf /bin/bash /chroot/bin/sh
 
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
@@ -1005,8 +1006,6 @@ git:
 shell:
   install:
   - /usr/bin/cp -af /chroot/. /validation-chroot/
-  - /usr/bin/cp -af /chroot/bin/bash /validation-chroot/bin/bash
-  - /usr/bin/cp -af /chroot/bin/sh /validation-chroot/bin/sh
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare

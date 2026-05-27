@@ -680,7 +680,7 @@ import:
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
-  to: /chroot/bin/bash
+  to: /bin/bash
   before: install
 - from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
@@ -857,6 +857,7 @@ shell:
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R deckhouse:deckhouse /chroot/etc
   - chown root:root /chroot/etc/passwd /chroot/etc/group
+  - /usr/bin/cp -af /bin/bash /chroot/bin/bash
   - ln -sf /bin/bash /chroot/bin/sh
 
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
