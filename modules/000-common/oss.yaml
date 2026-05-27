@@ -1,5 +1,4 @@
 # NOTE this file is not linted
-
 - name: Alpine Linux
   description: A Linux distribution built around musl libc and BusyBox.
   link: https://alpinelinux.org/
