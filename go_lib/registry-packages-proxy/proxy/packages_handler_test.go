@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"errors"
 	"io"
 	"net/http"
@@ -46,6 +47,10 @@ const (
 	testImagePath             = "packages/my-package"
 	testIconPath    = "docs/icon.svg"
 	testIconContent = "<svg>icon</svg>"
+)
+
+var testPackageRepositoryDockerCfg = base64.StdEncoding.EncodeToString(
+	[]byte(`{"auths":{"registry.test":{"auth":"dXNlcjpwYXNz"}}}`),
 )
 
 func packageBodyWithIcon(t *testing.T) []byte {
@@ -129,7 +134,7 @@ func newPackagesTestProxy(
 				Registry: v1alpha1.PackageRepositorySpecRegistry{
 					Repo:      "registry.test/deckhouse",
 					Scheme:    "https",
-					DockerCFG: "{}",
+					DockerCFG: testPackageRepositoryDockerCfg,
 				},
 			},
 		})
