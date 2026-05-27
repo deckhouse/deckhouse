@@ -22,7 +22,7 @@ Configuring an egress gateway requires two custom resources:
        - The `cilium-agent` on the node is in the `Ready` state.
      - When using EgressGateway in `VirtualIP` mode, an agent is launched on the active node which emulates a "virtual" IP address using the ARP protocol. The status of this agent's pod is also taken into account when determining the eligibility of a node.
      - Different EgressGateways can use the same nodes for operation. The active node is selected independently for each EgressGateway, which allows for load balancing between them.
-2. EgressGatewayPolicy — describes the policy for routing network requests from pods in the cluster to a specific egress gateway defined using EgressGateway.
+1. EgressGatewayPolicy — describes the policy for routing network requests from pods in the cluster to a specific egress gateway defined using EgressGateway.
 
 ### Node maintenance
 
@@ -50,7 +50,10 @@ To perform maintenance on a node that is currently the active egress gateway, fo
     d8 k label node <node-name> <egress-label>=<value>
    ```
 
-> Note: Reapplying the label may cause the node to become active again (if it is first in alphabetical order among candidates).
+{% alert level="info" %}
+Reapplying the label may cause the node to become active again (if it is first in alphabetical order among candidates).
+{% endalert %}
+
 To avoid immediate failback, temporarily reduce the number of EgressGateway replicas or adjust priorities using additional labels.
 
 ### Comparison with CiliumEgressGatewayPolicy
