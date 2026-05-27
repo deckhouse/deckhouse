@@ -32,6 +32,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -358,6 +360,9 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 			}
 
 			log.ErrorLn(msg)
+			if input.IsTerminal() && !opts.Global.ShowProgress {
+				progressbar.ErrorF("%s\n", msg)
+			}
 			errorCode = 1
 		}
 		kptelemetry.EndCommand(err, errorCode)
