@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// nolint:gci
 package controller
 
 import (
@@ -24,8 +23,6 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
-	dvpapi "dvp-common/api"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -38,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
+	dvpapi "dvp-common/api"
 )
 
 // DeckhouseClusterReconciler reconciles a DeckhouseCluster object
@@ -57,7 +55,7 @@ type DeckhouseClusterReconciler struct {
 // move the current state of the cluster closer to the desired state.
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.0/pkg/reconcile
-func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling DeckhouseCluster")
 
@@ -83,38 +81,39 @@ func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	defer func() {
-		if err := patchHelper.Patch(ctx, dvpCluster); err != nil {
-			logger.Error(err, "failed to patch DeckhouseCluster")
-			result = ctrl.Result{}
-			reterr = err
-		}
-	}()
 
 	// Handle deleted cluster
 	if !dvpCluster.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, logger, dvpCluster)
+		if err := r.reconcileDelete(ctx, logger, dvpCluster); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		if controllerutil.AddFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer) {
+			return ctrl.Result{}, patchHelper.Patch(ctx, dvpCluster)
+		}
+
+		if err := r.reconcile(dvpCluster); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
-	if controllerutil.AddFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer) {
-		return ctrl.Result{}, nil
+	if err := patchHelper.Patch(ctx, dvpCluster); err != nil {
+		logger.Error(err, "failed to patch DeckhouseCluster")
+		return ctrl.Result{}, err
 	}
 
-	return r.reconcile(ctx, dvpCluster)
+	return ctrl.Result{}, nil
 }
 
-func (r *DeckhouseClusterReconciler) reconcile(
-	_ context.Context,
-	dvpCluster *infrastructurev1a1.DeckhouseCluster,
-) (ctrl.Result, error) {
+func (r *DeckhouseClusterReconciler) reconcile(dvpCluster *infrastructurev1a1.DeckhouseCluster) error {
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to parse api server host: %w", err)
+		return fmt.Errorf("failed to parse api server host: %w", err)
 	}
 
 	port, err := strconv.ParseInt(controlPlaneEndpointURL.Port(), 10, 32)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
+		return fmt.Errorf("failed to parse api server port: %w", err)
 	}
 
 	infraReady := true
@@ -124,24 +123,24 @@ func (r *DeckhouseClusterReconciler) reconcile(
 		Port: int32(port),
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *DeckhouseClusterReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
 	dvpCluster *infrastructurev1a1.DeckhouseCluster,
-) (ctrl.Result, error) {
+) error {
 	if !controllerutil.ContainsFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer) {
-		return ctrl.Result{}, nil
+		return nil
 	}
 
 	if err := r.cleanup(ctx, logger, dvpCluster); err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 
 	controllerutil.RemoveFinalizer(dvpCluster, infrastructurev1a1.ClusterFinalizer)
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *DeckhouseClusterReconciler) cleanup(
