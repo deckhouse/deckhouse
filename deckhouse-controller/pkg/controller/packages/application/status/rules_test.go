@@ -20,14 +20,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmapper"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
-type mappingOption func(state *condmapper.State)
+type mappingOption func(state *condmap.State)
 
 func withInternalCondition(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return func(state *condmapper.State) {
+	return func(state *condmap.State) {
 		state.Internal[cond] = metav1.Condition{
 			Type:   cond,
 			Status: status,
@@ -37,7 +37,7 @@ func withInternalCondition(cond string, status metav1.ConditionStatus, reason st
 }
 
 func withExternalCondition(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return func(state *condmapper.State) {
+	return func(state *condmap.State) {
 		state.External[cond] = metav1.Condition{
 			Type:   cond,
 			Status: status,
@@ -47,13 +47,13 @@ func withExternalCondition(cond string, status metav1.ConditionStatus, reason st
 }
 
 func withVersionChanged() mappingOption {
-	return func(state *condmapper.State) {
-		state.VersionChanged = true
+	return func(state *condmap.State) {
+		state.Updating = true
 	}
 }
 
 func testMapping(opts ...mappingOption) map[string]metav1.Condition {
-	state := &condmapper.State{
+	state := &condmap.State{
 		Internal: make(map[string]metav1.Condition),
 		External: make(map[string]metav1.Condition),
 	}
@@ -111,31 +111,24 @@ func runTestCases(t *testing.T, cases []testCase) {
 func TestInstalledRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when ReadyInCluster and no version change",
+			name: "true when Scaled and no version change",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionTrue, reason: "Ready"},
+				// True conditions carry no reason — emit() drops it.
+				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
 			},
 		},
 		{
-			name: "not true when version changed",
+			name: "true on first install regardless of Updating flag",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 				withVersionChanged(),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: nil,
-			},
-		},
-		{
-			name: "false when Downloaded is false",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
+				// mapInstalled does not gate on Updating; stickiness happens via external state.
+				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
 			},
 		},
 		{
@@ -144,25 +137,25 @@ func TestInstalledRule(t *testing.T) {
 				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionFalse, "MountFailed"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "MountFailed"},
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
 			},
 		},
 		{
-			name: "false when ReadyInRuntime is false",
+			name: "false when Loaded is false",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeError"),
+				withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionFalse, "RuntimeError"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RuntimeError"},
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "LoadFromFilesystemFailed"},
 			},
 		},
 		{
-			name: "false when ReadyInCluster is false",
+			name: "absent when only Scaled is False (Scaled is not in install pipeline)",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterNotReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "ClusterNotReady"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "ClusterNotReady"},
+				ConditionInstalled: nil,
 			},
 		},
 		{
@@ -171,14 +164,14 @@ func TestInstalledRule(t *testing.T) {
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "RequirementsNotMet"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsNotMet"},
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
 			},
 		},
 		{
 			name: "sticky - not in result when already true externally",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "PreviouslyInstalled"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterNotReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "ClusterNotReady"),
 			},
 			expected: map[string]*expectedCondition{
 				// Sticky rule skips evaluation - condition preserved in external state, not in result
@@ -193,20 +186,20 @@ func TestInstalledRule(t *testing.T) {
 func TestUpdateInstalledRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when ReadyInCluster and version changed",
+			name: "true when Scaled and version changed",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 				withVersionChanged(),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: "Ready"},
+				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: ConditionUpdateInstalled},
 			},
 		},
 		{
 			name: "absent when not installed",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 				withVersionChanged(),
 			},
 			expected: map[string]*expectedCondition{
@@ -219,43 +212,21 @@ func TestUpdateInstalledRule(t *testing.T) {
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				// In a real rollback scenario, UpdateInstalled was set to False during the failed update
 				withExternalCondition(ConditionUpdateInstalled, metav1.ConditionFalse, "UpdateFailed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: "Ready"},
+				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: ConditionUpdateInstalled},
 			},
 		},
 		{
 			name: "absent after fresh install with no updates",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 				// No UpdateInstalled in external state = no update ever happened
 			},
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: nil, // Should not be present for fresh installs
-			},
-		},
-		{
-			name: "false when core condition fails during update",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-				withVersionChanged(),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
-			},
-		},
-		{
-			name: "absent when core condition fails without version change",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-			},
-			expected: map[string]*expectedCondition{
-				// FalseIf only triggers when version changed, so no update to this condition
-				ConditionUpdateInstalled: nil,
 			},
 		},
 	}
@@ -266,51 +237,42 @@ func TestUpdateInstalledRule(t *testing.T) {
 func TestReadyRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when ReadyInCluster",
+			name: "true when Scaled",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionTrue, reason: "Ready"},
+				ConditionReady: {status: metav1.ConditionTrue, reason: ConditionReady},
 			},
 		},
 		{
-			name: "false when core condition fails",
+			name: "false when not installed and Pending",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
+				ConditionReady: {status: metav1.ConditionFalse, reason: "Pending"},
 			},
 		},
 		{
-			name: "false when not installed and WaitConverge",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionWaitConverge), metav1.ConditionTrue, "Waiting"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionFalse, reason: "Waiting"},
-			},
-		},
-		{
-			name: "false when not installed and RequirementsMet",
+			name: "requirements passed does not explain readiness",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "RequirementsMet"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionFalse, reason: "RequirementsMet"},
+				ConditionReady: nil,
 			},
 		},
 		{
-			name: "true when installed even with WaitConverge",
+			name: "true when installed even with Pending",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
-				withInternalCondition(string(intstatus.ConditionWaitConverge), metav1.ConditionTrue, "Waiting"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionTrue, reason: "Ready"},
+				ConditionReady: {status: metav1.ConditionTrue, reason: ConditionReady},
 			},
 		},
 	}
@@ -318,57 +280,42 @@ func TestReadyRule(t *testing.T) {
 	runTestCases(t, cases)
 }
 
-func TestPartiallyDegradedRule(t *testing.T) {
+func TestScaledRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when ReadyInRuntime is false",
+			name: "true when Scaled",
 			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "RuntimeDegraded"},
+				ConditionScaled: {status: metav1.ConditionTrue, reason: ConditionScaled},
 			},
 		},
 		{
-			name: "true when ReadyInCluster is false",
+			name: "false when Scaled is false",
 			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterDegraded"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Degraded"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "ClusterDegraded"},
+				ConditionScaled: {status: metav1.ConditionFalse, reason: "Degraded"},
 			},
 		},
 		{
-			name: "true when HooksProcessed is false",
+			name: "false when Scaled is false with Reconciling reason",
 			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HooksFailed"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Reconciling"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "HooksFailed"},
+				ConditionScaled: {status: metav1.ConditionFalse, reason: "Reconciling"},
 			},
 		},
 		{
-			name: "false when all managed conditions true",
+			name: "unknown when internal Scaled is absent",
 			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
-				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "RequirementsNotMet"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "RuntimeReady"},
-			},
-		},
-		{
-			name: "absent when not installed",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: nil,
+				ConditionScaled: {status: metav1.ConditionUnknown, reason: ""},
 			},
 		},
 	}
@@ -379,63 +326,68 @@ func TestPartiallyDegradedRule(t *testing.T) {
 func TestManagedRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when all managed conditions true",
+			name: "true when Loaded, Scaled, HooksProcessed and ManifestsApplied are true",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
+				withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "ClusterReady"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsOK"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionTrue, reason: "RuntimeReady"},
-			},
-		},
-		{
-			name: "false when ReadyInRuntime is false",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeNotReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
-				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionFalse, reason: "RuntimeNotReady"},
-			},
-		},
-		{
-			name: "false when ReadyInCluster is false",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterNotReady"),
-				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionFalse, reason: "ClusterNotReady"},
+				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
 			},
 		},
 		{
 			name: "false when HooksProcessed is false",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
+				withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "ClusterReady"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HooksFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsOK"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionFalse, reason: "HooksFailed"},
+				ConditionManaged: {status: metav1.ConditionFalse, reason: "HookFailed"},
 			},
 		},
 		{
-			name: "false when WaitConverge is true",
+			name: "false when ManifestsApplied is false",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
+				withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "ClusterReady"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-				withInternalCondition(string(intstatus.ConditionWaitConverge), metav1.ConditionTrue, "Waiting"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, "boom"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionFalse, reason: "Waiting"},
+				ConditionManaged: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+			},
+		},
+		{
+			name: "false when ReadyOnFilesystem is false during reconcile",
+			opts: []mappingOption{
+				// reconcile phase: Installed=True externally, not updating.
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionFalse, "MountFailed"),
+				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsOK"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
+			},
+		},
+		{
+			name: "true when Pending is true (Pending no longer gates Managed)",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "ClusterReady"),
+				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsOK"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
 			},
 		},
 	}
@@ -448,45 +400,115 @@ func TestConfigurationAppliedRule(t *testing.T) {
 		{
 			name: "true when all config conditions true",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionSettingsValid), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-				withInternalCondition(string(intstatus.ConditionHelmApplied), metav1.ConditionTrue, "HelmOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionConfigurationApplied: {status: metav1.ConditionTrue, reason: "SettingsOK"},
+				ConditionConfigurationApplied: {status: metav1.ConditionTrue, reason: ConditionConfigurationApplied},
 			},
 		},
 		{
-			name: "false when SettingsValid is false",
+			name: "false when Configured is false",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionSettingsValid), metav1.ConditionFalse, "InvalidSettings"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionFalse, "InvalidSettings"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-				withInternalCondition(string(intstatus.ConditionHelmApplied), metav1.ConditionTrue, "HelmOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "InvalidSettings"},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "SettingsInvalid"},
 			},
 		},
 		{
 			name: "false when HooksProcessed is false",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionSettingsValid), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HooksFailed"),
-				withInternalCondition(string(intstatus.ConditionHelmApplied), metav1.ConditionTrue, "HelmOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "HooksFailed"},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "HookFailed"},
 			},
 		},
 		{
-			name: "false when HelmApplied is false",
+			name: "false when ManifestsApplied is false",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionSettingsValid), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-				withInternalCondition(string(intstatus.ConditionHelmApplied), metav1.ConditionFalse, "HelmFailed"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, "HelmFailed"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "HelmFailed"},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+			},
+		},
+	}
+
+	runTestCases(t, cases)
+}
+
+// TestDependencyDisabled covers the case where an installed and running
+// application loses a hard dependency (e.g. a module it depends on was
+// disabled). The cause is external, so user-facing signals (Installed, Ready)
+// go False, while ConfigurationApplied and Managed go Unknown — managing is
+// meaningless until the dependency returns. Scaled is excluded: it is owned
+// by the workload health monitor and mirrors the internal condition as-is.
+func TestDependencyDisabled(t *testing.T) {
+	// Realistic runtime state: app was running with all internal conditions
+	// True from the previous successful reconcile, then RequirementsMet flipped
+	// to False because a dependency module was disabled.
+	runningInternals := []mappingOption{
+		withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+		withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
+		withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+		withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "Loaded"),
+		withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "ConfigOK"),
+		withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
+		withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsOK"),
+		withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
+	}
+
+	cases := []testCase{
+		{
+			name: "all public conditions reflect dependency disabled",
+			opts: runningInternals,
+			expected: map[string]*expectedCondition{
+				// Installed overrides stickiness — the user must see the app stopped being installed.
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionReady:     {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				// Scaled mirrors its internal condition (True here) — the health monitor is its sole writer.
+				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
+				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
+				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
+				// UpdateInstalled is silent — the dependency-disabled state is the dominant signal.
+				ConditionUpdateInstalled: nil,
+			},
+		},
+		{
+			name: "UpdateInstalled silent even while updating",
+			opts: append(runningInternals, withVersionChanged()),
+			expected: map[string]*expectedCondition{
+				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
+				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
+				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
+				ConditionUpdateInstalled:      nil,
+			},
+		},
+		{
+			name: "first-install dependency unmet still uses install pipeline (no Unknowns)",
+			opts: []mappingOption{
+				// No external Installed=True — this is a first install, not a running app.
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				ConditionReady:     {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+				// Scaled goes Unknown when its internal condition is absent — health monitor hasn't reported yet.
+				ConditionScaled:               {status: metav1.ConditionUnknown, reason: ""},
+				ConditionConfigurationApplied: nil,
+				ConditionManaged:              nil,
+				ConditionUpdateInstalled:      nil,
 			},
 		},
 	}

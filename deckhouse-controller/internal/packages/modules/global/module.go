@@ -148,7 +148,7 @@ func (m *Module) GetValuesChecksum() string {
 // GetSettingsChecksum returns a checksum of the current config values.
 // Used to detect if settings changed.
 func (m *Module) GetSettingsChecksum() string {
-	return m.values.GetConfigChecksum()
+	return m.values.GetSettingsChecksum()
 }
 
 // GetValues returns values for rendering
@@ -158,15 +158,15 @@ func (m *Module) GetValues() addonutils.Values {
 
 // ValidateSettings validates settings against openAPI
 func (m *Module) ValidateSettings(_ context.Context, settings addonutils.Values) (settingscheck.Result, error) {
-	if err := m.values.ValidateConfigValues(settings); err != nil {
+	if err := m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
 	// apply defaults from config values spec
-	settings = m.values.ApplyDefaultsConfigValues(settings)
+	settings = m.values.ApplySettingsDefaults(settings)
 
 	// no need to call the settings check if nothing changed
-	if m.values.GetConfigChecksum() == settings.Checksum() {
+	if m.values.GetSettingsChecksum() == settings.Checksum() {
 		return settingscheck.Result{Valid: true}, nil
 	}
 
@@ -177,7 +177,7 @@ func (m *Module) ValidateSettings(_ context.Context, settings addonutils.Values)
 
 // ApplySettings apply settings values
 func (m *Module) ApplySettings(settings addonutils.Values) error {
-	return m.values.ApplyConfigValues(settings)
+	return m.values.ApplySettings(settings)
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules

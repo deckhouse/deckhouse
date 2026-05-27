@@ -15,48 +15,83 @@
 package helpers
 
 import (
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/spf13/cobra"
 
 	changeregistry "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/change_registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
-	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
-	helpersCommand := sh_app.CommandWithDefaultUsageTemplate(kpApp, "helper", "Deckhouse helpers.")
+func DefineHelperCommands(rootCmd *cobra.Command, logger *log.Logger) {
+	helpersCmd := &cobra.Command{
+		Use:   "helper",
+		Short: "Deckhouse helpers.",
+	}
+	rootCmd.AddCommand(helpersCmd)
 
 	{
-		genJWTCommand := helpersCommand.Command("gen-jwt", "Generate JWT token.")
-		privateKeyPath := genJWTCommand.Flag("private-key-path", "Path to private RSA key in PEM format.").Required().ExistingFile()
-		claims := genJWTCommand.Flag("claim", "Claims for token (ex --claim iss=deckhouse --claim sub=akakiy).").Required().StringMap()
-		ttl := genJWTCommand.Flag("ttl", "TTL duration (ex. 10s).").Required().Duration()
-		genJWTCommand.Action(func(_ *kingpin.ParseContext) error {
-			return jwt.GenJWT(*privateKeyPath, *claims, *ttl)
-		})
+		var (
+			privateKeyPath string
+			claims         map[string]string
+			ttl            time.Duration
+		)
+
+		genJWTCmd := &cobra.Command{
+			Use:   "gen-jwt",
+			Short: "Generate JWT token.",
+			RunE: func(_ *cobra.Command, _ []string) error {
+				if _, err := os.Stat(privateKeyPath); err != nil {
+					return fmt.Errorf("private-key-path: %w", err)
+				}
+				return jwt.GenJWT(privateKeyPath, claims, ttl)
+			},
+		}
+		genJWTCmd.Flags().StringVar(&privateKeyPath, "private-key-path", "", "Path to private RSA key in PEM format.")
+		genJWTCmd.Flags().StringToStringVar(&claims, "claim", nil, "Claims for token (ex --claim iss=deckhouse --claim sub=akakiy).")
+		genJWTCmd.Flags().DurationVar(&ttl, "ttl", 0, "TTL duration (ex. 10s).")
+		_ = genJWTCmd.MarkFlagRequired("private-key-path")
+		_ = genJWTCmd.MarkFlagRequired("claim")
+		_ = genJWTCmd.MarkFlagRequired("ttl")
+		helpersCmd.AddCommand(genJWTCmd)
 	}
 
 	{
-		changeRegistryCommand := helpersCommand.Command("change-registry", "Change registry for deckhouse images.")
-		newRegistry := changeRegistryCommand.Arg("new-registry", "Registry that will be used for deckhouse images (example: registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need http - provide '--scheme' flag with http value").Required().String()
+		var (
+			user        string
+			password    string
+			caFile      string
+			scheme      string
+			dryRun      bool
+			newImageTag string
+		)
 
-		user := changeRegistryCommand.Flag("user", "User with pull access to registry.").String()
-		password := changeRegistryCommand.Flag("password", "Password/token for registry user.").String()
-		caFile := changeRegistryCommand.Flag("ca-file", "Path to registry CA.").ExistingFile()
-
-		scheme := changeRegistryCommand.Flag("scheme", `Used scheme while connecting to registry, "http" or "https".`).String()
-		dryRun := changeRegistryCommand.Flag("dry-run", "Don't change deckhouse resources, only print them.").Default("false").Bool()
-
-		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()
-		changeRegistryCommand.Action(func(_ *kingpin.ParseContext) error {
-			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *scheme, *dryRun, logger)
-		})
+		changeRegistryCmd := &cobra.Command{
+			Use:   "change-registry NEW_REGISTRY",
+			Short: "Change registry for deckhouse images.",
+			Long: "Change registry for deckhouse images.\n\n" +
+				"NEW_REGISTRY: Registry that will be used for deckhouse images " +
+				"(example: registry.deckhouse.io/deckhouse/ce). By default, https will be used; " +
+				"pass --scheme=http to switch to http.",
+			Args: cobra.ExactArgs(1),
+			RunE: func(_ *cobra.Command, args []string) error {
+				if caFile != "" {
+					if _, err := os.Stat(caFile); err != nil {
+						return fmt.Errorf("ca-file: %w", err)
+					}
+				}
+				return changeregistry.ChangeRegistry(args[0], user, password, caFile, newImageTag, scheme, dryRun, logger)
+			},
+		}
+		changeRegistryCmd.Flags().StringVar(&user, "user", "", "User with pull access to registry.")
+		changeRegistryCmd.Flags().StringVar(&password, "password", "", "Password/token for registry user.")
+		changeRegistryCmd.Flags().StringVar(&caFile, "ca-file", "", "Path to registry CA.")
+		changeRegistryCmd.Flags().StringVar(&scheme, "scheme", "", `Used scheme while connecting to registry, "http" or "https".`)
+		changeRegistryCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Don't change deckhouse resources, only print them.")
+		changeRegistryCmd.Flags().StringVar(&newImageTag, "new-deckhouse-tag", "", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).")
+		helpersCmd.AddCommand(changeRegistryCmd)
 	}
-
-	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	cmd := kpApp.Command("cluster-configuration", "Parse configuration and print it.")
-	dhctlapp.DefineCommandParseClusterConfiguration(cmd)
-	cmd = kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it.")
-	dhctlapp.DefineCommandParseCloudDiscoveryData(cmd)
 }

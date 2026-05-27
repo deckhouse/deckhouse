@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -365,12 +366,22 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				var apv v1alpha1.ApplicationPackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &apv)
 				require.NoError(t, err)
+				savedStatus := apv.Status
 				require.NoError(t, kubeClient.Create(context.TODO(), &apv))
+				if !reflect.DeepEqual(savedStatus, v1alpha1.ApplicationPackageVersionStatus{}) {
+					apv.Status = savedStatus
+					require.NoError(t, kubeClient.Status().Update(context.TODO(), &apv))
+				}
 			case "PackageRepository":
 				var repo v1alpha1.PackageRepository
 				err := yaml.Unmarshal([]byte(manifest), &repo)
 				require.NoError(t, err)
+				savedStatus := repo.Status
 				require.NoError(t, kubeClient.Create(context.TODO(), &repo))
+				if !reflect.DeepEqual(savedStatus, v1alpha1.PackageRepositoryStatus{}) {
+					repo.Status = savedStatus
+					require.NoError(t, kubeClient.Status().Update(context.TODO(), &repo))
+				}
 			case "ModulePackageVersion":
 				var mpv v1alpha1.ModulePackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &mpv)
@@ -605,6 +616,33 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createFakePSM(newInternalClient(reg))
 
 		suite.setupController("incremental-module-scan.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("incremental scan with no new versions keeps package in repository status", func() {
+		// Regression: pre-existing ApplicationPackageVersion v1.0.0 already processed
+		// (Status.PackageMetadata set). Registry still has only v1.0.0, so the incremental
+		// scan finds no new tags and goes through the empty-foundTags branch in
+		// ProcessPackageVersions. Without inferPackageTypeFromExisting, the package would
+		// be appended to op.Status.Packages.Processed with Type="" and dropped by
+		// UpdateRepositoryStatus, silently truncating PackageRepository.status.packages.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", applicationVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("incremental-no-new-versions.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

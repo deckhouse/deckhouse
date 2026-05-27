@@ -47,9 +47,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -110,6 +112,8 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).
 		Build()
 
+	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
+
 	rec := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               suite.client,
@@ -120,8 +124,17 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 			Name:   "fe",
 			Bundle: "Default",
 		},
-		metricStorage: metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
-
+		metricStorage: metricStorage,
+		deckhouseSettings: helpers.NewDeckhouseSettingsContainer(&helpers.DeckhouseSettings{
+			Update: struct {
+				Mode                   string                            `json:"mode"`
+				DisruptionApprovalMode string                            `json:"disruptionApprovalMode"`
+				Windows                update.Windows                    `json:"windows"`
+				NotificationConfig     releaseUpdater.NotificationConfig `json:"notification"`
+			}{},
+			ReleaseChannel:           "",
+			AllowExperimentalModules: true,
+		}, metricStorage),
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 				Mode: "Auto",
