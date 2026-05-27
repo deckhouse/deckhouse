@@ -1363,13 +1363,13 @@ There may be a situation when the cluster's master nodes are powered off for an 
 **When nodes come back online after extended downtime**: Once the master nodes start and the Kubernetes API becomes available, `control-plane-manager` detects expired or soon-to-expire certificates and creates renewal operations automatically. To confirm that renewal has completed, check that the cert-renewal `ControlPlaneOperation` objects show `Phase=OperationCompleted`:
 
 ```shell
-kubectl get cpo -o wide
+d8 k get cpo -o wide
 ```
 
 The `ControlPlaneNode` object's `CERTIFICATES` column also shows `True` once all certificates are healthy:
 
 ```shell
-kubectl get cpn
+d8 k get cpn
 ```
 
 ## How do I protect sensitive fields in custom resources?
