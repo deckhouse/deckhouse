@@ -666,6 +666,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 final: false
 mount:
 - from: build_dir
@@ -677,11 +678,8 @@ import:
   before: install
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
-  add: /usr
-  to: /chroot
-  includePaths:
-  - bin/bash
-  - bin/sh
+  add: /usr/bin/bash
+  to: /bin/bash
   before: install
 - from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
@@ -858,6 +856,8 @@ shell:
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R deckhouse:deckhouse /chroot/etc
   - chown root:root /chroot/etc/passwd /chroot/etc/group
+  - cp -af /bin/bash /chroot/bin/bash
+  - ln -sf /bin/bash /chroot/bin/sh
 
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
 
@@ -902,6 +902,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 mount:
 - from: build_dir
   to: /apps
@@ -1004,7 +1005,7 @@ git:
 {{- include "image mount points" $ }}
 shell:
   install:
-  - /usr/bin/cp -alf /chroot/. /validation-chroot/
+  - cp -af /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
