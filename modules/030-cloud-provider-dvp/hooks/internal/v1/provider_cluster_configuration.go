@@ -60,10 +60,10 @@ type DvpNodesV2 struct {
 }
 
 type DvpNodesParameters struct {
-	Layout       *string            `json:"layout,omitempty" yaml:"layout,omitempty"`
-	SSHPublicKey *string            `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
-	Region       *string            `json:"region,omitempty" yaml:"region,omitempty"`
-	Zones        *[]string          `json:"zones,omitempty" yaml:"zones,omitempty"`
+	Layout       *string             `json:"layout,omitempty" yaml:"layout,omitempty"`
+	SSHPublicKey *string             `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	Region       *string             `json:"region,omitempty" yaml:"region,omitempty"`
+	Zones        *[]string           `json:"zones,omitempty" yaml:"zones,omitempty"`
 	IPAddresses  map[string][]string `json:"ipAddresses,omitempty"`
 }
 
