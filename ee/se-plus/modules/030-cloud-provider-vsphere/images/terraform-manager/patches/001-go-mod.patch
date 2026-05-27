@@ -38,7 +38,7 @@ index 45bcde4b..ef989ae2 100644
  	github.com/apparentlymart/go-textseg/v12 v12.0.0 // indirect
  	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 -	github.com/aws/aws-sdk-go v1.44.122 // indirect
-+	github.com/aws/aws-sdk-go-v2 v1.41.4 // indirect
++	github.com/aws/aws-sdk-go-v2 v1.41.5 // indirect
 +	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
 +	github.com/aws/aws-sdk-go-v2/config v1.32.12 // indirect
 +	github.com/aws/aws-sdk-go-v2/credentials v1.19.12 // indirect
@@ -405,8 +405,8 @@ index 2faee4d7..c26d1159 100644
  github.com/aws/aws-sdk-go v1.25.3/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 -github.com/aws/aws-sdk-go v1.44.122 h1:p6mw01WBaNpbdP2xrisz5tIkcNwzj/HysobNoaAHjgo=
 -github.com/aws/aws-sdk-go v1.44.122/go.mod h1:y4AeaBuwd2Lk+GepC1E9v0qOiTws0MIWAX4oIKwKHZo=
-+github.com/aws/aws-sdk-go-v2 v1.41.4 h1:10f50G7WyU02T56ox1wWXq+zTX9I1zxG46HYuG1hH/k=
-+github.com/aws/aws-sdk-go-v2 v1.41.4/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
++github.com/aws/aws-sdk-go-v2 v1.41.5 h1:dj5kopbwUsVUVFgO4Fi5BIT3t4WyqIDjGKCangnV/yY=
++github.com/aws/aws-sdk-go-v2 v1.41.5/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
 +github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 h1:eBMB84YGghSocM7PsjmmPffTa+1FBUeNvGvFou6V/4o=
 +github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8/go.mod h1:lyw7GFp3qENLh7kwzf7iMzAxDn+NzjXEAGjKS2UOKqI=
 +github.com/aws/aws-sdk-go-v2/config v1.32.12 h1:O3csC7HUGn2895eNrLytOJQdoL2xyJy0iYXhoZ1OmP0=
