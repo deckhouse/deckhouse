@@ -199,6 +199,8 @@ spec:
 
 ### Включение трейсов на одном узле
 
+Для включения трейсов на определенном узле укажите его имя в параметре `spec.nodeSelector.matchLabels`:
+
 ```yaml
 apiVersion: cilium.io/v2
 kind: CiliumNodeConfig
@@ -236,8 +238,8 @@ spec:
 
 ### Применение изменений
 
-Cilium агент при старте читает итоговую конфигурацию, поэтому после
-создания или изменения `CiliumNodeConfig` нужно перезапустить соответствующие
+Aгент Cilium при старте читает итоговую конфигурацию, поэтому после
+создания или изменения CiliumNodeConfig нужно перезапустить соответствующие
 поды `cilium-agent` (Deckhouse не делает это автоматически):
 
 - на одном узле:
@@ -247,11 +249,11 @@ Cilium агент при старте читает итоговую конфиг
   -l app=agent --field-selector spec.nodeName=<node-name>
   ```
 
-- на кластере (rolling restart):
+- на всех узлах кластера (rolling restart):
 
   ```bash
   d8 k -n d8-cni-cilium rollout restart daemonset/agent
   ```
 
-Чтобы откатить изменения, удалите ресурс `CiliumNodeConfig` и перезапустите те же
+Чтобы откатить изменения (выключить трейсы), удалите ресурс CiliumNodeConfig и перезапустите те же
 поды.

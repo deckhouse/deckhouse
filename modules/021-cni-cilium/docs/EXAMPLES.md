@@ -200,6 +200,8 @@ nodes in the cluster — depending on `spec.nodeSelector`.
 
 ### Enable trace events on a single node
 
+To enable trace on a specific node, specify its name in the `spec.nodeSelector.matchLabels` parameter:
+
 ```yaml
 apiVersion: cilium.io/v2
 kind: CiliumNodeConfig
@@ -238,7 +240,7 @@ spec:
 ### Applying the change
 
 Cilium agent at startup reads the merged configuration, so the affected
-`cilium-agent` pods must be restarted after the `CiliumNodeConfig` is created
+`cilium-agent` pods must be restarted after the CiliumNodeConfig is created
 or modified (Deckhouse does not restart agents automatically on such changes):
 
 - for single node:
@@ -254,4 +256,4 @@ or modified (Deckhouse does not restart agents automatically on such changes):
   d8 k -n d8-cni-cilium rollout restart daemonset/agent
   ```
 
-To revert, delete the `CiliumNodeConfig` resource and restart the same pods.
+To revert (disable traces), delete the CiliumNodeConfig resource and restart the same pods.
