@@ -40,6 +40,9 @@ const (
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
 	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
+
+	DeckhouseManagedByLabelKey   = "deckhouse.io/managed-by"
+	DeckhouseManagedByLabelValue = "deckhouse"
 )
 
 const (
@@ -390,13 +393,20 @@ func (c *ComputeService) getVMBDA(ctx context.Context, diskName string, vmHostna
 	return &vmbdas.Items[0], nil
 }
 
+func isDeckhouseManagedSecret(secret *corev1.Secret) bool {
+	if secret.Labels == nil {
+		return false
+	}
+	return secret.Labels[DeckhouseManagedByLabelKey] == DeckhouseManagedByLabelValue
+}
+
 func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte, vmName string, vmUID types.UID) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.namespace,
 			Labels: map[string]string{
-				"deckhouse.io/managed-by":       "deckhouse",
+				DeckhouseManagedByLabelKey:      DeckhouseManagedByLabelValue,
 				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
 				"dvp.deckhouse.io/hostname":     vmHostname,
 			},
@@ -413,21 +423,32 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 		StringData: map[string]string{"userData": string(userData)},
 	}
 
-	// Try to create, if already exists then update
-	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
-		if k8serrors.IsAlreadyExists(err) {
-			// Secret already exists, update it instead
-			existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
-			if getErr != nil {
-				return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
-			}
-			existing.StringData = map[string]string{"userData": string(userData)}
-			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
-				return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
-			}
-			return nil
-		}
+	_, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{})
+	if err == nil {
+		return nil
+	}
+	if !k8serrors.IsAlreadyExists(err) {
 		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
+	}
+
+	// Secret already exists — load it and decide whether we may update userData.
+	existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+	if getErr != nil {
+		return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
+	}
+
+	// Not managed by Deckhouse (legacy or user-created): keep as-is and continue reconcile.
+	if !isDeckhouseManagedSecret(existing) {
+		klog.Warningf(
+			"cloud-init secret %s/%s already exists without %s=%s; leaving unchanged and continuing with existing userData",
+			c.namespace, name, DeckhouseManagedByLabelKey, DeckhouseManagedByLabelValue,
+		)
+		return nil
+	}
+
+	existing.StringData = map[string]string{"userData": string(userData)}
+	if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+		return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
 	}
 	return nil
 }
