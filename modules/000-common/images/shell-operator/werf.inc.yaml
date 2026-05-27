@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "fix/webhook-init-retry"}}
+{{- $shellOperatorVersion := "fix/webhook-init-retry2"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
