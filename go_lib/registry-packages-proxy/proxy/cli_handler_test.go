@@ -223,7 +223,7 @@ func newTestProxy(t *testing.T, registryClient registry.Client, getter registry.
 	if c != nil {
 		opts = append(opts, WithCache(c))
 	}
-	p := NewProxy(nil, nil, getter, nopCLILogger{}, registryClient, opts...)
+	p := NewProxy(nil, nil, getter, nopCLILogger{}, nil, registryClient, opts...)
 	// Serve() normally initializes p.config; do the equivalent for CLIHandler tests.
 	p.config = Config{}
 	return p

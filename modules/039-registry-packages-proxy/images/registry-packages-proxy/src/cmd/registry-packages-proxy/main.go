@@ -23,6 +23,9 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
@@ -56,7 +59,7 @@ func main() {
 	defer stop()
 
 	// init kube clients
-	client, err := app.InitClient(config)
+	clientset, err := app.InitClient(config)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -66,8 +69,18 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	k8sClient, err := ctrlclient.New(kubeConfig, ctrlclient.Options{})
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
 	// watch resources
-	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
+	watcher := credentials.NewWatcher(clientset, dynamicClient, time.Hour, logger)
 	go watcher.Watch(ctx)
 
 	// init cache
@@ -87,7 +100,7 @@ func main() {
 	}
 	// /v1/images/* CLI download routes are wired up by Proxy.Serve via ServeCLI and reach the
 	// outside world through the kube-rbac-proxy sidecar on :4219, which authorizes them.
-	rp := proxy.NewProxy(server, listener, watcher, logger, registryClient, opts...)
+	rp := proxy.NewProxy(server, listener, watcher, logger, k8sClient, registryClient, opts...)
 	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
 		Listener:           bootstrapListener,
 		Logger:             logger,

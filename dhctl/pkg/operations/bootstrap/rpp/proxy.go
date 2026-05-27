@@ -244,7 +244,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		proxyLogger = newLogger(p.loggerProvider())
 	}
 
-	packagesProxy := proxy.NewProxy(srv, listener, p.configGetter, proxyLogger, registryCl)
+	packagesProxy := proxy.NewProxy(srv, listener, p.configGetter, proxyLogger, nil, registryCl)
 	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
 		Listener:           bootstrapListener,
 		Logger:             proxyLogger,

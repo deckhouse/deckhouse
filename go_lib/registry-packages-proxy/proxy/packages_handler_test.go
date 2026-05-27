@@ -21,11 +21,16 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"net/http/httptest"
+	"strconv"
 	"sync/atomic"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/stretchr/testify/assert"
@@ -36,8 +41,9 @@ import (
 )
 
 const (
-	testPackageName = "my-package"
-	testImagePath   = "packages/my-package"
+	testPackageRepositoryName = "packages-repo"
+	testPackageName           = "my-package"
+	testImagePath             = "packages/my-package"
 	testIconPath    = "docs/icon.svg"
 	testIconContent = "<svg>icon</svg>"
 )
@@ -83,10 +89,61 @@ func newPackagesTestServer(
 ) *httptest.Server {
 	t.Helper()
 
-	p := newTestProxy(t, fake, getter, c)
+	p := newPackagesTestProxy(t, fake, getter, c, true)
 	mux := http.NewServeMux()
 	mux.HandleFunc(packagesPathPrefix, p.PackagesHandler())
 	return httptest.NewServer(mux)
+}
+
+func newPackagesTestServerWithoutRepository(
+	t *testing.T,
+	fake *fakeCLIRegistryClient,
+	getter registry.ClientConfigGetter,
+	c pkgCache.Cache,
+) *httptest.Server {
+	t.Helper()
+
+	p := newPackagesTestProxy(t, fake, getter, c, false)
+	mux := http.NewServeMux()
+	mux.HandleFunc(packagesPathPrefix, p.PackagesHandler())
+	return httptest.NewServer(mux)
+}
+
+func newPackagesTestProxy(
+	t *testing.T,
+	registryClient registry.Client,
+	getter registry.ClientConfigGetter,
+	c pkgCache.Cache,
+	withDefaultRepository bool,
+) *Proxy {
+	t.Helper()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1alpha1.AddToScheme(scheme))
+
+	fakeClientBuilder := fake.NewClientBuilder().WithScheme(scheme)
+	if withDefaultRepository {
+		fakeClientBuilder = fakeClientBuilder.WithObjects(&v1alpha1.PackageRepository{
+			ObjectMeta: metav1.ObjectMeta{Name: testPackageRepositoryName},
+			Spec: v1alpha1.PackageRepositorySpec{
+				Registry: v1alpha1.PackageRepositorySpecRegistry{
+					Repo:      "registry.test/deckhouse",
+					Scheme:    "https",
+					DockerCFG: "{}",
+				},
+			},
+		})
+	}
+	k8sClient := fakeClientBuilder.Build()
+
+	var opts []ProxyOption
+	if c != nil {
+		opts = append(opts, WithCache(c))
+	}
+
+	p := NewProxy(nil, nil, getter, nopCLILogger{}, k8sClient, registryClient, opts...)
+	p.config = Config{}
+	return p
 }
 
 func TestPackagesHandler_MethodNotAllowed(t *testing.T) {
@@ -94,7 +151,7 @@ func TestPackagesHandler_MethodNotAllowed(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/packages/my-package/metadata/icon/", nil)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/v1/packages/packages-repo/my-package/metadata/icon/", nil)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -112,7 +169,7 @@ func TestPackagesHandler_InvalidPath(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/unknown/action")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/unknown/action")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -132,7 +189,7 @@ func TestPackagesHandler_GetIcon_SpecificVersion(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/v1.0.1")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.1")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -146,6 +203,31 @@ func TestPackagesHandler_GetIcon_SpecificVersion(t *testing.T) {
 	assert.Equal(t, strconv.Itoa(len(testIconContent)), resp.Header.Get("Content-Length"))
 
 	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.listTagsCalls))
+	assert.Equal(t, int32(1), atomic.LoadInt32(&fake.resolveTagCalls))
+	assert.Equal(t, int32(1), atomic.LoadInt32(&fake.getPackageCalls))
+}
+
+func TestPackagesHandler_GetIcon_UsesPackageRepositoryConfigForCacheMiss(t *testing.T) {
+	const manifestDigest = "sha256:package-repository"
+	fake := &fakeCLIRegistryClient{
+		tagToManifestDigest: map[string]string{
+			testImagePath + ":v1.0.1": manifestDigest,
+		},
+		packageBody: packageBodyWithIcon(t),
+		layerDigest: "layer-digest",
+	}
+	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{err: errors.New("getter should not be called")}, nil)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.1")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, testIconContent, string(body))
 	assert.Equal(t, int32(1), atomic.LoadInt32(&fake.resolveTagCalls))
 	assert.Equal(t, int32(1), atomic.LoadInt32(&fake.getPackageCalls))
 }
@@ -164,7 +246,7 @@ func TestPackagesHandler_GetIcon_LatestVersion(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -187,7 +269,7 @@ func TestPackagesHandler_GetIcon_HEAD(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	req, err := http.NewRequest(http.MethodHead, srv.URL+"/v1/packages/my-package/metadata/icon/v1.0.1", nil)
+	req, err := http.NewRequest(http.MethodHead, srv.URL+"/v1/packages/packages-repo/my-package/metadata/icon/v1.0.1", nil)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -211,7 +293,7 @@ func TestPackagesHandler_GetIcon_PackageNotFound(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -228,7 +310,7 @@ func TestPackagesHandler_GetIcon_NoValidTags(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -244,7 +326,7 @@ func TestPackagesHandler_GetIcon_TagNotFound(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/v9.9.9")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v9.9.9")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -262,7 +344,7 @@ func TestPackagesHandler_GetIcon_IconMissingInArchive(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/v1.0.0")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.0")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -271,14 +353,14 @@ func TestPackagesHandler_GetIcon_IconMissingInArchive(t *testing.T) {
 
 func TestPackagesHandler_GetIcon_RegistryConfigUnavailable(t *testing.T) {
 	fake := &fakeCLIRegistryClient{}
-	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{err: errors.New("no config")}, nil)
+	srv := newPackagesTestServerWithoutRepository(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/v1.0.0")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.0")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	assert.Equal(t, int32(0), atomic.LoadInt32(&fake.resolveTagCalls))
 }
 
@@ -289,7 +371,7 @@ func TestPackagesHandler_GetIcon_BadGatewayOnRegistryError(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
 	defer srv.Close()
 
-	resp, err := http.Get(srv.URL + "/v1/packages/my-package/metadata/icon/v1.0.0")
+	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.0")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -308,7 +390,7 @@ func TestPackagesHandler_GetIcon_CacheHit(t *testing.T) {
 	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, cache)
 	defer srv.Close()
 
-	url := srv.URL + "/v1/packages/my-package/metadata/icon/v1.0.1"
+	url := srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.1"
 
 	resp, err := http.Get(url)
 	require.NoError(t, err)
@@ -344,33 +426,44 @@ func TestParsePackagesPath(t *testing.T) {
 
 	cases := []struct {
 		url         string
+		wantRepo    string
 		wantPackage string
 		wantAction  packagesAction
 		wantVersion string
 		wantErr     bool
 	}{
 		{
-			url:         "/v1/packages/my-package/metadata/icon/",
-			wantPackage: "my-package",
+			url:         "/v1/packages/packages-repo/my-package/metadata/icon/",
+			wantRepo:    testPackageRepositoryName,
+			wantPackage: testPackageName,
 			wantAction:  packagesMetadataActionGetIcon,
 		},
 		{
-			url:         "/v1/packages/my-package/metadata/icon",
-			wantPackage: "my-package",
+			url:         "/v1/packages/packages-repo/my-package/metadata/icon",
+			wantRepo:    testPackageRepositoryName,
+			wantPackage: testPackageName,
 			wantAction:  packagesMetadataActionGetIcon,
 		},
 		{
-			url:         "/v1/packages/my-package/metadata/icon/v1.0.1",
-			wantPackage: "my-package",
+			url:         "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.1",
+			wantRepo:    testPackageRepositoryName,
+			wantPackage: testPackageName,
 			wantAction:  packagesMetadataActionGetIcon,
 			wantVersion: "v1.0.1",
 		},
+		{
+			url:         "/v1/packages/foo/bar/metadata/icon",
+			wantRepo:    "foo",
+			wantPackage: "bar",
+			wantAction:  packagesMetadataActionGetIcon,
+		},
 		{url: "/v1/packages/", wantErr: true},
-		{url: "/v1/packages/my-package", wantErr: true},
-		{url: "/v1/packages/foo/bar/metadata/icon", wantErr: true},
-		{url: "/v1/packages/my-package/unknown/action", wantErr: true},
-		{url: "/v1/packages/my-package/metadata/icon/not-semver", wantErr: true},
-		{url: "/v1/packages/my-package/metadata/icon/v1/2/3", wantErr: true},
+		{url: "/v1/packages/packages-repo", wantErr: true},
+		{url: "/v1/packages/packages-repo/my-package", wantErr: true},
+		{url: "/v1/packages/my-package/metadata/icon", wantErr: true},
+		{url: "/v1/packages/packages-repo/my-package/unknown/action", wantErr: true},
+		{url: "/v1/packages/packages-repo/my-package/metadata/icon/not-semver", wantErr: true},
+		{url: "/v1/packages/packages-repo/my-package/metadata/icon/v1/2/3", wantErr: true},
 	}
 
 	for _, tc := range cases {
@@ -378,13 +471,14 @@ func TestParsePackagesPath(t *testing.T) {
 		t.Run(tc.url, func(t *testing.T) {
 			t.Parallel()
 
-			action, pkg, version, err := parsePackagesPath(tc.url)
+			action, repo, pkg, version, err := parsePackagesPath(tc.url)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantAction, action)
+			assert.Equal(t, tc.wantRepo, repo)
 			assert.Equal(t, tc.wantPackage, pkg)
 			assert.Equal(t, tc.wantVersion, version)
 		})
