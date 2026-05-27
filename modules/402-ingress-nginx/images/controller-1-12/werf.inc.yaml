@@ -43,11 +43,6 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/curl-chroot-wrapper.sh
-  to: /src/curl-chroot-wrapper.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx-chroot-wrapper.sh
   to: /src/nginx-chroot-wrapper.sh
   stageDependencies:
@@ -664,12 +659,6 @@ import:
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: install
-- image: tools/curl-curl-8_18_0
-  add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /
@@ -825,6 +814,15 @@ import:
   - usr/local/lib/libluajit-5.1.so*
   - usr/local/modsecurity/lib/libmodsecurity.so*
   before: install
+- image: tools/bash
+  add: /usr
+  to: /chroot
+  owner: "0"
+  group: "0"
+  includePaths:
+  - bin/bash
+  - bin/sh
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -931,15 +929,6 @@ import:
   add: /dumb-init
   to: /usr/bin/dumb-init
   before: install
-- image: tools/bash
-  add: /usr
-  to: /
-  owner: "0"
-  group: "0"
-  includePaths:
-  - bin/bash
-  - bin/sh
-  before: install
 - image: tools/procps
   add: /
   to: /
@@ -978,6 +967,7 @@ git:
 {{- include "image mount points" $ }}
 shell:
   install:
+  - /usr/bin/cp -alf /chroot/bin/. /bin/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
