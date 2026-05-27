@@ -341,7 +341,7 @@ To restore etcd objects after changing the master node's IP address, follow thes
 1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig so that `control-plane-manager` regenerates the `kube-apiserver` certificate with the updated SAN list:
 
    ```shell
-   kubectl edit mc control-plane-manager
+   d8 k edit mc control-plane-manager
    ```
 
    Add the new IP to `spec.settings.apiserver.certSANs`:
