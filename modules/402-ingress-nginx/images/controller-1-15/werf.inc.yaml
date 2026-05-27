@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-15" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.30.1" }}
+{{ $nginxVersion := "1.30.2" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
@@ -43,11 +43,6 @@ git:
       - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /src/rootfs
-  stageDependencies:
-    install:
-      - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/curl-chroot-wrapper.sh
-  to: /src/curl-chroot-wrapper.sh
   stageDependencies:
     install:
       - '**/*'
@@ -663,12 +658,6 @@ import:
   - bin/bash
   - bin/sh
   before: install
-- from: {{ index $.Images "tools/curl" }}
-  add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /
@@ -916,12 +905,6 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   owner: "64535"
@@ -930,15 +913,6 @@ import:
 - from: {{ index $.Images "tools/dumb-init" }}
   add: /dumb-init
   to: /usr/bin/dumb-init
-  before: install
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr
-  to: /
-  owner: "0"
-  group: "0"
-  includePaths:
-  - bin/bash
-  - bin/sh
   before: install
 - from: {{ index $.Images "tools/procps" }}
   add: /
@@ -980,6 +954,7 @@ import:
   before: install
 shell:
   install:
+  - /usr/bin/cp -alf /chroot/bin/. /bin/
   - /usr/bin/cp -alf /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller

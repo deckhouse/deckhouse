@@ -203,7 +203,7 @@ jobs:
             let branchName;
             let prNum;
 
-            if (context.eventName === 'pull_request') {
+            if (context.eventName === 'pull_request' || context.eventName === 'pull_request_target') {
               branchName = context.payload.pull_request.head.ref;
               prNum = context.payload.pull_request.number;
             } else if (context.eventName === 'workflow_dispatch') {
