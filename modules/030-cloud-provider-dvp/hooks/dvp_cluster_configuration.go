@@ -357,9 +357,12 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 		icSet[ic.Name] = true
 	}
 
-	// Check master NodeGroup + InstanceClass.
-	if !nodeGroupSet["master"] || !icSet["master-dvp"] {
-		return false
+	// Check master NodeGroup + InstanceClass only when the PCC defines a masterNodeGroup.
+	// Hybrid clusters (static control plane, CSI-only) have no masterNodeGroup in PCC.
+	if pcc != nil && pcc.MasterNodeGroup != nil {
+		if !nodeGroupSet["master"] || !icSet["master-dvp"] {
+			return false
+		}
 	}
 
 	// Check each additional nodeGroup from PCC.

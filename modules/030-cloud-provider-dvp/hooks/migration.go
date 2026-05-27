@@ -38,9 +38,7 @@ const (
 	dvpCredentialSecretName       = "d8-cloud-provider-dvp-credentials"
 	dvpInstanceClassKind          = "DVPInstanceClass"
 	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
-	// dvpAuthSchemeKubeconfig is base64("kubeconfig") — the credential type
-	// understood by the DVP cloud-provider credential secret.
-	dvpAuthSchemeKubeconfig = "S3ViZWNvbmZpZw=="
+	dvpAuthSchemeKubeconfig       = "kubeconfig"
 )
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
@@ -108,7 +106,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 			"namespace": dvpNamespace,
 		},
 		"type": "cloud-provider.deckhouse.io/credentials",
-		"data": map[string]any{
+		"stringData": map[string]any{
 			"authScheme": dvpAuthSchemeKubeconfig,
 			"secret":     *cfg.Provider.KubeconfigDataBase64,
 		},
@@ -162,10 +160,6 @@ func createMigrationResourcesSecret(input *go_hook.HookInput, resources []any) e
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dvpMigrationResourcesName,
 			Namespace: dvpNamespace,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-				"module":   "cloud-provider-dvp",
-			},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
@@ -287,7 +281,7 @@ func replicasFromNodeGroup(nodeGroup map[string]any) (int, error) {
 }
 
 func zonesFromNodeGroup(nodeGroup map[string]any, clusterZones *[]string) []any {
-	if rawZones, ok := nodeGroup["zones"].([]interface{}); ok && len(rawZones) > 0 {
+	if rawZones, ok := nodeGroup["zones"].([]any); ok && len(rawZones) > 0 {
 		zones := make([]any, 0, len(rawZones))
 		for _, rawZone := range rawZones {
 			if zone, ok := rawZone.(string); ok && zone != "" {

@@ -84,7 +84,7 @@ zones:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cluster-configuration
+  name: d8-provider-cluster-configuration
   namespace: kube-system
 data:
   "cloud-provider-cluster-configuration.yaml": %s
@@ -225,8 +225,8 @@ metadata:
   name: d8-cloud-provider-dvp-credentials
   namespace: d8-cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
-data:
-  authScheme: S3ViZWNvbmZpZw==
+stringData:
+  authScheme: kubeconfig
   secret: YXBpVmV=
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -356,7 +356,7 @@ metadata:
   namespace: d8-cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
-  authScheme: S3ViZWNvbmZpZw==
+  authScheme: a3ViZWNvbmZpZw==
   secret: YXBpVmV=
 ---
 apiVersion: deckhouse.io/v1

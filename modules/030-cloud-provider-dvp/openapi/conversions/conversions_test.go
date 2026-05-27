@@ -32,7 +32,7 @@ func TestCloudProviderDvpConversions(t *testing.T) {
 		expectedVersion int
 	}{
 		{
-			name: "full v1 settings: move namespace, drop kubeconfigDataBase64, move zones, fill placeholders",
+			name: "full v1 settings: move namespace, drop kubeconfigDataBase64, move zones, fill layout placeholder",
 			settings: `
 provider:
   kubeconfigDataBase64: ZXhhbXBsZQo=
@@ -57,7 +57,7 @@ nodes:
 			expectedVersion: 2,
 		},
 		{
-			name: "empty v1 settings: synthesize placeholders for all required v2 fields",
+			name: "empty v1 settings: synthesize defaults for required v2 fields",
 			settings: `{}
 `,
 			expected: `
