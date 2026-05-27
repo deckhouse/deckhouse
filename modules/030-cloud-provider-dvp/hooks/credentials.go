@@ -43,7 +43,7 @@ func applyCredentialSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	// Only process secrets of the correct type.
-	if secret.Type != "cloud-provider.deckhouse.io/credentials" {
+	if secret.Type != dvpCredentialSecretType {
 		return nil, nil
 	}
 
@@ -74,7 +74,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleCredentials)
 
 func handleCredentials(_ context.Context, input *go_hook.HookInput) error {
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[credentialSecretSnapshot](input.Snapshots, "credential_secrets")
 	if err != nil {
@@ -85,7 +85,7 @@ func handleCredentials(_ context.Context, input *go_hook.HookInput) error {
 		if snap.Name == "" {
 			continue
 		}
-		entry := map[string]interface{}{
+		entry := map[string]any{
 			"authScheme": snap.AuthScheme,
 			"secret":     snap.Secret,
 		}

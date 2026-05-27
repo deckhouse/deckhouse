@@ -137,7 +137,7 @@ func filterCredentialSecret(obj *unstructured.Unstructured) (go_hook.FilterResul
 	if err := sdk.FromUnstructured(obj, secret); err != nil {
 		return nil, err
 	}
-	if secret.Type != "cloud-provider.deckhouse.io/credentials" {
+	if secret.Type != dvpCredentialSecretType {
 		return nil, nil
 	}
 	return credentialSecretResult{Name: secret.Name}, nil
@@ -166,7 +166,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		// Binding 1: ModuleConfig for the DVP module (does not trigger hook on change — read-only snapshot)
 		{
 			Name:       "module_config",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: dvpModuleConfigAPIVersion,
 			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpModuleConfigName},
@@ -185,7 +185,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-credentials"},
+				MatchNames: []string{dvpCredentialSecretName},
 			},
 			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          filterCredentialSecret,
@@ -201,8 +201,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		// Binding 4: DVPInstanceClass CRs (does not trigger hook on change — read-only snapshot)
 		{
 			Name:                "dvp_instance_classes",
-			ApiVersion:          "deckhouse.io/v1alpha1",
-			Kind:                "DVPInstanceClass",
+			ApiVersion:          dvpModuleConfigAPIVersion,
+			Kind:                dvpInstanceClassKind,
 			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          filterNamedResource,
 		},
@@ -443,8 +443,8 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 					return fmt.Errorf("unmarshal credentialSecrets: %w", err)
 				}
 			}
-			existing["d8-credentials"] = map[string]any{
-				"authScheme": "kubeconfig",
+			existing[dvpCredentialSecretName] = map[string]any{
+				"authScheme": dvpAuthSchemeKubeconfig,
 				"secret":     *pcc.Provider.KubeconfigDataBase64,
 			}
 			input.Values.Set("cloudProviderDvp.internal.credentialSecrets", existing)
@@ -473,7 +473,7 @@ func createMigrationConfigMap(input *go_hook.HookInput) {
 			Namespace: dvpNamespace,
 			Labels: map[string]string{
 				"heritage": "deckhouse",
-				"module":   "cloud-provider-dvp",
+				"module":   dvpModuleLabel,
 			},
 		},
 	}

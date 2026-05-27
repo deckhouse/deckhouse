@@ -227,7 +227,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: d8-cloud-provider-dvp-credentials
+  name: d8-credentials
   namespace: d8-cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 stringData:

@@ -36,10 +36,13 @@ const (
 	dvpNamespace                  = "d8-cloud-provider-dvp"
 	dvpMigrationResourcesName     = "d8-migration-resources"
 	dvpMigrationResourcesFilename = "resources.yaml"
-	dvpCredentialSecretName       = "d8-cloud-provider-dvp-credentials"
+	dvpCredentialSecretName       = "d8-credentials"
 	dvpInstanceClassKind          = "DVPInstanceClass"
 	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
 	dvpAuthSchemeKubeconfig       = "kubeconfig"
+	dvpCredentialSecretType       = "cloud-provider.deckhouse.io/credentials"
+	dvpModuleConfigAPIVersion     = "deckhouse.io/v1alpha1"
+	dvpModuleLabel                = "cloud-provider-dvp"
 )
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
@@ -104,7 +107,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 	}
 
 	moduleConfig := map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha1",
+		"apiVersion": dvpModuleConfigAPIVersion,
 		"kind":       "ModuleConfig",
 		"metadata": map[string]any{
 			"name": dvpModuleConfigName,
@@ -131,7 +134,7 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 			"name":      dvpCredentialSecretName,
 			"namespace": dvpNamespace,
 		},
-		"type": "cloud-provider.deckhouse.io/credentials",
+		"type": dvpCredentialSecretType,
 		"stringData": map[string]any{
 			"authScheme": dvpAuthSchemeKubeconfig,
 			"secret":     *cfg.Provider.KubeconfigDataBase64,
