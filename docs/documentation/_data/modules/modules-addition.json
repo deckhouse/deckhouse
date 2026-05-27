@@ -636,7 +636,7 @@
       }
     },
     "external": "true",
-    "path": "/products/stronghold/documentation/about/editions.html"
+    "path": "/modules/stronghold/"
   },
   "user-authz": {
     "editionFullyAvailable": [
