@@ -45,7 +45,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость относится к endpoint удалённого чтения /api/v1/read сервера Prometheus: некорректная валидация длины snappy-payload может привести к исчерпанию памяти и отказу в обслуживании (CVE-2026-42154, GHSA-8rm2-7qqf-34qm, CWE-400). Бинарник pilot-discovery не запускает сервер Prometheus и не обрабатывает запросы к /api/v1/read; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека. Эксплуатация в контексте данного компонента недоступна.",
       "timestamp": "2026-05-19T08:20:22.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44903"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к stored XSS в устаревшем веб-UI сервера Prometheus (heatmap, histogram bucket label values, флаг --enable-feature=old-ui, CVE-2026-44903, GHSA-fw8g-cg8f-9j28, CWE-79). Бинарник pilot-discovery не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-05-27T12:03:22.000000000Z"
     }
   ],
-  "timestamp": "2026-05-19T08:20:25Z"
+  "timestamp": "2026-05-27T12:03:58Z"
 }
