@@ -69,9 +69,6 @@
 {{- end }}
 
 {{- if .Values.cloudProviderDvp.storage.enabled }}
-
-{{- include "helm_lib_csi_controller_rbac" . }}
-
 {{- $csiImageName := "dvpCsiDriver" }}
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}
