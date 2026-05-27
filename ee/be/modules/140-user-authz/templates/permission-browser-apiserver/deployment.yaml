@@ -62,6 +62,8 @@ spec:
     metadata:
       labels:
         app: permission-browser-apiserver
+      annotations:
+        checksum/certificate: {{ include (print $.Template.BasePath "/permission-browser-apiserver/secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}

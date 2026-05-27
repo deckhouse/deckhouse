@@ -46,6 +46,8 @@ spec:
       labels:
         app: ratify
         app.kubernetes.io/part-of: gatekeeper
+      annotations:
+        checksum/certificate: {{ include (print $.Template.BasePath "/ratify/cert-secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
