@@ -94,3 +94,114 @@ part of `make validate`. The test:
 
 A failure prints the offending workload template and the rationale; the
 fix is almost always a one-line annotation addition.
+
+## TLS profiles
+
+Once the Pod restart contract is in place, the next decision is what
+**TLS handshake parameters** the in-Pod server offers. Deckhouse uses
+four profiles, named A–D after the type of client the server faces.
+
+### TL;DR
+
+- **Category A** — admission webhooks, conversion webhooks, extension
+  API servers. Client is deterministic and in-cluster
+  (kube-apiserver). Pin `MinVersion: tls.VersionTLS13` and do **not**
+  configure `CipherSuites`: Go fixes the suite list to three safe AEAD
+  ciphers for TLS 1.3
+  (`TLS_AES_128_GCM_SHA256`, `TLS_AES_256_GCM_SHA384`,
+  `TLS_CHACHA20_POLY1305_SHA256`).
+- **Category B** — `kube-rbac-proxy` sidecars, metrics endpoints, and
+  any HTTPS surface whose clients are not strictly under our control
+  (Prometheus is fine, but third-party scrapers may exist). Keep
+  TLS 1.2 as a compatibility floor and limit `CipherSuites` to ECDHE +
+  AEAD only — six entries in total. The forbidden classes are
+  `TLS_RSA_WITH_*` (no PFS), `*_CBC_*` (Lucky13), `*_SHA` without
+  `SHA256/SHA384` (SHA1), and the GOST suites
+  (`TLS_GOSTR341112_*`, `KUZNYECHIK`, `MAGMA`) that have no
+  implementation in upstream Go.
+- **Category C** — `kube-apiserver` itself. Already configured by
+  `candi/control-plane/kube-apiserver.yaml.tpl`; do not touch without
+  an architecture decision.
+- **Category D** — services exposed through ingress (`ingress-nginx`,
+  `dex` via ingress, …). Out of scope for this document; follow
+  Mozilla Intermediate / Modern as agreed with the security team.
+
+### Helper
+
+For convenience the same package exposes a tiny helper:
+
+```go
+import tlscert "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
+
+cfg := &tls.Config{ /* … */ }
+tlscert.ApplyServerCategoryA(cfg) // MinVersion = TLS 1.3, CipherSuites = nil
+// or
+tlscert.ApplyServerCategoryB(cfg) // MinVersion = TLS 1.2, CipherSuites = ECDHE + AEAD only
+```
+
+For controller-runtime managers use the `func(*tls.Config)` variant via
+`tlscert.ServerOptionCategoryA()` / `ServerOptionCategoryB()`. Most
+images that host their own webhook server live in a separate go.mod
+module and inline a four-line literal instead of importing the helper;
+see e.g. `modules/002-deckhouse/images/webhook-handler/operator/cmd/main.go`.
+
+### Helm/werf side
+
+For components that use the Kubernetes component-base CLI flags
+(`--tls-cipher-suites`, `--tls-min-version`), pass the same allow-list:
+
+- Category A:
+
+  ```yaml
+  - --tls-min-version=VersionTLS13
+  # --tls-cipher-suites: do not set, the list is fixed for TLS 1.3.
+  ```
+
+- Category B:
+
+  ```yaml
+  - --tls-min-version=VersionTLS12
+  - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+  ```
+
+### PR reviewer checklist
+
+When a diff touches `--tls-cipher-suites`, `tlsCipherSuites:`,
+`tls.Config{ CipherSuites: … }` or `MinVersion:`, verify:
+
+- [ ] Category of the component is identified (A / B / C / D).
+- [ ] For Category A — `MinVersion` is `tls.VersionTLS13` and
+      `CipherSuites` is empty; why **not** TLS 1.3-only if it isn't?
+- [ ] No `TLS_RSA_WITH_*` (RSA key exchange, no PFS).
+- [ ] No `*_CBC_*` and no `*_SHA` without `SHA256/SHA384`.
+- [ ] No `TLS_GOSTR341112_*` / `KUZNYECHIK` / `MAGMA`.
+- [ ] If `--tls-min-version=VersionTLS12` — does the PR description
+      justify why TLS 1.3 is not used?
+
+### Validation tests
+
+Two `make validate` tests guard this section:
+
+- `TestValidationTLSCipherSuitesPolicy`
+  (`testing/hooks/validation/tls_cipher_suites_policy_test.go`) walks
+  every Helm template, werf manifest and kubelet template and fails on
+  forbidden cipher names.
+- `TestValidationCategoryAWebhookServersUseTLS13` (same file) verifies
+  that every deckhouse-owned admission / conversion webhook Go server
+  pins `MinVersion` to `tls.VersionTLS13`.
+
+Both checks live under the `validation` build tag and are part of the
+`make validate` target.
+
+### Why no GOST suites
+
+The Kubernetes component-base flag parser accepts the names
+`TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_L` and `_MGM_S`, but the
+**implementation** of those suites does not exist in upstream Go. All
+deckhouse images are built with stock upstream Go, so writing those
+names into `--tls-cipher-suites` has zero runtime effect — the
+handshake silently never selects them. The only outcome is a false
+sense of GOST support during security audits. Real GOST-TLS, when ever
+required, is delivered out-of-band: a GOST-aware proxy (`stunnel`,
+OpenSSL+GOST-engine) in front of the component, or a Go fork with the
+GOST patches, neither of which is configured here.

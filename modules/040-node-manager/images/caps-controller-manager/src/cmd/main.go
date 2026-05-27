@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"os"
 	"time"
@@ -94,6 +95,17 @@ func main() {
 
 	webhookserver := webhook.NewServer(webhook.Options{
 		Port: 9443,
+		// Category A TLS profile (deckhouse TLS standard, see
+		// go_lib/hooks/tls_certificate/README.md): kube-apiserver is
+		// the only client of this admission webhook, so we pin the
+		// handshake floor to TLS 1.3 and let Go pick the fixed AEAD
+		// suite list.
+		TLSOpts: []func(*tls.Config){
+			func(c *tls.Config) {
+				c.MinVersion = tls.VersionTLS13
+				c.CipherSuites = nil
+			},
+		},
 	})
 
 	metricsServerOptions := metricsserver.Options{

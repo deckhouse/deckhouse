@@ -309,7 +309,14 @@ failSwapOn: true
 {{- if semverCompare ">=1.35" .kubernetesVersion }}
 failCgroupV1: false
 {{- end }}
-tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_GCM_SHA256"]
+# Category B TLS profile (deckhouse TLS standard, see
+# go_lib/hooks/tls_certificate/README.md). Strictly speaking the kubelet
+# serving cert is reached only by kube-apiserver (Category A → TLS 1.3),
+# but the kubelet is upgraded out-of-band on each node and rolling a
+# TLS 1.3-only floor here is a separate operational change. For now we
+# drop TLS_RSA_* (no PFS) and migrate the ChaCha20 entries to their
+# canonical _SHA256 names.
+tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"]
 {{- if ne .runType "ClusterBootstrap" }}
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
 # This flag affects logs from kubelet, for period of time between kubelet start and certificate request approve by Deckhouse hook.
