@@ -29,6 +29,10 @@ cloud-provider-dvp:
         - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
         - if .zones != null then .nodes.parameters.zones = .zones end
         - del(.zones)
+        - if .nodes.enabled == null then .nodes.enabled = true end
+        - if .storage == null then .storage = {} end
+        - if .storage.enabled == null then .storage.enabled = true end
+        - if .storage.parameters == null then .storage.parameters = {} end
 cloud-provider-vsphere:
     - version: 2
       description:

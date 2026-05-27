@@ -33,6 +33,8 @@ global:
   discovery: {}
 cloudProviderDvp:
   internal: {}
+  nodes: {}
+  provider: {}
 `
 	)
 
@@ -300,6 +302,8 @@ cloudProviderDvp:
       d8-credentials:
         authScheme: kubeconfig
         secret: cmVhbC1rdWJlY29uZmlnLWRhdGE=
+  nodes: {}
+  provider: {}
 `
 		bReal := HookExecutionConfigInit(valuesWithRealCred, `{}`)
 		bReal.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
