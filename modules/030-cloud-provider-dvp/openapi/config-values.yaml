@@ -24,6 +24,17 @@ properties:
       parameters:
         additionalProperties: false
         properties:
+          ipAddresses:
+            additionalProperties:
+              items:
+                type: string
+                pattern: ^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$
+              type: array
+            description: |-
+              Static IP addresses to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
+              For example, if 3 replicas are specified and the IP addresses provided are: ip1, ip2, and ip3, then ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
+              > These addresses must belong to the address range specified in the virtualization module configuration in the `virtualMachineCIDRs` parameter.
+            type: object
           layout:
             description: |-
               Layout name.
