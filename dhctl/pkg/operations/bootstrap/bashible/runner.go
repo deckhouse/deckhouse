@@ -263,7 +263,6 @@ func (r *Runner) createDir(ctx context.Context, dir, access string) error {
 	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		return r.runWithSH(ctx, bashCmd)
 	})
-
 	if err != nil {
 		return fmt.Errorf("Cannot create %s directory: %w", dir, err)
 	}
@@ -279,7 +278,6 @@ func (r *Runner) touchFile(ctx context.Context, file string) error {
 	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		return r.runWithSH(ctx, bashCmd)
 	})
-
 	if err != nil {
 		return fmt.Errorf("Cannot touch %s file: %w", file, err)
 	}

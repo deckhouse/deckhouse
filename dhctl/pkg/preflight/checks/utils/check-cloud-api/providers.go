@@ -19,7 +19,7 @@ import (
 	"fmt"
 )
 
-func HandleOpenStackProvider(providerClusterConfig []byte) (*CloudApiConfig, error) {
+func HandleOpenStackProvider(providerClusterConfig []byte) (*CloudAPIConfig, error) {
 	var openStackConfig OpenStackProvider
 	err := json.Unmarshal(providerClusterConfig, &openStackConfig)
 	if err != nil {
@@ -31,14 +31,14 @@ func HandleOpenStackProvider(providerClusterConfig []byte) (*CloudApiConfig, err
 		return nil, err
 	}
 
-	return &CloudApiConfig{
+	return &CloudAPIConfig{
 		URL:      url,
 		CACert:   openStackConfig.CACert,
 		Insecure: false,
 	}, nil
 }
 
-func HandleVSphereProvider(providerClusterConfig []byte) (*CloudApiConfig, error) {
+func HandleVSphereProvider(providerClusterConfig []byte) (*CloudAPIConfig, error) {
 	var vsphereConfig VSphereProvider
 	err := json.Unmarshal(providerClusterConfig, &vsphereConfig)
 	if err != nil {
@@ -50,7 +50,7 @@ func HandleVSphereProvider(providerClusterConfig []byte) (*CloudApiConfig, error
 		return nil, err
 	}
 
-	return &CloudApiConfig{
+	return &CloudAPIConfig{
 		URL:      url,
 		CACert:   "",
 		Insecure: vsphereConfig.Insecure,

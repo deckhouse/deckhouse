@@ -179,7 +179,7 @@ Feature gate `CRDSensitiveData` обеспечивает защиту чувст
 
 Маркер `x-kubernetes-sensitive-data` проверяется `kube-apiserver` при применении ресурса:
 
-- маркер требует, чтобы был включен feature gate `CRDSensitiveData` (включается автоматически, когда `apiserver.encryptionEnabled` равен `true`);
+- маркер требует, чтобы был включен feature gate `CRDSensitiveData`. Он включается по умолчанию, его не следует указывать вручную;
 - маркер не допускается устанавливать на корне схемы (на самом узле `openAPIV3Schema`). Чтобы защитить все поля ресурса, добавьте маркер на свойство `spec` (или на поддерево ниже него), а не на корень схемы — на корне также находятся системные поля (`apiVersion`, `kind`, `metadata`), которые невозможно зашифровать;
 - тип поля должен быть одним из типов OpenAPI v3: `string`, `integer`, `number`, `boolean`, `object` или `array`. Маркер на `object` или `array` делает чувствительным всё поддерево;
 - поддерживаются поля, объявленные как `x-kubernetes-int-or-string: true`;
@@ -192,9 +192,8 @@ Feature gate `CRDSensitiveData` обеспечивает защиту чувст
 - **Фильтрация полей на основе RBAC** — при выполнении запросов `get`, `list`, или `watch` чувствительные поля удаляются из ответа API, если у вызывающей стороны нет прав `get`, `list` или `watch` на субресурс `<resource>/sensitive`.
 - **Маскировка в журнале аудита** — значения чувствительных полей всегда заменяются на `"******"` в журнале аудита, независимо от прав RBAC и уровня аудита.
 
-Чтобы включить защиту чувствительных полей, установите [параметр `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в `true`.
-Feature gate `CRDSensitiveData` включается
-автоматически при активации шифрования, его не следует указывать вручную:
+Чтобы добавить к защите чувствительных полей шифрование в etcd, установите [параметр `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в `true`.
+Feature gate `CRDSensitiveData` включается по умолчанию, его не следует указывать вручную:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

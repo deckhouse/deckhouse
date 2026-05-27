@@ -145,7 +145,8 @@ func IsSystemDirOrUserHome(dir string) (bool, []string, error) {
 		return false, nil, err
 	}
 
-	additionalSystems := []string{homeDir, "/home", "/media"}
+	additionalSystems := make([]string, 0, 3+len(systemDirectories))
+	additionalSystems = append(additionalSystems, homeDir, "/home", "/media")
 
 	all := append(additionalSystems, systemDirectories...)
 	return slices.Contains(all, dir), all, nil

@@ -82,9 +82,19 @@ spec:
             httpHeaders:
             - name: "brief"
               value: "true"
-          periodSeconds: 30
+          # Match startupProbe granularity (2s). Default 30s adds a 30s lag
+          # between cilium /healthz first returning ok and kubelet flipping
+          # the pod to Ready — on the cluster-bootstrap critical path this
+          # gates `Wait Node Ready` and `Control-plane readiness` for nothing.
+          periodSeconds: 2
           successThreshold: 1
-          failureThreshold: 3
+          # /healthz brief flips back to fail every time cilium kicks off a
+          # full datapath regenerate (datapath-ipcache, CiliumNode update,
+          # network-status blip from cpm restarting apiserver, ...). At 2s
+          # probe + threshold 3 = 6s, the pod yo-yos NotReady through every
+          # regenerate. 15 (~30s) covers a typical regenerate batch so the
+          # pod stays Ready while cilium internally re-syncs BPF.
+          failureThreshold: 15
           timeoutSeconds: 5
         env:
         - name: K8S_NODE_NAME

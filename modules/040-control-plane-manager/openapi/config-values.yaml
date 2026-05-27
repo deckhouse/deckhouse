@@ -330,7 +330,7 @@ properties:
 
           When enabled, a Secret `kube-system/d8-secret-encryption-key` is created to store the encryption key.
 
-          Enabling this parameter automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver`, which protects custom resource fields marked with `x-kubernetes-sensitive-data: true` via encryption in etcd, RBAC-based field filtering with the `<resource>/sensitive` subresource and hiding values from the audit log.
+          Sensitive custom resource fields marked with `x-kubernetes-sensitive-data: true` are protected by the `CRDSensitiveData` feature gate for `kube-apiserver`, which is enabled by default. Enabling this parameter adds encryption in etcd to RBAC-based field filtering with the `<resource>/sensitive` subresource and hiding values from the audit log.
 
           > **Warning.** Once enabled, this parameter can't be disabled.
   rootKubeconfigSymlink:

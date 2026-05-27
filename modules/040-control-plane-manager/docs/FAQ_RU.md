@@ -1389,7 +1389,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
 
 Чтобы включить защиту полей, выполните следующие действия:
 
-1. Включите шифрование etcd с помощью [параметра `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в настройках модуля. Feature gate `CRDSensitiveData` включается автоматически одновременно с шифрованием — его не следует указывать вручную.
+1. Включите шифрование etcd с помощью [параметра `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в настройках модуля. Feature gate `CRDSensitiveData` включается по умолчанию — его не следует указывать вручную.
 
    {% alert level="warning" %}
    Включение параметра `apiserver.encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.

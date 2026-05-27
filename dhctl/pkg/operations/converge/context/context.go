@@ -17,7 +17,6 @@ package context
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/name212/govalue"
@@ -45,7 +44,6 @@ type MultiMasterClientSwitcher interface {
 }
 
 type Context struct {
-	kubeClientMu           sync.RWMutex
 	kubeProvider           libcon.KubeProvider
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 

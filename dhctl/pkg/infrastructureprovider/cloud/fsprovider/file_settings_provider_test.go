@@ -36,10 +36,8 @@ var terraformProviders = []string{
 	"openstack",
 	"aws",
 	gcp.ProviderName,
-	"vsphere",
 	"azure",
 	vcd.ProviderName,
-	"huaweicloud",
 }
 
 var tofuProviders = []string{
@@ -47,6 +45,8 @@ var tofuProviders = []string{
 	"dynamix",
 	"zvirt",
 	dvp.ProviderName,
+	"vsphere",
+	"huaweicloud",
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
@@ -80,7 +80,7 @@ func TestProvidersSettings(t *testing.T) {
 	for _, p := range tofuProviders {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.True(t, settings.UseOpenTofu())
-			require.Equal(t, settings.InfrastructureVersion(), "1.9.4")
+			require.Equal(t, settings.InfrastructureVersion(), "1.12.0")
 		})
 	}
 

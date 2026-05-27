@@ -26,7 +26,6 @@ import (
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
-	shapp "github.com/flant/shell-operator/pkg/app"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
@@ -293,10 +292,11 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 // Also sets a custom timeout for patch operations to prevent hanging on slow API calls.
 func (r *Runtime) buildObjectPatcher() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("object-patcher-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.ObjectPatcherKubeClientQps, shapp.ObjectPatcherKubeClientBurst)
-	client.WithTimeout(shapp.ObjectPatcherKubeClientTimeout)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.ObjectPatcherKubeClientQPS, addonapp.ObjectPatcherKubeClientBurst)
+	client.WithTimeout(addonapp.ObjectPatcherKubeClientTimeout)
+	client.WithMetricPrefix("packages_object_patcher_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize object patcher client: %w", err)
@@ -317,9 +317,10 @@ func (r *Runtime) buildObjectPatcher() error {
 //   - Converting Kubernetes events into binding contexts for hook execution
 func (r *Runtime) buildKubeEventsManager() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("kube-events-manager-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithMetricPrefix("packages_kube_events_manager_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize kube events manager client: %w", err)
@@ -356,9 +357,10 @@ func (r *Runtime) buildKubeEventsManager() error {
 // Rate limits are specific to monitoring workloads (different from patch or watch clients).
 func (r *Runtime) buildNelmService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("nelm-monitor-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
+	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
@@ -399,9 +401,10 @@ func (r *Runtime) buildNelmService() error {
 // goroutine start later via r.healthService.Start, paired with Stop on shutdown.
 func (r *Runtime) buildHealthService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithMetricPrefix("packages_health_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize health service client: %w", err)
@@ -690,7 +693,10 @@ func (r *Runtime) ResumeScheduler() {
 	r.scheduler.Resume()
 }
 
-// CheckConstraints checks constraints in scheduler
-func (r *Runtime) CheckConstraints(constraints schedule.Constraints) error {
-	return r.scheduler.CheckConstraints(constraints)
+// CheckConstraints validates the proposed package constraints against the
+// current cluster state and dependency graph. The `name` is the scheduler-side
+// identifier (apps.BuildName for applications, module name for modules) and is
+// used by the cycle simulation step to identify the proposed graph vertex.
+func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints) error {
+	return r.scheduler.CheckConstraints(name, constraints)
 }

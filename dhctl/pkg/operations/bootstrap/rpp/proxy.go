@@ -23,13 +23,12 @@ import (
 
 	"github.com/name212/govalue"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
-
 	rpp_log "github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
+	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -211,7 +210,6 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		tlsutils.CertKeyTypeRSA,
 		oneDay,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to generate TLS certificate for registry proxy: %v", err)
 	}
@@ -220,7 +218,6 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	listener, err := tls.Listen("tcp", addr, &tls.Config{
 		Certificates: []tls.Certificate{*cert},
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to listen registry proxy socket: %v", err)
 	}

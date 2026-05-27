@@ -37,6 +37,9 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+shell:
+  install:
+  - cd /src
 ---
 {{ $rppSignCheck := ternary "true" "false" (eq .Env "CSE") -}}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

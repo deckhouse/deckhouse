@@ -10,58 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.20.9
-	github.com/flant/kube-client v1.6.0
-	github.com/flant/shell-operator v1.16.6
-	github.com/go-openapi/spec v0.22.0
-	github.com/gojuno/minimock/v3 v3.4.7
-	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.20.7
-	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-multierror v1.1.1
-	github.com/iancoleman/strcase v0.3.0
-	github.com/imdario/mergo v0.3.16
-	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.38.2
-	github.com/otiai10/copy v1.14.0
-	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/spaolacci/murmur3 v1.1.0
-	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
-	github.com/stretchr/testify v1.11.1
-	github.com/tidwall/gjson v1.18.0
-	github.com/tidwall/sjson v1.2.5
-	github.com/vmware/govmomi v0.51.0 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.21
-	go.etcd.io/etcd/client/v3 v3.5.21
-	google.golang.org/grpc v1.80.0
-	google.golang.org/protobuf v1.36.11
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.4
-	k8s.io/api v0.33.8
-	k8s.io/apiextensions-apiserver v0.33.8
-	k8s.io/apimachinery v0.33.8
-	k8s.io/apiserver v0.33.8
-	k8s.io/client-go v0.33.8
-	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
-	sigs.k8s.io/yaml v1.6.0
-)
-
-require (
-	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
-	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa
-	github.com/deckhouse/module-sdk v0.10.4
-	github.com/ettle/strcase v0.2.0
-	github.com/evanphx/json-patch v5.9.0+incompatible
+	github.com/flant/addon-operator v1.21.4
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gammazero/deque v1.1.0
 	github.com/go-logr/logr v1.4.3
@@ -82,7 +31,7 @@ require (
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 	golang.org/x/mod v0.34.0
 	golang.org/x/text v0.36.0
-	k8s.io/code-generator v0.33.8
+	k8s.io/code-generator v0.33.12
 	k8s.io/kube-openapi v0.0.0-20250701173324-9bd5c66d9911
 	k8s.io/kubectl v0.33.8
 	sigs.k8s.io/controller-runtime v0.20.4
@@ -91,6 +40,56 @@ require (
 )
 
 require k8s.io/klog v1.0.0 // indirect
+
+require (
+	github.com/caarlos0/env/v11 v11.3.1
+	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/configtools/conversion v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/pkg/log v0.2.1
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7
+	github.com/deckhouse/module-sdk v0.10.4
+	github.com/ettle/strcase v0.2.0
+	github.com/evanphx/json-patch v5.9.0+incompatible
+	github.com/flant/kube-client v1.7.0
+	github.com/flant/shell-operator v1.17.4
+	github.com/go-openapi/spec v0.22.0
+	github.com/gojuno/minimock/v3 v3.4.7
+	github.com/google/go-cmp v0.7.0
+	github.com/google/go-containerregistry v0.20.7
+	github.com/google/uuid v1.6.0
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/iancoleman/strcase v0.3.0
+	github.com/imdario/mergo v0.3.16
+	github.com/onsi/ginkgo v1.16.5
+	github.com/onsi/gomega v1.41.0
+	github.com/otiai10/copy v1.14.1
+	github.com/pkg/errors v0.9.1
+	github.com/spaolacci/murmur3 v1.1.0
+	github.com/square/go-jose/v3 v3.0.0-20200630053402-0a67ce9b0693
+	github.com/stretchr/testify v1.11.1
+	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/sjson v1.2.5
+	go.etcd.io/etcd/api/v3 v3.5.21
+	go.etcd.io/etcd/client/v3 v3.5.21
+	google.golang.org/grpc v1.80.0
+	google.golang.org/protobuf v1.36.11
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6
+	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
+	helm.sh/helm/v3 v3.15.4
+	k8s.io/api v0.33.12
+	k8s.io/apiextensions-apiserver v0.33.12
+	k8s.io/apimachinery v0.33.12
+	k8s.io/apiserver v0.33.12
+	k8s.io/client-go v0.33.12
+	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
+	sigs.k8s.io/yaml v1.6.0
+)
 
 require (
 	al.essio.dev/pkg/shellescape v1.6.0 // indirect
@@ -129,12 +128,15 @@ require (
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/name212/govalue v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pterm/pterm v0.12.83 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.5.3 // indirect
 	github.com/redis/go-redis/v9 v9.10.0 // indirect
 	github.com/samber/lo v1.51.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/vbauerster/mpb/v8 v8.12.0 // indirect
+	github.com/vmware/govmomi v0.51.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yannh/kubeconform v0.6.7 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
@@ -150,7 +152,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
-	k8s.io/cli-runtime v0.33.8 // indirect
+	k8s.io/cli-runtime v0.33.12 // indirect
 	k8s.io/component-helpers v0.33.8 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
@@ -209,7 +211,7 @@ require (
 	github.com/flopp/go-findfont v0.1.0 // indirect
 	github.com/fluxcd/flagger v1.36.1 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-chi/chi/v5 v5.2.5
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -288,10 +290,10 @@ require (
 	github.com/peterhellberg/link v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_golang v1.22.0 // indirect
-	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.62.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/client_golang v1.23.2 // indirect
+	github.com/prometheus/client_model v0.6.2
+	github.com/prometheus/common v0.66.1 // indirect
+	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rubenv/sql-migrate v1.7.1 // indirect
@@ -300,7 +302,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.8.1 // indirect
@@ -348,7 +350,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
-	k8s.io/component-base v0.33.8 // indirect
+	k8s.io/component-base v0.33.12 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/kustomize/api v0.19.0 // indirect

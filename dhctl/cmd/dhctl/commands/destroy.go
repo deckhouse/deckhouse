@@ -71,7 +71,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		if !opts.Global.SanityCheck {
-			logger.LogWarnLn(destroyApprovalsMessage)
+			log.InteractiveWarnLn(destroyApprovalsMessage)
 
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")

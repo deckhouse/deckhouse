@@ -36,5 +36,4 @@ func TestSafeProvideLogger(t *testing.T) {
 		logger = provider(nilProvider)
 		require.False(t, govalue.IsNil(logger))
 	}
-
 }

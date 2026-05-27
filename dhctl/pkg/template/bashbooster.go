@@ -54,7 +54,7 @@ func RenderBashBooster(templatesDir string, data map[string]interface{}) (string
 			// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
 			bashBoosterScriptContent = strings.TrimSuffix(string(fileContent), "\n")
 		}
-		builder.WriteString(fmt.Sprintf("# %s\n\n%s\n", filePath, bashBoosterScriptContent))
+		fmt.Fprintf(&builder, "# %s\n\n%s\n", filePath, bashBoosterScriptContent)
 	}
 
 	return builder.String(), nil

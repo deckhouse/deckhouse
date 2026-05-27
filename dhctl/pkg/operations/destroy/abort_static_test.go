@@ -41,9 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")
-)
+var rootTmpDirStaticAbort = path.Join(os.TempDir(), "dhctl-test-static-abort")
 
 func TestStaticAbort(t *testing.T) {
 	defer func() {
