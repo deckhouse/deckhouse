@@ -44,11 +44,6 @@ git:
   stageDependencies:
     install:
       - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/curl-chroot-wrapper.sh
-  to: /src/curl-chroot-wrapper.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx-chroot-wrapper.sh
   to: /src/nginx-chroot-wrapper.sh
   stageDependencies:
@@ -680,12 +675,8 @@ import:
   includePaths:
   - bin/bash
   - bin/sh
-  before: install
-- image: tools/curl
-  add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
-  owner: "64535"
-  group: "64535"
+  owner: "0"
+  group: "0"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
@@ -933,12 +924,6 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   owner: "64535"
@@ -947,15 +932,6 @@ import:
 - image: tools/dumb-init
   add: /dumb-init
   to: /usr/bin/dumb-init
-  before: install
-- image: tools/bash
-  add: /usr
-  to: /
-  owner: "0"
-  group: "0"
-  includePaths:
-  - bin/bash
-  - bin/sh
   before: install
 - image: tools/procps
   add: /
@@ -995,6 +971,7 @@ git:
 {{- include "image mount points" $ }}
 shell:
   install:
+  - /usr/bin/cp -alf /chroot/bin/. /bin/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
