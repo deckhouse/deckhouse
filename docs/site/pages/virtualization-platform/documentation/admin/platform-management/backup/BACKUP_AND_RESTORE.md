@@ -61,7 +61,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    This backup will allow you to roll back in case of issues.
 
-1. Place the etcd snapshot file. Copy or move the `etcd-backup.snapshot` file to the current user's (root) home directory:
+1. Place the etcd snapshot file. Copy or move the [`etcd-backup.snapshot`](#creating-backups-with-deckhouse-cli) file to the current user's (root) home directory:
 
    ```shell
    cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
