@@ -52,21 +52,6 @@ jobs:
       SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
-  build_tests:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
-    name: Build tests image
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "build_tests_template" (slice $ctx "dev") | strings.Indent 4 }!}
-
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "go_generate_template" (slice $ctx) | strings.Indent 4 }!}
-
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
   build_{!{$werfEnv}!}:
     name: Build {!{$werfEnv}!}
@@ -164,19 +149,27 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_tests
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_tests") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
+
+  golangci_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: GolangCI Lint
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
 
   golint:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Go Lint Warning
+    continue-on-error: true
     needs:
       - git_info
       - pull_request_info
-      - build_tests
-    env:
-      DIFF_BASE: ${{ github.event.pull_request.base.sha }}
-{!{ tmpl.Exec "tests_template" (slice $ctx "golint_diff" "build_tests") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golint" "build_fe") | strings.Indent 4 }!}
 
   openapi_test_cases:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -184,8 +177,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_tests
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_tests") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -193,8 +186,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_tests
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_tests") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 
   set_e2e_requirement_status:
     # if previous jobs were failed we do not need set status, because checks will be failed
@@ -208,8 +201,7 @@ jobs:
       - build_{!{$werfEnv}!}{!{ end }!}
       - validators
       - openapi_test_cases
-      - golint
-      - go_generate
+      - golangci_lint
       - dhctl_tests
       - tests
     runs-on: "ubuntu-latest"
