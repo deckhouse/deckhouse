@@ -631,8 +631,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Some features are available depending on the selected Deckhouse Stronghold license. For more details, see the <a href='/products/stronghold/documentation/about/editions/'>&quot;Editions&quot;</a> section.",
-        "ru": "Некоторые функции доступны в зависимости от выбранной лицензии Deckhouse Stronghold. Подробнее можно ознакомиться в разделе <a href='/products/stronghold/documentation/about/editions/'>«Редакции»</a>."
+        "en": "Some features are available depending on the selected Deckhouse Stronghold license. For more details, see the <a href='/products/stronghold/documentation/about/editions/'>&quot;Editions&quot;</a> section of the Deckhouse Stronghold documentation.",
+        "ru": "Некоторые функции доступны в зависимости от выбранной лицензии Deckhouse Stronghold. Подробнее можно ознакомиться в разделе <a href='/products/stronghold/documentation/about/editions/'>«Редакции»</a> документации Deckhouse Stronghold."
       }
     },
     "external": "true",
