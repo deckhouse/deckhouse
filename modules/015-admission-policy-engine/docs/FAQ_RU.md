@@ -59,15 +59,53 @@ spec:
 
 ### `spec.match.namespaceSelector` – выбор неймспейсов
 
-Позволяет ограничить неймспейсы, в которых действует политика. Можно использовать комбинацию трёх фильтров:
+Позволяет ограничить неймспейсы, в которых действует политика. Внутри можно использовать три фильтра:
 
 * **`matchNames`** – явный список разрешённых неймспейсов. Если задан, политика действует только в перечисленных неймспейсах.
 * **`excludeNames`** – список исключаемых неймспейсов. Политика будет действовать во всех неймспейсах, **кроме** указанных.
-* **`labelSelector`** – селектор по лейблам самого объекта Namespace. Синтаксис полностью аналогичен селектору подов (`matchLabels` / `matchExpressions`). Фильтруются именно метаданные неймспейса.
+* **`labelSelector`** – селектор по лейблам самого объекта Namespace.
 
-Все заданные условия внутри `namespaceSelector` также объединяются логическим **И**. Рекомендуется не смешивать `matchNames` и `excludeNames` без явной необходимости – если указаны оба, результирующий набор вычисляется как (`matchNames` ∩ все) \ `excludeNames` (сначала берутся разрешённые, потом из них вычитаются исключённые).
+Если задано несколько полей, они объединяются логическим **И**:
+
+1. берётся множество из `matchNames` (или все неймспейсы, если `matchNames` не задан);
+2. применяется `labelSelector` (если задан);
+3. вычитаются `excludeNames`.
+
+Рекомендуется не смешивать `matchNames`, `excludeNames`, `labelSelector` без явной необходимости.
+
+#### Когда лучше использовать `labelSelector`
+
+Используйте **`labelSelector`**, когда политика должна автоматически применяться к группе неймспейсов по признаку, а не по фиксированным именам
+
+Например:
+- «все пространства имен с лейблом `env=prod`»;
+- «все неймспейсы команды `team=backend`» (с соответствующим лейблом);
+- «все неймспейсы с `security.deckhouse.io/pod-policy=restricted`».
+
+`labelSelector` особенно полезен, когда неймспейсы создаются/удаляются динамически: достаточно автоматически проставлять label на неймспейс при создании, и политика начнёт действовать без редактирования политики.
+
+`labelSelector` **не обязателен**, если у вас небольшой статичный список неймспейсов — тогда проще и читаемее использовать `matchNames`.
+
+#### Взаимоисключают ли друг друга `matchNames` и `labelSelector`
+
+Нет, технически они **не взаимоисключающие**: их можно указывать вместе, и тогда сработает пересечение.
+
+Но на практике это часто ухудшает читаемость и усложняет сопровождение. Поэтому рекомендуется выбирать один основной способ отбора:
+
+- либо **`matchNames + excludeNames`**;
+- либо **`labelSelector + excludeNames`**.
+
+Так проще понять, почему конкретный неймспейс попал/не попал под политику.
+
+#### Типовые сценарии
+
+1. **Статичный список окружений** → `matchNames + excludeNames`.
+2. **Динамические окружения/команды** → `labelSelector + excludeNames`.
+3. **Комбинация `matchNames + labelSelector`** — только если действительно нужно пересечение двух независимых условий.
 
 Примеры:
+
+**1) Статичный список неймспейсов (`matchNames + excludeNames`)**
 
 ```yaml
 spec:
@@ -76,16 +114,13 @@ spec:
       matchNames:
         - production
         - staging
+      excludeNames:
+        - staging
 ```
 
-```yaml
-spec:
-  match:
-    namespaceSelector:
-      excludeNames:
-        - kube-system
-        - gatekeeper-system
-```
+Итог: политика действует только в неймспейсе `production`.
+
+**2) Динамический выбор по лейблам (`labelSelector + excludeNames`)**
 
 ```yaml
 spec:
@@ -95,7 +130,13 @@ spec:
         matchLabels:
           team: backend
           environment: production
+      excludeNames:
+        - backend-sandbox
 ```
+
+Итог: все неймспейсы с лейблами `team=backend` и `environment=production`, кроме `backend-sandbox`.
+
+**3) Гибкая фильтрация по выражениям (`labelSelector.matchExpressions`)**
 
 ```yaml
 spec:
@@ -108,45 +149,34 @@ spec:
             values:
               - pci
               - sox
+          - key: lifecycle
+            operator: NotIn
+            values:
+              - deprecated
 ```
 
-### Совместное использование селекторов
+Итог: только неймспейсы с лейблами `compliance=pci` или `compliance=sox` и без лейбла `lifecycle=deprecated`.
 
-Наиболее типичный сценарий – ограничение и по подам, и по неймспейсам одновременно:
+**4) Комбинация `matchNames` и `labelSelector` (пересечение, использовать осторожно)**
 
 ```yaml
 spec:
   match:
-    labelSelector:
-      matchLabels:
-        app: payments
-        version: v2
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          env: prod
-      excludeNames:
-        - legacy-prod
-```
-
-Эта политика сработает для подов с лейблами `app=payments` и `version=v2`, которые находятся в неймспейсах, имеющих лейбл `env=prod`, за исключением неймспейса `legacy-prod`.
-
-```yaml
-spec:
-  match:
-    labelSelector:
-      matchExpressions:
-        - key: security
-          operator: NotIn
-          values:
-            - low
     namespaceSelector:
       matchNames:
-        - frontend
-        - backend
+        - production
+        - staging
+        - qa
+      labelSelector:
+        matchLabels:
+          team: backend
 ```
 
-Здесь политика охватывает поды, у которых значение лейбла `security` не равно `low`, в неймспейсах `frontend` и `backend`.
+Итог: применится только к неймспейсам, которые одновременно:
+- входят в список `production|staging|qa`;
+- имеют лейбл `team=backend`.
+
+Если, например, `qa` не имеет `team=backend`, он не попадёт под политику.
 
 ## Как расширить политики Pod Security Standards?
 

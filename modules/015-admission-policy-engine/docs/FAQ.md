@@ -63,11 +63,52 @@ Allows limiting the namespaces in which the policy is active. You can use a comb
 
 * **`matchNames`** – an explicit list of allowed namespaces. If specified, the policy only applies to the listed namespaces.
 * **`excludeNames`** – a list of excluded namespaces. The policy will apply to all namespaces **except** those specified.
-* **`labelSelector`** – a selector based on the labels of the Namespace object itself. The syntax is identical to the pod selector (`matchLabels` / `matchExpressions`). It filters the namespace metadata.
+* **`labelSelector`** – a selector based on the labels of the Namespace object itself.
 
-All specified conditions within `namespaceSelector` are also combined with a logical **AND**. It is recommended not to mix `matchNames` and `excludeNames` without a clear need – if both are specified, the resulting set is calculated as (`matchNames` ∩ all) \ `excludeNames` (allowed ones are taken first, then excluded ones are subtracted from them).
+#### How the final namespace set is calculated
+
+If multiple fields are set, they are combined with logical **AND**:
+
+1. Start with the set from `matchNames` (or all namespaces if `matchNames` is omitted).
+2. Apply `labelSelector` (if set).
+3. Subtract `excludeNames`.
+
+Formula:
+
+`result = (base_from_matchNames ∩ selected_by_labelSelector) \ excludeNames`
+
+#### When do you need `namespaceSelector.labelSelector`?
+
+Use **`labelSelector`** when the policy should follow namespace attributes rather than a fixed list of names:
+
+- “all namespaces with `env=prod`”;
+- “all namespaces owned by `team=backend`”;
+- “all namespaces with `security.deckhouse.io/pod-policy=restricted`”.
+
+`labelSelector` is especially useful in dynamic environments where namespaces are created/removed often: adding/removing a label is enough, and no policy edits are needed.
+
+You **do not need** `labelSelector` for a small, static list of namespaces. In that case, `matchNames` is usually simpler and more readable.
+
+#### Are `matchNames` and `labelSelector` mutually exclusive?
+
+No, technically they are **not mutually exclusive**. You can define both, and then the policy uses their intersection.
+
+However, in practice this often hurts readability and troubleshooting. A recommended approach is to choose one primary selection strategy:
+
+- either **`matchNames + excludeNames`**;
+- or **`labelSelector + excludeNames`**.
+
+This makes it much easier to understand why a namespace is in or out of scope.
+
+#### Typical patterns
+
+1. **Static environments list** → `matchNames + excludeNames`.
+2. **Dynamic team/environment targeting** → `labelSelector + excludeNames`.
+3. **`matchNames + labelSelector` together** → use only when you really need strict intersection of two independent conditions.
 
 Examples:
+
+**1) Static list (`matchNames + excludeNames`)**
 
 ```yaml
 spec:
@@ -76,16 +117,13 @@ spec:
       matchNames:
         - production
         - staging
+      excludeNames:
+        - staging
 ```
 
-```yaml
-spec:
-  match:
-    namespaceSelector:
-      excludeNames:
-        - kube-system
-        - gatekeeper-system
-```
+Result: the policy applies only in `production`.
+
+**2) Dynamic label-based targeting (`labelSelector + excludeNames`)**
 
 ```yaml
 spec:
@@ -95,7 +133,13 @@ spec:
         matchLabels:
           team: backend
           environment: production
+      excludeNames:
+        - backend-sandbox
 ```
+
+Result: all namespaces with `team=backend` and `environment=production`, except `backend-sandbox`.
+
+**3) Flexible filtering with expressions (`labelSelector.matchExpressions`)**
 
 ```yaml
 spec:
@@ -108,45 +152,34 @@ spec:
             values:
               - pci
               - sox
+          - key: lifecycle
+            operator: NotIn
+            values:
+              - deprecated
 ```
 
-### Using selectors together
+Result: only namespaces with `compliance in (pci, sox)` and without `lifecycle=deprecated`.
 
-The most typical scenario is limiting both by pods and by namespaces simultaneously:
+**4) `matchNames` + `labelSelector` together (intersection, use carefully)**
 
 ```yaml
 spec:
   match:
-    labelSelector:
-      matchLabels:
-        app: payments
-        version: v2
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          env: prod
-      excludeNames:
-        - legacy-prod
-```
-
-This policy will trigger for pods with labels `app=payments` and `version=v2` that are located in namespaces having the label `env=prod`, except for the `legacy-prod` namespace.
-
-```yaml
-spec:
-  match:
-    labelSelector:
-      matchExpressions:
-        - key: security
-          operator: NotIn
-          values:
-            - low
     namespaceSelector:
       matchNames:
-        - frontend
-        - backend
+        - production
+        - staging
+        - qa
+      labelSelector:
+        matchLabels:
+          team: backend
 ```
 
-Here, the policy covers pods where the `security` label value is not equal to `low`, in the `frontend` and `backend` namespaces.
+Result: applies only to namespaces that both:
+- are in `production|staging|qa`;
+- have label `team=backend`.
+
+For example, if `qa` does not have `team=backend`, it will not be matched.
 
 ## How do I extend Pod Security Standards policies?
 
