@@ -22,14 +22,19 @@ __sec() {
   __sec_start=$now
 }
 
-# Per-step prefetch wait: all 12 packages below are prefetched in the background by
+# Per-step prefetch wait: the packages below are prefetched in the background by
 # step 001_prefetch_registry_packages.sh (systemd unit `rpp-prefetch.service`). We
 # wait for each archive to land before calling `rpp-get install`, so install becomes
 # a fast local-extract instead of a serial HTTP download.
 #
 # If any wait times out (or the prefetch unit died) the `|| true` ensures we still
 # fall through to `rpp-get install`, which will fetch the missing archive itself.
-bb-rpp-wait-fetched "d8" "{{ .images.registrypackages.d8 }}" || true
+#
+# `d8` is intentionally NOT installed here — it's the largest registrypackage and
+# nothing between this step and 062 needs it. Its wait + install are deferred to
+# step 062 (`d8 completion bash` is the first real use). The 001 prefetch keeps
+# downloading d8 in parallel, so by the time 062 runs the archive is on disk and
+# only the (still synchronous) unpack happens then.
 bb-rpp-wait-fetched "jq" "{{ .images.registrypackages.jq171 }}" || true
 bb-rpp-wait-fetched "yq" "{{ .images.registrypackages.yq4471 }}" || true
 bb-rpp-wait-fetched "curl" "{{ .images.registrypackages.d8Curl891 }}" || true
@@ -43,5 +48,5 @@ bb-rpp-wait-fetched "lsblk" "{{- index .images.registrypackages "lsblk2402" }}" 
 bb-rpp-wait-fetched "nfs-mount" "{{- .images.registrypackages.nfsMount282 }}" || true
 __sec wait_prefetch
 
-rpp-get install "d8:{{ .images.registrypackages.d8 }}" "jq:{{ .images.registrypackages.jq171 }}" "yq:{{ .images.registrypackages.yq4471 }}" "curl:{{ .images.registrypackages.d8Curl891 }}" "which:{{ .images.registrypackages.which223 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}" "iptables:{{ .images.registrypackages.iptables189 }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk2402" }}" "nfs-mount:{{- .images.registrypackages.nfsMount282 }}"
+rpp-get install "jq:{{ .images.registrypackages.jq171 }}" "yq:{{ .images.registrypackages.yq4471 }}" "curl:{{ .images.registrypackages.d8Curl891 }}" "which:{{ .images.registrypackages.which223 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}" "iptables:{{ .images.registrypackages.iptables189 }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk2402" }}" "nfs-mount:{{- .images.registrypackages.nfsMount282 }}"
 __sec rpp_install

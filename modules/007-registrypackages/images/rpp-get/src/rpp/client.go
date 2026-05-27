@@ -109,6 +109,9 @@ func (c *Client) UpdateAuth(endpoints []string, token string) {
 	c.httpClient = newHTTPClient(c.cfg)
 }
 
+// installWorkerCount caps install parallelism at runtime.NumCPU because install
+// is CPU-bound: tar extraction + per-package install scripts (sometimes spawning
+// dpkg/rpm) compete for cores, not for the network.
 func installWorkerCount() int {
 	workers := runtime.NumCPU()
 	if workers < 1 {
@@ -118,13 +121,21 @@ func installWorkerCount() int {
 	return workers
 }
 
+// fetchWorkerCount sizes parallelism for network-bound downloads. Unlike
+// installWorkerCount it deliberately ignores NumCPU — fetching N small tarballs
+// over an HTTP connection (often via an ssh reverse-tunnel during bootstrap)
+// scales with link bandwidth, not with cores.
+func fetchWorkerCount() int {
+	return defaultFetchWorkers
+}
+
 func (c *Client) FetchAll(ctx context.Context, args []string) error {
 	refs, err := c.newPackageRefs(args)
 	if err != nil {
 		return err
 	}
 
-	return c.runAll(ctx, refs, c.fetchPackage)
+	return c.runAll(ctx, refs, fetchWorkerCount(), c.fetchPackage)
 }
 
 func (c *Client) InstallAll(ctx context.Context, args []string) error {
@@ -133,7 +144,7 @@ func (c *Client) InstallAll(ctx context.Context, args []string) error {
 		return err
 	}
 
-	return c.runAll(ctx, refs, c.installPackage)
+	return c.runAll(ctx, refs, installWorkerCount(), c.installPackage)
 }
 
 func (c *Client) InstallMissing(ctx context.Context, statuses []InstallStatus) error {
@@ -151,15 +162,15 @@ func (c *Client) InstallMissing(ctx context.Context, statuses []InstallStatus) e
 		}
 		missing = append(missing, ref)
 	}
-	return c.runAll(ctx, missing, c.installPackage)
+	return c.runAll(ctx, missing, installWorkerCount(), c.installPackage)
 }
 
-func (c *Client) runAll(ctx context.Context, refs []packageRef, action func(context.Context, packageRef) error) error {
+func (c *Client) runAll(ctx context.Context, refs []packageRef, maxWorkers int, action func(context.Context, packageRef) error) error {
 	if len(refs) == 0 {
 		return nil
 	}
 
-	workerCount := min(installWorkerCount(), len(refs))
+	workerCount := min(maxWorkers, len(refs))
 
 	if c.logger != nil {
 		c.logger.Printf("processing %d packages with %d workers", len(refs), workerCount)

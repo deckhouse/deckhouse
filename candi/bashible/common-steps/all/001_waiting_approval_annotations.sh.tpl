@@ -42,7 +42,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   done
 
   bb-log-info "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
-  approval_command="d8 k annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
+  approval_command="kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/approved="
   waiting_approval_message="Steps are waiting for approval to start. Deckhouse is performing a rolling update. If you want to force an update, use: ${approval_command}"
   waiting_approval_status_set="no"
   attempt=0

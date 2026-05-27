@@ -201,6 +201,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			DNSPolicy:                    apiv1.DNSDefault,
 			ServiceAccountName:           "deckhouse",
 			AutomountServiceAccountToken: ptr.To(true),
+			// system-cluster-critical: protects the bootstrap pod from eviction
+			// under any node pressure while the cluster is being assembled, and
+			// gives it scheduling priority over everything else. The helm chart
+			// applies the same class, so when deckhouse later replaces this
+			// Deployment with its own, priority does not change.
+			PriorityClassName: "system-cluster-critical",
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
 				RunAsGroup:   ptr.To(int64(0)),
@@ -371,8 +377,52 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "3",
 		},
 		{
+			// The helm-chart deckhouse uses GOGC=50 for steady-state memory
+			// frugality. During the first converge — when the heap doubles
+			// while LoadModulesFromFS parses ~60 OpenAPI schemas and helm
+			// renders charts — aggressive GC wastes CPU on the critical path.
+			// 100 (the Go default) reduces GC frequency by ~50% and shortens
+			// the cold start measurably; helm later overrides this to 50 in
+			// the post-converge Deployment.
 			Name:  "GOGC",
+			Value: "100",
+		},
+		{
+			// Soft memory ceiling that the Go runtime honors when triggering
+			// GC. Set just below the resource request above so the runtime
+			// starts shrinking before kubelet would even consider eviction.
+			Name:  "GOMEMLIMIT",
+			Value: "1400MiB",
+		},
+		{
+			// Default client-go QPS/Burst is 5/10 and causes 5-second-class
+			// stalls on the first converge while deckhouse mass-applies CRDs
+			// (see "client-side throttling, not priority and fairness" in
+			// addon-operator logs). Bumping all three clients (main, object
+			// patcher, helm monitor) lets the bootstrap pod saturate kube-
+			// apiserver instead of itself.
+			Name:  "KUBE_CLIENT_QPS",
 			Value: "50",
+		},
+		{
+			Name:  "KUBE_CLIENT_BURST",
+			Value: "100",
+		},
+		{
+			Name:  "OBJECT_PATCHER_KUBE_CLIENT_QPS",
+			Value: "50",
+		},
+		{
+			Name:  "OBJECT_PATCHER_KUBE_CLIENT_BURST",
+			Value: "100",
+		},
+		{
+			Name:  "HELM_MONITOR_KUBE_CLIENT_QPS",
+			Value: "50",
+		},
+		{
+			Name:  "HELM_MONITOR_KUBE_CLIENT_BURST",
+			Value: "100",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
