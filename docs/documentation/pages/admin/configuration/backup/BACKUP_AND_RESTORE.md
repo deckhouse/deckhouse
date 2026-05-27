@@ -335,7 +335,7 @@ To restore etcd objects after changing the master node's IP address, follow thes
 1. Update the IP address in static configuration files:
 
    - Check the Kubernetes component manifest files located in `/etc/kubernetes/manifests/`.
-   - Review kubelet’s system configuration files (typically found in `/etc/systemd/system/kubelet.service.d/` or similar directories).
+   - Review kubelet's system configuration files (typically found in `/etc/systemd/system/kubelet.service.d/` or similar directories).
    - Update the IP address in any other configurations that reference the old address, if necessary.
 
 1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig so that `control-plane-manager` regenerates the `kube-apiserver` certificate with the updated SAN list:
@@ -368,7 +368,7 @@ These actions can be performed either [automatically](#automated-object-extracti
 
 ### Automated object extraction when changing IP address
 
-To simplify cluster recovery after the master node’s IP address changes, use the script provided below. Before running the script:
+To simplify cluster recovery after the master node's IP address changes, use the script provided below. Before running the script:
 
 1. Specify the correct paths and IP addresses:
    - `ETCD_SNAPSHOT_PATH`: The path to the etcd snapshot backup.
@@ -395,13 +395,13 @@ ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/va
 
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
-find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ‘;’
-find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ‘;’
-find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ‘;’
+find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 
-crictl ps --name ‘kube-apiserver’ -o json | jq -r ‘.containers[0].id’ | xargs crictl stop
-crictl ps --name ‘kubernetes-api-proxy’ -o json | jq -r ‘.containers[0].id’ | xargs crictl stop
-crictl ps --name ‘etcd’ -o json | jq -r ‘.containers[].id’ | xargs crictl stop
+crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
+crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
+crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
 
 systemctl daemon-reload
 systemctl restart kubelet.service
@@ -411,7 +411,7 @@ systemctl restart kubelet.service
 
 ### Manual object restore after changing the IP address
 
-If you prefer to manually make changes during cluster recovery after the master node’s IP address has changed, follow these steps:
+If you prefer to manually make changes during cluster recovery after the master node's IP address has changed, follow these steps:
 
 1. Restore etcd from the backup:
 
@@ -428,7 +428,7 @@ If you prefer to manually make changes during cluster recovery after the master 
      mv /var/lib/etcd ./etcd_old
      ```
 
-   - Find or download the `etcdutl` utility if it’s not available, and perform the snapshot restore:
+   - Find or download the `etcdutl` utility if it's not available, and perform the snapshot restore:
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
@@ -453,9 +453,9 @@ If you prefer to manually make changes during cluster recovery after the master 
    OLD_IP=10.242.32.34                         # Old master node IP address.
    NEW_IP=10.242.32.21                         # New master node IP address.
 
-   find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ‘;’
-   find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ‘;’
-   find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ‘;’
+   find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+   find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+   find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
    ```
 
 1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig. `control-plane-manager` will detect the change in `cert-sans` inside `d8-control-plane-manager-config`, create a `ControlPlaneOperation` with a `RenewPKICerts` step, and regenerate the `kube-apiserver` certificate with the updated SAN list:
@@ -497,9 +497,9 @@ If you prefer to manually make changes during cluster recovery after the master 
 1. Restart all services that use the updated configuration and certificates. To immediately stop active containers, run:
 
    ```shell
-   crictl ps --name ‘kube-apiserver’ -o json | jq -r ‘.containers[0].id’ | xargs crictl stop
-   crictl ps --name ‘kubernetes-api-proxy’ -o json | jq -r ‘.containers[0].id’ | xargs crictl stop
-   crictl ps --name ‘etcd’ -o json | jq -r ‘.containers[].id’ | xargs crictl stop
+   crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
+   crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
+   crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
 
    systemctl daemon-reload
    systemctl restart kubelet.service
