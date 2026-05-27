@@ -609,6 +609,7 @@ jobs:
           werf build tests \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
+            --final-images-only=true \
             --build-report-path images_tags_werf.json
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
