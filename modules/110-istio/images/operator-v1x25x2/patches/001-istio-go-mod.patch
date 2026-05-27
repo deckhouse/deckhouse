@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index cec3efa8..7c90ca9e 100644
+index cec3efa8..4c4474ac 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,46 +1,47 @@
@@ -85,7 +85,7 @@ index cec3efa8..7c90ca9e 100644
  	github.com/cespare/xxhash/v2 v2.3.0 // indirect
  	github.com/chai2010/gettext-go v1.0.3 // indirect
 -	github.com/containerd/containerd v1.7.24 // indirect
-+	github.com/containerd/containerd v1.7.30 // indirect
++	github.com/containerd/containerd v1.7.32 // indirect
  	github.com/containerd/errdefs v0.3.0 // indirect
  	github.com/containerd/log v0.1.0 // indirect
  	github.com/containerd/platforms v0.2.1 // indirect
@@ -274,7 +274,7 @@ index cec3efa8..7c90ca9e 100644
 +	sigs.k8s.io/yaml v1.6.0 // indirect
  )
 diff --git a/go.sum b/go.sum
-index f432a32d..4545d702 100644
+index f432a32d..f3d8559c 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,15 +1,15 @@
@@ -355,8 +355,8 @@ index f432a32d..4545d702 100644
 -github.com/containerd/containerd v1.7.24/go.mod h1:7QUzfURqZWCZV7RLNEn1XjUCQLEf0bkaK4GjUaZehxw=
 -github.com/containerd/continuity v0.4.2 h1:v3y/4Yz5jwnvqPKJJ+7Wf93fyWoCB3F5EclWG023MDM=
 -github.com/containerd/continuity v0.4.2/go.mod h1:F6PTNCKepoxEaXLQp3wDAjygEnImnZ/7o4JzpodfroQ=
-+github.com/containerd/containerd v1.7.30 h1:/2vezDpLDVGGmkUXmlNPLCCNKHJ5BbC5tJB5JNzQhqE=
-+github.com/containerd/containerd v1.7.30/go.mod h1:fek494vwJClULlTpExsmOyKCMUAbuVjlFsJQc4/j44M=
++github.com/containerd/containerd v1.7.32 h1:S54xuVcPxeLaYgaRABtpJ2VyVUVsy0IGf7qHBs+sbY8=
++github.com/containerd/containerd v1.7.32/go.mod h1:jdwD6s/BhV4XVJGrvtziNPVA+83n66TwptVaPKprq4E=
  github.com/containerd/errdefs v0.3.0 h1:FSZgGOeK4yuT/+DnF07/Olde/q4KBoMsaamhXxIMDp4=
  github.com/containerd/errdefs v0.3.0/go.mod h1:+YBYIdtsnF4Iw6nWZhJcqGSg/dwvV7tyJ/kCkyJ2k+M=
  github.com/containerd/log v0.1.0 h1:TCJt7ioM2cr/tfR8GPbGf9/VRAX8D2B4PjzCpfX540I=
