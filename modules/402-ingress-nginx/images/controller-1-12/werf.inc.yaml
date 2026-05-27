@@ -914,12 +914,6 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   owner: "64535"
