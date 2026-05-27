@@ -328,7 +328,7 @@ After completing these steps, the selected objects will be recreated in the clus
 This section describes a scenario where only the IP address of the master node has changed, and all other objects in the etcd backup (such as CA certificates) remain valid. It assumes the restoration is performed in a single-master-node cluster.
 {% endalert %}
 
-To restore etcd objects after changing the master node’s IP address, follow these steps:
+To restore etcd objects after changing the master node's IP address, follow these steps:
 
 1. Restore etcd from the backup. Use the standard etcd restore procedure with a snapshot. Make sure not to change any parameters during restoration other than the etcd data itself.
 
