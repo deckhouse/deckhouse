@@ -82,6 +82,7 @@ spec:
         {{- if eq .Values.extendedMonitoring.imageAvailability.registry.scheme "HTTP" }}
         - --allow-plain-http
         {{- end }}
+        - --capath=/etc/ssl/certs/ca-certificates.crt
         {{- with .Values.global.modulesImages.registry.CA }}
         - --capath=/deckhouse-registry-root-ca/ca.crt
         {{- end }}
