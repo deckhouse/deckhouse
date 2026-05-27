@@ -73,7 +73,7 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
   d8 iam user reset-password admin --generate-password
   ```
 
-- сброс пароля в захешированом виде (если пароль захеширован, передайте bcrypt-хеш без кодирования в Base64):
+- сброс пароля в захешированном виде (если пароль захеширован, передайте bcrypt-хеш без кодирования в Base64):
 
   ```shell
   d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
