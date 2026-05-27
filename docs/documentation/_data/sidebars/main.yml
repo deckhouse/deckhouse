@@ -1432,20 +1432,56 @@ entries:
               url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: Storage system modules
-                ru: Модули системы хранения
+                ru: Модули систем хранения
               folders:
+                - title:
+                    en: Csi-hpe module
+                    ru: Модуль csi-hpe
+                  url: /architecture/storage/external/csi-hpe.html
+                - title:
+                    en: Csi-huawei module
+                    ru: Модуль csi-huawei
+                  url: /architecture/storage/external/csi-huawei.html
+                - title:
+                    en: Csi-netapp module
+                    ru: Модуль csi-netapp
+                  url: /architecture/storage/external/csi-netapp.html
                 - title:
                     en: Csi-nfs module
                     ru: Модуль csi-nfs
                   url: /architecture/storage/external/csi-nfs.html
+                - title:
+                    en: Csi-s3 module
+                    ru: Модуль csi-s3
+                  url: /architecture/storage/external/csi-s3.html
+                - title:
+                    en: Csi-scsi-generic module
+                    ru: Модуль csi-scsi-generic
+                  url: /architecture/storage/external/csi-scsi-generic.html
+                - title:
+                    en: Csi-yadro-tatlin-unified module
+                    ru: Модуль csi-yadro-tatlin-unified
+                  url: /architecture/storage/external/csi-yadro-tatlin-unified.html
             - title:
                 en: CSI drivers
                 ru: CSI-драйверы
               folders:
                 - title:
+                    en: Huawei CSI driver
+                    ru: CSI-драйвер Huawei
+                  url: /architecture/storage/csi-drivers/csi-driver-huawei.html
+                - title:
                     en: NFS CSI driver
                     ru: CSI-драйвер NFS
                   url: /architecture/storage/csi-drivers/csi-driver-nfs.html
+                - title:
+                    en: S3 CSI driver
+                    ru: CSI-драйвер S3
+                  url: /architecture/storage/csi-drivers/csi-driver-s3.html
+                - title:
+                    en: SCSI Generic CSI driver
+                    ru: CSI-драйвер SCSI Generic
+                  url: /architecture/storage/csi-drivers/csi-driver-scsi-generic.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
