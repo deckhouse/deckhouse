@@ -1356,22 +1356,21 @@ Kubelet handles server certificates using the following logic:
 
 ## How to manually update control plane component certificates?
 
-There may be a situation when the cluster's master nodes are powered off for an extended period. During this time, the control plane component certificates may expire. After the nodes are powered back on, the certificates will not update automatically and must be renewed manually.
+There may be a situation when the cluster's master nodes are powered off for an extended period. During this time, the control plane component certificates may expire.
 
-Control plane component certificates are updated using the `kubeadm` utility.
-To update the certificates, do the following on each master node:
+**Automatic renewal (normal operation)**: `control-plane-manager` monitors certificate expiry and automatically renews control-plane certificates when they are within 30 days of their expiry date. No manual action is required while the cluster is running.
 
-1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
+**When nodes come back online after extended downtime**: Once the master nodes start and the Kubernetes API becomes available, `control-plane-manager` detects expired or soon-to-expire certificates and creates renewal operations automatically. To confirm that renewal has completed, check that the cert-renewal `ControlPlaneOperation` objects show `Phase=OperationCompleted`:
 
-   ```shell
-   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
-   ```
+```shell
+d8 k get cpo -o wide
+```
 
-2. Update the certificates:
+The `ControlPlaneNode` object's `CERTIFICATES` column also shows `True` once all certificates are healthy:
 
-   ```shell
-   kubeadm certs renew all
-   ```
+```shell
+d8 k get cpn
+```
 
 ## How do I protect sensitive fields in custom resources?
 
