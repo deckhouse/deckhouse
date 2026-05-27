@@ -321,9 +321,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
   RotateKubeletServerCertificate: true
-{{- if eq $topologyManagerEnabled true }}
-  MemoryManager: true
-{{- end }}
 {{- if semverCompare "<=1.32" .kubernetesVersion }}
   InPlacePodVerticalScaling: true
 {{- end }}
