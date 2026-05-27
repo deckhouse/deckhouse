@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 47f82e06a..e3fa302aa 100644
+index 47f82e06a..28ba64bb6 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,8 +1,6 @@
@@ -39,7 +39,7 @@ index 47f82e06a..e3fa302aa 100644
  	github.com/cespare/xxhash/v2 v2.3.0 // indirect
  	github.com/coreos/go-semver v0.3.1 // indirect
  	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-@@ -54,7 +52,7 @@ require (
+@@ -54,21 +52,21 @@ require (
  	github.com/felixge/httpsnoop v1.0.4 // indirect
  	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
  	github.com/gibson042/canonicaljson-go v1.0.3 // indirect
@@ -48,9 +48,11 @@ index 47f82e06a..e3fa302aa 100644
  	github.com/go-logr/stdr v1.2.2 // indirect
  	github.com/go-openapi/jsonpointer v0.21.0 // indirect
  	github.com/go-openapi/jsonreference v0.21.0 // indirect
-@@ -65,11 +63,12 @@ require (
+ 	github.com/go-openapi/swag v0.23.0 // indirect
+ 	github.com/gogo/protobuf v1.3.2 // indirect
 -	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 +	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
+ 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
  	github.com/golang/protobuf v1.5.4 // indirect
  	github.com/google/cel-go v0.20.1 // indirect
  	github.com/google/gnostic-models v0.6.8 // indirect
@@ -118,7 +120,7 @@ index 47f82e06a..e3fa302aa 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 diff --git a/go.sum b/go.sum
-index ee1b04e89..7c28653eb 100644
+index ee1b04e89..7bb615d90 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -12,8 +12,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
@@ -143,8 +145,17 @@ index ee1b04e89..7c28653eb 100644
  github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
  github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
  github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
-github.com/golang-jwt/jwt/v4 v4.5.2 h1:YtQM7lnr8iZ+j5q71MGKkNw9Mn7AjHM68uc9g5fXeUI=
-github.com/golang-jwt/jwt/v4 v4.5.2/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
+@@ -64,8 +64,8 @@ github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZ
+ github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
+ github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
+ github.com/gogo/protobuf v1.3.2/go.mod h1:P1XiOD3dCwIKUDQYPy72D8LYyHL2YPYrpS2s69NZV8Q=
+-github.com/golang-jwt/jwt/v4 v4.5.0 h1:7cYmW1XlMY7h7ii7UhUyChSgS5wUJEnm9uZVTGqOWzg=
+-github.com/golang-jwt/jwt/v4 v4.5.0/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
++github.com/golang-jwt/jwt/v4 v4.5.2 h1:YtQM7lnr8iZ+j5q71MGKkNw9Mn7AjHM68uc9g5fXeUI=
++github.com/golang-jwt/jwt/v4 v4.5.2/go.mod h1:m21LjoU+eqJr34lmDMbreY2eSTRJ1cv77w39/MY0Ch0=
+ github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da h1:oI5xCqsCo564l8iNU+DwB5epxmsaqB+rhGL0m5jtYqE=
+ github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+ github.com/golang/mock v1.6.0 h1:ErTB+efbowRARo13NNdxyJji2egdxLGQhRaY+DUumQc=
 @@ -79,8 +79,8 @@ github.com/google/cel-go v0.20.1/go.mod h1:kWcIzTsPX0zmQ+H3TirHstLLf9ep5QTsZBN9u
  github.com/google/gnostic-models v0.6.8 h1:yo/ABAfM5IMRsS1VnXjTBvUb61tFIHozhlYvRgGre9I=
  github.com/google/gnostic-models v0.6.8/go.mod h1:5n7qKqH0f5wFt+aWF8CW6pZLLNOfYuF5OpfBSENuI8U=
