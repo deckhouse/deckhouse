@@ -480,6 +480,19 @@ properties:
             required:
               - kubeconfigDataBase64
               - namespace
+      discoveryData:
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          loadBalancer:
+            type: object
+            additionalProperties: false
+            description: Parameters for the load balancer.
+            properties:
+              enabled:
+                type: boolean
+                description: Whether the load balancer feature is enabled.
       providerDiscoveryData:
         type: object
         additionalProperties: false
