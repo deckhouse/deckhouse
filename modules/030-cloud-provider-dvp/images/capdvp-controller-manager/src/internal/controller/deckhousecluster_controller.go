@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 	dvpapi "dvp-common/api"
+	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
 
 // DeckhouseClusterReconciler reconciles a DeckhouseCluster object
