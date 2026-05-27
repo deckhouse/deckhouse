@@ -16,25 +16,50 @@ package schedule
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
+	"strings"
 )
+
+// CycleError reports a topological cycle in the dependency graph. Members are
+// the participating node names, sorted alphabetically for deterministic output.
+type CycleError struct {
+	Members []string
+}
+
+// Error renders the cycle members in a single line suitable for K8s admission
+// rejections and operator-facing logs.
+func (e *CycleError) Error() string {
+	return fmt.Sprintf("dependency cycle through: %s", strings.Join(e.Members, ", "))
+}
 
 // topoSort returns nodes in topological order respecting dependency edges,
 // with Order as the primary tiebreaker and name as the secondary tiebreaker
 // for nodes at the same topological level.
-// Nodes involved in cycles are silently omitted from the result.
-func topoSort(nodes map[string]*node) []*node {
+//
+// Predecessor edges are derived from n.dependencies directly.
+//
+// On cycle, returns the partial sort plus a *CycleError naming the
+// participants. Callers (CheckConstraints, AddNode) use this to reject
+// configurations that introduce cycles before they hit the live scheduler
+// graph. compute() falls back gracefully if a cycle ever slips through,
+// relying on its disabled-mark-active walk over s.nodes to unblock
+// higher-tier packages.
+func topoSort(nodes map[string]*node) ([]*node, error) {
 	if len(nodes) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	// Compute in-degree: count of followees that actually exist in nodes.
+	// Build the reverse dep map locally so we know whose in-degree to
+	// decrement when a node is processed.
+	dependents := make(map[string][]string, len(nodes))
 	inDegree := make(map[string]int, len(nodes))
 	for name, n := range nodes {
 		deg := 0
-		for dep := range n.followees {
+		for dep := range n.dependencies {
 			if _, ok := nodes[dep]; ok {
 				deg++
+				dependents[dep] = append(dependents[dep], name)
 			}
 		}
 		inDegree[name] = deg
@@ -48,7 +73,7 @@ func topoSort(nodes map[string]*node) []*node {
 		}
 	}
 
-	var result []*node
+	result := make([]*node, 0, len(nodes))
 	for len(ready) > 0 {
 		// Sort ready nodes: Order ASC, then name ASC for determinism.
 		slices.SortFunc(ready, func(a, b *node) int {
@@ -63,16 +88,30 @@ func topoSort(nodes map[string]*node) []*node {
 		ready = ready[1:]
 		result = append(result, n)
 
-		// Decrement in-degree for all followers.
-		for followerName := range n.followers {
-			inDegree[followerName]--
-			if inDegree[followerName] == 0 {
-				if fn, ok := nodes[followerName]; ok {
-					ready = append(ready, fn)
+		// Decrement in-degree for everyone that depends on n.
+		for _, dependentName := range dependents[n.name] {
+			inDegree[dependentName]--
+			if inDegree[dependentName] == 0 {
+				if dn, ok := nodes[dependentName]; ok {
+					ready = append(ready, dn)
 				}
 			}
 		}
 	}
 
-	return result
+	// Any node still carrying positive in-degree participates in a cycle.
+	if len(result) < len(nodes) {
+		members := make([]string, 0, len(nodes)-len(result))
+		for name, deg := range inDegree {
+			if deg > 0 {
+				members = append(members, name)
+			}
+		}
+
+		slices.Sort(members)
+
+		return result, &CycleError{Members: members}
+	}
+
+	return result, nil
 }

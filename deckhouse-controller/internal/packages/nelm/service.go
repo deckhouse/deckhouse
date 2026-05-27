@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -31,7 +32,8 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/monitor"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -41,6 +43,18 @@ const (
 
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
+
+	// managedByAnnotation marks a release as owned by this service.
+	managedByAnnotation      = "packages.deckhouse.io/managed-by"
+	managedByAnnotationValue = "deckhouse"
+)
+
+const (
+	conditionReasonRenderFailed           status.ConditionReason = "RenderFailed"
+	conditionReasonCheckTemplatesFailed   status.ConditionReason = "CheckTemplatesFailed"
+	conditionReasonCreateValuesFileFailed status.ConditionReason = "CreateValuesFileFailed"
+	conditionReasonCheckReleaseFailed     status.ConditionReason = "CheckReleaseFailed"
+	conditionReasonApplyManifestsFailed   status.ConditionReason = "ApplyManifestsFailed"
 )
 
 var ErrPackageNotHelm = errors.New("package not helm")
@@ -59,7 +73,7 @@ type Service struct {
 	tmpDir string // Temporary directory for values files
 
 	client         *nelm.Client // nelm client for Helm operations
-	monitorManager *monitor.Manager
+	monitorManager *drift.Manager
 
 	status *status.Service
 
@@ -67,16 +81,21 @@ type Service struct {
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
-	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
-		"heritage": "deckhouse",
-	}))
+func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+	nelmClient := nelm.New(logger,
+		nelm.WithResourcesLabels(map[string]string{
+			"heritage": "deckhouse",
+		}),
+		nelm.WithReleaseAnnotations(map[string]string{
+			managedByAnnotation: managedByAnnotationValue,
+		}),
+	)
 
 	return &Service{
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
 		status:         status,
-		monitorManager: monitor.New(cache, nelmClient, callback, logger),
+		monitorManager: drift.New(cache, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -153,6 +172,9 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
 	})
 }
 
@@ -203,7 +225,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	isHelm, err := s.isHelmChart(pkg.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckChartError(err)
+		return status.NewError(conditionReasonCheckTemplatesFailed, err)
 	}
 
 	if !isHelm {
@@ -213,7 +235,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateValuesError(err)
+		return status.NewError(conditionReasonCreateValuesFileFailed, err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
@@ -227,10 +249,13 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newRenderError(err)
+		return status.NewError(conditionReasonRenderFailed, err)
 	}
 
 	// Calculate checksum to detect changes in rendered manifests
@@ -240,7 +265,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, namespace, pkg.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckReleaseError(err)
+		return status.NewError(conditionReasonCheckReleaseFailed, err)
 	}
 
 	if !shouldUpgrade {
@@ -255,19 +280,51 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		OnTrackingEvent: s.status.UpdateTracking,
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
+		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
-			nelm.LabelPackageChecksum: checksum,
+			nelm.ReleaseLabelPackageChecksum: checksum,
 		},
-		RootValues: pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newInstallChartError(err)
+		return status.NewError(conditionReasonApplyManifestsFailed, err)
 	}
 
 	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)
 
 	return nil
+}
+
+// Cleanup uninstalls releases owned by this service (carrying the managed-by
+// annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) {
+	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
+		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
+	})
+	if err != nil {
+		s.logger.Warn("failed to list releases", log.Err(err))
+		return
+	}
+
+	for _, r := range releases {
+		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
+			continue
+		}
+
+		if slices.Contains(ignoreNamespaces, r.Namespace) {
+			continue
+		}
+
+		if err = s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
+			s.logger.Warn("failed to delete orphan release",
+				slog.String("namespace", r.Namespace),
+				slog.String("release", r.Name),
+				log.Err(err))
+		}
+	}
 }
 
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.
@@ -311,7 +368,7 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	}
 
 	if err = s.monitorManager.CheckResources(ctx, releaseName); err != nil {
-		if errors.Is(err, monitor.ErrAbsentManifest) {
+		if errors.Is(err, drift.ErrAbsentManifest) {
 			return true, nil
 		}
 
