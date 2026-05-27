@@ -67,6 +67,9 @@ const globalValues = `
 
 const moduleValuesA = `
 internal:
+  discoveryData:
+    loadBalancer:
+      enabled: false
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: DVPClusterConfiguration
