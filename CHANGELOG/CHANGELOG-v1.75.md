@@ -251,6 +251,8 @@
  - **[docs]** Added docs about how NGC execution works. [#17870](https://github.com/deckhouse/deckhouse/pull/17870)
  - **[docs]** Fixed registry-modules-watcher deleting all documentation when registry returns an error. [#16771](https://github.com/deckhouse/deckhouse/pull/16771)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
+ - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20171](https://github.com/deckhouse/deckhouse/pull/20171)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** CVE-2025-15566 is fixed in 1.10 and 1.12 controllers. [#19205](https://github.com/deckhouse/deckhouse/pull/19205)
