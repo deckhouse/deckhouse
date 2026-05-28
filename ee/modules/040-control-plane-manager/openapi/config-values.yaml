@@ -322,30 +322,44 @@ properties:
             # Avoid trailing slash
             pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
             default: /var/log/kube-audit
-      signature:
-        x-doc-d8Editions:
-          - ee
-          - cse-lite
-          - cse-pro
-        type: string
-        default: Rollback
-        description: |
-          Enables signature verification by the api-server for all records.
-          Transforms all records in etcd to new format with signature.
+      # TODO enable signature for ee and fe after full ready sig-migrate
+      # TODO after enable, do not forget change in dhctl/pkg/module/controlplane/config.go
+      # config.IsCSEdition to config.IsEEEdition
+      # TODO also in modules/040-control-plane-manager/images/control-plane-manager/werf.inc.yaml
+      # change {{ if eq $.Env "CSE"}} to {{ if $.isEE}}
+      # TODO also after enable signatures for ee and fe uncomment ee edition in signature in 
+      # ee/cse/modules/040-control-plane-manager/openapi/config-values.yaml
+      # TODO also add information about ee and fe editions
+      # in modules/040-control-plane-manager/docs/FAQ.md
+      # and modules/040-control-plane-manager/docs/FAQ_RU.md
+      # TODO also enable validation for module config in 
+      # modules/040-control-plane-manager/templates/validation.yaml
+      # TODO also move ee/cse/modules/040-control-plane-manager/monitoring dir to
+      # ee/modules/040-control-plane-manager/monitoring
+      # signature:
+      #   x-doc-d8Editions:
+      #     - ee
+      #     - cse-lite
+      #     - cse-pro
+      #   type: string
+      #   default: Rollback
+      #   description: |
+      #     Enables signature verification by the api-server for all records.
+      #     Transforms all records in etcd to new format with signature.
 
-          Possible values:
-          - Migrate
-            Allow read records without signature or with invalid signature.
-          - Enforce
-            Reject records without signature, with invalid signature or in wrong format.
-          - Rollback
-            Transform records to standard format (default format for etcd) when modify records.
-            Allows use records without signature or with invalid signature.
-        x-examples: ["Migrate"]
-        enum:
-          - Migrate
-          - Enforce
-          - Rollback
+      #     Possible values:
+      #     - Migrate
+      #       Allow read records without signature or with invalid signature.
+      #     - Enforce
+      #       Reject records without signature, with invalid signature or in wrong format.
+      #     - Rollback
+      #       Transform records to standard format (default format for etcd) when modify records.
+      #       Allows use records without signature or with invalid signature.
+      #   x-examples: ["Migrate"]
+      #   enum:
+      #     - Migrate
+      #     - Enforce
+      #     - Rollback
       encryptionEnabled:
         type: boolean
         default: false

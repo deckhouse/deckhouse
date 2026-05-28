@@ -651,3 +651,7 @@ func IsEEEdition(ed string) bool {
 	_, ok := editions[ed]
 	return ok
 }
+
+func IsCSEdition(ed string) bool {
+	return strings.ToLower(ed) == "cse"
+}
