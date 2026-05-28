@@ -134,3 +134,75 @@ func TestExtractTarGzFile_rejectsOversizedEntry(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "exceeds")
 }
+
+func TestExtractIcon_picksHighestPriorityCandidate(t *testing.T) {
+	// All four formats present at once: SVG must win because it's first
+	// in iconCandidates.
+	layers := []v1.Layer{
+		tarLayerWithFile(t, "docs/icon.png", "PNG"),
+		tarLayerWithFile(t, "docs/icon.jpeg", "JPEG"),
+		tarLayerWithFile(t, "docs/icon.svg", "SVG"),
+		tarLayerWithFile(t, "docs/icon.jpg", "JPG"),
+	}
+	img, err := mutate.AppendLayers(empty.Image, layers...)
+	require.NoError(t, err)
+
+	reader := flattenedPackageReader(t, img)
+	defer reader.Close()
+
+	data, cand, err := extractIcon(reader)
+	require.NoError(t, err)
+	assert.Equal(t, "SVG", string(data))
+	assert.Equal(t, "image/svg+xml", cand.contentType)
+	assert.Equal(t, "svg", cand.ext)
+}
+
+func TestExtractIcon_fallsBackThroughRasters(t *testing.T) {
+	// No SVG: PNG should win over JPG/JPEG.
+	layers := []v1.Layer{
+		tarLayerWithFile(t, "docs/icon.jpg", "JPG"),
+		tarLayerWithFile(t, "docs/icon.jpeg", "JPEG"),
+		tarLayerWithFile(t, "docs/icon.png", "PNG"),
+	}
+	img, err := mutate.AppendLayers(empty.Image, layers...)
+	require.NoError(t, err)
+
+	reader := flattenedPackageReader(t, img)
+	defer reader.Close()
+
+	data, cand, err := extractIcon(reader)
+	require.NoError(t, err)
+	assert.Equal(t, "PNG", string(data))
+	assert.Equal(t, "image/png", cand.contentType)
+	assert.Equal(t, "png", cand.ext)
+}
+
+func TestExtractIcon_returnsSentinelWhenAbsent(t *testing.T) {
+	// Only unrelated files - the sentinel is what tells fetchIcon to
+	// answer 404 instead of 502.
+	layer := tarLayerWithFile(t, "README", "no icon here")
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	reader := flattenedPackageReader(t, img)
+	defer reader.Close()
+
+	_, _, err = extractIcon(reader)
+	require.ErrorIs(t, err, errFileNotFoundInArchive)
+}
+
+func TestExtractIcon_normalizesLeadingDotSlash(t *testing.T) {
+	// Tar producers (e.g. ko, BuildKit) often prefix entries with "./".
+	// extractIcon must treat "./docs/icon.png" as a match.
+	layer := tarLayerWithFile(t, "./docs/icon.png", "PNG")
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	reader := flattenedPackageReader(t, img)
+	defer reader.Close()
+
+	data, cand, err := extractIcon(reader)
+	require.NoError(t, err)
+	assert.Equal(t, "PNG", string(data))
+	assert.Equal(t, "png", cand.ext)
+}

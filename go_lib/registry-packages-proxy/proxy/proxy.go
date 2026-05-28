@@ -99,11 +99,37 @@ const (
 	// handler intentionally does no authentication of its own.
 	packagesPathPrefix = "/v1/packages/"
 
-	// maxIconBytes caps the SVG payload we are willing to read out of an OCI
-	// image so that a hostile or accidentally-huge docs/icon.svg cannot
-	// blow up the proxy. 1 MiB is comfortably above any real SVG icon.
+	// maxIconBytes caps how much we are willing to read out of an OCI image
+	// for an icon entry so that a hostile or accidentally-huge file cannot
+	// blow up the proxy. 1 MiB comfortably accommodates raster icons; real
+	// package icons are typically well under 200 KiB.
 	maxIconBytes = 1 << 20
 )
+
+// iconCandidate describes one accepted package icon file: where to look for
+// it inside the OCI image and how to serve it back.
+type iconCandidate struct {
+	// path is the in-archive path that must match (after normalization of
+	// leading "./" / "/" by normalizeTarName).
+	path string
+	// contentType is the response Content-Type for this format.
+	contentType string
+	// ext is the filename extension stamped into Content-Disposition.
+	ext string
+}
+
+// iconCandidates is the ordered list of icon files the proxy accepts, in
+// priority order: SVG wins over raster formats because it's resolution
+// independent. JPG is preferred over JPEG only so that the more common
+// extension is picked when both happen to exist; both share the same MIME.
+//
+// Adding a new format is just an entry here (and a test in extract_tar_test.go).
+var iconCandidates = []iconCandidate{
+	{path: "docs/icon.svg", contentType: "image/svg+xml", ext: "svg"},
+	{path: "docs/icon.png", contentType: "image/png", ext: "png"},
+	{path: "docs/icon.jpg", contentType: "image/jpeg", ext: "jpg"},
+	{path: "docs/icon.jpeg", contentType: "image/jpeg", ext: "jpeg"},
+}
 
 var (
 	errEmptyRegistryConfig   = errors.New("empty registry config")
@@ -854,16 +880,18 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, cfg *regis
 		return
 	}
 
-	icon, ok := p.fetchIcon(w, r, cfg, imagePath, manifestDigest)
+	icon, cand, ok := p.fetchIcon(w, r, cfg, imagePath, manifestDigest)
 	if !ok {
 		return
 	}
 
 	// Icons are immutable for a given manifest digest, so cache aggressively
-	// downstream. ETag mirrors what cliHandler.handlePullTag does so the
-	// header surface is consistent between routes.
-	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.svg"`, packageName))
+	// downstream. Content-Type and the filename extension come from which
+	// file we actually found inside the OCI image (see iconCandidates).
+	// ETag mirrors what cliHandler.handlePullTag does so the header surface
+	// is consistent between routes.
+	w.Header().Set("Content-Type", cand.contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.%s"`, packageName, cand.ext))
 	w.Header().Set("Content-Length", strconv.Itoa(len(icon)))
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	w.Header().Set("ETag", `"`+manifestDigest+`"`)
@@ -930,7 +958,7 @@ func (p *Proxy) resolveManifestDigest(w http.ResponseWriter, r *http.Request, cf
 	return manifestDigest, true
 }
 
-func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath, manifestDigest string) ([]byte, bool) {
+func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath, manifestDigest string) ([]byte, iconCandidate, bool) {
 	_, reader, err := GetPackageCached(
 		r.Context(),
 		p.logger,
@@ -949,24 +977,26 @@ func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "package not found", http.StatusNotFound)
-			return nil, false
+			return nil, iconCandidate{}, false
 		}
 		p.logger.Errorf("get package for %q@%s: %v", imagePath, manifestDigest, err)
 		http.Error(w, "failed to fetch package", http.StatusBadGateway)
-		return nil, false
+		return nil, iconCandidate{}, false
 	}
 
-	icon, err := extractTarGzFile(reader, exactNameMatcher("docs/icon.svg"), maxIconBytes)
+	icon, cand, err := extractIcon(reader)
 	if err != nil {
-		if errors.Is(err, errFileNotFoundInArchive) {
-			http.Error(w, "icon not found", http.StatusNotFound)
-			return nil, false
-		}
-		p.logger.Errorf("extract icon from package for %q@%s: %v", imagePath, manifestDigest, err)
-		http.Error(w, "failed to extract icon", http.StatusBadGateway)
-		return nil, false
+		// Any failure to surface a recognized icon - no candidate present,
+		// a corrupted gzip stream, or an entry that exceeds maxIconBytes -
+		// is surfaced as 404 to the client. Icons are public best-effort
+		// metadata: the caller (browser, console) should just fall back to
+		// a default icon. The underlying cause is logged for ops; the
+		// client can't usefully distinguish them.
+		p.logger.Warnf("extract icon from package for %q@%s: %v", imagePath, manifestDigest, err)
+		http.Error(w, "icon not found", http.StatusNotFound)
+		return nil, iconCandidate{}, false
 	}
-	return icon, true
+	return icon, cand, true
 }
 
 // parsePackagesPath splits an HTTP path of the form:
@@ -1047,6 +1077,100 @@ func normalizeTarName(name string) string {
 	return name
 }
 
+// extractIcon walks the gzipped tar in reader once and returns the icon entry
+// that ranks highest in iconCandidates (lower index = higher priority). The
+// scan stops early when the top-priority candidate is found.
+//
+// The OCI image stream is single-use, so this MUST be done in one pass: we
+// can't rewind to look for SVG after we already saw PNG. We solve that by
+// buffering whichever match we currently believe is "best" and overwriting
+// it if a higher-priority one shows up later in the same archive.
+//
+// If no candidate is present, errFileNotFoundInArchive is returned so the
+// caller can map it to a 404. Any other error (corrupt gzip, oversized
+// entry, IO failure) is returned wrapped.
+func extractIcon(reader io.Reader) ([]byte, iconCandidate, error) {
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, iconCandidate{}, fmt.Errorf("read gzip stream: %w", err)
+	}
+	defer gzipReader.Close()
+
+	// Pre-index candidates by normalized path for O(1) lookup per entry,
+	// remembering the priority (slice index).
+	type indexed struct {
+		priority int
+		cand     iconCandidate
+	}
+	pathToCandidate := make(map[string]indexed, len(iconCandidates))
+	for i, c := range iconCandidates {
+		pathToCandidate[normalizeTarName(c.path)] = indexed{priority: i, cand: c}
+	}
+
+	bestPriority := -1
+	var bestData []byte
+	var bestCand iconCandidate
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, iconCandidate{}, fmt.Errorf("read tar header: %w", err)
+		}
+
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		entry, ok := pathToCandidate[normalizeTarName(header.Name)]
+		if !ok {
+			continue
+		}
+		// Already saw an equal-or-higher priority match; ignore this one.
+		if bestPriority != -1 && entry.priority >= bestPriority {
+			continue
+		}
+
+		data, err := readTarEntry(tarReader, maxIconBytes)
+		if err != nil {
+			return nil, iconCandidate{}, err
+		}
+
+		bestPriority = entry.priority
+		bestData = data
+		bestCand = entry.cand
+
+		// Top priority found - no point scanning the rest of the archive.
+		if bestPriority == 0 {
+			return bestData, bestCand, nil
+		}
+	}
+
+	if bestPriority == -1 {
+		return nil, iconCandidate{}, errFileNotFoundInArchive
+	}
+	return bestData, bestCand, nil
+}
+
+// readTarEntry reads at most maxBytes from the current tar entry, returning
+// an error if the entry exceeds the cap. Centralized so extractIcon and
+// extractTarGzFile share the same overflow semantics.
+func readTarEntry(tarReader io.Reader, maxBytes int64) ([]byte, error) {
+	// +1 so we can detect overflow: io.LimitReader stops at maxBytes,
+	// which would silently truncate a maxBytes-sized real file.
+	data, err := io.ReadAll(io.LimitReader(tarReader, maxBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read tar entry: %w", err)
+	}
+	if int64(len(data)) > maxBytes {
+		return nil, fmt.Errorf("tar entry exceeds %d bytes", maxBytes)
+	}
+	return data, nil
+}
+
 // extractTarGzFile reads a gzipped tar from reader and returns the bytes of
 // the first regular file matched by matcher, capped at maxBytes to protect
 // the proxy from a hostile or accidentally-huge entry. If no entry matches,
@@ -1072,17 +1196,6 @@ func extractTarGzFile(reader io.Reader, matcher tarEntryMatcher, maxBytes int64)
 			continue
 		}
 
-		// +1 so we can detect overflow: io.LimitReader stops at maxBytes,
-		// which would silently truncate a maxBytes-sized real file.
-		limited := io.LimitReader(tarReader, maxBytes+1)
-		data, err := io.ReadAll(limited)
-		if err != nil {
-			return nil, fmt.Errorf("read tar entry: %w", err)
-		}
-		if int64(len(data)) > maxBytes {
-			return nil, fmt.Errorf("tar entry exceeds %d bytes", maxBytes)
-		}
-		return data, nil
+		return readTarEntry(tarReader, maxBytes)
 	}
 }
-

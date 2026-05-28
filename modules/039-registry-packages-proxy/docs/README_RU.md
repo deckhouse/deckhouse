@@ -51,7 +51,18 @@ description: "Внутренний прокси-сервер пакетов regi
 | `GET`, `HEAD` | `/v1/packages/<РЕПОЗИТОРИЙ-ПАКЕТОВ>/<ИМЯ-ПАКЕТА>/metadata/icon`          | То же, что выше |
 | `GET`, `HEAD` | `/v1/packages/<РЕПОЗИТОРИЙ-ПАКЕТОВ>/<ИМЯ-ПАКЕТА>/metadata/icon/<ВЕРСИЯ>` | Иконка указанной версии (`<ВЕРСИЯ>` — semver, например `v1.0.1`) |
 
-`<РЕПОЗИТОРИЙ-ПАКЕТОВ>` — это `metadata.name` кастомного ресурса [PackageRepository](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#packagerepository); поле `spec.registry.repo` этого ресурса определяет, по какому пути в хранилище образов прокси читает файл `docs/icon.svg`. Прокси читает иконку из OCI-образа `<spec.registry.repo>/<ИМЯ-ПАКЕТА>:<ТЕГ>`.
+`<РЕПОЗИТОРИЙ-ПАКЕТОВ>` — это `metadata.name` кастомного ресурса [PackageRepository](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#packagerepository); поле `spec.registry.repo` этого ресурса определяет, по какому пути в хранилище образов прокси читает иконку. Прокси читает иконку из OCI-образа `<spec.registry.repo>/<ИМЯ-ПАКЕТА>:<ТЕГ>`.
+
+Прокси ищет внутри образа пакета следующие файлы в указанном порядке приоритета и возвращает первый найденный:
+
+| Путь                | `Content-Type`    |
+|---------------------|-------------------|
+| `docs/icon.svg`     | `image/svg+xml`   |
+| `docs/icon.png`     | `image/png`       |
+| `docs/icon.jpg`     | `image/jpeg`      |
+| `docs/icon.jpeg`    | `image/jpeg`      |
+
+Если ни одного из этих файлов нет (или файл больше 4 МиБ), прокси возвращает `404 Not Found`; вызывающий код должен использовать иконку по умолчанию. SVG предпочтительнее, так как не зависит от разрешения.
 
 Пример запроса:
 
@@ -59,7 +70,7 @@ description: "Внутренний прокси-сервер пакетов regi
 curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-repo/my-module/metadata/icon/"
 ```
 
-Пример успешного ответа:
+Пример успешного ответа (когда в образе есть `docs/icon.svg`):
 
 ```console
 Content-Type: image/svg+xml
@@ -127,4 +138,4 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.e
 - Требует `hostNetwork: true` для работы во время фазы загрузки.
 - Размер кеша ограничен 1 ГБ на под.
 - Большинство HTTP-эндпоинтов требуют RBAC Kubernetes; без аутентификации доступны только проверки работоспособности (health check) и иконки пакетов.
-- Иконки отдаются только как SVG из фиксированного пути `docs/icon.svg` внутри образа пакета.
+- Иконки читаются из фиксированных путей внутри образа пакета (`docs/icon.svg`, `docs/icon.png`, `docs/icon.jpg`, `docs/icon.jpeg`); SVG предпочтительнее. Максимальный размер иконки — 4 МиБ.

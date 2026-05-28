@@ -51,7 +51,18 @@ Package icons are **public**: no `Authorization: Bearer` header or Kubernetes RB
 | `GET`, `HEAD` | `/v1/packages/<PACKAGE-REPOSITORY>/<PACKAGE-NAME>/metadata/icon`           | Same as above |
 | `GET`, `HEAD` | `/v1/packages/<PACKAGE-REPOSITORY>/<PACKAGE-NAME>/metadata/icon/<VERSION>` | Icon of a specific version (`<VERSION>` is a semantic version, e.g. `v1.0.1`) |
 
-`<PACKAGE-REPOSITORY>` is the `metadata.name` of a [PackageRepository](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#packagerepository) custom resource; its `spec.registry.repo` field tells the proxy which registry path to pull `docs/icon.svg` from. The proxy reads the icon from the OCI image `<spec.registry.repo>/<PACKAGE-NAME>:<TAG>`.
+`<PACKAGE-REPOSITORY>` is the `metadata.name` of a [PackageRepository](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#packagerepository) custom resource; its `spec.registry.repo` field tells the proxy which registry path to pull the icon from. The proxy reads the icon from the OCI image `<spec.registry.repo>/<PACKAGE-NAME>:<TAG>`.
+
+The proxy looks for the following files inside the package image, in this priority order, and returns the first one it finds:
+
+| Path                | `Content-Type`    |
+|---------------------|-------------------|
+| `docs/icon.svg`     | `image/svg+xml`   |
+| `docs/icon.png`     | `image/png`       |
+| `docs/icon.jpg`     | `image/jpeg`      |
+| `docs/icon.jpeg`    | `image/jpeg`      |
+
+If none of these are present (or the file is larger than 4 MiB), the proxy returns `404 Not Found`; callers should fall back to a default icon. SVG is preferred because it is resolution-independent.
 
 Example request:
 
@@ -59,7 +70,7 @@ Example request:
 curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-repo/my-module/metadata/icon/"
 ```
 
-Example response headers:
+Example response headers (when the image ships `docs/icon.svg`):
 
 ```console
 Content-Type: image/svg+xml
@@ -128,4 +139,4 @@ The module ensures high availability through:
 - It requires `hostNetwork: true` to function during bootstrap phase.
 - Cache size is limited to 1 GB per pod.
 - Most HTTP endpoints require Kubernetes RBAC; only health checks (healthz) and package icons are anonymous.
-- Package icons are served only as SVG from the fixed path `docs/icon.svg` inside the package image.
+- Package icons are read from fixed paths inside the package image (`docs/icon.svg`, `docs/icon.png`, `docs/icon.jpg`, `docs/icon.jpeg`) with SVG preferred. Maximum icon size is 4 MiB.

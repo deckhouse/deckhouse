@@ -49,10 +49,24 @@ const (
 
 func packageBodyWithIcon(t *testing.T) []byte {
 	t.Helper()
+	return packageBodyWithFiles(t, map[string]string{testIconPath: testIconContent})
+}
 
-	layer := tarLayerWithFile(t, testIconPath, testIconContent)
-	img, err := mutate.AppendLayers(empty.Image, layer)
-	require.NoError(t, err)
+// packageBodyWithFiles produces the flattened-image gzip-tar bytes that a
+// fakeCLIRegistryClient should return for a package containing the given
+// file -> contents mapping. Each entry becomes one OCI layer (order is
+// undefined since map iteration is non-deterministic; for tests asserting
+// priority use the per-file helpers below instead).
+func packageBodyWithFiles(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+
+	img := empty.Image
+	for name, content := range files {
+		layer := tarLayerWithFile(t, name, content)
+		var err error
+		img, err = mutate.AppendLayers(img, layer)
+		require.NoError(t, err)
+	}
 
 	reader := flattenedPackageReader(t, img)
 	defer reader.Close()
@@ -495,6 +509,115 @@ func TestParsePackagesPath(t *testing.T) {
 			assert.Equal(t, tc.wantRepo, repo)
 			assert.Equal(t, tc.wantPackage, pkg)
 			assert.Equal(t, tc.wantVersion, version)
+		})
+	}
+}
+
+// TestPackagesHandler_GetIcon_FormatNegotiation pins down the rule that
+// determines which extension wins when an image contains different icon
+// files. The order in iconCandidates is the contract; this table mirrors it.
+func TestPackagesHandler_GetIcon_FormatNegotiation(t *testing.T) {
+	cases := []struct {
+		name            string
+		files           map[string]string
+		wantContentType string
+		wantFilename    string
+		wantBody        string
+	}{
+		{
+			name:            "svg only",
+			files:           map[string]string{"docs/icon.svg": "<svg/>"},
+			wantContentType: "image/svg+xml",
+			wantFilename:    `attachment; filename="my-package.svg"`,
+			wantBody:        "<svg/>",
+		},
+		{
+			name:            "png only",
+			files:           map[string]string{"docs/icon.png": "PNG-BYTES"},
+			wantContentType: "image/png",
+			wantFilename:    `attachment; filename="my-package.png"`,
+			wantBody:        "PNG-BYTES",
+		},
+		{
+			name:            "jpg only",
+			files:           map[string]string{"docs/icon.jpg": "JPG-BYTES"},
+			wantContentType: "image/jpeg",
+			wantFilename:    `attachment; filename="my-package.jpg"`,
+			wantBody:        "JPG-BYTES",
+		},
+		{
+			name:            "jpeg only",
+			files:           map[string]string{"docs/icon.jpeg": "JPEG-BYTES"},
+			wantContentType: "image/jpeg",
+			wantFilename:    `attachment; filename="my-package.jpeg"`,
+			wantBody:        "JPEG-BYTES",
+		},
+		{
+			// SVG must win over raster formats regardless of which layer
+			// it lives in.
+			name: "svg wins over png and jpg",
+			files: map[string]string{
+				"docs/icon.png": "PNG-BYTES",
+				"docs/icon.jpg": "JPG-BYTES",
+				"docs/icon.svg": "<svg/>",
+			},
+			wantContentType: "image/svg+xml",
+			wantFilename:    `attachment; filename="my-package.svg"`,
+			wantBody:        "<svg/>",
+		},
+		{
+			// When only raster formats are present, PNG wins over JPG/JPEG.
+			name: "png wins over jpg",
+			files: map[string]string{
+				"docs/icon.jpg": "JPG-BYTES",
+				"docs/icon.png": "PNG-BYTES",
+			},
+			wantContentType: "image/png",
+			wantFilename:    `attachment; filename="my-package.png"`,
+			wantBody:        "PNG-BYTES",
+		},
+		{
+			// Non-icon files in the same archive must not confuse the
+			// match (e.g. README, version files).
+			name: "ignores unrelated files",
+			files: map[string]string{
+				"README":          "hello",
+				"meta/version":    "v1.0.0",
+				"docs/icon.png":   "PNG-BYTES",
+				"docs/other.svg":  "not the icon",
+				"icons/icon.png":  "wrong location",
+			},
+			wantContentType: "image/png",
+			wantFilename:    `attachment; filename="my-package.png"`,
+			wantBody:        "PNG-BYTES",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			const manifestDigest = "sha256:format-test"
+			fake := &fakeCLIRegistryClient{
+				tagToManifestDigest: map[string]string{
+					testImagePath + ":v1.0.0": manifestDigest,
+				},
+				packageBody: packageBodyWithFiles(t, tc.files),
+			}
+			srv := newPackagesTestServer(t, fake, &fakeCLIGetter{}, nil)
+			defer srv.Close()
+
+			resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.0")
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.wantContentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tc.wantFilename, resp.Header.Get("Content-Disposition"))
+			assert.Equal(t, tc.wantBody, string(body))
+			assert.Equal(t, strconv.Itoa(len(tc.wantBody)), resp.Header.Get("Content-Length"))
 		})
 	}
 }
