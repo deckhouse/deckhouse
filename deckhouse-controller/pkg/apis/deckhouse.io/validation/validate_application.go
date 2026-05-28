@@ -256,6 +256,21 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 						return fmt.Errorf("parse noneOf group '%s': duplicate member '%s'", group.Name, m.Name)
 					}
 
+					if existing, clash := modules[m.Name]; clash {
+						bucket := "mandatory"
+						if existing.Optional {
+							bucket = "conditional"
+						}
+
+						return fmt.Errorf("parse noneOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
+					}
+
+					for _, ag := range anyOfGroups {
+						if _, clash := ag.Members[m.Name]; clash {
+							return fmt.Errorf("parse noneOf group '%s' member '%s': also listed in anyOf group '%s'", group.Name, m.Name, ag.Name)
+						}
+					}
+
 					constraint, err := parsePackageDependencyConstraint(m.Constraint)
 					if err != nil {
 						return fmt.Errorf("parse noneOf group '%s' member '%s': %w", group.Name, m.Name, err)

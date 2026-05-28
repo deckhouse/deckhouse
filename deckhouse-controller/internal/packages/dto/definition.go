@@ -110,11 +110,11 @@ type ModuleDependency struct {
 	Constraint string `yaml:"constraint,omitempty" json:"constraint,omitempty"`
 }
 
-// ModuleGroup is a group of alternative module dependencies. At least one member
-// must be installed and satisfy its constraint for the package to start. Name is
-// required and surfaces in scheduler error messages; Description is optional and
-// flows through to the CR status for kubectl visibility but is not used in any
-// scheduling decision.
+// ModuleGroup is a named group of module dependencies. Group semantics depend on
+// the containing bucket (AnyOf: at least one member must be installed; NoneOf:
+// no member may be installed). Name is required and surfaces in scheduler error
+// messages; Description is optional and flows through to the CR status for
+// kubectl visibility but is not used in any scheduling decision.
 type ModuleGroup struct {
 	Name        string             `yaml:"name" json:"name"`
 	Description string             `yaml:"description,omitempty" json:"description,omitempty"`

@@ -59,10 +59,11 @@ type ModulesRequirements struct {
 	NoneOf []ModuleGroup `json:"noneOf,omitempty" yaml:"noneOf,omitempty"`
 }
 
-// ModuleGroup is a group of alternative module dependencies for the AnyOf bucket.
-// Members maps each alternative's module name to its semver constraint (nil meaning
-// "any version of this alternative"). Name is the stable identifier used by the
-// scheduler in diagnostics.
+// ModuleGroup is a named group of module dependencies shared by the AnyOf and
+// NoneOf buckets; the containing field decides whether members are alternatives
+// (at least one must be installed) or forbidden (none may be installed). Members
+// maps each member's module name to its semver constraint (nil meaning "any
+// version"). Name is the stable identifier used by the scheduler in diagnostics.
 type ModuleGroup struct {
 	Name    string                         `json:"name" yaml:"name"`
 	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
