@@ -21,12 +21,13 @@ import (
 	"time"
 )
 
-// KubeconfigMissingError is returned when a kubeconfig file does not exist on disk. The caller treats this as a skippable condition.
-type KubeconfigMissingError struct {
+// MissingError is returned when a kubeconfig file does not exist on disk.
+// The caller treats this as a skippable condition.
+type MissingError struct {
 	File File
 }
 
-func (e *KubeconfigMissingError) Error() string {
+func (e *MissingError) Error() string {
 	return fmt.Sprintf("kubeconfig file %q not found", e.File)
 }
 

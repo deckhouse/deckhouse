@@ -54,17 +54,10 @@ type KubeconfigExpirationEntry struct {
 	Err error
 }
 
-// KubeconfigExpirationAction describes what happened to a single kubeconfig file.
-type KubeconfigExpirationAction uint8
-
-func (r *KubeconfigExpirationReport) add(file File, path string, notAfter time.Time, err error) {
+func (r *KubeconfigExpirationReport) add(exp ClientCertificateExpiration, err error) {
 	r.Entries = append(r.Entries, KubeconfigExpirationEntry{
-		ClientCertificateExpiration: ClientCertificateExpiration{
-			File:     file,
-			Path:     path,
-			NotAfter: notAfter,
-		},
-		Err: err,
+		ClientCertificateExpiration: exp,
+		Err:                         err,
 	})
 }
 
@@ -90,6 +83,7 @@ func WithFiles(files ...File) ExpirationOption {
 }
 
 // ListClientCertificateExpirations enumerates the selected kubeconfig files and returns a structured report.
+// The caller iterates report.Entries and decides per-entry what to do.
 func ListClientCertificateExpirations(opts ...ExpirationOption) KubeconfigExpirationReport {
 	options := newExpirationOptions(opts...)
 	files := expirationFiles(options)
@@ -101,11 +95,11 @@ func ListClientCertificateExpirations(opts ...ExpirationOption) KubeconfigExpira
 		exp, loadErr := clientCertificateExpiration(path)
 		switch {
 		case loadErr == nil:
-			report.add(exp.File, exp.Path, exp.NotAfter, nil)
+			report.add(exp, nil)
 		case errors.Is(loadErr, fs.ErrNotExist):
-			report.add(file, path, time.Time{}, &KubeconfigMissingError{File: file})
+			report.add(ClientCertificateExpiration{File: file, Path: path}, &MissingError{File: file})
 		default:
-			report.add(file, path, time.Time{}, loadErr)
+			report.add(ClientCertificateExpiration{File: file, Path: path}, loadErr)
 		}
 	}
 

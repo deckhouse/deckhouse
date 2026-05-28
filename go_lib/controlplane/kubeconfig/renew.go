@@ -97,23 +97,17 @@ type KubeconfigRenewReport struct {
 	Entries []KubeconfigRenewEntry
 }
 
+// KubeconfigRenewEntry is one row of KubeconfigRenewReport.
+// Err == nil means the client cert was re-signed; otherwise Err is a sentinel describing what happened:
+//   - *MissingError    when the kubeconfig file is absent (skippable)
+//   - *CAExternalError when the CA private key is absent (skippable)
+//   - *CAExpiredError  when the signing CA has expired (renewal is pointless and the kubeconfig is left untouched)
+//   - any other error (wrapped) for IO/permissions/signing failures
 type KubeconfigRenewEntry struct {
 	File File
 	Path string
 	Err  error
 }
-
-// KubeconfigRenewAction describes what happened to a single kubeconfig file.
-type KubeconfigRenewAction uint8
-
-const (
-	// KubeconfigRenewActionRenewed - certificate was renewed.
-	KubeconfigRenewActionRenewed KubeconfigRenewAction = iota
-	// KubeconfigRenewActionSkippedMissing - certificate was skipped because it was missing.
-	KubeconfigRenewActionSkippedMissing
-	// external CA scenario; the kubeconfig is left untouched.
-	KubeconfigRenewActionSkippedExternalCA
-)
 
 func (r *KubeconfigRenewReport) add(file File, path string, err error) {
 	r.Entries = append(r.Entries, KubeconfigRenewEntry{
@@ -140,7 +134,7 @@ func clientCertConfigFromX509(cert *x509.Certificate) pkiutil.CertConfig {
 // All other kubeconfig fields are preserved. CA cert and key are loaded from pkiDir.
 //
 // Sentinel errors:
-//   - *KubeconfigMissingError — kubeconfig file absent (skippable)
+//   - *MissingError — kubeconfig file absent (skippable)
 //   - *CAExternalError        — CA key absent (skippable)
 //   - *CAExpiredError         — CA cert expired (hard stop)
 func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
@@ -149,7 +143,7 @@ func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 	oldCert, err := loadClientCertificate(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return &KubeconfigMissingError{File: file}
+			return &MissingError{File: file}
 		}
 		return err
 	}
@@ -206,7 +200,7 @@ func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 }
 
 // RenewClientCert unconditionally re-signs the client certificate embedded in the given kubeconfig file.
-// Returns nil on success or one of *KubeconfigMissingError / *CAExternalError / *CAExpiredError to let the caller distinguish skip vs. fatal.
+// Returns nil on success or one of *MissingError / *CAExternalError / *CAExpiredError to let the caller distinguish skip vs. fatal.
 // This is the low-level, single-file entry point; for renewing a batch of kubeconfig files with a structured outcome report, use RenewClientCerts.
 func RenewClientCert(file File, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
@@ -214,9 +208,9 @@ func RenewClientCert(file File, opts ...RenewOption) error {
 }
 
 // RenewClientCerts iterates DefaultRenewableFiles() (or the subset chosen via WithRenewFiles) and renews each kubeconfig client certificate in turn.
-// On *KubeconfigMissingError or *CAExternalError: an entry is appended to the report with the corresponding skip action and iteration continues.
-// On *CAExpiredError or any other error (I/O, permissions, signing failure): iteration aborts and the partial report gathered so far is returned together with the fatal error.
-func RenewClientCerts(opts ...RenewOption) (KubeconfigRenewReport, error) {
+// The outcome of every file is recorded in report.Entries with Err == nil on success or a sentinel error otherwise.
+// Iteration never aborts — the caller iterates report.Entries and decides per-entry what to do.
+func RenewClientCerts(opts ...RenewOption) KubeconfigRenewReport {
 	o := newRenewOptions(opts...)
 
 	inventory := selectFiles(o.files)
@@ -224,27 +218,10 @@ func RenewClientCerts(opts ...RenewOption) (KubeconfigRenewReport, error) {
 	var report KubeconfigRenewReport
 	for _, info := range inventory {
 		path := filepath.Join(o.kubeconfigDir, string(info.File))
-
-		err := renewClientCert(o.kubeconfigDir, o.pkiDir, info.File)
-		if err == nil {
-			report.add(info.File, path, nil)
-			continue
-		}
-
-		var missing *KubeconfigMissingError
-		var external *CAExternalError
-		switch {
-		case errors.As(err, &missing):
-			report.add(info.File, path, missing)
-		case errors.As(err, &external):
-			report.add(info.File, path, external)
-		default:
-			// *CAExpiredError or any non-sentinel error is fatal.
-			return report, err
-		}
+		report.add(info.File, path, renewClientCert(o.kubeconfigDir, o.pkiDir, info.File))
 	}
 
-	return report, nil
+	return report
 }
 
 // selectFiles returns the inventory with only the given files, preserving the canonical DefaultRenewableFiles() order.

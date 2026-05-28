@@ -53,44 +53,49 @@ func TestListClientCertificateExpirations_DefaultExcludesKubelet(t *testing.T) {
 		require.NoError(t, createKubeConfigFile(file, opt, &rep))
 	}
 
-	expirations, err := ListClientCertificateExpirations(WithKubeconfigDir(dir))
-	require.NoError(t, err)
+	report := ListClientCertificateExpirations(WithKubeconfigDir(dir))
 
-	require.Len(t, expirations, 4)
+	require.Len(t, report.Entries, 4)
 	assert.Equal(t, []File{Admin, ControllerManager, Scheduler, SuperAdmin}, expirationFiles(newExpirationOptions(WithKubeconfigDir(dir))))
 
-	files := make([]File, 0, len(expirations))
-	for _, expiration := range expirations {
-		files = append(files, expiration.File)
+	files := make([]File, 0, len(report.Entries))
+	for _, e := range report.Entries {
+		require.NoError(t, e.Err)
+		files = append(files, e.File)
 	}
 
 	assert.Equal(t, []File{Admin, ControllerManager, Scheduler, SuperAdmin}, files)
 	assert.NotContains(t, files, Kubelet)
 }
 
-func TestListClientCertificateExpirations_IgnoreReadErrors(t *testing.T) {
+func TestListClientCertificateExpirations_MissingEntries(t *testing.T) {
 	dir := t.TempDir()
 	opt := makeExpirationTestOptions(t, dir)
 
 	var rep KubeconfigApplyReport
 	require.NoError(t, createKubeConfigFile(Admin, opt, &rep))
 
-	_, err := ListClientCertificateExpirations(
+	report := ListClientCertificateExpirations(
 		WithKubeconfigDir(dir),
 		WithFiles(Admin, Admin, Scheduler),
 	)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), filepath.Join(dir, string(Scheduler)))
+	require.Len(t, report.Entries, 2)
 
-	expirations, err := ListClientCertificateExpirations(
-		WithKubeconfigDir(dir),
-		WithFiles(Admin, Admin, Scheduler),
-		WithIgnoreReadErrors(),
-	)
-	require.Error(t, err)
-	require.Len(t, expirations, 1)
-	assert.Equal(t, Admin, expirations[0].File)
-	assert.Contains(t, err.Error(), filepath.Join(dir, string(Scheduler)))
+	byFile := make(map[File]KubeconfigExpirationEntry, len(report.Entries))
+	for _, e := range report.Entries {
+		byFile[e.File] = e
+	}
+
+	adminEntry, ok := byFile[Admin]
+	require.True(t, ok)
+	require.NoError(t, adminEntry.Err)
+
+	schedulerEntry, ok := byFile[Scheduler]
+	require.True(t, ok)
+	var missing *MissingError
+	require.ErrorAs(t, schedulerEntry.Err, &missing)
+	assert.Equal(t, Scheduler, missing.File)
+	assert.Equal(t, filepath.Join(dir, string(Scheduler)), schedulerEntry.Path)
 }
 
 func TestGetClientCertificateExpiration_NormalizesKnownAndUnknownPaths(t *testing.T) {

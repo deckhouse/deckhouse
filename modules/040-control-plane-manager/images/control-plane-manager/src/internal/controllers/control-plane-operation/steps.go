@@ -283,10 +283,20 @@ type certObserveStep struct{}
 func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	kubeconfigDir := env.Node.KubeconfigDir
 	component := env.State.Raw().Spec.Component
-	observedState, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
+	observedState, ok, err := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 	if !ok {
 		logger.Warn("CertObserve skipped: not a static pod component")
 		return StepResult{Outcome: OutcomeCompleted}, nil
+	}
+
+	// Persist whatever was read successfully before surfacing the error
+	// the partial state is still visible in the operation status.
+	if len(observedState.CertificatesExpirationDate) > 0 {
+		env.State.SetObservedState(&observedState)
+	}
+
+	if err != nil {
+		return StepResult{}, fmt.Errorf("read certificate expirations: %w", err)
 	}
 
 	if len(observedState.CertificatesExpirationDate) == 0 {
@@ -294,7 +304,6 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
-	env.State.SetObservedState(&observedState)
 	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationDate)))
 	return StepResult{Outcome: OutcomeCompleted}, nil
 }

@@ -33,11 +33,13 @@ func (e *CertValidationError) Error() string {
 	return fmt.Sprintf("certificate %q are not valid: %s", e.BaseName, e.Reason)
 }
 
-type CertMissingError struct {
+// MissingError is returned when a certificate file does not exist on disk.
+// The caller treats this as a skippable condition.
+type MissingError struct {
 	BaseName string
 }
 
-func (e *CertMissingError) Error() string {
+func (e *MissingError) Error() string {
 	return fmt.Sprintf("certificate %q not found on disk", e.BaseName)
 }
 

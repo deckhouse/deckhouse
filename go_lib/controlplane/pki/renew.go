@@ -18,7 +18,6 @@ package pki
 
 import (
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"time"
 
@@ -69,32 +68,25 @@ type PKIRenewReport struct {
 	Entries []PKIRenewEntry
 }
 
-// PKIRenewEntry is one row of PKIRenewReport. Mirrors CertificateExpiration struct.
+// PKIRenewEntry is one row of PKIRenewReport.
+// Err == nil means the cert was renewed successfully; otherwise Err is a sentinel describing what happened:
+//   - *MissingError   when the leaf cert file is absent (skippable)
+//   - *CAExternalError when the CA private key is absent (skippable)
+//   - *CAExpiredError when the signing CA has expired (renewal is pointless and the cert is left untouched)
+//   - any other error (wrapped) for IO/permissions/signing failures
 type PKIRenewEntry struct {
 	Name      LeafCertName
 	Path      string
 	Authority RootCertName
-	Action    PKIRenewAction
+	Err       error
 }
 
-// PKIRenewAction describes what happened to a single leaf certificate.
-type PKIRenewAction uint8
-
-const (
-	// PKIRenewActionRenewed - certificate was renewed.
-	PKIRenewActionRenewed PKIRenewAction = iota
-	// PKIRenewActionSkippedMissing - certificate was skipped because it was missing.
-	PKIRenewActionSkippedMissing
-	// external CA scenario; the leaf is left untouched.
-	PKIRenewActionSkippedExternalCA
-)
-
-func (r *PKIRenewReport) add(name LeafCertName, path string, authority RootCertName, action PKIRenewAction) {
+func (r *PKIRenewReport) add(name LeafCertName, path string, authority RootCertName, err error) {
 	r.Entries = append(r.Entries, PKIRenewEntry{
 		Name:      name,
 		Path:      path,
 		Authority: authority,
-		Action:    action,
+		Err:       err,
 	})
 }
 
@@ -134,7 +126,7 @@ func renewLeafCert(pkiDir string, name LeafCertName) error {
 	oldCert, err := pkiutil.LoadCert(certFile)
 	if err != nil {
 		if isNotExistError(err) {
-			return &CertMissingError{BaseName: string(name)}
+			return &MissingError{BaseName: string(name)}
 		}
 		return fmt.Errorf("load cert %q: %w", name, err)
 	}
@@ -182,7 +174,7 @@ func renewLeafCert(pkiDir string, name LeafCertName) error {
 // All Subject/SAN/Usage/Algorithm fields are preserved from the current certificate file.
 // The new certificate is issued with constants.CertificateValidityPeriod (1 year).
 // Sentinel errors:
-//   - *CertMissingError  — leaf cert file absent (skippable)
+//   - *MissingError  — leaf cert file absent (skippable)
 //   - *CAExternalError   — CA key absent (skippable)
 //   - *CAExpiredError    — CA cert expired (hard stop; renewal is pointless)
 func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
@@ -191,9 +183,8 @@ func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
 }
 
 // RenewCertificates iterates the inventory (or the subset chosen via WithRenewLeafs) and renews each leaf certificate in turn.
-// On *CertMissingError or *CAExternalError: an entry is appended to the report with the corresponding skip action and iteration continues.
-// On *CAExpiredError or any other error (I/O, permissions, signing failure): iteration aborts and the partial report gathered so far is returned together with the fatal error.
-func RenewCertificates(opts ...RenewOption) (PKIRenewReport, error) {
+// Iteration never aborts — the caller iterates report.Entries and decides per-entry what to do.
+func RenewCertificates(opts ...RenewOption) PKIRenewReport {
 	o := newRenewOptions(opts...)
 
 	inventory := selectLeafs(o.leafCertificates)
@@ -203,30 +194,14 @@ func RenewCertificates(opts ...RenewOption) (PKIRenewReport, error) {
 		authority, _ := caForLeaf(info.Name)
 		path := certPath(o.certificatesDir, string(info.Name))
 
-		err := renewLeafCert(o.certificatesDir, info.Name)
-		if err == nil {
-			report.add(info.Name, path, authority, PKIRenewActionRenewed)
-			continue
-		}
-
-		var missingCert *CertMissingError
-		var externalCA *CAExternalError
-		switch {
-		case errors.As(err, &missingCert):
-			report.add(info.Name, path, authority, PKIRenewActionSkippedMissing)
-		case errors.As(err, &externalCA):
-			report.add(info.Name, path, authority, PKIRenewActionSkippedExternalCA)
-		default:
-			// *CAExpiredError or any non-sentinel error is fatal.
-			return report, err
-		}
+		report.add(info.Name, path, authority, renewLeafCert(o.certificatesDir, info.Name))
 	}
 
-	return report, nil
+	return report
 }
 
 // defaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
-func defaultLeafCertificates() []LeafCertificateInfo {
+func DefaultLeafCertificates() []LeafCertificateInfo {
 	return []LeafCertificateInfo{
 		{ApiserverCertName, "certificate for serving the Kubernetes API"},
 		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
@@ -241,7 +216,7 @@ func defaultLeafCertificates() []LeafCertificateInfo {
 // selectLeafs returns the inventory with only the given names, preserving the canonical DefaultLeafCertificates() order.
 // When names is empty, returned default inventory.
 func selectLeafs(names []LeafCertName) []LeafCertificateInfo {
-	full := defaultLeafCertificates()
+	full := DefaultLeafCertificates()
 	if len(names) == 0 {
 		return full
 	}

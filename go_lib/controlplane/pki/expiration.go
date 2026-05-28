@@ -49,38 +49,20 @@ type ExpirationReport struct {
 	Entries []ExpirationEntry
 }
 
+// ExpirationEntry is one row of ExpirationReport. The embedded
+// CertificateExpiration fields are populated when Err == nil. Otherwise Err
+// is a sentinel describing why the entry was skipped:
+//   - *MissingError when the file is absent on disk
+//   - any other error (wrapped) when the file exists but cannot be parsed
 type ExpirationEntry struct {
-	Name      string
-	Path      string
-	NotAfter  time.Time
-	Authority RootCertName
-	IsCA      bool
-	Action    ExpirationAction
-	Err       error
+	CertificateExpiration
+	Err error
 }
 
-// ExpirationAction describes what happened to a single certificate.
-type ExpirationAction uint8
-
-const (
-	// ExpirationActionRead - certificate was read successfully.
-	ExpirationActionRead ExpirationAction = iota
-	// ExpirationActionSkippedMissing - certificate file is absent on disk.
-	ExpirationActionSkippedMissing
-	// ExpirationActionSkippedReadError - file exists but could not be loaded
-	// The wrapped loader error is available in Entry.Err.
-	ExpirationActionSkippedReadError
-)
-
-func (r *ExpirationReport) add(name, path string, authority RootCertName, isCA bool, notAfter time.Time, action ExpirationAction, err error) {
+func (r *ExpirationReport) add(exp CertificateExpiration, err error) {
 	r.Entries = append(r.Entries, ExpirationEntry{
-		Name:      name,
-		Path:      path,
-		NotAfter:  notAfter,
-		Authority: authority,
-		IsCA:      isCA,
-		Action:    action,
-		Err:       err,
+		CertificateExpiration: exp,
+		Err:                   err,
 	})
 }
 
@@ -112,31 +94,42 @@ func WithRootCertificates(names ...RootCertName) ExpirationOption {
 }
 
 // ListCertificateExpirations enumerates the selected certificates and returns a structured report.
-func ListCertificateExpirations(opts ...ExpirationOption) (ExpirationReport, error) {
+// The caller iterates report.Entries and decides per-entry what to do.
+func ListCertificateExpirations(opts ...ExpirationOption) ExpirationReport {
 	options := newExpirationOptions(opts...)
 
 	inventory, err := buildCertificateInventory(options)
 	if err != nil {
-		return ExpirationReport{}, err
+		panic(err)
 	}
 
 	var report ExpirationReport
 	for _, item := range inventory {
 		path := filepath.Join(options.certificatesDir, item.relPath)
-		isCA := item.authority == ""
 
 		exp, loadErr := loadCertificateExpiration(path, item)
 		switch {
 		case loadErr == nil:
-			report.add(exp.Name, exp.Path, exp.Authority, exp.IsCA, exp.NotAfter, ExpirationActionRead, nil)
+			report.add(exp, nil)
 		case errors.Is(loadErr, fs.ErrNotExist):
-			report.add(item.name, path, item.authority, isCA, time.Time{}, ExpirationActionSkippedMissing, nil)
+			report.add(skeletonExpiration(item, path), &MissingError{BaseName: item.name})
 		default:
-			report.add(item.name, path, item.authority, isCA, time.Time{}, ExpirationActionSkippedReadError, loadErr)
+			report.add(skeletonExpiration(item, path), loadErr)
 		}
 	}
 
-	return report, nil
+	return report
+}
+
+// skeletonExpiration builds a CertificateExpiration for failed cases:
+// NotAfter is zero but Name/Path/Authority/IsCA are populated from inventory
+func skeletonExpiration(item certificateInventoryItem, path string) CertificateExpiration {
+	return CertificateExpiration{
+		Name:      item.name,
+		Path:      path,
+		Authority: item.authority,
+		IsCA:      item.authority == "",
+	}
 }
 
 func GetCertificateExpiration(path string) (CertificateExpiration, error) {
