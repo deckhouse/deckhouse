@@ -881,9 +881,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 mount:
 - from: tmp_dir
-  to: /cp
-- from: tmp_dir
-  to: /setcap
+  to: /tmp
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -960,23 +958,23 @@ import:
 {{- include "image mount points" . }}
 - from: {{ index $.Images "tools/libcap" }}
   add: /usr/sbin/setcap
-  to: /setcap/
+  to: /tmp/setcap
   before: install
 - from: {{ index $.Images "tools/coreutils" }}
   add: /usr/bin/cp
-  to: /cp/
+  to: /tmp/cp
   before: install
 shell:
   install:
-  - /cp/cp -alf /chroot/bin/. /bin/
-  - /setcap/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - /setcap/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - /setcap/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /setcap/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /setcap/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /setcap/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /setcap/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - /setcap/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/cp -alf /chroot/bin/. /bin/
+  - /tmp/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /tmp/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /tmp/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /tmp/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /tmp/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx
