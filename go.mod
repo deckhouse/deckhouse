@@ -106,7 +106,7 @@ require (
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/deckhouse/deckhouse/go_lib/controlplane v0.0.0-00010101000000-000000000000 // indirect
 	github.com/deckhouse/lib-connection v0.7.0 // indirect
-	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
+	github.com/deckhouse/lib-dhctl v0.18.2 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
@@ -154,7 +154,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	k8s.io/cli-runtime v0.33.12 // indirect
 	k8s.io/component-helpers v0.33.8 // indirect
-	k8s.io/klog/v2 v2.130.1 // indirect
+	k8s.io/klog/v2 v2.140.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
 
