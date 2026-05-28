@@ -35,11 +35,6 @@ resource "kubernetes_manifest" "kubernetes-data-disk" {
     update = var.timeouts.update
     delete = var.timeouts.delete
   }
-  lifecycle {
-    ignore_changes = [
-      object.spec.persistentVolumeClaim.storageClassName
-    ]
-  }
 }
 
 # WARNING! if you change this resource and list please
@@ -101,6 +96,32 @@ resource "kubernetes_resource_ready_v1" "kubernetes-data-disk" {
   fail_conditions_appearance_duration = "3s"
 }
 
+resource "kubernetes_resource_ready_v1" "kubernetes-data-disk-migration" {
+  api_version = kubernetes_manifest.kubernetes-data-disk.object.apiVersion
+  kind        = kubernetes_manifest.kubernetes-data-disk.object.kind
+  name        = kubernetes_manifest.kubernetes-data-disk.object.metadata.name
+  namespace   = kubernetes_manifest.kubernetes-data-disk.object.metadata.namespace
+
+  triggers = {
+    storage_class = coalesce(var.storage_class, "")
+  }
+
+  wait_timeout                                = var.timeouts.update
+  skip_check_on_create_with_resource_lifetime = "0"
+  fail_conditions_appearance_duration         = "3s"
+
+  fields = {
+    "metadata.name" = ".+"
+  }
+
+  condition {
+    type   = "Ready"
+    status = "True"
+  }
+
+  depends_on = [kubernetes_resource_ready_v1.kubernetes-data-disk]
+}
+
 data "kubernetes_resource" "kubernetes-data-disk" {
   api_version = var.api_version
   kind        = "VirtualDisk"
@@ -110,8 +131,8 @@ data "kubernetes_resource" "kubernetes-data-disk" {
     namespace = var.namespace
   }
   depends_on = [
-    # wait to disk is ready
-    kubernetes_resource_ready_v1.kubernetes-data-disk,
+    # wait to disk is ready and migration (if any) complete
+    kubernetes_resource_ready_v1.kubernetes-data-disk-migration,
     kubernetes_manifest.kubernetes-data-disk
   ]
 }

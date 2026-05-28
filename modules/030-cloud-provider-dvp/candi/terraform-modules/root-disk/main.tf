@@ -42,11 +42,6 @@ resource "kubernetes_manifest" "root-disk" {
     update = var.timeouts.update
     delete = var.timeouts.delete
   }
-  lifecycle {
-    ignore_changes = [
-      object.spec.persistentVolumeClaim.storageClassName
-    ]
-  }
 }
 
 # WARNING! if you change this resource and list please
@@ -106,4 +101,30 @@ resource "kubernetes_resource_ready_v1" "root-disk" {
 
   # 3s instead of 15s: fail conditions (ProvisioningFailed, BlockDeviceLimitExceeded, PVCLost, etc.) appear within ~1s of the controller reconcile — 3s is enough to catch them. Cuts ~12s from master apply since disks gate VM creation.
   fail_conditions_appearance_duration = "3s"
+}
+
+resource "kubernetes_resource_ready_v1" "root-disk-migration" {
+  api_version = kubernetes_manifest.root-disk.object.apiVersion
+  kind        = kubernetes_manifest.root-disk.object.kind
+  name        = kubernetes_manifest.root-disk.object.metadata.name
+  namespace   = kubernetes_manifest.root-disk.object.metadata.namespace
+
+  triggers = {
+    storage_class = coalesce(var.storage_class, "")
+  }
+
+  wait_timeout                                = var.timeouts.update
+  skip_check_on_create_with_resource_lifetime = "0"
+  fail_conditions_appearance_duration         = "3s"
+
+  fields = {
+    "metadata.name" = ".+"
+  }
+
+  condition {
+    type   = "Ready"
+    status = "True"
+  }
+
+  depends_on = [kubernetes_resource_ready_v1.root-disk]
 }
