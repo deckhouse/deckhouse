@@ -42,6 +42,7 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	cachemetrics "github.com/deckhouse/node-controller/internal/metrics/cache"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
@@ -107,6 +108,11 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err = mgr.Add(cachemetrics.NewCollector(mgr.GetClient())); err != nil {
+		setupLog.Error(err, "unable to add cache metrics collector")
 		os.Exit(1)
 	}
 

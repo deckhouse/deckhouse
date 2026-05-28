@@ -3,7 +3,7 @@ module github.com/deckhouse/node-controller
 go 1.24.2
 
 require (
-	github.com/deckhouse/deckhouse v1.74.8
+    github.com/deckhouse/deckhouse v1.74.8
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/go-logr/logr v1.4.3
 	github.com/prometheus/client_golang v1.22.0
