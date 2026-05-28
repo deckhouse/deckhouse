@@ -3129,7 +3129,7 @@ diff --git a/kubernetes/resource_kubernetes_resource_ready_v1.go b/kubernetes/re
 new file mode 100644
 --- /dev/null	(date 1772625318937)
 +++ b/kubernetes/resource_kubernetes_resource_ready_v1.go	(date 1772625318937)
-@@ -0,0 +1,1692 @@
+@@ -0,0 +1,1702 @@
 +package kubernetes
 +
 +import (
