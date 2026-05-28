@@ -662,14 +662,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
-mount:
-- from: build_dir
-  to: /apps
 import:
-- from: {{ index $.Images "tools/libcap" }}
-  add: /usr/sbin/setcap
-  to: /tools/setcap
-  before: install
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr
@@ -887,15 +880,9 @@ shell:
   - ln -sf /chroot/var/log/nginx /var/log/nginx
   - chown -R deckhouse:deckhouse /chroot/var/log/nginx
   - ln -s /chroot/modules_mount /modules_mount
-
-  # Utils for final image
-  - cp -a /tools/setcap /apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
-mount:
-- from: build_dir
-  to: /apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -976,8 +963,11 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
+- from: {{ index $.Images "tools/libcap" }}
+  add: /usr/sbin/setcap
+  to: /apps/setcap
+  before: install
 shell:
   install:
   - /usr/bin/cp -alf /chroot/. /validation-chroot/

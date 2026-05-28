@@ -14,5 +14,4 @@ import:
   add: /usr/bin/bash
   to: /bin/bash
   before: setup
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}

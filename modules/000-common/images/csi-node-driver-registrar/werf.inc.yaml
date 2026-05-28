@@ -18,7 +18,6 @@ import:
   add: /csi-node-driver-registrar
   to: /csi-node-driver-registrar
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
