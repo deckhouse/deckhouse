@@ -46,7 +46,7 @@
       {{- range $dedicatedRule := $rule.rules }}
         {{- if $dedicatedRule.annotations }}
           {{- if (eq (get $dedicatedRule.annotations "d8_ignore_on_update") "true") }}
-            {{- $_ := set $dedicatedRule "expr" (printf "(%s) and ON() ((max(d8_is_updating) != 1) or ON() absent(d8_is_updating))" $dedicatedRule.expr) }}
+            {{- $_ := set $dedicatedRule "expr" (printf "(%s) and ON() ((max(d8_is_updating{source=\"deckhouse\"}) != 1) or ON() absent(d8_is_updating{source=\"deckhouse\"}))" $dedicatedRule.expr) }}
           {{- end }}
         {{- end }}
       {{- end }}

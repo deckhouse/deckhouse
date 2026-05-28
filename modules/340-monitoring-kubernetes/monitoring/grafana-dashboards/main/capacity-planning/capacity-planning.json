@@ -85,7 +85,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(kube_node_status_condition{node=~\"$node\", condition=\"Ready\", status=\"true\"} == 1)",
+          "expr": "sum(kube_node_status_condition{source=\"deckhouse\", node=~\"$node\", condition=\"Ready\", status=\"true\"} == 1)",
           "refId": "A"
         }
       ],
@@ -150,7 +150,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(kube_node_info{node=~\"$node\"})",
+          "expr": "sum(kube_node_info{source=\"deckhouse\", node=~\"$node\"})",
           "refId": "A"
         }
       ],
@@ -215,7 +215,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(max by (namespace) (kube_namespace_status_phase{namespace=~\"$namespace\", phase=\"Active\"}))",
+          "expr": "sum(max by (namespace) (kube_namespace_status_phase{source=\"deckhouse\", namespace=~\"$namespace\", phase=\"Active\"}))",
           "refId": "A"
         }
       ],
@@ -321,7 +321,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{source=\"deckhouse\", phase=\"Running\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -393,7 +393,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{source=\"deckhouse\", phase=\"Running\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -465,7 +465,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (rate(container_cpu_usage_seconds_total{container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval])))\n / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval])))\n / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -537,7 +537,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"})) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -609,7 +609,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (rate(container_cpu_usage_seconds_total{container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval]))) / sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval]))) / sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -681,7 +681,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"} )) / sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"} )) / sum(sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "__auto",
           "range": true,
@@ -753,7 +753,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(((max by (pod, namespace)(kube_pod_container_status_running))==1) * on (pod, namespace) group_right() (kube_pod_info{node=~\"$node\"}==1) \n) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(((max by (pod, namespace)(kube_pod_container_status_running{source=\"deckhouse\"}))==1) * on (pod, namespace) group_right() (kube_pod_info{source=\"deckhouse\", node=~\"$node\"}==1) \n) / sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"pods\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -888,7 +888,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -903,7 +903,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1027,7 +1027,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"}))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"cpu\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{source=\"deckhouse\", phase=\"Running\"}))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1042,7 +1042,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"cpu\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"cpu\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",unit=\"core\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{source=\"deckhouse\", phase=\"Running\"})))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1166,7 +1166,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (rate(container_cpu_usage_seconds_total{container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval]) - on (namespace,pod,container,node) group_left avg by (namespace,pod,container, node)(kube_pod_container_resource_requests{resource=\"cpu\",node=~\"$node\"})) * -1 > 0\n",
+          "expr": "sum by (node) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval]) - on (namespace,pod,container,node) group_left avg by (namespace,pod,container, node)(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",node=~\"$node\"})) * -1 > 0\n",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1181,7 +1181,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (rate(container_cpu_usage_seconds_total{container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval]) - on (namespace,pod,container,node) group_left avg by (namespace,pod,container, node)(kube_pod_container_resource_requests{resource=\"cpu\",node=~\"$node\"})) * -1 > 0)",
+          "expr": "sum(sum by (node) (rate(container_cpu_usage_seconds_total{source=\"deckhouse\", container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval]) - on (namespace,pod,container,node) group_left avg by (namespace,pod,container, node)(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",node=~\"$node\"})) * -1 > 0)",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1302,7 +1302,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1317,7 +1317,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"memory\",unit=\"byte\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1441,7 +1441,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"}))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{source=\"deckhouse\", phase=\"Running\"}))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1456,7 +1456,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"memory\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{phase=\"Running\"})))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"}[$__rate_interval])) - on(node) (sum by (node) (avg_over_time(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"}[$__rate_interval])* on (uid) group_left(phase) kube_pod_status_phase{source=\"deckhouse\", phase=\"Running\"})))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1581,7 +1581,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"} ) - sum by (node) (kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"})) * -1 > 0\n",
+          "expr": "(sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"} ) - sum by (node) (kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"})) * -1 > 0\n",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1596,7 +1596,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum((sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"} ) - sum by (node) (kube_pod_container_resource_requests{resource=\"memory\",node=~\"$node\"})) * -1 > 0)",
+          "expr": "sum((sum by (node) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",node=~\"$node\"} ) - sum by (node) (kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",node=~\"$node\"})) * -1 > 0)",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1717,7 +1717,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"pods\",node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1732,7 +1732,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__rate_interval])))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"pods\",node=~\"$node\"}[$__rate_interval])))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1856,7 +1856,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__rate_interval])) - on(node) (count by (node) (\n  ((max by (pod, namespace)(kube_pod_container_status_running))==1) * on (pod, namespace) group_right() (kube_pod_info{node=~\"$node\"}==1) \n))",
+          "expr": "sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"pods\",node=~\"$node\"}[$__rate_interval])) - on(node) (count by (node) (\n  ((max by (pod, namespace)(kube_pod_container_status_running{source=\"deckhouse\"}))==1) * on (pod, namespace) group_right() (kube_pod_info{source=\"deckhouse\", node=~\"$node\"}==1) \n))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1871,7 +1871,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{resource=\"pods\",node=~\"$node\"}[$__rate_interval])) - on(node) (count by (node) (\n  ((max by (pod, namespace)(kube_pod_container_status_running))==1) * on (pod, namespace) group_right() (kube_pod_info{node=~\"$node\"}==1) \n)))",
+          "expr": "sum(sum by (node) (avg_over_time(kube_node_status_allocatable{source=\"deckhouse\", resource=\"pods\",node=~\"$node\"}[$__rate_interval])) - on(node) (count by (node) (\n  ((max by (pod, namespace)(kube_pod_container_status_running{source=\"deckhouse\"}))==1) * on (pod, namespace) group_right() (kube_pod_info{source=\"deckhouse\", node=~\"$node\"}==1) \n)))",
           "hide": false,
           "legendFormat": "Total",
           "range": true,
@@ -1986,7 +1986,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "topk(10, (sum by (namespace,pod,container)((rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval])) - on (namespace,pod,container) group_left avg by (namespace,pod,container)(kube_pod_container_resource_requests{resource=\"cpu\",node=~\"$node\"}))) * -1 > 0)\n",
+          "expr": "topk(10, (sum by (namespace,pod,container)((rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=~\"$namespace\",container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval])) - on (namespace,pod,container) group_left avg by (namespace,pod,container)(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",node=~\"$node\"}))) * -1 > 0)\n",
           "format": "table",
           "instant": true,
           "range": false,
@@ -2126,7 +2126,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "topk(10, (sum by (namespace,container,pod) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",namespace=~\"$namespace\",node=~\"$node\"}) - on (namespace,pod,container) avg by (namespace,pod,container)(kube_pod_container_resource_requests{resource=\"memory\",namespace=~\"$namespace\",node=~\"$node\"})) * -1 >0)\n",
+          "expr": "topk(10, (sum by (namespace,container,pod) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",namespace=~\"$namespace\",node=~\"$node\"}) - on (namespace,pod,container) avg by (namespace,pod,container)(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",namespace=~\"$namespace\",node=~\"$node\"})) * -1 >0)\n",
           "format": "table",
           "instant": true,
           "range": false,
@@ -2262,7 +2262,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "topk(10, (sum by (namespace,pod,container)((rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval])) - on (namespace,pod,container) group_left avg by (namespace,pod,container)(kube_pod_container_resource_requests{resource=\"cpu\",node=~\"$node\"}))) > 0)\n",
+          "expr": "topk(10, (sum by (namespace,pod,container)((rate(container_cpu_usage_seconds_total{source=\"deckhouse\", namespace=~\"$namespace\",container!=\"POD\",container!=\"\",node=~\"$node\"}[$__rate_interval])) - on (namespace,pod,container) group_left avg by (namespace,pod,container)(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"cpu\",node=~\"$node\"}))) > 0)\n",
           "format": "table",
           "instant": true,
           "range": false,
@@ -2402,7 +2402,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "topk(10, (sum by (namespace,container,pod) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",namespace=~\"$namespace\",node=~\"$node\"}) - on (namespace,pod,container) avg by (namespace,pod,container)(kube_pod_container_resource_requests{resource=\"memory\",namespace=~\"$namespace\",node=~\"$node\"})) >0)\n",
+          "expr": "topk(10, (sum by (namespace,container,pod) (container_memory_working_set_bytes:without_kmem{container!=\"POD\",container!=\"\",namespace=~\"$namespace\",node=~\"$node\"}) - on (namespace,pod,container) avg by (namespace,pod,container)(kube_pod_container_resource_requests{source=\"deckhouse\", resource=\"memory\",namespace=~\"$namespace\",node=~\"$node\"})) >0)\n",
           "format": "table",
           "instant": true,
           "range": false,
@@ -2485,7 +2485,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(up{job=\"node-exporter\"}, node)",
+        "definition": "label_values(up{source=\"deckhouse\", job=\"node-exporter\"}, node)",
         "hide": 0,
         "includeAll": true,
         "label": "Nodes",
@@ -2493,7 +2493,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"node-exporter\"}, node)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"node-exporter\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,
@@ -2520,7 +2520,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
+        "definition": "label_values(kube_pod_info{source=\"deckhouse\", node=~\"$node\"}, namespace)",
         "hide": 0,
         "includeAll": true,
         "label": "Namespace",
@@ -2528,7 +2528,7 @@
         "name": "namespace",
         "options": [],
         "query": {
-          "query": "label_values(kube_pod_info{node=~\"$node\"}, namespace)",
+          "query": "label_values(kube_pod_info{source=\"deckhouse\", node=~\"$node\"}, namespace)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

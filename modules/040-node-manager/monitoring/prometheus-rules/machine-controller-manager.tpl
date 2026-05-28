@@ -1,7 +1,7 @@
 - name: d8.machine-controller-manager.availability
   rules:
   - alert: D8MachineControllerManagerPodIsNotReady
-    expr: min by (pod) (kube_pod_status_ready{condition="false", namespace="d8-cloud-instance-manager", pod=~"machine-controller-manager-.*"}) > 0
+    expr: min by (pod) (kube_pod_status_ready{source="deckhouse", condition="false", namespace="d8-cloud-instance-manager", pod=~"machine-controller-manager-.*"}) > 0
     for: 10m
     labels:
       severity_level: "8"
@@ -17,7 +17,7 @@
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
 
   - alert: D8MachineControllerManagerPodIsNotRunning
-    expr: absent(kube_pod_status_phase{namespace="d8-cloud-instance-manager",phase="Running",pod=~"machine-controller-manager-.*"})
+    expr: absent(kube_pod_status_phase{source="deckhouse", namespace="d8-cloud-instance-manager",phase="Running",pod=~"machine-controller-manager-.*"})
     for: 10m
     labels:
       severity_level: "8"
@@ -41,7 +41,7 @@
         ```
 
   - alert: D8MachineControllerManagerTargetDown
-    expr: max by (job) (up{job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 0)
+    expr: max by (job) (up{source="deckhouse", job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 0)
     for: 5m
     labels:
       severity_level: "8"
@@ -58,7 +58,7 @@
       summary: Prometheus is unable to scrape the machine-controller-manager's metrics.
 
   - alert: D8MachineControllerManagerTargetAbsent
-    expr: absent(up{job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 1)
+    expr: absent(up{source="deckhouse", job="machine-controller-manager", namespace="d8-cloud-instance-manager"} == 1)
     for: 5m
     labels:
       severity_level: "8"
@@ -98,7 +98,7 @@
 - name: d8.machine-controller-manager.malfunctioning
   rules:
   - alert: D8MachineControllerManagerPodIsRestartingTooOften
-    expr: max by (pod) (increase(kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod=~"machine-controller-manager-.*"}[1h]) and kube_pod_container_status_restarts_total{namespace="d8-cloud-instance-manager", pod=~"machine-controller-manager-.*"}) > 5
+    expr: max by (pod) (increase(kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-cloud-instance-manager", pod=~"machine-controller-manager-.*"}[1h]) and kube_pod_container_status_restarts_total{source="deckhouse", namespace="d8-cloud-instance-manager", pod=~"machine-controller-manager-.*"}) > 5
     labels:
       severity_level: "9"
       tier: cluster

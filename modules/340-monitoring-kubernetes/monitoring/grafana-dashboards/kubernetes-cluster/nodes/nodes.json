@@ -391,7 +391,7 @@
       "pluginVersion": "10.4.19",
       "targets": [
         {
-          "expr": "kube_node_info{node=~\"$node\"}",
+          "expr": "kube_node_info{source=\"deckhouse\", node=~\"$node\"}",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -399,7 +399,7 @@
           "refId": "A"
         },
         {
-          "expr": "count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"})",
+          "expr": "count by (node) (node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"})",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -407,7 +407,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__range]))",
+          "expr": "sum by (node) (avg_over_time(node_load1{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -415,7 +415,7 @@
           "refId": "C"
         },
         {
-          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__rate_interval])) * 100 )",
+          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"}[$__rate_interval])) * 100 )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -423,7 +423,7 @@
           "refId": "F"
         },
         {
-          "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__range]))",
+          "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -431,7 +431,7 @@
           "refId": "G"
         },
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__range])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__range])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__range])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__range])\n  )",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range])\n    -\n    avg_over_time(node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range])\n    -\n    avg_over_time(node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range])\n    -\n    avg_over_time(node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range])\n  )",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -439,7 +439,7 @@
           "refId": "H"
         },
         {
-          "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__range]) + avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__range]))",
+          "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range]) + avg_over_time(node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -447,7 +447,7 @@
           "refId": "J"
         },
         {
-          "expr": "sum by (node) (rate(node_network_receive_bytes_total{node=~\"$node\", device!~\"lo\"}[$__range]))",
+          "expr": "sum by (node) (rate(node_network_receive_bytes_total{source=\"deckhouse\", node=~\"$node\", device!~\"lo\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -455,7 +455,7 @@
           "refId": "K"
         },
         {
-          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{node=~\"$node\", device!~\"lo\"}[$__range]))",
+          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{source=\"deckhouse\", node=~\"$node\", device!~\"lo\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -463,7 +463,7 @@
           "refId": "L"
         },
         {
-          "expr": "sum by (node) (rate(node_disk_read_bytes_total{node=~\"$node\"}[$__range]))",
+          "expr": "sum by (node) (rate(node_disk_read_bytes_total{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -471,7 +471,7 @@
           "refId": "M"
         },
         {
-          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=~\"$node\"}[$__range]))",
+          "expr": "sum by (node) (rate(node_disk_written_bytes_total{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -604,7 +604,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "count(kube_node_info)",
+          "expr": "count(kube_node_info{source=\"deckhouse\"})",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -719,7 +719,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}[$__rate_interval])) * 100 )",
+          "expr": "100 - (avg by (node) (rate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"}[$__rate_interval])) * 100 )",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -816,7 +816,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum by (node) (avg_over_time(node_load1{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ node }}",
@@ -914,7 +914,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
+          "expr": "sum by (node) (avg_over_time(node_load1{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"}) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ node }}",
@@ -1028,7 +1028,7 @@
           "repeatDirection": "h",
           "targets": [
             {
-              "expr": "sum by (mode) (rate(node_cpu_seconds_total{node=~\"$node\"}[$__rate_interval])) * 100",
+              "expr": "sum by (mode) (rate(node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -1145,7 +1145,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval])\n  )",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n  )",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1245,7 +1245,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval])\n  )\n/\nsum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval]))\n* 100",
+          "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n  )\n/\nsum by (node) (avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))\n* 100",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1256,7 +1256,7 @@
           "step": 10
         },
         {
-          "expr": "sum by (node) (avg_over_time(node_load1{node=~\"$node\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{node=~\"$node\", mode=\"idle\"}) * 100",
+          "expr": "sum by (node) (avg_over_time(node_load1{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])) / count by (node) (node_cpu_seconds_total{source=\"deckhouse\", node=~\"$node\", mode=\"idle\"}) * 100",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -1385,7 +1385,7 @@
           "repeatDirection": "h",
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1393,7 +1393,7 @@
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
@@ -1401,7 +1401,7 @@
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1413,7 +1413,7 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
@@ -1421,7 +1421,7 @@
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
@@ -1561,7 +1561,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_read_bytes_total{node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum by (node) (rate(node_disk_read_bytes_total{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1684,7 +1684,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "expr": "sum by (node) (rate(node_disk_written_bytes_total{node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum by (node) (rate(node_disk_written_bytes_total{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1827,7 +1827,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo\"}[$__rate_interval])) * 8",
+          "expr": "sum by (node) (rate(node_network_receive_bytes_total{source=\"deckhouse\", node=~\"$node\",device!~\"lo\"}[$__rate_interval])) * 8",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1946,7 +1946,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo\"}[$__rate_interval])) * 8",
+          "expr": "sum by (node) (rate(node_network_transmit_bytes_total{source=\"deckhouse\", node=~\"$node\",device!~\"lo\"}[$__rate_interval])) * 8",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -2063,7 +2063,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2164,7 +2164,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2265,7 +2265,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2367,7 +2367,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2468,7 +2468,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2569,7 +2569,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2671,7 +2671,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "(sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} * 100",
+              "expr": "(sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2772,7 +2772,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_free_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2873,7 +2873,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_size_bytes{source=\"deckhouse\", node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -2939,7 +2939,7 @@
         "name": "node",
         "options": [],
         "query": {
-          "query": "label_values(up{job=\"node-exporter\"}, node)",
+          "query": "label_values(up{source=\"deckhouse\", job=\"node-exporter\"}, node)",
           "refId": "main-node-Variable-Query"
         },
         "refresh": 2,

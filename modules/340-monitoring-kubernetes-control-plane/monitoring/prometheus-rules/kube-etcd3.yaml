@@ -2,7 +2,7 @@
   rules:
 
   - alert: KubeEtcdTargetDown
-    expr: max by (job) (up{job="kube-etcd3"} == 0)
+    expr: max by (job) (up{source="deckhouse", job="kube-etcd3"} == 0)
     for: 1m
     labels:
       severity_level: "5"
@@ -30,7 +30,7 @@
            ```
 
   - alert: KubeEtcdTargetAbsent
-    expr: absent(up{job="kube-etcd3"}) == 1
+    expr: absent(up{source="deckhouse", job="kube-etcd3"}) == 1
     for: 1m
     labels:
       severity_level: "5"
@@ -58,7 +58,7 @@
            ```
 
   - alert: KubeEtcdNoLeader
-    expr: max by (node) (etcd_server_has_leader{job="kube-etcd3"}) == 0
+    expr: max by (node) (etcd_server_has_leader{source="deckhouse", job="kube-etcd3"}) == 0
     for: 1m
     labels:
       severity_level: "4"
@@ -80,7 +80,7 @@
   rules:
 
   - alert: KubeEtcdHighNumberOfLeaderChanges
-    expr: max by (node) (increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[10m]) > 3)
+    expr: max by (node) (increase(etcd_server_leader_changes_seen_total{source="deckhouse", job="kube-etcd3"}[10m]) > 3)
     labels:
       severity_level: "5"
       tier: cluster
@@ -101,7 +101,7 @@
         - Degradation of network connectivity between cluster members in the multi-master mode.
 
   - alert: KubeEtcdInsufficientMembers
-    expr: count(up{job="kube-etcd3"} == 0) > (count(up{job="kube-etcd3"}) / 2 - 1)
+    expr: count(up{source="deckhouse", job="kube-etcd3"} == 0) > (count(up{source="deckhouse", job="kube-etcd3"}) / 2 - 1)
     for: 3m
     labels:
       severity_level: "4"
@@ -122,7 +122,7 @@
         ```
 
   - alert: KubeEtcdHighFsyncDurations
-    expr: max by (node) (histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{job="kube-etcd3"}[5m])) > 0.5)
+    expr: max by (node) (histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{source="deckhouse", job="kube-etcd3"}[5m])) > 0.5)
     for: 10m
     labels:
       severity_level: "7"

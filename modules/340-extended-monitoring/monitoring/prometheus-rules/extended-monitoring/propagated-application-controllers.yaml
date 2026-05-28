@@ -2,12 +2,12 @@
   rules:
   - alert: KubernetesDeploymentReplicasUnavailable
     expr: |
-      kube_deployment_status_replicas_unavailable
+      kube_deployment_status_replicas_unavailable{source="deckhouse"}
       > on (namespace, deployment)
       (
-        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{source="deckhouse", threshold="replicas-not-ready"})
         + on (namespace, deployment)
-        kube_deployment_spec_strategy_rollingupdate_max_unavailable
+        kube_deployment_spec_strategy_rollingupdate_max_unavailable{source="deckhouse"}
       )
     for: 5m
     labels:
@@ -34,11 +34,11 @@
   - alert: KubernetesDeploymentReplicasUnavailable
     expr: |
       (
-        (kube_deployment_status_replicas_available == 0) * (kube_deployment_spec_replicas != 0)
+        (kube_deployment_status_replicas_available{source="deckhouse"} == 0) * (kube_deployment_spec_replicas{source="deckhouse"} != 0)
       )
       * on (namespace, deployment)
       (
-        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{source="deckhouse", threshold="replicas-not-ready"})
       )
     for: 5m
     labels:
@@ -61,10 +61,10 @@
 
   - alert:  KubernetesDaemonSetReplicasUnavailable
     expr: |
-      kube_daemonset_status_number_unavailable
+      kube_daemonset_status_number_unavailable{source="deckhouse"}
       > on (namespace, daemonset)
       (
-        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
+        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{source="deckhouse", threshold="replicas-not-ready"})
       )
     for: 5m
     labels:
@@ -97,11 +97,11 @@
   - alert: KubernetesDaemonSetReplicasUnavailable
     expr: |
       (
-        (kube_daemonset_status_number_available == 0) * (kube_daemonset_status_desired_number_scheduled != 0)
+        (kube_daemonset_status_number_available{source="deckhouse"} == 0) * (kube_daemonset_status_desired_number_scheduled{source="deckhouse"} != 0)
       )
       * on (namespace, daemonset)
       (
-        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{threshold="replicas-not-ready"})
+        max by (namespace, daemonset) (extended_monitoring_daemonset_threshold{source="deckhouse", threshold="replicas-not-ready"})
       )
     for: 5m
     labels:
@@ -130,7 +130,7 @@
 
   - alert: KubernetesDaemonSetNotUpToDate
     expr: |
-      max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_updated_number_scheduled) > 0
+      max by (namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{source="deckhouse"} - kube_daemonset_status_updated_number_scheduled{source="deckhouse"}) > 0
     for: 15m
     labels:
       severity_level: "9"
@@ -168,11 +168,11 @@
   - alert: KubernetesStatefulSetReplicasUnavailable
     expr: |
       (
-        kube_statefulset_status_replicas - kube_statefulset_status_replicas_ready
+        kube_statefulset_status_replicas{source="deckhouse"} - kube_statefulset_status_replicas_ready{source="deckhouse"}
       )
       > on (namespace, statefulset)
       (
-        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
+        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{source="deckhouse", threshold="replicas-not-ready"})
       )
     for: 5m
     labels:
@@ -199,11 +199,11 @@
   - alert: KubernetesStatefulSetReplicasUnavailable
     expr: |
       (
-        kube_statefulset_status_replicas_ready == 0
+        kube_statefulset_status_replicas_ready{source="deckhouse"} == 0
       )
       * on (namespace, statefulset)
       (
-        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{threshold="replicas-not-ready"})
+        max by (namespace, statefulset) (extended_monitoring_statefulset_threshold{source="deckhouse", threshold="replicas-not-ready"})
       )
     for: 5m
     labels:

@@ -6,10 +6,10 @@
 - alert: {{ $controllerKind }}ImageAbsent
   expr: |
     max by (namespace, name, container, image) (
-      k8s_image_availability_exporter_absent{kind={{ $controllerKind | lower | quote }}} == 1
+      k8s_image_availability_exporter_absent{source="deckhouse", kind={{ $controllerKind | lower | quote }}} == 1
     )
     * on (namespace) group_left()
-    max by (namespace) (extended_monitoring_enabled)
+    max by (namespace) (extended_monitoring_enabled{source="deckhouse"})
   for: 30m
   labels:
     severity_level: "7"
@@ -33,10 +33,10 @@
 - alert: {{ $controllerKind }}BadImageFormat
   expr: |
     max by (namespace, name, container, image) (
-      k8s_image_availability_exporter_bad_image_format{kind={{ $controllerKind | lower | quote }}} == 1
+      k8s_image_availability_exporter_bad_image_format{source="deckhouse", kind={{ $controllerKind | lower | quote }}} == 1
     )
     * on (namespace) group_left()
-    max by (namespace) (extended_monitoring_enabled)
+    max by (namespace) (extended_monitoring_enabled{source="deckhouse"})
   for: 30m
   labels:
     severity_level: "7"
@@ -60,10 +60,10 @@
 - alert: {{ $controllerKind }}RegistryUnavailable
   expr: |
     max by (namespace, name, container, image) (
-      k8s_image_availability_exporter_registry_unavailable{kind={{ $controllerKind | lower | quote }}} == 1
+      k8s_image_availability_exporter_registry_unavailable{source="deckhouse", kind={{ $controllerKind | lower | quote }}} == 1
     )
     * on (namespace) group_left()
-    max by (namespace) (extended_monitoring_enabled)
+    max by (namespace) (extended_monitoring_enabled{source="deckhouse"})
   for: 30m
   labels:
     severity_level: "7"
@@ -87,10 +87,10 @@
 - alert: {{ $controllerKind }}AuthenticationFailure
   expr: |
     max by (namespace, name, container, image) (
-      k8s_image_availability_exporter_authentication_failure{kind={{ $controllerKind | lower | quote }}} == 1
+      k8s_image_availability_exporter_authentication_failure{source="deckhouse", kind={{ $controllerKind | lower | quote }}} == 1
     )
     * on (namespace) group_left()
-    max by (namespace) (extended_monitoring_enabled)
+    max by (namespace) (extended_monitoring_enabled{source="deckhouse"})
   for: 30m
   labels:
     severity_level: "7"
@@ -114,10 +114,10 @@
 - alert: {{ $controllerKind }}AuthorizationFailure
   expr: |
     max by (namespace, name, container, image) (
-      k8s_image_availability_exporter_authorization_failure{kind={{ $controllerKind | lower | quote }}} == 1
+      k8s_image_availability_exporter_authorization_failure{source="deckhouse", kind={{ $controllerKind | lower | quote }}} == 1
     )
     * on (namespace) group_left()
-    max by (namespace) (extended_monitoring_enabled)
+    max by (namespace) (extended_monitoring_enabled{source="deckhouse"})
   for: 30m
   labels:
     severity_level: "7"
@@ -141,10 +141,10 @@
 - alert: {{ $controllerKind }}ImageAvailabilityUnknownError
   expr: |
     max by (namespace, name, container, image) (
-      k8s_image_availability_exporter_unknown_error{kind={{ $controllerKind | lower | quote }}} == 1
+      k8s_image_availability_exporter_unknown_error{source="deckhouse", kind={{ $controllerKind | lower | quote }}} == 1
     )
     * on (namespace) group_left()
-    max by (namespace) (extended_monitoring_enabled)
+    max by (namespace) (extended_monitoring_enabled{source="deckhouse"})
   for: 30m
   labels:
     severity_level: "7"

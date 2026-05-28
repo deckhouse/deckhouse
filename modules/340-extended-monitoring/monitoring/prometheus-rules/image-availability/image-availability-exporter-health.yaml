@@ -2,7 +2,7 @@
   rules:
 
   - alert: D8ImageAvailabilityExporterTargetDown
-    expr: max by (job) (up{job="image-availability-exporter"} == 0)
+    expr: max by (job) (up{source="deckhouse", job="image-availability-exporter"} == 0)
     for: 30m
     labels:
       tier: cluster
@@ -34,7 +34,7 @@
            ```
 
   - alert: D8ImageAvailabilityExporterTargetAbsent
-    expr: absent(up{job="image-availability-exporter"}) == 1
+    expr: absent(up{source="deckhouse", job="image-availability-exporter"}) == 1
     for: 30m
     labels:
       tier: cluster
@@ -66,7 +66,7 @@
            ```
 
   - alert: D8ImageAvailabilityExporterPodIsNotReady
-    expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-monitoring", pod=~"image-availability-exporter-.*"}) != 1
+    expr: min by (pod) (kube_pod_status_ready{source="deckhouse", condition="true", namespace="d8-monitoring", pod=~"image-availability-exporter-.*"}) != 1
     for: 30m
     labels:
       tier: cluster
@@ -98,7 +98,7 @@
            ```
 
   - alert: D8ImageAvailabilityExporterPodIsNotRunning
-    expr: absent(kube_pod_status_phase{namespace="d8-monitoring",phase="Running",pod=~"image-availability-exporter-.*"})
+    expr: absent(kube_pod_status_phase{source="deckhouse", namespace="d8-monitoring", phase="Running", pod=~"image-availability-exporter-.*"})
     for: 30m
     labels:
       tier: cluster
@@ -133,7 +133,7 @@
 
   - alert: D8ImageAvailabilityExporterMalfunctioning
     expr: |
-      increase(k8s_image_availability_exporter_completed_rechecks_total[10m]) == 0
+      increase(k8s_image_availability_exporter_completed_rechecks_total{source="deckhouse"}[10m]) == 0
     for: 30m
     labels:
       tier: cluster

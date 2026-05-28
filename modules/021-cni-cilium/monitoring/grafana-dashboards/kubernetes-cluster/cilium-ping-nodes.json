@@ -127,7 +127,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"node\",source_node_name=~\"${source_node}\",target_node_name=~\"${destination_node}\"}[$__range]) * 100",
+          "expr": "avg_over_time(cilium_node_connectivity_status{source=\"deckhouse\", type=\"node\",source_node_name=~\"${source_node}\",target_node_name=~\"${destination_node}\"}[$__range]) * 100",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -227,7 +227,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(cilium_node_connectivity_status{type=\"endpoint\",source_node_name=~\"${source_node}\",target_node_name=~\"${destination_node}\"}[$__range]) * 100",
+          "expr": "avg_over_time(cilium_node_connectivity_status{source=\"deckhouse\", type=\"endpoint\",source_node_name=~\"${source_node}\",target_node_name=~\"${destination_node}\"}[$__range]) * 100",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -342,7 +342,7 @@
           },
           "targets": [
             {
-              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"node\", protocol=\"icmp\"})",
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source=\"deckhouse\", source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"node\", protocol=\"icmp\"})",
               "legendFormat": "{{target_node_name}}",
               "refId": "A"
             }
@@ -431,7 +431,7 @@
           },
           "targets": [
             {
-              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"node\", protocol=\"http\"})",
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source=\"deckhouse\", source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"node\", protocol=\"http\"})",
               "legendFormat": "{{target_node_name}}",
               "refId": "A"
             }
@@ -520,7 +520,7 @@
           },
           "targets": [
             {
-              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"endpoint\", protocol=\"icmp\"})",
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source=\"deckhouse\", source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"endpoint\", protocol=\"icmp\"})",
               "legendFormat": "{{target_node_name}}",
               "refId": "A"
             }
@@ -609,7 +609,7 @@
           },
           "targets": [
             {
-              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"endpoint\", protocol=\"http\"})",
+              "expr": "avg by (target_node_name) (cilium_node_connectivity_latency_seconds{source=\"deckhouse\", source_node_name=~\"$source_node\", target_node_name=~\"$destination_node\", type=\"endpoint\", protocol=\"http\"})",
               "legendFormat": "{{target_node_name}}",
               "refId": "A"
             }
@@ -678,7 +678,7 @@
         "multi": true,
         "name": "source_node",
         "options": [],
-        "query": "label_values(cilium_node_connectivity_latency_seconds, source_node_name)",
+        "query": "label_values(cilium_node_connectivity_latency_seconds{source=\"deckhouse\"}, source_node_name{source=\"deckhouse\"})",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -709,7 +709,7 @@
         "multi": true,
         "name": "destination_node",
         "options": [],
-        "query": "label_values(cilium_node_connectivity_latency_seconds, target_node_name)",
+        "query": "label_values(cilium_node_connectivity_latency_seconds{source=\"deckhouse\"}, target_node_name{source=\"deckhouse\"})",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -740,7 +740,7 @@
         "multi": true,
         "name": "protocol",
         "options": [],
-        "query": "label_values(cilium_node_connectivity_latency_seconds, protocol)",
+        "query": "label_values(cilium_node_connectivity_latency_seconds{source=\"deckhouse\"}, protocol)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

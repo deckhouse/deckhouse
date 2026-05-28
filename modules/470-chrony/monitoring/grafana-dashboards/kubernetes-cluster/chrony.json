@@ -80,7 +80,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count (node_timex_sync_status{node=~\"$node\"}==0)\nor vector(0)",
+          "expr": "count (node_timex_sync_status{source=\"deckhouse\", node=~\"$node\"}==0)\nor vector(0)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -157,7 +157,7 @@
       "targets": [
         {
           "alias": "Stratum",
-          "expr": "count (chrony_tracking_stratum{node=~\"$node\"}==16)\nor vector(0)",
+          "expr": "count (chrony_tracking_stratum{source=\"deckhouse\", node=~\"$node\"}==16)\nor vector(0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -392,7 +392,7 @@
       ],
       "targets": [
         {
-          "expr": "max by (node) (min_over_time(node_timex_sync_status{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (min_over_time(node_timex_sync_status{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -400,7 +400,7 @@
           "refId": "A"
         },
         {
-          "expr": "max by (node) (max_over_time(chrony_tracking_stratum{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_stratum{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -424,7 +424,7 @@
           "refId": "E"
         },
         {
-          "expr": "max by (node) (max_over_time(chrony_tracking_root_dispersion_seconds{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_root_dispersion_seconds{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -432,7 +432,7 @@
           "refId": "F"
         },
         {
-          "expr": "max by (node) (max_over_time(chrony_tracking_root_delay_seconds{node=~\"$node\"}[$__range]))",
+          "expr": "max by (node) (max_over_time(chrony_tracking_root_delay_seconds{source=\"deckhouse\", node=~\"$node\"}[$__range]))",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -440,7 +440,7 @@
           "refId": "G"
         },
         {
-          "expr": "max by (node) (node_time_seconds{node=~\"$node\"} - chrony_tracking_reference_timestamp_seconds{node=~\"$node\"})",
+          "expr": "max by (node) (node_time_seconds{source=\"deckhouse\", node=~\"$node\"} - chrony_tracking_reference_timestamp_seconds{source=\"deckhouse\", node=~\"$node\"})",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -630,7 +630,7 @@
       "targets": [
         {
           "alias": "Last Offset",
-          "expr": "(max_over_time(chrony_tracking_last_offset_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(chrony_tracking_last_offset_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
+          "expr": "(max_over_time(chrony_tracking_last_offset_seconds{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(chrony_tracking_last_offset_seconds{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]) < 0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -762,7 +762,7 @@
       "targets": [
         {
           "alias": "Frequency",
-          "expr": "max_over_time(chrony_tracking_root_dispersion_seconds{node=~\"$node\"}[$__rate_interval])",
+          "expr": "max_over_time(chrony_tracking_root_dispersion_seconds{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
           "groupBy": [
             {
@@ -889,7 +889,7 @@
       "targets": [
         {
           "alias": "Last Offset",
-          "expr": "(max_over_time(chrony_tracking_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(chrony_tracking_root_delay_seconds{node=~\"$node\"}[$__rate_interval]) < 0)",
+          "expr": "(max_over_time(chrony_tracking_root_delay_seconds{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]) > 0)\nor\n(min_over_time(chrony_tracking_root_delay_seconds{source=\"deckhouse\", node=~\"$node\"}[$__rate_interval]) < 0)",
           "format": "time_series",
           "groupBy": [
             {
@@ -1014,7 +1014,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "node_time_seconds - on(node) chrony_tracking_reference_timestamp_seconds{node=~\"$node\"}",
+          "expr": "node_time_seconds{source=\"deckhouse\"} - on(node) chrony_tracking_reference_timestamp_seconds{source=\"deckhouse\", node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1104,7 +1104,7 @@
         "multi": true,
         "name": "node",
         "options": [],
-        "query": "label_values(chrony_exporter_build_info, node)",
+        "query": "label_values(chrony_exporter_build_info{source=\"deckhouse\"}, node)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
