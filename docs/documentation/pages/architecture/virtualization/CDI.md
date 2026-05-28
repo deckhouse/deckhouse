@@ -6,10 +6,10 @@ description: Architecture of the CDI component of virtualization module in Deckh
 ---
 
 {% alert level="info" %}
-A [fork](https://github.com/deckhouse/3p-containerized-data-importer) of CDI is used in the [`virtualization`](/modules/virtualization/) module. The [original CDI](https://github.com/kubevirt/containerized-data-importer) is a KubeVirt subproject. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage virtual machines using Kubernetes as an orchestration platform.
+A [fork](https://github.com/deckhouse/3p-containerized-data-importer) of CDI is used in the [`virtualization`](/modules/virtualization/) module. The [original CDI](https://github.com/kubevirt/containerized-data-importer) is a KubeVirt subproject. [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage virtual machines (VMs) using Kubernetes as an orchestration platform.
 {% endalert %}
 
-Containerized Data Importer (CDI) component of the [`virtualization`](/modules/virtualization/) module is a persistent storage management add-on for Kubernetes. It's primary goal is to provide a declarative way to build virtual machine disks based on PersistentVolumeClaim (PVC) resources. CDI provides the ability to import virtual machine images and disks into PVC volumes for use in KubeVirt-managed virtual machines. The data can come from different sources:
+Containerized Data Importer (CDI) component of the [`virtualization`](/modules/virtualization/) module is a persistent storage management add-on for Kubernetes. It's primary goal is to provide a declarative way to build VM disks based on PersistentVolumeClaim (PVC) resources. CDI provides the ability to import VM images and disks into PVC volumes for use in KubeVirt-managed VM. The data can come from different sources:
 
 - A URL address
 - A container registry

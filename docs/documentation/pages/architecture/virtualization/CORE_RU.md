@@ -1,14 +1,14 @@
 ---
-title: Ядро (CORE) модуля
+title: Ядро модуля
 permalink: ru/architecture/virtualization/core.html
 lang: ru
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, сабресурсы, kubevirt, virt-operator, core
 description: Архитектура ядра (CORE) модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
-Ядро (CORE) модуля [`virtualization`](/modules/virtualization/) непосредственно отвечает за работу с виртуальными машинами (ВМ). Ядро основано на проекте KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять виртуальными машинами с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных виртуальных машин и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
+Ядро модуля [`virtualization`](/modules/virtualization/) непосредственно отвечает за работу с виртуальными машинами (ВМ). Ядро основано на проекте KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
 
-Для управления ВМ компонент CORE использует кастомные ресурсы следующих API-групп:
+Для управления ВМ ядро модуля использует кастомные ресурсы следующих API-групп:
 
 1. `internal.virtualization.deckhouse.io` — основная группа, аналог API-группы `kubevirt.io` оригинального KubeVirt, включает в себя следующие кастомные ресурсы:
 
@@ -35,7 +35,7 @@ description: Архитектура ядра (CORE) модуля virtualization 
 
    Сабресурсами управляет компонент virt-api. Перечисленные выше сабресурсы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `subresources.virtualization.deckhouse.io` API-групп, управляемых компонентом virtualization-api.
 
-## Архитектура ядра (CORE) модуля
+## Архитектура ядра модуля
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -44,14 +44,14 @@ description: Архитектура ядра (CORE) модуля virtualization 
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонента CORE модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура ядра модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента CORE модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-core.ru.png)
+![Архитектура ядра модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-core.ru.png)
 
-## Компоненты ядра (CORE) модуля
+## Компоненты ядра модуля
 
-Ядро (CORE) модуля состоит из следующих компонентов:
+Ядро модуля состоит из следующих компонентов:
 
 1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API-группы. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API-группы с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API-группы `internal.virtualization.deckhouse.io` в API-группу `kubevirt.io` и проксирует их на эндпоинт virt-api.
 
@@ -107,9 +107,9 @@ description: Архитектура ядра (CORE) модуля virtualization 
 
      Также virt-handler постоянно следит за состоянием запущенной ВМ, которое возвращает libvirtd через virt-launcher, и обновляет статус VirtualMachineInstance.
 
-## Взаимодействия ядра (CORE) модуля
+## Взаимодействия ядра модуля
 
-Ядро (CORE) модуля взаимодействует со следующими компонентами:
+Ядро модуля взаимодействует со следующими компонентами:
 
 1. **Kube-apiserver**:
 
@@ -119,7 +119,7 @@ description: Архитектура ядра (CORE) модуля virtualization 
 
 1. [**CDI (Containerized-Data-Importer)**](cdi.html) — KubeVirt на основе спецификации диска и ссылки на образ ВМ в секции DataVolumeTemplate ресурса VirtualMachine создает DataVolume. CDI импортирует в PVC образ диска из указанного в DataVolume источника. Созданный PVC является диском ВМ, управляемой KubeVirt.
 
-С ядром (CORE) модуля взаимодействуют следующие внешние компоненты:
+С ядром модуля взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver**:
 
