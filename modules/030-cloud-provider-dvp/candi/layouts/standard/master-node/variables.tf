@@ -16,7 +16,8 @@ variable "clusterConfiguration" {
 }
 
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
@@ -41,12 +42,40 @@ variable "additional_disks" {
   default = []
 }
 
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
+
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
 
 locals {
   prefix            = var.clusterConfiguration.cloud.prefix
   node_index        = var.nodeIndex
-  namespace         = var.providerClusterConfiguration.provider.namespace
-  master_node_group = var.providerClusterConfiguration.masterNodeGroup
+  namespace         = module.migration.namespace
+  master_node_group = module.migration.master_node_group
   instance_class    = local.master_node_group.instanceClass
 
 
@@ -75,21 +104,21 @@ locals {
   bootloader                 = lookup(local.instance_class.virtualMachine, "bootloader", null)
   live_migration_policy      = lookup(local.instance_class.virtualMachine, "liveMigrationPolicy", "PreferForced")
   run_policy = lookup(
-  local.instance_class.virtualMachine,
-  "runPolicy",
-  "AlwaysOnUnlessStoppedManually",
-)
+    local.instance_class.virtualMachine,
+    "runPolicy",
+    "AlwaysOnUnlessStoppedManually",
+  )
 
-  ssh_public_key = var.providerClusterConfiguration.sshPublicKey
+  ssh_public_key = module.migration.ssh_public_key
 
   ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
 
   kubernetes_data_disk_storage_class = lookup(local.instance_class.etcdDisk, "storageClass", null)
   kubernetes_data_disk_size          = local.instance_class.etcdDisk.size
 
-  region = lookup(var.providerClusterConfiguration, "region", "")
+  region = module.migration.region
 
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", [])
+  actual_zones = module.migration.zones
   zones        = lookup(local.master_node_group, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.master_node_group["zones"])) : local.actual_zones
   zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 

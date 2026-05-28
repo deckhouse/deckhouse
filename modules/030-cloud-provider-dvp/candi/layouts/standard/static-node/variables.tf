@@ -16,7 +16,8 @@ variable "clusterConfiguration" {
 }
 
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
 variable "nodeIndex" {
@@ -45,11 +46,40 @@ variable "additional_disks" {
   default = []
 }
 
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
+
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
+
 locals {
   prefix         = var.clusterConfiguration.cloud.prefix
   node_index     = var.nodeIndex
-  namespace      = var.providerClusterConfiguration.provider.namespace
-  ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
+  namespace      = module.migration.namespace
+  ng             = [for i in module.migration.node_groups : i if i.name == var.nodeGroupName][0]
   instance_class = local.ng["instanceClass"]
 
 
@@ -77,21 +107,21 @@ locals {
   memory_size                = local.instance_class.virtualMachine.memory.size
   virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
 
-  bootloader = lookup(local.instance_class.virtualMachine, "bootloader", null)
+  bootloader            = lookup(local.instance_class.virtualMachine, "bootloader", null)
   live_migration_policy = lookup(local.instance_class.virtualMachine, "liveMigrationPolicy", "PreferForced")
   run_policy = lookup(
-  local.instance_class.virtualMachine,
-  "runPolicy",
-  "AlwaysOnUnlessStoppedManually",
-)
+    local.instance_class.virtualMachine,
+    "runPolicy",
+    "AlwaysOnUnlessStoppedManually",
+  )
 
-  ssh_public_key = var.providerClusterConfiguration.sshPublicKey
+  ssh_public_key = module.migration.ssh_public_key
 
   ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
 
-  region = lookup(var.providerClusterConfiguration, "region", "")
+  region = module.migration.region
 
-  actual_zones = lookup(var.providerClusterConfiguration, "zones", [])
+  actual_zones = module.migration.zones
   zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
   zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 
