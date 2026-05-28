@@ -211,7 +211,7 @@ properties:
     x-examples:
       - {updateMode: "InPlaceOrRecreate", longtermMaxCPU: "1", longtermMaxMemory: "1500Mi", maxCPU: "1000m", maxMemory: "1500Mi"}
       - {updateMode: "Off"}
-    default: {updateMode: "InPlaceOrRecreate"}
+    default: {updateMode: "Initial"}
     description: |
       VPA settings for pods.
     properties:
@@ -269,10 +269,10 @@ properties:
           - `Off` — VPA does not apply resource changes to running pods; recommendations are available in the VPA status.
 
           > The `Auto` mode is deprecated since Deckhouse 1.75. Use `InPlaceOrRecreate` instead.
-        default: "InPlaceOrRecreate"
+        default: "Initial"
         enum:
-          - "InPlaceOrRecreate"
           - "Initial"
+          - "InPlaceOrRecreate"
           - "Off"
   highAvailability:
     type: boolean
