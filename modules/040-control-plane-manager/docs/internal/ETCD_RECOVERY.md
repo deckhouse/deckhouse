@@ -130,8 +130,8 @@ On the selected node do the following:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   d8 k label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   d8 k label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 Start kubelet on another nodes:
@@ -147,7 +147,7 @@ On the first recovered node do the following steps:
    kubectl -n d8-system rollout restart deployment deckhouse
    ```
 
-   If Deckhouse Pod stuck in Terminating state, force delete Pod:
+   If Deckhouse Pod is stuck in a Terminating state, forcibly delete the Pod:
 
    ```shell
    kubectl -n d8-system delete po -l app=deckhouse --force
@@ -169,7 +169,7 @@ On the first recovered node do the following steps:
 Add control-plane role for each other control-plane nodes:
 
 ```shell
-d8 k label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait until `ControlPlaneNode` objects show healthy status and `ControlPlaneOperation` objects reach `OperationCompleted`:
@@ -208,8 +208,8 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   d8 k label node LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   d8 k label node LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
@@ -248,7 +248,7 @@ To turn them into cluster members, do the following on those nodes:
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
    ```
 
-1. Restart and wait readiness Deckhouse.
+1. Restart and wait for Deckhouse to be ready.
 
    ```shell
    kubectl -n d8-system rollout restart deployment deckhouse
@@ -270,7 +270,7 @@ To turn them into cluster members, do the following on those nodes:
 Add a control-plane role for each lost nodes:
 
 ```shell
-d8 k label node LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait until `ControlPlaneNode` objects show healthy status and `ControlPlaneOperation` objects reach `OperationCompleted`:
@@ -468,7 +468,7 @@ Do the following:
 1. Remove control-plane role label from affected node.
 
    ```shell
-   d8 k label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On the affected node:
@@ -488,7 +488,7 @@ On the affected node:
 1. Add control-plane role to affected node.
 
    ```shell
-   d8 k label node AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+   kubectl label node AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 Wait until `ControlPlaneNode` shows healthy status and `ControlPlaneOperation` objects for the node reach `OperationCompleted`:
@@ -615,8 +615,8 @@ On the selected node do the following:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   d8 k label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   d8 k label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On another nodes, start kubelet:
@@ -626,13 +626,13 @@ systemctl start kubelet.service
 ```
 
 On the first recovered node do the following:
-1. Restart and wait for Deckhouse to be ready.
+1. Restart and wait readiness Deckhouse.
 
    ```shell
    kubectl -n d8-system rollout restart deployment deckhouse
    ```
 
-   If Deckhouse Pod is stuck in a Terminating state, forcibly delete the Pod:
+   If Deckhouse Pod stuck in Terminating state, force delete Pod:
 
    ```shell
    kubectl -n d8-system delete po -l app=deckhouse --force
@@ -645,18 +645,18 @@ On the first recovered node do the following:
    d8 k get cpo -o wide
    ```
 
-1. Check that node etcd member has peer and client host as internal node IP.
+1. Check node etcd member has peer and client host as internal node IP.
 
    ```shell
    ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-For each other control-plane node:
+For each another control-plane nodes:
 
 1. Add control-plane role.
 
    ```shell
-   d8 k label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+   kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 1. Wait until `ControlPlaneNode` objects show healthy status and `ControlPlaneOperation` objects reach `OperationCompleted`:
