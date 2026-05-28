@@ -210,7 +210,7 @@ properties:
           Tracing collection settings (single source for both legacy control-plane tracing and the Telemetry API path).
 
           - If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false` and [`tracing.enabled`](#parameters-tracing-enabled) is `true`, the module fills `meshConfig.defaultConfig.tracing.zipkin` from `collector.zipkin.address` (with [`tracing.sampling`](#parameters-tracing-sampling)).
-          - If `telemetryAPI.enabled` is `true` and tracing is enabled, the module adds an `extensionProviders` entry named **`deckhouse-tracing`** (Zipkin protocol) plus a mesh-wide **`Telemetry`** spec that references this provider (`spec.tracing` on `d8-main-mesh` in namespace `d8-istio`).
+          - If `telemetryAPI.enabled` is `true` and tracing is enabled, the module adds an `extensionProviders` entry named **`deckhouse-tracing`** (Zipkin protocol) plus `spec.tracing` on the mesh-wide **`Telemetry`** `main-access-log-format` in namespace `d8-istio`.
         default: {}
         properties:
           zipkin:
@@ -254,17 +254,17 @@ properties:
     description: |
       [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) integration.
 
-      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the legacy `telemetry.v2` filters, and installs a single bundled **Telemetry** CR **`d8-main-mesh`** in `d8-istio` (Prometheus metrics, access logs via `main-access-log-format`, and—when [`tracing.enabled`](#parameters-tracing-enabled) is `true` with [`tracing.collector.zipkin.address`](#parameters-tracing-collector)—mesh-wide tracing via provider **`deckhouse-tracing`**) so Grafana/Kiali keep seeing `istio_*` series from sidecars.
+      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the legacy `telemetry.v2` filters, and extends the always-present **`Telemetry`** `main-access-log-format` in `d8-istio` with `spec.metrics` (and—when [`tracing.enabled`](#parameters-tracing-enabled) is `true` with [`tracing.collector.zipkin.address`](#parameters-tracing-collector)—`spec.tracing` via **`deckhouse-tracing`**) so Grafana/Kiali keep seeing `istio_*` series from sidecars.
 
-      When `false` (default), the full legacy `telemetry.v2` stack stays on (including Sail’s `telemetry.v2.prometheus`), without `defaultProviders` or the bundled `d8-main-mesh` manifest.
+      When `false` (default), the full legacy `telemetry.v2` stack stays on (including Sail’s `telemetry.v2.prometheus`), without `defaultProviders.metrics`, while **`Telemetry`** `main-access-log-format` still enables access logs (backwards compatible with releases since the access-log Telemetry was introduced).
 
-      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) only defines the Envoy log template referenced by extension provider `main-access-log-format`; it alone does not install the bundled Telemetry CR unless Telemetry API mode is enabled.
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) defines the Envoy log template in `meshConfig.extensionProviders`; the **`Telemetry`** `main-access-log-format` object selects that provider for access logging.
     default: {}
     properties:
       enabled:
         type: boolean
         description: |
-          Telemetry API path: wires `defaultProviders.metrics`, turns off `telemetry.v2`, renders **`Telemetry`** `d8-main-mesh` (metrics + access logs; tracing when tracing is configured).
+          Telemetry API path: wires `defaultProviders.metrics`, turns off `telemetry.v2`, adds `spec.metrics` (and tracing when configured) to **`Telemetry`** `main-access-log-format`.
         default: false
         x-examples: [true]
   sidecar:
