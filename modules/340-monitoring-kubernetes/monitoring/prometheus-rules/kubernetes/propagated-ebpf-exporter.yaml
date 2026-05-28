@@ -1,6 +1,8 @@
 - name: oom-kills
   rules:
   - record: oom_kills:normalized
+    labels:
+      source: deckhouse
     expr: |-
       max by (namespace, pod) (
         label_replace(kube_pod_info{source="deckhouse"}, "raw_pod_id", "$1$2$3$4$5", "uid", "(.+)-(.+)-(.+)-(.+)-(.+)")
@@ -13,6 +15,8 @@
         )
       )
   - record: oom_kills:normalized
+    labels:
+      source: deckhouse
     expr: |-
       max by (namespace, pod, container) (
         label_replace(kube_pod_container_info{source="deckhouse", container_id!=""}, "raw_container_id", "$1", "container_id", "containerd://(.+)")
@@ -20,6 +24,8 @@
         max by (raw_container_id) (label_replace(ebpf_exporter_oom_kills{source="deckhouse", cgroup_path=~".+cri-containerd-.+.scope"}, "raw_container_id", "$1", "cgroup_path", ".+cri-containerd-(.+).scope"))
       )
   - record: oom_kills:normalized
+    labels:
+      source: deckhouse
     expr: |-
       max by (namespace, pod, container) (
         kube_pod_container_info{source="deckhouse"} * on (uid) group_left

@@ -22,3 +22,5 @@
         label_replace(kube_persistentvolumeclaim_info{source="deckhouse", volumename!=""}, "persistentvolume", "$1", "volumename", "(.+)")
       )
     record: kube_persistentvolume_is_local
+    labels:
+      source: deckhouse

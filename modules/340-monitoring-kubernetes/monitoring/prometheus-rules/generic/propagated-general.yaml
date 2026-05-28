@@ -2,3 +2,5 @@
   rules:
   - record: fd_utilization
     expr: process_open_fds{source="deckhouse"} / process_max_fds{source="deckhouse"}
+    labels:
+      source: deckhouse

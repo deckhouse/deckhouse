@@ -1,6 +1,8 @@
 - name: kubernetes.controller
   rules:
   - record: kube_controller_pod
+    labels:
+      source: deckhouse
     expr: |-
       max by(job, node, namespace, controller, controller_name, controller_type, pod)
       (
@@ -43,6 +45,8 @@
          "controller", "rs/$1", "controller", "ReplicaSet/(.*)")
       )
   - record: kube_controller_pod
+    labels:
+      source: deckhouse
     expr: |-
       sum by(job, node, namespace, controller, controller_type, controller_name, pod)
       (
@@ -78,6 +82,8 @@
       )
   # virt-launcher pod -> VirtualMachine
   - record: kube_controller_pod
+    labels:
+      source: deckhouse
     expr: |-
       max by(job, node, namespace, controller, controller_name, controller_type, pod)
       (
@@ -95,6 +101,8 @@
       )
   # hp-volume pod -> VirtualMachine (through virt-launcher)
   - record: kube_controller_pod
+    labels:
+      source: deckhouse
     expr: |-
       max by(job, node, namespace, controller, controller_name, controller_type, pod)
       (
@@ -121,6 +129,8 @@
         "controller", "vm/$1", "controller_name", "(.*)")
       )
   - record: kube_controller_replicas
+    labels:
+      source: deckhouse
     expr: |-
      # get daemonset replicas
      max by(job, namespace, controller_type, controller_name)
@@ -170,6 +180,8 @@
        "controller_name", "$1", "replicaset", "(.*)"))
      )
   - record: kube_controller_replicas_ready
+    labels:
+      source: deckhouse
     expr: |-
      # get daemonset ready replicas
      max by(job, namespace, controller_type, controller_name)
