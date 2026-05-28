@@ -17,7 +17,6 @@ package checks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -197,9 +196,6 @@ func (c CloudDiskNameLengthCheck) dvpNodeGroups() []dvpNodeGroup {
 		c.MetaConfig.ProviderClusterConfig, "nodeGroups",
 	)
 	if err != nil {
-		if errors.Is(err, dhctljson.ErrNotFound) {
-			return nil
-		}
 		return nil
 	}
 	return *groups
