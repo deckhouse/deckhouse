@@ -1,13 +1,15 @@
 ---
 title: Hybrid integrations
 permalink: en/admin/integrations/hybrid/overview.html
+search: hybrid, hybrid cluster, hybrid integration
+description: General principles of hybrid integration in Deckhouse Kubernetes Platform.
 ---
 
-A hybrid cluster is a DKP cluster in which the control plane and base worker nodes are placed in your own infrastructure, while additional worker nodes are connected from an external cloud or virtualization environment, for example from Yandex Cloud, VMware Cloud Director, or VMware vSphere.
+A hybrid cluster is a Deckhouse Kubernetes Platform (DKP) cluster in which the control plane and base worker nodes are placed in your own infrastructure, while additional worker nodes are connected from an external cloud or virtualization environment, for example from Yandex Cloud, VMware Cloud Director, or VMware vSphere.
 
 This approach allows you to extend an existing static cluster without creating a separate Kubernetes cluster: increase compute capacity, place part of the workloads in external infrastructure, or gradually migrate services there. For applications, a single Kubernetes control plane is preserved: a common API, common resources, and unified mechanisms for scheduling, monitoring, updating, and operations.
 
-Hybrid integration is performed on the basis of an already deployed static DKP cluster — a cluster with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter. In such a cluster, the control plane and base worker nodes are placed in your own infrastructure. Then the corresponding cloud provider module is enabled, through which DKP receives information about the external infrastructure and can create or connect additional worker nodes.
+Hybrid integration is performed on the basis of an already deployed static DKP cluster with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter. Then the corresponding cloud provider module is enabled, through which DKP receives information about the external infrastructure and can create or connect additional worker nodes.
 
 Depending on the provider, nodes can be added automatically through the cloud API or by manually connecting pre-created virtual machines: using the DKP bootstrap script or Cluster API Provider Static (CAPS).
 
@@ -21,10 +23,10 @@ The general principles of hybrid integration are described on this page. The pro
 
 DKP uses different node group types for hybrid scenarios:
 
-- [`Static`](../../../../architecture/cluster-and-infrastructure/node-management/static-nodes.html) — nodes that are created and maintained by the user; also used in scenarios involving connection through CAPS.
-- [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) — nodes that DKP creates and deletes automatically through the provider API.
-- [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — nodes that are created by the user in external infrastructure and then connected to the cluster.
-- `Hybrid` — the NodeGroup type used in the scenario for connecting manually created cloud nodes in Yandex Cloud.
+- [`Static`](../../../../architecture/cluster-and-infrastructure/node-management/static-nodes.html): Nodes that are created and maintained by the user; also used in scenarios involving connection through CAPS.
+- [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html): Nodes that DKP creates and deletes automatically through the provider API.
+- [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html): Nodes that are created by the user in external infrastructure and then connected to the cluster.
+- `Hybrid`: The NodeGroup type used in the scenario for connecting manually created cloud nodes in Yandex Cloud.
 
 ## Node addition methods
 
@@ -48,12 +50,12 @@ The full list of connections is provided in the [Network interaction](../../../.
 
 It is also recommended to check:
 
-- routing between the networks of static and connected nodes in both directions
-- availability of the Kubernetes API for connected nodes
-- availability of connected nodes from the control plane and cluster system components
-- availability of DNS servers and allowed external addresses
-- availability of the container registry and other external services required for downloading images and packages
-- the same MTU value along the entire network path, especially when using tunnels
-- traffic encapsulation parameters when using Cilium, including [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), if traffic filtering is applied between sites
+- Routing between the networks of static and connected nodes in both directions
+- Availability of the Kubernetes API for connected nodes
+- Availability of connected nodes from the control plane and cluster system components
+- Availability of DNS servers and allowed external addresses
+- Availability of the container registry and other external services required for downloading images and packages
+- The same MTU value along the entire network path, especially when using tunnels
+- Traffic encapsulation parameters when using Cilium, including [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), if traffic filtering is applied between sites
 
 Specific requirements for networks, subnets, virtual machine templates, credentials, and additional parameters depend on the infrastructure provider being used and are provided in the "Prerequisites" section for the corresponding provider.

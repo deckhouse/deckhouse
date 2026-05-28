@@ -2,9 +2,11 @@
 title: Гибридный кластер с Yandex Cloud
 permalink: ru/admin/integrations/hybrid/yandex-hybrid.html
 lang: ru
+search: гибрид с Yandex Cloud
+description: Подготовка к гибридной интеграции с Yandex Cloud в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из Yandex Cloud в существующий статический кластер DKP.
+Далее описан процесс добавления worker-узлов из Yandex Cloud в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
 
 Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие DKP с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
 
@@ -20,8 +22,8 @@ lang: ru
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
 - Между сетью статических узлов и VPC Yandex Cloud настроена сетевая связность.
-- Узлы Yandex Cloud, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
-- Выполнены требования из раздела [Авторизация в Yandex Cloud](../public/yandex/authorization.html):
+- Узлы Yandex Cloud, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Выполнены требования из раздела [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html):
   - подготовлен сервисный аккаунт;
   - выбран каталог, в котором будут создаваться ресурсы;
   - настроены необходимые роли и доступ к используемой VPC.
@@ -58,9 +60,9 @@ lang: ru
    - `SUBNET_ID` — ID подсети, в которой будут создаваться worker-узлы;
    - `ZONE` — зона доступности, соответствующая выбранной подсети.
 
-   Подробнее в разделе [Авторизация в Yandex Cloud](../public/yandex/authorization.html)
+   Подробнее в разделе [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html).
 
-1. Создайте Service Account в нужном каталоге Yandex Cloud и назначьте ему права:
+1. Создайте сервисный аккаунт в нужном каталоге Yandex Cloud и назначьте ему права:
 
    ```shell
    yc iam service-account create \
@@ -83,7 +85,7 @@ lang: ru
 
    Роль `editor` нужна для создания и управления облачными ресурсами, а `vpc.admin` — для работы с сетевыми ресурсами VPC.
 
-1. Создайте ключ Service Account и сохраните его в JSON-файл:
+1. Создайте ключ сервисного аккаунта и сохраните его в JSON-файл:
 
    ```shell
    yc iam key create \
@@ -106,7 +108,7 @@ lang: ru
    Если используется другой ключ, укажите путь к нему вместо `~/.ssh/id_rsa.pub`.
 
    {% alert level="warning" %}
-   В параметре `sshPublicKey` нужно передавать публичный SSH-ключ администратора, а не публичный ключ из JSON-файла Service Account.
+   В параметре `sshPublicKey` нужно передавать публичный SSH-ключ администратора, а не публичный ключ из JSON-файла сервисного аккаунта.
    {% endalert %}
 
 1. Получите ID образа операционной системы, из которого будут создаваться виртуальные машины:
@@ -118,7 +120,7 @@ lang: ru
    ```
 
    {% alert level="warning" %}
-   Параметр `imageID` — это ID образа ОС в Yandex Cloud. Не используйте в этом поле ID существующей виртуальной машины или ID ключа Service Account.
+   Параметр `imageID` — это ID образа ОС в Yandex Cloud. Не используйте в этом поле ID существующей виртуальной машины или ID ключа сервисного аккаунта.
    {% endalert %}
 
 1. Укажите CIDR сети, в которой будут размещаться узлы Yandex Cloud:
@@ -133,7 +135,7 @@ lang: ru
    yc vpc subnet list --folder-id "$FOLDER_ID"
    ```
 
-1. Создайте файл, например `cloud-provider-cluster-configuration.yaml` с конфигурацией провайдера:
+1. Создайте файл с конфигурацией провайдера. Например, `cloud-provider-cluster-configuration.yaml`:
 
    ```shell
    cat > cloud-provider-cluster-configuration.yaml <<EOF
@@ -166,14 +168,14 @@ lang: ru
    - `imageID` — ID образа ОС для создаваемых виртуальных машин;
    - `cloudID` — ID облака Yandex Cloud;
    - `folderID` — ID каталога Yandex Cloud;
-   - `serviceAccountJSON` — JSON-ключ Service Account в однострочном формате;
+   - `serviceAccountJSON` — JSON-ключ сервисного аккаунта в однострочном формате;
    - `sshPublicKey` — публичный SSH-ключ для доступа к создаваемым узлам.
 
    {% alert level="info" %}
    В гибридном сценарии, когда control plane уже развёрнут как статический кластер, секция `masterNodeGroup` не приводит к созданию master-узлов в Yandex Cloud, но остаётся частью конфигурации провайдера.
    {% endalert %}
 
-1. Создайте файл, например `cloud-provider-discovery-data.json` с discovery-данными Yandex Cloud:
+1. Создайте файл с discovery-данными Yandex Cloud. Например, `cloud-provider-discovery-data.json`:
 
    ```shell
    cat > cloud-provider-discovery-data.json <<EOF
@@ -206,7 +208,7 @@ lang: ru
    - `shouldAssignPublicIPAddress` — управляет назначением публичных IP-адресов создаваемым узлам.
 
    {% alert level="warning" %}
-   Если параметр `shouldAssignPublicIPAddress` установлен в `false`, у создаваемых узлов не будет публичного IP-адреса. В этом случае узлы должны иметь доступ к registry и внешним сервисам через NAT Gateway, NAT-инстанс, proxy или другой egress-механизм. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
+   Если параметр `shouldAssignPublicIPAddress` установлен в `false`, у создаваемых узлов не будет публичного IP-адреса. В этом случае узлы должны иметь доступ к хранилищу образов и внешним сервисам через NAT Gateway, NAT-инстанс, прокси или другой egress-механизм. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
    {% endalert %}
 
 1. Закодируйте файлы `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` в Base64:
@@ -268,7 +270,7 @@ lang: ru
    d8 k -n d8-cloud-provider-yandex get pods -o wide
    ```
 
-1. Создайте файл, например `yandex-instanceclass-nodegroup.yaml` с ресурсами YandexInstanceClass и NodeGroup:
+1. Создайте файл с ресурсами YandexInstanceClass и NodeGroup. Например, `yandex-instanceclass-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -322,11 +324,14 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                 STATUS   ROLES                  AGE   VERSION    INTERNAL-IP
    static-master-0                      Ready    control-plane,master   1h    v1.33.10   10.128.0.15
    yc-worker-f3564dca-7fc59-s2w5d       Ready    yc-worker              10m   v1.33.10   10.128.0.21
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Для диагностики состояния и поиска возможных проблем проверьте логи machine-controller-manager:
 
@@ -351,7 +356,7 @@ lang: ru
 - В Yandex Cloud создана виртуальная машина, которая будет подключена к кластеру.
 - Виртуальная машина подключена к сети и подсети Yandex Cloud, используемым для гибридной интеграции с кластером.
 - Внутренний IP-адрес виртуальной машины входит в диапазон адресов, используемый для облачных узлов Yandex Cloud.
-- Имя виртуальной машины в Yandex Cloud совпадает с hostname внутри операционной системы.
+- Имя виртуальной машины в Yandex Cloud совпадает с именем хоста (hostname) внутри операционной системы.
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
 
 1. На master-узле задайте переменные для создаваемой NodeGroup и подключаемой виртуальной машины:
@@ -399,10 +404,13 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME      TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    yc-caps   Static   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. На master-узле сгенерируйте SSH-ключ, который CAPS будет использовать для подключения к виртуальной машине:
 
@@ -529,11 +537,14 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                         STATUS   ROLES     AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
    static-master-0              Ready    master    1h    v1.33.10   10.128.0.15   <none>
    yandex-worker-hybrid-caps    Ready    yc-caps   5m    v1.33.10   10.128.0.29   <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. При сбоях подключения проверьте состояние NodeGroup, StaticInstance, Machine и события в кластере:
 
@@ -562,7 +573,7 @@ lang: ru
 - В Yandex Cloud создана виртуальная машина, которая будет подключена к кластеру.
 - Виртуальная машина подключена к сети и подсети Yandex Cloud, используемым для гибридной интеграции с кластером.
 - Внутренний IP-адрес виртуальной машины входит в диапазон адресов, используемый для облачных узлов Yandex Cloud.
-- Имя виртуальной машины в Yandex Cloud совпадает с hostname внутри операционной системы.
+- Имя виртуальной машины в Yandex Cloud совпадает с именем хоста (hostname) внутри операционной системы.
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
 
 1. Проверьте метаданные виртуальной машины в Yandex Cloud.
@@ -590,7 +601,7 @@ lang: ru
    - `<USER>` — имя пользователя для SSH-доступа к виртуальной машине;
    - `<SSH_PUBLIC_KEY>` — публичный SSH-ключ администратора.
 
-1. На master-узле создайте файл, например `yandex-manual-nodegroup.yaml`, с ресурсом NodeGroup:
+1. На master-узле создайте файл с ресурсом NodeGroup. Например, `yandex-manual-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -620,10 +631,13 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME        TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    yc-manual   CloudStatic   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. На master-узле получите bootstrap-скрипт для созданной NodeGroup:
 
@@ -644,7 +658,7 @@ lang: ru
 
    В начале декодированного содержимого должен быть bash-скрипт:
 
-   ```shell
+   ```console
    #!/bin/bash
    ```
 
@@ -691,11 +705,14 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                    STATUS   ROLES       AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
    static-master-0         Ready    master      1h    v1.33.10   10.128.0.15   <none>
    yandex-worker-hybrid    Ready    yc-manual   5m    v1.33.10   10.128.0.17   <PUBLIC_IP>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. При сбоях подключения проверьте состояние NodeGroup, события и логи компонентов:
 

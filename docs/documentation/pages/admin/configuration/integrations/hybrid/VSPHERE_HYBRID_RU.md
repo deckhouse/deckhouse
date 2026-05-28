@@ -2,9 +2,11 @@
 title: Гибридный кластер с vSphere
 permalink: ru/admin/integrations/hybrid/vsphere-hybrid.html
 lang: ru
+search: гибрид с vSphere
+description: Подготовка к гибридной интеграции с VMware vSphere в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из vSphere в существующий статический кластер DKP.
+Далее описан процесс добавления worker-узлов из vSphere в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
 
 Для интеграции с vSphere используется модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Он обеспечивает взаимодействие DKP с vCenter, получение информации о виртуальных машинах, работу с параметрами размещения и интеграцию с инфраструктурными возможностями vSphere.
 
@@ -20,8 +22,8 @@ lang: ru
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
 - Между сетью статических узлов и сетью виртуальных машин во vSphere настроена сетевая связность.
-- Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
-- Выполнены требования из раздела [Подключение и авторизация в VMware vSphere](../virtualization/vsphere/authorization.html):
+- Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Выполнены требования из раздела [«Подключение и авторизация в VMware vSphere»](../virtualization/vsphere/authorization.html):
   - настроен доступ к vCenter;
   - подготовлена учётная запись vSphere с необходимыми привилегиями;
   - подготовлен шаблон виртуальной машины;
@@ -88,7 +90,7 @@ lang: ru
    d8 k get pods -n d8-cloud-provider-vsphere -o wide
    ```
 
-1. Создайте файл, например `vsphere-instance.yaml`, c ресурсами [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup) со значением `nodeType: CloudEphemeral`:
+1. Создайте файл c ресурсами [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup) со значением `nodeType: CloudEphemeral`. Например, `vsphere-instance.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -145,11 +147,14 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                             STATUS   ROLES                  AGE   VERSION
    static-master-0                  Ready    control-plane,master   1h    v1.33.10
    ephemeral-1ca02a5b-7588b-k89dc   Ready    ephemeral              10m   v1.33.10
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. При сбоях создания ВМ проверьте объекты Machine, MachineSet и логи machine-controller-manager:
 
@@ -182,7 +187,7 @@ lang: ru
   ```
 
 - В vSphere создана виртуальная машина, которая будет подключена к кластеру.
-- Имя виртуальной машины в vSphere, значение local-hostname в метаданных и hostname внутри операционной системы совпадают.
+- Имя виртуальной машины в vSphere, значение локального имени хоста (local-hostname) в метаданных и имени хоста (hostname) внутри операционной системы совпадают.
 - В дополнительных параметрах ВМ в vSphere задан параметр:
 
   ```text
@@ -195,7 +200,7 @@ lang: ru
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
 
 {% offtopic title="Передача метаданных в ВМ через vSphere..." %}
-Для предварительной настройки виртуальной машины можно использовать cloud-init через метаданные vSphere. Например, метаданные можно использовать для настройки hostname, сети и SSH-ключей.
+Для предварительной настройки виртуальной машины можно использовать cloud-init через метаданные vSphere. Например, метаданные можно использовать для настройки имени хоста (hostname), сети и SSH-ключей.
 
 В этом случае задайте в дополнительных параметрах ВМ:
 
@@ -229,7 +234,7 @@ guestinfo.metadata.encoding = base64
 Где:
 
 - `instance-id` — идентификатор виртуальной машины;
-- `local-hostname` — hostname узла внутри операционной системы;
+- `local-hostname` — имя хоста (hostname) узла внутри операционной системы;
 - `public-keys-data` — публичный SSH-ключ для доступа к виртуальной машине;
 - `network` — сетевые настройки, которые будут применены внутри виртуальной машины.
 
@@ -240,7 +245,7 @@ METADATA_B64="$(base64 -w0 metadata.json)"
 echo "$METADATA_B64"
 ```
 
-Использование `guestinfo.metadata` не является обязательным требованием CAPS. Главное, чтобы к моменту создания ресурса StaticInstance виртуальная машина была доступна по SSH, имела корректный hostname и пользователь для подключения мог выполнять команды через `sudo` без пароля.
+Использование `guestinfo.metadata` не является обязательным требованием CAPS. Главное, чтобы к моменту создания ресурса StaticInstance виртуальная машина была доступна по SSH, имела корректное имя хоста (hostname) и пользователь для подключения мог выполнять команды через `sudo` без пароля.
 {% endofftopic %}
 
 1. На master-узле задайте переменные для создаваемой NodeGroup и подключаемой виртуальной машины:
@@ -255,7 +260,7 @@ echo "$METADATA_B64"
    Где:
 
    - `NODE_GROUP` — имя NodeGroup, в которую будет добавлен узел;
-   - `NODE_NAME` — имя подключаемого узла. Оно должно совпадать с hostname внутри операционной системы и именем ВМ в vSphere;
+   - `NODE_NAME` — имя подключаемого узла. Оно должно совпадать с именем хоста (hostname) внутри операционной системы и именем ВМ в vSphere;
    - `NODE_SSH_IP` — IP-адрес виртуальной машины, доступный по SSH;
    - `CAPS_USER` — пользователь, под которым CAPS будет подключаться к виртуальной машине.
 
@@ -288,10 +293,13 @@ echo "$METADATA_B64"
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    vsphere-caps   Static   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. На master-узле сгенерируйте SSH-ключ, который CAPS будет использовать для подключения к виртуальной машине:
 
@@ -418,11 +426,14 @@ echo "$METADATA_B64"
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                    STATUS   ROLES          AGE   VERSION    INTERNAL-IP      EXTERNAL-IP
    static-master-0         Ready    master         1h    v1.33.10   192.168.240.135  <none>
    vsphere-worker-caps     Ready    vsphere-caps   5m    v1.33.10   192.168.240.152  <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. При сбоях подключения проверьте состояние NodeGroup, StaticInstance, Machine и события в кластере:
 
@@ -455,7 +466,7 @@ echo "$METADATA_B64"
   ```
 
 - В vSphere создана виртуальная машина, которая будет подключена к кластеру.
-- Имя виртуальной машины в vSphere совпадает с hostname внутри операционной системы.
+- Имя виртуальной машины в vSphere совпадает с именем хоста (hostname) внутри операционной системы.
 - В дополнительных параметрах ВМ в vSphere заданы параметры:
 
   ```text
@@ -489,7 +500,7 @@ echo "$METADATA_B64"
   Где:
 
   - `instance-id` — идентификатор виртуальной машины;
-  - `local-hostname` — hostname узла внутри операционной системы;
+  - `local-hostname` — имя хоста (hostname) узла внутри операционной системы;
   - `public-keys-data` — публичный SSH-ключ для доступа к виртуальной машине;
   - `network` — сетевые настройки, которые будут применены внутри виртуальной машины.
 
@@ -503,7 +514,7 @@ echo "$METADATA_B64"
 - Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
 
-1. Создайте файл, например `cloud-static-nodegroup.yaml`, с ресурсом NodeGroup и типом узлов CloudStatic:
+1. Создайте файл с ресурсом NodeGroup и типом узлов CloudStatic. Например, `cloud-static-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -528,10 +539,13 @@ echo "$METADATA_B64"
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    cloud-static   CloudStatic   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Получите bootstrap-скрипт для созданной NodeGroup:
 
@@ -573,8 +587,11 @@ echo "$METADATA_B64"
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                       STATUS   ROLES          AGE   VERSION    INTERNAL-IP
    static-master-0            Ready    master         1h    v1.33.10   192.168.240.135
    cloud-static-worker-0      Ready    cloud-static   5m    v1.33.10   192.168.240.152
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->

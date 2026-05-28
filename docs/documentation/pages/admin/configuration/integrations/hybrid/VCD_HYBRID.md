@@ -1,6 +1,8 @@
 ---
 title: Hybrid cluster with VCD
 permalink: en/admin/integrations/hybrid/vcd-hybrid.html
+search: hybrid with VCD
+description: Preparation for hybrid integration with VMware Cloud Director in Deckhouse Kubernetes Platform.
 ---
 
 The following describes the process of adding worker nodes from VMware Cloud Director (VCD) to an existing static DKP cluster.
@@ -21,15 +23,15 @@ Before you begin, make sure that the following conditions are met:
 - Network connectivity is configured between the network of static nodes and the network of virtual machines in VCD.
 - VCD nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
 - The requirements from the [Connection and authorization in VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html) section are met:
-  - a tenant with allocated resources is configured in VCD
-  - a VCD account with a static password and administrator permissions is prepared
-  - a working network with an enabled DHCP server is configured in VCD
-  - the required VCD resources are prepared: VDC, vApp, templates, policies, and other parameters
+  - A tenant with allocated resources is configured in VCD.
+  - A VCD account with a static password and administrator permissions is prepared.
+  - A working network with an enabled DHCP server is configured in VCD.
+  - The required VCD resources are prepared: VDC, vApp, templates, policies, and other parameters.
 - When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 
 ## Adding automatically created nodes
 
-1. Create a file, for example `cloud-provider-vcd-mc.yaml`, with a ModuleConfig resource:
+1. Create a file with a ModuleConfig resource. For example, `cloud-provider-vcd-mc.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -54,15 +56,15 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `mainNetwork` — the name of the network where cloud nodes will be placed in VCD
-   - `organization` — the Organization name in VCD
-   - `virtualDataCenter` — the Virtual Data Center name in VCD
-   - `virtualApplicationName` — the name of the vApp where nodes will be created, for example `dkp-vcd-app`
-   - `sshPublicKey` — the public SSH key for accessing the nodes
-   - `provider.server` — the VCD API URL
-   - `provider.username` — the VCD username
-   - `provider.password` — the VCD user password
-   - `provider.insecure` — set to `true` if VCD uses a self-signed TLS certificate
+   - `mainNetwork`: Name of the network where cloud nodes will be placed in VCD.
+   - `organization`: Organization name in VCD.
+   - `virtualDataCenter`: Virtual Data Center name in VCD.
+   - `virtualApplicationName`: Name of the vApp where nodes will be created, for example `dkp-vcd-app`.
+   - `sshPublicKey`: Public SSH key for accessing the nodes.
+   - `provider.server`: VCD API URL.
+   - `provider.username`: VCD username.
+   - `provider.password`: VCD user password.
+   - `provider.insecure`: Set to `true` if VCD uses a self-signed TLS certificate.
 
    If a token is used for authentication, specify `apiToken` instead of `username` and `password`:
 
@@ -94,7 +96,7 @@ Before you begin, make sure that the following conditions are met:
    d8 k get sc
    ```
 
-1. Create a file, for example `vcd-instanceclass-nodegroup.yaml`, with the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources:
+1. Create a file with the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources. For example, `vcd-instanceclass-nodegroup.yaml`:
 
    ```yaml
    ---
@@ -187,10 +189,10 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `NODE_GROUP` — the name of the NodeGroup to which the node will be added;
-   - `NODE_NAME` — the name of the node being connected. It must match the hostname inside the operating system and the VM name in VCD;
-   - `NODE_SSH_IP` — the IP address of the virtual machine available over SSH;
-   - `CAPS_USER` — the user that CAPS will use to connect to the virtual machine.
+   - `NODE_GROUP`: Name of the NodeGroup to which the node will be added.
+   - `NODE_NAME`: Name of the node being connected. It must match the hostname inside the operating system and the VM name in VCD.
+   - `NODE_SSH_IP`: IP address of the virtual machine available over SSH.
+   - `CAPS_USER`: User that CAPS will use to connect to the virtual machine.
 
 1. On the master node, create a NodeGroup:
 
@@ -221,10 +223,13 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    vcd-caps   Static   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. On the master node, generate the SSH key that CAPS will use to connect to the virtual machine:
 
@@ -331,10 +336,10 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `metadata.name` — the name of the node being connected
-   - `metadata.labels.role` — the label by which NodeGroup selects this StaticInstance
-   - `spec.address` — the IP address of the virtual machine available over SSH
-   - `spec.credentialsRef.name` — the name of the SSHCredentials resource created earlier
+   - `metadata.name`: Name of the node being connected.
+   - `metadata.labels.role`: Label by which NodeGroup selects this StaticInstance.
+   - `spec.address`: IP address of the virtual machine available over SSH.
+   - `spec.credentialsRef.name`: Name of the SSHCredentials resource created earlier.
 
 1. Check the StaticInstance status:
 
@@ -351,11 +356,14 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME             STATUS   ROLES      AGE   VERSION    INTERNAL-IP      EXTERNAL-IP
    static-master-0  Ready    master     1h    v1.33.10   192.168.240.138  <none>
    vcd-worker-caps  Ready    vcd-caps   5m    v1.33.10   192.168.240.151  <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If connection fails, check the NodeGroup, StaticInstance, Machine status, and cluster events:
 
@@ -398,7 +406,7 @@ Before you begin, make sure that the following conditions are met:
 - The virtual machine is connected to the VCD network used as the main network for the cluster's cloud nodes. Usually, this is the network specified in the [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) parameter of the `cloud-provider-vcd` configuration or in the VCDInstanceClass being used.
 - The virtual machine has the required base packages installed for the supported OS. For RED OS, install `which` and the package manager in advance if they are missing.
 
-1. Create a file, for example `cloud-static-nodegroup.yaml`, with a NodeGroup resource and the CloudStatic node type:
+1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -423,10 +431,13 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    cloud-static   CloudStatic   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Get the bootstrap script for the created NodeGroup:
 
@@ -468,8 +479,11 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                       STATUS   ROLES          AGE   VERSION    INTERNAL-IP
    static-master-0            Ready    master         1h    v1.33.10   192.168.240.138
    cloud-static-worker-0      Ready    cloud-static   5m    v1.33.10   192.168.240.151
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->

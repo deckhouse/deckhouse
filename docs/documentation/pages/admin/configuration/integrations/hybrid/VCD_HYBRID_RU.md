@@ -2,9 +2,11 @@
 title: Гибридный кластер с VCD
 permalink: ru/admin/integrations/hybrid/vcd-hybrid.html
 lang: ru
+search: гибрид с VCD
+description: Подготовка к гибридной интеграции с VMware Cloud Director в Deckhouse Kubernetes Platform.
 ---
 
-Далее описан процесс добавления worker-узлов из VMware Cloud Director (VCD) в существующий статический кластер DKP.
+Далее описан процесс добавления worker-узлов из VMware Cloud Director (VCD) в существующий статический кластер Deckhouse Kubernetes Platform (DKP).
 
 Для интеграции с VCD используется модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/). Он обеспечивает взаимодействие DKP с VMware Cloud Director, создание и удаление виртуальных машин, получение информации об инфраструктуре VCD, а также интеграцию со StorageClass и другими возможностями провайдера.
 
@@ -20,8 +22,8 @@ lang: ru
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
 - Между сетью статических узлов и сетью виртуальных машин в VCD настроена сетевая связность.
-- Узлы VCD, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
-- Выполнены требования из раздела [Подключение и авторизация в VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html):
+- Узлы VCD, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
+- Выполнены требования из раздела [«Подключение и авторизация в VMware vCloud Director»](../virtualization/vcd/connection-and-authorization.html):
   - настроен тенант в VCD с выделенными ресурсами;
   - подготовлена учётная запись VCD со статичным паролем и правами администратора;
   - настроена рабочая сеть в VCD с включённым DHCP-сервером;
@@ -30,7 +32,7 @@ lang: ru
 
 ## Добавление автоматически создаваемых узлов
 
-1. Создайте файл, например, `cloud-provider-vcd-mc.yaml` с ресурсом ModuleConfig:
+1. Создайте файл с ресурсом ModuleConfig. Например, `cloud-provider-vcd-mc.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -94,7 +96,7 @@ lang: ru
    d8 k get sc
    ```
 
-1. Создайте файл, например, `vcd-instanceclass-nodegroup.yaml` с ресурсами [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup):
+1. Создайте файл с ресурсами [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup). Например, `vcd-instanceclass-nodegroup.yaml`:
 
    ```yaml
    ---
@@ -164,7 +166,7 @@ lang: ru
   ```
 
 - В VCD создана виртуальная машина, которая будет подключена к кластеру.
-- Имя виртуальной машины в VCD совпадает с hostname внутри операционной системы.
+- Имя виртуальной машины в VCD совпадает с именем хоста (hostname) внутри операционной системы.
 - В дополнительных параметрах ВМ в VCD задано значение:
 
   ```text
@@ -188,7 +190,7 @@ lang: ru
    Где:
 
    - `NODE_GROUP` — имя NodeGroup, в которую будет добавлен узел;
-   - `NODE_NAME` — имя подключаемого узла. Оно должно совпадать с hostname внутри операционной системы и именем ВМ в VCD;
+   - `NODE_NAME` — имя подключаемого узла. Оно должно совпадать с именем хоста (hostname) внутри операционной системы и именем ВМ в VCD;
    - `NODE_SSH_IP` — IP-адрес виртуальной машины, доступный по SSH;
    - `CAPS_USER` — пользователь, под которым CAPS будет подключаться к виртуальной машине.
 
@@ -221,10 +223,13 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME       TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    vcd-caps   Static   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. На master-узле сгенерируйте SSH-ключ, который CAPS будет использовать для подключения к виртуальной машине:
 
@@ -351,11 +356,14 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME             STATUS   ROLES      AGE   VERSION    INTERNAL-IP      EXTERNAL-IP
    static-master-0  Ready    master     1h    v1.33.10   192.168.240.138  <none>
    vcd-worker-caps  Ready    vcd-caps   5m    v1.33.10   192.168.240.151  <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. При сбоях подключения проверьте состояние NodeGroup, StaticInstance, Machine и события в кластере:
 
@@ -388,7 +396,7 @@ lang: ru
   ```
 
 - В VCD создана виртуальная машина, которая будет подключена к кластеру.
-- Имя виртуальной машины в VCD совпадает с hostname внутри операционной системы.
+- Имя виртуальной машины в VCD совпадает с именем хоста (hostname) внутри операционной системы.
 - В дополнительных параметрах ВМ в VCD задано значение:
 
   ```text
@@ -398,7 +406,7 @@ lang: ru
 - Виртуальная машина подключена к сети VCD, используемой как основная сеть для облачных узлов кластера. Обычно это сеть, указанная в параметре [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) конфигурации `cloud-provider-vcd` или в используемом VCDInstanceClass.
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
 
-1. Создайте файл, например `cloud-static-nodegroup.yaml`, с ресурсом NodeGroup и типом узлов CloudStatic:
+1. Создайте файл с ресурсом NodeGroup и типом узлов CloudStatic. Например, `cloud-static-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -423,10 +431,13 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    cloud-static   CloudStatic   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Получите bootstrap-скрипт для созданной NodeGroup:
 
@@ -468,8 +479,11 @@ lang: ru
 
    Пример ожидаемого результата:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                       STATUS   ROLES          AGE   VERSION    INTERNAL-IP
    static-master-0            Ready    master         1h    v1.33.10   192.168.240.138
    cloud-static-worker-0      Ready    cloud-static   5m    v1.33.10   192.168.240.151
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->

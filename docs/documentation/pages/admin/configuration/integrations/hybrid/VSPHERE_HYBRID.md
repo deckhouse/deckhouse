@@ -1,6 +1,8 @@
 ---
 title: Hybrid cluster with vSphere
 permalink: en/admin/integrations/hybrid/vsphere-hybrid.html
+search: hybrid with vSphere
+description: Preparation for hybrid integration with VMware vSphere in Deckhouse Kubernetes Platform.
 ---
 
 The following describes the process of adding worker nodes from vSphere to an existing static DKP cluster.
@@ -21,10 +23,10 @@ Before you begin, make sure that the following conditions are met:
 - Network connectivity is configured between the network of static nodes and the network of virtual machines in vSphere.
 - vSphere nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
 - The requirements from the [Connection and authorization in VMware vSphere](../virtualization/vsphere/authorization.html) section are met:
-  - access to vCenter is configured
-  - a vSphere account with the required privileges is prepared
-  - a virtual machine template is prepared
-  - networks, Datastore, region tags, and zone tags are configured
+  - Access to vCenter is configured.
+  - The vSphere account with the required privileges is prepared.
+  - A virtual machine template is prepared.
+  - Networks, Datastore, region tags, and zone tags are configured.
 - When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 
 ## Adding automatically created nodes
@@ -35,7 +37,7 @@ In the `spec.settings` parameter, specify access parameters for vCenter, network
 
 An example configuration and description of the available parameters are provided in the [module examples](/modules/cloud-provider-vsphere/examples.html) and in the [Configuration of the `cloud-provider-vsphere` module](/modules/cloud-provider-vsphere/configuration.html) section.
 
-1. Create a file, for example `vsphere-mc.yaml`, with ModuleConfig for the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module:
+1. Create a file with ModuleConfig for the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module. For example, `vsphere-mc.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -64,15 +66,15 @@ An example configuration and description of the available parameters are provide
 
    Parameter values:
 
-   - `host` — vCenter address
-   - `username`, `password` — vSphere user credentials
-   - `insecure` — disables verification of the vCenter TLS certificate
-   - `vmFolderPath` — the folder where virtual machines will be created
-   - `regionTagCategory`, `zoneTagCategory` — region and zone tag categories
-   - `region` — region tag
-   - `zones` — list of zones where nodes can be created
-   - `internalNetworkNames` — list of vSphere networks for connecting created nodes
-   - `sshKeys` — public SSH keys that will be added to the created virtual machines
+   - `host`: vCenter address.
+   - `username`, `password`: vSphere user credentials.
+   - `insecure`: Disables verification of the vCenter TLS certificate.
+   - `vmFolderPath`: Folder where virtual machines will be created.
+   - `regionTagCategory`, `zoneTagCategory`: Region and zone tag categories.
+   - `region`: Region tag.
+   - `zones`: List of zones where nodes can be created.
+   - `internalNetworkNames`: List of vSphere networks for connecting created nodes.
+   - `sshKeys`: Public SSH keys that will be added to the created virtual machines.
 
 1. Apply the module configuration:
 
@@ -87,7 +89,7 @@ An example configuration and description of the available parameters are provide
    d8 k get pods -n d8-cloud-provider-vsphere -o wide
    ```
 
-1. Create a file, for example `vsphere-instance.yaml`, with the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources with the `nodeType: CloudEphemeral` value:
+1. Create a file with the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources with the `nodeType: CloudEphemeral` value. For example, `vsphere-instance.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -122,10 +124,10 @@ An example configuration and description of the available parameters are provide
 
    Where:
 
-   - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) describes the parameters of the virtual machine that will be created in vSphere;
-   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node group that DKP must maintain in the cluster;
-   - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider;
-   - `cloudInstances.classReference` points to VsphereInstanceClass;
+   - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) describes the parameters of the virtual machine that will be created in vSphere.
+   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node group that DKP must maintain in the cluster.
+   - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider.
+   - `cloudInstances.classReference` points to VsphereInstanceClass.
    - `cloudInstances.zones` must contain zones from the `zones` list in ModuleConfig.
 
 1. Apply the manifest:
@@ -144,11 +146,14 @@ An example configuration and description of the available parameters are provide
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                             STATUS   ROLES                  AGE   VERSION
    static-master-0                  Ready    control-plane,master   1h    v1.33.10
    ephemeral-1ca02a5b-7588b-k89dc   Ready    ephemeral              10m   v1.33.10
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If VM creation fails, check the Machine and MachineSet objects and the machine-controller-manager logs:
 
@@ -227,10 +232,10 @@ Example `metadata.json` file:
 
 Where:
 
-- `instance-id` — virtual machine identifier;
-- `local-hostname` — node hostname inside the operating system;
-- `public-keys-data` — public SSH key for accessing the virtual machine;
-- `network` — network settings that will be applied inside the virtual machine.
+- `instance-id`: Virtual machine identifier.
+- `local-hostname`: Node hostname inside the operating system.
+- `public-keys-data`: Public SSH key for accessing the virtual machine.
+- `network`: Network settings that will be applied inside the virtual machine.
 
 To get the value for the `guestinfo.metadata` parameter, run:
 
@@ -253,10 +258,10 @@ Using `guestinfo.metadata` is not a mandatory CAPS requirement. The main require
 
    Where:
 
-   - `NODE_GROUP` — the name of the NodeGroup to which the node will be added
-   - `NODE_NAME` — the name of the node being connected. It must match the hostname inside the operating system and the VM name in vSphere
-   - `NODE_SSH_IP` — the IP address of the virtual machine available over SSH
-   - `CAPS_USER` — the user that CAPS will use to connect to the virtual machine
+   - `NODE_GROUP`: Name of the NodeGroup to which the node will be added.
+   - `NODE_NAME`: Name of the node being connected. It must match the hostname inside the operating system and the VM name in vSphere.
+   - `NODE_SSH_IP`: IP address of the virtual machine available over SSH.
+   - `CAPS_USER`: User that CAPS will use to connect to the virtual machine.
 
 1. On the master node, create a NodeGroup:
 
@@ -287,10 +292,13 @@ Using `guestinfo.metadata` is not a mandatory CAPS requirement. The main require
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    vsphere-caps   Static   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. On the master node, generate the SSH key that CAPS will use to connect to the virtual machine:
 
@@ -397,10 +405,10 @@ Using `guestinfo.metadata` is not a mandatory CAPS requirement. The main require
 
    Where:
 
-   - `metadata.name` — the name of the node being connected
-   - `metadata.labels.role` — the label by which NodeGroup selects this StaticInstance
-   - `spec.address` — the IP address of the virtual machine available over SSH
-   - `spec.credentialsRef.name` — the name of the SSHCredentials resource created earlier
+   - `metadata.name`: Name of the node being connected.
+   - `metadata.labels.role`: Label by which NodeGroup selects this StaticInstance.
+   - `spec.address`: IP address of the virtual machine available over SSH.
+   - `spec.credentialsRef.name`: Name of the SSHCredentials resource created earlier.
 
 1. Check the StaticInstance status:
 
@@ -417,11 +425,14 @@ Using `guestinfo.metadata` is not a mandatory CAPS requirement. The main require
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                    STATUS   ROLES          AGE   VERSION    INTERNAL-IP      EXTERNAL-IP
    static-master-0         Ready    master         1h    v1.33.10   192.168.240.135  <none>
    vsphere-worker-caps     Ready    vsphere-caps   5m    v1.33.10   192.168.240.152  <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If connection fails, check the NodeGroup, StaticInstance, Machine status, and cluster events:
 
@@ -487,10 +498,10 @@ Before you begin, make sure that the following conditions are met:
 
   Where:
 
-  - `instance-id` — virtual machine identifier
-  - `local-hostname` — node hostname inside the operating system
-  - `public-keys-data` — public SSH key for accessing the virtual machine
-  - `network` — network settings that will be applied inside the virtual machine
+  - `instance-id`: Virtual machine identifier.
+  - `local-hostname`: Node hostname inside the operating system.
+  - `public-keys-data`: Public SSH key for accessing the virtual machine.
+  - `network`: Network settings that will be applied inside the virtual machine.
 
   To get the value for the `guestinfo.metadata` parameter, run:
 
@@ -502,7 +513,7 @@ Before you begin, make sure that the following conditions are met:
 - The virtual machine is connected to the network specified in the [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) parameter of the `cloud-provider-vsphere` module configuration.
 - The virtual machine has the required base packages installed for the supported OS. For RED OS, install `which` and the package manager in advance if they are missing.
 
-1. Create a file, for example `cloud-static-nodegroup.yaml`, with a NodeGroup resource and the CloudStatic node type:
+1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -527,10 +538,13 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME           TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    cloud-static   CloudStatic   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Get the bootstrap script for the created NodeGroup:
 
@@ -572,8 +586,11 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                       STATUS   ROLES          AGE   VERSION    INTERNAL-IP
    static-master-0            Ready    master         1h    v1.33.10   192.168.240.135
    cloud-static-worker-0      Ready    cloud-static   5m    v1.33.10   192.168.240.152
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->

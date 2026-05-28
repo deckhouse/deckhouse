@@ -1,9 +1,11 @@
 ---
 title:  Hybrid cluster with Yandex Cloud
 permalink: en/admin/integrations/hybrid/yandex-hybrid.html
+search: hybrid with Yandex Cloud
+description: Preparation for hybrid integration with Yandex Cloud in Deckhouse Kubernetes Platform.
 ---
 
-The following describes the process of adding worker nodes from Yandex Cloud to an existing static DKP cluster.
+The following describes the process of adding worker nodes from Yandex Cloud to an existing static Deckhouse Kubernetes Platform cluster.
 
 Integration with Yandex Cloud uses the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. It provides interaction between DKP and the Yandex Cloud API, retrieval of information about cloud infrastructure, creation of virtual machines, work with network parameters, and connection of nodes to an existing cluster.
 
@@ -20,10 +22,10 @@ Before you begin, make sure that the following conditions are met:
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
 - Network connectivity is configured between the network of static nodes and the Yandex Cloud VPC.
 - Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
-- The requirements from the [Authorization in Yandex Cloud](../public/yandex/authorization.html) section are met:
-  - a service account is prepared;
-  - a folder where resources will be created is selected;
-  - the required roles and access to the VPC being used are configured.
+- The requirements from the [Connection and authorization in Yandex Cloud](../public/yandex/authorization.html) section are met:
+  - A service account is prepared.
+  - A folder where resources will be created is selected.
+  - The required roles and access to the VPC being used are configured.
 - When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 
 ## Adding automatically created nodes
@@ -51,15 +53,15 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    Where:
 
-   - `CLOUD_ID` — Yandex Cloud cloud ID
-   - `FOLDER_ID` — ID of the folder where resources will be created
-   - `NETWORK_ID` — VPC network ID
-   - `SUBNET_ID` — ID of the subnet where worker nodes will be created
-   - `ZONE` — availability zone corresponding to the selected subnet
+   - `CLOUD_ID`: Yandex Cloud cloud ID.
+   - `FOLDER_ID`: ID of the folder where resources will be created.
+   - `NETWORK_ID`: VPC network ID.
+   - `SUBNET_ID`: ID of the subnet where worker nodes will be created.
+   - `ZONE`: Availability zone corresponding to the selected subnet.
 
-   For details, see [Authorization in Yandex Cloud](../public/yandex/authorization.html)
+   For details, see [Connection and authorization in Yandex Cloud](../public/yandex/authorization.html) section.
 
-1. Create a Service Account in the required Yandex Cloud folder and assign permissions to it:
+1. Create a service account in the required Yandex Cloud folder and assign permissions to it:
 
    ```shell
    yc iam service-account create \
@@ -82,7 +84,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    The `editor` role is required for creating and managing cloud resources, and `vpc.admin` is required for working with VPC network resources.
 
-1. Create a Service Account key and save it to a JSON file:
+1. Create a service account key and save it to a JSON file:
 
    ```shell
    yc iam key create \
@@ -105,7 +107,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    If another key is used, specify its path instead of `~/.ssh/id_rsa.pub`.
 
    {% alert level="warning" %}
-   The `sshPublicKey` parameter must contain the administrator's public SSH key, not the public key from the Service Account JSON file.
+   The `sshPublicKey` parameter must contain the administrator's public SSH key, not the public key from the service account JSON file.
    {% endalert %}
 
 1. Get the ID of the operating system image from which virtual machines will be created:
@@ -117,7 +119,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    ```
 
    {% alert level="warning" %}
-   The `imageID` parameter is the OS image ID in Yandex Cloud. Do not use the ID of an existing virtual machine or the Service Account key ID in this field.
+   The `imageID` parameter is the OS image ID in Yandex Cloud. Do not use the ID of an existing virtual machine or the service account key ID in this field.
    {% endalert %}
 
 1. Specify the CIDR of the network where Yandex Cloud nodes will be placed:
@@ -132,7 +134,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    yc vpc subnet list --folder-id "$FOLDER_ID"
    ```
 
-1. Create a file, for example `cloud-provider-cluster-configuration.yaml`, with the provider configuration:
+1. Create a file with the provider configuration. For example, `cloud-provider-cluster-configuration.yaml`:
 
    ```shell
    cat > cloud-provider-cluster-configuration.yaml <<EOF
@@ -161,18 +163,18 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    Where:
 
-   - `nodeNetworkCIDR` — CIDR of the network that includes the addresses of the subnets used for Yandex Cloud nodes
-   - `imageID` — OS image ID for the created virtual machines
-   - `cloudID` — Yandex Cloud cloud ID
-   - `folderID` — Yandex Cloud folder ID
-   - `serviceAccountJSON` — Service Account JSON key in a single-line format
-   - `sshPublicKey` — public SSH key for accessing the created nodes
+   - `nodeNetworkCIDR`: CIDR of the network that includes the addresses of the subnets used for Yandex Cloud nodes.
+   - `imageID`: OS image ID for the created virtual machines.
+   - `cloudID`: Yandex Cloud cloud ID.
+   - `folderID`: Yandex Cloud folder ID.
+   - `serviceAccountJSON`: Service account JSON key in a single-line format.
+   - `sshPublicKey`: Public SSH key for accessing the created nodes.
 
    {% alert level="info" %}
    In a hybrid scenario, when the control plane is already deployed as a static cluster, the `masterNodeGroup` section does not create master nodes in Yandex Cloud, but remains part of the provider configuration.
    {% endalert %}
 
-1. Create a file, for example `cloud-provider-discovery-data.json`, with Yandex Cloud discovery data:
+1. Create a file with Yandex Cloud discovery data. For example, `cloud-provider-discovery-data.json`:
 
    ```shell
    cat > cloud-provider-discovery-data.json <<EOF
@@ -199,10 +201,10 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    Where:
 
-   - `internalNetworkIDs` — list of Yandex Cloud network IDs that provide internal connectivity between nodes
-   - `zoneToSubnetIdMap` — mapping between an availability zone and the subnet where nodes will be created
-   - `zones` — list of zones available for node creation
-   - `shouldAssignPublicIPAddress` — controls assignment of public IP addresses to the created nodes
+   - `internalNetworkIDs`: List of Yandex Cloud network IDs that provide internal connectivity between nodes.
+   - `zoneToSubnetIdMap`: Mapping between an availability zone and the subnet where nodes will be created.
+   - `zones`: List of zones available for node creation.
+   - `shouldAssignPublicIPAddress`: Controls assignment of public IP addresses to the created nodes.
 
    {% alert level="warning" %}
    If the `shouldAssignPublicIPAddress` parameter is set to `false`, the created nodes will not have a public IP address. In this case, the nodes must have access to the registry and external services through a NAT Gateway, NAT instance, proxy, or another egress mechanism. For zones where subnets are missing, the `empty` value can be used.
@@ -267,7 +269,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    d8 k -n d8-cloud-provider-yandex get pods -o wide
    ```
 
-1. Create a file, for example `yandex-instanceclass-nodegroup.yaml`, with the YandexInstanceClass and NodeGroup resources:
+1. Create a file with the YandexInstanceClass and NodeGroup resources. For example, `yandex-instanceclass-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -299,11 +301,11 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    Where:
 
-   - YandexInstanceClass describes the parameters of the virtual machine that will be created in Yandex Cloud
-   - `mainSubnet` — ID of the subnet from which the created worker nodes must have access to the cluster's static nodes
-   - NodeGroup describes the node group that DKP must maintain in the cluster
-   - `nodeType: Cloud` means that nodes will be created automatically through the cloud provider
-   - `cloudInstances.zones` must contain zones from the `zones` list in `cloud-provider-discovery-data.json`
+   - YandexInstanceClass describes the parameters of the virtual machine that will be created in Yandex Cloud.
+   - `mainSubnet` ID of the subnet from which the created worker nodes must have access to the cluster's static nodes.
+   - NodeGroup describes the node group that DKP must maintain in the cluster.
+   - `nodeType: Cloud` means that nodes will be created automatically through the cloud provider.
+   - `cloudInstances.zones` must contain zones from the `zones` list in `cloud-provider-discovery-data.json`.
 
 1. Apply the manifest:
 
@@ -321,11 +323,14 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                 STATUS   ROLES                  AGE   VERSION    INTERNAL-IP
    static-master-0                      Ready    control-plane,master   1h    v1.33.10   10.128.0.15
    yc-worker-f3564dca-7fc59-s2w5d       Ready    yc-worker              10m   v1.33.10   10.128.0.21
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. To diagnose the status and find possible issues, check the machine-controller-manager logs:
 
@@ -364,10 +369,10 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `NODE_GROUP` — the name of the NodeGroup to which the node will be added
-   - `NODE_NAME` — the name of the node being connected
-   - `NODE_SSH_IP` — the IP address of the virtual machine available over SSH
-   - `CAPS_USER` — the user that CAPS will use to connect to the virtual machine
+   - `NODE_GROUP`: Name of the NodeGroup to which the node will be added.
+   - `NODE_NAME`: Name of the node being connected.
+   - `NODE_SSH_IP`: IP address of the virtual machine available over SSH.
+   - `CAPS_USER`: User that CAPS will use to connect to the virtual machine.
 
 1. On the master node, create a NodeGroup:
 
@@ -398,10 +403,13 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME      TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    yc-caps   Static   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. On the master node, generate the SSH key that CAPS will use to connect to the virtual machine:
 
@@ -508,10 +516,10 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `metadata.name` — the name of the node being connected
-   - `metadata.labels.role` — the label by which NodeGroup selects this StaticInstance
-   - `spec.address` — the IP address of the virtual machine available over SSH
-   - `spec.credentialsRef.name` — the name of the SSHCredentials resource created earlier
+   - `metadata.name`: Name of the node being connected.
+   - `metadata.labels.role`: Label by which NodeGroup selects this StaticInstance.
+   - `spec.address`: IP address of the virtual machine available over SSH.
+   - `spec.credentialsRef.name`: Name of the SSHCredentials resource created earlier.
 
 1. Check the StaticInstance status:
 
@@ -528,11 +536,14 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                         STATUS   ROLES     AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
    static-master-0              Ready    master    1h    v1.33.10   10.128.0.15   <none>
    yandex-worker-hybrid-caps    Ready    yc-caps   5m    v1.33.10   10.128.0.29   <none>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If connection fails, check the NodeGroup, StaticInstance, Machine status, and cluster events:
 
@@ -586,10 +597,10 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `<USER>` — the username for SSH access to the virtual machine
-   - `<SSH_PUBLIC_KEY>` — the administrator's public SSH key
+   - `<USER>`: Username for SSH access to the virtual machine.
+   - `<SSH_PUBLIC_KEY>`: Administrator's public SSH key.
 
-1. On the master node, create a file, for example `yandex-manual-nodegroup.yaml`, with a NodeGroup resource:
+1. On the master node create a file with a NodeGroup resource. For example, `yandex-manual-nodegroup.yaml`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -619,10 +630,13 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME        TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    yc-manual   CloudStatic   0       0       0                                                               1m    True
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. On the master node, get the bootstrap script for the created NodeGroup:
 
@@ -643,7 +657,7 @@ Before you begin, make sure that the following conditions are met:
 
    The decoded content must start with a bash script:
 
-   ```shell
+   ```console
    #!/bin/bash
    ```
 
@@ -666,10 +680,10 @@ Before you begin, make sure that the following conditions are met:
 
    Where:
 
-   - `<MASTER_USER>` — the user for SSH access to the master node
-   - `<MASTER_IP>` — the IP address of the master node
-   - `<USER>` — the user on the VM being connected
-   - `<NODE_PUBLIC_OR_INTERNAL_IP>` — the public or internal IP address of the VM being connected
+   - `<MASTER_USER>`: User for SSH access to the master node.
+   - `<MASTER_IP>`: IP address of the master node.
+   - `<USER>`: User on the VM being connected.
+   - `<NODE_PUBLIC_OR_INTERNAL_IP>`: Public or internal IP address of the VM being connected.
 
 1. On the VM being connected, decode the bootstrap script, set permissions, and run it:
 
@@ -690,11 +704,14 @@ Before you begin, make sure that the following conditions are met:
 
    Example expected output:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                    STATUS   ROLES       AGE   VERSION    INTERNAL-IP   EXTERNAL-IP
    static-master-0         Ready    master      1h    v1.33.10   10.128.0.15   <none>
    yandex-worker-hybrid    Ready    yc-manual   5m    v1.33.10   10.128.0.17   <PUBLIC_IP>
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. If connection fails, check the NodeGroup status, events, and component logs:
 
