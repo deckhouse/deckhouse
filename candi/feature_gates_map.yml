@@ -225,8 +225,11 @@
   kubelet:
     - ConcurrentWatchObjectDecode
     - ContainerStopSignals
+    - CRIListStreaming
     - MemoryQoS
     - MutablePVNodeAffinity
+    - NativeHistograms
+    - PodInfoAPI
     - PodLogsQuerySplitStreams
     - SELinuxMount
   apiserver:
@@ -237,13 +240,20 @@
     - CrossNamespaceVolumeDataSource
     - HPAScaleToZero
     - MutablePVNodeAffinity
+    - NativeHistograms
+    - PersistentVolumeClaimUnusedSinceTime
     - PodLogsQuerySplitStreams
     - SELinuxMount
+    - ShardedListAndWatch
     - TaintTolerationComparisonOperators
   kubeControllerManager:
     - ConcurrentWatchObjectDecode
+    - ControllerManagerReleaseLeaderElectionLockOnExit
     - CrossNamespaceVolumeDataSource
+    - NativeHistograms
+    - PersistentVolumeClaimUnusedSinceTime
     - SELinuxMount
   kubeScheduler:
     - ConcurrentWatchObjectDecode
+    - NativeHistograms
     - TaintTolerationComparisonOperators
