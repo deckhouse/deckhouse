@@ -15,4 +15,4 @@ Use this section to:
 - perform basic maintenance operations;
 - check the resource status and configuration result.
 
-Details about infrastructure preparation, service class configuration, and other administrative settings are provided in the [Administration](../../../admin/managed-services/overview/) section.
+Details about infrastructure preparation, service class configuration, and other administrative settings are provided in the [Administration](../../admin/configuration/managed-services/overview/) section.
