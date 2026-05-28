@@ -43,22 +43,32 @@ func (w *Watcher) GetPackagesConfig(packageRepositoryName string) (*registry.Pac
 		return nil, fmt.Errorf("get package repository %q: %w", packageRepositoryName, err)
 	}
 
-	auth, err := readAuthFromDockerCfg(pr.Spec.Registry.Repo, pr.Spec.Registry.DockerCFG)
-	if err != nil {
-		return nil, fmt.Errorf("read auth from docker cfg: %w", err)
+	// An empty dockerCfg means the upstream registry is anonymous. Don't
+	// treat the absence of credentials as a hard error: we should still be
+	// able to pull public images.
+	var auth string
+	if pr.Spec.Registry.DockerCFG != "" {
+		ac, err := readAuthFromDockerCfg(pr.Spec.Registry.Repo, pr.Spec.Registry.DockerCFG)
+		if err != nil {
+			return nil, fmt.Errorf("read auth from docker cfg: %w", err)
+		}
+		auth = ac.Auth
 	}
 
 	return &registry.PackagesConfig{
 		Repository: pr.Spec.Registry.Repo,
 		Scheme:     pr.Spec.Registry.Scheme,
 		CA:         pr.Spec.Registry.CA,
-		Auth:       auth.Auth,
+		Auth:       auth,
 	}, nil
 }
 
-// readAuthFromDockerCfg locates the matching auth entry inside a (possibly
-// base64-encoded) docker config JSON, comparing entries by URL host so that a
-// repository like "registry.test/path" still matches an "registry.test" key.
+// readAuthFromDockerCfg locates the matching auth entry inside a base64-encoded
+// docker config JSON, comparing entries by URL host so that a repository like
+// "registry.test/path" still matches an "registry.test" key.
+//
+// The CR contract is that spec.registry.dockerCfg is base64. We do NOT silently
+// fall back to interpreting it as raw JSON: that just masks misconfiguration.
 func readAuthFromDockerCfg(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	r, err := parseRegistryURL(repo)
 	if err != nil {
@@ -67,8 +77,7 @@ func readAuthFromDockerCfg(repo, dockerCfgBase64 string) (authn.AuthConfig, erro
 
 	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
-		// if base64 decoding failed, try to use input as it is
-		dockerCfg = []byte(dockerCfgBase64)
+		return authn.AuthConfig{}, fmt.Errorf("decode dockerCfg as base64: %w", err)
 	}
 	auths := gjson.Get(string(dockerCfg), "auths").Map()
 	authConfig := authn.AuthConfig{}

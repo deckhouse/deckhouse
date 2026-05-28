@@ -70,7 +70,7 @@ func flattenedPackageReader(t *testing.T, img v1.Image) io.ReadCloser {
 	return reader
 }
 
-func TestExtractTarGzFileFromPath_extractsFromIntermediateLayer(t *testing.T) {
+func TestExtractTarGzFile_extractsFromIntermediateLayer(t *testing.T) {
 	const iconPath = "docs/icon.svg"
 	const iconContent = "<svg>icon</svg>"
 
@@ -85,7 +85,7 @@ func TestExtractTarGzFileFromPath_extractsFromIntermediateLayer(t *testing.T) {
 		reader := flattenedPackageReader(t, img)
 		defer reader.Close()
 
-		got, err := extractTarGzFileFromPath(reader, iconPath)
+		got, err := extractTarGzFile(reader, exactNameMatcher(iconPath), maxIconBytes)
 		require.NoError(t, err)
 		assert.Equal(t, iconContent, string(got))
 	})
@@ -99,8 +99,38 @@ func TestExtractTarGzFileFromPath_extractsFromIntermediateLayer(t *testing.T) {
 		require.NoError(t, err)
 		defer reader.Close()
 
-		_, err = extractTarGzFileFromPath(reader, iconPath)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), `file "docs/icon.svg" not found in archive`)
+		_, err = extractTarGzFile(reader, exactNameMatcher(iconPath), maxIconBytes)
+		require.ErrorIs(t, err, errFileNotFoundInArchive)
 	})
+}
+
+func TestExtractTarGzFile_normalizesLeadingDotSlash(t *testing.T) {
+	// Many tar producers prefix entries with "./"; the matcher should accept
+	// both shapes.
+	const target = "docs/icon.svg"
+	layer := tarLayerWithFile(t, "./"+target, "<svg/>")
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	reader := flattenedPackageReader(t, img)
+	defer reader.Close()
+
+	got, err := extractTarGzFile(reader, exactNameMatcher(target), maxIconBytes)
+	require.NoError(t, err)
+	assert.Equal(t, "<svg/>", string(got))
+}
+
+func TestExtractTarGzFile_rejectsOversizedEntry(t *testing.T) {
+	const target = "docs/icon.svg"
+	big := make([]byte, 16)
+	layer := tarLayerWithFile(t, target, string(big))
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	reader := flattenedPackageReader(t, img)
+	defer reader.Close()
+
+	_, err = extractTarGzFile(reader, exactNameMatcher(target), 8)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds")
 }

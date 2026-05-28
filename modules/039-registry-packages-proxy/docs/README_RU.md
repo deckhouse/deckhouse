@@ -45,24 +45,25 @@ description: "Внутренний прокси-сервер пакетов regi
 
 Иконки пакетов **публичные**: заголовок `Authorization: Bearer` и RBAC Kubernetes не требуются.
 
-| Метод | Путь                                               | Описание |
-|-------|----------------------------------------------------|----------|
-| `GET`, `HEAD` | `/v1/packages/<ИМЯ-ПАКЕТА>/metadata/icon/`         | Иконка последнего semver-тега |
-| `GET`, `HEAD` | `/v1/packages/<ИМЯ-ПАКЕТА>/metadata/icon`          | То же, что выше |
-| `GET`, `HEAD` | `/v1/packages/<ИМЯ-ПАКЕТА>/metadata/icon/<ВЕРСИЯ>` | Иконка указанной версии (`<ВЕРСИЯ>` — semver, например `v1.0.1`) |
+| Метод | Путь                                                                          | Описание |
+|-------|-------------------------------------------------------------------------------|----------|
+| `GET`, `HEAD` | `/v1/packages/<РЕПОЗИТОРИЙ-ПАКЕТОВ>/<ИМЯ-ПАКЕТА>/metadata/icon/`         | Иконка последнего semver-тега |
+| `GET`, `HEAD` | `/v1/packages/<РЕПОЗИТОРИЙ-ПАКЕТОВ>/<ИМЯ-ПАКЕТА>/metadata/icon`          | То же, что выше |
+| `GET`, `HEAD` | `/v1/packages/<РЕПОЗИТОРИЙ-ПАКЕТОВ>/<ИМЯ-ПАКЕТА>/metadata/icon/<ВЕРСИЯ>` | Иконка указанной версии (`<ВЕРСИЯ>` — semver, например `v1.0.1`) |
 
-Прокси читает файл `docs/icon.svg` из OCI-образа `packages/<ИМЯ-ПАКЕТА>:<ТЕГ>` в хранилище образов контейнеров кластера (учётные данные задаются через [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)).
+`<РЕПОЗИТОРИЙ-ПАКЕТОВ>` — это `metadata.name` кастомного ресурса [PackageRepository](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#packagerepository); поле `spec.registry.repo` этого ресурса определяет, по какому пути в хранилище образов прокси читает файл `docs/icon.svg`. Прокси читает иконку из OCI-образа `<spec.registry.repo>/<ИМЯ-ПАКЕТА>:<ТЕГ>`.
 
 Пример запроса:
 
 ```shell
-curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-module/metadata/icon/"
+curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-repo/my-module/metadata/icon/"
 ```
 
 Пример успешного ответа:
 
 ```console
-Content-Type: image/svg+xml` и `Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
+Content-Type: image/svg+xml
+Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 ```
 
 ### Загрузка Deckhouse CLI (`/v1/images/`)

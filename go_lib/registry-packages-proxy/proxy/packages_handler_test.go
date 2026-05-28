@@ -38,9 +38,13 @@ import (
 const (
 	testPackageRepositoryName = "packages-repo"
 	testPackageName           = "my-package"
-	testImagePath             = "packages/my-package"
-	testIconPath              = "docs/icon.svg"
-	testIconContent           = "<svg>icon</svg>"
+	// testImagePath mirrors what handleGetIcon passes to the registry client:
+	// the package name verbatim (no synthetic "packages/" prefix is added).
+	// The PackageRepository CR's spec.registry.repo is what carries any
+	// "packages/" sub-path in real clusters.
+	testImagePath   = "my-package"
+	testIconPath    = "docs/icon.svg"
+	testIconContent = "<svg>icon</svg>"
 )
 
 func packageBodyWithIcon(t *testing.T) []byte {
@@ -260,9 +264,10 @@ func TestPackagesHandler_GetIcon_LatestVersion(t *testing.T) {
 }
 
 func TestPackagesHandler_GetIcon_HEAD(t *testing.T) {
+	const manifestDigest = "sha256:head"
 	fake := &fakeCLIRegistryClient{
 		tagToManifestDigest: map[string]string{
-			testImagePath + ":v1.0.1": "sha256:head",
+			testImagePath + ":v1.0.1": manifestDigest,
 		},
 		packageBody: packageBodyWithIcon(t),
 	}
@@ -279,7 +284,11 @@ func TestPackagesHandler_GetIcon_HEAD(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "image/svg+xml", resp.Header.Get("Content-Type"))
 	assert.Equal(t, `attachment; filename="my-package.svg"`, resp.Header.Get("Content-Disposition"))
-	assert.Empty(t, resp.Header.Get("Content-Length"))
+	// HEAD must report the same Content-Length / ETag as GET (RFC 9110).
+	assert.Equal(t, strconv.Itoa(len(testIconContent)), resp.Header.Get("Content-Length"))
+	assert.Equal(t, `"`+manifestDigest+`"`, resp.Header.Get("ETag"))
+	assert.Equal(t, manifestDigest, resp.Header.Get("Docker-Content-Digest"))
+	assert.Equal(t, "public, max-age=31536000, immutable", resp.Header.Get("Cache-Control"))
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -348,7 +357,12 @@ func TestPackagesHandler_GetIcon_IconMissingInArchive(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+	// An icon that legitimately doesn't exist inside a valid package is a
+	// client-visible "not found", not a backend failure.
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	// Failure path must NOT pretend to serve an SVG attachment.
+	assert.NotEqual(t, "image/svg+xml", resp.Header.Get("Content-Type"))
+	assert.Empty(t, resp.Header.Get("Content-Disposition"))
 }
 
 func TestPackagesHandler_GetIcon_RegistryConfigUnavailable(t *testing.T) {

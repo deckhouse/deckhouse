@@ -81,8 +81,6 @@ func TestIsAllowedCLIImagePath(t *testing.T) {
 
 	allowed := []string{
 		"deckhouse-cli",
-		"deckhouse-cli/plugins",
-		"deckhouse-cli/plugins/",
 		"deckhouse-cli/plugins/foo",
 		"deckhouse-cli/plugins/some-plugin",
 	}
@@ -94,6 +92,11 @@ func TestIsAllowedCLIImagePath(t *testing.T) {
 		"",
 		"other",
 		"deckhouse-cli/extras",
+		// Bare "plugins" namespace with no plugin name is rejected here
+		// rather than relying on go-containerregistry's name validation
+		// downstream.
+		"deckhouse-cli/plugins",
+		"deckhouse-cli/plugins/",
 		"deckhouse-cli/plugins/a/b",
 		"/deckhouse-cli",
 	}

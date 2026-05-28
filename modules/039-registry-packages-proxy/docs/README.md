@@ -45,18 +45,18 @@ All endpoint paths listed below are served over HTTPS through that host, as well
 
 Package icons are **public**: no `Authorization: Bearer` header or Kubernetes RBAC authorization are required.
 
-| Method | Path                                                  | Description |
-|--------|-------------------------------------------------------|-------------|
-| `GET`, `HEAD` | `/v1/packages/<PACKAGE-NAME>/metadata/icon/`          | Icon of the latest semver tag |
-| `GET`, `HEAD` | `/v1/packages/<PACKAGE-NAME>/metadata/icon`           | Same as above |
-| `GET`, `HEAD` | `/v1/packages/<PACKAGE-NAME>/metadata/icon/<VERSION>` | Icon of a specific version (`<VERSION>` is a semantic version, e.g. `v1.0.1`) |
+| Method | Path                                                                       | Description |
+|--------|----------------------------------------------------------------------------|-------------|
+| `GET`, `HEAD` | `/v1/packages/<PACKAGE-REPOSITORY>/<PACKAGE-NAME>/metadata/icon/`          | Icon of the latest semver tag |
+| `GET`, `HEAD` | `/v1/packages/<PACKAGE-REPOSITORY>/<PACKAGE-NAME>/metadata/icon`           | Same as above |
+| `GET`, `HEAD` | `/v1/packages/<PACKAGE-REPOSITORY>/<PACKAGE-NAME>/metadata/icon/<VERSION>` | Icon of a specific version (`<VERSION>` is a semantic version, e.g. `v1.0.1`) |
 
-The proxy reads `docs/icon.svg` from the OCI image `packages/<PACKAGE-NAME>:<TAG>` in the cluster registry (configured via [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)).
+`<PACKAGE-REPOSITORY>` is the `metadata.name` of a [PackageRepository](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#packagerepository) custom resource; its `spec.registry.repo` field tells the proxy which registry path to pull `docs/icon.svg` from. The proxy reads the icon from the OCI image `<spec.registry.repo>/<PACKAGE-NAME>:<TAG>`.
 
 Example request:
 
 ```shell
-curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-module/metadata/icon/"
+curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-repo/my-module/metadata/icon/"
 ```
 
 Example response headers:

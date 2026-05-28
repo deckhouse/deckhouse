@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -84,10 +85,7 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		}
 	}
 
-	// Flatten all image layers into a single resulting layer (not just the last diff).
-	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return mutate.Extract(image), nil
-	})
+	layer, err := selectImageLayer(image, config.FlattenLayers)
 	if err != nil {
 		return 0, "", nil, err
 	}
@@ -108,6 +106,29 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	}
 
 	return size, hash.Hex, reader, nil
+}
+
+// selectImageLayer returns the bytes-bearing layer requested by the caller:
+// either the last layer of the image (legacy behavior) or a synthetic layer
+// that flattens all layers into one filesystem (FlattenLayers=true). The
+// flattened path is needed for images whose interesting file may live in any
+// layer, e.g. icon extraction; the last-layer path preserves the historical
+// /package and rpp-get contract.
+func selectImageLayer(image v1.Image, flatten bool) (v1.Layer, error) {
+	if !flatten {
+		layers, err := image.Layers()
+		if err != nil {
+			return nil, err
+		}
+		if len(layers) == 0 {
+			return nil, fmt.Errorf("image has no layers")
+		}
+		return layers[len(layers)-1], nil
+	}
+
+	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return mutate.Extract(image), nil
+	})
 }
 
 func (c *DefaultClient) ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (string, error) {

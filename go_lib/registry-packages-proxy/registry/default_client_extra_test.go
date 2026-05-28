@@ -135,7 +135,10 @@ func readGzipTarFile(t *testing.T, reader io.Reader, fileName string) string {
 	}
 }
 
-func TestDefaultClient_GetPackage_returnsFlattenedLayers(t *testing.T) {
+// TestDefaultClient_GetPackage_lastLayerOnly_byDefault pins down the
+// historical contract: without FlattenLayers, callers see only the bytes of
+// the LAST layer. The icon (in the earlier layer) must NOT be visible.
+func TestDefaultClient_GetPackage_lastLayerOnly_byDefault(t *testing.T) {
 	host := newTestRegistry(t)
 
 	iconLayer := tarLayerWithFile(t, "docs/icon.svg", "<svg>icon</svg>")
@@ -149,6 +152,33 @@ func TestDefaultClient_GetPackage_returnsFlattenedLayers(t *testing.T) {
 	cfg := &ClientConfig{
 		Repository: host + "/deckhouse",
 		Scheme:     "http",
+	}
+
+	_, _, reader, err := c.GetPackage(context.Background(), testLogger{}, cfg, digest, "test-package")
+	require.NoError(t, err)
+	defer reader.Close()
+
+	assert.Equal(t, "v1.0.0", readGzipTarFile(t, reader, "meta/version"))
+}
+
+// TestDefaultClient_GetPackage_returnsFlattenedLayers exercises the opt-in
+// flatten path used by the icon handler: every file from every layer must be
+// reachable in the returned tar.
+func TestDefaultClient_GetPackage_returnsFlattenedLayers(t *testing.T) {
+	host := newTestRegistry(t)
+
+	iconLayer := tarLayerWithFile(t, "docs/icon.svg", "<svg>icon</svg>")
+	topLayer := tarLayerWithFile(t, "meta/version", "v1.0.0")
+	img, err := mutate.AppendLayers(empty.Image, iconLayer, topLayer)
+	require.NoError(t, err)
+
+	digest := pushImage(t, host, img, "deckhouse/test-package", "v1.0.0")
+
+	c := &DefaultClient{}
+	cfg := &ClientConfig{
+		Repository:    host + "/deckhouse",
+		Scheme:        "http",
+		FlattenLayers: true,
 	}
 
 	_, _, reader, err := c.GetPackage(context.Background(), testLogger{}, cfg, digest, "test-package")
