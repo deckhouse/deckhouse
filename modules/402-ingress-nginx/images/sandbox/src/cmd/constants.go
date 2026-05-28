@@ -46,6 +46,7 @@ var sandboxExtraAllowSyscalls = []string{
 	"geteuid",
 	"getegid",
 	"getppid",
+	"getpgid",
 	"uname",
 	"wait4",
 	"poll",
