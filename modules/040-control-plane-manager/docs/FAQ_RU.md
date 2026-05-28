@@ -1024,7 +1024,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 1. Скопируйте или перенесите файл резервной копии etcd [`etcd-backup.snapshot`](#как-сделать-резервную-копию-etcd-вручную) в домашнюю директорию текущего пользователя (root):
 
-   
+   ```shell
+   cp /путь/до/резервной/копии/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
 
 1. Очистите директорию etcd.
 

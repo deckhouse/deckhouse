@@ -1014,7 +1014,9 @@ Follow these steps to restore a single-master cluster on master node:
 
 1. Copy or move the [`etcd-backup.snapshot`](#how-to-manually-backup-etcd) file to the current user's (root) home directory:
 
-   
+   ```shell
+   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
 
 1. Clean the etcd directory.
 
