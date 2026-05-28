@@ -47,7 +47,7 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 		)
 		for _, e := range report.Entries {
 			if e.Err != nil {
-				logger.Warn("cannot read cert expiration", "name", e.Name, "path", e.Path, log.Err(e.Err))
+				logger.Warn("cannot read cert expiration", "name", e.Name, "path", e.Path, "error", e.Err)
 				readErrs = append(readErrs, fmt.Errorf("cert %q: %w", e.Name, e.Err))
 				continue
 			}
@@ -62,7 +62,7 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 		)
 		for _, e := range report.Entries {
 			if e.Err != nil {
-				logger.Warn("cannot read kubeconfig cert expiration", "file", e.File, "path", e.Path, log.Err(e.Err))
+				logger.Warn("cannot read kubeconfig cert expiration", "file", e.File, "path", e.Path, "error", e.Err)
 				readErrs = append(readErrs, fmt.Errorf("kubeconfig %q: %w", e.File, e.Err))
 				continue
 			}
