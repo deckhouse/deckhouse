@@ -24,6 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +41,10 @@ import (
 )
 
 const (
-	dvpMigrationConfigMapName = "d8-module-is-migrating"
+	dvpMigrationConfigMapName  = "d8-module-is-migrating"
+	pccSecretName              = "d8-provider-cluster-configuration"
+	pccSecretNamespace         = "kube-system"
+	pccClusterConfigKey        = "cloud-provider-cluster-configuration.yaml"
 )
 
 // pccSecretFilterResult holds the parsed data from the PCC secret.
@@ -242,38 +246,45 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleDVPClusterConfiguration)
 
 func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
-	// ---- Determine PCC presence ----
+	// ---- Parse PCC Secret snapshot (if present) ----
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	pccPresent := len(pccSnaps) > 0
 
+	var pccResult pccSecretFilterResult
+	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
+
+	if pccPresent {
+		if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
+			return fmt.Errorf("unmarshal PCC snapshot: %w", err)
+		}
+		// Discovery data may survive even after the cluster-config key is removed — always parse it.
+		if len(pccResult.ProviderDiscoveryDataJSON) > 0 {
+			if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, &discoveryData); err != nil {
+				return fmt.Errorf("unmarshal discovery data: %w", err)
+			}
+		}
+	}
+
+	// pccConfigPresent is true only when the cloud-provider-cluster-configuration.yaml key
+	// still exists in the Secret.  After cleanupProviderClusterConfiguration removes that key
+	// the Secret remains (pccPresent==true) but pccConfigPresent becomes false — treat it as
+	// State A to avoid oscillation.
+	pccConfigPresent := len(pccResult.ProviderClusterConfig) > 0
+
 	// ---- State machine ----
-	if !pccPresent {
-		// State A: no PCC — new cluster on v2, standard flow.
+	if !pccConfigPresent {
+		// State A: no cluster config present — either a new v2 cluster or cleanup already done.
 		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
 		// Clean up migration artifacts if they exist.
 		deleteMigrationArtifacts(input)
-		return mergeAndSetDiscoveryData(input, cloudDataV1.DVPCloudProviderDiscoveryData{})
+		cleanupProviderClusterConfiguration(input)
+		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
-	// PCC is present — parse it.
-	var pccResult pccSecretFilterResult
-	if err := pccSnaps[0].UnmarshalTo(&pccResult); err != nil {
-		return fmt.Errorf("unmarshal PCC snapshot: %w", err)
-	}
-
+	// Cluster config is present — parse it.
 	var pcc v1.DvpProviderClusterConfiguration
-	if len(pccResult.ProviderClusterConfig) > 0 {
-		if err := convertJSONRawMessageToStruct(pccResult.ProviderClusterConfig, &pcc); err != nil {
-			return fmt.Errorf("parse PCC: %w", err)
-		}
-	}
-
-	// Parse discovery data.
-	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
-	if len(pccResult.ProviderDiscoveryDataJSON) > 0 {
-		if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, &discoveryData); err != nil {
-			return fmt.Errorf("unmarshal discovery data: %w", err)
-		}
+	if err := convertJSONRawMessageToStruct(pccResult.ProviderClusterConfig, &pcc); err != nil {
+		return fmt.Errorf("parse PCC: %w", err)
 	}
 
 	// ---- Determine completeness of new resources ----
@@ -284,22 +295,27 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		// Values come from MC v2 (root path) — do NOT override from PCC.
 		// Clean up migration artifacts.
 		deleteMigrationArtifacts(input)
+		cleanupProviderClusterConfiguration(input)
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
 	// State B: PCC present, new resources incomplete — migration in progress.
-	// Write root values from PCC so templates can render.
-	if err := mapPCCtoRootValues(input, &pcc); err != nil {
-		return fmt.Errorf("map PCC to root values: %w", err)
-	}
 
-	// Validate and enrich the PCC (e.g. merge any MC-level overrides).
+	// Apply any MC-level overrides to pcc FIRST so that mapPCCtoRootValues and
+	// createProviderClusterConfigurationResources both see the final, reconciled pcc.
+	// This prevents the synthetic d8-credentials entry injected by mapPCCtoRootValues
+	// from using a stale (pre-override) kubeconfigDataBase64.
 	var moduleConfiguration v1.DvpModuleConfiguration
 	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
 		return fmt.Errorf("parse module configuration: %w", err)
 	}
 	if err := overrideValues(&pcc, &moduleConfiguration); err != nil {
 		return fmt.Errorf("override values: %w", err)
+	}
+
+	// Write root values from the (now-overridden) PCC so templates can render.
+	if err := mapPCCtoRootValues(input, &pcc); err != nil {
+		return fmt.Errorf("map PCC to root values: %w", err)
 	}
 
 	// Create d8-migration-resources Secret.
@@ -322,6 +338,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 	}
 	var mc moduleConfigFilterResult
 	if err := mcSnaps[0].UnmarshalTo(&mc); err != nil {
+		input.Logger.Warn("isNewResourcesComplete: failed to unmarshal module_config snapshot", "error", err)
 		return false
 	}
 	if mc.Version != 2 || !mc.Enabled || len(mc.Provider) == 0 {
@@ -334,13 +351,18 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 		return false
 	}
 	var cred credentialSecretResult
-	if err := credSnaps[0].UnmarshalTo(&cred); err != nil || cred.Name == "" {
+	if err := credSnaps[0].UnmarshalTo(&cred); err != nil {
+		input.Logger.Warn("isNewResourcesComplete: failed to unmarshal credential_secret_d8 snapshot", "error", err)
+		return false
+	}
+	if cred.Name == "" {
 		return false
 	}
 
 	// Build sets of existing NodeGroups and DVPInstanceClasses.
 	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[namedResourceResult](input.Snapshots, "node_groups")
 	if err != nil {
+		input.Logger.Warn("isNewResourcesComplete: failed to unmarshal node_groups snapshot", "error", err)
 		return false
 	}
 	nodeGroupSet := make(map[string]bool, len(existingNodeGroups))
@@ -350,6 +372,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 
 	existingICs, err := sdkobjectpatch.UnmarshalToStruct[namedResourceResult](input.Snapshots, "dvp_instance_classes")
 	if err != nil {
+		input.Logger.Warn("isNewResourcesComplete: failed to unmarshal dvp_instance_classes snapshot", "error", err)
 		return false
 	}
 	icSet := make(map[string]bool, len(existingICs))
@@ -370,6 +393,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 		for _, rawNG := range pcc.NodeGroups {
 			ng, err := mapFromAny(rawNG)
 			if err != nil {
+				input.Logger.Warn("isNewResourcesComplete: failed to convert nodeGroup entry", "error", err)
 				return false
 			}
 			name, ok := ng["name"].(string)
@@ -459,6 +483,19 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 func deleteMigrationArtifacts(input *go_hook.HookInput) {
 	input.PatchCollector.Delete("v1", "Secret", dvpNamespace, dvpMigrationResourcesName)
 	input.PatchCollector.Delete("v1", "ConfigMap", dvpNamespace, dvpMigrationConfigMapName)
+}
+
+// cleanupProviderClusterConfiguration removes the cloud-provider-cluster-configuration.yaml
+// key from the d8-provider-cluster-configuration Secret in kube-system.
+// Idempotent: no-op if the key or the Secret itself is absent (hybrid cluster / fresh v2 setup).
+func cleanupProviderClusterConfiguration(input *go_hook.HookInput) {
+	patch := map[string]any{
+		"data": map[string]any{
+			pccClusterConfigKey: nil,
+		},
+	}
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", pccSecretNamespace, pccSecretName,
+		object_patch.WithIgnoreMissingObject())
 }
 
 // createMigrationConfigMap creates (or updates) the d8-module-is-migrating ConfigMap.

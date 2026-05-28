@@ -47,7 +47,7 @@ const (
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
 	if cfg == nil || cfg.Provider == nil || cfg.Provider.KubeconfigDataBase64 == nil || cfg.Provider.Namespace == nil {
-		return nil
+		return fmt.Errorf("cannot create migration resources: provider config incomplete (provider=%v)", cfg != nil && cfg.Provider != nil)
 	}
 
 	providerSettings := map[string]any{

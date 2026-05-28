@@ -161,6 +161,68 @@ metadata:
 		})
 	})
 
+	// ---- State A': PCC Secret exists but cluster-config key already removed (post-cleanup oscillation guard) ----
+	Context("State A: PCC Secret exists but cluster-config key removed (post-cleanup)", func() {
+		// Simulate the moment after cleanupProviderClusterConfiguration has run:
+		// the Secret still exists in the snapshot but cloud-provider-cluster-configuration.yaml
+		// is gone.  The hook must not re-enter State B and re-create migration artifacts.
+		pccSecretKeyRemoved := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+		ar := HookExecutionConfigInit(emptyValues, `{}`)
+		ar.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		ar.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		ar.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			// Stale migration artifacts from a previous reconcile cycle.
+			arState := pccSecretKeyRemoved + `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-dvp
+type: Opaque
+data: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-dvp
+`
+			ar.KubeStateSet(arState)
+			ar.BindingContexts.Set(ar.GenerateBeforeHelmContext())
+			ar.RunHook()
+		})
+
+		It("should treat removed cluster-config key as State A and clean up migration artifacts", func() {
+			Expect(ar).To(ExecuteSuccessfully())
+
+			// Migration artifacts must be deleted — we are effectively in State A.
+			migrationSecret := ar.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeFalse())
+
+			migrationCM := ar.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeFalse())
+
+			// Discovery data from the remaining key must still be populated.
+			Expect(ar.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(ar.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["default"]`))
+
+			// No new migration resources secret should be created.
+			Expect(ar.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources").Exists()).To(BeFalse())
+		})
+	})
+
 	// ---- State B: PCC present, new resources absent ----
 	Context("State B: PCC present, new resources not yet applied", func() {
 		b := HookExecutionConfigInit(emptyValues, `{}`)
