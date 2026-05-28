@@ -643,7 +643,7 @@ func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, image
 //
 // into its components. <image-path> may contain slashes; the split anchors on the final
 // /tags segment.
-func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag string, err error) {
+func parseCLIPath(urlPath string) (string, cliAction, string, error) {
 	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
 		return "", cliActionUnknown, "", errors.New("not a CLI path")
 	}
@@ -661,7 +661,7 @@ func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag strin
 	}
 
 	// imagePath is the part of the path before the tags segment
-	imagePath = rest[:idx]
+	imagePath := rest[:idx]
 	if imagePath == "" {
 		return "", cliActionUnknown, "", errors.New("empty image path")
 	}
@@ -672,7 +672,7 @@ func parseCLIPath(urlPath string) (imagePath string, action cliAction, tag strin
 	case suffix == "" || suffix == "/":
 		return imagePath, cliActionListTags, "", nil
 	case strings.HasPrefix(suffix, "/"):
-		tag = strings.Trim(suffix[1:], "/")
+		tag := strings.Trim(suffix[1:], "/")
 		if tag == "" || strings.Contains(tag, "/") {
 			return "", cliActionUnknown, "", errors.New("invalid tag")
 		}
@@ -696,10 +696,7 @@ func isAllowedCLIImagePath(imagePath string) bool {
 	plugin := strings.TrimPrefix(imagePath, pluginsPrefix)
 	// remove leading slash if present (/plugin -> plugin)
 	plugin = strings.TrimPrefix(plugin, "/")
-	if strings.Contains(plugin, "/") {
-		return false
-	}
-	return true
+	return !strings.Contains(plugin, "/")
 }
 
 func normalizeBootstrapClusterUUID(clusterUUID string) string {
