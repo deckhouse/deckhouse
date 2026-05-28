@@ -18,7 +18,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"encoding/base64"
 	"errors"
 	"io"
 	"net/http"
@@ -27,11 +26,6 @@ import (
 	"sync/atomic"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/stretchr/testify/assert"
@@ -45,12 +39,8 @@ const (
 	testPackageRepositoryName = "packages-repo"
 	testPackageName           = "my-package"
 	testImagePath             = "packages/my-package"
-	testIconPath    = "docs/icon.svg"
-	testIconContent = "<svg>icon</svg>"
-)
-
-var testPackageRepositoryDockerCfg = base64.StdEncoding.EncodeToString(
-	[]byte(`{"auths":{"registry.test":{"auth":"dXNlcjpwYXNz"}}}`),
+	testIconPath              = "docs/icon.svg"
+	testIconContent           = "<svg>icon</svg>"
 )
 
 func packageBodyWithIcon(t *testing.T) []byte {
@@ -86,29 +76,49 @@ func packageBodyWithoutIcon(t *testing.T) []byte {
 	return buf.Bytes()
 }
 
+// withDefaultPackagesRepo seeds the getter so GetPackagesConfig(testPackageRepositoryName)
+// returns the default fixture used by most packages tests.
+func withDefaultPackagesRepo(getter *fakeCLIGetter) *fakeCLIGetter {
+	if getter.packagesCfgs == nil {
+		getter.packagesCfgs = map[string]*registry.PackagesConfig{}
+	}
+	getter.packagesCfgs[testPackageRepositoryName] = &registry.PackagesConfig{
+		Repository: "registry.test/deckhouse",
+		Scheme:     "https",
+		Auth:       "dXNlcjpwYXNz",
+	}
+	return getter
+}
+
 func newPackagesTestServer(
 	t *testing.T,
 	fake *fakeCLIRegistryClient,
-	getter registry.ClientConfigGetter,
+	getter *fakeCLIGetter,
 	c pkgCache.Cache,
 ) *httptest.Server {
 	t.Helper()
 
-	p := newPackagesTestProxy(t, fake, getter, c, true)
+	withDefaultPackagesRepo(getter)
+	p := newPackagesTestProxy(t, fake, getter, c)
 	mux := http.NewServeMux()
 	mux.HandleFunc(packagesPathPrefix, p.PackagesHandler())
 	return httptest.NewServer(mux)
 }
 
+// newPackagesTestServerWithoutRepository wires the proxy with a getter whose
+// GetPackagesConfig yields no entries, mimicking a missing PackageRepository.
 func newPackagesTestServerWithoutRepository(
 	t *testing.T,
 	fake *fakeCLIRegistryClient,
-	getter registry.ClientConfigGetter,
+	getter *fakeCLIGetter,
 	c pkgCache.Cache,
 ) *httptest.Server {
 	t.Helper()
 
-	p := newPackagesTestProxy(t, fake, getter, c, false)
+	if getter.packagesCfgs == nil {
+		getter.packagesCfgs = map[string]*registry.PackagesConfig{}
+	}
+	p := newPackagesTestProxy(t, fake, getter, c)
 	mux := http.NewServeMux()
 	mux.HandleFunc(packagesPathPrefix, p.PackagesHandler())
 	return httptest.NewServer(mux)
@@ -119,34 +129,15 @@ func newPackagesTestProxy(
 	registryClient registry.Client,
 	getter registry.ClientConfigGetter,
 	c pkgCache.Cache,
-	withDefaultRepository bool,
 ) *Proxy {
 	t.Helper()
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, v1alpha1.AddToScheme(scheme))
-
-	fakeClientBuilder := fake.NewClientBuilder().WithScheme(scheme)
-	if withDefaultRepository {
-		fakeClientBuilder = fakeClientBuilder.WithObjects(&v1alpha1.PackageRepository{
-			ObjectMeta: metav1.ObjectMeta{Name: testPackageRepositoryName},
-			Spec: v1alpha1.PackageRepositorySpec{
-				Registry: v1alpha1.PackageRepositorySpecRegistry{
-					Repo:      "registry.test/deckhouse",
-					Scheme:    "https",
-					DockerCFG: testPackageRepositoryDockerCfg,
-				},
-			},
-		})
-	}
-	k8sClient := fakeClientBuilder.Build()
 
 	var opts []ProxyOption
 	if c != nil {
 		opts = append(opts, WithCache(c))
 	}
 
-	p := NewProxy(nil, nil, getter, nopCLILogger{}, k8sClient, registryClient, opts...)
+	p := NewProxy(nil, nil, getter, nopCLILogger{}, registryClient, opts...)
 	p.config = Config{}
 	return p
 }
@@ -221,7 +212,11 @@ func TestPackagesHandler_GetIcon_UsesPackageRepositoryConfigForCacheMiss(t *test
 		packageBody: packageBodyWithIcon(t),
 		layerDigest: "layer-digest",
 	}
-	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{err: errors.New("getter should not be called")}, nil)
+	// Get() (registry repository lookup) must not be reached because
+	// PackagesHandler resolves config via GetPackagesConfig and threads it
+	// through to GetPackageCached, which short-circuits the per-request
+	// registry getter lookup.
+	srv := newPackagesTestServer(t, fake, &fakeCLIGetter{err: errors.New("Get should not be called")}, nil)
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/v1/packages/packages-repo/my-package/metadata/icon/v1.0.1")

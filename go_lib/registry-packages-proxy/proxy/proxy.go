@@ -19,14 +19,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -34,12 +32,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/tidwall/gjson"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -51,7 +43,6 @@ type Proxy struct {
 	listener       net.Listener
 	getter         registry.ClientConfigGetter
 	registryClient registry.Client
-	k8sClient      client.Client
 	cache          cache.Cache
 	logger         log.Logger
 	config         Config
@@ -115,14 +106,12 @@ func NewProxy(server *http.Server,
 	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
 	logger log.Logger,
-	k8sClient client.Client,
 	registryClient registry.Client, opts ...ProxyOption,
 ) *Proxy {
 	p := &Proxy{
 		server:         server,
 		listener:       listener,
 		getter:         clientConfigGetter,
-		k8sClient:      k8sClient,
 		registryClient: registryClient,
 		// by default, we set cache to nil, to use proxy without cache
 		// to set up cache use WithCache option
@@ -772,29 +761,19 @@ func (p *Proxy) PackagesHandler() http.HandlerFunc {
 			return
 		}
 
-		var packageRepository v1alpha1.PackageRepository
-		err = p.k8sClient.Get(r.Context(), types.NamespacedName{Name: packageRepositoryName}, &packageRepository)
+		packagesCfg, err := p.getter.GetPackagesConfig(packageRepositoryName)
 		if err != nil {
-			p.logger.Errorf("get package repository: %v", err)
+			p.logger.Errorf("get packages config for %q: %v", packageRepositoryName, err)
+			http.Error(w, "package repository not found", http.StatusNotFound)
+			return
+		}
+		if packagesCfg == nil {
+			p.logger.Errorf("get packages config for %q: nil config", packageRepositoryName)
 			http.Error(w, "package repository not found", http.StatusNotFound)
 			return
 		}
 
-		authCfg, err := readAuthFromDockerCfg(packageRepository.Spec.Registry.Repo, packageRepository.Spec.Registry.DockerCFG)
-		if err != nil {
-			p.logger.Errorf("read auth from docker cfg: %v", err)
-			http.Error(w, "failed to read auth from docker cfg", http.StatusInternalServerError)
-			return
-		}
-		cfg := &registry.ClientConfig{
-			Repository: packageRepository.Spec.Registry.Repo,
-			Scheme:     packageRepository.Spec.Registry.Scheme,
-			Auth:       authCfg.Auth,
-			SignCheck:  p.config.SignCheck,
-		}
-		if packageRepository.Spec.Registry.CA != "" {
-			cfg.CA = packageRepository.Spec.Registry.CA
-		}
+		cfg := packagesCfg.ToClientConfig(p.config.SignCheck)
 
 		clientIP := getRequestIP(r)
 		p.logger.Infof("Packages request from client %s", clientIP)
@@ -1025,44 +1004,3 @@ func extractTarGzFileFromPath(reader io.Reader, filePath string) ([]byte, error)
 	}
 }
 
-func readAuthFromDockerCfg(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
-	r, err := parse(repo)
-	if err != nil {
-		return authn.AuthConfig{}, fmt.Errorf("parse repo: %w", err)
-	}
-
-	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
-	if err != nil {
-		// if base64 decoding failed, try to use input as it is
-		dockerCfg = []byte(dockerCfgBase64)
-	}
-	auths := gjson.Get(string(dockerCfg), "auths").Map()
-	authConfig := authn.AuthConfig{}
-
-	// The config should have at least one .auths.* entry
-	for repoName, repoAuth := range auths {
-		repoNameURL, err := parse(repoName)
-		if err != nil {
-			return authn.AuthConfig{}, fmt.Errorf("parse repo name: %w", err)
-		}
-
-		if repoNameURL.Host == r.Host {
-			err := json.Unmarshal([]byte(repoAuth.Raw), &authConfig)
-			if err != nil {
-				return authn.AuthConfig{}, fmt.Errorf("unmarshal json: %w", err)
-			}
-			return authConfig, nil
-		}
-	}
-
-	return authn.AuthConfig{}, fmt.Errorf("%q credentials not found in the dockerCfg", repo)
-}
-
-// parse parses url without scheme://
-// if we pass url without scheme ve've got url back with two leading slashes
-func parse(rawURL string) (*url.URL, error) {
-	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
-		return url.ParseRequestURI(rawURL)
-	}
-	return url.Parse("//" + rawURL)
-}

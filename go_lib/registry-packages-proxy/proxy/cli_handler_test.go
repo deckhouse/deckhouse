@@ -158,6 +158,13 @@ func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, _
 type fakeCLIGetter struct {
 	cfg *registry.ClientConfig
 	err error
+
+	// packagesCfgs maps PackageRepository name -> resolved packages config.
+	// Tests that don't care about the /v1/packages/* path can leave this nil
+	// and the default fixture (registry.test/deckhouse + https) is returned.
+	packagesCfgs    map[string]*registry.PackagesConfig
+	packagesCfgErr  error
+	defaultPkgFound bool // when true, missing keys still resolve to default
 }
 
 func (g *fakeCLIGetter) Get(_ string) (*registry.ClientConfig, error) {
@@ -168,6 +175,21 @@ func (g *fakeCLIGetter) Get(_ string) (*registry.ClientConfig, error) {
 		return g.cfg, nil
 	}
 	return &registry.ClientConfig{Repository: "registry.test/deckhouse", Scheme: "https"}, nil
+}
+
+func (g *fakeCLIGetter) GetPackagesConfig(packageRepositoryName string) (*registry.PackagesConfig, error) {
+	if g.packagesCfgErr != nil {
+		return nil, g.packagesCfgErr
+	}
+	if g.packagesCfgs != nil {
+		if cfg, ok := g.packagesCfgs[packageRepositoryName]; ok {
+			return cfg, nil
+		}
+		if !g.defaultPkgFound {
+			return nil, errors.New("package repository not found")
+		}
+	}
+	return &registry.PackagesConfig{Repository: "registry.test/deckhouse", Scheme: "https"}, nil
 }
 
 // cliMemCache is a simple in-memory cache.Cache used to verify cache hits.
@@ -223,7 +245,7 @@ func newTestProxy(t *testing.T, registryClient registry.Client, getter registry.
 	if c != nil {
 		opts = append(opts, WithCache(c))
 	}
-	p := NewProxy(nil, nil, getter, nopCLILogger{}, nil, registryClient, opts...)
+	p := NewProxy(nil, nil, getter, nopCLILogger{}, registryClient, opts...)
 	// Serve() normally initializes p.config; do the equivalent for CLIHandler tests.
 	p.config = Config{}
 	return p

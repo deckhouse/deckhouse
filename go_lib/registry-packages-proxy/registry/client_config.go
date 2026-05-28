@@ -21,3 +21,32 @@ type ClientConfig struct {
 	Auth       string
 	SignCheck  bool
 }
+
+// PackagesConfig describes connection parameters resolved for a packages
+// repository (e.g. PackageRepository CR). It carries the same registry
+// connection fields as ClientConfig but is returned by ClientConfigGetter
+// keyed by a packages-repository name rather than by a registry repository.
+//
+// SignCheck is intentionally omitted: it is a runtime-level concern of the
+// proxy, not a property of the upstream registry credentials.
+type PackagesConfig struct {
+	Repository string
+	Scheme     string
+	CA         string
+	Auth       string
+}
+
+// ToClientConfig converts a PackagesConfig into a ClientConfig usable by
+// registry.Client methods, copying the requested SignCheck flag.
+func (c *PackagesConfig) ToClientConfig(signCheck bool) *ClientConfig {
+	if c == nil {
+		return nil
+	}
+	return &ClientConfig{
+		Repository: c.Repository,
+		Scheme:     c.Scheme,
+		CA:         c.CA,
+		Auth:       c.Auth,
+		SignCheck:  signCheck,
+	}
+}

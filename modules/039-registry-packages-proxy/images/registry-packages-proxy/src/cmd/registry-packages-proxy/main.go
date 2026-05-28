@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// watch resources
-	watcher := credentials.NewWatcher(clientset, dynamicClient, time.Hour, logger)
+	watcher := credentials.NewWatcher(clientset, dynamicClient, k8sClient, time.Hour, logger)
 	go watcher.Watch(ctx)
 
 	// init cache
@@ -111,7 +111,7 @@ func main() {
 	}
 	// /v1/images/* CLI download routes are wired up by Proxy.Serve via ServeCLI and reach the
 	// outside world through the kube-rbac-proxy sidecar on :4219, which authorizes them.
-	rp := proxy.NewProxy(server, listener, watcher, logger, k8sClient, registryClient, opts...)
+	rp := proxy.NewProxy(server, listener, watcher, logger, registryClient, opts...)
 	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
 		Listener:           bootstrapListener,
 		Logger:             logger,
