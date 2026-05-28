@@ -1198,4 +1198,39 @@ updatePolicy:
 			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","review-123"]`))
 		})
 	})
+
+	Context("custom control plane for operator-free version 1.27", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.HelmRender()
+		})
+
+		It("renders custom istiod resources and skips operator CRs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-istio", "istiod-v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x27").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeFalse())
+
+			svc := f.KubernetesResource("Service", "d8-istio", "istiod-v1x27")
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("grpc-xds"))
+			Expect(svc.Field("spec.ports").String()).To(ContainSubstring("https-webhook"))
+		})
+	})
 })

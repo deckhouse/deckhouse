@@ -1,0 +1,21 @@
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if not (get $versionInfo "supportsOperator") }}
+  {{- $revision := get $versionInfo "revision" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+  {{- $cloudPlatform := include "istioCloudPlatform" $ }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-{{ $revision }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "istio.io/rev" $revision "operator.istio.io/component" "Pilot")) | nindent 2 }}
+data:
+  meshNetworks: |-
+{{ include "istioCustomMeshNetworks" (list $) | nindent 4 }}
+  mesh: |-
+{{ include "istioCustomMesh" (list $ $revision $fullVersion $supportsAmbient $cloudPlatform) | nindent 4 }}
+  {{- end }}
+{{- end }}
