@@ -3,14 +3,14 @@
 {{- $moduleStageFallBackLegacy := .stageFallBackLegacy }}
 
 {{- if not (or (eq $module nil) (eq $channel nil)) }}
-  {{- $moduleData := index (index .ctx.Site.Data.modules $module) $channel }}
+  {{- $moduleData := index (index hugo.Data.modules $module) $channel }}
   {{- $moduleMetadata := index $moduleData "module" }}
   {{- $moduleStage := index $moduleMetadata "stage" }}
   {{- if and (or (not $moduleStage) (eq $moduleStage nil)) (ne $moduleStageFallBackLegacy nil) (gt (len $moduleStageFallBackLegacy) 0) }}
     {{- $moduleStage = humanize $moduleStageFallBackLegacy }}
   {{- end }}
 
-  {{- if in .ctx.Site.Data.helpers.moduleAllowedStages $moduleStage }}
+  {{- if in hugo.Data.helpers.moduleAllowedStages $moduleStage }}
 
     {{- $statusKey := replace (lower $moduleStage) " " "_" -}}
 
