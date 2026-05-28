@@ -338,8 +338,8 @@ lang: ru
    - Проверьте файлы манифестов компонентов Kubernetes, расположенные в `/etc/kubernetes/manifests/`.
    - Проверьте системные настройки kubelet (файлы в `/etc/systemd/system/kubelet.service.d/` или аналогичные директории).
    - При необходимости измените IP-адрес и в других конфигурациях, если они ссылаются на старый адрес.
-1. Перевыпустите сертификаты, выданные для старого IP. Удалите или переместите старые сертификаты, связанные с apiserver и, при необходимости, с etcd. Сгенерируйте новые сертификаты, указав в качестве SAN (Subject Alternative Name) новый IP-адрес master-узла.
-1. Перезапустите все сервисы, использующие обновлённые конфигурации и сертификаты. Заставьте kubelet перезапустить манифесты control-plane (API-сервер, etcd и т.д.). Перезагрузите системные службы (например, `systemctl restart kubelet`) или убедитесь, что все нужные процессы перезапущены автоматически.
+1. Перезапустите все сервисы, использующие обновлённые конфигурации. Заставьте kubelet перезапустить манифесты control-plane (API-сервер, etcd и т.д.).
+1. Добавьте новый IP-адрес в список `certSANs` в ModuleConfig `control-plane-manager`. `control-plane-manager` автоматически перевыпустит сертификат `kube-apiserver` с обновлённым списком SAN.
 1. Дождитесь, пока kubelet обновит собственный сертификат.
 
 Данные действия можно произвести как [автоматизировано](#автоматизированная-выгрузка-объектов-при-смене-ip-адреса) — с помощью скрипта, так и [вручную](#ручное-восстановление-объектов-при-смене-ip-адреса) — путем выполнения одиночных команд.
@@ -353,11 +353,9 @@ lang: ru
    - `OLD_IP` — старый IP-адрес master-узла, под которым создавалась резервная копия.
    - `NEW_IP` — новый IP-адрес master-узла.
 
-1. Убедитесь, что версия Kubernetes (`KUBERNETES_VERSION`) совпадает с установленной в кластере. Это необходимо для корректной загрузки соответствующей версии kubeadm.
-
 1. [Скачайте](#восстановление-кластера-с-одним-control-plane-узлом) утилиту `etcdutl`, если она не установлена.
 
-1. После выполнения скрипта необходимо дождаться, пока kubelet обновит свой сертификат, учитывающий новый IP-адрес. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
+1. После выполнения скрипта добавьте новый IP-адрес в список `certSANs` в ModuleConfig `control-plane-manager` (см. шаг 4 выше), после чего дождитесь, пока kubelet обновит свой сертификат с новым IP-адресом. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
 
 {% offtopic title="Скрипт для выгрузки объектов" %}
 
@@ -365,7 +363,6 @@ lang: ru
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
 OLD_IP=10.242.32.34                         # IP-адрес старого master-узла.
 NEW_IP=10.242.32.21                         # IP-адрес нового master-узла.
-KUBERNETES_VERSION=1.28.0                   # Версия Kubernetes.
 
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
@@ -384,10 +381,6 @@ mkdir -p ./old_certs/etcd
 mv /etc/kubernetes/pki/apiserver.* ./old_certs/
 mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
 mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
-
-curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-chmod +x kubeadm
-./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -448,34 +441,16 @@ systemctl restart kubelet.service
     find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     ```
 
-1. Перевыпустите сертификаты, выпущенные для старого IP-адреса:
+1. Создайте резервную копию текущих сертификатов:
 
-   - Подготовьте каталог для временного хранения старых сертификатов:
+   ```shell
+   mkdir -p ./old_certs/etcd
+   mv /etc/kubernetes/pki/apiserver.* ./old_certs/
+   mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
+   mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+   ```
 
-      ```shell
-      mkdir -p ./old_certs/etcd
-      mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-      mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-      mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
-      ```
-
-   - Установите или скачайте kubeadm в соответствии с текущей версией Kubernetes:
-
-     ```shell
-     KUBERNETES_VERSION=1.28.0 # Версия Kubernetes.
-     curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-     chmod +x kubeadm
-     ```
-
-   - Сгенерируйте новые сертификаты:
-
-     ```shell
-     ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
-     ```
-
-     В созданных сертификатах будет учтён новый IP-адрес.
-
-1. Перезапустите сервисы, использующие обновлённые конфигурации и сертификаты. Для немедленного прекращения работы запущенных контейнеров выполните:
+1. Перезапустите сервисы, использующие обновлённые конфигурации. Для немедленного прекращения работы запущенных контейнеров выполните:
 
     ```shell
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -486,7 +461,43 @@ systemctl restart kubelet.service
     systemctl restart kubelet.service
     ```
 
-    Kubelet перезапустит соответствующие поды, а компоненты Kubernetes загрузят новые сертификаты.
+    Kubelet перезапустит соответствующие поды, а компоненты Kubernetes загрузят обновлённые конфигурации.
+
+1. Добавьте новый IP-адрес в список `certSANs` в ModuleConfig `control-plane-manager`. `control-plane-manager` обнаружит изменение ключа `cert-sans` в секрете `d8-control-plane-manager-config`, создаст `ControlPlaneOperation` с шагом `RenewPKICerts` и перевыпустит сертификат `kube-apiserver` с обновлённым списком SAN:
+
+   ```shell
+   kubectl edit mc control-plane-manager
+   ```
+
+   Добавьте новый IP-адрес в `spec.settings.apiserver.certSANs`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         certSANs:
+           - <NEW_IP>
+   ```
+
+   Следите за ходом перевыпуска сертификата:
+
+   ```shell
+   kubectl get cpo -o wide -w
+   ```
+
+   Дождитесь, пока операция перейдёт в фазу `Phase=Succeeded`. Затем убедитесь, что `ControlPlaneNode` показывает актуальное состояние сертификатов:
+
+   ```shell
+   kubectl get cpn
+   ```
+
+   В столбце `CERTIFICATES` должно быть значение `True`.
 
 1. Дождитесь, пока kubelet обновит собственный сертификат. Kubelet автоматически генерирует и обновляет свой сертификат, в котором будет прописан новый IP-адрес:
   
