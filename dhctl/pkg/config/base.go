@@ -472,7 +472,7 @@ func ParseConfigFromData(
 	for _, opt := range opts {
 		opt(&vopts)
 	}
-	schemaStore := NewSchemaStore(globalOptions, vopts.extraSchemaPaths...)
+	schemaStore := NewSchemaStore(globalOptions)
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
