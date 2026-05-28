@@ -972,6 +972,7 @@ import:
 - from: {{ index $.Images "tools/coreutils" }}
   add: /usr/bin/cp
   to: /apps/cp
+  before: install
 shell:
   install:
   - /apps/cp -alf /chroot/. /validation-chroot/
