@@ -307,7 +307,7 @@ To restore objects from exported YAML files, follow these steps:
 1. Create the objects in the cluster. To restore individual resources, run:
 
    ```shell
-   d8 k create -f <PATH_TO_FILE>.json
+   d8 k create -f <PATH_TO_FILE>.yaml
    ```
 
    You can specify either a single file or a directory path.
@@ -493,7 +493,7 @@ If you prefer to manually make changes during cluster recovery after the master 
    d8 k get cpo -o wide -w
    ```
 
-   Wait until the renewal operation reaches `Phase=Succeeded`. Then verify that the `ControlPlaneNode` shows healthy certificates:
+   Wait until the renewal operation reaches `Phase=OperationCompleted`. Then verify that the `ControlPlaneNode` shows healthy certificates:
 
    ```shell
    d8 k get cpn

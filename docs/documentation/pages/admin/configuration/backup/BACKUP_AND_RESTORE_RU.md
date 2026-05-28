@@ -491,7 +491,7 @@ systemctl restart kubelet.service
    d8 k get cpo -o wide -w
    ```
 
-   Дождитесь, пока операция перейдёт в фазу `Phase=Succeeded`. Затем убедитесь, что `ControlPlaneNode` показывает актуальное состояние сертификатов:
+   Дождитесь, пока операция перейдёт в фазу `Phase=OperationCompleted`. Затем убедитесь, что `ControlPlaneNode` показывает актуальное состояние сертификатов:
 
    ```shell
    d8 k get cpn

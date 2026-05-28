@@ -1040,7 +1040,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-      ```
+   ```
 
    Чтобы убедиться, что etcd запущена, воспользуйтесь командой:
 
