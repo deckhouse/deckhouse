@@ -116,6 +116,14 @@ type RefreshTokenSnapshot struct {
 
 const userOperationRetentionPeriod = 24 * time.Hour
 
+// userOperationAnnotationInitiator carries the email of the admin who
+// triggered a UserOperation from the Console UI. Stored as an annotation
+// because Kubernetes label values forbid '@' (and dots after '@'), which
+// disqualifies the vast majority of real email addresses. Surfaced in the
+// hook's structured logs as the "initiator" key so audit trails record
+// *who* did what, not just *what role* (initiatorType) did it.
+const userOperationAnnotationInitiator = "deckhouse.io/initiator"
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authn",
 	Schedule: []go_hook.ScheduleConfig{
@@ -241,6 +249,36 @@ func applyUserOperationFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return userOperation, nil
 }
 
+// userOperationLogFields returns slog-style key/value pairs describing a
+// UserOperation: who initiated it (initiator = admin email from the UI,
+// initiatorType = the role-level marker the UI already sets), what type of
+// operation it is, and which user it targets — either a local username or
+// an external (connectorID, email) pair. Empty fields are omitted so log
+// lines stay terse for the common case.
+func userOperationLogFields(op UserOperation) []any {
+	fields := []any{
+		"operation", op.Name,
+		"namespace", op.Namespace,
+		"type", op.Spec.Type,
+		"initiatorType", op.Spec.InitiatorType,
+		"createdAt", op.GetObjectMeta().GetCreationTimestamp().Time.Format(time.RFC3339),
+	}
+	if initiator := op.GetAnnotations()[userOperationAnnotationInitiator]; initiator != "" {
+		fields = append(fields, "initiator", initiator)
+	}
+	if op.Spec.User != "" {
+		fields = append(fields, "targetKind", "local", "targetUser", op.Spec.User)
+	}
+	if op.Spec.Target != nil {
+		fields = append(fields,
+			"targetKind", "external",
+			"targetConnector", op.Spec.Target.ConnectorID,
+			"targetEmail", op.Spec.Target.Email,
+		)
+	}
+	return fields
+}
+
 func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 	operationsToExecute := make([]UserOperation, 0)
 	operationsToCleanUp := make([]UserOperation, 0)
@@ -250,6 +288,7 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		if userOperation.Status.Phase == "" {
+			input.Logger.Info("Discovered pending UserOperation", userOperationLogFields(userOperation)...)
 			operationsToExecute = append(operationsToExecute, userOperation)
 			continue
 		}
@@ -263,14 +302,15 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("Operations to clean up", "count", len(operationsToCleanUp))
 
 	for _, operation := range operationsToExecute {
-		input.Logger.Info("Executing UserOperation", "name", operation.Name, "type", operation.Spec.Type)
+		logFields := userOperationLogFields(operation)
+		input.Logger.Info("Executing UserOperation", logFields...)
 		err := executeUserOperation(input, operation)
 		if err != nil {
-			input.Logger.Error(fmt.Sprintf("Failed to execute UserOperation %s: %v", operation.Name, err))
+			input.Logger.Error("Failed to execute UserOperation", append(logFields, "error", err.Error())...)
 			operation.Status.Phase = UserOperationStatusPhaseFailed
 			operation.Status.Message = err.Error()
 		} else {
-			input.Logger.Info("UserOperation succeeded", "name", operation.Name)
+			input.Logger.Info("UserOperation succeeded", logFields...)
 			operation.Status.Phase = UserOperationStatusPhaseSucceeded
 			operation.Status.Message = ""
 		}
@@ -284,7 +324,7 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	for _, operation := range operationsToCleanUp {
-		input.Logger.Info("Deleting old UserOperation", "name", operation.Name)
+		input.Logger.Info("Deleting old UserOperation", userOperationLogFields(operation)...)
 		input.PatchCollector.Delete("deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name)
 	}
 	return nil
@@ -307,7 +347,7 @@ func executeUserOperation(input *go_hook.HookInput, operation UserOperation) err
 
 func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 	if operation.Spec.Lock == nil {
-		input.Logger.Error("Lock spec is nil", "userOperation", operation.Name)
+		input.Logger.Error("Lock spec is nil", userOperationLogFields(operation)...)
 		return errors.New("lock spec is nil")
 	}
 
@@ -331,7 +371,11 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
 	}
 
-	input.Logger.Info("Locking user password", "user", userPassword.Username, "duration", operation.Spec.Lock.For.Duration)
+	input.Logger.Info("Locking local user password",
+		append(userOperationLogFields(operation),
+			"user", userPassword.Username,
+			"duration", operation.Spec.Lock.For.Duration.String(),
+		)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
 		if err := sdk.FromUnstructured(obj, &pass); err != nil {
@@ -384,7 +428,8 @@ func executeUnlock(input *go_hook.HookInput, operation UserOperation) error {
 		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
 	}
 
-	input.Logger.Info("Unlocking user password", "user", userPassword.Username)
+	input.Logger.Info("Unlocking local user password",
+		append(userOperationLogFields(operation), "user", userPassword.Username)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
 		if err := sdk.FromUnstructured(obj, &pass); err != nil {
@@ -439,7 +484,8 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
 	}
 
-	input.Logger.Info("Resetting user password", "user", userPassword.Username)
+	input.Logger.Info("Resetting local user password",
+		append(userOperationLogFields(operation), "user", userPassword.Username)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
 		if err := sdk.FromUnstructured(obj, &pass); err != nil {
@@ -469,7 +515,8 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 		return err
 	}
 	if !anyDeleted {
-		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
+		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete",
+			append(userOperationLogFields(operation), "user", operation.Spec.User)...)
 	}
 	return nil
 }
@@ -592,11 +639,10 @@ func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockF
 	}
 
 	input.Logger.Info("Locking external user via OfflineSessions",
-		"connector", operation.Spec.Target.ConnectorID,
-		"email", operation.Spec.Target.Email,
-		"offlinesession", sess.Name,
-		"duration", lockFor,
-	)
+		append(userOperationLogFields(operation),
+			"offlinesession", sess.Name,
+			"duration", lockFor.String(),
+		)...)
 
 	until := time.Now().Add(lockFor).UTC().Format(time.RFC3339)
 	patch := map[string]any{
@@ -634,10 +680,7 @@ func unlockOfflineSession(input *go_hook.HookInput, operation UserOperation) err
 	}
 
 	input.Logger.Info("Unlocking external user via OfflineSessions",
-		"connector", operation.Spec.Target.ConnectorID,
-		"email", operation.Spec.Target.Email,
-		"offlinesession", sess.Name,
-	)
+		append(userOperationLogFields(operation), "offlinesession", sess.Name)...)
 
 	patch := map[string]any{
 		"lockedUntil":                    nil,
