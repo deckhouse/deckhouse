@@ -181,6 +181,17 @@ spec:
                 description: Last time the repository was synchronized.
                 format: date-time
                 type: string
+              lastOperationNewVersions:
+                description: |-
+                  Number of new versions found by the most recent completed operation.
+                  Reset on every completion, including to zero when the last scan found nothing new.
+                type: integer
+              lastNewVersionsTime:
+                description: |-
+                  Time of the most recent completed operation that found at least one new version.
+                  Operations that found zero new versions do not advance this timestamp.
+                format: date-time
+                type: string
             type: object
         required:
         - spec

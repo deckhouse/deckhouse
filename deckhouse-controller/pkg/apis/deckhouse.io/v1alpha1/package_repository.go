@@ -141,6 +141,16 @@ type PackageRepositoryStatus struct {
 	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
 	// +optional
 	PartialScanAvailable bool `json:"partialScanAvailable"`
+
+	// Number of new versions found by the most recent completed operation.
+	// Reset on every completion, including to zero when the last scan found nothing new.
+	// +optional
+	LastOperationNewVersions int `json:"lastOperationNewVersions,omitempty"`
+
+	// Time of the most recent completed operation that found at least one new version.
+	// Operations that found zero new versions do not advance this timestamp.
+	// +optional
+	LastNewVersionsTime *metav1.Time `json:"lastNewVersionsTime,omitempty"`
 }
 
 type PackageRepositoryStatusPackage struct {
