@@ -79,7 +79,7 @@ var reasonToReconcileBody = map[string]string{
 
 // DeriveStatus returns the canonical Phase and Message for the given set of
 // module conditions. It is a pure function — no I/O, no side effects.
-func DeriveStatus(c *ModuleConditions) (phase string, message string) {
+func DeriveStatus(c *ModuleConditions) (string, string) {
 	if c == nil {
 		return PhasePending, "Installation is waiting for dependent modules to converge"
 	}
@@ -128,8 +128,7 @@ func DeriveStatus(c *ModuleConditions) (phase string, message string) {
 
 // --- helpers ---
 
-func isFalse(c *ConditionStatus) bool  { return c != nil && c.Status == metav1.ConditionFalse }
-func isTrue(c *ConditionStatus) bool   { return c != nil && c.Status == metav1.ConditionTrue }
+func isFalse(c *ConditionStatus) bool   { return c != nil && c.Status == metav1.ConditionFalse }
 func isUnknown(c *ConditionStatus) bool { return c != nil && c.Status == metav1.ConditionUnknown }
 
 func isFalseReason(c *ConditionStatus, reason string) bool {
