@@ -136,6 +136,16 @@ noises:
       image= filename=/tmp/cac912e8605cafa636a779d728e15fe9d3b45607d2125f9503e6caab2585d2eb/etc/kubernetes/deckhouse
       name=<NA> mode=S_IXUSR|S_IWUSR|S_IRUSR event=fchmodat)
 {{- end -}}
+{{- if has "loki" .Values.global.enabledModules }}
+# Before adding a new ClusterLoggingConfig with destinationRefs: [se-neuvector]:
+# the se-bridge sidecar (neuvector module, images/se-bridge/) only has parsers for
+#   - falco (container `falco` in d8-runtime-audit-engine)
+#   - dex (container `dex` in d8-user-authn)
+#   - virtualization-audit (container `virtualization-audit` in d8-virtualization)
+#   - containerd-integrity (File source /var/log/containerd/containerd-integrity.log)
+# For a new source, add a mapper in the bridge first. Otherwise the event hits
+# the fallback mapping (generic CLUSEventLog) and fires the
+# se_bridge_unknown_source_total Prometheus alert.
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
@@ -146,6 +156,9 @@ spec:
   type: KubernetesPods
   destinationRefs:
     - se-d8-loki
+    {{- if has "neuvector" .Values.global.enabledModules }}
+    - se-neuvector-falco
+    {{- end }}
   labelFilter:
     - field: message
       operator: Regex
@@ -179,6 +192,9 @@ spec:
   type: KubernetesPods
   destinationRefs:
     - se-d8-loki
+    {{- if has "neuvector" .Values.global.enabledModules }}
+    - se-neuvector-dex
+    {{- end }}
   labelFilter:
     - field: message
       operator: Regex
@@ -206,6 +222,9 @@ spec:
   type: KubernetesPods
   destinationRefs:
     - se-d8-loki
+    {{- if has "neuvector" .Values.global.enabledModules }}
+    - se-neuvector-virtualization-audit
+    {{- end }}
   labelFilter:
     - field: message
       operator: Regex
@@ -231,6 +250,9 @@ metadata:
 spec:
   destinationRefs:
     - se-d8-loki
+    {{- if has "neuvector" .Values.global.enabledModules }}
+    - se-neuvector-containerd-integrity
+    {{- end }}
   file:
     include:
       - /var/log/containerd/containerd-integrity.log
@@ -258,3 +280,36 @@ spec:
   type: Loki
   extraLabels:
     deckhouse_io_type: "security-event"
+{{- end }}
+{{- if has "neuvector" .Values.global.enabledModules }}
+# The se-bridge integration adds one ClusterLogDestination per source so each
+# one carries a literal `source` label that the bridge uses to pick the right
+# mapper. One shared destination would force the bridge to guess the source
+# from heterogeneous metadata (container name works for pods, fails for the
+# File source), so we accept the template boilerplate in exchange for a clean
+# contract.
+#
+# All four destinations point at the same Service: neuvector-se-bridge in
+# d8-neuvector, TCP :5170, JSON codec (newline-delimited). Vector's own disk
+# buffer covers transient bridge unavailability; retries are handled by the
+# Socket sink.
+{{- range $src := tuple "falco" "dex" "virtualization-audit" "containerd-integrity" }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  {{- include "helm_lib_module_labels" (list $ (dict "app" $.Chart.Name "kind" "security-events")) | nindent 2 }}
+  name: se-neuvector-{{ $src }}
+spec:
+  type: Socket
+  socket:
+    # CROSS-REPO CONTRACT: this FQDN is owned by the neuvector module
+    # (templates/controller/se-bridge-service.yaml). Coordinate any rename.
+    address: "neuvector-se-bridge.d8-neuvector.svc:5170"
+    mode: TCP
+    encoding:
+      codec: JSON
+  extraLabels:
+    source: {{ $src | quote }}
+{{- end }}
+{{- end }}
