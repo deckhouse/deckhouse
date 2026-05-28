@@ -66,7 +66,7 @@ function prepare_channels() {
 }
 
 function run_hugo() {
-    docker run --rm -p 1313:1313 -v $BUILDER_TEMPLATE_PATH:/src -w /src cibuilds/hugo:0.159.2 hugo server --disableFastRender --environment production
+    docker run --rm -p 1313:1313 -v $BUILDER_TEMPLATE_PATH:/src -w /src --entrypoint hugo ghcr.io/gohugoio/hugo:v0.162.0 server --disableFastRender --environment production
 }
 
 if [ "$1" = "clean" ]; then

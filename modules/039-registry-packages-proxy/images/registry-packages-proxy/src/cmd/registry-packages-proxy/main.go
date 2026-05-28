@@ -75,6 +75,9 @@ func main() {
 	if !config.DisableCache {
 		go cache.Reconcile(ctx)
 	}
+
+	registryClient := &registry.DefaultClient{}
+
 	// init http server
 	server := app.BuildServer()
 
@@ -82,12 +85,14 @@ func main() {
 	if !config.DisableCache {
 		opts = append(opts, proxy.WithCache(cache))
 	}
-	rp := proxy.NewProxy(server, listener, watcher, logger, &registry.DefaultClient{}, opts...)
+	// /v1/images/* CLI download routes are wired up by Proxy.Serve via ServeCLI and reach the
+	// outside world through the kube-rbac-proxy sidecar on :4219, which authorizes them.
+	rp := proxy.NewProxy(server, listener, watcher, logger, registryClient, opts...)
 	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
 		Listener:           bootstrapListener,
 		Logger:             logger,
 		ClientConfigGetter: watcher,
-		RegistryClient:     &registry.DefaultClient{},
+		RegistryClient:     registryClient,
 		SignCheck:          config.SignCheck,
 		ClusterUUID:        config.ClusterUUID,
 	})

@@ -8,6 +8,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
@@ -42,4 +45,3 @@ import:
 imageSpec:
   config:
     entrypoint: ["/node-group-exporter"]
-

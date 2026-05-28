@@ -72,7 +72,8 @@ func (o *Options) DirConfig() *directoryconfig.DirectoryConfig {
 }
 
 func (o *Options) ToSpanAttributes() []otattribute.KeyValue {
-	attrs := make([]otattribute.KeyValue, 0, 64)
+	//nolint:prealloc
+	attrs := make([]otattribute.KeyValue, 0)
 
 	attrs = append(attrs, o.Global.ToSpanAttributes()...)
 	attrs = append(attrs, o.BuildInfo.ToSpanAttributes()...)

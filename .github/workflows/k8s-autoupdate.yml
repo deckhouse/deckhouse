@@ -43,10 +43,19 @@ jobs:
     # </template: checkout_step>
 
     # <template: werf_install_step>
-    - name: Install werf CLI
-      uses: werf/actions/install@v2
-      with:
-        version: ${{env.WERF_VERSION}}
+    - name: Install werf-dk CLI
+      run: |
+        WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+        echo "$WERF_PATH" >> "$GITHUB_PATH"
+        CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+        if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          mkdir -p "$WERF_PATH"
+          curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+          chmod +x "$WERF_PATH/werf"
+        else
+          echo "Current werf is $CACHED_VERSION, skipping download"
+        fi
     # </template: werf_install_step>
     # <template: import_secrets>
     - name: Split repository name
@@ -132,7 +141,7 @@ jobs:
         branch: chore/k8s-autoupdate
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
-        labels: e2e/run/yandex-cloud,${{ steps.update.outputs.k8sVersions }}security/cve
+        labels: e2e/run/yandex-cloud,${{ steps.update.outputs.k8sVersions }}
         milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report

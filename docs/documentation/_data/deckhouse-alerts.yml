@@ -1976,13 +1976,13 @@ alerts:
       module: istio
       edition: ce
       description: |
-        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` runs as UID `{{$labels.reserved_uid}}`.
+        Container `{{$labels.container}}` in pod `{{$labels.pod}}` in namespace `{{$labels.namespace}}` is running as UID `1337`.
 
-        UID `{{$labels.reserved_uid}}` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
+        UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. When application containers run with this UID, their traffic bypasses Istio completely — no routing rules, mTLS, or telemetry will be applied.
 
         To fix the issue, change the `runAsUser` in the container's or pod's `securityContext` to a different UID.
       summary: |
-        Application container runs as Istio bypass UID {{$labels.reserved_uid}}.
+        Application container is running as UID 1337 (reserved by Istio).
       severity: "4"
       markupFormat: markdown
     - name: D8IstioVersionIsIncompatibleWithK8sVersion
@@ -2580,7 +2580,7 @@ alerts:
       edition: ce
       description: |
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
-        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
       summary: |
         Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
@@ -3195,6 +3195,54 @@ alerts:
       summary: |
         Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
+      markupFormat: markdown
+    - name: D8SignatureErrorsDetected
+      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ee
+      description: |-
+        There have been errors while reading/writing signed data from etcd.
+        Errors may occur due to the following factors:
+
+        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
+        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
+        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
+        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
+
+        To investigate which records are generating alerts, follow instructions below.
+
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        A significant number of signature errors detected.
+      severity: "2"
+      markupFormat: markdown
+    - name: D8SignatureErrorsDetected
+      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ee
+      description: |-
+        There have been errors while reading/writing signed data from etcd.
+        Errors can arise due to the following factors:
+
+        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
+        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
+        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
+        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
+
+        To investigate which records are generating alerts, follow instructions below.
+
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        A significant number of signature errors detected.
+      severity: "7"
       markupFormat: markdown
     - name: D8SmokeMiniNotBoundPersistentVolumeClaims
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml

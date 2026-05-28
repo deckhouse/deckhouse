@@ -28,6 +28,15 @@ DIFF_BASE="${DIFF_BASE:-HEAD~1}"
 GOLANGCI_LINT_BIN="${GOLANGCI_LINT_BIN:-golangci-lint}"
 GOLANGCI_LINT_ARGS="${GOLANGCI_LINT_ARGS:---max-issues-per-linter 100 --max-same-issues 100}"
 
+# golangci-lint must already be on PATH — we deliberately don't install it
+# here (the CI tests image ships /usr/local/bin/golangci-lint). Fail fast
+# with a clear hint instead of letting `golangci-lint run` error cryptically.
+if ! command -v "$GOLANGCI_LINT_BIN" >/dev/null 2>&1; then
+  echo "golangci-lint not found on PATH (looked for: '$GOLANGCI_LINT_BIN')." >&2
+  echo "Run 'make golangci-lint' to install it locally, or set GOLANGCI_LINT_BIN." >&2
+  exit 1
+fi
+
 # All module directories, repo-relative, sorted by descending path length so
 # the longest prefix wins for nested modules.
 mapfile -t MODULE_DIRS < <(

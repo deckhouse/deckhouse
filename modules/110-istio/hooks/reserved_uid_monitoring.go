@@ -33,28 +33,16 @@ import (
 )
 
 const (
-	deckhouseProxyUID int64 = 64535
-	legacyProxyUID    int64 = 1337
-
-	istioProxyContainerName = "istio-proxy"
-	istioCanonicalNameLabel = "service.istio.io/canonical-name"
-	reservedUIDMetricsGroup = "d8_istio_reserved_uid"
+	istioReservedUID        int64 = 1337
+	istioProxyContainerName       = "istio-proxy"
+	istioCanonicalNameLabel       = "service.istio.io/canonical-name"
+	reservedUIDMetricsGroup       = "d8_istio_reserved_uid"
 )
 
-var reservedUIDs = map[int64]string{
-	deckhouseProxyUID: "64535",
-	legacyProxyUID:    "1337",
-}
-
-type reservedContainer struct {
-	Name string
-	UID  string
-}
-
 type podReservedUIDInfo struct {
-	Namespace          string
-	Pod                string
-	ImproperContainers []reservedContainer
+	Namespace              string
+	Pod                    string
+	ImproperContainerNames []string
 }
 
 func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -70,7 +58,7 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 		podRunAsUser = pod.Spec.SecurityContext.RunAsUser
 	}
 
-	var matchingContainers []reservedContainer
+	var matchingContainers []string
 	for _, container := range pod.Spec.Containers {
 		if container.Name == istioProxyContainerName {
 			continue
@@ -83,11 +71,8 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 			effectiveRunAsUser = podRunAsUser
 		}
 
-		if effectiveRunAsUser == nil {
-			continue
-		}
-		if uidStr, ok := reservedUIDs[*effectiveRunAsUser]; ok {
-			matchingContainers = append(matchingContainers, reservedContainer{Name: container.Name, UID: uidStr})
+		if effectiveRunAsUser != nil && *effectiveRunAsUser == istioReservedUID {
+			matchingContainers = append(matchingContainers, container.Name)
 		}
 	}
 
@@ -96,9 +81,9 @@ func applyReservedUIDFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	return podReservedUIDInfo{
-		Namespace:          pod.Namespace,
-		Pod:                pod.Name,
-		ImproperContainers: matchingContainers,
+		Namespace:              pod.Namespace,
+		Pod:                    pod.Name,
+		ImproperContainerNames: matchingContainers,
 	}, nil
 }
 
@@ -135,15 +120,14 @@ func handleReservedUIDMonitoring(_ context.Context, input *go_hook.HookInput) er
 			return fmt.Errorf("failed to iterate over pod snapshots: %w", err)
 		}
 
-		for _, c := range info.ImproperContainers {
+		for _, containerName := range info.ImproperContainerNames {
 			input.MetricsCollector.Set(
 				"d8_istio_pod_container_reserved_uid",
 				1,
 				map[string]string{
-					"namespace":    info.Namespace,
-					"pod":          info.Pod,
-					"container":    c.Name,
-					"reserved_uid": c.UID,
+					"namespace": info.Namespace,
+					"pod":       info.Pod,
+					"container": containerName,
 				},
 				metrics.WithGroup(reservedUIDMetricsGroup),
 			)

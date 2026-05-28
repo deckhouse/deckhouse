@@ -1,4 +1,5 @@
 {{- $required_patches_from_ee_dir_by_versions := dict }}
+{{- $integrity_patches_version := "v0.1.0" }}
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -7,10 +8,10 @@
   {{- $full_version := printf "%s.%s" $version $patch }}
 
   {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
-  {{- $patch := false }}
+  {{- $hasPatches := false }}
   {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
     {{- if contains $version $path }}
-      {{- $patch = true }}
+      {{- $hasPatches = true }}
     {{- end }}
   {{- end }}
 
@@ -35,16 +36,18 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | repl
 fromImage: common/src-artifact
 fromCacheVersion: "2025-10-10-{{ $full_version | replace "." "-" }}"
 final: false
-  {{- if $patch }}
+
+{{- if $hasPatches }}
 git:
 - add: {{ $patches }}/patches/{{ $version }}
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-  {{- end }}
+{{- end }}
 
 {{- range $_, $patch_path := $required_patches_from_ee_dir }}
+{{- $hasPatches = true }}
 # we have some required patches for kubernetes located in ee edition
 # therese patches should be added for all kubernetes versions because we do not doing any actions for verify
 # that patches exists in directory
@@ -57,8 +60,11 @@ git:
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ $.DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
+  - mkdir -p /patches
   - git clone --depth 1 --branch v{{ $full_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/kubernetes.git /src
   - cd /src
   - |
@@ -69,9 +75,18 @@ shell:
     KUBE_GIT_COMMIT='0000000000000000000000000000000000000000'
     KUBE_GIT_TREE_STATE='archive'
     EOF
-  {{- if $patch }}
-  - git apply /patches/*.patch --verbose
+  {{- if $.isEE}}
+  - echo -e "\033[1;33mPrepare integrity patches. Use patches version '{{ $integrity_patches_version }}' ...\033[0m"
+  - git clone --depth 1 --branch {{ $integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/kubernetes-integrity-patches.git /integrity-patches
+  - alias cp='cp'
+  - chmod 755 /integrity-patches/scripts/ci-copy-patches.sh
+  - /integrity-patches/scripts/ci-copy-patches.sh -k "{{ $full_version }}" -d /patches -p /integrity-patches
+  - rm -rf /integrity-patches
   {{- end }}
+  - echo "Apply patches:"
+  - find "/patches" -type f -name "*.patch" || true
+  - git apply /patches/*.patch --verbose
+  - echo "Remove hack/tools dir"
   - rm -r .git vendor hack/tools/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
