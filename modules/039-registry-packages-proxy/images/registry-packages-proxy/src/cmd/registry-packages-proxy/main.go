@@ -28,7 +28,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
@@ -81,7 +80,7 @@ func main() {
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		logger.Fatal(err.Error())
 	}
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
+	if err := credentials.AddToScheme(scheme); err != nil {
 		logger.Fatal(err.Error())
 	}
 

@@ -26,7 +26,6 @@ import (
 	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
@@ -39,7 +38,7 @@ func (w *Watcher) GetPackagesConfig(packageRepositoryName string) (*registry.Pac
 		return nil, fmt.Errorf("package repository client is not configured")
 	}
 
-	var pr v1alpha1.PackageRepository
+	var pr PackageRepository
 	if err := w.packageRepositoryClient.Get(context.Background(), types.NamespacedName{Name: packageRepositoryName}, &pr); err != nil {
 		return nil, fmt.Errorf("get package repository %q: %w", packageRepositoryName, err)
 	}
