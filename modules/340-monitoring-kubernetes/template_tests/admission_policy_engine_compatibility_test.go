@@ -92,6 +92,39 @@ discovery:
 			Expect(f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "oom-kills-exporter").Exists()).To(BeTrue())
 		})
 
+		It("must drop ALL capabilities on every container in node-exporter and oom-kills-exporter DaemonSets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, dsName := range []string{"node-exporter", "oom-kills-exporter"} {
+				ds := f.KubernetesResource("DaemonSet", "d8-monitoring", dsName)
+				Expect(ds.Exists()).To(BeTrue(), "DaemonSet %q must exist", dsName)
+
+				for _, c := range ds.Field("spec.template.spec.initContainers").Array() {
+					name := c.Get("name").String()
+					drops := c.Get("securityContext.capabilities.drop").Array()
+					dropStrings := make([]string, 0, len(drops))
+					for _, d := range drops {
+						dropStrings = append(dropStrings, d.String())
+					}
+					Expect(dropStrings).To(ContainElement("ALL"),
+						"DS %q initContainer %q must drop ALL capabilities under restricted PSS", dsName, name)
+				}
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				Expect(containers).ToNot(BeEmpty(), "DS %q must have containers", dsName)
+				for _, c := range containers {
+					name := c.Get("name").String()
+					drops := c.Get("securityContext.capabilities.drop").Array()
+					dropStrings := make([]string, 0, len(drops))
+					for _, d := range drops {
+						dropStrings = append(dropStrings, d.String())
+					}
+					Expect(dropStrings).To(ContainElement("ALL"),
+						"DS %q container %q must drop ALL capabilities under restricted PSS", dsName, name)
+				}
+			}
+		})
+
 		It("must keep kube-state-metrics without exception", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

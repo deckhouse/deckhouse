@@ -106,4 +106,40 @@ scrapeInterval: 30s
 		Expect(f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "trickster").Exists()).To(BeFalse())
 		Expect(f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "aggregating-proxy").Exists()).To(BeFalse())
 	})
+
+	It("if rendered, the prometheus-main prompptool init container must be restricted-PSS compliant", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		prometheusMain := f.KubernetesResource("Prometheus", "d8-monitoring", "main")
+		if !prometheusMain.Exists() {
+			Skip("Prometheus/main CR not rendered in this test setup")
+		}
+
+		initContainers := prometheusMain.Field("spec.initContainers").Array()
+		if len(initContainers) == 0 {
+			Skip("no initContainers rendered (prompp digests likely absent in test fixtures)")
+		}
+
+		found := false
+		for _, c := range initContainers {
+			if c.Get("name").String() != "prompptool" {
+				continue
+			}
+			found = true
+			drops := c.Get("securityContext.capabilities.drop").Array()
+			dropStrings := make([]string, 0, len(drops))
+			for _, d := range drops {
+				dropStrings = append(dropStrings, d.String())
+			}
+			Expect(dropStrings).To(ContainElement("ALL"),
+				"prompptool init container must drop ALL capabilities for d8-monitoring restricted PSS")
+			Expect(c.Get("securityContext.allowPrivilegeEscalation").Bool()).To(BeFalse(),
+				"prompptool init container must set allowPrivilegeEscalation:false")
+			Expect(c.Get("securityContext.runAsNonRoot").Bool()).To(BeTrue(),
+				"prompptool init container must runAsNonRoot:true")
+			Expect(c.Get("securityContext.seccompProfile.type").String()).To(Equal("RuntimeDefault"),
+				"prompptool init container must set seccompProfile.type=RuntimeDefault")
+		}
+		Expect(found).To(BeTrue(), "expected to find prompptool init container in Prometheus/main spec")
+	})
 })

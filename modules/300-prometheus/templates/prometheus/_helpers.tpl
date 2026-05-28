@@ -25,7 +25,17 @@ initContainers:
   - name: {{ $volume }}
     mountPath: /prometheus
     subPath: prometheus-db
-  {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ctx | nindent 2 }}
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 64535
+    runAsGroup: 64535
+    seccompProfile:
+      type: RuntimeDefault
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 6 }}

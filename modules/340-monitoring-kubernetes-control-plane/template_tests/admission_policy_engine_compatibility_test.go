@@ -77,5 +77,36 @@ discovery:
 			Expect(securityPolicyException.Exists()).To(BeTrue())
 			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
 		})
+
+		It("must drop ALL capabilities on every container in control-plane-proxy DaemonSet", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ds := f.KubernetesResource("DaemonSet", "d8-monitoring", "control-plane-proxy")
+			Expect(ds.Exists()).To(BeTrue())
+
+			for _, c := range ds.Field("spec.template.spec.initContainers").Array() {
+				name := c.Get("name").String()
+				drops := c.Get("securityContext.capabilities.drop").Array()
+				dropStrings := make([]string, 0, len(drops))
+				for _, d := range drops {
+					dropStrings = append(dropStrings, d.String())
+				}
+				Expect(dropStrings).To(ContainElement("ALL"),
+					"initContainer %q must drop ALL capabilities under restricted PSS", name)
+			}
+
+			containers := ds.Field("spec.template.spec.containers").Array()
+			Expect(containers).ToNot(BeEmpty())
+			for _, c := range containers {
+				name := c.Get("name").String()
+				drops := c.Get("securityContext.capabilities.drop").Array()
+				dropStrings := make([]string, 0, len(drops))
+				for _, d := range drops {
+					dropStrings = append(dropStrings, d.String())
+				}
+				Expect(dropStrings).To(ContainElement("ALL"),
+					"container %q must drop ALL capabilities under restricted PSS", name)
+			}
+		})
 	})
 })

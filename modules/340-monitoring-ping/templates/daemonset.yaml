@@ -66,10 +66,16 @@ spec:
         args:
           - "--cleanup-node-exporter-metrics=true"
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
           readOnlyRootFilesystem: true
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts: # TODO remove volumes in future, need for clean staled metrics
           - name: textfile
             mountPath: /node-exporter-textfile

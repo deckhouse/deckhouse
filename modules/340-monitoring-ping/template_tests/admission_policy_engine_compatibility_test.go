@@ -80,9 +80,47 @@ discovery:
 - 0
 `))
 			Expect(pseBase.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
-			Expect(pseBase.Field("spec.securityContext.allowPrivilegeEscalation.allowedValue").Bool()).To(BeTrue())
+			Expect(pseBase.Field("spec.securityContext.allowPrivilegeEscalation.allowedValue").Exists()).To(BeFalse(),
+				"allowPrivilegeEscalation:true must not be whitelisted by the SPE; the init container is expected to set allowPrivilegeEscalation:false")
 
 			Expect(f.KubernetesResource("SecurityPolicyException", "d8-monitoring", "monitoring-ping-root-init").Exists()).To(BeFalse())
+		})
+
+		It("must drop ALL capabilities on every container in the DaemonSet (restricted PSS compliance)", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			daemonSet := f.KubernetesResource("DaemonSet", "d8-monitoring", "monitoring-ping")
+			Expect(daemonSet.Exists()).To(BeTrue())
+
+			initContainers := daemonSet.Field("spec.template.spec.initContainers").Array()
+			Expect(initContainers).ToNot(BeEmpty())
+			for _, c := range initContainers {
+				name := c.Get("name").String()
+				drops := c.Get("securityContext.capabilities.drop").Array()
+				dropStrings := make([]string, 0, len(drops))
+				for _, d := range drops {
+					dropStrings = append(dropStrings, d.String())
+				}
+				Expect(dropStrings).To(ContainElement("ALL"),
+					"initContainer %q must drop ALL capabilities under restricted PSS", name)
+				Expect(c.Get("securityContext.allowPrivilegeEscalation").Bool()).To(BeFalse(),
+					"initContainer %q must set allowPrivilegeEscalation:false", name)
+				Expect(c.Get("securityContext.seccompProfile.type").String()).To(Equal("RuntimeDefault"),
+					"initContainer %q must set seccompProfile.type=RuntimeDefault", name)
+			}
+
+			containers := daemonSet.Field("spec.template.spec.containers").Array()
+			Expect(containers).ToNot(BeEmpty())
+			for _, c := range containers {
+				name := c.Get("name").String()
+				drops := c.Get("securityContext.capabilities.drop").Array()
+				dropStrings := make([]string, 0, len(drops))
+				for _, d := range drops {
+					dropStrings = append(dropStrings, d.String())
+				}
+				Expect(dropStrings).To(ContainElement("ALL"),
+					"container %q must drop ALL capabilities under restricted PSS", name)
+			}
 		})
 	})
 })

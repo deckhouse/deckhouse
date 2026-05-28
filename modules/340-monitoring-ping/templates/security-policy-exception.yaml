@@ -19,11 +19,6 @@ spec:
       metadata:
         description: |
           Root execution is required for the cleanup init container.
-    allowPrivilegeEscalation:
-      allowedValue: true
-      metadata:
-        description: |
-          Default runtime behavior for the root cleanup init container.
     capabilities:
       allowedValues:
         add:
