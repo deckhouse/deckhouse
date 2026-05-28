@@ -784,7 +784,7 @@ spec:
   tracing:
   - providers:
     - name: otel-tracing
-      randomSamplingPercentage: 5.0
+    randomSamplingPercentage: 5.0
 ```
 
 HTTP trace export over HTTP (`opentelemetry.http` + `path`) is documented in the upstream task.

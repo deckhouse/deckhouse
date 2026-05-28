@@ -160,16 +160,16 @@ spec:
           ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
           PROXY_CONFIG_XDS_AGENT: "true"
         holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
-    {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
-{{- with $.Values.istio.tracing.collector.zipkin }}
-{{- with .address }}
+        {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
+        {{- with $.Values.istio.tracing.collector.zipkin }}
+        {{- with .address }}
         tracing:
           sampling: {{ $.Values.istio.tracing.sampling }}
           zipkin:
             address: {{ . | quote }}
-{{- end }}
-{{- end }}
-    {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
 
     {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
       caCertificates:

@@ -787,7 +787,7 @@ spec:
   tracing:
   - providers:
     - name: otel-tracing
-      randomSamplingPercentage: 5.0
+    randomSamplingPercentage: 5.0
 ```
 
 HTTP-режим задаётся `opentelemetry.http` и `path` — см. инструкцию Istio.

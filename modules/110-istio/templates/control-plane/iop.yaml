@@ -95,15 +95,15 @@ spec:
           {{- end }}
         {{- end }}
       name: main-access-log-format
-{{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
-{{- with $.Values.istio.tracing.collector.zipkin }}
-{{- with .address }}
+      {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
+      {{- with $.Values.istio.tracing.collector.zipkin }}
+      {{- with .address }}
     - name: deckhouse-tracing
       zipkin:
         address: {{ . | quote }}
-{{- end }}
-{{- end }}
-{{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
 
     # The rules below exclude upmeter-related namespaces from istiod's point of view.
     # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
@@ -123,16 +123,16 @@ spec:
         PROXY_CONFIG_XDS_AGENT: "true"
         ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
       holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
-  {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
-{{- with $.Values.istio.tracing.collector.zipkin }}
-{{- with .address }}
+      {{- if and $.Values.istio.tracing.enabled (not $telemetryAPI.enabled) }}
+      {{- with $.Values.istio.tracing.collector.zipkin }}
+      {{- with .address }}
       tracing:
         sampling: {{ $.Values.istio.tracing.sampling }}
         zipkin:
           address: {{ . | quote }}
-{{- end }}
-{{- end }}
-  {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
 
   {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
