@@ -212,7 +212,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		inClusterSource = "in-cluster"
 	)
 
-	defer c.switchPhase(ctx, phases.CheckConfiguration)()
+	c.beginPhase(ctx, phases.CheckConfiguration)
 
 	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
@@ -256,6 +256,8 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		}
 	}
 
+	c.completePhase(ctx, phases.CheckConfiguration)
+
 	return syncStatus, nil
 }
 
@@ -267,7 +269,7 @@ type InfraResult struct {
 }
 
 func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
-	defer c.switchPhase(ctx, phases.CheckInfra)()
+	c.beginPhase(ctx, phases.CheckInfra)
 
 	stat, hasTerraformState, err := CheckState(
 		ctx, kubeCl, metaConfig, infrastructureContext,
@@ -310,6 +312,8 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 		migrateToTofuStatus = CheckStatusOutOfSync
 	}
 
+	c.completePhase(ctx, phases.CheckInfra)
+
 	return &InfraResult{
 		Status:                  checkStatus,
 		Statistics:              stat,
@@ -349,17 +353,24 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 	return &client.KubernetesClient{KubeClient: kubeCl}, nil
 }
 
-func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func() {
-	if !c.Embedded {
-		_, _ = c.PhasedExecutionContext.SwitchPhase(ctx, s, false, c.StateCache, nil)
-		return func() {}
+func (c *Checker) beginPhase(ctx context.Context, phase phases.OperationPhase) {
+	if c.Embedded {
+		return
 	}
 
-	return func() {
+	_, _ = c.PhasedExecutionContext.SwitchPhase(ctx, phase, false, c.StateCache, nil)
+}
+
+func (c *Checker) completePhase(ctx context.Context, phase phases.OperationPhase) {
+	if c.Embedded {
 		if c.ExternalPhasedContext != nil {
-			c.ExternalPhasedContext.CompleteSubPhase(phases.OperationSubPhase(s))
+			c.ExternalPhasedContext.CompleteSubPhase(phases.OperationSubPhase(phase))
 		}
+
+		return
 	}
+
+	_ = c.PhasedExecutionContext.CompletePhase(ctx, c.StateCache, nil)
 }
 
 type configTypeForCompare map[string]any

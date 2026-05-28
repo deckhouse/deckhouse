@@ -171,5 +171,10 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 		return err
 	}
 
+	err = op.PhasedExecutionContext.CompletePhaseAndPipeline(ctx, stateCache, nil)
+	if err != nil {
+		return fmt.Errorf("unable to complete phase: %w", err)
+	}
+
 	return nil
 }
