@@ -3,7 +3,7 @@
 apiVersion: telemetry.istio.io/v1alpha1
 kind: Telemetry
 metadata:
-  name: deckhouse-main-mesh
+  name: d8-main-mesh
   namespace: d8-istio
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
