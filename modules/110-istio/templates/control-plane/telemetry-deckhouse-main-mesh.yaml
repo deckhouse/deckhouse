@@ -14,14 +14,10 @@ spec:
   metrics:
   - providers:
     - name: prometheus
-{{- if $.Values.istio.tracing.enabled }}
-{{- with $.Values.istio.tracing.collector.zipkin }}
-{{- with .address }}
+  {{- if $.Values.istio.tracing.enabled }}
   tracing:
   - providers:
     - name: deckhouse-tracing
     randomSamplingPercentage: {{ $.Values.istio.tracing.sampling | default 1.0 }}
-{{- end }}
-{{- end }}
-{{- end }}
+  {{- end }}
 {{- end }}
