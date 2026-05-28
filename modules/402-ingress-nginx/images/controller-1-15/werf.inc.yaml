@@ -951,11 +951,11 @@ import:
 {{- include "image mount points" . }}
 - from: {{ index $.Images "tools/libcap" }}
   add: /usr/sbin/setcap
-  to: /apps/setcap
+  to: /apps/
   before: install
 - from: {{ index $.Images "tools/coreutils" }}
   add: /usr/bin/cp
-  to: /apps/cp
+  to: /apps/
   before: install
 shell:
   install:
