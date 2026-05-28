@@ -1014,7 +1014,7 @@ func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.
 // example:
 // - /v1/packages/deckhouse/my-package/metadata/icon/ -> packagesMetadataActionGetIcon, deckhouse, my-package, ""
 // - /v1/packages/deckhouse/my-package/metadata/icon/v0.0.1 -> packagesMetadataActionGetIcon, deckhouse, my-package, "v0.0.1"
-func parsePackagesPath(urlPath string) (action packagesAction, packageRepositoryName, packageName, version string, err error) {
+func parsePackagesPath(urlPath string) (packagesAction, string, string, string, error) {
 	if !strings.HasPrefix(urlPath, packagesPathPrefix) {
 		return packagesMetadataActionUnknown, "", "", "", errors.New("not a packages metadata path")
 	}
@@ -1061,7 +1061,7 @@ type tarEntryMatcher func(header *tar.Header) bool
 // entry path. Leading "./" and "/" segments in the header name are stripped
 // before comparison so archives produced by different tools (`tar` strips
 // "./", BuildKit doesn't) match the same target.
-func exactNameMatcher(filePath string) tarEntryMatcher {
+func exactNameMatcher(filePath string) tarEntryMatcher { //nolint:unparam
 	want := normalizeTarName(filePath)
 	return func(header *tar.Header) bool {
 		return normalizeTarName(header.Name) == want
