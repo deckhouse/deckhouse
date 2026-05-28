@@ -251,7 +251,6 @@ versions = {
             "MemoryQoS",
             "MutablePVNodeAffinity",
             "NativeHistograms",
-            "PodInfoAPI",
             "PodLogsQuerySplitStreams",
             "SELinuxMount",
         ],
