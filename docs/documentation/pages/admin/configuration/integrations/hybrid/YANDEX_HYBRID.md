@@ -217,7 +217,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    export DISCOVERY_DATA_B64="$(base64 -w0 cloud-provider-discovery-data.json)"
    ```
 
-1. Create a manifest with the `d8-provider-cluster-configuration` secret and ModuleConfig for the `cloud-provider-yandex` module:
+1. Create a manifest with the `d8-provider-cluster-configuration` Secret and ModuleConfig for the `cloud-provider-yandex` module:
 
    ```shell
    cat > yandex-provider-secret-and-mc.yaml <<EOF
