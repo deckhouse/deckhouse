@@ -145,6 +145,10 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 		raw, _ := json.Marshal(packageStatus.Tracking)
 		app.Status.Tracking = runtime.RawExtension{Raw: raw}
 	}
+
+	// Derive canonical Phase and Message from the external conditions.
+	conds := ConditionsFromMeta(app.Status.Conditions)
+	app.Status.Phase, app.Status.Message = DeriveStatus(conds)
 }
 
 // buildMapperStatus creates mapper input from Application and internal conditions.

@@ -62,9 +62,8 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
-// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
+// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // Application represents a namespace-scoped application instance.
@@ -105,6 +104,15 @@ type ApplicationSpec struct {
 }
 
 type ApplicationStatus struct {
+	// Phase is a human-readable summary of the application's lifecycle phase.
+	// One of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// Message is a human-readable description of the current status.
+	// +optional
+	Message string `json:"message,omitempty"`
+
 	// Information about the currently installed version.
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
