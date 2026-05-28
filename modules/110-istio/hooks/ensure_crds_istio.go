@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -74,6 +76,16 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	}
 	if len(crds) == 0 {
 		return fmt.Errorf("no CRD files found matching pattern: %s", crdsGlob)
+	}
+
+	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
+	if !versionMap.DoesVersionSupportOperator(CRDversionToInstall) {
+		for _, crdFile := range crds {
+			fileName := filepath.Base(crdFile)
+			if fileName == "crd-operator.yaml" || strings.HasPrefix(fileName, "sailoperator.io_") {
+				return fmt.Errorf("unsupported CRD file for operator-free version %s: %s", CRDversionToInstall, fileName)
+			}
+		}
 	}
 
 	return ensure_crds.EnsureCRDsHandler(crdsGlob)(ctx, input, dc)
