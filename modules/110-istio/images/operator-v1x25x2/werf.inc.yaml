@@ -22,7 +22,6 @@ import:
   after: setup
 imageSpec:
   config:
-    user: "1337:1337"
     workingDir: "/"
     entrypoint: ["/usr/local/bin/operator"]
 ---
