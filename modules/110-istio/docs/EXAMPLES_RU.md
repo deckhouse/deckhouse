@@ -655,8 +655,8 @@ annotations:
 
 | Режим | Поведение |
 |-------|-----------|
-| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **не** создаёт mesh-wide объект `Telemetry` `deckhouse-main-mesh`. |
-| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены при включённом `telemetry.enabled`; модуль создаёт один объект **`Telemetry`** `deckhouse-main-mesh` (метрики Prometheus, stdout access log через провайдер `main-access-log-format`). При включённой трассировке адрес Zipkin задаётся в [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector); модуль регистрирует провайдер **`deckhouse-tracing`** и дополняет `deckhouse-main-mesh` блоком `spec.tracing`. Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **не** создаёт mesh-wide объект `Telemetry` `d8-main-mesh`. |
+| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены при включённом `telemetry.enabled`; модуль создаёт один объект **`Telemetry`** `d8-main-mesh` (метрики Prometheus, stdout access log через провайдер `main-access-log-format`). При включённой трассировке адрес Zipkin задаётся в [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector); модуль регистрирует провайдер **`deckhouse-tracing`** и дополняет `d8-main-mesh` блоком `spec.tracing`. Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
 
 ### Как включить режим Telemetry API
 
@@ -702,7 +702,7 @@ kubectl exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
 
 ### Дополнительные политики `Telemetry` (по желанию)
 
-Дополнительные **`Telemetry`** удобно задавать **с явным workload‑селектором** или `targetRef`. Два объекта **`Telemetry`** в **одном** неймспейсе **без** селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в **`d8-istio`** единственный объект без селектора (**`deckhouse-main-mesh`**); второй там же без селектора не добавляйте без осознанной замены.
+Дополнительные **`Telemetry`** удобно задавать **с явным workload‑селектором** или `targetRef`. Два объекта **`Telemetry`** в **одном** неймспейсе **без** селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в **`d8-istio`** единственный объект без селектора (**`d8-main-mesh`**); второй там же без селектора не добавляйте без осознанной замены.
 
 Пример ограниченной политики в прикладном пространстве имён:
 
@@ -725,9 +725,9 @@ spec:
 [`tracing.collector`](configuration.html#parameters-tracing-collector) задаёт отправку трасс через протокол **Zipkin** (Jaeger принимает Zipkin ingestion, обычно порт `9411`):
 
 - При **`telemetryAPI.enabled: false`** и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` используется **классический** путь: `meshConfig.defaultConfig.tracing.zipkin.address` заполняется из `collector.zipkin.address`.
-- При **`telemetryAPI.enabled: true`**, **`tracing.enabled: true`** и непустом [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) блок `defaultConfig.tracing.zipkin` **не создаётся**; модуль добавляет **`deckhouse-tracing`** в `/meshConfig/extensionProviders/` и продлевает объект **`Telemetry`** `deckhouse-main-mesh`, выставив `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) отображается в `randomSamplingPercentage`, по умолчанию `1.0` если не задавали sampling в конфигурации явно).
+- При **`telemetryAPI.enabled: true`**, **`tracing.enabled: true`** и непустом [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) блок `defaultConfig.tracing.zipkin` **не создаётся**; модуль добавляет **`deckhouse-tracing`** в `/meshConfig/extensionProviders/` и продлевает объект **`Telemetry`** `d8-main-mesh`, выставив `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) отображается в `randomSamplingPercentage`, по умолчанию `1.0` если не задавали sampling в конфигурации явно).
 
-Путь с OTLP или нестандартными провайдерами требует добавить свой **`meshConfig`** и объект **`Telemetry`**, ограниченный **`selector`/неймспейсом приложения**. Нельзя размещать **ещё один** `Telemetry` **без селектора** в **`d8-istio`** рядом с **`deckhouse-main-mesh`**, иначе снова [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). См. официально [tracing telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+Путь с OTLP или нестандартными провайдерами требует добавить свой **`meshConfig`** и объект **`Telemetry`**, ограниченный **`selector`/неймспейсом приложения**. Нельзя размещать **ещё один** `Telemetry` **без селектора** в **`d8-istio`** рядом с **`d8-main-mesh`**, иначе снова [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). См. официально [tracing telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### Пример — Telemetry API + Jaeger через Zipkin
 
@@ -792,7 +792,7 @@ spec:
 
 HTTP-режим задаётся `opentelemetry.http` и `path` — см. инструкцию Istio.
 
-**Не** добавляйте второй **бесселекторный** `Telemetry` в **`d8-istio`** при уже существующем **`deckhouse-main-mesh`**: это [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Для mesh‑wide OTLP придётся либо доработать GitOps-слой, либо дождаться настроек OTLP/`extensionProviders` в **`ModuleConfig`**, либо пользоваться модульным **`deckhouse-tracing`**, пока нужен именно классический Zipkin/Jaeger-приём.
+**Не** добавляйте второй **бесселекторный** `Telemetry` в **`d8-istio`** при уже существующем **`d8-main-mesh`**: это [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Для mesh‑wide OTLP придётся либо доработать GitOps-слой, либо дождаться настроек OTLP/`extensionProviders` в **`ModuleConfig`**, либо пользоваться модульным **`deckhouse-tracing`**, пока нужен именно классический Zipkin/Jaeger-приём.
 
 #### Пример — трассировка только для части приложений
 

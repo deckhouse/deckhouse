@@ -81,7 +81,7 @@ properties:
           ```
       collector:
         description: |
-          Единая конфигурация коллектора трассов для **legacy** (`meshConfig.defaultConfig.tracing`) и для **Telemetry API** (провайдер `extensionProviders` с именем **`deckhouse-tracing`** и ссылка из CR `Telemetry` `deckhouse-main-mesh` при включённом [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled)).
+          Единая конфигурация коллектора трассов для **legacy** (`meshConfig.defaultConfig.tracing`) и для **Telemetry API** (провайдер `extensionProviders` с именем **`deckhouse-tracing`** и ссылка из CR `Telemetry` `d8-main-mesh` при включённом [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled)).
         properties:
           zipkin:
             description: |
@@ -111,15 +111,15 @@ properties:
     description: |
       Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
 
-      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; модуль создаёт один ресурс **`Telemetry`** `deckhouse-main-mesh` (метрики Prometheus, access log через `main-access-log-format` и при [`tracing.enabled`](#parameters-tracing-enabled) с адресом в [`tracing.collector.zipkin.address`](#parameters-tracing-collector) — mesh-wide трассировку через **`deckhouse-tracing`**), чтобы серии `istio_*` снова были видны в Grafana/Kiali.
+      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; модуль создаёт один ресурс **`Telemetry`** `d8-main-mesh` (метрики Prometheus, access log через `main-access-log-format` и при [`tracing.enabled`](#parameters-tracing-enabled) с адресом в [`tracing.collector.zipkin.address`](#parameters-tracing-collector) — mesh-wide трассировку через **`deckhouse-tracing`**), чтобы серии `istio_*` снова были видны в Grafana/Kiali.
 
-      Если `false` (по умолчанию), остаётся полный legacy-путь `telemetry.v2` (в т.ч. `prometheus` в Sail), без `defaultProviders` и без манифеста `deckhouse-main-mesh`.
+      Если `false` (по умолчанию), остаётся полный legacy-путь `telemetry.v2` (в т.ч. `prometheus` в Sail), без `defaultProviders` и без манифеста `d8-main-mesh`.
 
-      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) задаёт только шаблон лога для провайдера `main-access-log-format`; сам CR `deckhouse-main-mesh` появляется только при включённом Telemetry API режиме.
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) задаёт только шаблон лога для провайдера `main-access-log-format`; сам CR `d8-main-mesh` появляется только при включённом Telemetry API режиме.
     properties:
       enabled:
         description: |
-          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, ресурс **`Telemetry`** `deckhouse-main-mesh` (при включённой трассировке — также секция трассировки из [`tracing.collector`](#parameters-tracing-collector)).
+          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, ресурс **`Telemetry`** `d8-main-mesh` (при включённой трассировке — также секция трассировки из [`tracing.collector`](#parameters-tracing-collector)).
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:

@@ -249,7 +249,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		It("does not create bundled Telemetry manifests when Telemetry API mode is disabled", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("Telemetry", "d8-istio", "deckhouse-main-mesh").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Telemetry", "d8-istio", "d8-main-mesh").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting").Exists()).To(BeFalse())
 		})
 
@@ -258,7 +258,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			mesh := f.KubernetesResource("Telemetry", "d8-istio", "deckhouse-main-mesh")
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main-mesh")
 			Expect(mesh.Exists()).To(BeTrue())
 			Expect(mesh.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("main-access-log-format"))
 			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
@@ -274,7 +274,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			mesh := f.KubernetesResource("Telemetry", "d8-istio", "deckhouse-main-mesh")
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main-mesh")
 			Expect(mesh.Exists()).To(BeTrue())
 			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
 			Expect(mesh.Field("spec.tracing.0.randomSamplingPercentage").Num).To(Equal(float64(1)))
