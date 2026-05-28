@@ -468,7 +468,11 @@ func ParseConfigFromData(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
-	schemaStore := NewSchemaStore(globalOptions)
+	var vopts validateOptions
+	for _, opt := range opts {
+		opt(&vopts)
+	}
+	schemaStore := NewSchemaStore(globalOptions, vopts.extraSchemaPaths...)
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
@@ -516,10 +520,6 @@ deckhouse: {}
 		}
 	}
 
-	var vopts validateOptions
-	for _, opt := range opts {
-		opt(&vopts)
-	}
 	if vopts.operation != "" {
 		metaConfig.Operation = vopts.operation
 	}
