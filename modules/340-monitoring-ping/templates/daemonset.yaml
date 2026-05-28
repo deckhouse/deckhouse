@@ -50,7 +50,6 @@ spec:
         app: monitoring-ping
         {{- if $securityPolicyExceptionEnabled }}
         security.deckhouse.io/security-policy-exception: monitoring-ping
-        security.deckhouse.io/security-policy-exception/monitoring-ping-clean-node-exporter-stale: monitoring-ping-root-init
         {{- end }}
     spec:
       terminationGracePeriodSeconds: 0

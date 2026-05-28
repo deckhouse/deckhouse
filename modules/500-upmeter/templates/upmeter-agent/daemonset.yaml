@@ -47,7 +47,6 @@ spec:
         app: upmeter-agent
         {{- if $securityPolicyExceptionEnabled }}
         security.deckhouse.io/security-policy-exception: upmeter-agent
-        security.deckhouse.io/security-policy-exception/chown-volume-data: upmeter-agent-chown-init
         {{- end }}
     spec:
       imagePullSecrets:

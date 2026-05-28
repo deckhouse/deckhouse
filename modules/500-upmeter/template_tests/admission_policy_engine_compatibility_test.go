@@ -99,15 +99,13 @@ var _ = Describe("Module :: upmeter :: admission-policy-engine compatibility", f
 			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").Exists()).To(BeFalse())
 		})
 
-		It("must not render SPE pair and exception labels", func() {
+		It("must not render SPE and exception label", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			agentDaemonSet := f.KubernetesResource("DaemonSet", "d8-upmeter", "upmeter-agent")
 			Expect(agentDaemonSet.Exists()).To(BeTrue())
 			Expect(agentDaemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
-			Expect(agentDaemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception/chown-volume-data").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter-agent").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter-agent-chown-init").Exists()).To(BeFalse())
 		})
 	})
 
@@ -128,26 +126,23 @@ var _ = Describe("Module :: upmeter :: admission-policy-engine compatibility", f
 			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").String()).To(Equal("true"))
 		})
 
-		It("must render SPE pair and pod-wide + per-container exception labels for upmeter-agent only", func() {
+		It("must render a single merged SPE and pod-wide exception label for upmeter-agent only", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			agentDaemonSet := f.KubernetesResource("DaemonSet", "d8-upmeter", "upmeter-agent")
 			Expect(agentDaemonSet.Exists()).To(BeTrue())
 			Expect(agentDaemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("upmeter-agent"))
-			Expect(agentDaemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception/chown-volume-data").String()).To(Equal("upmeter-agent-chown-init"))
 
 			pseBase := f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter-agent")
 			Expect(pseBase.Exists()).To(BeTrue())
 			Expect(pseBase.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
-			Expect(pseBase.Field("spec.securityContext.runAsUser").Exists()).To(BeFalse())
-			Expect(pseBase.Field("spec.securityContext.runAsNonRoot").Exists()).To(BeFalse())
-
-			pseInit := f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter-agent-chown-init")
-			Expect(pseInit.Exists()).To(BeTrue())
-			Expect(pseInit.Field("spec.securityContext.runAsUser.allowedValues").String()).To(MatchYAML(`
+			Expect(pseBase.Field("spec.securityContext.runAsUser.allowedValues").String()).To(MatchYAML(`
 - 0
 `))
-			Expect(pseInit.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
+			Expect(pseBase.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
+			Expect(pseBase.Field("spec.securityContext.allowPrivilegeEscalation.allowedValue").Bool()).To(BeTrue())
+
+			Expect(f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter-agent-chown-init").Exists()).To(BeFalse())
 
 			upmeterStatefulSet := f.KubernetesResource("StatefulSet", "d8-upmeter", "upmeter")
 			Expect(upmeterStatefulSet.Exists()).To(BeTrue())
