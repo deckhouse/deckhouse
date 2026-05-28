@@ -85,20 +85,6 @@ rules:
   - deletecollection
   - patch
   - update
-- apiGroups:
-  - deckhouse.io
-  resourceNames:
-  - local-path-provisioner
-  resources:
-  - moduleconfigs
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - delete
-  - patch
-  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
