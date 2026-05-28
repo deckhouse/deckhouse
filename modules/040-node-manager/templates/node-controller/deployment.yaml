@@ -79,19 +79,29 @@ spec:
         - /node-controller
         args:
         - --metrics-bind-address=127.0.0.1:4291
+{{- if not .Values.global.clusterIsBootstrapped }}
+        - --health-probe-bind-address=127.0.0.1:4292
+{{- else }}
         - --health-probe-bind-address=0.0.0.0:4292
+{{- end }}
         - --webhook-port=4290
         - --max-concurrent-reconciles=10
         - -v=4
         livenessProbe:
           httpGet:
             path: /healthz
+{{- if not .Values.global.clusterIsBootstrapped }}
+            host: 127.0.0.1
+{{- end }}
             port: 4292
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
+{{- if not .Values.global.clusterIsBootstrapped }}
+            host: 127.0.0.1
+{{- end }}
             port: 4292
           initialDelaySeconds: 5
           periodSeconds: 10
