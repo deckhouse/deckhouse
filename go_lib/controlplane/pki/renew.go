@@ -49,7 +49,7 @@ func WithRenewDir(dir string) RenewOption {
 }
 
 // WithRenewLeafs restricts RenewCertificates to the provided leaf names.
-// When empty, the full DefaultLeafCertificates() inventory is used.
+// When empty, the full default leaf certificate inventory is used.
 func WithRenewLeafs(names ...LeafCertName) RenewOption {
 	return func(o *renewOptions) {
 		o.leafCertificates = append(o.leafCertificates, names...)
@@ -227,8 +227,19 @@ func RenewCertificates(opts ...RenewOption) PKIRenewReport {
 	return report
 }
 
+// LeafDescription returns the human-readable description for the given renewable leaf certificate name.
+// Falls back to the string representation of name when no description is found.
+func LeafDescription(name LeafCertName) string {
+	for _, info := range defaultLeafCertificates() {
+		if info.Name == name {
+			return info.Description
+		}
+	}
+	return string(name)
+}
+
 // defaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
-func DefaultLeafCertificates() []LeafCertificateInfo {
+func defaultLeafCertificates() []LeafCertificateInfo {
 	return []LeafCertificateInfo{
 		{ApiserverCertName, "certificate for serving the Kubernetes API"},
 		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
@@ -240,10 +251,10 @@ func DefaultLeafCertificates() []LeafCertificateInfo {
 	}
 }
 
-// selectLeafs returns the inventory with only the given names, preserving the canonical DefaultLeafCertificates() order.
+// selectLeafs returns the inventory with only the given names, preserving the canonical order.
 // When names is empty, returned default inventory.
 func selectLeafs(names []LeafCertName) []LeafCertificateInfo {
-	full := DefaultLeafCertificates()
+	full := defaultLeafCertificates()
 	if len(names) == 0 {
 		return full
 	}

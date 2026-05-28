@@ -37,9 +37,20 @@ type FileInfo struct {
 	Description string
 }
 
-// DefaultRenewableFiles returns the canonical list of renewable kubeconfig files.
+// FileDescription returns the human-readable description for the given kubeconfig file.
+// Falls back to the string representation of file when no description is found.
+func FileDescription(file File) string {
+	for _, info := range defaultRenewableFiles() {
+		if info.File == file {
+			return info.Description
+		}
+	}
+	return string(file)
+}
+
+// defaultRenewableFiles returns the canonical list of renewable kubeconfig files.
 // The kubelet.conf entry is intentionally omitted — kubelet manages its own client certificate rotation.
-func DefaultRenewableFiles() []FileInfo {
+func defaultRenewableFiles() []FileInfo {
 	return []FileInfo{
 		{Admin, "certificate embedded in the kubeconfig file for the admin to use"},
 		{SuperAdmin, "certificate embedded in the kubeconfig file for the super-admin"},
@@ -75,7 +86,7 @@ func WithRenewPKIDir(dir string) RenewOption {
 }
 
 // WithRenewFiles restricts RenewClientCerts to the provided kubeconfig files.
-// When empty, the full DefaultRenewableFiles() inventory is used.
+// When empty, the full default renewable files inventory is used.
 func WithRenewFiles(files ...File) RenewOption {
 	return func(o *renewOptions) {
 		o.files = append(o.files, files...)
@@ -225,7 +236,7 @@ func RenewClientCert(file File, opts ...RenewOption) error {
 	return renewClientCert(o.kubeconfigDir, o.pkiDir, file, o.dryRun)
 }
 
-// RenewClientCerts iterates DefaultRenewableFiles() (or the subset chosen via WithRenewFiles) and renews each kubeconfig client certificate in turn.
+// RenewClientCerts iterates the renewable kubeconfig files (or the subset chosen via WithRenewFiles) and renews each kubeconfig client certificate in turn.
 // All other kubeconfig fields are preserved. CA cert and key are loaded from pkiDir.
 //
 // The returned error encodes the outcome:
@@ -249,10 +260,10 @@ func RenewClientCerts(opts ...RenewOption) KubeconfigRenewReport {
 	return report
 }
 
-// selectFiles returns the inventory with only the given files, preserving the canonical DefaultRenewableFiles() order.
+// selectFiles returns the inventory with only the given files, preserving the canonical order.
 // When files is empty, returned default inventory.
 func selectFiles(files []File) []FileInfo {
-	full := DefaultRenewableFiles()
+	full := defaultRenewableFiles()
 	if len(files) == 0 {
 		return full
 	}
