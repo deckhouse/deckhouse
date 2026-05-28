@@ -691,6 +691,9 @@ podSubnetNodeCIDRPrefix: "24"
 		testParams := testParseConfigFromClusterParams{
 			clusterConfig: clusterGenericConfig,
 			clusterType:   CloudClusterType,
+			extraGVRs: map[schema.GroupVersionResource]string{
+				{Group: instanceClassAPIGroup, Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+			},
 		}
 
 		createCloudConfigSecret := func(t *testing.T, tst *testParseConfigFromCluster, config *string) {
@@ -791,6 +794,7 @@ provider:
 type testParseConfigFromClusterParams struct {
 	clusterConfig string
 	clusterType   string
+	extraGVRs     map[schema.GroupVersionResource]string
 }
 
 type testParseConfigFromCluster struct {
@@ -801,10 +805,14 @@ type testParseConfigFromCluster struct {
 }
 
 func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromClusterParams) *testParseConfigFromCluster {
-	kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+	gvrs := map[schema.GroupVersionResource]string{
 		nodeGroupGVR:    "NodeGroupList",
 		ModuleConfigGVR: "ModuleConfigList",
-	})
+	}
+	for gvr, kind := range p.extraGVRs {
+		gvrs[gvr] = kind
+	}
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(gvrs)
 
 	if p.clusterConfig != "" {
 		testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{

@@ -120,7 +120,12 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	}
 
 	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(
-		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()), nil)
+		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()), nil,
+		config.ValidateOptionExtraSchemaPaths(
+			"/deckhouse/modules/030-cloud-provider-aws/candi/openapi",
+			"/deckhouse/candi/cloud-providers/aws/openapi",
+		),
+	)
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}
