@@ -112,6 +112,8 @@ spec:
             resourceFieldRef:
               resource: limits.memory
               divisor: '1'
+        - name: GOMAXPROCS
+          value: "8"
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
