@@ -28,18 +28,10 @@ index 989f0dc76e0..ab496787650 100644
  	return nil
  }
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go
-index a8aa021b2a5..0af2e644909 100644
+index a8aa021b2a5..bc7d029441a 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_windows.go
-@@ -21,6 +21,7 @@ limitations under the License.
- package nodeshutdown
- 
- import (
-+	"errors"
- 	"fmt"
- 	"path/filepath"
- 	"strings"
-@@ -30,6 +31,7 @@ import (
+@@ -30,6 +30,7 @@ import (
  	v1 "k8s.io/api/core/v1"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/client-go/tools/record"
@@ -47,7 +39,7 @@ index a8aa021b2a5..0af2e644909 100644
  	"k8s.io/klog/v2"
  	"k8s.io/kubernetes/pkg/features"
  	kubeletevents "k8s.io/kubernetes/pkg/kubelet/events"
-@@ -237,7 +239,7 @@ func (m *managerImpl) ShutdownStatus() error {
+@@ -237,7 +238,7 @@ func (m *managerImpl) ShutdownStatus() error {
  	defer m.nodeShuttingDownMutex.Unlock()
  
  	if m.nodeShuttingDownNow {
