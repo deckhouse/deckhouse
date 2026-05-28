@@ -307,7 +307,7 @@ To restore objects from exported YAML files, follow these steps:
 1. Create the objects in the cluster. To restore individual resources, run:
 
    ```shell
-   d8 k create -f <PATH_TO_FILE>.yaml
+   d8 k create -f <PATH_TO_FILE>.json
    ```
 
    You can specify either a single file or a directory path.
