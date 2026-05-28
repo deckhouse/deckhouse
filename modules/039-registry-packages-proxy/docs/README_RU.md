@@ -3,17 +3,17 @@ title: "Модуль registry-packages-proxy"
 description: "Внутренний прокси-сервер пакетов registry."
 ---
 
-Модуль `registry-packages-proxy` предоставляет сервис HTTP-прокси внутри кластера для доступа к пакетам из container registries. Он выступает в качестве посредника между компонентами кластера и внешними или внутренними container registry, предлагая возможности кеширования для оптимизации использования полосы пропускания и улучшения производительности извлечения пакетов.
+Модуль `registry-packages-proxy` предоставляет сервис HTTP-прокси внутри кластера для доступа к пакетам из хранилищ образов контейнеров (container registry). Он выступает в качестве посредника между компонентами кластера и внешними или внутренними хранилищами образов контейнеров с функциями кеширования для оптимизации использования пропускной способности сети и повышения производительности при загрузке пакетов.
 
-Этот модуль — критически важный компонент инфраструктуры, который работает на master-узлах и используется во время загрузки кластера и операций во время выполнения для извлечения пакетов из container registries.
+Этот модуль — критически важный компонент инфраструктуры, который работает на master-узлах и используется во время загрузки кластера и операций в процессе работы кластера для извлечения пакетов из хранилищ образов контейнеров.
 
-Модуль развертывает высокодоступный прокси-сервис, который:
+Модуль развёртывает высокодоступный прокси-сервис, который:
 
-- Работает как deployment на master-узлах с включенным `hostNetwork` для обеспечения доступности во время загрузки, когда CNI еще недоступен.
+- Работает как deployment на master-узлах с включенным `hostNetwork` для обеспечения доступности во время загрузки, когда CNI ещё недоступен.
 - Прослушивает порт `4219` (HTTPS) на IP-адресе каждого master-узла.
-- Предоставляет эндпоинт `/package` для извлечения пакетов container registry по дайджесту.
-- Реализует локальное кеширование извлеченных пакетов (до 1 ГБ) для снижения сетевого трафика и улучшения производительности.
-- Следит за кастомными ресурсами [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) для получения учетных данных container registry для разных репозиториев.
+- Предоставляет эндпоинт `/package` для извлечения пакетов из хранилища образов контейнеров по дайджесту.
+- Реализует локальное кеширование извлечённых пакетов (до 1 ГБ) для снижения сетевого трафика и улучшения производительности.
+- Следит за кастомными ресурсами [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) для получения учётных данных хранилищ образов контейнеров.
 - Использует `kube-rbac-proxy` для защиты доступа к прокси и эндпоинтам метрик.
 - Предоставляет публичный HTTPS API (через Ingress) для исполняемых файлов и плагинов Deckhouse CLI, а также иконок пакетов.
 
@@ -22,9 +22,9 @@ description: "Внутренний прокси-сервер пакетов regi
 Прокси-сервис состоит из двух контейнеров:
 
 1. **registry-packages-proxy** — основное приложение прокси, которое:
-   - извлекает пакеты из удаленных container registries с использованием дайджестов;
+   - извлекает пакеты из удалённых хранилищ образов контейнеров с использованием дайджестов;
    - кеширует пакеты локально в эфемерном volume (максимум 1 ГБ);
-   - поддерживает аутентификацию в container registry через учетные данные из ресурсов [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource);
+   - поддерживает аутентификацию в хранилищах образов контейнеров через учётные данные из ресурсов [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource);
    - предоставляет проверки работоспособности и метрики Prometheus;
    - прослушивает `127.0.0.1:5080` (HTTP, внутренний).
 
@@ -33,57 +33,58 @@ description: "Внутренний прокси-сервер пакетов regi
    - защищает эндпоинт `/metrics` с авторизацией Kubernetes RBAC;
    - защищает эндпоинт `/package`, требуя соответствующих разрешений;
    - защищает `/v1/images/*` (загрузка Deckhouse CLI) с авторизацией Kubernetes RBAC;
-   - позволяет доступ к `/healthz` без аутентификации;
+   - позволяет доступ к `/healthz` без аутентификации.
 
 ## Публичный HTTP API (Ingress)
 
-После завершения bootstrap кластера и настройки `publicDomainTemplate` модуль создаёт Ingress с хостом:
+После завершения развёртывания кластера (bootstrap) и настройки шаблона DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), модуль создаёт Ingress для имени `registry-packages-proxy`, используя шаблон из `publicDomainTemplate` (например, `registry-packages-proxy.company.my`, для `publicDomainTemplate: "%s.company.my"`).
 
-`registry-packages-proxy.<publicDomainTemplate>`
-
-Все пути ниже доступны по HTTPS через этот хост (а также на порту `4219` каждого master-узла для доступа изнутри кластера).
+Все пути эндпоинтов, приведенные ниже, доступны по HTTPS через этот хост, а также на порту `4219` каждого master-узла для доступа изнутри кластера.
 
 ### Иконки пакетов (`/v1/packages/`)
 
 Иконки пакетов **публичные**: заголовок `Authorization: Bearer` и RBAC Kubernetes не требуются.
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| `GET`, `HEAD` | `/v1/packages/<имя-пакета>/metadata/icon/` | Иконка последнего semver-тега |
-| `GET`, `HEAD` | `/v1/packages/<имя-пакета>/metadata/icon` | То же, что выше |
-| `GET`, `HEAD` | `/v1/packages/<имя-пакета>/metadata/icon/<версия>` | Иконка указанной версии (`<версия>` — semver, например `v1.0.1`) |
+| Метод | Путь                                               | Описание |
+|-------|----------------------------------------------------|----------|
+| `GET`, `HEAD` | `/v1/packages/<ИМЯ-ПАКЕТА>/metadata/icon/`         | Иконка последнего semver-тега |
+| `GET`, `HEAD` | `/v1/packages/<ИМЯ-ПАКЕТА>/metadata/icon`          | То же, что выше |
+| `GET`, `HEAD` | `/v1/packages/<ИМЯ-ПАКЕТА>/metadata/icon/<ВЕРСИЯ>` | Иконка указанной версии (`<ВЕРСИЯ>` — semver, например `v1.0.1`) |
 
-Прокси читает файл `docs/icon.svg` из OCI-образа `packages/<имя-пакета>:<тег>` в registry кластера (учётные данные задаются через [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)).
+Прокси читает файл `docs/icon.svg` из OCI-образа `packages/<ИМЯ-ПАКЕТА>:<ТЕГ>` в хранилище образов контейнеров кластера (учётные данные задаются через [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)).
 
-Успешный ответ: `Content-Type: image/svg+xml` и `Content-Disposition: attachment; filename="<имя-пакета>.svg"`.
-
-Пример:
+Пример запроса:
 
 ```shell
 curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-module/metadata/icon/"
+```
+
+Пример успешного ответа:
+
+```console
+Content-Type: image/svg+xml` и `Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 ```
 
 ### Загрузка Deckhouse CLI (`/v1/images/`)
 
 Для этих эндпоинтов нужен действительный токен Kubernetes (или клиентский сертификат, принимаемый `kube-rbac-proxy`) и право RBAC `get` на subresource `deployments/cli-binary` с именем `registry-packages-proxy` в namespace `d8-cloud-instance-manager`.
 
-Выдайте доступ через ClusterRole `d8:registry-packages-proxy:cli-download` (привяжите к пользователям или ServiceAccount через `ClusterRoleBinding` или `RoleBinding`).
+Выдайте доступ через ClusterRole `d8:registry-packages-proxy:cli-download` (привяжите к пользователям или ServiceAccount через ClusterRoleBinding или RoleBinding).
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| `GET` | `/v1/images/<образ>/tags` | JSON со списком тегов |
-| `GET`, `HEAD` | `/v1/images/<образ>/tags/<тег>` | OCI-образ в формате `application/x-gzip` (слои сведены) |
+| Метод | Путь                            | Описание |
+|-------|---------------------------------|----------|
+| `GET` | `/v1/images/<ОБРАЗ>/tags`       | JSON со списком тегов |
+| `GET`, `HEAD` | `/v1/images/<ОБРАЗ>/tags/<ТЕГ>` | OCI-образ в формате `application/x-gzip` (слои сведены) |
 
-Допустимые значения `<образ>`:
+Допустимые значения для `<ОБРАЗ>`:
 
 - `deckhouse-cli`
-- `deckhouse-cli/plugins/<плагин>` (один сегмент пути для `<плагин>`)
+- `deckhouse-cli/plugins/<ПЛАГИН>` (один сегмент пути для `<ПЛАГИН>`)
 
 Пример:
 
 ```shell
-curl -fsS -H "Authorization: Bearer ${TOKEN}" \
-  "https://registry-packages-proxy.example.com/v1/images/deckhouse-cli/tags"
+curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.example.com/v1/images/deckhouse-cli/tags"
 ```
 
 ### Внутренний эндпоинт `/package`
@@ -94,13 +95,13 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" \
 
 Когда компонент запрашивает пакет:
 
-1. Запрос включает параметр `digest` (обязательный) и опциональные параметры `repository` и `path`.
+1. Запрос включает параметр `digest` (обязательный) и необязательные параметры `repository` и `path`.
 1. Прокси проверяет локальный кеш на наличие запрошенного дайджеста.
 1. Если запрашиваемый пакет есть в кеше, он извлекается из кеша.
 1. Если запрашиваемый пакет отсутствует в кеше:
-   - Прокси извлекает учетные данные для указанного репозитория из отслеживаемых ресурсов [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
-   - Пакет извлекается из удаленного container registry.
-   - Пакет передается клиенту с одновременным кешированием для будущих запросов.
+   - Прокси извлекает учётные данные для указанного хранилища образов из отслеживаемых ресурсов [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
+   - Пакет извлекается из удалённого хранилища образов.
+   - Пакет передаётся клиенту с одновременным кешированием для будущих запросов.
 1. Ответы включают соответствующие HTTP-заголовки для кеширования (`Cache-Control`, `ETag`, `Content-Length`).
 
 ## Высокая доступность
@@ -108,7 +109,7 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" \
 Модуль обеспечивает высокую доступность через:
 
 - Запуск нескольких реплик на master-узлах (в HA-конфигурациях).
-- Правила anti-affinity для подов для распределения подов по разным master-узлам.
+- Правила anti-affinity для распределения подов по разным master-узлам.
 - PodDisruptionBudget для предотвращения одновременного нарушения работы всех реплик.
 - Поддержку Vertical Pod Autoscaler для автоматической настройки ресурсов.
 
@@ -124,5 +125,5 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" \
 - Модуль работает исключительно на master-узлах.
 - Требует `hostNetwork: true` для работы во время фазы загрузки.
 - Размер кеша ограничен 1 ГБ на под.
-- Большинство HTTP-эндпоинтов требуют RBAC Kubernetes; без аутентификации доступны только health check и иконки пакетов.
+- Большинство HTTP-эндпоинтов требуют RBAC Kubernetes; без аутентификации доступны только проверки работоспособности (health check) и иконки пакетов.
 - Иконки отдаются только как SVG из фиксированного пути `docs/icon.svg` внутри образа пакета.

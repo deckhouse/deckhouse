@@ -1,6 +1,6 @@
 ---
 title: "The registry-packages-proxy module"
-description: "Internal registry packages proxy for optimizing access to registry packages."
+description: "Internal proxy for optimizing access to packages from container registries."
 ---
 
 The `registry-packages-proxy` module provides an in-cluster HTTP proxy service for accessing packages from container registries. It acts as an intermediary between cluster components and external or internal registries, offering caching capabilities to optimize bandwidth usage and improve package retrieval performance.
@@ -33,51 +33,54 @@ The proxy service consists of two containers:
    - Secures `/metrics` endpoint with Kubernetes RBAC authorization.
    - Secures `/package` endpoint requiring appropriate permissions.
    - Secures `/v1/images/*` (Deckhouse CLI downloads) with Kubernetes RBAC authorization.
-   - Allows unauthenticated access to `/healthz`
+   - Allows unauthenticated access to `/healthz`.
 
 ## Public HTTP API (Ingress)
 
-After the cluster is bootstrapped and `publicDomainTemplate` is configured, the module creates an Ingress with the host:
+After the cluster is bootstrapped and the DNS name template is configured in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter, the module creates an Ingress for `registry-packages-proxy` using that template (for example, `registry-packages-proxy.company.my` for `publicDomainTemplate: "%s.company.my"`).
 
-`registry-packages-proxy.<publicDomainTemplate>`
-
-All paths below are served over HTTPS through that host (and on port `4219` of each master node for in-cluster access).
+All endpoint paths listed below are served over HTTPS through that host, as well as on port `4219` of each master node for in-cluster access.
 
 ### Package icons (`/v1/packages/`)
 
-Package icons are **public**: no `Authorization: Bearer` header or Kubernetes RBAC is required.
+Package icons are **public**: no `Authorization: Bearer` header or Kubernetes RBAC authorization are required.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET`, `HEAD` | `/v1/packages/<package-name>/metadata/icon/` | Icon of the latest semver tag |
-| `GET`, `HEAD` | `/v1/packages/<package-name>/metadata/icon` | Same as above |
-| `GET`, `HEAD` | `/v1/packages/<package-name>/metadata/icon/<version>` | Icon of a specific version (`<version>` is a semantic version, e.g. `v1.0.1`) |
+| Method | Path                                                  | Description |
+|--------|-------------------------------------------------------|-------------|
+| `GET`, `HEAD` | `/v1/packages/<PACKAGE-NAME>/metadata/icon/`          | Icon of the latest semver tag |
+| `GET`, `HEAD` | `/v1/packages/<PACKAGE-NAME>/metadata/icon`           | Same as above |
+| `GET`, `HEAD` | `/v1/packages/<PACKAGE-NAME>/metadata/icon/<VERSION>` | Icon of a specific version (`<VERSION>` is a semantic version, e.g. `v1.0.1`) |
 
-The proxy reads `docs/icon.svg` from the OCI image `packages/<package-name>:<tag>` in the cluster registry (configured via [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)).
+The proxy reads `docs/icon.svg` from the OCI image `packages/<PACKAGE-NAME>:<TAG>` in the cluster registry (configured via [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)).
 
-Successful responses use `Content-Type: image/svg+xml` and `Content-Disposition: attachment; filename="<package-name>.svg"`.
-
-Example:
+Example request:
 
 ```shell
 curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-module/metadata/icon/"
+```
+
+Example response headers:
+
+```console
+Content-Type: image/svg+xml
+Content-Disposition: attachment; filename="<PACKAGE-NAME>.svg"
 ```
 
 ### Deckhouse CLI downloads (`/v1/images/`)
 
 These endpoints require a valid Kubernetes token (or client certificate accepted by `kube-rbac-proxy`) and RBAC permission to `get` the `deployments/cli-binary` subresource `registry-packages-proxy` in namespace `d8-cloud-instance-manager`.
 
-Grant access with the ClusterRole `d8:registry-packages-proxy:cli-download` (bind it to users or ServiceAccounts via `ClusterRoleBinding` or `RoleBinding`).
+Grant access with the ClusterRole `d8:registry-packages-proxy:cli-download` (bind it to users or ServiceAccounts via ClusterRoleBinding or RoleBinding).
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/v1/images/<image>/tags` | JSON list of tags |
-| `GET`, `HEAD` | `/v1/images/<image>/tags/<tag>` | OCI image as `application/x-gzip` (flattened layers) |
+| Method | Path                          | Description |
+|--------|-------------------------------|-------------|
+| `GET` | `/v1/images/<IMAGE>/tags`     | JSON list of tags |
+| `GET`, `HEAD` | `/v1/images/<IMAGE>/tags/<TAG>` | OCI image as `application/x-gzip` (flattened layers) |
 
-Allowed `<image>` values:
+Allowed `<IMAGE>` values:
 
 - `deckhouse-cli`
-- `deckhouse-cli/plugins/<plugin>` (single path segment for `<plugin>`)
+- `deckhouse-cli/plugins/<PLUGIN>` (single path segment for `<PLUGIN>`)
 
 Example:
 
@@ -98,7 +101,7 @@ When a component requests a package:
 1. The proxy checks its local cache for the requested digest.
 1. If cached, the package is served directly from cache.
 1. If not cached:
-   - The proxy fetches credentials for the specified repository from watched [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resources.
+   - The proxy fetches credentials for the specified registry from watched [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resources.
    - The package is retrieved from the remote registry.
    - The package is streamed to the client while simultaneously being cached for future requests.
 1. Responses include appropriate HTTP headers for caching (`Cache-Control`, `ETag`, `Content-Length`).
@@ -124,5 +127,5 @@ The module ensures high availability through:
 - The module runs exclusively on master nodes.
 - It requires `hostNetwork: true` to function during bootstrap phase.
 - Cache size is limited to 1 GB per pod.
-- Most HTTP endpoints require Kubernetes RBAC; only health checks are anonymous.
+- Most HTTP endpoints require Kubernetes RBAC; only health checks (healthz) and package icons are anonymous.
 - Package icons are served only as SVG from the fixed path `docs/icon.svg` inside the package image.
