@@ -16,7 +16,10 @@ shell:
   install:
     - git clone --depth 1 --branch "v{{ $version }}" $(cat /run/secrets/SOURCE_REPO)/prometheus-operator/prometheus-operator.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - git apply /patches/001-endpointslices.patch --verbose
+    - git apply /patches/002-endpointslices_fallback.patch --verbose
+    - git apply /patches/003-alertmanager_tls_assets.patch --verbose
+    - git apply /patches/004-fix_cve.patch --verbose
     - rm -r .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
@@ -25,6 +28,10 @@ final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /patches
+    to: /patches
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -37,6 +44,12 @@ shell:
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
+    - cp /patches/op_funcs_init.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/parser/op_funcs_init.go
+    - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/005-op-functions.patch
+    - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/006-printer-op-top-aggregate-string.patch
+    - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
+    - cd /src
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")
     - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"
     - go build -ldflags="-s -w ${GO_BUILD_LDFLAGS}" -o /operator cmd/operator/main.go
