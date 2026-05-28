@@ -12,8 +12,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "{{ include "helm_lib_module_public_domain" (list . "console") }}"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
 spec:
@@ -22,14 +20,13 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
     http:
       paths:
+      # Only /v1/images/* (Deckhouse CLI downloads, RBAC-authenticated) is exposed
+      # through the public Ingress. /v1/packages/*/metadata/icon[/<version>] is
+      # intentionally NOT routed here: icons are served anonymously
+      # (kube-rbac-proxy excludePaths) and must stay reachable only from inside
+      # the cluster via the Service (and the master-node hostPort 4219 during
+      # bootstrap), never via the public domain.
       - path: /v1/images/
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: registry-packages-proxy
-            port:
-              name: https
-      - path: /v1/packages/
         pathType: ImplementationSpecific
         backend:
           service:

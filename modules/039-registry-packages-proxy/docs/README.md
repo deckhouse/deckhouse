@@ -15,7 +15,8 @@ The module deploys a highly-available proxy service that:
 - Implements local caching of retrieved packages (up to 1 GB) to reduce network traffic and improve performance.
 - Watches [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) custom resources to obtain registry credentials for different repositories.
 - Uses `kube-rbac-proxy` to secure access to the proxy and metrics endpoints.
-- Exposes a public HTTPS API (via Ingress) for Deckhouse CLI binaries and package icons.
+- Exposes a public HTTPS API (via Ingress) for Deckhouse CLI binaries.
+- Exposes an in-cluster HTTPS API for package icons (no public Ingress).
 
 ## Architecture
 
@@ -35,15 +36,18 @@ The proxy service consists of two containers:
    - Secures `/v1/images/*` (Deckhouse CLI downloads) with Kubernetes RBAC authorization.
    - Allows unauthenticated access to `/healthz`.
 
-## Public HTTP API (Ingress)
+## HTTP API
 
 After the cluster is bootstrapped and the DNS name template is configured in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter, the module creates an Ingress for `registry-packages-proxy` using that template (for example, `registry-packages-proxy.company.my` for `publicDomainTemplate: "%s.company.my"`).
 
-All endpoint paths listed below are served over HTTPS through that host, as well as on port `4219` of each master node for in-cluster access.
+The endpoints listed below are reachable in two ways:
 
-### Package icons (`/v1/packages/`)
+- **Public** (via the Ingress on the `registry-packages-proxy` public host): only `/v1/images/*`.
+- **In-cluster only** (via the `registry-packages-proxy.d8-cloud-instance-manager.svc` Service on port `443`, or `:4219` on each master node for bootstrap): all routes, including `/v1/packages/*`.
 
-Package icons are **public**: no `Authorization: Bearer` header or Kubernetes RBAC authorization are required.
+### Package icons (`/v1/packages/`) — in-cluster only
+
+Package icons are served **without authentication** (`kube-rbac-proxy` excludes these paths from RBAC) but are **only reachable from inside the cluster**. They are intentionally **not** routed through the public Ingress, so the public domain `registry-packages-proxy.<publicDomain>` will not serve them.
 
 | Method | Path                                                                       | Description |
 |--------|----------------------------------------------------------------------------|-------------|
@@ -64,10 +68,10 @@ The proxy looks for the following files inside the package image, in this priori
 
 If none of these are present (or the file is larger than 4 MiB), the proxy returns `404 Not Found`; callers should fall back to a default icon. SVG is preferred because it is resolution-independent.
 
-Example request:
+Example request from a pod in the cluster:
 
 ```shell
-curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-repo/my-module/metadata/icon/"
+curl -fsSk "https://registry-packages-proxy.d8-cloud-instance-manager.svc/v1/packages/my-repo/my-module/metadata/icon/"
 ```
 
 Example response headers (when the image ships `docs/icon.svg`):
@@ -77,9 +81,9 @@ Content-Type: image/svg+xml
 Content-Disposition: attachment; filename="<PACKAGE-NAME>.svg"
 ```
 
-### Deckhouse CLI downloads (`/v1/images/`)
+### Deckhouse CLI downloads (`/v1/images/`) — public
 
-These endpoints require a valid Kubernetes token (or client certificate accepted by `kube-rbac-proxy`) and RBAC permission to `get` the `deployments/cli-binary` subresource `registry-packages-proxy` in namespace `d8-cloud-instance-manager`.
+These endpoints are reachable through the public Ingress (`registry-packages-proxy.<publicDomain>`) and require a valid Kubernetes token (or client certificate accepted by `kube-rbac-proxy`) and RBAC permission to `get` the `deployments/cli-binary` subresource `registry-packages-proxy` in namespace `d8-cloud-instance-manager`.
 
 Grant access with the ClusterRole `d8:registry-packages-proxy:cli-download` (bind it to users or ServiceAccounts via ClusterRoleBinding or RoleBinding).
 
@@ -131,12 +135,12 @@ The module ensures high availability through:
 | ClusterRole | Purpose |
 |-------------|---------|
 | `d8:registry-packages-proxy:cli-download` | Access to `/v1/images/*` |
-| `d8:registry-packages-proxy:packages-download` | Reserved for future authenticated `/v1/packages/*` routes (icons are public) |
+| `d8:registry-packages-proxy:packages-download` | Reserved for future authenticated `/v1/packages/*` routes (icons are served anonymously, in-cluster only) |
 
 ## Limitations
 
 - The module runs exclusively on master nodes.
 - It requires `hostNetwork: true` to function during bootstrap phase.
 - Cache size is limited to 1 GB per pod.
-- Most HTTP endpoints require Kubernetes RBAC; only health checks (healthz) and package icons are anonymous.
+- Most HTTP endpoints require Kubernetes RBAC; only health checks (healthz) and package icons are anonymous. Package icons are additionally limited to in-cluster access (no public Ingress route).
 - Package icons are read from fixed paths inside the package image (`docs/icon.svg`, `docs/icon.png`, `docs/icon.jpg`, `docs/icon.jpeg`) with SVG preferred. Maximum icon size is 4 MiB.

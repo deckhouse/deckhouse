@@ -15,7 +15,8 @@ description: "Внутренний прокси-сервер пакетов regi
 - Реализует локальное кеширование извлечённых пакетов (до 1 ГБ) для снижения сетевого трафика и улучшения производительности.
 - Следит за кастомными ресурсами [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) для получения учётных данных хранилищ образов контейнеров.
 - Использует `kube-rbac-proxy` для защиты доступа к прокси и эндпоинтам метрик.
-- Предоставляет публичный HTTPS API (через Ingress) для исполняемых файлов и плагинов Deckhouse CLI, а также иконок пакетов.
+- Предоставляет публичный HTTPS API (через Ingress) для исполняемых файлов и плагинов Deckhouse CLI.
+- Предоставляет внутрикластерный HTTPS API для иконок пакетов (без публикации через Ingress).
 
 ## Архитектура
 
@@ -35,15 +36,18 @@ description: "Внутренний прокси-сервер пакетов regi
    - защищает `/v1/images/*` (загрузка Deckhouse CLI) с авторизацией Kubernetes RBAC;
    - позволяет доступ к `/healthz` без аутентификации.
 
-## Публичный HTTP API (Ingress)
+## HTTP API
 
 После завершения развёртывания кластера (bootstrap) и настройки шаблона DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), модуль создаёт Ingress для имени `registry-packages-proxy`, используя шаблон из `publicDomainTemplate` (например, `registry-packages-proxy.company.my`, для `publicDomainTemplate: "%s.company.my"`).
 
-Все пути эндпоинтов, приведенные ниже, доступны по HTTPS через этот хост, а также на порту `4219` каждого master-узла для доступа изнутри кластера.
+Эндпоинты ниже доступны двумя способами:
 
-### Иконки пакетов (`/v1/packages/`)
+- **Публично** (через Ingress на публичном имени `registry-packages-proxy`): только `/v1/images/*`.
+- **Только изнутри кластера** (через Service `registry-packages-proxy.d8-cloud-instance-manager.svc` на порту `443`, либо через `:4219` на каждом master-узле в фазе bootstrap): все маршруты, включая `/v1/packages/*`.
 
-Иконки пакетов **публичные**: заголовок `Authorization: Bearer` и RBAC Kubernetes не требуются.
+### Иконки пакетов (`/v1/packages/`) — только изнутри кластера
+
+Иконки пакетов отдаются **без аутентификации** (`kube-rbac-proxy` исключает эти пути из RBAC), но **доступны только изнутри кластера**. Маршрут `/v1/packages/*` намеренно **не публикуется через Ingress**, поэтому публичное имя `registry-packages-proxy.<publicDomain>` иконки не отдаёт.
 
 | Метод | Путь                                                                          | Описание |
 |-------|-------------------------------------------------------------------------------|----------|
@@ -64,10 +68,10 @@ description: "Внутренний прокси-сервер пакетов regi
 
 Если ни одного из этих файлов нет (или файл больше 4 МиБ), прокси возвращает `404 Not Found`; вызывающий код должен использовать иконку по умолчанию. SVG предпочтительнее, так как не зависит от разрешения.
 
-Пример запроса:
+Пример запроса из пода внутри кластера:
 
 ```shell
-curl -fsS "https://registry-packages-proxy.example.com/v1/packages/my-repo/my-module/metadata/icon/"
+curl -fsSk "https://registry-packages-proxy.d8-cloud-instance-manager.svc/v1/packages/my-repo/my-module/metadata/icon/"
 ```
 
 Пример успешного ответа (когда в образе есть `docs/icon.svg`):
@@ -77,9 +81,9 @@ Content-Type: image/svg+xml
 Content-Disposition: attachment; filename="<ИМЯ-ПАКЕТА>.svg"
 ```
 
-### Загрузка Deckhouse CLI (`/v1/images/`)
+### Загрузка Deckhouse CLI (`/v1/images/`) — публичный
 
-Для этих эндпоинтов нужен действительный токен Kubernetes (или клиентский сертификат, принимаемый `kube-rbac-proxy`) и право RBAC `get` на subresource `deployments/cli-binary` с именем `registry-packages-proxy` в namespace `d8-cloud-instance-manager`.
+Эти эндпоинты доступны через публичный Ingress (`registry-packages-proxy.<publicDomain>`) и требуют действительный токен Kubernetes (или клиентский сертификат, принимаемый `kube-rbac-proxy`) и право RBAC `get` на subresource `deployments/cli-binary` с именем `registry-packages-proxy` в namespace `d8-cloud-instance-manager`.
 
 Выдайте доступ через ClusterRole `d8:registry-packages-proxy:cli-download` (привяжите к пользователям или ServiceAccount через ClusterRoleBinding или RoleBinding).
 
@@ -130,12 +134,12 @@ curl -fsS -H "Authorization: Bearer ${TOKEN}" "https://registry-packages-proxy.e
 | ClusterRole | Назначение |
 |-------------|------------|
 | `d8:registry-packages-proxy:cli-download` | Доступ к `/v1/images/*` |
-| `d8:registry-packages-proxy:packages-download` | Зарезервирована для будущих защищённых маршрутов `/v1/packages/*` (иконки публичные) |
+| `d8:registry-packages-proxy:packages-download` | Зарезервирована для будущих защищённых маршрутов `/v1/packages/*` (иконки отдаются анонимно, доступ только изнутри кластера) |
 
 ## Ограничения
 
 - Модуль работает исключительно на master-узлах.
 - Требует `hostNetwork: true` для работы во время фазы загрузки.
 - Размер кеша ограничен 1 ГБ на под.
-- Большинство HTTP-эндпоинтов требуют RBAC Kubernetes; без аутентификации доступны только проверки работоспособности (health check) и иконки пакетов.
+- Большинство HTTP-эндпоинтов требуют RBAC Kubernetes; без аутентификации доступны только проверки работоспособности (health check) и иконки пакетов. Иконки пакетов дополнительно ограничены доступом только изнутри кластера (без маршрута через публичный Ingress).
 - Иконки читаются из фиксированных путей внутри образа пакета (`docs/icon.svg`, `docs/icon.png`, `docs/icon.jpg`, `docs/icon.jpeg`); SVG предпочтительнее. Максимальный размер иконки — 4 МиБ.

@@ -87,7 +87,7 @@ const (
 	cliImagesPathPrefix = "/v1/images/"
 
 	// packagesPathPrefix is the URL prefix served on the standard proxy mux for
-	// public package metadata (currently: icons). Paths under it look like:
+	// in-cluster package metadata (currently: icons). Paths under it look like:
 	//
 	//   /v1/packages/<packages-repo>/<package-name>/metadata/icon/          -> get icon of package latest version
 	//   /v1/packages/<packages-repo>/<package-name>/metadata/icon/<version> -> get icon of package specific version
@@ -97,6 +97,11 @@ const (
 	// kube-rbac-proxy (the standard sidecar listening on :4219) serves icon URLs
 	// without authentication (see excludePaths in the module deployment). This
 	// handler intentionally does no authentication of its own.
+	//
+	// /v1/packages/* is deliberately NOT routed through the public Ingress (see
+	// templates/ingress.yaml), so anonymous access is bounded to the cluster:
+	// callers reach it via the in-cluster Service (or hostPort 4219 on master
+	// nodes during bootstrap), never via the public domain.
 	packagesPathPrefix = "/v1/packages/"
 
 	// maxIconBytes caps how much we are willing to read out of an OCI image
