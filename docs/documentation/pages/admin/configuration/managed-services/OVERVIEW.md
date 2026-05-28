@@ -1,9 +1,10 @@
 ---
 title: "Overview"
+permalink: en/admin/configuration/managed-services/
 description: "Administration of managed-services in Deckhouse Kubernetes Platform"
 ---
 
-Managed-services provide a set of Kubernetes custom resources for deploying and operating application services in a cluster. Administrative materials usually describe infrastructure requirements, environment preparation, service class configuration, and other settings that define the available usage scenarios.
+Managed-services provide a set of Kubernetes custom resources for deploying and operating application services in a cluster.
 
 Use this section to:
 
@@ -12,4 +13,4 @@ Use this section to:
 - define available service classes and configurations;
 - verify that the infrastructure is ready to run managed-services.
 
-Instructions for creating services, configuring instances, and connecting to them are provided in the [Usage](../../../user/managed-services/overview/) section.
+Instructions for creating services, configuring instances, and connecting to them are provided in the [Usage](../../../user/managed-services/) section.
