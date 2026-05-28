@@ -1,0 +1,179 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Triggered via workflow_dispatch when label 'build/reproducibility-check'
+# is added on a PR. Runs build_template for FE on the same HEAD SHA as the
+# baseline build-and-test_dev run, then diffs the two build_report_FE
+# artifacts (DockerImageDigest per image).
+
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref_slug" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . }!}
+
+name: 'Build reproducibility check'
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: 'PR id (label trigger payload)'
+        required: false
+      issue_number:
+        description: 'PR number'
+        required: false
+      comment_id:
+        description: 'ID of comment to update on workflow start'
+        required: false
+      ci_commit_ref_name:
+        description: 'Git ref name for image tags'
+        required: false
+      pull_request_ref:
+        description: 'Git ref to checkout PR sources'
+        required: false
+      pull_request_sha:
+        description: 'PR head SHA (used to find baseline run)'
+        required: false
+      pull_request_head_label:
+        description: 'PR head label, e.g. fork:branch'
+        required: false
+
+env:
+{!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
+
+# Squash queued runs and keep only the newest for a given PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.issue_number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+  pull-requests: read
+
+jobs:
+  started_at:
+    name: Save start timestamp
+    outputs:
+      started_at: ${{ steps.started_at.outputs.started_at }}
+    runs-on: "regular"
+    steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+
+{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
+
+  # build_template (dev mode) reads needs.pull_request_info.outputs.ref_slug.
+  # Synthesize it from workflow_dispatch inputs without pulling the full
+  # pull_request_info_job (which is wired for pull_request_target events).
+  pull_request_info:
+    name: Pull request info (from workflow_dispatch inputs)
+    runs-on: "ubuntu-latest"
+    outputs:
+      ref_slug: ${{ steps.set.outputs.ref_slug }}
+    steps:
+      - id: set
+        env:
+          PR_REF: ${{ github.event.inputs.pull_request_ref }}
+          PR_NUMBER: ${{ github.event.inputs.issue_number }}
+        run: |
+          if [[ -n "${PR_REF}" ]]; then
+            num=$(echo "${PR_REF}" | sed -E 's|refs/pull/([0-9]+)/.*|\1|')
+          else
+            num="${PR_NUMBER}"
+          fi
+          if [[ -z "${num}" || ! "${num}" =~ ^[0-9]+$ ]]; then
+            echo "::error::cannot derive PR number from inputs"
+            exit 1
+          fi
+          echo "ref_slug=pr${num}" >> $GITHUB_OUTPUT
+
+  find_baseline:
+    name: Find baseline build run
+    runs-on: "ubuntu-latest"
+    needs:
+      - git_info
+    outputs:
+      baseline_run_id: ${{ steps.find.outputs.run_id }}
+      baseline_run_url: ${{ steps.find.outputs.run_url }}
+    steps:
+      - name: Find last successful build-and-test_dev run for HEAD SHA
+        id: find
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          script: |
+            const headSha = "${{ needs.git_info.outputs.github_sha }}";
+            const workflow_id = 'build-and-test_dev.yml';
+
+            const runs = await github.paginate(
+              github.rest.actions.listWorkflowRuns,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id,
+                per_page: 100,
+                status: 'success',
+              },
+              (page) => page.data
+            );
+
+            const baseline = runs.find((wr) => wr.head_sha === headSha);
+            if (!baseline) {
+              return core.setFailed(
+                `No successful 'build-and-test_dev.yml' run found for SHA ${headSha}. ` +
+                `Wait until the regular build succeeds, then re-add the label.`
+              );
+            }
+
+            core.notice(`Baseline run: ${baseline.html_url} (id=${baseline.id})`);
+            core.setOutput('run_id', baseline.id.toString());
+            core.setOutput('run_url', baseline.html_url);
+
+  build_fe_rerun:
+    name: Build FE (rerun)
+    needs:
+      - git_info
+      - pull_request_info
+      - find_baseline
+    env:
+      WERF_ENV: "FE"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev" "FE") | strings.Indent 4 }!}
+
+  compare_reports:
+    name: Compare build reports
+    runs-on: "ubuntu-latest"
+    needs:
+      - find_baseline
+      - build_fe_rerun
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+
+      - name: Download baseline build_report_FE
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+        with:
+          name: build_report_FE
+          path: baseline/build_report_FE
+          run-id: ${{ needs.find_baseline.outputs.baseline_run_id }}
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+
+      - name: Download rerun build_report_FE
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+        with:
+          name: build_report_FE
+          path: rerun/build_report_FE
+
+      - name: Compare digests
+        run: |
+          python .github/scripts/python/reproducibility_check.py \
+            baseline/build_report_FE/images_tags_werf.json \
+            rerun/build_report_FE/images_tags_werf.json

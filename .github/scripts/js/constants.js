@@ -92,6 +92,9 @@ const labels = {
   'edition/se+': { type: 'edition', edition: 'SE-plus' },
   'edition/cse': { type: 'edition', edition: 'CSE' },
 
+  // Rerun FE build on the same HEAD SHA and diff build reports against the last successful build-and-test_dev run.
+  'build/reproducibility-check': { type: 'reproducibility-check' },
+
   // Enable operator-trivy to get CIS benchmark report
   'e2e/use/cis': { type: 'e2e-use', cis: true }
 };
