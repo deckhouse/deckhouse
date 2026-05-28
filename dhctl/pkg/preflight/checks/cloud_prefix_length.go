@@ -155,7 +155,7 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 
 func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
 	masterIndex := maxNodeIndex(c.MetaConfig.MasterNodeGroupSpec.Replicas)
-	for _, diskName := range dvpMasterDiskNames(prefix, masterIndex, "abcdef", c.masterHasAdditionalDisks()) {
+	for _, diskName := range dvpMasterDiskNames(prefix, masterIndex, "abcdef", c.dvpMasterHasAdditionalDisks()) {
 		if len(diskName) > maxDiskNameLength {
 			return fmt.Errorf(
 				"disk name %q for node group %q exceeds %d characters (got %d); "+
@@ -182,7 +182,7 @@ func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
 	return nil
 }
 
-func (c CloudDiskNameLengthCheck) masterHasAdditionalDisks() bool {
+func (c CloudDiskNameLengthCheck) dvpMasterHasAdditionalDisks() bool {
 	master, err := dhctljson.UnmarshalToFromMessageMap[dvpMasterNodeGroup](
 		c.MetaConfig.ProviderClusterConfig, "masterNodeGroup",
 	)
