@@ -1,11 +1,10 @@
 ---
 title: "Overview"
+permalink: en/user/managed-services/
 description: "Using managed-services in Deckhouse Kubernetes Platform"
 ---
 
-The Usage section contains instructions for working with managed-services in Deckhouse Kubernetes Platform.
-
-Managed-services allow users to create and use ready-to-run application services by using Kubernetes custom resources. User materials usually describe basic workflows such as service creation, instance parameter configuration, connectivity, backup, recovery, and status checks.
+Managed-services allow users to create and use ready-to-run application services by using Kubernetes custom resources. 
 
 Use this section to:
 
@@ -15,4 +14,4 @@ Use this section to:
 - perform basic maintenance operations;
 - check the resource status and configuration result.
 
-Details about infrastructure preparation, service class configuration, and other administrative settings are provided in the [Administration](../../admin/configuration/managed-services/overview/) section.
+Details about infrastructure preparation, service class configuration, and other administrative settings are provided in the [Administration](../../admin/configuration/managed-services/) section.
