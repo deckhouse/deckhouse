@@ -11,6 +11,10 @@
         +
         container_memory_cache{source="deckhouse"}
       )
+    labels:
+      source: deckhouse
   - record: container_memory_working_set_bytes:without_kmem
     expr: |
       container_memory_working_set_bytes{source="deckhouse"} - container_memory:kmem
+    labels:
+      source: deckhouse
