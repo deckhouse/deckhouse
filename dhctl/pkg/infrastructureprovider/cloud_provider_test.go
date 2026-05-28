@@ -29,8 +29,8 @@ import (
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
@@ -107,6 +107,7 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 		FSDIParams:       getTestFSDIParams(t, logger),
 		IsDebug:          false,
 		ProvidersCache:   newCloudProvidersMapCache(),
+		GlobalOptions:    &options.New().Global,
 	}
 }
 
@@ -1576,14 +1577,10 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	stat, err := os.Stat(configPath)
 	require.NoError(t, err)
 	require.False(t, stat.IsDir())
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 
 	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
 		logger: params.logger,
-	}), dc)
+	}), &options.New().Global)
 
 	require.NoError(t, err)
 	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)

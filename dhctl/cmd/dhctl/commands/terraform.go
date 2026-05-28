@@ -72,14 +72,13 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
-			Address:     opts.Converge.ListenAddress,
-			Path:        opts.Converge.MetricsPath,
-			Interval:    opts.Converge.CheckInterval,
-			TmpDir:      opts.Global.TmpDir,
-			DownloadDir: opts.Global.DownloadDir,
-			Logger:      logger,
-			IsDebug:     opts.Global.IsDebug,
-			KubeCl:      kubeCl,
+			Address:  opts.Converge.ListenAddress,
+			Path:     opts.Converge.MetricsPath,
+			Interval: opts.Converge.CheckInterval,
+			TmpDir:   opts.Global.TmpDir,
+			Logger:   logger,
+			IsDebug:  opts.Global.IsDebug,
+			KubeCl:   kubeCl,
 		})
 
 		exporter.Start(ctx)
@@ -133,7 +132,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
@@ -146,10 +145,10 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		provider, err := providerGetter(ctx, metaConfig)
@@ -166,6 +165,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 				WithDebug(opts.Global.IsDebug),
 			check.CheckStateOptions{},
 			false,
+			&opts.Global,
 		)
 		if err != nil {
 			return err

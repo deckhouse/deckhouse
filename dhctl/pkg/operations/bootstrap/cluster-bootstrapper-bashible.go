@@ -47,7 +47,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
-		b.DirectoryConfig,
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
@@ -94,7 +94,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		MetaConfig:     metaConfig,
 		CommanderMode:  b.CommanderMode,
 		IsDebug:        b.IsDebug,
-		DirsConfig:     b.DirectoryConfig,
+		GlobalOpts:     &b.Options.Global,
 		LoggerProvider: b.loggerProvider,
 	})
 

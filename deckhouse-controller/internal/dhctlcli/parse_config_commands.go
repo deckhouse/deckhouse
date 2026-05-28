@@ -61,14 +61,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 				ctx,
 				string(data),
 				preparatorProvider,
-				opts.DirConfig(),
+				&opts.Global,
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, opts.DirConfig())
+			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, &opts.Global)
 			if err != nil {
 				return err
 			}
@@ -109,7 +109,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 			}
 		}
 
-		schemaStore := config.NewSchemaStore(opts.DirConfig())
+		schemaStore := config.NewSchemaStore(&opts.Global)
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)

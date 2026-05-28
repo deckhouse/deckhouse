@@ -22,6 +22,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
@@ -44,12 +45,13 @@ type GetAbortDestroyerParams struct {
 	LoggerProvider    log.LoggerProvider
 
 	TmpDir        string
-	DownloadDir   string
 	IsDebug       bool
 	CommanderMode bool
 	// SSHUser is recorded into the converge lock lease as the holder identity
 	// (informational only).
 	SSHUser string
+
+	GlobalOptions *options.GlobalOptions
 
 	overridePhaseProvider phases.DefaultActionProvider
 	staticLoopsParams     static.LoopsParams
@@ -106,7 +108,7 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		controller.ClusterInfraOptions{
 			PhasedExecutionContext: a.params.PhasedExecutionContext,
 			TmpDir:                 a.params.TmpDir,
-			DownloadDir:            a.params.DownloadDir,
+			GlobalOptions:          a.params.GlobalOptions,
 			Logger:                 logger,
 			IsDebug:                a.params.IsDebug,
 		},

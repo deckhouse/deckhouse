@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -109,7 +110,8 @@ func ApplyPipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
-	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
+	globalOptions *options.GlobalOptions,
+	extractFn func(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error),
 ) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
 
@@ -129,7 +131,7 @@ func ApplyPipeline(
 
 		defer func() {
 			if err == nil {
-				extractedData, err = extractFn(ctx, r)
+				extractedData, err = extractFn(ctx, r, globalOptions)
 			}
 		}()
 
@@ -138,7 +140,7 @@ func ApplyPipeline(
 		}
 		span.AddEvent("Apply done")
 
-		extractedData, err = extractFn(ctx, r)
+		extractedData, err = extractFn(ctx, r, globalOptions)
 		span.AddEvent("Extracted data")
 
 		return err
@@ -213,6 +215,7 @@ func CheckBaseInfrastructurePipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
+	globalOptions *options.GlobalOptions,
 ) (int, plan.Plan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := plan.HasNoChanges
 
@@ -244,7 +247,7 @@ func CheckBaseInfrastructurePipeline(
 			return nil
 		}
 
-		info, err := GetBaseInfraResult(ctx, r)
+		info, err := GetBaseInfraResult(ctx, r, globalOptions)
 		if err != nil {
 			isChange = plan.HasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
@@ -328,13 +331,13 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 	)
 }
 
-func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetBaseInfraResult(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetInfrastructureOutput(ctx, "cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
 
-	schemaStore := config.NewSchemaStore(nil)
+	schemaStore := config.NewSchemaStore(globalOptions)
 	_, err = schemaStore.Validate(&cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)
@@ -355,7 +358,7 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutput
 	}, nil
 }
 
-func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetMasterNodeResult(ctx context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
 	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, masterSSHIPOutputKey)
 	if err != nil {
 		return nil, err
@@ -423,7 +426,7 @@ func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*Pipel
 	return res, nil
 }
 
-func OnlyState(_ context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func OnlyState(_ context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
 	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
