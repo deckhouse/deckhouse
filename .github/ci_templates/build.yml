@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: "ubuntu-latest"
+  runs-on: "ubuntu-slim"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
@@ -351,6 +351,7 @@ steps:
       werf build tests \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
+        --final-images-only=true \
         --build-report-path images_tags_werf.json
 
       TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"

@@ -126,3 +126,4 @@ testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
 go_lib/registry/                         @nabokihms @vadimartynov
+go_lib/controlplane/                     @sprait @AmazinMax

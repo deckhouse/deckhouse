@@ -18,7 +18,6 @@ import:
   add: /csi-attacher
   to: /csi-attacher
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:

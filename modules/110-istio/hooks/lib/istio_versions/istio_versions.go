@@ -74,6 +74,14 @@ func (vm IstioVersionsMap) DoesSupportOperator(fullVer string) bool {
 	return false
 }
 
+func (vm IstioVersionsMap) DoesVersionSupportOperator(version string) bool {
+	istioVerInfo, ok := vm[version]
+	if !ok {
+		return false
+	}
+	return istioVerInfo.SupportsOperator
+}
+
 func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
 	for _, istioVerInfo := range vm {
 		if istioVerInfo.Revision == rev {

@@ -61,6 +61,7 @@ import:
   add: /src/bashible-apiserver
   to: /bashible-apiserver
   before: setup
+{{- include "image mount points" . }}
 git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
@@ -81,7 +82,11 @@ git:
   {{- end }}
   excludePaths:
   - "**/cluster-bootstrap"
-{{- include "image mount points" . }}
+shell:
+  install:
+  - set -e
+  beforeSetup:
+  - set -e
 imageSpec:
   config:
     # Category A TLS profile (deckhouse TLS standard, see

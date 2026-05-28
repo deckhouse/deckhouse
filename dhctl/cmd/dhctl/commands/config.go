@@ -60,7 +60,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
@@ -80,7 +80,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			templateData,
 			metaConfig.ProviderName,
 			"",
-			opts.DirConfig(),
+			&opts.Global,
 		)
 	}
 
@@ -118,7 +118,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
@@ -127,7 +127,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
+		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, &opts.Global)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -164,7 +164,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
@@ -178,7 +178,7 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		if err := template.PrepareControlPlaneManifests(templateController, controlPlaneConfig, opts.DirConfig()); err != nil {
+		if err := template.PrepareControlPlaneManifests(templateController, controlPlaneConfig, &opts.Global); err != nil {
 			return err
 		}
 		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
@@ -221,14 +221,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 				ctx,
 				string(data),
 				preparatorProvider,
-				opts.DirConfig(),
+				&opts.Global,
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, opts.DirConfig())
+			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, &opts.Global)
 			if err != nil {
 				return err
 			}
@@ -269,7 +269,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 			}
 		}
 
-		schemaStore := config.NewSchemaStore(opts.DirConfig())
+		schemaStore := config.NewSchemaStore(&opts.Global)
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)

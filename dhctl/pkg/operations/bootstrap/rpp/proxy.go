@@ -30,7 +30,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	tlsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/tls"
 )
@@ -44,7 +44,7 @@ type RegistryPackagesProxy struct {
 	configGetter  registry.ClientConfigGetter
 	clusterDomain string
 	clusterUUID   string
-	dc            *directoryconfig.DirectoryConfig
+	opts          *options.GlobalOptions
 
 	localPort           string
 	remotePort          string
@@ -121,8 +121,8 @@ func (p *RegistryPackagesProxy) WithClusterUUID(clusterUUID string) *RegistryPac
 	return p
 }
 
-func (p *RegistryPackagesProxy) WithDirectoryConfig(dc *directoryconfig.DirectoryConfig) *RegistryPackagesProxy {
-	p.dc = dc
+func (p *RegistryPackagesProxy) WithGlobalOptions(globalOptions *options.GlobalOptions) *RegistryPackagesProxy {
+	p.opts = globalOptions
 
 	return p
 }
@@ -141,8 +141,8 @@ func (p *RegistryPackagesProxy) upTunnel(ctx context.Context, sshCl libcon.SSHCl
 		return upTunnelError(fmt.Errorf("internal error - ssh client is nil"))
 	}
 
-	if govalue.IsNil(p.dc) {
-		return upTunnelError(fmt.Errorf("internal error - directory is nil"))
+	if govalue.IsNil(p.opts) {
+		return upTunnelError(fmt.Errorf("internal error - global options is nil"))
 	}
 
 	if govalue.IsNil(p.proxy) {
@@ -295,13 +295,13 @@ func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon
 	}
 
 	preflightURL := fmt.Sprintf("https://%s/healthz", net.JoinHostPort(listenAddress, remotePort))
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.dc)
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.opts)
 	if err != nil {
 		tun.Stop()
 		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %v", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.dc)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.opts)
 	if err != nil {
 		tun.Stop()
 		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %v", err)

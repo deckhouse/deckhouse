@@ -112,6 +112,8 @@ spec:
             resourceFieldRef:
               resource: limits.memory
               divisor: '1'
+        - name: GOMAXPROCS
+          value: "8"
         - name: KUBERNETES_SERVICE_HOST
           value: "127.0.0.1"
         - name: KUBERNETES_SERVICE_PORT
@@ -358,7 +360,7 @@ spec:
         command:
         - cilium-dbg
         - build-config
-        - --allow-config-keys=debug,single-cluster-route,mtu,bpf-map-dynamic-size-ratio,monitor-aggregation,monitor-aggregation-flags,monitor-aggregation-interval
+        - --allow-config-keys=debug,single-cluster-route,mtu,bpf-map-dynamic-size-ratio,monitor-aggregation,monitor-aggregation-flags,monitor-aggregation-interval,bpf-events-trace-enabled
         env:
         - name: K8S_NODE_NAME
           valueFrom:

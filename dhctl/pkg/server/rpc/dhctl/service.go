@@ -28,8 +28,8 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -48,13 +48,13 @@ type Service struct {
 }
 
 type ServiceParams struct {
-	TmpDir            string
-	CacheDir          string
-	PodName           string
-	PodNamespace      string
-	SchemaStore       *config.SchemaStore
-	IsDebug           bool
-	DownloadDirConfig *directoryconfig.DirectoryConfig
+	TmpDir        string
+	CacheDir      string
+	PodName       string
+	PodNamespace  string
+	SchemaStore   *config.SchemaStore
+	IsDebug       bool
+	GlobalOptions *options.GlobalOptions
 }
 
 func New(params ServiceParams) *Service {

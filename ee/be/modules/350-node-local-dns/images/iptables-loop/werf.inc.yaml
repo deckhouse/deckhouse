@@ -7,7 +7,6 @@ import:
   add: /iptables-loop
   to: /iptables-loop
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

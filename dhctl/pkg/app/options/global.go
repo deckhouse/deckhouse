@@ -24,6 +24,14 @@ import (
 	otattribute "go.opentelemetry.io/otel/attribute"
 )
 
+const (
+	DefaultCandiDir               = DefaultDeckhouseDir + "/candi"
+	DefaultInfrastructureVersions = DefaultCandiDir + "/terraform_versions.yml"
+	DefaultGlobalHooksModule      = DefaultDeckhouseDir + "/global-hooks"
+	DefaultVersionMap             = DefaultCandiDir + "/version_map.yml"
+	DefaultModulesDir             = DefaultDeckhouseDir + "/modules"
+)
+
 // GlobalOptions holds settings shared by every dhctl command.
 type GlobalOptions struct {
 	TmpDir                 string
@@ -37,6 +45,18 @@ type GlobalOptions struct {
 	ConfigPaths            []string
 	SanityCheck            bool
 	ShowProgress           bool
+
+	// directory vars, moved from global and config
+	DhctlPath              string
+	DeckhouseDir           string
+	CandiDir               string
+	InfrastructureVersions string
+	GlobalHooksModule      string
+	VersionMap             string
+	ModulesDir             string
+
+	// indecates if download is needed
+	NeedDownload bool
 }
 
 func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
@@ -58,7 +78,7 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 // The DHCTL_DEBUG environment variable is honored here so commands receive
 // the same IsDebug behavior the previous package init() used to set.
 func NewGlobalOptions() GlobalOptions {
-	return GlobalOptions{
+	o := GlobalOptions{
 		TmpDir:           DefaultTmpDir(),
 		LoggerType:       "pretty",
 		IsDebug:          os.Getenv("DHCTL_DEBUG") == "yes",
@@ -66,6 +86,16 @@ func NewGlobalOptions() GlobalOptions {
 		DownloadCacheDir: filepath.Join(DefaultTmpDir(), "cache"),
 		ConfigPaths:      make([]string, 0),
 	}
+
+	rootPath, _ := os.Getwd()
+	if !CheckDirs() {
+		rootPath = o.DownloadDir
+		o.NeedDownload = true
+	}
+
+	SetPaths(rootPath, &o)
+
+	return o
 }
 
 // BuildInfo carries version/edition metadata loaded once at startup.
@@ -125,4 +155,85 @@ func readBuildFile(dst *string, filePath string) {
 		*dst = strings.TrimSpace(string(buf[:n]))
 		*dst = strings.ReplaceAll(*dst, "\n", "")
 	}
+}
+
+func CheckDirs() bool {
+	// old global dirs to check
+	pwd, err := os.Getwd()
+	if err != nil {
+		return false
+	}
+	deckhouseDir := pwd + DefaultDeckhouseDir
+	candiDir := pwd + DefaultCandiDir
+	infrastructureVersions := pwd + DefaultInfrastructureVersions
+	globalHooksModule := pwd + DefaultGlobalHooksModule
+	versionMap := pwd + DefaultVersionMap
+	modulesDir := pwd + DefaultModulesDir
+
+	absDh, err := os.Stat("/deckhouse")
+	if err != nil {
+		return false
+	}
+	if !absDh.IsDir() {
+		return false
+	}
+
+	dh, err := os.Stat(deckhouseDir)
+	if err != nil {
+		return false
+	}
+	if !dh.IsDir() {
+		return false
+	}
+
+	candi, err := os.Stat(candiDir)
+	if err != nil {
+		return false
+	}
+	if !candi.IsDir() {
+		return false
+	}
+
+	_, err = os.Stat(infrastructureVersions)
+	if err != nil {
+		return false
+	}
+
+	globalHooks, err := os.Stat(globalHooksModule)
+	if err != nil {
+		return false
+	}
+	if !globalHooks.IsDir() {
+		return false
+	}
+
+	modules, err := os.Stat(modulesDir)
+	if err != nil {
+		return false
+	}
+	if !modules.IsDir() {
+		return false
+	}
+
+	_, err = os.Stat(versionMap)
+
+	return err == nil
+}
+
+func SetPaths(root string, o *GlobalOptions) {
+	dhctlPath, err := os.Getwd()
+	if err != nil {
+		dhctlPath = "/"
+	}
+	_, err = os.Stat(filepath.Join(dhctlPath, "dhctl"))
+	if err != nil {
+		dhctlPath = "/"
+	}
+	o.CandiDir = filepath.Join(root, "deckhouse", "candi")
+	o.DeckhouseDir = filepath.Join(root, "deckhouse")
+	o.DhctlPath = dhctlPath
+	o.InfrastructureVersions = filepath.Join(o.CandiDir, "terraform_versions.yml")
+	o.GlobalHooksModule = filepath.Join(o.DeckhouseDir, "global-hooks")
+	o.VersionMap = filepath.Join(o.CandiDir, "version_map.yml")
+	o.ModulesDir = filepath.Join(o.DeckhouseDir, "modules")
 }

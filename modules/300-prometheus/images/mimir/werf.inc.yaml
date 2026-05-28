@@ -62,11 +62,10 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/mimir
-    to: /bin/mimir
-    after: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/mimir
+  to: /bin/mimir
+  after: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

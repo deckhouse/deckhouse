@@ -47,7 +47,6 @@ import:
   add: /src/permission-browser-apiserver
   to: /permission-browser-apiserver
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

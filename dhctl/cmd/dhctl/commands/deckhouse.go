@@ -60,11 +60,11 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		return log.ProcessCtx(ctx, "default", "Remove Deckhouse️", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)
@@ -109,11 +109,11 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		metaConfig, err := config.ParseConfig(
 			ctx,
@@ -121,13 +121,13 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
 		}
 
-		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
+		installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &opts.Global)
 		if err != nil {
 			return err
 		}
