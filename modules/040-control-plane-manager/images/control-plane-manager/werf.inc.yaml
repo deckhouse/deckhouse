@@ -5,13 +5,11 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
-fromCacheVersion: "2025-07-25-3"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /control-plane-manager
   to: /control-plane-manager
   before: install
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:

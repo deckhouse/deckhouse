@@ -46,10 +46,9 @@ dependencies:
 {{- $context := . -}}
 
 image: images-digests
-from: {{ index $.Images "base/scratch" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 dependencies:
-
 {{- range $imageDigest := $context.ModulesImagesDigestList }}
   {{- if not (hasSuffix "artifact" $imageDigest) }}
   {{- $ModuleNameCamel := $imageDigest | splitList "/" | first | camelcase | untitle }}
@@ -61,18 +60,9 @@ dependencies:
     targetEnv: MODULE_IMAGE_DIGEST_{{ $ModuleNameCamel }}_{{ $ImageDigestCamel }}
   {{- end }}
 {{- end }}
-
-import:
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  before: setup
-- image: {{ index $.Images "coreutils" }}
-  add: /usr/bin/env
-  before: setup
-- image: {{ index $.Images "grep" }}
-  add: /usr/bin/grep
-  before: setup
 shell:
+  beforeInstall:
+  - pm install grep coreutils jq
   setup:
   - |
     set -e

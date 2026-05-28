@@ -6,7 +6,6 @@ import:
   add: /kube-rbac-proxy
   to: /kube-rbac-proxy
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

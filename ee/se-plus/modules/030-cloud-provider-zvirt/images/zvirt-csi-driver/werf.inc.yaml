@@ -29,7 +29,6 @@ import:
   add: /bin/lsblk
   to: /bin/lsblk
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

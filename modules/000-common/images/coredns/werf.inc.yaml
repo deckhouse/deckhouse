@@ -51,11 +51,10 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /coredns
-    to: /coredns
-    before: setup
-git:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /coredns
+  to: /coredns
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

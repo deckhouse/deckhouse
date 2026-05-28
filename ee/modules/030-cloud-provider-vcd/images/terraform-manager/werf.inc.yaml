@@ -12,6 +12,9 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 {{- range $_, $version := $version_map }}
 - image: terraform-provider-vcd-artifact
@@ -19,7 +22,9 @@ import:
   to: /terraform-manager/terraform-provider-vcd-v{{ $version }}
   before: setup
 {{- end }}
-
+shell:
+  install:
+  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

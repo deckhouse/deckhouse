@@ -101,10 +101,8 @@ import:
 # images_digests.json, testing/library/utils.go falls back to the dummy
 # DefaultImagesDigests (tools/images_tags) — the path designed for
 # template/matrix tests.
-git:
-- add: /tools/mounts/mountfile
+- image: werf-mountpoints
+  add: /tools/mounts/mountfile
   to: /root/.ack-ginkgo-rc
-  stageDependencies:
-    setup:
-    - "**/*"
+  before: setup
 {{- end }}

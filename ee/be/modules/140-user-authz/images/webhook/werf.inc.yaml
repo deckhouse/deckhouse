@@ -2,15 +2,14 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
-    add: /src/webhook
-    to: /webhook
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
-    add: /src/healthcheck
-    to: /healthcheck
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
+  add: /src/webhook
+  to: /webhook
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-artifact
+  add: /src/healthcheck
+  to: /healthcheck
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
