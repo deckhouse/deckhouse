@@ -31,6 +31,16 @@ func (e *MissingError) Error() string {
 	return fmt.Sprintf("kubeconfig file %q not found", e.File)
 }
 
+// CAMissingError is returned when the signing CA certificate file is absent.
+// The client cert cannot be re-signed, so renewal is skipped.
+type CAMissingError struct {
+	CAName string
+}
+
+func (e *CAMissingError) Error() string {
+	return fmt.Sprintf("CA %q certificate not found on disk", e.CAName)
+}
+
 // CAExternalError is returned when the CA certificate exists but its private key does not (external CA scenario).
 // Renewal of the kubeconfig client cert is skipped — only the holder of the CA key can sign new leaf certificates.
 type CAExternalError struct {
@@ -42,7 +52,7 @@ func (e *CAExternalError) Error() string {
 }
 
 // CAExpiredError is returned when the CA certificate has already expired.
-// Renewal is blocked: signing with an expired CA produces certificates that fail chain validation in Kubernetes components.
+// Renewal is skipped: a client cert signed by an expired CA fails chain validation, so re-signing is pointless until the CA is rotated.
 type CAExpiredError struct {
 	CAName    string
 	ExpiredAt time.Time

@@ -132,11 +132,6 @@ func clientCertConfigFromX509(cert *x509.Certificate) pkiutil.CertConfig {
 
 // renewClientCert unconditionally re-signs the client certificate embedded in the given kubeconfig file.
 // All other kubeconfig fields are preserved. CA cert and key are loaded from pkiDir.
-//
-// Sentinel errors:
-//   - *MissingError — kubeconfig file absent (skippable)
-//   - *CAExternalError        — CA key absent (skippable)
-//   - *CAExpiredError         — CA cert expired (hard stop)
 func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 	path := filepath.Join(kubeconfigDir, string(file))
 
@@ -151,7 +146,7 @@ func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 	caCert, err := pkiutil.LoadCert(filepath.Join(pkiDir, "ca.crt"))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("CA certificate not found in %q", pkiDir)
+			return &CAMissingError{CAName: "ca"}
 		}
 		return fmt.Errorf("load CA cert: %w", err)
 	}
@@ -196,20 +191,37 @@ func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 	authInfo.ClientKey = ""
 	authInfo.ClientKeyData = encodedKey
 
-	return clientcmd.WriteToFile(*kubeConfig, path)
+	if err := clientcmd.WriteToFile(*kubeConfig, path); err != nil {
+		return fmt.Errorf("write kubeconfig %q: %w", file, err)
+	}
+	return nil
 }
 
 // RenewClientCert unconditionally re-signs the client certificate embedded in the given kubeconfig file.
-// Returns nil on success or one of *MissingError / *CAExternalError / *CAExpiredError to let the caller distinguish skip vs. fatal.
-// This is the low-level, single-file entry point; for renewing a batch of kubeconfig files with a structured outcome report, use RenewClientCerts.
+// All other kubeconfig fields are preserved. CA cert and key are loaded from pkiDir.
+//
+// The returned error encodes the outcome:
+//   - nil              — re-signed cleanly
+//   - *MissingError    — kubeconfig file absent (skipped)
+//   - *CAMissingError  — CA cert file absent (skipped)
+//   - *CAExternalError — CA key absent / external CA (skipped)
+//   - *CAExpiredError  — CA already expired (skipped)
+//   - any other error  — IO/permissions/signing failure (skipped)
 func RenewClientCert(file File, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
 	return renewClientCert(o.kubeconfigDir, o.pkiDir, file)
 }
 
 // RenewClientCerts iterates DefaultRenewableFiles() (or the subset chosen via WithRenewFiles) and renews each kubeconfig client certificate in turn.
-// The outcome of every file is recorded in report.Entries with Err == nil on success or a sentinel error otherwise.
-// Iteration never aborts — the caller iterates report.Entries and decides per-entry what to do.
+// All other kubeconfig fields are preserved. CA cert and key are loaded from pkiDir.
+//
+// The returned error encodes the outcome:
+//   - nil              — re-signed cleanly
+//   - *MissingError    — kubeconfig file absent (skipped)
+//   - *CAMissingError  — CA cert file absent (skipped)
+//   - *CAExternalError — CA key absent / external CA (skipped)
+//   - *CAExpiredError  — CA already expired (skipped)
+//   - any other error  — IO/permissions/signing failure (skipped)
 func RenewClientCerts(opts ...RenewOption) KubeconfigRenewReport {
 	o := newRenewOptions(opts...)
 

@@ -43,6 +43,18 @@ func (e *MissingError) Error() string {
 	return fmt.Sprintf("certificate %q not found on disk", e.BaseName)
 }
 
+// CAMissingError is returned when the signing CA certificate file is absent.
+// The leaf cannot be re-signed, so renewal is skipped.
+type CAMissingError struct {
+	CAName string
+}
+
+func (e *CAMissingError) Error() string {
+	return fmt.Sprintf("CA %q certificate not found on disk", e.CAName)
+}
+
+// CAExternalError is returned when the CA certificate exists but its private key does not (external CA scenario).
+// Renewal is skipped.
 type CAExternalError struct {
 	CAName string
 }
@@ -51,6 +63,8 @@ func (e *CAExternalError) Error() string {
 	return fmt.Sprintf("CA %q private key not found (external CA — renewal skipped)", e.CAName)
 }
 
+// CAExpiredError is returned when the signing CA certificate has already expired.
+// Renewal is skipped: a leaf signed by an expired CA fails chain validation, so re-signing is pointless until the CA is rotated.
 type CAExpiredError struct {
 	CAName    string
 	ExpiredAt time.Time

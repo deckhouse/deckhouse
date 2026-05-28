@@ -135,7 +135,7 @@ func renewLeafCert(pkiDir string, name LeafCertName) error {
 	caCert, err := pkiutil.LoadCert(caCertFile)
 	if err != nil {
 		if isNotExistError(err) {
-			return fmt.Errorf("CA cert %q not found", caName)
+			return &CAMissingError{CAName: string(caName)}
 		}
 		return fmt.Errorf("load CA cert %q: %w", caName, err)
 	}
@@ -170,20 +170,33 @@ func renewLeafCert(pkiDir string, name LeafCertName) error {
 	return nil
 }
 
-// RenewLeafCert renews a leaf certificate by re-signing it with the same private key.
-// All Subject/SAN/Usage/Algorithm fields are preserved from the current certificate file.
+// RenewCertificate renews a leaf certificate by re-signing it with a fresh key.
+// All Subject/SAN/Usage/Algorithm fields are preserved from the current cert.
 // The new certificate is issued with constants.CertificateValidityPeriod (1 year).
-// Sentinel errors:
-//   - *MissingError  — leaf cert file absent (skippable)
-//   - *CAExternalError   — CA key absent (skippable)
-//   - *CAExpiredError    — CA cert expired (hard stop; renewal is pointless)
+//
+// The returned error encodes the outcome:
+//   - nil              — re-signed cleanly
+//   - *MissingError    — leaf cert file absent (skipped)
+//   - *CAMissingError  — CA cert file absent (skipped)
+//   - *CAExternalError — CA key absent / external CA (skipped)
+//   - *CAExpiredError  — CA already expired (skipped)
+//   - any other error  — IO/permissions/signing failure (skipped)
 func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
 	return renewLeafCert(o.certificatesDir, name)
 }
 
-// RenewCertificates iterates the inventory (or the subset chosen via WithRenewLeafs) and renews each leaf certificate in turn.
-// Iteration never aborts — the caller iterates report.Entries and decides per-entry what to do.
+// RenewCertificates renews a batch of leaf certificates by re-signing them with a fresh key.
+// All Subject/SAN/Usage/Algorithm fields are preserved from the current cert.
+// The new certificate is issued with constants.CertificateValidityPeriod (1 year).
+//
+// The returned error encodes the outcome:
+//   - nil              — re-signed cleanly
+//   - *MissingError    — leaf cert file absent (skipped)
+//   - *CAMissingError  — CA cert file absent (skipped)
+//   - *CAExternalError — CA key absent / external CA (skipped)
+//   - *CAExpiredError  — CA already expired (skipped)
+//   - any other error  — IO/permissions/signing failure (skipped)
 func RenewCertificates(opts ...RenewOption) PKIRenewReport {
 	o := newRenewOptions(opts...)
 
