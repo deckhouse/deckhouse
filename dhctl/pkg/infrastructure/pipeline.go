@@ -122,7 +122,11 @@ func ApplyPipeline(
 			return err
 		}
 
-		defer func() { extractedData, err = extractFn(ctx, r) }()
+		defer func() {
+			if err == nil {
+				extractedData, err = extractFn(ctx, r)
+			}
+		}()
 
 		if err := r.Apply(ctx); err != nil {
 			return err
