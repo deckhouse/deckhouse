@@ -85,7 +85,7 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 
 		allPassedHosts := ""
 		if len(apiserverHosts) > 0 {
-			strings.Join(apiserverHosts, ",")
+			allPassedHosts = strings.Join(apiserverHosts, ",")
 		}
 
 		err := retry.NewSilentLoop(name, 45, 5*time.Second).RunContext(ctx, func() error {
@@ -236,7 +236,10 @@ func UpdateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 }
 
 func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for Node %s to become Ready", nodeName), 100, 20*time.Second).
+	// Poll every 1s: kubelet flips Node.Status.Ready in one tick once CNI signals
+	// itself initialised, so coarse 20s polling adds a full polling-cycle of dead
+	// time after the transition. Total budget unchanged (2000 × 1s = ~33 min).
+	return retry.NewLoop(fmt.Sprintf("Waiting for Node %s to become Ready", nodeName), 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 			if err != nil {
@@ -263,7 +266,7 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 
 func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupsMap map[string]int) error {
 	ngsName := slices.Collect(maps.Keys(nodeGroupsMap))
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 100, 20*time.Second).
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeGroups %v to become Ready", ngsName), 2000, 1*time.Second).
 		RunContext(ctx, func() error {
 			desiredReadyNodes := 0
 			for _, countNodes := range nodeGroupsMap {

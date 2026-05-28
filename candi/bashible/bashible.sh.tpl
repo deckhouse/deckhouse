@@ -510,6 +510,10 @@ function main() {
     local per_step_log="${step_log_dir}/step.${step_base}.log"
     local attempt=0
     local sx=""
+    # ms-precision timing emitted as `[bashible-timing] step=NAME dur=X.YYYs` —
+    # parsed by dhctl-side measurement tooling to map where bashible time goes.
+    local start_ts
+    start_ts=$(date +%s.%N)
     echo ===
     echo === Step: $step
     echo ===
@@ -539,6 +543,9 @@ function main() {
       bb-bashible-ready-steps-failed "$step_base"
     done
     cp -f "$per_step_log" "$step_log" 2>/dev/null || true
+    local dur
+    dur=$(awk -v s="$start_ts" -v e="$(date +%s.%N)" 'BEGIN{printf "%.3f", e-s}')
+    echo "[bashible-timing] step=$step_base dur=${dur}s"
     return 0
   }
 

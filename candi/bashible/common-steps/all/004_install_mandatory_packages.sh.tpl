@@ -11,6 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
+
+__sec_start=$(date +%s.%N)
+__sec() {
+  local now dur
+  now=$(date +%s.%N)
+  dur=$(awk -v s="$__sec_start" -v e="$now" 'BEGIN{printf "%.3f", e-s}')
+  echo "[bashible-timing] step=004_install_mandatory_packages.sh section=$1 dur=${dur}s"
+  __sec_start=$now
+}
 
 # Per-step prefetch wait: all 12 packages below are prefetched in the background by
 # step 001_prefetch_registry_packages.sh (systemd unit `rpp-prefetch.service`). We
@@ -31,5 +41,7 @@ bb-rpp-wait-fetched "iptables" "{{ .images.registrypackages.iptables189 }}" || t
 bb-rpp-wait-fetched "growpart" "{{ .images.registrypackages.growpart033 }}" || true
 bb-rpp-wait-fetched "lsblk" "{{- index .images.registrypackages "lsblk2402" }}" || true
 bb-rpp-wait-fetched "nfs-mount" "{{- .images.registrypackages.nfsMount282 }}" || true
+__sec wait_prefetch
 
 rpp-get install "d8:{{ .images.registrypackages.d8 }}" "jq:{{ .images.registrypackages.jq171 }}" "yq:{{ .images.registrypackages.yq4471 }}" "curl:{{ .images.registrypackages.d8Curl891 }}" "which:{{ .images.registrypackages.which223 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}" "iptables:{{ .images.registrypackages.iptables189 }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk2402" }}" "nfs-mount:{{- .images.registrypackages.nfsMount282 }}"
+__sec rpp_install
