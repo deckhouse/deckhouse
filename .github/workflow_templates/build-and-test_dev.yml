@@ -200,7 +200,7 @@ jobs:
       - go_generate
       - dhctl_tests
       - tests
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run
