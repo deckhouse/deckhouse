@@ -196,8 +196,8 @@ spec:
                             type: string
                         type: object
                       modules:
-                        description: Required modules, partitioned into mandatory
-                          and conditional dependencies.
+                        description: Required modules, partitioned into mandatory,
+                          conditional, and anyOf dependencies.
                         properties:
                           anyOf:
                             description: |-
