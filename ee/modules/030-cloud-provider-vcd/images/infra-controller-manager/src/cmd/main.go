@@ -102,6 +102,15 @@ func main() {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
 
+	// Category A TLS profile (deckhouse TLS standard, see
+	// go_lib/hooks/tls_certificate/README.md): kube-apiserver is the
+	// only webhook client and Prometheus is the only metrics client,
+	// so TLS 1.3 is a safe floor for both surfaces.
+	tlsOpts = append(tlsOpts, func(c *tls.Config) {
+		c.MinVersion = tls.VersionTLS13
+		c.CipherSuites = nil
+	})
+
 	// Create watchers for metrics and webhooks certificates
 	var metricsCertWatcher, webhookCertWatcher *certwatcher.CertWatcher
 

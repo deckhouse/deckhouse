@@ -88,6 +88,16 @@ func main() {
 		tlsOpts = append(tlsOpts, disableHTTP2)
 	}
 
+	// Category A TLS profile (deckhouse TLS standard, see
+	// go_lib/hooks/tls_certificate/README.md): the webhook is reached
+	// only by kube-apiserver, so we pin TLS 1.3 and rely on Go's fixed
+	// AEAD suite list. The same opt is reused for the metrics server
+	// below: in-cluster Prometheus speaks TLS 1.3 fine.
+	tlsOpts = append(tlsOpts, func(c *tls.Config) {
+		c.MinVersion = tls.VersionTLS13
+		c.CipherSuites = nil
+	})
+
 	webhookServer := webhook.NewServer(webhook.Options{
 		TLSOpts: tlsOpts,
 	})

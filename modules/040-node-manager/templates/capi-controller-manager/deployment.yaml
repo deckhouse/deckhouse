@@ -62,6 +62,7 @@ spec:
     metadata:
       annotations:
         node-manager.deckhouse.io/force-rollout-v1-72-5: ""
+        checksum/certificate: {{ include (print $.Template.BasePath "/capi-controller-manager/secret-tls.yaml") . | sha256sum }}
       labels:
         app: capi-controller-manager
         cluster.x-k8s.io/provider: cluster-api

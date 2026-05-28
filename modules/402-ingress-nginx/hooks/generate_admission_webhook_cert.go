@@ -96,6 +96,10 @@ func generateValidateWebhookCert(_ context.Context, input *go_hook.HookInput) er
 		return errors.Wrap(err, "generate CA failed")
 	}
 
+	// NOTE: WithGroups intentionally omitted on the leaf so that its Subject DN
+	// differs from the CA's (which keeps O=ingress-nginx.d8-ingress-nginx).
+	// Without this, OpenSSL flags the leaf as depth-0 self-signed
+	// (X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) since subject == issuer.
 	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
@@ -104,7 +108,6 @@ func generateValidateWebhookCert(_ context.Context, input *go_hook.HookInput) er
 			S: 2048,
 		}),
 		certificate.WithSANs("*.d8-ingress-nginx", "*.d8-ingress-nginx.svc"),
-		certificate.WithGroups("ingress-nginx.d8-ingress-nginx"),
 		certificate.WithSigningDefaultExpiry(87600*time.Hour),
 	)
 	if err != nil {
