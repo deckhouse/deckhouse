@@ -1909,7 +1909,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs table.versioning-table {
-  table-layout: fixed;
+  table-layout: auto;
 
   th, td {
     word-wrap: break-word;
