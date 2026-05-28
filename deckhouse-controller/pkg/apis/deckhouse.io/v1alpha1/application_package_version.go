@@ -251,18 +251,89 @@ type ApplicationPackageVersionList struct {
 	Items []ApplicationPackageVersion `json:"items"`
 }
 
+// PackageRequirements describes the platform and module dependencies of a package,
+// surfaced as part of the package version status.
 type PackageRequirements struct {
 	// Required Deckhouse version.
 	// +optional
-	Deckhouse string `json:"deckhouse,omitempty"`
+	Deckhouse *VersionConstraint `json:"deckhouse,omitempty"`
 
 	// Required Kubernetes version.
 	// +optional
-	Kubernetes string `json:"kubernetes,omitempty"`
+	Kubernetes *VersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required versions of other modules.
+	// Required modules, partitioned into mandatory, conditional, and anyOf
+	// dependency buckets.
 	// +optional
-	Modules map[string]string `json:"modules,omitempty"`
+	Modules *PackageModulesRequirements `json:"modules,omitempty"`
+}
+
+// VersionConstraint wraps a single semver constraint expression (e.g. ">= 1.26").
+type VersionConstraint struct {
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModulesRequirements groups module dependencies by how they affect startup.
+type PackageModulesRequirements struct {
+	// Mandatory dependencies — must be present (and satisfy the constraint, if any)
+	// for the package to start.
+	// +optional
+	Mandatory []PackageModuleDependency `json:"mandatory,omitempty"`
+
+	// Conditional dependencies — not required to be present, but if installed must
+	// satisfy the constraint for the package to function correctly. Replaces the
+	// legacy "!optional" suffix from the v1 requirements format.
+	// +optional
+	Conditional []PackageModuleDependency `json:"conditional,omitempty"`
+
+	// AnyOf groups of alternative dependencies — at least one member of each group
+	// must be installed (and satisfy its constraint, if any) for the package to
+	// start. Groups are checker-only and add no edges to the dependency graph.
+	// +optional
+	AnyOf []PackageModuleGroup `json:"anyOf,omitempty"`
+
+	// NoneOf groups of forbidden dependencies — no member of any group may be
+	// installed for the package to start. A member with no constraint is forbidden
+	// at any version; a member with a constraint is forbidden only at versions
+	// matching that constraint. Groups are checker-only and add no edges to the
+	// dependency graph.
+	// +optional
+	NoneOf []PackageModuleGroup `json:"noneOf,omitempty"`
+}
+
+// PackageModuleDependency is a single named module dependency with a semver
+// constraint. The constraint is required for entries in
+// PackageModulesRequirements.Conditional ("if installed, no version requirement"
+// is a no-op and rejected at parse time); for entries in
+// PackageModulesRequirements.Mandatory the constraint is optional and an empty
+// value means "any version".
+type PackageModuleDependency struct {
+	// Module name.
+	Name string `json:"name"`
+
+	// Semver constraint expression.
+	// +optional
+	Constraint string `json:"constraint,omitempty"`
+}
+
+// PackageModuleGroup is a named group of module dependencies. Group semantics
+// depend on the containing bucket: members of an anyOf group are alternatives
+// (at least one must be installed), members of a noneOf group are forbidden
+// (none may be installed). The Name is required and surfaces in scheduler
+// diagnostics; the Description is optional human-facing documentation.
+type PackageModuleGroup struct {
+	// Stable identifier used by the scheduler in diagnostics.
+	Name string `json:"name"`
+
+	// Human-readable description of the group's purpose.
+	// +optional
+	Description string `json:"description,omitempty"`
+
+	// Module dependencies in this group. The bucket containing the group
+	// (anyOf / noneOf) defines whether members are alternatives or forbidden.
+	Modules []PackageModuleDependency `json:"modules"`
 }
 
 type PackageDescription struct {

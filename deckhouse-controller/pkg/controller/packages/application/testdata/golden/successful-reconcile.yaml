@@ -72,8 +72,10 @@ status:
       en: example — test
       ru: example — test
     requirements:
-      deckhouse: '>=1.0.0'
-      kubernetes: '>=1.26'
+      deckhouse:
+        constraint: '>=1.0.0'
+      kubernetes:
+        constraint: '>=1.26'
     stage: Preview
   usedBy:
   - name: test-app
