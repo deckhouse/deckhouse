@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -28,6 +29,13 @@ import (
 const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length"
 
 const maxDiskNameLength = 63
+
+func maxNodeIndex(replicas int) string {
+	if replicas <= 1 {
+		return "0"
+	}
+	return strconv.Itoa(replicas - 1)
+}
 
 func providerKubernetesDataDiskNames(prefix, nodeIndex string) []string {
 	return []string{
@@ -85,6 +93,7 @@ type dvpMasterNodeGroup struct {
 
 type dvpNodeGroup struct {
 	Name          string           `json:"name"`
+	Replicas      int              `json:"replicas"`
 	InstanceClass dvpInstanceClass `json:"instanceClass"`
 }
 
@@ -116,16 +125,18 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 		return c.runDVP(prefix)
 	}
 
+	nodeIndex := maxNodeIndex(c.MetaConfig.MasterNodeGroupSpec.Replicas)
+
 	var diskNames []string
 	switch provider {
 	case "aws", "azure", "gcp", "yandex", "huaweicloud", "vsphere":
-		diskNames = providerKubernetesDataDiskNames(prefix, "0")
+		diskNames = providerKubernetesDataDiskNames(prefix, nodeIndex)
 	case "openstack":
-		diskNames = openstackDiskNames(prefix, "0")
+		diskNames = openstackDiskNames(prefix, nodeIndex)
 	case "vcd":
-		diskNames = vcdDiskNames(prefix, "0")
+		diskNames = vcdDiskNames(prefix, nodeIndex)
 	case "zvirt", "dynamix":
-		diskNames = providerMasterNodeDiskNames(prefix, "0")
+		diskNames = providerMasterNodeDiskNames(prefix, nodeIndex)
 	default:
 		return nil
 	}
@@ -143,7 +154,8 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 }
 
 func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
-	for _, diskName := range dvpMasterDiskNames(prefix, "0", "abcdef", c.masterHasAdditionalDisks()) {
+	masterIndex := maxNodeIndex(c.MetaConfig.MasterNodeGroupSpec.Replicas)
+	for _, diskName := range dvpMasterDiskNames(prefix, masterIndex, "abcdef", c.masterHasAdditionalDisks()) {
 		if len(diskName) > maxDiskNameLength {
 			return fmt.Errorf(
 				"disk name %q for node group %q exceeds %d characters (got %d); "+
@@ -155,7 +167,8 @@ func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
 
 	for _, ng := range c.dvpNodeGroups() {
 		hasAdditional := len(ng.InstanceClass.AdditionalDisks) > 0
-		for _, diskName := range dvpNodeGroupDiskNames(prefix, ng.Name, "0", "abcdef", hasAdditional) {
+		ngIndex := maxNodeIndex(ng.Replicas)
+		for _, diskName := range dvpNodeGroupDiskNames(prefix, ng.Name, ngIndex, "abcdef", hasAdditional) {
 			if len(diskName) > maxDiskNameLength {
 				return fmt.Errorf(
 					"disk name %q for node group %q exceeds %d characters (got %d); "+
