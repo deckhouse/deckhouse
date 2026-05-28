@@ -43,16 +43,9 @@ func (w *Watcher) GetPackagesConfig(packageRepositoryName string) (*registry.Pac
 		return nil, fmt.Errorf("get package repository %q: %w", packageRepositoryName, err)
 	}
 
-	// An empty dockerCfg means the upstream registry is anonymous. Don't
-	// treat the absence of credentials as a hard error: we should still be
-	// able to pull public images.
-	var auth string
-	if pr.Spec.Registry.DockerCFG != "" {
-		ac, err := readAuthFromDockerCfg(pr.Spec.Registry.Repo, pr.Spec.Registry.DockerCFG)
-		if err != nil {
-			return nil, fmt.Errorf("read auth from docker cfg: %w", err)
-		}
-		auth = ac.Auth
+	auth, err := resolveRegistryAuth(pr.Spec.Registry)
+	if err != nil {
+		return nil, fmt.Errorf("resolve registry auth for package repository %q: %w", packageRepositoryName, err)
 	}
 
 	return &registry.PackagesConfig{
@@ -61,6 +54,51 @@ func (w *Watcher) GetPackagesConfig(packageRepositoryName string) (*registry.Pac
 		CA:         pr.Spec.Registry.CA,
 		Auth:       auth,
 	}, nil
+}
+
+// resolveRegistryAuth converts the credentials carried on a
+// PackageRepositorySpecRegistry into the base64("login:password") shape that
+// registry.PackagesConfig.Auth (and the docker config "auth" field) expect.
+//
+// Precedence matches the upstream PackageRepository controller (see
+// deckhouse-controller/internal/registry.Service.buildRegistryClient):
+//
+//  1. spec.registry.login  - takes priority, wins over dockerCfg.
+//  2. spec.registry.dockerCfg - parsed as a docker config JSON and matched
+//     against spec.registry.repo by URL host.
+//  3. neither              - anonymous registry; return empty string.
+//
+// We do NOT treat the absence of credentials as an error: many package
+// repositories are public.
+func resolveRegistryAuth(spec PackageRepositorySpecRegistry) (string, error) {
+	if spec.Login != "" {
+		return encodeBasicAuth(spec.Login, spec.Password), nil
+	}
+	if spec.DockerCFG == "" {
+		return "", nil
+	}
+	ac, err := readAuthFromDockerCfg(spec.Repo, spec.DockerCFG)
+	if err != nil {
+		return "", fmt.Errorf("read auth from docker cfg: %w", err)
+	}
+	// dockerCfg entries usually carry an already-base64-encoded "auth"
+	// field; fall back to encoding from username/password if only those
+	// are present (some registries / CI tools write the config that way).
+	if ac.Auth != "" {
+		return ac.Auth, nil
+	}
+	if ac.Username != "" {
+		return encodeBasicAuth(ac.Username, ac.Password), nil
+	}
+	return "", nil
+}
+
+// encodeBasicAuth returns base64("user:password") which is exactly what the
+// "auth" field of a docker config JSON entry contains and what
+// registry.ClientConfig.Auth is plumbed into authn.AuthConfig.Auth for the
+// Basic auth header.
+func encodeBasicAuth(user, password string) string {
+	return base64.StdEncoding.EncodeToString([]byte(user + ":" + password))
 }
 
 // readAuthFromDockerCfg locates the matching auth entry inside a base64-encoded
