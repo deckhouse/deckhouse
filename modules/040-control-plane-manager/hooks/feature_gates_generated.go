@@ -333,7 +333,6 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"MemoryQoS",
 			"MutablePVNodeAffinity",
 			"NativeHistograms",
-			"PodInfoAPI",
 			"PodLogsQuerySplitStreams",
 			"SELinuxMount",
 		},
