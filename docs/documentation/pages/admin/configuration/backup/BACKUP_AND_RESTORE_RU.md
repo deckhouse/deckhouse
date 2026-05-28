@@ -466,7 +466,7 @@ systemctl restart kubelet.service
 1. Добавьте новый IP-адрес в список `certSANs` в ModuleConfig `control-plane-manager`. `control-plane-manager` обнаружит изменение ключа `cert-sans` в секрете `d8-control-plane-manager-config`, создаст `ControlPlaneOperation` с шагом `RenewPKICerts` и перевыпустит сертификат `kube-apiserver` с обновлённым списком SAN:
 
    ```shell
-   kubectl edit mc control-plane-manager
+   d8 k edit mc control-plane-manager
    ```
 
    Добавьте новый IP-адрес в `spec.settings.apiserver.certSANs`:
@@ -488,13 +488,13 @@ systemctl restart kubelet.service
    Следите за ходом перевыпуска сертификата:
 
    ```shell
-   kubectl get cpo -o wide -w
+   d8 k get cpo -o wide -w
    ```
 
    Дождитесь, пока операция перейдёт в фазу `Phase=Succeeded`. Затем убедитесь, что `ControlPlaneNode` показывает актуальное состояние сертификатов:
 
    ```shell
-   kubectl get cpn
+   d8 k get cpn
    ```
 
    В столбце `CERTIFICATES` должно быть значение `True`.
