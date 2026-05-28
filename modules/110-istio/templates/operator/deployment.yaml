@@ -87,6 +87,8 @@ spec:
         - server
         securityContext:
           allowPrivilegeEscalation: false
+          seccompProfile:
+            type: RuntimeDefault
           capabilities:
             drop:
             - ALL

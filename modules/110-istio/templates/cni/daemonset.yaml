@@ -89,6 +89,8 @@ spec:
           {{- else }}
           securityContext:
             allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
             readOnlyRootFilesystem: true
             runAsNonRoot: false
             runAsUser: 0
