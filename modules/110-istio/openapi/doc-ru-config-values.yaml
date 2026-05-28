@@ -87,7 +87,7 @@ properties:
             description: |
               Параметры протокола Zipkin, который использует Istio для отправки трассов (Jaeger принимает его на порту `9411`, как правило).
 
-              При включённой трассировке адрес задаётся здесь в обоих режимах описаных в [`tracing.collector`](#parameters-tracing-collector).
+              При включённой трассировке адрес задаётся здесь в обоих режимах описанных в [`tracing.collector`](#parameters-tracing-collector).
             properties:
               address:
                 description: Сетевой адрес zipkin-коллектора в формате `<хост>:<порт>` (FQDN или IP согласно шаблону в схеме).
