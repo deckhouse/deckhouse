@@ -5,7 +5,7 @@ search: hybrid with VCD
 description: Preparation for hybrid integration with VMware Cloud Director in Deckhouse Kubernetes Platform.
 ---
 
-The following describes the process of adding worker nodes from VMware Cloud Director (VCD) to an existing static DKP cluster.
+The following describes the process of adding worker nodes from VMware Cloud Director (VCD) to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
 
 Integration with VCD uses the [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module. It provides interaction between DKP and VMware Cloud Director, creation and deletion of virtual machines, retrieval of information about the VCD infrastructure, and integration with StorageClass and other provider capabilities.
 

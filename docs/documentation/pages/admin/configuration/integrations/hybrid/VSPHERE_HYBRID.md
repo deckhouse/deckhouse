@@ -5,7 +5,7 @@ search: hybrid with vSphere
 description: Preparation for hybrid integration with VMware vSphere in Deckhouse Kubernetes Platform.
 ---
 
-The following describes the process of adding worker nodes from vSphere to an existing static DKP cluster.
+The following describes the process of adding worker nodes from vSphere to an existing static Deckhouse Kubernetes Platform (DKP) cluster.
 
 Integration with vSphere uses the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module. It provides interaction between DKP and vCenter, retrieval of information about virtual machines, work with placement parameters, and integration with vSphere infrastructure capabilities.
 
@@ -35,7 +35,7 @@ To connect an already running static cluster to vCenter, use the [ModuleConfig](
 
 In the `spec.settings` parameter, specify access parameters for vCenter, network settings, region and zone tags, and SSH keys that will be added to the created virtual machines.
 
-An example configuration and description of the available parameters are provided in the [module examples](/modules/cloud-provider-vsphere/examples.html) and in the [Configuration of the `cloud-provider-vsphere` module](/modules/cloud-provider-vsphere/configuration.html) section.
+An example configuration and description of the available parameters are provided in the [module examples](/modules/cloud-provider-vsphere/examples.html) and in the section describing the [module settings](/modules/cloud-provider-vsphere/configuration.html).
 
 1. Create a file with ModuleConfig for the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module. For example, `vsphere-mc.yaml`:
 

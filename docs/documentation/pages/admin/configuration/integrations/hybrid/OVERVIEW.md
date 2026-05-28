@@ -1,5 +1,5 @@
 ---
-title: Hybrid integrations
+title: Hybrid clusters
 permalink: en/admin/integrations/hybrid/overview.html
 search: hybrid, hybrid cluster, hybrid integration
 description: General principles of hybrid integration in Deckhouse Kubernetes Platform.
