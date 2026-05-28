@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -30,25 +29,51 @@ const CloudDiskNameLengthCheckName preflight.CheckName = "cloud-disk-name-length
 
 const maxDiskNameLength = 63
 
-var providerDiskSuffixParts = map[string][][]string{
-	"aws":         {{"kubernetes-data", "0"}},
-	"azure":       {{"kubernetes-data", "0"}},
-	"gcp":         {{"kubernetes-data", "0"}},
-	"yandex":      {{"kubernetes-data", "0"}},
-	"openstack":   {{"kubernetes-data", "0"}, {"master-root-volume", "0"}},
-	"huaweicloud": {{"kubernetes-data", "0"}},
-	"vsphere":     {{"kubernetes-data", "0"}},
-	"vcd":         {{"master", "0", "etcd-disk"}},
-	"zvirt":       {{"master", "0", "kubernetes-data"}},
-	"dynamix":     {{"master", "0", "kubernetes-data"}},
+func providerKubernetesDataDiskNames(prefix, nodeIndex string) []string {
+	return []string{
+		fmt.Sprintf("%s-kubernetes-data-%s", prefix, nodeIndex),
+	}
 }
 
-var (
-	dvpMasterDisks             = [][]string{{"0", "abcdef"}, {"kubernetes-data", "0", "abcdef"}}
-	dvpMasterAdditionalDisk    = []string{"additional-disk", "0", "0", "abcdef"}
-	dvpNodeGroupDisks          = [][]string{{"0", "abcdef"}}
-	dvpNodeGroupAdditionalDisk = []string{"additional-disk", "0", "0", "abcdef"}
-)
+func openstackDiskNames(prefix, nodeIndex string) []string {
+	return []string{
+		fmt.Sprintf("%s-kubernetes-data-%s", prefix, nodeIndex),
+		fmt.Sprintf("%s-master-root-volume-%s", prefix, nodeIndex),
+	}
+}
+
+func vcdDiskNames(prefix, nodeIndex string) []string {
+	return []string{
+		fmt.Sprintf("%s-master-%s-etcd-disk", prefix, nodeIndex),
+	}
+}
+
+func providerMasterNodeDiskNames(prefix, nodeIndex string) []string {
+	return []string{
+		fmt.Sprintf("%s-master-%s-kubernetes-data", prefix, nodeIndex),
+	}
+}
+
+func dvpMasterDiskNames(prefix, nodeIndex, hash string, withAdditional bool) []string {
+	names := []string{
+		fmt.Sprintf("%s-master-%s-%s", prefix, nodeIndex, hash),
+		fmt.Sprintf("%s-master-kubernetes-data-%s-%s", prefix, nodeIndex, hash),
+	}
+	if withAdditional {
+		names = append(names, fmt.Sprintf("%s-master-additional-disk-0-%s-%s", prefix, nodeIndex, hash))
+	}
+	return names
+}
+
+func dvpNodeGroupDiskNames(prefix, nodeGroup, nodeIndex, hash string, withAdditional bool) []string {
+	names := []string{
+		fmt.Sprintf("%s-%s-%s-%s", prefix, nodeGroup, nodeIndex, hash),
+	}
+	if withAdditional {
+		names = append(names, fmt.Sprintf("%s-%s-additional-disk-0-%s-%s", prefix, nodeGroup, nodeIndex, hash))
+	}
+	return names
+}
 
 type dvpInstanceClass struct {
 	AdditionalDisks []json.RawMessage `json:"additionalDisks,omitempty"`
@@ -91,13 +116,21 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 		return c.runDVP(prefix)
 	}
 
-	disks, ok := providerDiskSuffixParts[provider]
-	if !ok {
+	var diskNames []string
+	switch provider {
+	case "aws", "azure", "gcp", "yandex", "huaweicloud", "vsphere":
+		diskNames = providerKubernetesDataDiskNames(prefix, "0")
+	case "openstack":
+		diskNames = openstackDiskNames(prefix, "0")
+	case "vcd":
+		diskNames = vcdDiskNames(prefix, "0")
+	case "zvirt", "dynamix":
+		diskNames = providerMasterNodeDiskNames(prefix, "0")
+	default:
 		return nil
 	}
 
-	for _, suffixParts := range disks {
-		diskName := prefix + "-" + strings.Join(suffixParts, "-")
+	for _, diskName := range diskNames {
 		if len(diskName) > maxDiskNameLength {
 			return fmt.Errorf(
 				"disk name %q exceeds %d characters (got %d); use a shorter cluster prefix",
@@ -110,40 +143,29 @@ func (c CloudDiskNameLengthCheck) Run(ctx context.Context) error {
 }
 
 func (c CloudDiskNameLengthCheck) runDVP(prefix string) error {
-	masterDisks := dvpMasterDisks
-	if c.masterHasAdditionalDisks() {
-		masterDisks = append(masterDisks, dvpMasterAdditionalDisk)
-	}
-	for _, suffixParts := range masterDisks {
-		if err := checkDVPDiskName(prefix, "master", suffixParts); err != nil {
-			return err
+	for _, diskName := range dvpMasterDiskNames(prefix, "0", "abcdef", c.masterHasAdditionalDisks()) {
+		if len(diskName) > maxDiskNameLength {
+			return fmt.Errorf(
+				"disk name %q for node group %q exceeds %d characters (got %d); "+
+					"use a shorter cluster prefix or node group name",
+				diskName, "master", maxDiskNameLength, len(diskName),
+			)
 		}
 	}
 
 	for _, ng := range c.dvpNodeGroups() {
-		ngDisks := dvpNodeGroupDisks
-		if len(ng.InstanceClass.AdditionalDisks) > 0 {
-			ngDisks = append(ngDisks, dvpNodeGroupAdditionalDisk)
-		}
-		for _, suffixParts := range ngDisks {
-			if err := checkDVPDiskName(prefix, ng.Name, suffixParts); err != nil {
-				return err
+		hasAdditional := len(ng.InstanceClass.AdditionalDisks) > 0
+		for _, diskName := range dvpNodeGroupDiskNames(prefix, ng.Name, "0", "abcdef", hasAdditional) {
+			if len(diskName) > maxDiskNameLength {
+				return fmt.Errorf(
+					"disk name %q for node group %q exceeds %d characters (got %d); "+
+						"use a shorter cluster prefix or node group name",
+					diskName, ng.Name, maxDiskNameLength, len(diskName),
+				)
 			}
 		}
 	}
 
-	return nil
-}
-
-func checkDVPDiskName(prefix, nodeGroup string, suffixParts []string) error {
-	diskName := prefix + "-" + nodeGroup + "-" + strings.Join(suffixParts, "-")
-	if len(diskName) > maxDiskNameLength {
-		return fmt.Errorf(
-			"disk name %q for node group %q exceeds %d characters (got %d); "+
-				"use a shorter cluster prefix or node group name",
-			diskName, nodeGroup, maxDiskNameLength, len(diskName),
-		)
-	}
 	return nil
 }
 
