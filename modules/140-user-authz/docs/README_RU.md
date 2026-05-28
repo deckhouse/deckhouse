@@ -344,6 +344,7 @@ write:
     - cert-manager.io/certificates
     - cert-manager.io/issuers
     - configmaps
+    - deckhouse.io/daemonsetmetrics
     - deckhouse.io/deploymentmetrics
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -460,6 +461,7 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
+    - deckhouse.io/clusterdaemonsetmetrics
     - deckhouse.io/clusterdeploymentmetrics
     - deckhouse.io/clusteringressmetrics
     - deckhouse.io/clusterlogdestinations
