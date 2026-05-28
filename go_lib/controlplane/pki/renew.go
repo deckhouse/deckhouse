@@ -37,6 +37,7 @@ type RenewOption func(*renewOptions)
 type renewOptions struct {
 	certificatesDir  string
 	leafCertificates []LeafCertName
+	dryRun           bool
 }
 
 // WithRenewDir overrides the PKI directory used by Renew*.
@@ -52,6 +53,14 @@ func WithRenewDir(dir string) RenewOption {
 func WithRenewLeafs(names ...LeafCertName) RenewOption {
 	return func(o *renewOptions) {
 		o.leafCertificates = append(o.leafCertificates, names...)
+	}
+}
+
+// WithDryRun runs all renewal checks and signing in memory but skips writing the new certificate to disk.
+// The returned error contract is unchange
+func WithDryRun() RenewOption {
+	return func(o *renewOptions) {
+		o.dryRun = true
 	}
 }
 
@@ -116,7 +125,7 @@ func caForLeaf(name LeafCertName) (RootCertName, bool) {
 	return "", false
 }
 
-func renewLeafCert(pkiDir string, name LeafCertName) error {
+func renewLeafCert(pkiDir string, name LeafCertName, dryRun bool) error {
 	caName, ok := caForLeaf(name)
 	if !ok {
 		return fmt.Errorf("unknown leaf certificate %q", name)
@@ -164,6 +173,11 @@ func renewLeafCert(pkiDir string, name LeafCertName) error {
 	if err != nil {
 		return fmt.Errorf("sign cert %q: %w", name, err)
 	}
+
+	if dryRun {
+		return nil
+	}
+
 	if err := writeCertAndKey(pkiDir, string(name), newCert, newKey); err != nil {
 		return fmt.Errorf("write cert %q: %w", name, err)
 	}
@@ -183,7 +197,7 @@ func renewLeafCert(pkiDir string, name LeafCertName) error {
 //   - any other error  — IO/permissions/signing failure (skipped)
 func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
-	return renewLeafCert(o.certificatesDir, name)
+	return renewLeafCert(o.certificatesDir, name, o.dryRun)
 }
 
 // RenewCertificates renews a batch of leaf certificates by re-signing them with a fresh key.
@@ -207,7 +221,7 @@ func RenewCertificates(opts ...RenewOption) PKIRenewReport {
 		authority, _ := caForLeaf(info.Name)
 		path := certPath(o.certificatesDir, string(info.Name))
 
-		report.add(info.Name, path, authority, renewLeafCert(o.certificatesDir, info.Name))
+		report.add(info.Name, path, authority, renewLeafCert(o.certificatesDir, info.Name, o.dryRun))
 	}
 
 	return report

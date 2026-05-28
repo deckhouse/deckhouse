@@ -55,6 +55,7 @@ type renewOptions struct {
 	kubeconfigDir string
 	pkiDir        string
 	files         []File
+	dryRun        bool
 }
 
 // WithRenewKubeconfigDir overrides the directory containing kubeconfig files.
@@ -78,6 +79,14 @@ func WithRenewPKIDir(dir string) RenewOption {
 func WithRenewFiles(files ...File) RenewOption {
 	return func(o *renewOptions) {
 		o.files = append(o.files, files...)
+	}
+}
+
+// WithDryRun runs all renewal checks and signing in memory but skips writing the new kubeconfig to disk.
+// The returned error contract is unchanged.
+func WithDryRun() RenewOption {
+	return func(o *renewOptions) {
+		o.dryRun = true
 	}
 }
 
@@ -132,7 +141,7 @@ func clientCertConfigFromX509(cert *x509.Certificate) pkiutil.CertConfig {
 
 // renewClientCert unconditionally re-signs the client certificate embedded in the given kubeconfig file.
 // All other kubeconfig fields are preserved. CA cert and key are loaded from pkiDir.
-func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
+func renewClientCert(kubeconfigDir, pkiDir string, file File, dryRun bool) error {
 	path := filepath.Join(kubeconfigDir, string(file))
 
 	oldCert, err := loadClientCertificate(path)
@@ -191,6 +200,10 @@ func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 	authInfo.ClientKey = ""
 	authInfo.ClientKeyData = encodedKey
 
+	if dryRun {
+		return nil
+	}
+
 	if err := clientcmd.WriteToFile(*kubeConfig, path); err != nil {
 		return fmt.Errorf("write kubeconfig %q: %w", file, err)
 	}
@@ -209,7 +222,7 @@ func renewClientCert(kubeconfigDir, pkiDir string, file File) error {
 //   - any other error  — IO/permissions/signing failure (skipped)
 func RenewClientCert(file File, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
-	return renewClientCert(o.kubeconfigDir, o.pkiDir, file)
+	return renewClientCert(o.kubeconfigDir, o.pkiDir, file, o.dryRun)
 }
 
 // RenewClientCerts iterates DefaultRenewableFiles() (or the subset chosen via WithRenewFiles) and renews each kubeconfig client certificate in turn.
@@ -230,7 +243,7 @@ func RenewClientCerts(opts ...RenewOption) KubeconfigRenewReport {
 	var report KubeconfigRenewReport
 	for _, info := range inventory {
 		path := filepath.Join(o.kubeconfigDir, string(info.File))
-		report.add(info.File, path, renewClientCert(o.kubeconfigDir, o.pkiDir, info.File))
+		report.add(info.File, path, renewClientCert(o.kubeconfigDir, o.pkiDir, info.File, o.dryRun))
 	}
 
 	return report
