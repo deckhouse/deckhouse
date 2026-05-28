@@ -56,7 +56,7 @@ variable "hostname" {
 }
 
 variable "timeouts" {
-  default = { "create" = "30m", "update" = "1m", "delete" = "1m" }
+  default = { "create" = "30m", "update" = "30m", "delete" = "1m" }
   type = object({
     create = string
     update = string
@@ -67,9 +67,7 @@ variable "timeouts" {
 
 locals {
   disk_destructive_params = {
-    "additionalDisk" = {
-      "storageClass" = var.storage_class
-    }
+    "additionalDisk" = {}
   }
 
   disk_destructive_params_json      = jsonencode(local.disk_destructive_params)

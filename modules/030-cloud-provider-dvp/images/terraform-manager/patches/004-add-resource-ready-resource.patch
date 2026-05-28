@@ -3169,7 +3169,8 @@ new file mode 100644
 +	resourceReadyFailConditionsAppearanceDurationAttr  = "fail_conditions_appearance_duration"
 +	resourceReadySkipCheckOnCreateResourceLifeTimeAttr = "skip_check_on_create_with_resource_lifetime"
 +
-+	resourceReadyReadyAttr = "ready"
++	resourceReadyReadyAttr    = "ready"
++	resourceReadyTriggersAttr = "triggers"
 +)
 +
 +var (
@@ -3181,6 +3182,7 @@ new file mode 100644
 +		resourceReadyKindAttr,
 +		resourceReadyNameAttr,
 +		resourceReadyNamespaceAttr,
++		resourceReadyTriggersAttr,
 +	}
 +
 +	resourceReadySkipUpdateFields = []string{
@@ -3311,6 +3313,13 @@ new file mode 100644
 +		),
 +
 +		resourceReadyFailConditionsAttr: conditionsSchema(failConditionsDescription),
++
++		resourceReadyTriggersAttr: {
++			Type:        schema.TypeMap,
++			Optional:    true,
++			Description: "A map of arbitrary values that, when changed, trigger recreation of this resource and re-run the readiness check. Useful for tracking mutations like storage class migration.",
++			Elem:        &schema.Schema{Type: schema.TypeString},
++		},
 +
 +		resourceReadyReadyAttr: {
 +			Type:        schema.TypeBool,

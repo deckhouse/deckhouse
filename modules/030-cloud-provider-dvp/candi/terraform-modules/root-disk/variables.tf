@@ -59,7 +59,7 @@ variable "hostname" {
 }
 
 variable "timeouts" {
-  default = { "create" = "30m", "update" = "1m", "delete" = "1m" }
+  default = { "create" = "30m", "update" = "30m", "delete" = "1m" }
   type = object({
     create = string
     update = string
@@ -70,7 +70,6 @@ variable "timeouts" {
 locals {
   root_disk_destructive_params = {
     "rootDisk" = {
-      "storageClass" = var.storage_class
       "image" = {
         "type" = var.image.kind
         "name" = var.image.name
