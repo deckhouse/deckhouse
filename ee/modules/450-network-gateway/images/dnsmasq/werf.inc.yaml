@@ -9,6 +9,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
+import:
 {{- include "image mount points" $ }}
 shell:
   beforeInstall:
