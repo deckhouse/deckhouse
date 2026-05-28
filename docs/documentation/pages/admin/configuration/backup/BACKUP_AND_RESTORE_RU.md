@@ -477,7 +477,7 @@ systemctl restart kubelet.service
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      enabled: true
      settings:
        apiserver:

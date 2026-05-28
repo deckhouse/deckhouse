@@ -479,7 +479,7 @@ If you prefer to manually make changes during cluster recovery after the master 
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 3
      enabled: true
      settings:
        apiserver:
