@@ -379,6 +379,11 @@ find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 
+mkdir -p ./old_certs/etcd
+mv /etc/kubernetes/pki/apiserver.* ./old_certs/
+mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
+mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
@@ -437,6 +442,15 @@ If you prefer to manually make changes during cluster recovery after the master 
     find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     ```
+
+1. Back up the current certificates:
+
+   ```shell
+   mkdir -p ./old_certs/etcd
+   mv /etc/kubernetes/pki/apiserver.* ./old_certs/
+   mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
+   mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+   ```
 
 1. Restart all services that use the updated configuration. To immediately stop active containers, run:
 
