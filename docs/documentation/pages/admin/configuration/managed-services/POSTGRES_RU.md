@@ -1,6 +1,7 @@
 ---
 title: "managed-postgres"
 description: "Администрирование managed-postgres в Deckhouse Kubernetes Platform"
+lang: ru
 ---
 
 Модуль `managed-postgres` управляет кластерами PostgreSQL в Deckhouse Kubernetes Platform. Модуль находится в стадии `Preview`. Для установки модуля есть дополнительные требования. После включения модуля DKP устанавливает CRD модуля, но не удаляет их при отключении. Если созданные CRD больше не нужны, удалите их вручную. Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет ограничения и значения по умолчанию для связанных ресурсов Postgres.
