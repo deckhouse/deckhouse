@@ -137,6 +137,11 @@ spec:
             value: |
               excludePaths:
               - /healthz
+              # Package icons are public metadata; no Bearer token or RBAC required.
+              - /v1/packages/*/*/metadata/icon
+              - /v1/packages/*/*/metadata/icon/
+              - /v1/packages/*/*/metadata/icon/*
+              - /v1/packages/*/*/metadata/icon/*/
               upstreams:
               - upstream: http://127.0.0.1:5080/healthz
                 path: /healthz
@@ -169,6 +174,16 @@ spec:
                     apiVersion: v1
                     resource: deployments
                     subresource: cli-binary
+                    name: registry-packages-proxy
+              - upstream: http://127.0.0.1:5080/v1/packages/
+                path: /v1/packages/
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-cloud-instance-manager
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: packages
                     name: registry-packages-proxy
         livenessProbe:
           httpGet:
