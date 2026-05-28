@@ -1,5 +1,7 @@
 # Trivy version
 {{- $trivyVersion := "v0.55.2" }}
+{{- $trivyDbForkCommit := "11b0c9f9e5e4785e0a51948b33f33edf62fa0d29" }}
+{{- $trivyDbPatchCommit := "bf69cbe30e41c19e4c69b050a29a025f886ac2fd" }}
 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -25,8 +27,10 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/3p/aquasecurity/trivy-db.git /src/trivy-db # Not original trivy-db repo anymore
-  - git clone --depth 1 --branch {{ $trivyVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
+  - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/3p/aquasecurity/trivy-db.git /src/trivy-db # Not original trivy-db repo anymore
+  - cd /src/trivy-db && git checkout {{ $trivyDbForkCommit }}
+  - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
+  - cd /src/trivy-db-patch && git checkout {{ $trivyDbPatchCommit }}
   - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy.git /src/trivy-patch
   - cd /src/trivy-patch && git checkout 7f9ae5c0561de84b903a326b0927df2d376903fe # last commit from branch main. Werf trigger for rebuild
