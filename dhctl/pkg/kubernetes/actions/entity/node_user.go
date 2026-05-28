@@ -95,7 +95,7 @@ func NodeUserExists(ctx context.Context, kubeProvider kubernetes.KubeClientProvi
 
 	err = libretry.NewSilentLoopWithParamsOpts(
 		libretry.WithName("Check NodeUser %q exists", name),
-		libretry.WithAttempts(5),
+		libretry.WithAttempts(10),
 		libretry.WithWait(2*time.Second),
 	).RunContext(ctx, func() error {
 		timeoutCtx, cancel := defaultTimeoutCtx(ctx)
