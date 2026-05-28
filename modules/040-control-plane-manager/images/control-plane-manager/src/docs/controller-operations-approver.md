@@ -40,7 +40,7 @@ Rules:
 ## Reconciliation Logic
 
 1. Query node topology to determine:
-   - Count of master nodes (labeled with `node-role.kubernetes.io/control-plane=""`)
+   - Count of master nodes (labeled with `node.deckhouse.io/control-plane=""`)
    - Count of arbiter nodes (labeled with `node.deckhouse.io/etcd-arbiter=""`)
 2. List all `ControlPlaneOperation` objects.
 3. Split operations into:
