@@ -17,9 +17,15 @@ metadata:
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:
-  - host: {{ include "helm_lib_module_public_domain" (list . "deckhouse-cli") }}
+  - host: {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
     http:
       paths:
+      # Only /v1/images/* (Deckhouse CLI downloads, RBAC-authenticated) is exposed
+      # through the public Ingress. /v1/packages/*/metadata/icon[/<version>] is
+      # intentionally NOT routed here: icons are served anonymously
+      # (kube-rbac-proxy excludePaths) and must stay reachable only from inside
+      # the cluster via the Service (and the master-node hostPort 4219 during
+      # bootstrap), never via the public domain.
       - path: /v1/images/
         pathType: ImplementationSpecific
         backend:
@@ -30,7 +36,7 @@ spec:
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:
     - hosts:
-        - {{ include "helm_lib_module_public_domain" (list . "deckhouse-cli") }}
+        - {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
       secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
 {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
@@ -44,9 +50,9 @@ metadata:
 spec:
   certificateOwnerRef: false
   secretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
-  {{ include "helm_lib_module_generate_common_name" (list . "deckhouse-cli") | nindent 2 }}
+  {{ include "helm_lib_module_generate_common_name" (list . "registry-packages-proxy") | nindent 2 }}
   dnsNames:
-  - {{ include "helm_lib_module_public_domain" (list . "deckhouse-cli") }}
+  - {{ include "helm_lib_module_public_domain" (list . "registry-packages-proxy") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
