@@ -62,8 +62,10 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.message"
+// +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message",priority=1
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // Application represents a namespace-scoped application instance.
@@ -104,14 +106,15 @@ type ApplicationSpec struct {
 }
 
 type ApplicationStatus struct {
-	// Phase is a human-readable summary of the application's lifecycle phase.
-	// One of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// Summary aggregates the high-level user-facing state, message and
+	// resolution hint for the application. It is the single source of
+	// truth for the UI; clients should not derive these values themselves.
+	//
+	// A pointer is used so that the field is omitted from the serialized
+	// status until summarize actually produces something — Go's
+	// `omitempty` does not elide empty struct values otherwise.
 	// +optional
-	Phase string `json:"phase,omitempty"`
-
-	// Message is a human-readable description of the current status.
-	// +optional
-	Message string `json:"message,omitempty"`
+	Summary *ApplicationStatusSummary `json:"summary,omitempty"`
 
 	// Information about the currently installed version.
 	// +optional
@@ -135,6 +138,26 @@ type ApplicationStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+// ApplicationStatusSummary aggregates the high-level lifecycle state derived
+// from the application conditions. It is consumed by the UI as a single
+// source of truth so that the frontend does not have to re-implement the
+// state machine on top of conditions.
+type ApplicationStatusSummary struct {
+	// State is the high-level lifecycle state observed for the application.
+	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// +optional
+	State string `json:"state,omitempty"`
+
+	// Message is a human-readable description of the current state.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Tip is a human-readable instruction on how to resolve the current
+	// state. Empty when no action is required.
+	// +optional
+	Tip string `json:"tip,omitempty"`
 }
 
 type ApplicationStatusVersion struct {

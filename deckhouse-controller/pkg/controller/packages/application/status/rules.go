@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -208,14 +208,33 @@ var (
 )
 
 // firstFalse returns the first internal condition in chain whose status is False.
+// ManifestsApplied=False/ApplyingManifests is progress, not a terminal failure.
 func firstFalse(state condmap.State, chain []string) (string, bool) {
 	for _, cond := range chain {
-		if state.IntEqual(cond, metav1.ConditionFalse) {
+		if state.IntEqual(cond, metav1.ConditionFalse) && !isApplyingManifests(state, cond) {
 			return cond, true
 		}
 	}
 
 	return "", false
+}
+
+// isApplyingManifests recognises the "manifests are being applied right now"
+// state, which the deployer surfaces as ManifestsApplied=False with reason
+// ApplyingManifests.
+//
+// why: ApplyingManifests is a transient progress marker, not a failure. If
+// firstFalse treated it like any other False, every reconcile would briefly
+// flip mapped conditions (Ready, Managed, ConfigurationApplied, Scaled) to
+// False/Unknown during the apply window. That produced visible status flaps
+// in -owide and in the UI for a healthy app, so we skip it here.
+func isApplyingManifests(state condmap.State, cond string) bool {
+	if cond != intManifestsApplied {
+		return false
+	}
+
+	reason, _ := state.GetIntReason(cond)
+	return reason == string(intstatus.ConditionReasonApplyingManifests)
 }
 
 // pipelineBlocker returns the highest-priority blocker for an install or
@@ -301,7 +320,7 @@ func mapUpdateInstalled(state condmap.State) metav1.Condition {
 			return emit(state, ConditionUpdateInstalled, metav1.ConditionFalse, cond)
 		}
 	}
-	if state.IntEqual(intScaled, metav1.ConditionTrue) {
+	if state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
 		return emit(state, ConditionUpdateInstalled, metav1.ConditionTrue, intScaled)
 	}
 
@@ -342,14 +361,56 @@ func mapReady(state condmap.State) metav1.Condition {
 	return metav1.Condition{}
 }
 
-// mapScaled mirrors the internal Scaled condition verbatim. Scaled is owned
-// by a separate controller (the workload health monitor) and is not derived
-// from any other condition — install/update/dependency signals never override
-// it. When the internal condition is absent, external Scaled is Unknown.
+// mapScaled normally mirrors the workload health monitor, but lifecycle
+// failures override it where the public status model needs failure context.
+// During first install, Scaled stays absent until the app is actually scaled.
+//
+// why per phase:
+//   - install: Scaled was previously emitted as Unknown when intScaled was
+//     missing. For a freshly-created Application that briefly produced a
+//     Scaled=Unknown row with empty reason in -owide before any other
+//     condition appeared, and confused users into thinking the controller
+//     had given up. We now suppress the condition entirely until intScaled
+//     actually goes True.
+//   - update: a hook or manifests failure during update is a workload-level
+//     failure as well. We surface that on Scaled (Unknown for hook failures
+//     because the workload state is no longer observable, False for
+//     ManifestsApplyFailed because the workload itself rejected the new
+//     manifests).
+//   - reconcile: a filesystem failure makes the runtime state untrustworthy,
+//     so Scaled becomes Unknown rather than reporting whatever the health
+//     monitor saw last.
 func mapScaled(state condmap.State) metav1.Condition {
+	if isDependencyDisabled(state) {
+		return emit(state, ConditionScaled, metav1.ConditionUnknown, intRequirementsMet)
+	}
+
+	switch phaseOf(state) {
+	case phaseInstall:
+		if _, ok := pipelineBlocker(state, installPipeline); ok {
+			return metav1.Condition{}
+		}
+		status, ok := state.GetIntStatus(intScaled)
+		if !ok || status != metav1.ConditionTrue {
+			return metav1.Condition{}
+		}
+		return emit(state, ConditionScaled, status, intScaled)
+	case phaseUpdate:
+		if cond, ok := firstFalse(state, lateStage); ok {
+			if cond == intManifestsApplied {
+				return emit(state, ConditionScaled, metav1.ConditionFalse, cond)
+			}
+			return emit(state, ConditionScaled, metav1.ConditionUnknown, cond)
+		}
+	case phaseReconcile:
+		if state.IntEqual(intReadyOnFilesystem, metav1.ConditionFalse) {
+			return emit(state, ConditionScaled, metav1.ConditionUnknown, intReadyOnFilesystem)
+		}
+	}
+
 	status, ok := state.GetIntStatus(intScaled)
 	if !ok {
-		return metav1.Condition{Type: ConditionScaled, Status: metav1.ConditionUnknown}
+		return metav1.Condition{}
 	}
 
 	return emit(state, ConditionScaled, status, intScaled)
@@ -366,9 +427,24 @@ func mapManaged(state condmap.State) metav1.Condition {
 	}
 
 	chain := lateStage
-	if phaseOf(state) == phaseReconcile {
+	switch phaseOf(state) {
+	case phaseInstall:
+		// why: during the first install a HookInitializationFailed means we
+		// never started managing the workload — there is nothing to "stop
+		// managing". Emitting Managed=False there would be misleading and
+		// would also light up degraded sub-states.
+		// Runtime HookFailed during install still flows through (we did start
+		// managing), only the init flavour is suppressed.
+		if state.IntEqual(intHooksProcessed, metav1.ConditionFalse) {
+			reason, _ := state.GetIntReason(intHooksProcessed)
+			if canonicalReason(intHooksProcessed, reason) == "HookInitializationFailed" {
+				return metav1.Condition{}
+			}
+		}
+	case phaseReconcile:
 		chain = reconcileChain
 	}
+
 	if cond, ok := firstFalse(state, chain); ok {
 		return emit(state, ConditionManaged, metav1.ConditionFalse, cond)
 	}
