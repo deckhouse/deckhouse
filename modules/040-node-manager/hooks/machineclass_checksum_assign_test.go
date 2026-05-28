@@ -187,7 +187,7 @@ spec: {}
                 "imageName": "ubuntu-18-04-cloud-amd64",
                 "mainNetwork": "dev2"
             },
-            "kubernetesVersion": "1.31",
+            "kubernetesVersion": "1.32",
             "manualRolloutID": "",
             "updateEpoch": "112714"
         }]`
