@@ -39,3 +39,52 @@
     true
   {{- end -}}
 {{- end -}}
+
+{{- define "istio.tracing.telemetryAPIProviderName" -}}
+  {{- if .Values.istio.tracing.enabled -}}
+    {{- $otel := .Values.istio.tracing.collector.opentelemetry | default dict -}}
+    {{- if and $otel.service $otel.port -}}
+deckhouse-tracing-otlp
+    {{- else -}}
+      {{- with .Values.istio.tracing.collector.zipkin -}}
+        {{- with .address -}}
+deckhouse-tracing
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "istio.tracing.telemetryAPIExtensionProvider.body" -}}
+  {{- $root := . -}}
+  {{- $otel := $root.Values.istio.tracing.collector.opentelemetry | default dict -}}
+  {{- if and $otel.service $otel.port -}}
+- name: deckhouse-tracing-otlp
+  opentelemetry:
+    service: {{ $otel.service | quote }}
+    port: {{ $otel.port }}
+    {{- if $otel.http }}
+    http:
+      path: {{ default "/v1/traces" $otel.http.path | quote }}
+      {{- if $otel.http.timeout }}
+      timeout: {{ $otel.http.timeout | quote }}
+      {{- end }}
+    {{- end }}
+  {{- else -}}
+    {{- with $root.Values.istio.tracing.collector.zipkin -}}
+      {{- with .address -}}
+- name: deckhouse-tracing
+  zipkin:
+    address: {{ . | quote }}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "istio.tracing.telemetryAPIExtensionProvider" -}}
+  {{- $root := .root -}}
+  {{- $indent := .indent | int -}}
+  {{- if and $root.Values.istio.tracing.enabled ($root.Values.istio.telemetryAPI | default dict).enabled -}}
+{{ include "istio.tracing.telemetryAPIExtensionProvider.body" $root | nindent $indent }}
+  {{- end -}}
+{{- end -}}

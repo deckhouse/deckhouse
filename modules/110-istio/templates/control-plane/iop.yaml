@@ -96,13 +96,7 @@ spec:
         {{- end }}
       name: main-access-log-format
       {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
-      {{- with $.Values.istio.tracing.collector.zipkin }}
-      {{- with .address }}
-    - name: deckhouse-tracing
-      zipkin:
-        address: {{ . | quote }}
-      {{- end }}
-      {{- end }}
+{{- include "istio.tracing.telemetryAPIExtensionProvider" (dict "root" $ "indent" 4) }}
       {{- end }}
 
     # The rules below exclude upmeter-related namespaces from istiod's point of view.

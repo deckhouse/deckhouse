@@ -209,16 +209,46 @@ properties:
         description: |
           Tracing collection settings (single source for both legacy control-plane tracing and the Telemetry API path).
 
-          - If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false` and [`tracing.enabled`](#parameters-tracing-enabled) is `true`, the module fills `meshConfig.defaultConfig.tracing.zipkin` from `collector.zipkin.address` (with [`tracing.sampling`](#parameters-tracing-sampling)).
-          - If `telemetryAPI.enabled` is `true` and tracing is enabled, the module adds an `extensionProviders` entry named **`deckhouse-tracing`** (Zipkin protocol) plus `spec.tracing` on the mesh-wide **`Telemetry`** `main-access-log-format` in namespace `d8-istio`.
+          - If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false` and [`tracing.enabled`](#parameters-tracing-enabled) is `true`, the module fills `meshConfig.defaultConfig.tracing.zipkin` from `collector.zipkin.address` (with [`tracing.sampling`](#parameters-tracing-sampling)). OpenTelemetry export requires the Telemetry API path.
+          - If `telemetryAPI.enabled` is `true` and tracing is enabled, configure **either** [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry) **or** [`collector.zipkin`](#parameters-tracing-collector-zipkin). When both are set, OpenTelemetry wins: extension provider **`deckhouse-tracing-otlp`** and `spec.tracing` on **`Telemetry`** `main-access-log-format`. Otherwise Zipkin uses **`deckhouse-tracing`** the same way.
         default: {}
         properties:
+          opentelemetry:
+            type: object
+            description: |
+              OpenTelemetry extension provider for the Telemetry API path (`meshConfig.extensionProviders` + mesh-wide `spec.tracing`).
+
+              Requires `service` and `port` (gRPC OTLP by default; set `http.path` for HTTP export). Not used when [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false`.
+            default: {}
+            properties:
+              service:
+                type: string
+                description: Collector hostname reachable from the mesh (for example a Kubernetes Service DNS name).
+                example: "opentelemetry-collector.observability.svc.cluster.local"
+              port:
+                type: integer
+                description: Collector port (for example `4317` for gRPC OTLP).
+                minimum: 1
+                maximum: 65535
+                example: 4317
+              http:
+                type: object
+                description: Optional HTTP OTLP exporter settings (omit to use gRPC).
+                properties:
+                  path:
+                    type: string
+                    description: OTLP traces HTTP path (defaults to `/v1/traces` in the chart when `http` is set but `path` is empty).
+                    example: "/v1/traces"
+                  timeout:
+                    type: string
+                    description: HTTP export timeout (Istio duration string).
+                    example: "10s"
           zipkin:
             type: object
             description: |
               Zipkin protocol parameters used by Istio for sending traces. Jaeger accepts Zipkin ingestion on the standard port (`9411`).
 
-              Mandatory when tracing is enabled: the Zipkin collector address is read from here in both routing modes described under [`tracing.collector`](#parameters-tracing-collector).
+              With tracing enabled, set `address` here for legacy mode or for Telemetry API when OpenTelemetry is not configured under [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry).
             default: {}
             properties:
               address:
@@ -254,7 +284,7 @@ properties:
     description: |
       [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) integration.
 
-      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the legacy `telemetry.v2` filters, and extends the always-present **`Telemetry`** `main-access-log-format` in `d8-istio` with `spec.metrics` (and—when [`tracing.enabled`](#parameters-tracing-enabled) is `true` with [`tracing.collector.zipkin.address`](#parameters-tracing-collector)—`spec.tracing` via **`deckhouse-tracing`**) so Grafana/Kiali keep seeing `istio_*` series from sidecars.
+      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the legacy `telemetry.v2` filters, and extends the always-present **`Telemetry`** `main-access-log-format` in `d8-istio` with `spec.metrics` (and—when [`tracing.enabled`](#parameters-tracing-enabled) is `true` with a configured [`tracing.collector`](#parameters-tracing-collector)—`spec.tracing` via **`deckhouse-tracing-otlp`** or **`deckhouse-tracing`**) so Grafana/Kiali keep seeing `istio_*` series from sidecars.
 
       When `false` (default), the full legacy `telemetry.v2` stack stays on (including Sail’s `telemetry.v2.prometheus`), without `defaultProviders.metrics`, while **`Telemetry`** `main-access-log-format` still enables access logs (backwards compatible with releases since the access-log Telemetry was introduced).
 

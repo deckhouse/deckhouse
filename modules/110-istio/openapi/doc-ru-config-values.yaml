@@ -81,13 +81,32 @@ properties:
           ```
       collector:
         description: |
-          Единая конфигурация коллектора трассов для **legacy** (`meshConfig.defaultConfig.tracing`) и для **Telemetry API** (провайдер `extensionProviders` с именем **`deckhouse-tracing`** и `spec.tracing` в CR **`Telemetry`** `main-access-log-format` при включённом [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled)).
+          Единая конфигурация коллектора трассов для **legacy** (`meshConfig.defaultConfig.tracing`) и для **Telemetry API** (провайдер в `extensionProviders` и `spec.tracing` в CR **`Telemetry`** `main-access-log-format` при [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled): **`deckhouse-tracing-otlp`** для OpenTelemetry или **`deckhouse-tracing`** для Zipkin).
+
+          В legacy-режиме используется только Zipkin. Если заданы и OpenTelemetry, и Zipkin при включённом Telemetry API, приоритет у OpenTelemetry.
         properties:
+          opentelemetry:
+            description: |
+              Провайдер OpenTelemetry для пути Telemetry API (`extensionProviders` + mesh-wide `spec.tracing`).
+
+              Нужны `service` и `port` (по умолчанию gRPC OTLP; для HTTP укажите `http.path`). Не применяется при `telemetryAPI.enabled: false`.
+            properties:
+              service:
+                description: Имя хоста коллектора, доступного из mesh (например DNS Service в Kubernetes).
+              port:
+                description: Порт коллектора (например `4317` для gRPC OTLP).
+              http:
+                description: Необязательные параметры HTTP OTLP (без блока — gRPC).
+                properties:
+                  path:
+                    description: Путь HTTP для трасс (в шаблоне по умолчанию `/v1/traces`, если `http` задан без `path`).
+                  timeout:
+                    description: Таймаут HTTP-экспорта (строка длительности Istio).
           zipkin:
             description: |
-              Параметры протокола Zipkin, который использует Istio для отправки трассов (Jaeger принимает его на порту `9411`, как правило).
+              Параметры протокола Zipkin (Jaeger обычно на порту `9411`).
 
-              При включённой трассировке адрес задаётся здесь в обоих режимах описанных в [`tracing.collector`](#parameters-tracing-collector).
+              При включённой трассировке: в legacy — обязателен `address`; в Telemetry API — если не настроен [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry).
             properties:
               address:
                 description: Сетевой адрес zipkin-коллектора в формате `<хост>:<порт>` (FQDN или IP согласно шаблону в схеме).
@@ -111,7 +130,7 @@ properties:
     description: |
       Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
 
-      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; к уже существующему **`Telemetry`** `main-access-log-format` добавляются `spec.metrics` (и при [`tracing.enabled`](#parameters-tracing-enabled) с адресом в [`tracing.collector.zipkin.address`](#parameters-tracing-collector) — `spec.tracing` через **`deckhouse-tracing`**), чтобы серии `istio_*` снова были видны в Grafana/Kiali.
+      Если `enabled` — `true`, метрики mesh идут через Telemetry API: в `meshConfig` выставляется `defaultProviders.metrics: [prometheus]`, `telemetry.enabled` остаётся `true`, а `telemetry.v2` выключается; к уже существующему **`Telemetry`** `main-access-log-format` добавляются `spec.metrics` (и при [`tracing.enabled`](#parameters-tracing-enabled) с настроенным [`tracing.collector`](#parameters-tracing-collector) — `spec.tracing` через **`deckhouse-tracing-otlp`** или **`deckhouse-tracing`**), чтобы серии `istio_*` снова были видны в Grafana/Kiali.
 
       Если `false` (по умолчанию), остаётся полный legacy-путь `telemetry.v2` (в т.ч. `prometheus` в Sail), без `defaultProviders.metrics`, а **`Telemetry`** `main-access-log-format` по-прежнему включает access log (совместимость с релизами, где этот CR уже был).
 
