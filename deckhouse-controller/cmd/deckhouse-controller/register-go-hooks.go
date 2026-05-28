@@ -59,6 +59,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/secrets"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/users"
+	_ "github.com/deckhouse/deckhouse/modules/039-registry-packages-proxy/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/040-control-plane-manager/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"

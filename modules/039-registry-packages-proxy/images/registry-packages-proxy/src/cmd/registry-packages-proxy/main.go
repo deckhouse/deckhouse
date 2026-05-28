@@ -23,6 +23,11 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
@@ -50,7 +55,7 @@ func main() {
 	defer stop()
 
 	// init kube clients
-	client, err := app.InitClient(config)
+	clientset, err := app.InitClient(config)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -60,8 +65,26 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		logger.Fatal(err.Error())
+	}
+	if err := credentials.AddToScheme(scheme); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	k8sClient, err := ctrlclient.New(kubeConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
 	// watch resources
-	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
+	watcher := credentials.NewWatcher(clientset, dynamicClient, k8sClient, time.Hour, logger)
 	go watcher.Watch(ctx)
 
 	// init cache
@@ -69,6 +92,9 @@ func main() {
 	if !config.DisableCache {
 		go cache.Reconcile(ctx)
 	}
+
+	registryClient := &registry.DefaultClient{}
+
 	// init http server
 	server := app.BuildServer()
 
@@ -76,10 +102,9 @@ func main() {
 	if !config.DisableCache {
 		opts = append(opts, proxy.WithCache(cache))
 	}
-	rp := proxy.NewProxy(server, listener, watcher, logger, &registry.DefaultClient{}, opts...)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
+	// /v1/images/* CLI download routes are wired up by Proxy.Serve via ServeCLI and reach the
+	// outside world through the kube-rbac-proxy sidecar on :4219, which authorizes them.
+	rp := proxy.NewProxy(server, listener, watcher, logger, registryClient, opts...)
 
 	go rp.Serve(&proxy.Config{SignCheck: config.SignCheck})
 
