@@ -18,7 +18,6 @@ import:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    user: "1000"
     workingDir: "/opt/kiali"
     entrypoint: ["/opt/kiali/kiali"]
 ---
