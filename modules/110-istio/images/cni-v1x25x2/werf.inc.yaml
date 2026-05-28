@@ -40,7 +40,6 @@ imageSpec:
   config:
     env: {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"}
     workingDir: "/opt/cni/bin"
-    user: "1337:1337"
     entrypoint: ["/usr/local/bin/install-cni"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
