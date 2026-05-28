@@ -682,11 +682,12 @@ spec:
 После генерации трафика между сервисами mesh:
 
 ```shell
+# Текст метрик Prometheus через admin API сайдкара (в istio-proxy есть pilot-agent, curl нет)
 istio_pod="$(
   kubectl -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
 )"
 kubectl exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
-  curl -sS localhost:15020/stats/prometheus | head
+  /usr/local/bin/pilot-agent request GET stats/prometheus | head
 ```
 
 В выводе должны присутствовать метрики вроде `istio_requests_total`, если сбор настроен корректно.

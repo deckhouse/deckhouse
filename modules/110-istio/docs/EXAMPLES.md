@@ -678,12 +678,12 @@ Wait until the `Istio` / `IstioOperator` resource in `d8-istio` reconciles and w
 Generate traffic between meshed pods, then on a pod with `istio-proxy`:
 
 ```shell
-# Prometheus text on merged stats port (inside the mesh / from debug tooling)
+# Prometheus text from the sidecar admin API (istio-proxy has pilot-agent, not curl)
 istio-proxy-pod="$(
   kubectl -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
 )"
 kubectl exec -n my-namespace "${istio-proxy-pod}" -c istio-proxy -- \
-  curl -sS localhost:15020/stats/prometheus | head
+  /usr/local/bin/pilot-agent request GET stats/prometheus | head
 ```
 
 You should see series such as `istio_requests_total` if metrics are wired correctly.
