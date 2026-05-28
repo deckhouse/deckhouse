@@ -396,7 +396,7 @@ systemctl restart kubelet.service
 
 ### Manual object restore after changing the IP address
 
-If you prefer to manually make changes during cluster recovery after the master node's IP address has changed, follow these steps:
+If you prefer to manually make changes during cluster recovery after the master node’s IP address has changed, follow these steps:
 
 1. Restore etcd from the backup:
 
@@ -413,7 +413,7 @@ If you prefer to manually make changes during cluster recovery after the master 
      mv /var/lib/etcd ./etcd_old
      ```
 
-   - Find or download the `etcdutl` utility if it's not available, and perform the snapshot restore:
+   - Find or download the `etcdutl` utility if it’s not available, and perform the snapshot restore:
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
