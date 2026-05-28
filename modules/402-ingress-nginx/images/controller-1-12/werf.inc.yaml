@@ -881,7 +881,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 mount:
 - from: tmp_dir
-  to: /tmp
+  to: /tmp_dir
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
