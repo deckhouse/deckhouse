@@ -189,6 +189,7 @@ read:
     - deckhouse.io/ingressmetrics
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
@@ -576,6 +577,7 @@ write:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projects
