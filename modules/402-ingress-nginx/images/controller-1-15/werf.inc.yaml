@@ -867,6 +867,9 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
+mount:
+- from: build_dir
+  to: /apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -942,9 +945,7 @@ import:
   group: "0"
   includePaths:
   - usr/bin/test
-  - usr/bin/chroot
   - usr/bin/cat
-  - usr/bin/cp
   - usr/bin/tail
   before: install
 {{- include "image mount points" . }}
@@ -952,10 +953,13 @@ import:
   add: /usr/sbin/setcap
   to: /apps/setcap
   before: install
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /usr/bin/cp
+  to: /apps/cp
 shell:
   install:
-  - /usr/bin/cp -alf /chroot/bin/. /bin/
-  - /usr/bin/cp -alf /chroot/. /validation-chroot/
+  - /apps/cp -alf /chroot/bin/. /bin/
+  - /apps/cp -alf /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
