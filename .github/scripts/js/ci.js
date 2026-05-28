@@ -1031,11 +1031,6 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       command.workflows = ['build-and-test_dev.yml'];
       command.rerunWorkflow = true;
     }
-    // Trigger build reproducibility check on label, ignore 'unlabeled' action.
-    if (labelType === 'reproducibility-check' && event.action === 'labeled') {
-      command.workflows = ['reproducibility-check.yml'];
-      command.triggerWorkflowDispatch = true;
-    }
   } finally {
     core.endGroup();
   }

@@ -16,37 +16,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Triggered via workflow_dispatch when label 'build/reproducibility-check'
-# is added on a PR. Runs build_template for FE on the same HEAD SHA as the
-# baseline build-and-test_dev run, then diffs the two build_report_FE
-# artifacts (DockerImageDigest per image).
+# Weekly build reproducibility check.
+#
+# Trigger: schedule (Saturday 01:00 MSK = Friday 22:00 UTC) or workflow_dispatch.
+# On schedule the latest 'main' commit is taken; on manual run the commit SHA
+# is provided as an input.
+#
+# The baseline build_report_FE artifact is fetched from the matching
+# 'build-and-test_main.yml' (main commits) or 'build-and-test_dev.yml' (PR commits)
+# successful run. If no such run exists for the target SHA the workflow fails.
+#
+# Then the FE build is repeated for the same SHA in the same style as the
+# baseline (main-style or dev-style), and the two build_report_FE JSONs are
+# diffed by DockerImageDigest. Both reports are saved as workflow artifacts.
 
 name: 'Build reproducibility check'
 
 on:
+  # Saturday 01:00 MSK (UTC+3, no DST) == Friday 22:00 UTC.
+  schedule:
+    - cron: '0 22 * * 5'
   workflow_dispatch:
     inputs:
-      issue_id:
-        description: 'PR id (label trigger payload)'
-        required: false
-      issue_number:
-        description: 'PR number'
-        required: false
-      comment_id:
-        description: 'ID of comment to update on workflow start'
-        required: false
-      ci_commit_ref_name:
-        description: 'Git ref name for image tags'
-        required: false
-      pull_request_ref:
-        description: 'Git ref to checkout PR sources'
-        required: false
-      pull_request_sha:
-        description: 'PR head SHA (used to find baseline run)'
-        required: false
-      pull_request_head_label:
-        description: 'PR head label, e.g. fork:branch'
-        required: false
+      commit_sha:
+        description: 'Git commit SHA to verify reproducibility for'
+        required: true
+        type: string
 
 env:
 
@@ -68,186 +63,177 @@ env:
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
   GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
+  WERF_LOG_DEBUG: true
 
-# Squash queued runs and keep only the newest for a given PR.
+# Serialize runs for the same target SHA. cancel-in-progress is false because
+# rebuilds are expensive and we don't want a queued run to abort an in-flight one.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.issue_number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.inputs.commit_sha || 'scheduled' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
   id-token: write
   actions: read
-  pull-requests: read
 
 jobs:
-  started_at:
-    name: Save start timestamp
+  resolve_target:
+    name: Resolve target commit and baseline
+    runs-on: "ubuntu-slim"
     outputs:
-      started_at: ${{ steps.started_at.outputs.started_at }}
-    runs-on: "regular"
+      sha: ${{ steps.resolve.outputs.sha }}
+      baseline_run_id: ${{ steps.resolve.outputs.baseline_run_id }}
+      baseline_run_url: ${{ steps.resolve.outputs.baseline_run_url }}
+      baseline_workflow: ${{ steps.resolve.outputs.baseline_workflow }}
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
     steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-
-  # <template: git_info_job>
-
-  git_info:
-    name: Get git info
-    runs-on: "ubuntu-latest"
-    outputs:
-      ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
-      ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
-      ci_commit_ref_name: ${{ steps.git_info.outputs.ci_commit_ref_name }}
-      ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
-      ref_full: ${{ steps.git_info.outputs.ref_full }}
-      github_sha: ${{ steps.git_info.outputs.github_sha }}
-      pr_number: ${{ steps.git_info.outputs.pr_number }}
-    # Skip the CI for automation PRs, e.g. changelog, don't skip if Pull Request title contains "[run ci]".
-    if: ${{ contains(github.event.pull_request.title, '[run ci]') || github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
-    steps:
-      - id: git_info
-        name: Get tag name and SHA
+      - name: Resolve target SHA and locate baseline
+        id: resolve
         uses: actions/github-script@v6.4.1
         with:
+          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
-            const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
+            const eventName = context.eventName;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-            let refSlug = ''
-            let refName = ''
-            let refFull = ''
-            let githubBranch = ''
-            let githubTag = ''
-            let githubSHA = ''
-            let prNumber = ''
-            if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
-              // Trigger: workflow_dispatch with pull_request_ref.
-              // Extract pull request number from 'refs/pull/<NUM>/merge'
-              prNumber = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
-
-              refSlug       = `pr${prNumber}`
-              refName       = context.payload.inputs.ci_commit_ref_name
-              refFull       = context.payload.inputs.pull_request_ref
-              githubBranch  = refName
-              githubSHA     = context.payload.inputs.pull_request_sha
-              core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
-            } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
-              // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
-              const targetRepo = context.payload.repository.full_name;
-              const prRepo = context.payload.pull_request.head.repo.full_name
-              const prRef = context.payload.pull_request.head.ref
-
-              refSlug = `pr${context.issue.number}`;
-              refName = (prRepo === targetRepo) ? prRef : refSlug;
-              refFull = `refs/pull/${context.issue.number}/head`
-              githubBranch = refName
-              githubSHA = context.payload.pull_request.head.sha
-              core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
-              prNumber = context.issue.number
+            // Trigger fully determines which build workflow holds the baseline:
+            //   schedule          -> 'main' commit, baseline in build-and-test_main.yml
+            //   workflow_dispatch -> arbitrary commit (treated as dev/PR), baseline in build-and-test_dev.yml
+            let sha = '';
+            let baselineKind = '';
+            let baselineWorkflowId = '';
+            if (eventName === 'schedule') {
+              const r = await github.rest.repos.getBranch({ owner, repo, branch: 'main' });
+              sha = r.data.commit.sha;
+              baselineKind = 'main';
+              baselineWorkflowId = 'build-and-test_main.yml';
+              core.notice(`Schedule run: using latest 'main' commit ${sha}, baseline workflow=${baselineWorkflowId}`);
+            } else if (eventName === 'workflow_dispatch') {
+              sha = ((context.payload.inputs || {}).commit_sha || '').trim();
+              if (!sha) {
+                return core.setFailed(`'commit_sha' input is required for manual runs`);
+              }
+              try {
+                const r = await github.rest.repos.getCommit({ owner, repo, ref: sha });
+                sha = r.data.sha;
+              } catch (e) {
+                return core.setFailed(`Commit ${sha} not found in ${owner}/${repo}: ${e.message}`);
+              }
+              baselineKind = 'dev';
+              baselineWorkflowId = 'build-and-test_dev.yml';
+              core.notice(`Manual run: using commit ${sha}, baseline workflow=${baselineWorkflowId}`);
             } else {
-              // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
-              // refName is 'main' or tag name, so slugification is not necessary.
-              refSlug       = GITHUB_REF_NAME
-              refName       = GITHUB_REF_NAME
-              refFull       = GITHUB_REF
-              githubTag     = GITHUB_REF_TYPE == "tag"    ? refName : ""
-              githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
-              githubSHA     = context.sha
-              core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+              return core.setFailed(`Unsupported event: ${eventName}`);
             }
 
-            core.setCommandEcho(true)
-            core.setOutput('ci_commit_ref_slug', refSlug)
-            core.setOutput('ci_commit_ref_name', refName)
-            core.setOutput(`ci_commit_tag`, githubTag)
-            core.setOutput(`ci_commit_branch`, githubBranch)
-            core.setOutput(`ref_full`, refFull)
-            core.setOutput('github_sha', githubSHA)
-            core.setOutput('pr_number', prNumber)
-            core.setCommandEcho(false)
+            // Locate the latest successful baseline run for this SHA in the chosen workflow.
+            // API supports a server-side head_sha filter, so we only fetch matching runs.
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner, repo,
+              workflow_id: baselineWorkflowId,
+              head_sha: sha,
+              status: 'success',
+              per_page: 10,
+            });
+            // Runs are returned newest-first; pick the most recent success.
+            const baseline = (runs.data.workflow_runs || [])[0];
+            if (!baseline) {
+              return core.setFailed(
+                `No successful '${baselineWorkflowId}' run found for SHA ${sha}. ` +
+                `Reproducibility check requires an existing baseline build_report_FE artifact. ` +
+                `Ensure the regular build pipeline has completed for this commit first.`
+              );
+            }
 
-  # </template: git_info_job>
+            // For dev mode we need the PR number to reconstruct CI_COMMIT_REF_SLUG = prN.
+            let prNumber = '';
+            if (baselineKind === 'dev') {
+              const prs = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner, repo, commit_sha: sha,
+              });
+              if (prs.data.length > 0) {
+                prNumber = prs.data[0].number.toString();
+                core.notice(`dev baseline: associated PR #${prNumber}`);
+              } else {
+                return core.setFailed(
+                  `dev-style baseline found for SHA ${sha}, but no associated PR. ` +
+                  `Cannot reconstruct dev build context (PR number is required for ref_slug).`
+                );
+              }
+            }
 
-  # build_template (dev mode) reads needs.pull_request_info.outputs.ref_slug.
-  # Synthesize it from workflow_dispatch inputs without pulling the full
-  # pull_request_info_job (which is wired for pull_request_target events).
+            core.notice(`Baseline run: ${baseline.html_url} (workflow=${baselineKind}, id=${baseline.id})`);
+            core.setOutput('sha', sha);
+            core.setOutput('baseline_run_id', baseline.id.toString());
+            core.setOutput('baseline_run_url', baseline.html_url);
+            core.setOutput('baseline_workflow', baselineKind);
+            core.setOutput('pr_number', prNumber);
+
+  # Synthetic git_info: build_template reads needs.git_info.outputs.*. We
+  # construct the values from the resolved target SHA and baseline workflow kind
+  # so the rerun build mirrors the original build context as closely as possible.
+  git_info:
+    name: Get git info (synthetic)
+    needs:
+      - resolve_target
+    runs-on: "ubuntu-slim"
+    outputs:
+      ci_commit_tag: ${{ steps.set.outputs.ci_commit_tag }}
+      ci_commit_branch: ${{ steps.set.outputs.ci_commit_branch }}
+      ci_commit_ref_name: ${{ steps.set.outputs.ci_commit_ref_name }}
+      ci_commit_ref_slug: ${{ steps.set.outputs.ci_commit_ref_slug }}
+      github_sha: ${{ steps.set.outputs.github_sha }}
+    steps:
+      - id: set
+        env:
+          SHA: ${{ needs.resolve_target.outputs.sha }}
+          WF: ${{ needs.resolve_target.outputs.baseline_workflow }}
+          PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
+        run: |
+          if [[ "$WF" == "main" ]]; then
+            REF="main"
+          elif [[ "$WF" == "dev" ]]; then
+            REF="pr${PR_NUMBER}"
+          else
+            echo "::error::Unknown baseline_workflow: '$WF'"
+            exit 1
+          fi
+          {
+            echo "ci_commit_tag="
+            echo "ci_commit_branch=${REF}"
+            echo "ci_commit_ref_name=${REF}"
+            echo "ci_commit_ref_slug=${REF}"
+            echo "github_sha=${SHA}"
+          } >> $GITHUB_OUTPUT
+
+  # Synthetic pull_request_info: build_template in dev mode reads
+  # needs.pull_request_info.outputs.ref_slug. Only created for dev baselines.
   pull_request_info:
-    name: Pull request info (from workflow_dispatch inputs)
-    runs-on: "ubuntu-latest"
+    name: Pull request info (synthetic, dev mode only)
+    needs:
+      - resolve_target
+    if: needs.resolve_target.outputs.baseline_workflow == 'dev'
+    runs-on: "ubuntu-slim"
     outputs:
       ref_slug: ${{ steps.set.outputs.ref_slug }}
     steps:
       - id: set
         env:
-          PR_REF: ${{ github.event.inputs.pull_request_ref }}
-          PR_NUMBER: ${{ github.event.inputs.issue_number }}
+          PR_NUMBER: ${{ needs.resolve_target.outputs.pr_number }}
         run: |
-          if [[ -n "${PR_REF}" ]]; then
-            num=$(echo "${PR_REF}" | sed -E 's|refs/pull/([0-9]+)/.*|\1|')
-          else
-            num="${PR_NUMBER}"
-          fi
-          if [[ -z "${num}" || ! "${num}" =~ ^[0-9]+$ ]]; then
-            echo "::error::cannot derive PR number from inputs"
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "::error::pr_number is empty in dev mode"
             exit 1
           fi
-          echo "ref_slug=pr${num}" >> $GITHUB_OUTPUT
+          echo "ref_slug=pr${PR_NUMBER}" >> $GITHUB_OUTPUT
 
-  find_baseline:
-    name: Find baseline build run
-    runs-on: "ubuntu-latest"
+  build_fe_main:
+    name: Build FE (main-style)
     needs:
+      - resolve_target
       - git_info
-    outputs:
-      baseline_run_id: ${{ steps.find.outputs.run_id }}
-      baseline_run_url: ${{ steps.find.outputs.run_url }}
-    steps:
-      - name: Find last successful build-and-test_dev run for HEAD SHA
-        id: find
-        uses: actions/github-script@v6.4.1
-        with:
-          github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
-          script: |
-            const headSha = "${{ needs.git_info.outputs.github_sha }}";
-            const workflow_id = 'build-and-test_dev.yml';
-
-            const runs = await github.paginate(
-              github.rest.actions.listWorkflowRuns,
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id,
-                per_page: 100,
-                status: 'success',
-              },
-              (page) => page.data
-            );
-
-            const baseline = runs.find((wr) => wr.head_sha === headSha);
-            if (!baseline) {
-              return core.setFailed(
-                `No successful 'build-and-test_dev.yml' run found for SHA ${headSha}. ` +
-                `Wait until the regular build succeeds, then re-add the label.`
-              );
-            }
-
-            core.notice(`Baseline run: ${baseline.html_url} (id=${baseline.id})`);
-            core.setOutput('run_id', baseline.id.toString());
-            core.setOutput('run_url', baseline.html_url);
-
-  build_fe_rerun:
-    name: Build FE (rerun)
-    needs:
-      - git_info
-      - pull_request_info
-      - find_baseline
+    if: needs.resolve_target.outputs.baseline_workflow == 'main'
     env:
       WERF_ENV: "FE"
     # <template: build_template>
@@ -309,7 +295,309 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref_slug }}
+          ref: ${{ needs.resolve_target.outputs.sha }}
+      # </template: checkout_full_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf-dk CLI
+        run: |
+          WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+          echo "$WERF_PATH" >> "$GITHUB_PATH"
+          CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+          if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+            echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+            mkdir -p "$WERF_PATH"
+            curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+            chmod +x "$WERF_PATH/werf"
+          else
+            echo "Current werf is $CACHED_VERSION, skipping download"
+          fi
+      # </template: werf_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
+            ${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ steps.secrets.outputs.SOURCE_REPO_GIT }})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+
+      - name: Build and push deckhouse images
+        id: build
+        env:
+          WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+          DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-dev"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
+          COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+          SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+        run: |
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+          # IMAGE_NAME is a name of image from werf.yaml.
+          # IMAGE_DST is an image name for docker push.
+          function publish_image() {
+            IMAGE_NAME=$1
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
+          }
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+          export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          type werf && source $(werf ci-env github --verbose --as-file)
+          werf build \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_tags_werf.json
+
+          # Publish images for Git branch.
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+              publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
+            fi
+          else
+            echo "Branch unset, skipping branch publish."
+          fi
+
+          # Publish images for Git tag.
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
+          else
+            echo "Not a release tag, skipping tag publish."
+          fi
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json || true
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
+    # </template: build_template>
+
+
+  build_fe_dev:
+    name: Build FE (dev-style)
+    needs:
+      - resolve_target
+      - git_info
+      - pull_request_info
+    if: needs.resolve_target.outputs.baseline_workflow == 'dev'
+    env:
+      WERF_ENV: "FE"
+    # <template: build_template>
+    runs-on: [self-hosted, large]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_SSH_PRIVATE_KEY | SVACE_ANALYZE_SSH_PRIVATE_KEY ;
+            projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI SVACE_ANALYZE_HOST | SVACE_ANALYZE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve_target.outputs.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -535,11 +823,15 @@ jobs:
 
   compare_reports:
     name: Compare build reports
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     needs:
-      - find_baseline
-      - build_fe_rerun
+      - resolve_target
+      - build_fe_main
+      - build_fe_dev
+    if: ${{ always() && (needs.build_fe_main.result == 'success' || needs.build_fe_dev.result == 'success') }}
     steps:
+      # Plain checkout (no ref override): we need the reproducibility_check.py
+      # from the workflow's branch (main), NOT from the historical target SHA.
 
       # <template: checkout_step>
       - name: Checkout sources
@@ -552,7 +844,7 @@ jobs:
         with:
           name: build_report_FE
           path: baseline/build_report_FE
-          run-id: ${{ needs.find_baseline.outputs.baseline_run_id }}
+          run-id: ${{ needs.resolve_target.outputs.baseline_run_id }}
           github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
 
       - name: Download rerun build_report_FE
@@ -561,8 +853,27 @@ jobs:
           name: build_report_FE
           path: rerun/build_report_FE
 
+      - name: Upload baseline build_report as workflow artifact
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: baseline_build_report_FE
+          path: baseline/build_report_FE/images_tags_werf.json
+
+      - name: Upload rerun build_report as workflow artifact
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: rerun_build_report_FE
+          path: rerun/build_report_FE/images_tags_werf.json
+
+      - name: Print resolved context
+        run: |
+          echo "Target SHA:        ${{ needs.resolve_target.outputs.sha }}"
+          echo "Baseline workflow: ${{ needs.resolve_target.outputs.baseline_workflow }}"
+          echo "Baseline run:      ${{ needs.resolve_target.outputs.baseline_run_url }}"
+          echo "PR number (dev):   ${{ needs.resolve_target.outputs.pr_number }}"
+
       - name: Compare digests
         run: |
-          python .github/scripts/python/reproducibility_check.py \
+          python3 .github/scripts/python/reproducibility_check.py \
             baseline/build_report_FE/images_tags_werf.json \
             rerun/build_report_FE/images_tags_werf.json
