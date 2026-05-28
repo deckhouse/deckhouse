@@ -28,6 +28,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 var (
@@ -438,6 +439,42 @@ func TestProgressTracker_Progress_CurrentPhase(t *testing.T) {
 	require.NotNil(t, installAdditionalPhase)
 	assert.NotNil(t, installAdditionalPhase.Action)
 	assert.Equal(t, phases.ProgressActionSkip, *installAdditionalPhase.Action)
+}
+
+func TestPhasedExecutionContext_Finalize_DoesNotCompleteOnMidPhaseFailure(t *testing.T) {
+	t.Parallel()
+
+	var lastProgress phases.Progress
+
+	pec := phases.NewDefaultPhasedExecutionContext(
+		phases.OperationBootstrap,
+		func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		func(progress phases.Progress) error {
+			lastProgress = progress
+			return nil
+		},
+	)
+
+	state := cache.NewTestCache()
+	ctx := t.Context()
+
+	require.NoError(t, pec.InitPipeline(ctx, state))
+
+	_, err := pec.StartPhase(ctx, phases.ExecuteBashibleBundlePhase, false, state)
+	require.NoError(t, err)
+	require.NoError(t, pec.CompletePhase(ctx, state, nil))
+
+	_, err = pec.SwitchPhase(ctx, phases.CreateResourcesPhase, false, state, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, phases.CreateResourcesPhase, lastProgress.CurrentPhase)
+	require.NotEqual(t, 1.0, lastProgress.Progress)
+
+	require.NoError(t, pec.Finalize(ctx, state))
+
+	require.Equal(t, phases.CreateResourcesPhase, lastProgress.CurrentPhase)
+	require.NotEqual(t, 1.0, lastProgress.Progress)
+	require.NotEqual(t, phases.FinalizationPhase, lastProgress.CompletedPhase)
 }
 
 func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {

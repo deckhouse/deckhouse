@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -31,8 +32,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
+	utilcache "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func TestCheckClusterConfig(t *testing.T) {
@@ -696,4 +699,125 @@ func (f *testCheckSpecificClusterFiller) Static(_ context.Context, metaConfig *c
 
 func (f *testCheckSpecificClusterFiller) Incorrect(_ context.Context, metaConfig *config.MetaConfig) (nilType, error) {
 	return nil, config.UnsupportedClusterTypeErr(metaConfig)
+}
+
+func TestChecker_progress(t *testing.T) {
+	t.Parallel()
+	require.Len(t, phases.CheckPhases(), 2)
+
+	for _, tc := range []struct {
+		name     string
+		embedded bool
+		exec     []phases.OperationPhase
+		wantSubs []phases.OperationSubPhase
+	}{
+		{
+			name: "standalone/cloud",
+			exec: []phases.OperationPhase{phases.CheckInfra, phases.CheckConfiguration},
+		},
+		{
+			name: "standalone/static",
+			exec: []phases.OperationPhase{phases.CheckConfiguration},
+		},
+		{
+			name:     "embedded/cloud",
+			embedded: true,
+			exec:     []phases.OperationPhase{phases.CheckInfra, phases.CheckConfiguration},
+			wantSubs: []phases.OperationSubPhase{
+				phases.OperationSubPhase(phases.CheckInfra),
+				phases.OperationSubPhase(phases.CheckConfiguration),
+			},
+		},
+		{
+			name:     "embedded/static",
+			embedded: true,
+			exec:     []phases.OperationPhase{phases.CheckConfiguration},
+			wantSubs: []phases.OperationSubPhase{phases.OperationSubPhase(phases.CheckConfiguration)},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			progress, subs := runCheckerProgress(t, tc.embedded, tc.exec...)
+
+			if tc.embedded {
+				require.Equal(t, tc.wantSubs, subs)
+				require.Equal(t, phases.ConvergeCheckPhase, progress.CurrentPhase)
+				require.Equal(t, phases.OperationSubPhase(phases.CheckConfiguration), progress.CompletedSubPhase)
+				return
+			}
+
+			require.Equal(t, phases.OperationCheck, progress.Operation)
+			require.Equal(t, 1.0, progress.Progress)
+			require.Equal(t, phases.CheckConfiguration, progress.CompletedPhase)
+
+			for _, phase := range tc.exec {
+				i := slices.IndexFunc(progress.Phases, func(p phases.PhaseWithSubPhases) bool { return p.Phase == phase })
+				require.NotEqual(t, -1, i)
+				require.NotNil(t, progress.Phases[i].Action)
+				require.NotEqual(t, phases.ProgressActionSkip, *progress.Phases[i].Action)
+			}
+		})
+	}
+}
+
+func runCheckerProgress(
+	t *testing.T, embedded bool, exec ...phases.OperationPhase,
+) (phases.Progress, []phases.OperationSubPhase) {
+	t.Helper()
+
+	var progress phases.Progress
+	var subs []phases.OperationSubPhase
+
+	ctx := t.Context()
+	state := utilcache.NewTestCache()
+
+	var checker *Checker
+	if embedded {
+		checker = NewChecker(&Params{CommanderMode: true, StateCache: state, Embedded: true})
+		parent := phases.NewDefaultPhasedExecutionContext(
+			phases.OperationConverge, nil,
+			func(p phases.Progress) error {
+				progress = p
+				return nil
+			},
+		)
+
+		checker.SetExternalPhasedContext(extCtx{parent: parent, subs: &subs})
+		require.NoError(t, parent.InitPipeline(ctx, state))
+
+		_, err := parent.StartPhase(ctx, phases.ConvergeCheckPhase, false, state)
+		require.NoError(t, err)
+	} else {
+		checker = NewChecker(&Params{
+			CommanderMode: true,
+			StateCache:    state,
+			OnProgressFunc: func(p phases.Progress) error {
+				progress = p
+				return nil
+			},
+		})
+		require.NoError(t, checker.PhasedExecutionContext.InitPipeline(ctx, state))
+	}
+
+	for _, phase := range exec {
+		checker.beginPhase(ctx, phase)
+		checker.completePhase(ctx, phase)
+	}
+
+	if !embedded {
+		require.NoError(t, checker.PhasedExecutionContext.Finalize(ctx, state))
+	}
+
+	return progress, subs
+}
+
+type extCtx struct {
+	parent phases.DefaultPhasedExecutionContext
+	subs   *[]phases.OperationSubPhase
+}
+
+func (e extCtx) CompleteSubPhase(subPhase phases.OperationSubPhase) {
+	*e.subs = append(*e.subs, subPhase)
+	e.parent.CompleteSubPhase(subPhase)
 }

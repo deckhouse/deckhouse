@@ -155,6 +155,11 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) Finalize(ctx context.Con
 		return nil
 	}
 
+	// Keep the last reported progress when the operation failed mid-phase.
+	if pec.currentPhase != "" && pec.currentPhase != pec.completedPhase {
+		return pec.setLastState(ctx, stateCache)
+	}
+
 	err := pec.progressTracker.Complete(pec.completedPhase)
 	if err != nil {
 		log.ErrorF("Failed to complete progress: %v", err)
