@@ -904,7 +904,7 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/configuration/managed-services.html
+                  url: /admin/configuration/managed-services/
                 - title:
                     en: Managed-postgres
                     ru: Managed-postgres
@@ -1162,7 +1162,7 @@ entries:
             - title:
                 en: Overview
                 ru: Обзор
-              url: /user/managed-services.html
+              url: /user/managed-services/
             - title:
                 en: Managed-postgres
                 ru: Managed-postgres
