@@ -60,13 +60,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 2},
 }, dependency.WithExternalDependencies(setNodeGroupStatusEngine))
 
-func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+func setNodeGroupStatusEngine(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %w", err)
 	}
 
-	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), nodeGroupEngineMigrationConfigMap, metav1.GetOptions{})
+	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, nodeGroupEngineMigrationConfigMap, metav1.GetOptions{})
 	if err == nil {
 		input.Logger.Debug("NodeGroup engine migration marker already exists")
 		return nil
@@ -75,7 +75,7 @@ func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc de
 		return fmt.Errorf("cannot get migration marker ConfigMap: %w", err)
 	}
 
-	defaultEngine, err := defaultCloudEphemeralNodeGroupEngine(kubeClient.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-node-manager-cloud-provider", metav1.GetOptions{}))
+	defaultEngine, err := defaultCloudEphemeralNodeGroupEngine(kubeClient.CoreV1().Secrets("kube-system").Get(ctx, "d8-node-manager-cloud-provider", metav1.GetOptions{}))
 	if err != nil {
 		return fmt.Errorf("cannot determine default NodeGroup engine from registration secret: %w", err)
 	}
@@ -85,7 +85,7 @@ func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc de
 		Resource: "nodegroups",
 	}
 
-	nodeGroups, err := kubeClient.Dynamic().Resource(nodeGroupGVR).List(context.TODO(), metav1.ListOptions{})
+	nodeGroups, err := kubeClient.Dynamic().Resource(nodeGroupGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot list NodeGroups: %w", err)
 	}
@@ -114,13 +114,13 @@ func setNodeGroupStatusEngine(_ context.Context, input *go_hook.HookInput, dc de
 			return fmt.Errorf("cannot marshal NodeGroup %q status patch: %w", info.Name, err)
 		}
 
-		_, err = kubeClient.Dynamic().Resource(nodeGroupGVR).Patch(context.TODO(), info.Name, types.MergePatchType, patchData, metav1.PatchOptions{}, "status")
+		_, err = kubeClient.Dynamic().Resource(nodeGroupGVR).Patch(ctx, info.Name, types.MergePatchType, patchData, metav1.PatchOptions{}, "status")
 		if err != nil {
 			return fmt.Errorf("cannot patch NodeGroup %q status.engine: %w", info.Name, err)
 		}
 	}
 
-	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), &corev1.ConfigMap{
+	_, err = kubeClient.CoreV1().ConfigMaps("kube-system").Create(ctx, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nodeGroupEngineMigrationConfigMap,
 			Namespace: "kube-system",

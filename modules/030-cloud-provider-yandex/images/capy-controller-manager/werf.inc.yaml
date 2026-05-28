@@ -10,11 +10,11 @@ fromImage: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/manager
-  to: /capyandex-controller-manager
+  to: /capy-controller-manager
   before: setup
 imageSpec:
   config:
-    entrypoint: ["/capyandex-controller-manager"]
+    entrypoint: ["/capy-controller-manager"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

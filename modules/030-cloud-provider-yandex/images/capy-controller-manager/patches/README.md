@@ -1,7 +1,7 @@
 # 001-use-existing-control-plane-endpoint.patch
 
 This directory contains patches applied to the upstream `yandex-cloud/cluster-api-provider-yandex`
-source during the `capyandex-controller-manager` image build.
+source during the `capy-controller-manager` image build.
 
 ## 001-use-existing-control-plane-endpoint.patch
 
