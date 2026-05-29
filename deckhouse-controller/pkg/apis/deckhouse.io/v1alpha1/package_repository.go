@@ -57,9 +57,9 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=LastScan,type=date,JSONPath=.status.scan.lastScanTime
-// +kubebuilder:printcolumn:name=NEW-VERSIONS,type=integer,JSONPath=.status.scan.newVersions
-// +kubebuilder:printcolumn:name=LAST-CHANGE,type=date,JSONPath=.status.scan.lastChangeTime,priority=1
+// +kubebuilder:printcolumn:name=LastScan,type=date,JSONPath=.status.lastScanTime
+// +kubebuilder:printcolumn:name=NEW-VERSIONS,type=integer,JSONPath=.status.lastNewVersions
+// +kubebuilder:printcolumn:name=LAST-CHANGE,type=date,JSONPath=.status.lastChangeTime,priority=1
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
@@ -114,9 +114,18 @@ type PackageRepositorySpecRegistry struct {
 }
 
 type PackageRepositoryStatus struct {
-	// Scan summarizes the most recent registry scans of this repository.
+	// Time of the most recent scan of any outcome.
 	// +optional
-	Scan *PackageRepositoryStatusScan `json:"scan,omitempty"`
+	LastScanTime *metav1.Time `json:"lastScanTime,omitempty"`
+
+	// Time of the most recent scan that found at least one new version.
+	// Scans that found nothing new do not advance this timestamp.
+	// +optional
+	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
+
+	// Number of new versions found by the most recent scan.
+	// Set to zero when the last scan found nothing new.
+	LastNewVersions int `json:"lastNewVersions"`
 
 	// List of packages available in this repository.
 	// +optional
@@ -143,22 +152,6 @@ type PackageRepositoryStatus struct {
 	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
 	// +optional
 	PartialScanAvailable bool `json:"partialScanAvailable"`
-}
-
-// PackageRepositoryStatusScan summarizes the repository's scan history.
-type PackageRepositoryStatusScan struct {
-	// Time of the most recent scan of any outcome.
-	// +optional
-	LastScanTime *metav1.Time `json:"lastScanTime,omitempty"`
-
-	// Time of the most recent scan that found at least one new version.
-	// Scans that found nothing new do not advance this timestamp.
-	// +optional
-	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
-
-	// Number of new versions found by the most recent scan.
-	// Set to zero when the last scan found nothing new.
-	NewVersions int `json:"newVersions"`
 }
 
 type PackageRepositoryStatusPackage struct {

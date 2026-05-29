@@ -18,13 +18,13 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.scan.lastScanTime
+    - jsonPath: .status.lastScanTime
       name: LastScan
       type: date
-    - jsonPath: .status.scan.newVersions
+    - jsonPath: .status.lastNewVersions
       name: NEW-VERSIONS
       type: integer
-    - jsonPath: .status.scan.lastChangeTime
+    - jsonPath: .status.lastChangeTime
       name: LAST-CHANGE
       priority: 1
       type: date
@@ -157,6 +157,21 @@ spec:
                   - type
                   type: object
                 type: array
+              lastChangeTime:
+                description: |-
+                  Time of the most recent scan that found at least one new version.
+                  Scans that found nothing new do not advance this timestamp.
+                format: date-time
+                type: string
+              lastNewVersions:
+                description: |-
+                  Number of new versions found by the most recent scan.
+                  Set to zero when the last scan found nothing new.
+                type: integer
+              lastScanTime:
+                description: Time of the most recent scan of any outcome.
+                format: date-time
+                type: string
               message:
                 description: Human-readable message about the repository status.
                 type: string
@@ -184,25 +199,6 @@ spec:
               phase:
                 description: Current phase of the repository.
                 type: string
-              scan:
-                description: Summarizes the most recent registry scans of this repository.
-                properties:
-                  lastChangeTime:
-                    description: |-
-                      Time of the most recent scan that found at least one new version.
-                      Scans that found nothing new do not advance this timestamp.
-                    format: date-time
-                    type: string
-                  lastScanTime:
-                    description: Time of the most recent scan of any outcome.
-                    format: date-time
-                    type: string
-                  newVersions:
-                    description: |-
-                      Number of new versions found by the most recent scan.
-                      Set to zero when the last scan found nothing new.
-                    type: integer
-                type: object
             type: object
         required:
         - spec
