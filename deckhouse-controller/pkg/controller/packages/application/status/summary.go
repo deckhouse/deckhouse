@@ -116,7 +116,7 @@ var summaryTable = map[phase]map[string]advice{
 		"DownloadFailed": {
 			stateUpdating,
 			"Update is stalled: new version could not be downloaded; previous version is still serving",
-			"Check registry connectivity, imagePullSecret, and network. The previous version continues to work. After fixing, the controller will retry the download.",
+			"Check registry connectivity, and image integrity. The previous version continues to work. After fixing, the controller will retry the download.",
 		},
 		"LoadFromFilesystemFailed": {
 			stateUpdating,
@@ -126,7 +126,7 @@ var summaryTable = map[phase]map[string]advice{
 		"SettingsInvalid": {
 			stateUpdating,
 			"Update is stalled: new settings did not pass validation; previous version is still serving",
-			"Fix the ModuleConfig to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
+			"Fix the application settings to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
 		},
 		"HookInitializationFailed": {
 			stateFailed,
@@ -161,7 +161,7 @@ var summaryTable = map[phase]map[string]advice{
 		"SettingsInvalid": {
 			stateDegraded,
 			"Reconcile failed: new settings did not pass validation; previously applied configuration is still in effect",
-			"The previous configuration continues to work. Fix the invalid fields in ModuleConfig. After saving, the controller will re-apply the settings.",
+			"The previous configuration continues to work. Fix the invalid fields in the application settings. After saving, the controller will re-apply the settings.",
 		},
 		"HookInitializationFailed": {
 			stateDegraded,
@@ -199,7 +199,7 @@ var summaryTable = map[phase]map[string]advice{
 var summarySuspended = advice{
 	state:   stateSuspended,
 	message: "Application is suspended: a required dependency has been disabled",
-	tip:     "Enable the disabled dependent module back. After it converges, the controller will automatically restore all conditions and resume operation.",
+	tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
 }
 
 // summaryReady is the fixed Summary for a healthy application: install or update

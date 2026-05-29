@@ -197,7 +197,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateUpdating,
 			message: "Update is stalled: new version could not be downloaded; previous version is still serving",
-			tip:     "Check registry connectivity, imagePullSecret, and network. The previous version continues to work. After fixing, the controller will retry the download.",
+			tip:     "Check registry connectivity, and image integrity. The previous version continues to work. After fixing, the controller will retry the download.",
 		},
 		{
 			name: "update: load from filesystem failed, old version serving",
@@ -221,7 +221,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateUpdating,
 			message: "Update is stalled: new settings did not pass validation; previous version is still serving",
-			tip:     "Fix the ModuleConfig to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
+			tip:     "Fix the application settings to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
 		},
 		{
 			name: "update: hook sync failed, old version down",
@@ -314,7 +314,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateDegraded,
 			message: "Reconcile failed: new settings did not pass validation; previously applied configuration is still in effect",
-			tip:     "The previous configuration continues to work. Fix the invalid fields in ModuleConfig. After saving, the controller will re-apply the settings.",
+			tip:     "The previous configuration continues to work. Fix the invalid fields in the application settings. After saving, the controller will re-apply the settings.",
 		},
 		{
 			name: "reconcile: startup/runtime hooks failed",
@@ -367,7 +367,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateSuspended,
 			message: "Application is suspended: a required dependency has been disabled",
-			tip:     "Enable the disabled dependent module back. After it converges, the controller will automatically restore all conditions and resume operation.",
+			tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
 		},
 	}
 
