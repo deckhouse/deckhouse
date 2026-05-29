@@ -1,7 +1,7 @@
 # Trivy version
 {{- $trivyVersion := "v0.55.2" }}
-{{- $trivyDbForkCommit := "11b0c9f9e5e4785e0a51948b33f33edf62fa0d29" }}
-{{- $trivyDbPatchCommit := "bf69cbe30e41c19e4c69b050a29a025f886ac2fd" }}
+{{- $trivyDbForkCommit := "df65ebde46f4ab443fb6f4702b05b8fe6332c356" }}
+{{- $trivyDbPatchCommit := "bbed03c788ca3a04a5b93e2c7a2f2213659ed9ec" }}
 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
