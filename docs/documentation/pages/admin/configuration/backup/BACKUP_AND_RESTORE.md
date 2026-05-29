@@ -128,8 +128,6 @@ To properly restore a multi-master cluster, follow these steps:
    d8 k label cpn <REMAINING_MASTER_NAME> control-plane-manager.deckhouse.io/maintenance=""
    ```
 
-   > **Note.** The label will automatically disappear after restoring etcd from the backup, since the cluster state is taken from a snapshot that did not have this label.
-
 1. Switch the cluster to single master mode:
 
    - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
