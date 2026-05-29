@@ -28,9 +28,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -43,12 +40,6 @@ const (
 	minVersionValuesKey = "istio:minimalVersion"
 	istioNamespace      = "d8-istio"
 )
-
-var sailIstioGVR = schema.GroupVersionResource{
-	Group:    "sailoperator.io",
-	Version:  "v1",
-	Resource: "istios",
-}
 
 type IstioOperatorCrdInfo struct {
 	Name     string
@@ -87,15 +78,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("discovery"),
 	// Relies on hook discovery_versions_to_install.go (Order: 5) and must run before hooks deprecated_versions_monitoring.go and compatibility_version_istio_k8s_monitoring.go (Order: 10)
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 9},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:              "istiooperators",
-			ApiVersion:        "install.istio.io/v1alpha1",
-			Kind:              "IstioOperator",
-			FilterFunc:        applyIstioOperatorFilter,
-			NamespaceSelector: lib.NsSelector(),
-		},
-	},
 }, dependency.WithExternalDependencies(operatorRevisionsToInstallDiscovery))
 
 func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -113,30 +95,43 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 		operatorVersionsToInstall = append(operatorVersionsToInstall, version)
 	}
 
-	for iopInfo, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdInfo](input.Snapshots.Get("istiooperators")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'istiooperators' snapshot: %w", err)
-		}
-
-		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
-		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
-			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
-			continue
-		}
-		if !versionMap.DoesVersionSupportOperator(iopVer) {
-			continue
-		}
-		if !lib.Contains(operatorVersionsToInstall, iopVer) {
-			operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
-		}
-	}
-
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	istios, err := k8sClient.Dynamic().Resource(sailIstioGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
+	iops, err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		// The CRD can be absent on operator-free control planes; this is expected.
+		if !k8serrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		for _, iop := range iops.Items {
+			infoAny, err := applyIstioOperatorFilter(&iop)
+			if err != nil {
+				return fmt.Errorf("cannot parse IstioOperator %q: %w", iop.GetName(), err)
+			}
+			iopInfo, ok := infoAny.(IstioOperatorCrdInfo)
+			if !ok {
+				return fmt.Errorf("unexpected IstioOperator filter result type for %q", iop.GetName())
+			}
+
+			iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
+			if !versionMap.IsRevisionSupported(iopInfo.Revision) {
+				unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+				continue
+			}
+			if !versionMap.DoesVersionSupportOperator(iopVer) {
+				continue
+			}
+			if !lib.Contains(operatorVersionsToInstall, iopVer) {
+				operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
+			}
+		}
+	}
+
+	istios, err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioNamespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		// The CRD can be absent on old control planes; this is expected.
 		if !k8serrors.IsNotFound(err) {
