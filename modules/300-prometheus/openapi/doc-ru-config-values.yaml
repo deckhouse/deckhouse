@@ -3,7 +3,7 @@ properties:
     description: Сколько дней хранить данные.
   storageClass:
     description: |-
-      Имя StorageClass, который будет использоваться по умолчанию в кластере.
+      Имя StorageClass для хранения данных Prometheus.
 
       Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
