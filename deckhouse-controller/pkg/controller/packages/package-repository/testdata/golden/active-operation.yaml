@@ -17,7 +17,6 @@ spec:
     scheme: https
 status:
   partialScanAvailable: false
-  syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation

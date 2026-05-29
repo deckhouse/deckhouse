@@ -43,4 +43,3 @@ spec:
     repo: registry.example.com/test
 status:
   partialScanAvailable: false
-  syncTime: null

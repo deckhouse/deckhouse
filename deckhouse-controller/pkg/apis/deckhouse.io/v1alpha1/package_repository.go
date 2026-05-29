@@ -57,7 +57,9 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
+// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.scan.lastTime
+// +kubebuilder:printcolumn:name=New,type=integer,JSONPath=.status.scan.newVersions
+// +kubebuilder:printcolumn:name=LastNew,type=date,JSONPath=.status.scan.lastNewVersionsTime,priority=1
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
@@ -112,9 +114,9 @@ type PackageRepositorySpecRegistry struct {
 }
 
 type PackageRepositoryStatus struct {
-	// Last time the repository was synchronized.
+	// Scan summarizes the most recent registry scans of this repository.
 	// +optional
-	SyncTime metav1.Time `json:"syncTime,omitempty"`
+	Scan *PackageRepositoryStatusScan `json:"scan,omitempty"`
 
 	// List of packages available in this repository.
 	// +optional
@@ -141,16 +143,22 @@ type PackageRepositoryStatus struct {
 	// PartialScanAvailable indicates whether the registry supports pagination for tag listing.
 	// +optional
 	PartialScanAvailable bool `json:"partialScanAvailable"`
+}
 
-	// Number of new versions found by the most recent completed operation.
-	// Always present once any operation has completed; set to zero when the last
-	// scan found nothing new.
-	LastOperationNewVersions int `json:"lastOperationNewVersions"`
+// PackageRepositoryStatusScan summarizes the repository's scan history.
+type PackageRepositoryStatusScan struct {
+	// Time of the most recent scan of any outcome.
+	// +optional
+	LastTime *metav1.Time `json:"lastTime,omitempty"`
 
-	// Time of the most recent completed operation that found at least one new version.
-	// Operations that found zero new versions do not advance this timestamp.
+	// Time of the most recent scan that found at least one new version.
+	// Scans that found nothing new do not advance this timestamp.
 	// +optional
 	LastNewVersionsTime *metav1.Time `json:"lastNewVersionsTime,omitempty"`
+
+	// Number of new versions found by the most recent scan.
+	// Set to zero when the last scan found nothing new.
+	NewVersions int `json:"newVersions"`
 }
 
 type PackageRepositoryStatusPackage struct {

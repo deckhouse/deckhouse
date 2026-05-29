@@ -18,8 +18,15 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.syncTime
+    - jsonPath: .status.scan.lastTime
       name: Sync
+      type: date
+    - jsonPath: .status.scan.newVersions
+      name: New
+      type: integer
+    - jsonPath: .status.scan.lastNewVersionsTime
+      name: LastNew
+      priority: 1
       type: date
     - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
       name: MSG
@@ -177,21 +184,25 @@ spec:
               phase:
                 description: Current phase of the repository.
                 type: string
-              syncTime:
-                description: Last time the repository was synchronized.
-                format: date-time
-                type: string
-              lastOperationNewVersions:
-                description: |-
-                  Number of new versions found by the most recent completed operation.
-                  Reset on every completion, including to zero when the last scan found nothing new.
-                type: integer
-              lastNewVersionsTime:
-                description: |-
-                  Time of the most recent completed operation that found at least one new version.
-                  Operations that found zero new versions do not advance this timestamp.
-                format: date-time
-                type: string
+              scan:
+                description: Summarizes the most recent registry scans of this repository.
+                properties:
+                  lastNewVersionsTime:
+                    description: |-
+                      Time of the most recent scan that found at least one new version.
+                      Scans that found nothing new do not advance this timestamp.
+                    format: date-time
+                    type: string
+                  lastTime:
+                    description: Time of the most recent scan of any outcome.
+                    format: date-time
+                    type: string
+                  newVersions:
+                    description: |-
+                      Number of new versions found by the most recent scan.
+                      Set to zero when the last scan found nothing new.
+                    type: integer
+                type: object
             type: object
         required:
         - spec

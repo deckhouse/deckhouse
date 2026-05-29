@@ -29,4 +29,3 @@ spec:
     scheme: https
 status:
   partialScanAvailable: false
-  syncTime: null

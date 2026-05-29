@@ -85,4 +85,7 @@ status:
   packagesCount: 1
   partialScanAvailable: false
   phase: Active
-  syncTime: "2025-10-31T12:00:00Z"
+  scan:
+    lastNewVersionsTime: "2025-10-31T12:00:00Z"
+    lastTime: "2025-10-31T12:00:00Z"
+    newVersions: 1

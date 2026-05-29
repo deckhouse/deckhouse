@@ -50,4 +50,3 @@ status:
     status: "False"
     type: LastScanSucceeded
   partialScanAvailable: false
-  syncTime: null
