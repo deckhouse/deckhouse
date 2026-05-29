@@ -88,7 +88,10 @@ spec:
 
 ## Как добавить алерты и/или recording-правила для вашего проекта?
 
-Для добавления алертов существует специальный ресурс — `CustomPrometheusRules`.
+Для добавления алертов существует два способа:
+
+- **Рекомендуемый способ** — с помощью ресурсов [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) и [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) модуля `observability`.
+- **Устаревший способ** — с помощью ресурса [CustomPrometheusRules](cr.html#customprometheusrules). Ниже приведён пример этого способа.
 
 Параметры:
 
