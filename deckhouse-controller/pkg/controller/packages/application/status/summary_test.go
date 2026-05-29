@@ -366,7 +366,7 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionUpdateInstalled:      nil,
 			},
 			state:   stateSuspended,
-			message: "Application is suspended: a required dependency has been disabled",
+			message: "Application is suspended: requirements unmet",
 			tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
 		},
 	}
@@ -467,7 +467,7 @@ func TestSummarize_SuspendedVsPending(t *testing.T) {
 	t.Run("suspended when previously installed and requirements drop", func(t *testing.T) {
 		state, message, _ := summaryFor(installed(), intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))
 		assert.Equal(t, stateSuspended, state)
-		assert.Equal(t, "Application is suspended: a required dependency has been disabled", message)
+		assert.Equal(t, "Application is suspended: requirements unmet", message)
 	})
 
 	t.Run("pending when requirements unmet on first install", func(t *testing.T) {
@@ -475,6 +475,6 @@ func TestSummarize_SuspendedVsPending(t *testing.T) {
 		// requirements, not a running app that lost a dependency.
 		state, message, _ := summaryFor(intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))
 		assert.Equal(t, statePending, state)
-		assert.NotEqual(t, "Application is suspended: a required dependency has been disabled", message)
+		assert.NotEqual(t, "Application is suspended: requirements unmet", message)
 	})
 }
