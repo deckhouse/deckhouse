@@ -40,7 +40,6 @@ spec:
       type: string
     - jsonPath: .status.summary.message
       name: Message
-      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
