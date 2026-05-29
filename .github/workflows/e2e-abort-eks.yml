@@ -405,6 +405,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -760,6 +761,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -1115,6 +1117,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -1470,6 +1473,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -1825,6 +1829,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -2180,6 +2185,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -2535,6 +2541,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -2890,6 +2897,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -3245,6 +3253,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -3600,6 +3609,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -3955,6 +3965,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
@@ -4310,6 +4321,7 @@ jobs:
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
           -e LAYOUT_AWS_DEFAULT_REGION=eu-central-1 \
