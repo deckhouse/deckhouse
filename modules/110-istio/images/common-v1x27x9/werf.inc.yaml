@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
 {{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-27" $ )) }}
@@ -34,3 +35,4 @@ shell:
   # kiali
   - cd /src/kiali/
   - git apply --verbose /patches/001-kiali-gomod_gosum.patch
+{{- end }}
