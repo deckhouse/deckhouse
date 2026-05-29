@@ -22,7 +22,6 @@ import (
 	"runtime"
 	"strconv"
 
-	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
@@ -86,21 +85,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Mirror cfg into the addon-operator / shell-operator package-level globals
-	// before registering debug sub-commands (queue, hook, global, module, raw).
-	// Those sub-commands bind --debug-unix-socket to ad_app.DebugUnixSocket /
-	// sh_app.DebugUnixSocket and dial them via DefaultClient(); without this
-	// bridge a CLI invocation like `deckhouse-controller queue list` defaults
-	// to /var/run/shell-operator/debug.socket while the running operator
-	// actually listens on cfg.Debug.UnixSocket (set by the DEBUG_UNIX_SOCKET
-	// env var in modules/002-deckhouse/templates/deployment.yaml). The `start`
-	// command flow also performs this bridge inside NewAddonOperator, but for
-	// non-start invocations NewAddonOperator never runs. This mirrors
-	// addon-operator's own cmd/addon-operator/main.go which does the same
-	// shapp.ApplyConfig(addon_operator.ShellOperatorConfig(cfg)) call before
-	// debug.DefineDebugCommands(rootCmd) below.
+	// Mirror cfg into addon-operator package-level globals and shell-operator's
+	// debug.DefaultSocketPath before registering debug sub-commands (queue,
+	// hook, global, module, raw).
+	//
+	// ad_app.ApplyConfig populates the addon-operator globals (ModulesDir,
+	// Namespace, etc.) so that debug commands defined by addon-operator can
+	// locate config paths. The `start` command flow also performs this bridge
+	// inside NewAddonOperator, but for non-start invocations (e.g.
+	// `deckhouse-controller queue list`) NewAddonOperator never runs.
+	//
+	// sh_debug.DefaultSocketPath is the CLI-side global that shell-operator's
+	// debug sub-commands (queue, hook, config, raw) bind --debug-unix-socket
+	// against. Without this assignment, those commands default to
+	// /var/run/shell-operator/debug.socket while the running operator actually
+	// listens on cfg.Debug.UnixSocket (set by the DEBUG_UNIX_SOCKET env var in
+	// modules/002-deckhouse/templates/deployment.yaml). This mirrors what
+	// addon-operator's own cmd/addon-operator/main.go does before
+	// sh_debug.DefineDebugCommands(rootCmd) below. In the `start` path,
+	// NewAddonOperator also assigns sh_debug.DefaultSocketPath, so the two
+	// assignments are idempotent.
 	ad_app.ApplyConfig(cfg)
-	sh_app.ApplyConfig(addonoperator.ShellOperatorConfig(cfg))
+	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
 	logger := log.NewLogger()
 	log.SetDefault(logger)
