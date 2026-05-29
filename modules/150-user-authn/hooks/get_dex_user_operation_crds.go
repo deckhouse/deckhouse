@@ -321,6 +321,13 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 			"deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name,
 			object_patch.WithSubresource("status"),
 		)
+
+		if operation.Spec.Type == UserOperationTypeResetPass && operation.Spec.ResetPassword != nil {
+			input.PatchCollector.PatchWithMerge(
+				map[string]any{"spec": map[string]any{"resetPassword": nil}},
+				"deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name,
+			)
+		}
 	}
 
 	for _, operation := range operationsToCleanUp {
