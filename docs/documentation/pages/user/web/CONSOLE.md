@@ -142,27 +142,13 @@ The form lets you specify the required parameters for the new node group.
 This subsection is intended for managing instance classes used in the cluster.
 The class list can be sorted.
 
-!["Machine classes" subsection interface](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
+!["Instance classes" subsection interface](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
 
-![Information about the selected machine class](../../images/console/system-management-dvpinstanceclasses-deckhouse-io-worker.png)
+![Information about the selected instance class](../../images/console/system-management-dvpinstanceclasses-deckhouse-io-worker.png)
 
-The "Add machine class" form lets you specify parameters for a new machine configuration for the cluster.
+The "Create resource" form lets you specify parameters for a new instance configuration for the cluster.
 
-Under the "Configuration" heading, specify the name of the machine class being created. In the "Resources" block, configure the following parameters:
-
-- Number of virtual CPU cores
-- CPU platform
-- Memory size
-- Baseline performance level
-- Number of graphics adapters
-- Image ID
-
-Additionally, you can enable support for preemptible virtual machines and specify the disk size and type.
-
-In the "Networks" block, you can specify the primary subnet, select the network type, and enable the use of a public IP address.
-You can also add additional subnets and labels for more flexible infrastructure configuration.
-
-![Machine class creation form](../../images/console/add_class.png)
+![Instance class creation form](../../images/console/add_class.png)
 
 ### "Nodes" subsection
 
