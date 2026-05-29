@@ -75,7 +75,7 @@ if bb-is-distro-like? "rhel"; then
   fi
 fi
 
-{{- $containerd := "containerd1730"}}
+{{- $containerd := "containerd1732"}}
 {{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerd223" }}
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
