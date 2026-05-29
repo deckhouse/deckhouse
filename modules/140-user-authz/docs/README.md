@@ -319,13 +319,9 @@ read:
 
 ```text
 read:
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
     - deckhouse.io/customprometheusrules
     - deckhouse.io/grafanaadditionaldatasources
     - deckhouse.io/grafanadashboarddefinitions
-read-write:
-    - deckhouse.io/podloggingconfigs
 write:
     - apps/deployments
     - apps/statefulsets
@@ -456,8 +452,6 @@ write:
     - deckhouse.io/clusterdaemonsetmetrics
     - deckhouse.io/clusterdeploymentmetrics
     - deckhouse.io/clusteringressmetrics
-    - deckhouse.io/clusterlogdestinations
-    - deckhouse.io/clusterloggingconfigs
     - deckhouse.io/clusterpodmetrics
     - deckhouse.io/clusterservicemetrics
     - deckhouse.io/clusterstatefulsetmetrics
