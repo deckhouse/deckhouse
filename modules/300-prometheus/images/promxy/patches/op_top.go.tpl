@@ -34,7 +34,16 @@ func init() {
 	RegisterOPSmoothie()
 }
 
-// ExtractOptTop checks op_top if it is top level aggregate expr and returns new expression without op_top and result modifier.
+// OP_FUNCTIONS
+
+// ExtractOptTop returns a stripped expression and a result modifier when the
+// top-level aggregate is op_top. Otherwise the original expression is
+// returned unchanged and the modifier is nil.
+//
+// We deliberately don't traverse the AST: promxy's parser.Walk fans children
+// out into goroutines for read-only visits, which would make modifier-state
+// updates racy. op_top is only supported on the top level — nested usage is
+// left to fail naturally with a generic "no FunctionCall for op_top" error.
 func ExtractOptTop(expr parser.Expr, start, end, step int64) (parser.Expr, func(matrix Matrix) Matrix, error) {
 	aggExpr, ok := expr.(*parser.AggregateExpr)
 	if !ok || aggExpr.Op != parser.OP_TOP {
@@ -57,10 +66,10 @@ func newOPTop(node *parser.AggregateExpr, start, stop, step int64) (func(Matrix)
 	)
 	limit, _ = strconv.Atoi(node.Param.String())
 	switch len(node.Grouping) {
-	case 0:
-	case 1:
+	case 0: // op_top($expr) or op_top($limit, $expr)
+	case 1: // op_top($includeOther, $expr) or op_top($limit, $includeOther, $expr)
 		includeOther, _ = strconv.ParseBool(strings.ToLower(node.Grouping[0]))
-	case 2:
+	case 2: // op_top($includeOther, $weightFunc, $expr) or op_top($limit, $includeOther, $weightFunc, $expr)
 		includeOther, _ = strconv.ParseBool(strings.ToLower(node.Grouping[0]))
 		weightFunc = weightFuncKind(node.Grouping[1])
 	}
@@ -83,6 +92,16 @@ type OPTopQueryParams struct {
 	limit        int
 }
 
+// calculatePointsRequired returns required amount of data-points for current start, stop, and end
+// ex:
+//
+//	step = 10
+//	---------
+//	[start=0]       1
+//	[start+step=10] 2
+//	[start+step=20] 3
+//	[start+step=30] 4
+//	[stop=40]       5
 func calculatePointsRequired(start, stop, step int64) int {
 	if step == 0 {
 		return 1
@@ -91,6 +110,19 @@ func calculatePointsRequired(start, stop, step int64) int {
 	return int(req) + 1
 }
 
+// calculatePointInd returns point index in series by given timestamp
+// ex:
+//
+//	    timestamp = 30
+//	    step      = 10
+//		---------
+//		[start=0]       1 ind=0
+//		[start+step=10] 2 ind=1
+//		[start+step=20] 3 ind=2
+//		[start+step=30] 4 ind=3 <- at timestamp = 30
+//		[stop=40]       5 ind=3
+//
+// so (30-0)/10 = 3.
 func calculatePointInd(start, step, timestamp int64) int {
 	if step == 0 {
 		return 0
@@ -100,11 +132,11 @@ func calculatePointInd(start, step, timestamp int64) int {
 
 func markedAsOtherSeries(ls labels.Labels) bool {
 	marked := false
-	for _, l := range ls {
+	ls.Range(func(l labels.Label) {
 		if l.Value == "~other" {
 			marked = true
 		}
-	}
+	})
 	return marked
 }
 
@@ -125,17 +157,17 @@ func nonEmptyValue(val float64) float64 {
 	return val
 }
 
-func weightBySum(samples []Point) (res float64) {
+func weightBySum(samples []FPoint) (res float64) {
 	for _, sample := range samples {
-		res += nonEmptyValue(sample.V)
+		res += nonEmptyValue(sample.F)
 	}
 	return
 }
 
-func weightByMax(samples []Point) (res float64) {
+func weightByMax(samples []FPoint) (res float64) {
 	for _, sample := range samples {
-		if sample.V > res {
-			res = nonEmptyValue(sample.V)
+		if sample.F > res {
+			res = nonEmptyValue(sample.F)
 		}
 	}
 	return
@@ -143,24 +175,24 @@ func weightByMax(samples []Point) (res float64) {
 
 const magicExp = 1.001
 
-func weightByExp(samples []Point) (res float64) {
+func weightByExp(samples []FPoint) (res float64) {
 	for sampleInd := range samples {
-		res += nonEmptyValue(samples[sampleInd].V) * math.Pow(magicExp, float64(sampleInd))
+		res += nonEmptyValue(samples[sampleInd].F) * math.Pow(magicExp, float64(sampleInd))
 	}
 	res = nonEmptyValue(res / float64(len(samples)))
 	return
 }
 
-func weightByEws(samples []Point) (res float64) {
+func weightByEws(samples []FPoint) (res float64) {
 	for sampleInd := range samples {
-		res += nonEmptyValue(samples[sampleInd].V) * math.Pow(magicExp, float64(sampleInd))
+		res += nonEmptyValue(samples[sampleInd].F) * math.Pow(magicExp, float64(sampleInd))
 	}
 	return
 }
 
-func weightByEwm(samples []Point) (res float64) {
+func weightByEwm(samples []FPoint) (res float64) {
 	for sampleInd := range samples {
-		val := nonEmptyValue(samples[sampleInd].V) * math.Pow(magicExp, float64(sampleInd))
+		val := nonEmptyValue(samples[sampleInd].F) * math.Pow(magicExp, float64(sampleInd))
 		if val > res {
 			res = val
 		}
@@ -185,7 +217,7 @@ func OPTop(params *OPTopQueryParams, initial Matrix, start, stop, step int64) Ma
 	if len(initial) == 0 {
 		return initial
 	}
-	var weightFunc func([]Point) float64
+	var weightFunc func([]FPoint) float64
 	switch params.weightFunc {
 	case weightFuncSum:
 		weightFunc = weightBySum
@@ -204,7 +236,7 @@ func OPTop(params *OPTopQueryParams, initial Matrix, start, stop, step int64) Ma
 	for streamInd := range initial {
 		m.members = append(m.members, member{
 			index:  streamInd,
-			weight: weightFunc(initial[streamInd].Points),
+			weight: weightFunc(initial[streamInd].Floats),
 		})
 	}
 	limit := params.limit
@@ -228,7 +260,7 @@ func OPTop(params *OPTopQueryParams, initial Matrix, start, stop, step int64) Ma
 		auxiliaryIndices := m.members[limit:]
 		otherSamplesCount := calculatePointsRequired(start, stop, step)
 		var (
-			otherSamples   = make([]Point, otherSamplesCount)
+			otherSamples   = make([]FPoint, otherSamplesCount)
 			otherLabelsRaw = map[string]string{}
 		)
 		currentTimestamp := start
@@ -238,33 +270,34 @@ func OPTop(params *OPTopQueryParams, initial Matrix, start, stop, step int64) Ma
 		}
 		var labelsFilled bool
 		for _, index := range auxiliaryIndices {
-			for _, sample := range initial[index.index].Points {
+			for _, sample := range initial[index.index].Floats {
 				otherSampleInd := calculatePointInd(start, step, sample.T)
-				otherSamples[otherSampleInd].V += nonEmptyValue(sample.V)
+				otherSamples[otherSampleInd].F += nonEmptyValue(sample.F)
 			}
 			if labelsFilled {
 				continue
 			}
-			for _, l := range initial[index.index].Metric {
+
+			initial[index.index].Metric.Range(func(l labels.Label) {
 				if l.Name == "__name__" {
 					otherLabelsRaw[l.Name] = l.Value
 				} else {
 					otherLabelsRaw[l.Name] = "~other"
 				}
-			}
+			})
 			labelsFilled = true
 		}
 
-		otherLabelsList := make(labels.Labels, 0, len(otherLabelsRaw))
+		lsb := labels.NewScratchBuilder(len(otherLabelsRaw))
 		for label, labelValue := range otherLabelsRaw {
-			otherLabelsList = append(otherLabelsList, labels.Label{Name: label, Value: labelValue})
+			lsb.Add(label, labelValue)
 		}
-		sort.Sort(otherLabelsList)
 
 		otherSeries := Series{
-			Metric: otherLabelsList,
-			Points: otherSamples,
+			Metric: lsb.Labels(),
+			Floats: otherSamples,
 		}
+
 		res = append(res, otherSeries)
 	}
 	return res

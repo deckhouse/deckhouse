@@ -1,5 +1,11 @@
 ---
-{{- $PromxyVersion := "v0.0.93" }}
+# Pinned to master HEAD (2026-05-19) to pull in:
+#  - Migration to Prometheus 3.5 LTS (enables native UTF-8 label support via
+#    prometheus/common's UTF8Validation default).
+#  - Bump of google.golang.org/grpc to v1.79.3 (CVE-2026-33186).
+#  - Bump of golang.org/x/oauth2 and golang-jwt to fix CVE-2025-47914/-58181.
+# When jacksontj/promxy cuts a new tagged release, switch back to a tag.
+{{- $PromxyVersion := "0cabe7fcf17855a054dbbb5205202768b324b9b1" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -15,12 +21,10 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
-    - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
+    - git clone $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - cd /src
-    - git apply /patches/001-go-mod.patch --verbose
-    - git apply /patches/004-cve-grpc.patch --verbose
-    - rm -rf /src/.git
+    - git checkout {{ $PromxyVersion }}
+    - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}

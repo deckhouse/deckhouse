@@ -1,7 +1,6 @@
-diff --git a/promql/engine.go b/promql/engine.go
 --- a/promql/engine.go
 +++ b/promql/engine.go
-@@ -147,6 +147,8 @@
+@@ -199,6 +199,8 @@
  	// Cancellation function for the query.
  	cancel func()
  
@@ -10,58 +9,51 @@ diff --git a/promql/engine.go b/promql/engine.go
  	// The engine against which the query is executed.
  	ng *Engine
  }
-@@ -400,10 +402,16 @@
- 	if err != nil {
+@@ -498,7 +500,13 @@
+ 	if err := ng.validateOpts(expr); err != nil {
  		return nil, err
  	}
-+	var resultModifier func(Matrix) Matrix
-+	expr, resultModifier, err = ExtractOptTop(expr, ts.UnixNano()/int64(time.Millisecond), ts.UnixNano()/int64(time.Millisecond), 0)
-+	if err != nil {
+-	*pExpr, err = PreprocessExpr(expr, ts, ts)
++	if *pExpr, err = PreprocessExpr(expr, ts, ts); err != nil {
++		return qry, err
++	}
++	// OP_FUNCTIONS
++	if *pExpr, qry.resultModifier, err = ExtractOptTop(*pExpr, ts.UnixMilli(), ts.UnixMilli(), 0); err != nil {
 +		return nil, fmt.Errorf("failed to extract op function: %w", err)
 +	}
- 	qry, err := ng.newQuery(q, opts, expr, ts, ts, 0)
- 	if err != nil {
- 		return nil, err
- 	}
-+	qry.resultModifier = resultModifier
- 	qry.q = qs
  
- 	return qry, nil
-@@ -416,6 +424,11 @@
- 	if err != nil {
- 		return nil, err
- 	}
-+	var resultModifier func(Matrix) Matrix
-+	expr, resultModifier, err = ExtractOptTop(expr, start.UnixNano()/int64(time.Millisecond), end.UnixNano()/int64(time.Millisecond), interval.Milliseconds())
-+	if err != nil {
-+		return nil, fmt.Errorf("failed to extract op function: %w", err)
-+	}
+ 	return qry, err
+ }
+@@ -525,7 +533,13 @@
  	if expr.Type() != parser.ValueTypeVector && expr.Type() != parser.ValueTypeScalar {
  		return nil, fmt.Errorf("invalid expression type %q for range query, must be Scalar or instant Vector", parser.DocumentedType(expr.Type()))
  	}
-@@ -423,6 +436,7 @@
- 	if err != nil {
- 		return nil, err
- 	}
-+	qry.resultModifier = resultModifier
- 	qry.q = qs
+-	*pExpr, err = PreprocessExpr(expr, start, end)
++	if *pExpr, err = PreprocessExpr(expr, start, end); err != nil {
++		return qry, err
++	}
++	// OP_FUNCTIONS
++	if *pExpr, qry.resultModifier, err = ExtractOptTop(*pExpr, start.UnixMilli(), end.UnixMilli(), interval.Milliseconds()); err != nil {
++		return nil, fmt.Errorf("failed to extract op function: %w", err)
++	}
  
- 	return qry, nil
-@@ -675,6 +689,11 @@
- 		case parser.ValueTypeScalar:
- 			return Scalar{V: mat[0].Points[0].V, T: start}, warnings, nil
+ 	return qry, err
+ }
+@@ -798,6 +812,11 @@
+ 			return Scalar{V: mat[0].Floats[0].F, T: start}, warnings, nil
  		case parser.ValueTypeMatrix:
+ 			ng.sortMatrixResult(ctx, query, mat)
++
 +			// OP_FUNCTIONS
 +			if query.resultModifier != nil {
 +				mat = query.resultModifier(mat)
 +			}
-+
  			return mat, warnings, nil
  		default:
  			panic(fmt.Errorf("promql.Engine.exec: unexpected expression type %q", s.Expr.Type()))
-@@ -715,6 +734,11 @@
- 	sort.Sort(mat)
- 	sortSpanTimer.Finish()
+@@ -840,6 +859,11 @@
+ 	// TODO(fabxc): where to ensure metric labels are a copy from the storage internals.
+ 	ng.sortMatrixResult(ctx, query, mat)
  
 +	// OP_FUNCTIONS
 +	if query.resultModifier != nil {
@@ -71,79 +63,42 @@ diff --git a/promql/engine.go b/promql/engine.go
  	return mat, warnings, nil
  }
  
-@@ -1415,7 +1439,7 @@
- 			// should keep the metric name.  For all the other range
- 			// vector functions, the only change needed is to drop the
- 			// metric name in the output.
--			if e.Func.Name != "last_over_time" {
-+			if e.Func.Name != "last_over_time" && e.Func.Name != "op_smoothie" {
- 				metric = dropMetricName(metric)
- 			}
- 			ss := Series{
-
-diff --git a/promql/parser/lex.go b/promql/parser/lex.go
+@@ -1870,7 +1894,7 @@
+ 		// should keep the metric name.  For all the other range
+ 		// vector functions, the only change needed is to drop the
+ 		// metric name in the output.
+-		dropName := e.Func.Name != "last_over_time"
++		dropName := e.Func.Name != "last_over_time" && e.Func.Name != "op_smoothie" // OP_FUNCTIONS avoid import cycle
+ 
+ 		for i, s := range selVS.Series {
+ 			if err := contextDone(ctx, "expression evaluation"); err != nil {
 --- a/promql/parser/lex.go
 +++ b/promql/parser/lex.go
-@@ -62,6 +62,12 @@
- 	return i == TOPK || i == BOTTOMK || i == COUNT_VALUES || i == QUANTILE
+@@ -68,6 +68,13 @@
+ 	return i == TOPK || i == BOTTOMK || i == COUNT_VALUES || i == QUANTILE || i == LIMITK || i == LIMIT_RATIO
  }
  
-+// IsOPTop is an ad-hoc checker function for OP_TOP aggregate operator.
 +// OP_FUNCTIONS
++
++// IsOPTop is an ad-hoc checker function for OP_TOP aggregate operator.
 +func (i ItemType) IsOPTop() bool {
 +	return i == OP_TOP
 +}
 +
- // IsKeyword returns true if the Item corresponds to a keyword.
- // Returns false otherwise.
- func (i ItemType) IsKeyword() bool { return i > keywordsStart && i < keywordsEnd }
-@@ -111,6 +117,7 @@
+ // IsExperimentalAggregator defines the experimental aggregation functions that are controlled
+ // with EnableExperimentalFunctions.
+ func (i ItemType) IsExperimentalAggregator() bool {
+@@ -122,6 +129,7 @@
+ 	"stdvar":       STDVAR,
  	"topk":         TOPK,
  	"bottomk":      BOTTOMK,
- 	"count_values": COUNT_VALUES,
 +	"op_top":       OP_TOP, // OP_FUNCTIONS
+ 	"count_values": COUNT_VALUES,
  	"quantile":     QUANTILE,
- 
- 	// Keywords.
-
-diff --git a/promql/parser/generated_parser.y b/promql/parser/generated_parser.y
---- a/promql/parser/generated_parser.y
-+++ b/promql/parser/generated_parser.y
-@@ -102,6 +102,7 @@
- STDVAR
- SUM
- TOPK
-+OP_TOP
- %token	aggregatorsEnd
- 
- // Keywords.
-@@ -573,7 +574,7 @@
-                 ;
- 
- 
--metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | WITHOUT | START | END;
-+metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | WITHOUT | START | END;
- 
- label_set       : LEFT_BRACE label_set_list RIGHT_BRACE
-                         { $$ = labels.New($2...) }
-@@ -673,10 +674,10 @@
-  * Keyword lists.
-  */
- 
--aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK ;
-+aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP ;
- 
- // inside of grouping options label names can be recognized as keywords by the lexer. This is a list of keywords that could also be a label name.
--maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | START | END | ATAN2;
-+maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | START | END | ATAN2;
- 
- unary_op        : ADD | SUB;
- 
-
-diff --git a/promql/parser/parse.go b/promql/parser/parse.go
+ 	"limitk":       LIMITK,
 --- a/promql/parser/parse.go
 +++ b/promql/parser/parse.go
-@@ -393,6 +393,20 @@
+@@ -471,6 +471,20 @@
  		return
  	}
  
@@ -163,4 +118,36 @@ diff --git a/promql/parser/parse.go b/promql/parser/parse.go
 +
  	desiredArgs := 1
  	if ret.Op.IsAggregatorWithParam() {
- 		desiredArgs = 2
+ 		if !EnableExperimentalFunctions && ret.Op.IsExperimentalAggregator() {
+--- a/promql/parser/generated_parser.y
++++ b/promql/parser/generated_parser.y
+@@ -128,6 +128,7 @@
+ STDVAR
+ SUM
+ TOPK
++OP_TOP
+ LIMITK
+ LIMIT_RATIO
+ %token	aggregatorsEnd
+@@ -695,7 +696,7 @@
+                 ;
+ 
+ 
+-metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | WITHOUT | START | END | LIMITK | LIMIT_RATIO;
++metric_identifier: AVG | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | IDENTIFIER |  LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | WITHOUT | START | END | LIMITK | LIMIT_RATIO;
+ 
+ label_set       : LEFT_BRACE label_set_list RIGHT_BRACE
+                         { $$ = labels.New($2...) }
+@@ -949,10 +950,10 @@
+  * Keyword lists.
+  */
+ 
+-aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | LIMITK | LIMIT_RATIO;
++aggregate_op    : AVG | BOTTOMK | COUNT | COUNT_VALUES | GROUP | MAX | MIN | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | LIMITK | LIMIT_RATIO;
+ 
+ // Inside of grouping options label names can be recognized as keywords by the lexer. This is a list of keywords that could also be a label name.
+-maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | START | END | ATAN2 | LIMITK | LIMIT_RATIO;
++maybe_label     : AVG | BOOL | BOTTOMK | BY | COUNT | COUNT_VALUES | GROUP | GROUP_LEFT | GROUP_RIGHT | IDENTIFIER | IGNORING | LAND | LOR | LUNLESS | MAX | METRIC_IDENTIFIER | MIN | OFFSET | ON | QUANTILE | STDDEV | STDVAR | SUM | TOPK | OP_TOP | START | END | ATAN2 | LIMITK | LIMIT_RATIO;
+ 
+ unary_op        : ADD | SUB;
+ 
