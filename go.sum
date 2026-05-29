@@ -157,8 +157,8 @@ github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7 h
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260525111533-9e5ba68242f7/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/lib-connection v0.7.0 h1:RcPiaQJwZ0yw8QkZhxtlpM2ht+e4MoX/6aHvAtTOUcg=
 github.com/deckhouse/lib-connection v0.7.0/go.mod h1:DF2LDhylaHMqJQaOH0Soqv2YDOo64m+uql4bdCBJq5s=
-github.com/deckhouse/lib-dhctl v0.17.0 h1:2bDR+kohYp3JI6pBq7T4XwEhIWuagnc39Y8Cmd186ck=
-github.com/deckhouse/lib-dhctl v0.17.0/go.mod h1:RCthjbhLf0CtgdltTmFHk+lRyjRai8BlAO7SocAYR+E=
+github.com/deckhouse/lib-dhctl v0.18.2 h1:vGBDPmWjTy1OcMJ+eFBoteui+eDewkXV94j139ozJ5A=
+github.com/deckhouse/lib-dhctl v0.18.2/go.mod h1:uG4+4vwNjWS4YzvHQ8rAXz8dR/cPmscLZW/+CTLzrys=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.4 h1:1C61nXevgQiUnmv5Is+XP9Octu05XWKgjFi6gmL7miM=
@@ -1059,8 +1059,8 @@ k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f h1:SLb+kxmzfA87x4E4brQzB33VBb
 k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f/go.mod h1:EJykeLsmFC60UQbYJezXkEsG2FLrt0GPNkU5iK5GWxU=
 k8s.io/klog v1.0.0 h1:Pt+yjF5aB1xDSVbau4VsWe+dQNzA0qv1LlXdC2dF6Q8=
 k8s.io/klog v1.0.0/go.mod h1:4Bi6QPql/J/LkTDqv7R/cd3hPo4k2DG6Ptcz060Ez5I=
-k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
-k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=
+k8s.io/klog/v2 v2.140.0 h1:Tf+J3AH7xnUzZyVVXhTgGhEKnFqye14aadWv7bzXdzc=
+k8s.io/klog/v2 v2.140.0/go.mod h1:o+/RWfJ6PwpnFn7OyAG3QnO47BFsymfEfrz6XyYSSp0=
 k8s.io/kube-openapi v0.0.0-20250701173324-9bd5c66d9911 h1:gAXU86Fmbr/ktY17lkHwSjw5aoThQvhnstGGIYKlKYc=
 k8s.io/kube-openapi v0.0.0-20250701173324-9bd5c66d9911/go.mod h1:GLOk5B+hDbRROvt0X2+hqX64v/zO3vXN7J78OUmBSKw=
 k8s.io/kubectl v0.33.8 h1:5/Tmg9Rlpr05QpUdf6Pdk2T1zpoU1jg090CvBgt/GiI=
