@@ -138,9 +138,13 @@ func (h *sandboxTraceHandler) Handle(ctx *ptracer.Context) ptracer.TraceAction {
 		if h.Unsafe && action == ptracer.TraceKill {
 			action = ptracer.TraceBan
 		}
-		if !h.ShowDetails && action == ptracer.TraceBan {
-			log.Printf("deny syscall=%q", syscallName)
-			action = ptracer.TraceKill
+		if action == ptracer.TraceBan {
+			if h.ShowDetails {
+				log.Printf("deny syscall=%q (soft-ban)", syscallName)
+			} else {
+				log.Printf("deny syscall=%q (kill)", syscallName)
+				action = ptracer.TraceKill
+			}
 		}
 	}
 
