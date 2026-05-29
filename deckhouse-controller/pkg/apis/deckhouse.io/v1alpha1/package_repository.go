@@ -57,9 +57,9 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.scan.lastTime
-// +kubebuilder:printcolumn:name=New,type=integer,JSONPath=.status.scan.newVersions
-// +kubebuilder:printcolumn:name=LastNew,type=date,JSONPath=.status.scan.lastNewVersionsTime,priority=1
+// +kubebuilder:printcolumn:name=LastScan,type=date,JSONPath=.status.scan.lastScanTime
+// +kubebuilder:printcolumn:name=NEW-VERSIONS,type=integer,JSONPath=.status.scan.newVersions
+// +kubebuilder:printcolumn:name=LAST-CHANGE,type=date,JSONPath=.status.scan.lastChangeTime,priority=1
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
@@ -149,12 +149,12 @@ type PackageRepositoryStatus struct {
 type PackageRepositoryStatusScan struct {
 	// Time of the most recent scan of any outcome.
 	// +optional
-	LastTime *metav1.Time `json:"lastTime,omitempty"`
+	LastScanTime *metav1.Time `json:"lastScanTime,omitempty"`
 
 	// Time of the most recent scan that found at least one new version.
 	// Scans that found nothing new do not advance this timestamp.
 	// +optional
-	LastNewVersionsTime *metav1.Time `json:"lastNewVersionsTime,omitempty"`
+	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
 
 	// Number of new versions found by the most recent scan.
 	// Set to zero when the last scan found nothing new.

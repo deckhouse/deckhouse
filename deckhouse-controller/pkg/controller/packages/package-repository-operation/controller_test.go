@@ -294,8 +294,8 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	// Normalize timestamps for consistent golden files
 	resultStr := result.String()
 	resultStr = regexp.MustCompile(`startTime: "[^"]*"`).ReplaceAllString(resultStr, `startTime: "2025-10-31T12:00:00Z"`)
-	resultStr = regexp.MustCompile(`lastTime: "[^"]*"`).ReplaceAllString(resultStr, `lastTime: "2025-10-31T12:00:00Z"`)
-	resultStr = regexp.MustCompile(`lastNewVersionsTime: "[^"]*"`).ReplaceAllString(resultStr, `lastNewVersionsTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastScanTime: "[^"]*"`).ReplaceAllString(resultStr, `lastScanTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastChangeTime: "[^"]*"`).ReplaceAllString(resultStr, `lastChangeTime: "2025-10-31T12:00:00Z"`)
 	resultStr = regexp.MustCompile(`completionTime: "[^"]*"`).ReplaceAllString(resultStr, `completionTime: "2025-10-31T12:00:00Z"`)
 
 	return []byte(resultStr)

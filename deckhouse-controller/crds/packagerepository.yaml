@@ -18,14 +18,14 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.scan.lastTime
-      name: Sync
+    - jsonPath: .status.scan.lastScanTime
+      name: LastScan
       type: date
     - jsonPath: .status.scan.newVersions
-      name: New
+      name: NEW-VERSIONS
       type: integer
-    - jsonPath: .status.scan.lastNewVersionsTime
-      name: LastNew
+    - jsonPath: .status.scan.lastChangeTime
+      name: LAST-CHANGE
       priority: 1
       type: date
     - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
@@ -187,13 +187,13 @@ spec:
               scan:
                 description: Summarizes the most recent registry scans of this repository.
                 properties:
-                  lastNewVersionsTime:
+                  lastChangeTime:
                     description: |-
                       Time of the most recent scan that found at least one new version.
                       Scans that found nothing new do not advance this timestamp.
                     format: date-time
                     type: string
-                  lastTime:
+                  lastScanTime:
                     description: Time of the most recent scan of any outcome.
                     format: date-time
                     type: string

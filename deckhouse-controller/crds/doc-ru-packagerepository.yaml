@@ -91,10 +91,10 @@ spec:
                   description: |
                     Сводка по последним сканированиям репозитория.
                   properties:
-                    lastTime:
+                    lastScanTime:
                       description: |
                         Время последнего сканирования с любым результатом.
-                    lastNewVersionsTime:
+                    lastChangeTime:
                       description: |
                         Время последнего сканирования, нашедшего хотя бы одну новую версию.
                         Сканирования, не нашедшие нового, это значение не обновляют.

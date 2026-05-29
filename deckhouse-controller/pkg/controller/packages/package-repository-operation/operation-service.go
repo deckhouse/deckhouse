@@ -183,16 +183,16 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 	s.repo.Status.PackagesCount = len(s.repo.Status.Packages)
 	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
 
-	// LastNewVersionsTime is preserved across scans that find nothing new, so only
+	// LastChangeTime is preserved across scans that find nothing new, so only
 	// advance it when the current scan actually found versions.
 	scan := s.repo.Status.Scan
 	if scan == nil {
 		scan = &v1alpha1.PackageRepositoryStatusScan{}
 	}
-	scan.LastTime = &now
+	scan.LastScanTime = &now
 	scan.NewVersions = newVersionsTotal
 	if newVersionsTotal > 0 {
-		scan.LastNewVersionsTime = &now
+		scan.LastChangeTime = &now
 	}
 	s.repo.Status.Scan = scan
 

@@ -86,6 +86,6 @@ status:
   partialScanAvailable: false
   phase: Active
   scan:
-    lastNewVersionsTime: "2025-10-31T12:00:00Z"
-    lastTime: "2025-10-31T12:00:00Z"
+    lastChangeTime: "2025-10-31T12:00:00Z"
+    lastScanTime: "2025-10-31T12:00:00Z"
     newVersions: 1
