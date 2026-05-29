@@ -68,6 +68,13 @@ type UserOperationResetPasswordSpec struct {
 
 type UserOperationLockSpec struct {
 	For metav1.Duration `json:"for"`
+	// Permanent overrides For. When true, the hook writes lockedUntil set to
+	// userOperationForeverTime — a far-future timestamp that Dex's
+	// time.Now()-based comparison treats as a perpetual lockout. Mutually
+	// exclusive with For at the *intent* level (if both are present,
+	// Permanent wins); validation in executeLock rejects the case where
+	// neither is set so callers can't accidentally produce a no-op Lock.
+	Permanent bool `json:"permanent,omitempty"`
 }
 
 type UserOperationSpecType string
@@ -123,6 +130,14 @@ const userOperationRetentionPeriod = 24 * time.Hour
 // hook's structured logs as the "initiator" key so audit trails record
 // *who* did what, not just *what role* (initiatorType) did it.
 const userOperationAnnotationInitiator = "deckhouse.io/initiator"
+
+// userOperationForeverTime is the lockedUntil value the hook writes for a
+// permanent lock (UserOperationLockSpec.Permanent == true). Year 9999 keeps
+// the value inside time.Time's safe range and RFC3339 grammar while sitting
+// far beyond any realistic clock skew or planned expiry. Both Dex's
+// Password.lockedUntil and OfflineSessions.lockedUntil are compared with
+// time.Now(), so any far-future stamp blocks logins indefinitely.
+var userOperationForeverTime = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authn",
@@ -357,11 +372,24 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		input.Logger.Error("Lock spec is nil", userOperationLogFields(operation)...)
 		return errors.New("lock spec is nil")
 	}
+	if !operation.Spec.Lock.Permanent && operation.Spec.Lock.For.Duration == 0 {
+		return errors.New("lock spec requires either 'for' (positive duration) or 'permanent: true'")
+	}
+
+	// lockedUntil is computed once here so the external (OfflineSessions) and
+	// local (Password) code paths agree on the exact timestamp, and so the
+	// "forever" branch is colocated with its validation.
+	var lockedUntil time.Time
+	if operation.Spec.Lock.Permanent {
+		lockedUntil = userOperationForeverTime
+	} else {
+		lockedUntil = time.Now().Add(operation.Spec.Lock.For.Duration)
+	}
 
 	// Non-local users (LDAP, Crowd, ...): lock state lives in OfflineSessions
 	// indexed by (email, connID).
 	if operation.Spec.Target != nil {
-		return lockOfflineSession(input, operation, operation.Spec.Lock.For.Duration)
+		return lockOfflineSession(input, operation, lockedUntil)
 	}
 
 	var userPassword *Password
@@ -381,7 +409,8 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 	input.Logger.Info("Locking local user password",
 		append(userOperationLogFields(operation),
 			"user", userPassword.Username,
-			"duration", operation.Spec.Lock.For.Duration.String(),
+			"lockedUntil", lockedUntil.UTC().Format(time.RFC3339),
+			"permanent", operation.Spec.Lock.Permanent,
 		)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
@@ -389,7 +418,7 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 			input.Logger.Error("Failed to convert Password object", "error", err)
 			return nil, err
 		}
-		pass.LockedUntil = ptr.To(time.Now().Add(operation.Spec.Lock.For.Duration))
+		pass.LockedUntil = ptr.To(lockedUntil)
 		u, err := sdk.ToUnstructured(&pass)
 		if err != nil {
 			return nil, err
@@ -639,19 +668,20 @@ func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationT
 // annotation slot did. Sending the desired values explicitly is the only
 // reliable way to set top-level fields on a CR with
 // x-kubernetes-preserve-unknown-fields. This mirrors unlockOfflineSession.
-func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockFor time.Duration) error {
+func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockedUntil time.Time) error {
 	sess, err := findOfflineSessionByTarget(input, operation.Spec.Target)
 	if err != nil {
 		return err
 	}
 
+	until := lockedUntil.UTC().Format(time.RFC3339)
 	input.Logger.Info("Locking external user via OfflineSessions",
 		append(userOperationLogFields(operation),
 			"offlinesession", sess.Name,
-			"duration", lockFor.String(),
+			"lockedUntil", until,
+			"permanent", operation.Spec.Lock.Permanent,
 		)...)
 
-	until := time.Now().Add(lockFor).UTC().Format(time.RFC3339)
 	patch := map[string]any{
 		"lockedUntil":                    until,
 		"incorrectPasswordLoginAttempts": int64(0),

@@ -71,6 +71,15 @@ spec:
                     for:
                       type: string
                       description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
+                    permanent:
+                      type: boolean
+                      description: |
+                        If `true`, the user is locked permanently (no expiry).
+
+                        When set, `for` is ignored. The hook writes `lockedUntil`
+                        to a far-future timestamp (year 9999), which Dex treats
+                        as a perpetual lockout. To release such a lock, submit
+                        an `Unlock` UserOperation.
             status:
               type: object
               properties:
@@ -196,6 +205,15 @@ spec:
                     for:
                       type: string
                       description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
+                    permanent:
+                      type: boolean
+                      description: |
+                        If `true`, the user is locked permanently (no expiry).
+
+                        When set, `for` is ignored. The hook writes `lockedUntil`
+                        to a far-future timestamp (year 9999), which Dex treats
+                        as a perpetual lockout. To release such a lock, submit
+                        an `Unlock` UserOperation.
             status:
               type: object
               properties:
