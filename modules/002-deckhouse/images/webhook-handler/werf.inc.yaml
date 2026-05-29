@@ -174,4 +174,4 @@ git:
   - '**/*.sum'
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
