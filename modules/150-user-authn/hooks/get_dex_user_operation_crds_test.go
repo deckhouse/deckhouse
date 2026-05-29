@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -99,6 +100,34 @@ metadata:
   name: user-operation-01
 spec:
   initiatorType: Admin
+  type: Lock
+  user: admin
+`
+		userOperationLockPermanent = `
+---
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  creationTimestamp: "%s"
+  name: user-operation-01
+spec:
+  initiatorType: Admin
+  lock:
+    for: permanent
+  type: Lock
+  user: admin
+`
+		userOperationLockSevenDays = `
+---
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  creationTimestamp: "%s"
+  name: user-operation-01
+spec:
+  initiatorType: Admin
+  lock:
+    for: 7d
   type: Lock
   user: admin
 `
@@ -276,6 +305,62 @@ status:
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
 			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Lock local user permanently", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationLockPermanent, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
+			// The hook writes the year-9999 sentinel for `for: permanent`.
+			// Any year past 9000 implies the permanent-lock branch ran —
+			// no finite duration can reach that horizon.
+			Expect(pw.Field("lockedUntil").Time().Year()).To(BeNumerically(">=", 9000))
+			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Lock local user for 7 days (d unit is expanded to hours)", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationLockSevenDays, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
+			// 7 days expansion happens in the hook (Go's time.ParseDuration knows
+			// no "d" unit). Verify lockedUntil sits ~7 days from now (±1 minute
+			// to absorb scheduling jitter without making the check vacuous).
+			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(7*24*time.Hour), time.Minute))
+			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Reset user's password wipes the hash from spec on success", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationResetPassword, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			// spec.resetPassword must be removed so the bcrypt hash does not
+			// linger in etcd for the 24h retention window after the password
+			// has already been applied to the Dex Password CR.
+			Expect(uo.Field("spec.resetPassword").Exists()).To(BeFalse())
 		})
 
 		It("Unlock local user", func() {
@@ -503,3 +588,73 @@ status:
 
 	})
 })
+
+// Anchored time so success cases can assert exact instants rather than
+// "now ± epsilon"; this is the whole reason resolveLockUntil takes `now`
+// as a parameter.
+var fixedNow = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+func TestResolveLockUntil(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    time.Time
+		wantErr bool
+	}{
+		{
+			name:  "permanent sentinel resolves to the year-9999 lock-forever marker",
+			input: userOperationLockForever,
+			want:  userOperationForeverTime,
+		},
+		{
+			name:  "plain Go duration is added to now",
+			input: "30m",
+			want:  fixedNow.Add(30 * time.Minute),
+		},
+		{
+			name:  "compound Go duration with no days unit",
+			input: "2h30m",
+			want:  fixedNow.Add(2*time.Hour + 30*time.Minute),
+		},
+		{
+			name:  "single days segment expands to 24h-per-day",
+			input: "7d",
+			want:  fixedNow.Add(7 * 24 * time.Hour),
+		},
+		{
+			name:  "fractional days are honoured",
+			input: "0.5d",
+			want:  fixedNow.Add(12 * time.Hour),
+		},
+		{
+			name:  "days mix freely with other Go-duration units",
+			input: "1d12h",
+			want:  fixedNow.Add(36 * time.Hour),
+		},
+		{
+			name:    "non-parseable garbage surfaces an error (CRD pattern should make this unreachable in prod)",
+			input:   "never",
+			wantErr: true,
+		},
+		{
+			name:    "explicitly zero duration is rejected as non-positive (CEL should also catch it)",
+			input:   "0s",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveLockUntil(tt.input, fixedNow)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("resolveLockUntil(%q) error = %v, wantErr = %v", tt.input, err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("resolveLockUntil(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}

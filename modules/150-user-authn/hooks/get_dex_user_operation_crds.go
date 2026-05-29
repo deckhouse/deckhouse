@@ -21,6 +21,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,14 +69,59 @@ type UserOperationResetPasswordSpec struct {
 }
 
 type UserOperationLockSpec struct {
-	For metav1.Duration `json:"for"`
-	// Permanent overrides For. When true, the hook writes lockedUntil set to
-	// userOperationForeverTime — a far-future timestamp that Dex's
-	// time.Now()-based comparison treats as a perpetual lockout. Mutually
-	// exclusive with For at the *intent* level (if both are present,
-	// Permanent wins); validation in executeLock rejects the case where
-	// neither is set so callers can't accidentally produce a no-op Lock.
-	Permanent bool `json:"permanent,omitempty"`
+	// For is either a Go-style duration string accepted by time.ParseDuration
+	// (e.g. "30m", "1h", "2h30m"), or the sentinel userOperationLockForever
+	// ("permanent") for an indefinite lock. We use a plain string rather than
+	// metav1.Duration so the sentinel can travel through (un)marshalling
+	// without colliding with time.ParseDuration's grammar.
+	For string `json:"for"`
+}
+
+// userOperationLockForever is the sentinel value accepted by
+// UserOperationLockSpec.For to request a permanent lock.
+const userOperationLockForever = "permanent"
+
+// lockDaysSegment matches one "<number>d" piece inside a Go-style duration
+// string. The CRD pattern guarantees the surrounding shape, so we don't
+// re-validate it here.
+var lockDaysSegment = regexp.MustCompile(`([0-9]+(?:\.[0-9]+)?)d`)
+
+// expandLockDuration rewrites every "<num>d" segment in a Go-style duration
+// string into the equivalent "<num*24>h" so time.ParseDuration — which has
+// no "d" unit — can consume the result. We surface days in the API for
+// admin ergonomics ("7d" reads better than "168h") while keeping a single,
+// trusted parser on the read side.
+func expandLockDuration(s string) string {
+	return lockDaysSegment.ReplaceAllStringFunc(s, func(seg string) string {
+		days, err := strconv.ParseFloat(seg[:len(seg)-1], 64)
+		if err != nil {
+			// CRD pattern should make this unreachable; bail out unchanged and
+			// let time.ParseDuration produce the canonical error message.
+			return seg
+		}
+		return strconv.FormatFloat(days*24, 'f', -1, 64) + "h"
+	})
+}
+
+// resolveLockUntil maps UserOperationLockSpec.For to an absolute expiry.
+//
+// Shape and positivity of forValue are enforced at the API boundary by the
+// UserOperation CRD (`pattern` + `x-kubernetes-validations`), so anything
+// reaching here is either the "permanent" sentinel or a positive duration.
+// The error paths below are kept as a defensive guard for hand-crafted
+// objects in tests or clusters where CRD validation is somehow bypassed.
+func resolveLockUntil(forValue string, now time.Time) (time.Time, error) {
+	if forValue == userOperationLockForever {
+		return userOperationForeverTime, nil
+	}
+	d, err := time.ParseDuration(expandLockDuration(forValue))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid lock.for %q: %w", forValue, err)
+	}
+	if d <= 0 {
+		return time.Time{}, fmt.Errorf("lock.for %q must be a positive duration", forValue)
+	}
+	return now.Add(d), nil
 }
 
 type UserOperationSpecType string
@@ -337,6 +384,13 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 			object_patch.WithSubresource("status"),
 		)
 
+		// Wipe the bcrypt hash from spec.resetPassword as soon as the
+		// operation reaches a terminal phase (Succeeded or Failed). The hook
+		// never reprocesses a terminal operation (Status.Phase != "" skips
+		// the execute branch), so the payload has no remaining purpose and
+		// only widens the window during which a hash sits in etcd. JSON
+		// merge patch with nil deletes the whole resetPassword block; the
+		// CRD schema does not require it for type=ResetPassword.
 		if operation.Spec.Type == UserOperationTypeResetPass && operation.Spec.ResetPassword != nil {
 			input.PatchCollector.PatchWithMerge(
 				map[string]any{"spec": map[string]any{"resetPassword": nil}},
@@ -372,18 +426,10 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		input.Logger.Error("Lock spec is nil", userOperationLogFields(operation)...)
 		return errors.New("lock spec is nil")
 	}
-	if !operation.Spec.Lock.Permanent && operation.Spec.Lock.For.Duration == 0 {
-		return errors.New("lock spec requires either 'for' (positive duration) or 'permanent: true'")
-	}
 
-	// lockedUntil is computed once here so the external (OfflineSessions) and
-	// local (Password) code paths agree on the exact timestamp, and so the
-	// "forever" branch is colocated with its validation.
-	var lockedUntil time.Time
-	if operation.Spec.Lock.Permanent {
-		lockedUntil = userOperationForeverTime
-	} else {
-		lockedUntil = time.Now().Add(operation.Spec.Lock.For.Duration)
+	lockedUntil, err := resolveLockUntil(operation.Spec.Lock.For, time.Now())
+	if err != nil {
+		return err
 	}
 
 	// Non-local users (LDAP, Crowd, ...): lock state lives in OfflineSessions
@@ -409,8 +455,8 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 	input.Logger.Info("Locking local user password",
 		append(userOperationLogFields(operation),
 			"user", userPassword.Username,
+			"for", operation.Spec.Lock.For,
 			"lockedUntil", lockedUntil.UTC().Format(time.RFC3339),
-			"permanent", operation.Spec.Lock.Permanent,
 		)...)
 	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var pass Password
@@ -678,8 +724,8 @@ func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, locke
 	input.Logger.Info("Locking external user via OfflineSessions",
 		append(userOperationLogFields(operation),
 			"offlinesession", sess.Name,
+			"for", operation.Spec.Lock.For,
 			"lockedUntil", until,
-			"permanent", operation.Spec.Lock.Permanent,
 		)...)
 
 	patch := map[string]any{
