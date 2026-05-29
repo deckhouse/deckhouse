@@ -3,7 +3,7 @@
 {{- $channel := .channel }}
 
 {{- $requirements := dict }}
-{{- $moduleData := index (index site.Data.modules $module) $channel }}
+{{- $moduleData := index (index hugo.Data.modules $module) $channel }}
 {{- $moduleMetadata := index $moduleData "module" }}
 {{- if and $moduleMetadata $moduleMetadata.requirements }}
   {{- $requirements = $moduleMetadata.requirements }}
