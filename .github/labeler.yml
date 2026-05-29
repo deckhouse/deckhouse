@@ -62,7 +62,6 @@ area/kubernetes:
   - modules/036-kube-proxy/**
 
 area/logs:
-  - modules/460-log-shipper/**
   - modules/462-loki/**
 
 area/monitoring:
