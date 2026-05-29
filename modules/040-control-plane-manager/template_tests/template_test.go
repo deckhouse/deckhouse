@@ -322,7 +322,9 @@ apiserver:
   authn: {}
 `
 	const (
-		eeModuleDir        = "/deckhouse/ee/modules/040-control-plane-manager"
+		// TODO change to "/deckhouse/ee/modules/040-control-plane-manager"
+		// after enable signature for ee and fe
+		eeModuleDir        = "/deckhouse/ee/cse/modules/040-control-plane-manager"
 		moduleDir          = "/deckhouse/modules/040-control-plane-manager"
 		valuesInModulePath = "openapi/values.yaml"
 	)

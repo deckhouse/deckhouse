@@ -1418,7 +1418,7 @@ A complete configuration example and results are available in the [Examples](exa
 ## How to Verify the Data Integrity Control Functionality Stored in etcd?
 
 {% alert level="warning" %}
-Verify the Data Integrity Control Stored in etcd functionality available only for EE, CSE-lite and CSE-pro editions.
+Verify the Data Integrity Control Stored in etcd functionality available only for CSE-lite and CSE-pro editions.
 {% endalert %}
 
 ### Verifying the Format of Stored Data
