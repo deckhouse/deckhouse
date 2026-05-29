@@ -47,6 +47,58 @@ If the `htpasswd` command is not available, install the appropriate package:
 * `apache2-htpasswd` — for ALT Linux.
 {% endalert %}
 
+## Local user operations
+
+Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource, wait for the operation to complete, and print the result.
+
+The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
+
+Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands:
+
+- Interactive password reset:
+
+  ```shell
+  d8 iam user reset-password admin
+  ```
+
+- Reading the new password from stdin:
+
+  ```shell
+  echo "N3wPa$$wo#d" | d8 iam user reset-password admin --password-stdin
+  ```
+
+- Generating a new password automatically:
+
+  ```shell
+  d8 iam user reset-password admin --generate-password
+  ```
+
+- Reset the password in hashed form (if the password is hashed, provide the bcrypt hash without Base64 encoding):
+
+  ```shell
+  d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
+  ```
+
+- 2FA reset:
+
+  ```shell
+  d8 iam user reset2fa admin
+  ```
+
+- Locking a user for 30 minutes:
+
+  ```shell
+  d8 iam user lock admin 30m
+  ```
+
+- User unlock:
+
+  ```shell
+  d8 iam user unlock admin
+  ```
+
+By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
+
 ## Adding a user to a group
 
 {% alert level="warning" %}
@@ -72,7 +124,7 @@ spec:
 
 Where `members` is a list of users belonging to the group.
 
-Once the group is created and includes all necessary users, proceed by configuring [authorization](../../access/authorization/).
+Once the group is created and includes all necessary users, proceed by configuring [authorization](../authorization/).
 
 ## Configuring password policy
 

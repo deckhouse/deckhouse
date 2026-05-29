@@ -42,5 +42,5 @@ spec:
   registry:
     repo: registry.example.com/test
 status:
+  lastNewVersions: 0
   partialScanAvailable: false
-  syncTime: null

@@ -13,7 +13,6 @@ import:
   owner: 64535
   group: 64535
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

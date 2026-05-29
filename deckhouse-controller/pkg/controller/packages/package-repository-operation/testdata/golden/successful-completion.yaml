@@ -79,10 +79,12 @@ status:
     reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
+  lastChangeTime: "2025-10-31T12:00:00Z"
+  lastNewVersions: 1
+  lastScanTime: "2025-10-31T12:00:00Z"
   packages:
   - name: v1.0.0
     type: Application
   packagesCount: 1
   partialScanAvailable: false
   phase: Active
-  syncTime: "2025-10-31T12:00:00Z"
