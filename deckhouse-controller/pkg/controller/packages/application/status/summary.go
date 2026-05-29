@@ -198,7 +198,7 @@ var summaryTable = map[phase]map[string]advice{
 // was disabled.
 var summarySuspended = advice{
 	state:   stateSuspended,
-	message: "Application is suspended: a required dependency has been disabled",
+	message: "Application is suspended: requirements unmet",
 	tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
 }
 
