@@ -45,32 +45,14 @@ git:
 # - 'ee/fe/modules/*/webhooks/'
   excludePaths:
     - '**/*_test.py'
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/src/entrypoint.sh
   to: /entrypoint.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}shell_lib/semver.sh
   to: /{{ .ModulePath }}frameworks/shell/semver.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator/internal/controller/templates
   to: /internal/controller/templates
-  stageDependencies:
-    install:
-      - '**/*'
-shell:
-  install:
-  - set -e
 imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}
@@ -162,9 +144,6 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-webhook-operator-src-artifact
 fromImage: common/src-artifact
 final: false
-shell:
-  install:
-  - cd /operator
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/operator
   to: /src
@@ -172,6 +151,3 @@ git:
   - '**/*.go'
   - '**/*.mod'
   - '**/*.sum'
-  stageDependencies:
-    install:
-    - '**/*'
