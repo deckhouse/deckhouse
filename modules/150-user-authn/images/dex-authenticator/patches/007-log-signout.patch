@@ -1,0 +1,15 @@
+diff --git a/oauthproxy.go b/oauthproxy.go
+index cfe0f0ec..a8bd18e0 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -727,6 +727,9 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+ 		return
+ 	}
++	if session, sErr := p.LoadCookiedSession(req); sErr == nil && session != nil {
++		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "User signed out")
++	}
+ 	err = p.ClearSessionCookie(rw, req)
+ 	if err != nil {
+ 		logger.Errorf("Error clearing session cookie: %v", err)
+
