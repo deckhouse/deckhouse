@@ -38,6 +38,9 @@ data:
           "excludeIPRanges": {{ $.Values.istio.sidecar.excludeOutboundIPRanges | default list | join "," | quote }},
           "excludeOutboundPorts": {{ $.Values.istio.sidecar.excludeOutboundPorts | default list | join "," | quote }},
           "excludeInboundPorts": {{ $.Values.istio.sidecar.excludeInboundPorts | default list | join "," | quote }},
+          "privileged": false,
+          "capNetBindService": false,
+          "holdApplicationUntilProxyStarts": {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts | default false }},
           "resources": {}
         },
         "proxy_init": {
