@@ -74,6 +74,7 @@ shell:
   install:
   # copy extra tools
   - cp -av /tools/* /extra_apps
+  #
   - mkdir -p /src
   - cd /src
   - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
