@@ -143,9 +143,9 @@ type PackageRepositoryStatus struct {
 	PartialScanAvailable bool `json:"partialScanAvailable"`
 
 	// Number of new versions found by the most recent completed operation.
-	// Reset on every completion, including to zero when the last scan found nothing new.
-	// +optional
-	LastOperationNewVersions int `json:"lastOperationNewVersions,omitempty"`
+	// Always present once any operation has completed; set to zero when the last
+	// scan found nothing new.
+	LastOperationNewVersions int `json:"lastOperationNewVersions"`
 
 	// Time of the most recent completed operation that found at least one new version.
 	// Operations that found zero new versions do not advance this timestamp.
