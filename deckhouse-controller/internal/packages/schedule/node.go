@@ -48,7 +48,9 @@ type Constraints struct {
 	Order        Order                 // Scheduling priority; lower values run first.
 	Kubernetes   *semver.Constraints   // Kubernetes version constraint (e.g., ">=1.21")
 	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
-	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name.
+	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and checker inputs.
+	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Checker-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
+	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Checker-only: "must not be installed" is an admission predicate, not an ordering relation.
 }
 
 // Dependency describes a requirement on another package, with an optional
@@ -56,6 +58,25 @@ type Constraints struct {
 type Dependency struct {
 	Constraint *semver.Constraints `json:"constraint" yaml:"constraint"` // Semver constraint the dependency must satisfy
 	Optional   bool                `json:"optional" yaml:"optional"`     // If true, the check is skipped when the dependency is absent
+}
+
+// AnyOfGroup is a group of alternative dependencies: at least one member must
+// be installed and satisfy its constraint for the group to pass. A nil
+// constraint on a member means "any installed version is acceptable". Name is
+// the stable identifier used by the scheduler in failure diagnostics.
+type AnyOfGroup struct {
+	Name    string                         `json:"name" yaml:"name"`
+	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
+}
+
+// NoneOfGroup is a group of forbidden dependencies: no member may be installed
+// in a way that matches its constraint. A nil constraint on a member forbids
+// the module at any installed version; a non-nil constraint narrows the
+// forbidden range. Name is the stable identifier used by the scheduler in
+// failure diagnostics.
+type NoneOfGroup struct {
+	Name    string                         `json:"name" yaml:"name"`
+	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
 }
 
 // Order is a numeric priority for scheduling: lower values are processed first.
@@ -66,74 +87,33 @@ type Order uint
 // used to evaluate eligibility on each scheduling pass.
 type node struct {
 	name    string          // Unique package name; also used as the graph vertex key.
-	version *semver.Version // Current installed version; used by dependency checkers of followers.
+	version *semver.Version // Current installed version; used by dependency checkers of dependents.
 
 	state nodeState // Lifecycle phase: idle → scheduled → active.
 	order Order     // Scheduling priority; lower values run before higher ones.
 
 	status checker.Result // Last computed enabled/disabled result from the checker chain.
 
-	followees    map[string]struct{}   // Packages this node waits for before it can be scheduled.
-	followers    map[string]struct{}   // Packages that are waiting on this node to become active.
-	dependencies map[string]Dependency // Declared dependency constraints (version bounds, optional flag).
+	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and checker inputs.
 
 	checkers []checker.Checker // Ordered list of checkers to evaluate
 }
 
-// addNode creates a node from a Package, wires followee/follower edges in both
-// directions, attaches version/condition/dependency checkers, and inserts the
-// node into the graph. It does NOT trigger a scheduling pass — the caller is
-// responsible for that.
+// addNode creates a node from a Package, attaches the checker chain, and
+// inserts the node into the graph. It does NOT trigger a scheduling pass —
+// the caller is responsible for that.
 //
-// If a node with the same name already exists (version update), its stale
-// reverse edges are cleaned up before the new node is inserted. This prevents
-// old followees from keeping the package as a follower after its constraints change.
+// Ordering is derived from n.dependencies by topoSort; enable state is
+// computed by the checker chain.
 func (s *Scheduler) addNode(pkg Package) {
-	// Clean up stale reverse edges from the previous node (if any).
-	// Without this, a dependency dropped in the new version would still
-	// hold a followers["name"] reference and spuriously trigger this node.
-	if old, ok := s.nodes[pkg.GetName()]; ok {
-		for dep := range old.followees {
-			if parent, ok := s.nodes[dep]; ok {
-				delete(parent.followers, old.name)
-			}
-		}
-	}
+	constraints := pkg.GetConstraints()
 
 	n := &node{
 		name:         pkg.GetName(),
 		version:      pkg.GetVersion(),
 		state:        nodeStateIdle,
-		followees:    make(map[string]struct{}),
-		followers:    make(map[string]struct{}),
-		dependencies: maps.Clone(pkg.GetConstraints().Dependencies),
-	}
-
-	constraints := pkg.GetConstraints()
-
-	n.order = constraints.Order
-
-	for dep := range constraints.Dependencies {
-		n.followees[dep] = struct{}{}
-
-		if parent, ok := s.nodes[dep]; ok {
-			parent.followers[n.name] = struct{}{}
-		}
-	}
-
-	if n.name != packageGlobal {
-		n.followees[packageGlobal] = struct{}{}
-
-		// all packages should be subscribed to global
-		if global, ok := s.nodes[packageGlobal]; ok {
-			global.followers[n.name] = struct{}{}
-		}
-	}
-
-	for _, existing := range s.nodes {
-		if _, ok := existing.followees[n.name]; ok {
-			n.followers[existing.name] = struct{}{}
-		}
+		order:        constraints.Order,
+		dependencies: maps.Clone(constraints.Dependencies),
 	}
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
@@ -149,7 +129,7 @@ func (s *Scheduler) addNode(pkg Package) {
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
-		deps := make(map[string]dependency.Dependency)
+		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
 				Constraint: dep.Constraint,
@@ -160,5 +140,47 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.checkers = append(n.checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
+	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
+		n.checkers = append(n.checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	}
+
+	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
+		n.checkers = append(n.checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
 	s.nodes[pkg.GetName()] = n
+}
+
+// toAnyOfGroups translates schedule.AnyOfGroup values into the dependency
+// package's AnyOfGroup shape. The two types are structurally identical; the
+// translation exists so the schedule package's public contract does not leak
+// the dependency package's types to callers. Members maps are cloned so the
+// scheduler's view is isolated from later mutation of the caller's Constraints
+// (mirrors the maps.Clone of constraints.Dependencies in addNode).
+func toAnyOfGroups(in []AnyOfGroup) []dependency.AnyOfGroup {
+	out := make([]dependency.AnyOfGroup, 0, len(in))
+	for _, g := range in {
+		out = append(out, dependency.AnyOfGroup{
+			Name:    g.Name,
+			Members: maps.Clone(g.Members),
+		})
+	}
+
+	return out
+}
+
+// toNoneOfGroups translates schedule.NoneOfGroup values into the dependency
+// package's NoneOfGroup shape. The two types are structurally identical; the
+// translation exists so the schedule package's public contract does not leak
+// the dependency package's types to callers.
+func toNoneOfGroups(in []NoneOfGroup) []dependency.NoneOfGroup {
+	out := make([]dependency.NoneOfGroup, 0, len(in))
+	for _, g := range in {
+		out = append(out, dependency.NoneOfGroup{
+			Name:    g.Name,
+			Members: g.Members,
+		})
+	}
+
+	return out
 }

@@ -25,8 +25,6 @@ import (
 	"path/filepath"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 // DefaultTmpDir returns the default location for dhctl temporary state.
@@ -56,21 +54,11 @@ type Options struct {
 	Render       RenderOptions
 	ControlPlane ControlPlaneOptions
 	Destroy      DestroyOptions
-}
-
-// DirConfig returns the directory configuration consumed by pkg/config and
-// pkg/template. It bundles the download directories (from GlobalOptions) with
-// the version-file path (from BuildInfo) so callers do not need to reach into
-// both sub-structs.
-func (o *Options) DirConfig() *directoryconfig.DirectoryConfig {
-	return &directoryconfig.DirectoryConfig{
-		DownloadDir:      o.Global.DownloadDir,
-		DownloadCacheDir: o.Global.DownloadCacheDir,
-		VersionFilePath:  o.BuildInfo.VersionFile,
-	}
+	Registry     RegistryOptions
 }
 
 func (o *Options) ToSpanAttributes() []otattribute.KeyValue {
+	//nolint:prealloc
 	attrs := make([]otattribute.KeyValue, 0)
 
 	attrs = append(attrs, o.Global.ToSpanAttributes()...)

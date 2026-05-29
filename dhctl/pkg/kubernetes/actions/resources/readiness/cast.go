@@ -21,14 +21,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-type castErrorFunc func(key, kind string) (bool, error)
-type castResult[T any] struct {
-	value T
-	ok    bool
+type (
+	castErrorFunc     func(key, kind string) (bool, error)
+	castResult[T any] struct {
+		value T
+		ok    bool
 
-	err   error
-	ready bool
-}
+		err   error
+		ready bool
+	}
+)
 
 func (r *castResult[T]) ReadyResult() (bool, error) {
 	return r.ready, r.err
@@ -44,7 +46,7 @@ func returnCastError[T any](key string, errFunc castErrorFunc) castResult[T] {
 	}
 }
 
-func castKey[T any](m map[string]any, key string, notFound castErrorFunc, castErr castErrorFunc) castResult[T] {
+func castKey[T any](m map[string]any, key string, notFound, castErr castErrorFunc) castResult[T] {
 	raw, ok := m[key]
 	if !ok {
 		return returnCastError[T](key, notFound)

@@ -9,6 +9,7 @@
 
 {{- range $version := .Values.istio.internal.versionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if get $versionInfo "supportsOperator" }}
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
@@ -136,10 +137,13 @@ spec:
       defaultConfig:
         proxyMetadata:
           CLOUD_PLATFORM: {{ $cloudPlatform }}
-          ISTIO_META_DNS_CAPTURE: "true"
           ISTIO_META_DNS_AUTO_ALLOCATE: "true"
-          PROXY_CONFIG_XDS_AGENT: "true"
+          ISTIO_META_DNS_CAPTURE: "true"
+          {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
+          ISTIO_META_ENABLE_HBONE: "true"
+          {{- end }}
           ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
+          PROXY_CONFIG_XDS_AGENT: "true"
         holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
     {{- if $.Values.istio.tracing.enabled }}
         tracing:
@@ -256,5 +260,6 @@ spec:
       - matchExpressions:
         - key: job-name
           operator: Exists
+  {{- end }}
   {{- end }}
 {{- end }}

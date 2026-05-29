@@ -39,9 +39,11 @@ status:
           create error for v1.2.0'
         version: v1.2.0
       name: test-package
+    newVersionsOverall: 1
     processed:
     - foundVersions: 3
       name: test-package
+      newVersions: 1
       type: Module
     processedOverall: 1
     total: 1

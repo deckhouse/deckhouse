@@ -204,6 +204,7 @@ run: |
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e WERF_ENV=${WERF_ENV} \
   -e USER_RUNNER_ID=${user_runner_id} \
   -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v $(pwd)/testing:/deckhouse/testing \
@@ -222,6 +223,7 @@ run: |
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e WERF_ENV=${WERF_ENV} \
   -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
   -v "$PWD/config.yml:/config.yml" \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -240,6 +242,7 @@ run: |
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e WERF_ENV=${WERF_ENV} \
   -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
@@ -411,7 +414,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 # <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
-  runs-on: "ubuntu-latest"
+  runs-on: "ubuntu-slim"
   permissions:
     contents: read
     issues: write
@@ -572,6 +575,7 @@ check_e2e_labels:
         INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+        DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
       run: |
         # Calculate unique prefix for e2e test.
         # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -616,9 +620,9 @@ check_e2e_labels:
         fi
 
         # Use rw-registry for Git tags.
-        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-        if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+        if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           # Use stage-registry for release branches.
           BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
         else

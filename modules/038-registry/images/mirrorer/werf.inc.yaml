@@ -39,19 +39,18 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /src/tmp
-    to: /tmp
-    before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /mirrorer
-    to: /mirrorer
-    before: setup
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-git:
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  add: /src/tmp
+  to: /tmp
+  before: setup
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  add: /mirrorer
+  to: /mirrorer
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

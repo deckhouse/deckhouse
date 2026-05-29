@@ -43,6 +43,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 	app.DefineDontUsePublicImagesFlags(cmd, &opts.Bootstrap)
 	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
 	app.DefinePreflight(cmd, &opts.Preflight)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -63,12 +64,13 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 			}
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
 			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			ResetInitialState:      false,
-			DirectoryConfig:        opts.DirConfig(),
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
 			Options:                opts,

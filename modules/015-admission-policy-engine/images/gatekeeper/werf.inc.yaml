@@ -3,11 +3,10 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /gatekeeper
-    to: /bin/gatekeeper
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /gatekeeper
+  to: /bin/gatekeeper
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

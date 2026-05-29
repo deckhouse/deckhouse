@@ -61,13 +61,14 @@ func GetLabelSelector(selectors []LabelSelector) (string, error) {
 }
 
 func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error) {
-	withNg := []LabelSelector{
-		{
-			Label:    global.NodeGroupLabel,
-			Operator: selection.Equals,
-			Vals:     []string{global.MasterNodeGroupName},
-		},
-	}
+	withNg := make([]LabelSelector, 0, 1+len(selectors))
+
+	withNg = append(withNg, LabelSelector{
+
+		Label:    global.NodeGroupLabel,
+		Operator: selection.Equals,
+		Vals:     []string{global.MasterNodeGroupName},
+	})
 
 	withNg = append(withNg, selectors...)
 
@@ -83,8 +84,10 @@ type KubeClientProviderWithCtx interface {
 	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
 }
 
-var _ KubeClientProvider = &SimpleKubeClientGetter{}
-var _ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+var (
+	_ KubeClientProvider        = &SimpleKubeClientGetter{}
+	_ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+)
 
 type SimpleKubeClientGetter struct {
 	kubeCl *client.KubernetesClient

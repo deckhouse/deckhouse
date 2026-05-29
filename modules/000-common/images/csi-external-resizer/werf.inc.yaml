@@ -13,13 +13,12 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
-git:
-{{- include "image mount points" $ }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /csi-resizer
   to: /csi-resizer
   before: setup
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/csi-resizer"]
@@ -49,7 +48,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 final: false
@@ -62,9 +61,6 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash
   install:
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src

@@ -29,19 +29,30 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-)
-
-var (
-	deckhouseDir = "/deckhouse"
 )
 
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -49,7 +60,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
@@ -69,7 +80,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			templateData,
 			metaConfig.ProviderName,
 			"",
-			opts.DirConfig(),
+			&opts.Global,
 		)
 	}
 
@@ -83,9 +94,23 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -93,7 +118,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
@@ -102,7 +127,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
+		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, &opts.Global)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -115,9 +140,23 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
+	app.DefineImgBundleFlags(cmd, &opts.Registry)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		// Registry shoud run before LoadConfigFromFile
+		registryStop, err := registry.InitFromConfig(
+			ctx,
+			loggerProvider(),
+			opts.Global.ConfigPaths,
+			opts.Registry.ImgBundlePath,
+		)
+		if err != nil {
+			return err
+		}
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -125,13 +164,13 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.DirConfig(),
+			&opts.Global,
 		)
 		if err != nil {
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err
 		}
@@ -139,12 +178,12 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InteractiveInfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		if err := template.PrepareControlPlaneManifests(templateController, templateData, opts.DirConfig()); err != nil {
+		if err := template.PrepareControlPlaneManifests(templateController, controlPlaneConfig, &opts.Global); err != nil {
 			return err
 		}
 		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
 		// the resulting PKI is not used to start a real cluster.
-		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
+		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", controlPlaneConfig)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -182,14 +221,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 				ctx,
 				string(data),
 				preparatorProvider,
-				opts.DirConfig(),
+				&opts.Global,
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, opts.DirConfig())
+			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, &opts.Global)
 			if err != nil {
 				return err
 			}
@@ -230,7 +269,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 			}
 		}
 
-		schemaStore := config.NewSchemaStore(opts.DirConfig())
+		schemaStore := config.NewSchemaStore(&opts.Global)
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)
@@ -249,8 +288,4 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 		fmt.Print(string(output))
 		return nil
 	})
-}
-
-func InitGlobalVars(pwd string) {
-	deckhouseDir = pwd + "/deckhouse"
 }

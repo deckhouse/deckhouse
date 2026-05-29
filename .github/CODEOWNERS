@@ -105,6 +105,7 @@
 810-documentation/                                               @z9r5
 
 /candi/                                  @borg-z @090809
+/candi/control-plane/                    @sprait
 /ee/candi/                               @borg-z @090809
 /ee/**/candi/                            @borg-z @090809
 candi/version_map.yml                    @sprait
@@ -125,3 +126,4 @@ testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
 go_lib/registry/                         @nabokihms @vadimartynov
+go_lib/controlplane/                     @sprait @AmazinMax

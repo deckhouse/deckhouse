@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +29,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -70,9 +73,73 @@ type rppBinaryHandler struct {
 
 const (
 	rppBinaryName = "rpp-get"
+
+	// cliImagesPathPrefix is the URL prefix served on the standard proxy mux for
+	// deckhouse-cli (and plugin) downloads. Paths under it look like:
+	//
+	//   /v1/images/<image>/tags                 -> list tags
+	//   /v1/images/<image>/tags/<tag>           -> download OCI image tar.gz
+	//
+	// where <image> must match the allowlist (deckhouse-cli or deckhouse-cli/plugins/<plugin>).
+	// kube-rbac-proxy (the standard sidecar listening on :4219) gates /v1/images/* with its
+	// own SubjectAccessReview-based authorization, so this handler intentionally does no
+	// authentication of its own.
+	cliImagesPathPrefix = "/v1/images/"
+
+	// packagesPathPrefix is the URL prefix served on the standard proxy mux for
+	// in-cluster package metadata (currently: icons). Paths under it look like:
+	//
+	//   /v1/packages/<packages-repo>/<package-name>/metadata/icon/          -> get icon of package latest version
+	//   /v1/packages/<packages-repo>/<package-name>/metadata/icon/<version> -> get icon of package specific version
+	//
+	// where <packages-repo> is the PackageRepository CR name and <package-name>
+	// is the OCI image name under that repository's spec.registry.repo.
+	// kube-rbac-proxy (the standard sidecar listening on :4219) serves icon URLs
+	// without authentication (see excludePaths in the module deployment). This
+	// handler intentionally does no authentication of its own.
+	//
+	// /v1/packages/* is deliberately NOT routed through the public Ingress (see
+	// templates/ingress.yaml), so anonymous access is bounded to the cluster:
+	// callers reach it via the in-cluster Service (or hostPort 4219 on master
+	// nodes during bootstrap), never via the public domain.
+	packagesPathPrefix = "/v1/packages/"
+
+	// maxIconBytes caps how much we are willing to read out of an OCI image
+	// for an icon entry so that a hostile or accidentally-huge file cannot
+	// blow up the proxy. 1 MiB comfortably accommodates raster icons; real
+	// package icons are typically well under 200 KiB.
+	maxIconBytes = 1 << 20
 )
 
-var errEmptyRegistryConfig = errors.New("empty registry config")
+// iconCandidate describes one accepted package icon file: where to look for
+// it inside the OCI image and how to serve it back.
+type iconCandidate struct {
+	// path is the in-archive path that must match (after normalization of
+	// leading "./" / "/" by normalizeTarName).
+	path string
+	// contentType is the response Content-Type for this format.
+	contentType string
+	// ext is the filename extension stamped into Content-Disposition.
+	ext string
+}
+
+// iconCandidates is the ordered list of icon files the proxy accepts, in
+// priority order: SVG wins over raster formats because it's resolution
+// independent. JPG is preferred over JPEG only so that the more common
+// extension is picked when both happen to exist; both share the same MIME.
+//
+// Adding a new format is just an entry here (and a test in extract_tar_test.go).
+var iconCandidates = []iconCandidate{
+	{path: "docs/icon.svg", contentType: "image/svg+xml", ext: "svg"},
+	{path: "docs/icon.png", contentType: "image/png", ext: "png"},
+	{path: "docs/icon.jpg", contentType: "image/jpeg", ext: "jpg"},
+	{path: "docs/icon.jpeg", contentType: "image/jpeg", ext: "jpeg"},
+}
+
+var (
+	errEmptyRegistryConfig   = errors.New("empty registry config")
+	errFileNotFoundInArchive = errors.New("file not found in archive")
+)
 
 func NewProxy(server *http.Server,
 	listener net.Listener,
@@ -134,6 +201,7 @@ func (p *Proxy) Serve(cfg *Config) {
 	} else {
 		p.config = Config{}
 	}
+
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
 		requestIP := getRequestIP(r)
 
@@ -200,11 +268,41 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.logger.Infof("Package for digest %q sent successfully", digest)
 	})
 
+	p.ServeCLI()
+	p.ServePackages()
+
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err.Error())
 	}
+}
+
+// CLIHandler returns an http.HandlerFunc that serves the /v1/images/* CLI download routes
+// (image tag listing and binary pulling) for this Proxy.
+//
+// Two URL shapes are supported under /v1/images/<image>/:
+//
+//	GET /v1/images/<image>/tags                 -> JSON list of available tags
+//	GET /v1/images/<image>/tags/<tag>           -> stream OCI image tar.gz
+//	                                                as application/x-gzip
+//
+// <image> must match the deckhouse-cli allowlist (deckhouse-cli or
+// deckhouse-cli/plugins/<plugin>); other paths return 404.
+//
+// kube-rbac-proxy (the standard sidecar listening on :4219) is responsible for authn/authz
+// before requests reach this handler, so it intentionally performs no authentication itself.
+func (p *Proxy) CLIHandler() http.HandlerFunc {
+	handler := &cliHandler{proxy: p}
+	return handler.serveHTTP
+}
+
+// ServeCLI mounts CLIHandler under /v1/images/ on http.DefaultServeMux so the routes are
+// served by the standard proxy server exposed via kube-rbac-proxy on :4219. It is invoked
+// automatically from Serve, and can also be called explicitly by callers that want to opt
+// in without starting the full proxy listener.
+func (p *Proxy) ServeCLI() {
+	http.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
 }
 
 func (s *RPPClientBinaryServer) Serve() {
@@ -243,27 +341,45 @@ func (s *RPPClientBinaryServer) Stop() {
 }
 
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
-	// if cache is nil, return digest directly from registry
-	if p.cache == nil {
-		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
-		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	return GetPackageCached(ctx, p.logger, p.getter, p.registryClient, p.cache, digest, repository, path, p.config.SignCheck, nil)
+}
+
+// GetPackageCached fetches an image package by manifest digest, first consulting the optional
+// on-disk cache and falling back to the registry. On a cache miss the registry stream is teed
+// into the cache asynchronously so the caller still gets a streaming reader.
+//
+// If registryConfig is nil, configuration is resolved via getter.Get(repository).
+//
+// The returned reader must be closed by the caller.
+func GetPackageCached(
+	ctx context.Context,
+	logger log.Logger,
+	getter registry.ClientConfigGetter,
+	registryClient registry.Client,
+	pkgCache cache.Cache,
+	digest string,
+	repository string,
+	path string,
+	signCheck bool,
+	registryConfig *registry.ClientConfig,
+) (int64, io.ReadCloser, error) {
+	if pkgCache == nil {
+		logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
+		size, _, reader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck, registryConfig)
 		return size, reader, err
 	}
 
-	// otherwise try to find digest in the cache
-	size, cacheReader, err := p.cache.Get(digest)
+	size, cacheReader, err := pkgCache.Get(digest)
 	if err == nil {
 		return size, cacheReader, nil
 	}
-	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
-		p.logger.Errorf("Get package from cache: %v", err)
-		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		logger.Errorf("Get package from cache: %v", err)
+		size, _, reader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck, registryConfig)
 		return size, reader, err
 	}
 
-	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, layerDigest, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	size, layerDigest, registryReader, err := getPackageFromRegistry(ctx, logger, getter, registryClient, digest, repository, path, signCheck, registryConfig)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -276,37 +392,47 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	pipeReader, pipeWriter := io.Pipe()
 	teeReader := io.TeeReader(registryReader, pipeWriter)
 
-	// asynchronously copy registry package to the cache
 	go func() {
 		defer registryReader.Close()
 		defer pipeWriter.Close()
 
-		err := p.cache.Set(digest, layerDigest, teeReader)
+		err := pkgCache.Set(digest, layerDigest, teeReader)
 		if err == nil {
 			return
 		}
-		p.logger.Errorf("cache set for digest %q: %v", digest, err)
+		logger.Errorf("cache set for digest %q: %v", digest, err)
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
-			p.logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
+			logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
 		}
 	}()
 
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, string, io.ReadCloser, error) {
-	registryConfig, err := p.getter.Get(repository)
-	if err != nil {
-		return 0, "", nil, err
+func getPackageFromRegistry(
+	ctx context.Context,
+	logger log.Logger,
+	getter registry.ClientConfigGetter,
+	registryClient registry.Client,
+	digest string,
+	repository string,
+	path string,
+	signCheck bool,
+	registryConfig *registry.ClientConfig,
+) (int64, string, io.ReadCloser, error) {
+	if registryConfig == nil {
+		var err error
+		registryConfig, err = getter.Get(repository)
+		if err != nil {
+			return 0, "", nil, err
+		}
 	}
-	registryConfig.SignCheck = p.config.SignCheck
+	// Create a local copy so SignCheck does not mutate shared getter-backed configs.
+	registryConfigWithSignCheck := *registryConfig
+	registryConfigWithSignCheck.SignCheck = signCheck
 
-	size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
-	if err != nil {
-		return 0, "", nil, err
-	}
-	return size, layerDigest, registryReader, nil
+	return registryClient.GetPackage(ctx, logger, &registryConfigWithSignCheck, digest, path)
 }
 
 type ProxyOption func(*Proxy)
@@ -370,15 +496,22 @@ func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]by
 	if registryConfig == nil {
 		return nil, errEmptyRegistryConfig
 	}
-	registryConfig.SignCheck = h.signCheck
+	// Copy before mutating so we don't race with the watcher (which may
+	// rewrite registryClientConfigs under Lock while readers still hold a
+	// pointer to the previous value).
+	localCfg := *registryConfig
+	localCfg.SignCheck = h.signCheck
 
-	_, _, packageReader, err := h.registryClient.GetPackage(ctx, h.logger, registryConfig, digest, "")
+	_, _, packageReader, err := h.registryClient.GetPackage(ctx, h.logger, &localCfg, digest, "")
 	if err != nil {
 		return nil, err
 	}
 	defer packageReader.Close()
 
-	binary, err := extractTarGzFile(packageReader, h.binaryName)
+	// rpp-get binaries are small (a few MiB); cap reads at 64 MiB so a
+	// malformed or hostile archive cannot exhaust the process memory.
+	const maxBinaryBytes = 64 << 20
+	binary, err := extractTarGzFile(packageReader, baseNameMatcher(h.binaryName), maxBinaryBytes)
 	if err != nil {
 		return nil, fmt.Errorf("extract %s binary: %w", h.binaryName, err)
 	}
@@ -409,11 +542,645 @@ func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []b
 	}
 }
 
+// cliHandler implements the /v1/images/* HTTP routes documented on Proxy.ServeCLI.
+// It is intentionally thin: all of the registry-config / cache state lives on the parent Proxy
+// so a single Proxy instance backs both /package and /v1/images/* on the same standard server.
+type cliHandler struct {
+	proxy *Proxy
+}
+
+type cliAction int
+
+const (
+	cliActionUnknown cliAction = iota
+	cliActionListTags
+	cliActionPullTag
+)
+
+type cliTagsResponse struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
+	imagePath, action, tag, err := parseCLIPath(r.URL.Path)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if !isAllowedCLIImagePath(imagePath) {
+		h.proxy.logger.Warnf("CLI request for disallowed image path %q from %s", imagePath, getRequestIP(r))
+		http.NotFound(w, r)
+		return
+	}
+
+	switch action {
+	case cliActionListTags:
+		h.handleListTags(w, r, imagePath)
+	case cliActionPullTag:
+		h.handlePullTag(w, r, imagePath, tag)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+// cliClientConfig resolves the default registry config and returns a private
+// copy with SignCheck stamped in. Callers must NOT mutate the value returned
+// directly by the getter: the watcher rewrites those entries under a write
+// lock while readers still hold a pointer to them.
+func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (*registry.ClientConfig, bool) {
+	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
+	if err != nil {
+		logger.Errorf("get registry config: %v", err)
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return nil, false
+	}
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return nil, false
+	}
+	local := *cfg
+	local.SignCheck = h.proxy.config.SignCheck
+	return &local, true
+}
+
+func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imagePath string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI list-tags for image %q from client %s", imagePath, clientIP)
+
+	cfg, ok := h.cliClientConfig(w, logger)
+	if !ok {
+		return
+	}
+
+	tags, err := h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "image not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("list tags for %q: %v", imagePath, err)
+		http.Error(w, "failed to list tags", http.StatusBadGateway)
+		return
+	}
+
+	body, err := json.Marshal(cliTagsResponse{Name: imagePath, Tags: tags})
+	if err != nil {
+		logger.Errorf("marshal tags: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	_, _ = w.Write(body)
+}
+
+func (h *cliHandler) handlePullTag(w http.ResponseWriter, r *http.Request, imagePath, tag string) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	clientIP := getRequestIP(r)
+	logger := h.proxy.logger
+	logger.Infof("CLI pull image %q tag %q from client %s", imagePath, tag, clientIP)
+
+	cfg, ok := h.cliClientConfig(w, logger)
+	if !ok {
+		return
+	}
+
+	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, tag)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "tag not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("resolve tag %q for %q: %v", tag, imagePath, err)
+		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
+		return
+	}
+
+	size, reader, err := GetPackageCached(
+		r.Context(),
+		logger,
+		h.proxy.getter,
+		h.proxy.registryClient,
+		h.proxy.cache,
+		manifestDigest,
+		registry.DefaultRepository,
+		imagePath,
+		h.proxy.config.SignCheck,
+		cfg,
+	)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "package not found", http.StatusNotFound)
+			return
+		}
+		logger.Errorf("get package for %q@%s: %v", imagePath, manifestDigest, err)
+		http.Error(w, "failed to fetch package", http.StatusBadGateway)
+		return
+	}
+
+	fileBase := imagePath
+	if i := strings.LastIndex(imagePath, "/"); i >= 0 {
+		fileBase = imagePath[i+1:]
+	}
+
+	w.Header().Set("Content-Type", "application/x-gzip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s.tar.gz"`, fileBase, tag))
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("ETag", `"`+manifestDigest+`"`)
+	w.Header().Set("Docker-Content-Digest", manifestDigest)
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	if _, err := io.Copy(w, reader); err != nil {
+		logger.Errorf("stream package for %q@%s: %v", imagePath, manifestDigest, err)
+	}
+}
+
+// parseCLIPath splits an HTTP path of the form
+//
+//	/v1/images/<image-path>/tags
+//	/v1/images/<image-path>/tags/<tag>
+//
+// into its components. <image-path> may contain slashes; the split anchors on the final
+// /tags segment.
+func parseCLIPath(urlPath string) (string, cliAction, string, error) {
+	if !strings.HasPrefix(urlPath, cliImagesPathPrefix) {
+		return "", cliActionUnknown, "", errors.New("not a CLI path")
+	}
+	// rest is the part of the path after the /v1/images/ prefix
+	rest := strings.TrimPrefix(urlPath, cliImagesPathPrefix)
+	rest = strings.Trim(rest, "/")
+	if rest == "" {
+		return "", cliActionUnknown, "", errors.New("missing image path")
+	}
+
+	const sep = "/tags"
+	idx := strings.LastIndex(rest, sep)
+	if idx < 0 {
+		return "", cliActionUnknown, "", errors.New("missing tags segment")
+	}
+
+	// imagePath is the part of the path before the tags segment
+	imagePath := rest[:idx]
+	if imagePath == "" {
+		return "", cliActionUnknown, "", errors.New("empty image path")
+	}
+
+	// suffix is the part of the path after the tags segment
+	suffix := rest[idx+len(sep):]
+	switch {
+	case suffix == "" || suffix == "/":
+		return imagePath, cliActionListTags, "", nil
+	case strings.HasPrefix(suffix, "/"):
+		tag := strings.Trim(suffix[1:], "/")
+		if tag == "" || strings.Contains(tag, "/") {
+			return "", cliActionUnknown, "", errors.New("invalid tag")
+		}
+		return imagePath, cliActionPullTag, tag, nil
+	default:
+		return "", cliActionUnknown, "", errors.New("unexpected path suffix")
+	}
+}
+
+// isAllowedCLIImagePath enforces the allowlist:
+//   - deckhouse-cli
+//   - deckhouse-cli/plugins/<single non-empty segment>
+//
+// The bare "deckhouse-cli/plugins" / "deckhouse-cli/plugins/" forms are NOT
+// allowed: they map to an OCI repo with an empty trailing path segment which
+// name.NewRepository would reject downstream anyway. Refusing them here keeps
+// the error 404 (allowlist) instead of leaking a registry error.
+func isAllowedCLIImagePath(imagePath string) bool {
+	if imagePath == "deckhouse-cli" {
+		return true
+	}
+	const pluginsPrefix = "deckhouse-cli/plugins/"
+	if !strings.HasPrefix(imagePath, pluginsPrefix) {
+		return false
+	}
+	plugin := strings.TrimPrefix(imagePath, pluginsPrefix)
+	if plugin == "" || strings.Contains(plugin, "/") {
+		return false
+	}
+	return true
+}
+
+func (p *Proxy) ServePackages() {
+	http.HandleFunc(packagesPathPrefix, p.PackagesHandler())
+}
+
+type packagesAction int
+
+const (
+	packagesMetadataActionUnknown packagesAction = iota
+	packagesMetadataActionGetIcon
+)
+
+// packagesRoutes is the ordered list of recognized action segments. Order is
+// significant: parsePackagesPath walks it top-down and picks the FIRST match,
+// so longer/more-specific segments must come first if any future segment is
+// a prefix of another (e.g. "metadata/icon-small" before "metadata/icon").
+var packagesRoutes = []struct {
+	segment string
+	action  packagesAction
+}{
+	{"metadata/icon", packagesMetadataActionGetIcon},
+}
+
+// PackagesHandler returns an http.HandlerFunc that serves the /v1/packages/* packages routes
+func (p *Proxy) PackagesHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		action, packageRepositoryName, packageName, version, err := parsePackagesPath(r.URL.Path)
+		if err != nil {
+			// Don't surface internal parser detail to anonymous clients;
+			// they only need to know the URL didn't parse.
+			p.logger.Warnf("parse packages path %q from %s: %v", r.URL.Path, getRequestIP(r), err)
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		packagesCfg, err := p.getter.GetPackagesConfig(packageRepositoryName)
+		if err != nil {
+			p.logger.Errorf("get packages config for %q: %v", packageRepositoryName, err)
+			http.Error(w, "package repository not found", http.StatusNotFound)
+			return
+		}
+		if packagesCfg == nil {
+			p.logger.Errorf("get packages config for %q: nil config", packageRepositoryName)
+			http.Error(w, "package repository not found", http.StatusNotFound)
+			return
+		}
+
+		// Icon extraction needs to read docs/icon.svg regardless of which
+		// layer it was added in, so the registry client must flatten all
+		// layers for /v1/packages/* routes.
+		cfg := packagesCfg.ToClientConfig(p.config.SignCheck, true)
+
+		clientIP := getRequestIP(r)
+		p.logger.Infof("Packages request from client %s", clientIP)
+
+		switch action {
+		case packagesMetadataActionGetIcon:
+			p.handleGetIcon(w, r, cfg, packageName, version)
+		default:
+			http.NotFound(w, r)
+		}
+	}
+}
+
+// handleGetIcon serves
+//
+//	GET  /v1/packages/<repo>/<package>/metadata/icon[/<version>]
+//	HEAD /v1/packages/<repo>/<package>/metadata/icon[/<version>]
+//
+// If <version> is omitted the latest semver tag is resolved on the fly. The
+// SVG itself is extracted from docs/icon.svg inside the OCI image whose tag
+// resolves to that version. Response headers (Content-Type, Content-Length,
+// ETag, Cache-Control) are only written after the icon bytes are in hand, so
+// errors don't leave the client with a misleading "attachment; filename=*.svg"
+// download containing a plain-text error message.
+func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, packageName, version string) {
+	if cfg == nil {
+		http.Error(w, "registry config unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	imagePath := packageName
+	p.logger.Debugf("handleGetIcon for %q/%q:%q", cfg.Repository, imagePath, version)
+
+	if version == "" {
+		resolved, ok := p.resolveLatestVersion(w, r, cfg, imagePath)
+		if !ok {
+			return
+		}
+		version = resolved
+	}
+
+	manifestDigest, ok := p.resolveManifestDigest(w, r, cfg, imagePath, version)
+	if !ok {
+		return
+	}
+
+	icon, cand, ok := p.fetchIcon(w, r, cfg, imagePath, manifestDigest)
+	if !ok {
+		return
+	}
+
+	// Icons are immutable for a given manifest digest, so cache aggressively
+	// downstream. Content-Type and the filename extension come from which
+	// file we actually found inside the OCI image (see iconCandidates).
+	// ETag mirrors what cliHandler.handlePullTag does so the header surface
+	// is consistent between routes.
+	w.Header().Set("Content-Type", cand.contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.%s"`, packageName, cand.ext))
+	w.Header().Set("Content-Length", strconv.Itoa(len(icon)))
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	w.Header().Set("ETag", `"`+manifestDigest+`"`)
+	w.Header().Set("Docker-Content-Digest", manifestDigest)
+
+	if r.Method == http.MethodHead {
+		return
+	}
+
+	if _, err := w.Write(icon); err != nil {
+		p.logger.Errorf("write icon for %q@%s: %v", imagePath, manifestDigest, err)
+	}
+}
+
+// resolveLatestVersion finds the largest semver tag for imagePath, writing an
+// HTTP error response and returning ok=false on any failure.
+func (p *Proxy) resolveLatestVersion(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath string) (string, bool) {
+	tags, err := p.registryClient.ListTags(r.Context(), p.logger, cfg, imagePath)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "package not found", http.StatusNotFound)
+			return "", false
+		}
+		p.logger.Errorf("list tags for %q: %v", imagePath, err)
+		http.Error(w, "failed to list tags", http.StatusBadGateway)
+		return "", false
+	}
+	if len(tags) == 0 {
+		http.Error(w, "no tags found", http.StatusNotFound)
+		return "", false
+	}
+
+	var latest *semver.Version
+	for _, tag := range tags {
+		v, err := semver.NewVersion(tag)
+		if err != nil {
+			continue
+		}
+		if latest == nil || latest.LessThan(v) {
+			latest = v
+		}
+	}
+	if latest == nil {
+		http.Error(w, "no valid tags found", http.StatusNotFound)
+		return "", false
+	}
+
+	version := latest.Original()
+	p.logger.Debugf("resolved latest version for %q: %q", imagePath, version)
+	return version, true
+}
+
+func (p *Proxy) resolveManifestDigest(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath, version string) (string, bool) {
+	manifestDigest, err := p.registryClient.ResolveTag(r.Context(), p.logger, cfg, imagePath, version)
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "tag not found", http.StatusNotFound)
+			return "", false
+		}
+		p.logger.Errorf("resolve tag %q for %q: %v", version, imagePath, err)
+		http.Error(w, "failed to resolve tag", http.StatusBadGateway)
+		return "", false
+	}
+	return manifestDigest, true
+}
+
+func (p *Proxy) fetchIcon(w http.ResponseWriter, r *http.Request, cfg *registry.ClientConfig, imagePath, manifestDigest string) ([]byte, iconCandidate, bool) {
+	_, reader, err := GetPackageCached(
+		r.Context(),
+		p.logger,
+		p.getter,
+		p.registryClient,
+		p.cache,
+		manifestDigest,
+		cfg.Repository,
+		imagePath,
+		p.config.SignCheck,
+		cfg,
+	)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		if errors.Is(err, registry.ErrPackageNotFound) {
+			http.Error(w, "package not found", http.StatusNotFound)
+			return nil, iconCandidate{}, false
+		}
+		p.logger.Errorf("get package for %q@%s: %v", imagePath, manifestDigest, err)
+		http.Error(w, "failed to fetch package", http.StatusBadGateway)
+		return nil, iconCandidate{}, false
+	}
+
+	icon, cand, err := extractIcon(reader)
+	if err != nil {
+		// Any failure to surface a recognized icon - no candidate present,
+		// a corrupted gzip stream, or an entry that exceeds maxIconBytes -
+		// is surfaced as 404 to the client. Icons are public best-effort
+		// metadata: the caller (browser, console) should just fall back to
+		// a default icon. The underlying cause is logged for ops; the
+		// client can't usefully distinguish them.
+		p.logger.Warnf("extract icon from package for %q@%s: %v", imagePath, manifestDigest, err)
+		http.Error(w, "icon not found", http.StatusNotFound)
+		return nil, iconCandidate{}, false
+	}
+	return icon, cand, true
+}
+
+// parsePackagesPath splits an HTTP path of the form:
+// - /v1/packages/<packages-repo>/<package-name>/<action>/
+// - /v1/packages/<packages-repo>/<package-name>/<action>/<version>
+// into its components:
+// - <packages-repo> and <package-name> must not contain slashes;
+// - <action> must match packagesActionToSegment, eg. metadata/icon;
+// - optional <version> is a semantic version, eg. v0.0.1.
+// example:
+// - /v1/packages/deckhouse/my-package/metadata/icon/ -> packagesMetadataActionGetIcon, deckhouse, my-package, ""
+// - /v1/packages/deckhouse/my-package/metadata/icon/v0.0.1 -> packagesMetadataActionGetIcon, deckhouse, my-package, "v0.0.1"
+func parsePackagesPath(urlPath string) (packagesAction, string, string, string, error) {
+	if !strings.HasPrefix(urlPath, packagesPathPrefix) {
+		return packagesMetadataActionUnknown, "", "", "", errors.New("not a packages metadata path")
+	}
+
+	rest := strings.Trim(strings.TrimPrefix(urlPath, packagesPathPrefix), "/")
+	packageRepositoryName, afterRepo, ok := strings.Cut(rest, "/")
+	if !ok || packageRepositoryName == "" {
+		return packagesMetadataActionUnknown, "", "", "", errors.New("missing package repository segment")
+	}
+
+	packageName, afterPackage, ok := strings.Cut(afterRepo, "/")
+	if !ok || packageName == "" {
+		return packagesMetadataActionUnknown, "", "", "", errors.New("missing package segment")
+	}
+
+	for _, route := range packagesRoutes {
+		switch {
+		case afterPackage == route.segment:
+			return route.action, packageRepositoryName, packageName, "", nil
+		case strings.HasPrefix(afterPackage, route.segment+"/"):
+			tag := strings.TrimPrefix(afterPackage, route.segment+"/")
+			if tag == "" || strings.Contains(tag, "/") {
+				return packagesMetadataActionUnknown, "", "", "", errors.New("invalid version segment")
+			}
+			if _, err := semver.NewVersion(tag); err != nil {
+				return packagesMetadataActionUnknown, "", "", "", fmt.Errorf("invalid semantic version: %w", err)
+			}
+			return route.action, packageRepositoryName, packageName, tag, nil
+		}
+	}
+
+	return packagesMetadataActionUnknown, "", "", "", errors.New("unknown action")
+}
+
 func normalizeBootstrapClusterUUID(clusterUUID string) string {
 	return strings.Trim(strings.TrimSpace(clusterUUID), "/")
 }
 
-func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
+// tarEntryMatcher reports whether a tar header is the entry the caller wants.
+// Implementations should be cheap (only the tar header is available).
+type tarEntryMatcher func(header *tar.Header) bool
+
+// exactNameMatcher returns a matcher that picks a single, fully-qualified
+// entry path. Leading "./" and "/" segments in the header name are stripped
+// before comparison so archives produced by different tools (`tar` strips
+// "./", BuildKit doesn't) match the same target.
+func exactNameMatcher(filePath string) tarEntryMatcher { //nolint:unparam
+	want := normalizeTarName(filePath)
+	return func(header *tar.Header) bool {
+		return normalizeTarName(header.Name) == want
+	}
+}
+
+// baseNameMatcher returns a matcher that picks any regular entry whose
+// basename equals fileName, regardless of where it lives in the archive.
+func baseNameMatcher(fileName string) tarEntryMatcher {
+	return func(header *tar.Header) bool {
+		return path.Base(normalizeTarName(header.Name)) == fileName
+	}
+}
+
+func normalizeTarName(name string) string {
+	name = strings.TrimPrefix(name, "./")
+	name = strings.TrimPrefix(name, "/")
+	return name
+}
+
+// extractIcon walks the gzipped tar in reader once and returns the icon entry
+// that ranks highest in iconCandidates (lower index = higher priority). The
+// scan stops early when the top-priority candidate is found.
+//
+// The OCI image stream is single-use, so this MUST be done in one pass: we
+// can't rewind to look for SVG after we already saw PNG. We solve that by
+// buffering whichever match we currently believe is "best" and overwriting
+// it if a higher-priority one shows up later in the same archive.
+//
+// If no candidate is present, errFileNotFoundInArchive is returned so the
+// caller can map it to a 404. Any other error (corrupt gzip, oversized
+// entry, IO failure) is returned wrapped.
+func extractIcon(reader io.Reader) ([]byte, iconCandidate, error) {
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, iconCandidate{}, fmt.Errorf("read gzip stream: %w", err)
+	}
+	defer gzipReader.Close()
+
+	// Pre-index candidates by normalized path for O(1) lookup per entry,
+	// remembering the priority (slice index).
+	type indexed struct {
+		priority int
+		cand     iconCandidate
+	}
+	pathToCandidate := make(map[string]indexed, len(iconCandidates))
+	for i, c := range iconCandidates {
+		pathToCandidate[normalizeTarName(c.path)] = indexed{priority: i, cand: c}
+	}
+
+	bestPriority := -1
+	var bestData []byte
+	var bestCand iconCandidate
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, iconCandidate{}, fmt.Errorf("read tar header: %w", err)
+		}
+
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		entry, ok := pathToCandidate[normalizeTarName(header.Name)]
+		if !ok {
+			continue
+		}
+		// Already saw an equal-or-higher priority match; ignore this one.
+		if bestPriority != -1 && entry.priority >= bestPriority {
+			continue
+		}
+
+		data, err := readTarEntry(tarReader, maxIconBytes)
+		if err != nil {
+			return nil, iconCandidate{}, err
+		}
+
+		bestPriority = entry.priority
+		bestData = data
+		bestCand = entry.cand
+
+		// Top priority found - no point scanning the rest of the archive.
+		if bestPriority == 0 {
+			return bestData, bestCand, nil
+		}
+	}
+
+	if bestPriority == -1 {
+		return nil, iconCandidate{}, errFileNotFoundInArchive
+	}
+	return bestData, bestCand, nil
+}
+
+// readTarEntry reads at most maxBytes from the current tar entry, returning
+// an error if the entry exceeds the cap. Centralized so extractIcon and
+// extractTarGzFile share the same overflow semantics.
+func readTarEntry(tarReader io.Reader, maxBytes int64) ([]byte, error) {
+	// +1 so we can detect overflow: io.LimitReader stops at maxBytes,
+	// which would silently truncate a maxBytes-sized real file.
+	data, err := io.ReadAll(io.LimitReader(tarReader, maxBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("read tar entry: %w", err)
+	}
+	if int64(len(data)) > maxBytes {
+		return nil, fmt.Errorf("tar entry exceeds %d bytes", maxBytes)
+	}
+	return data, nil
+}
+
+// extractTarGzFile reads a gzipped tar from reader and returns the bytes of
+// the first regular file matched by matcher, capped at maxBytes to protect
+// the proxy from a hostile or accidentally-huge entry. If no entry matches,
+// errFileNotFoundInArchive is returned so callers can map it to a 404.
+func extractTarGzFile(reader io.Reader, matcher tarEntryMatcher, maxBytes int64) ([]byte, error) {
 	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read gzip stream: %w", err)
@@ -425,16 +1192,15 @@ func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
 		header, err := tarReader.Next()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, fmt.Errorf("file %q not found in archive", fileName)
+				return nil, errFileNotFoundInArchive
 			}
-
 			return nil, err
 		}
 
-		if header.Typeflag != tar.TypeReg || path.Base(header.Name) != fileName {
+		if header.Typeflag != tar.TypeReg || !matcher(header) {
 			continue
 		}
 
-		return io.ReadAll(tarReader)
+		return readTarEntry(tarReader, maxBytes)
 	}
 }

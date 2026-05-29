@@ -23,6 +23,17 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	// Hook is idempotent (CreateIfNotExists) and only ensures the default `master`
+	// NodeGroup metadata object exists. During bootstrap the master Node is
+	// registered directly by kubeadm via bashible — the NG resource is metadata
+	// only and not on the critical path for the cluster to function.
+	//
+	// On its own queue (not "main") so that a transient validating-webhook
+	// failure (node-controller-webhook still warming up at module-startup time)
+	// doesn't fail node-manager's whole ModuleRun Startup phase and trigger a
+	// ConvergeModules retry storm on the main queue. The hook retries on its
+	// dedicated queue until the webhook backend is ready.
+	Queue: "/modules/node-manager/create-master-ng",
 	// ensure crds hook has order 5, for creating node group we should use greater number
 	OnStartup: &go_hook.OrderedConfig{Order: 6},
 }, createMasterNodeGroup)

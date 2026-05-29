@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -29,13 +30,25 @@ import (
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
+	// Registry shoud run before LoadConfigFromFile
+	registryStop, err := registry.InitFromConfig(
+		ctx,
+		b.loggerProvider(),
+		b.Options.Global.ConfigPaths,
+		b.Options.Registry.ImgBundlePath,
+	)
+	if err != nil {
+		return err
+	}
+	defer registryStop()
+
 	metaConfig, err := config.ParseConfig(
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
-		b.DirectoryConfig,
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
@@ -55,19 +68,14 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 			return err
 		}
 
-		onComplete := func() {
-			pb := progressbar.GetDefaultPb()
-			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-			pb.MultiPrinter.Stop()
-		}
-		defer onComplete()
+		defer progressbar.FinishDefaultProgressBar()
 	}
 
 	if err := metaConfig.LoadInstallerVersion(); err != nil {
 		return err
 	}
 
-	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
+	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
 	if err != nil {
 		return err
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libcon_config "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -35,6 +36,7 @@ type providerOptions struct {
 	connectionConfig    string
 	kubeFlagsDefined    bool
 	requireKubeProvider bool
+	kubeConfig          *kube.Config
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -57,6 +59,21 @@ func WithRequiredKubeProvider() ProviderOptions {
 	}
 }
 
+// WithKubeConfig makes GetProviders use the supplied kube settings as the
+// source of truth instead of re-parsing CLI/env flags through lib-connection.
+// Callers (dhctl commands) already have the values populated in opts.Kube by
+// kingpin, including programmatic overrides; re-parsing flags inside the
+// initializer dropped any value that wasn't on os.Args / env at call time.
+func WithKubeConfig(kubeConfig, kubeConfigContext string, inCluster bool) ProviderOptions {
+	return func(o *providerOptions) {
+		o.kubeConfig = &kube.Config{
+			KubeConfig:          kubeConfig,
+			KubeConfigContext:   kubeConfigContext,
+			KubeConfigInCluster: inCluster,
+		}
+	}
+}
+
 func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)
 	return getProviderInitializer(baseProviderSettings, opts...)
@@ -72,13 +89,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		return nil, nil, err
 	}
 
-	parser := kube.NewFlagsParser(baseProviderSettings)
-	fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-	flags, err := parser.InitFlags(fset)
-	if err != nil {
-		return nil, nil, err
-	}
-	cfg, err := flags.ExtractConfig()
+	cfg, err := resolveKubeConfig(baseProviderSettings, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,6 +114,26 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	return sshProviderInitializer, kubeProvider, nil
 }
 
+// resolveKubeConfig returns the kube.Config GetProviders should use.
+// When WithKubeConfig was supplied, the caller's already-parsed kube settings
+// (opts.Kube populated by kingpin, including programmatic overrides) win and we
+// skip lib-connection's parser entirely. Otherwise we fall back to the legacy
+// flag-parsing path for callers that don't have a parsed options struct
+// (notably the server path that drives connections from a config blob).
+func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *providerOptions) (*kube.Config, error) {
+	if options.kubeConfig != nil {
+		return options.kubeConfig, nil
+	}
+
+	parser := kube.NewFlagsParser(baseProviderSettings)
+	fset := flag.NewFlagSet("my-set", flag.ExitOnError)
+	flags, err := parser.InitFlags(fset)
+	if err != nil {
+		return nil, err
+	}
+	return flags.ExtractConfig()
+}
+
 func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	options := newProviderOptions(opts...)
 
@@ -124,6 +155,7 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 		loggerProvider := log.NonInteractiveLoggerProvider()
 		sett.WithLogger(loggerProvider)
 		parser := libcon_config.NewFlagsParser(sett)
+		parser.WithEnvsPrefix(global.SSHEnvsPrefix)
 		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
 		flags, err := parser.InitFlags(fset)
 		if err != nil {

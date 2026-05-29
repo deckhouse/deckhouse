@@ -99,17 +99,17 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			ctx,
 			params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
+			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
-		}
-		if sshProviderInitializer != nil {
-			defer sshProviderInitializer.Cleanup(ctx)
 		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {

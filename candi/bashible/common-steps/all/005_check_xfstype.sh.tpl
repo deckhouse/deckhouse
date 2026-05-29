@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=light-checks
+
 {{- /*
 Description of problem with XFS https://www.suse.com/support/kb/doc/?id=000020068
 */}}

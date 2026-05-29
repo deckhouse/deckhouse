@@ -19,6 +19,7 @@ package registry
 import (
 	"archive/tar"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log/slog"
@@ -36,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	registryhelpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -321,10 +323,18 @@ func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) 
 			Scheme:       v.Spec.Registry.Scheme,
 		}
 	case *v1alpha1.PackageRepository:
+		dockerCFG := v.Spec.Registry.DockerCFG
+		// Application charts read .Application.Package.Registry.dockercfg to build imagePullSecrets;
+		// synthesize one from login/password so charts work regardless of which auth method the spec uses.
+		if dockerCFG == "" && v.Spec.Registry.Login != "" {
+			if raw, err := registryhelpers.DockerCfgFromCreds(v.Spec.Registry.Login, v.Spec.Registry.Password, v.Spec.Registry.Repo); err == nil {
+				dockerCFG = base64.StdEncoding.EncodeToString(raw)
+			}
+		}
 		return Remote{
 			Name:         v.Name,
 			Repository:   v.Spec.Registry.Repo,
-			DockerConfig: v.Spec.Registry.DockerCFG,
+			DockerConfig: dockerCFG,
 			Login:        v.Spec.Registry.Login,
 			Password:     v.Spec.Registry.Password,
 			CA:           v.Spec.Registry.CA,

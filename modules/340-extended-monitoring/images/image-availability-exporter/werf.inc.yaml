@@ -43,12 +43,13 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/k8s-image-availability-exporter
-    to: /k8s-image-availability-exporter
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/k8s-image-availability-exporter
+  to: /k8s-image-availability-exporter
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/k8s-image-availability-exporter"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

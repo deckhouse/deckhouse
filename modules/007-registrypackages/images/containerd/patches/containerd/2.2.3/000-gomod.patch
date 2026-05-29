@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 648cb3e43..36a776f90 100644
+index 648cb3e43..0a42fcc9f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -29,19 +29,19 @@ index 648cb3e43..36a776f90 100644
  	github.com/google/uuid v1.6.0
  	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.1.0
  	github.com/intel/goresctrl v0.10.0
-@@ -68,37 +71,44 @@ require (
+@@ -68,40 +71,47 @@ require (
  	go.etcd.io/bbolt v1.4.3
  	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
  	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0
 -	go.opentelemetry.io/otel v1.38.0
-+	go.opentelemetry.io/otel v1.39.0
++	go.opentelemetry.io/otel v1.41.0
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.35.0
  	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.35.0
 -	go.opentelemetry.io/otel/sdk v1.38.0
 -	go.opentelemetry.io/otel/trace v1.38.0
 +	go.opentelemetry.io/otel/sdk v1.39.0
-+	go.opentelemetry.io/otel/trace v1.39.0
++	go.opentelemetry.io/otel/trace v1.41.0
  	go.uber.org/goleak v1.3.0
 -	golang.org/x/mod v0.29.0
 -	golang.org/x/sync v0.18.0
@@ -82,7 +82,11 @@ index 648cb3e43..36a776f90 100644
 +	github.com/docker/docker-credential-helpers v0.9.3 // indirect
  	github.com/felixge/httpsnoop v1.0.4 // indirect
  	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
- 	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
++	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+ 	github.com/go-logr/logr v1.4.3 // indirect
+ 	github.com/go-logr/stdr v1.2.2 // indirect
+ 	github.com/go-ole/go-ole v1.2.6 // indirect
 @@ -109,16 +119,30 @@ require (
  	github.com/gogo/protobuf v1.3.2 // indirect
  	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
@@ -139,7 +143,7 @@ index 648cb3e43..36a776f90 100644
  	go.opencensus.io v0.24.0 // indirect
  	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 -	go.opentelemetry.io/otel/metric v1.38.0 // indirect
-+	go.opentelemetry.io/otel/metric v1.39.0 // indirect
++	go.opentelemetry.io/otel/metric v1.41.0 // indirect
  	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
  	go.yaml.in/yaml/v2 v2.4.2 // indirect
 -	golang.org/x/crypto v0.45.0 // indirect
@@ -163,7 +167,7 @@ index 648cb3e43..36a776f90 100644
  	sigs.k8s.io/randfill v1.0.0 // indirect
  	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 diff --git a/go.sum b/go.sum
-index 99c583994..08f2d5a33 100644
+index 99c583994..0e2c9de4c 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -14,14 +14,18 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW
@@ -219,7 +223,7 @@ index 99c583994..08f2d5a33 100644
  github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c h1:+pKlWGMw7gf6bQ+oDZB4KHQFypsfjYlq/C4rfL7D3g8=
  github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c/go.mod h1:Uw6UezgYA44ePAFQYUehOuCzmy5zmg/+nl2ZfMWGkpA=
  github.com/docker/go-metrics v0.0.1 h1:AgB/0SvBxihN0X8OR4SjsblXkbMvalQ8cjmtKQ2rQV8=
-@@ -102,6 +121,9 @@ github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymF
+@@ -102,14 +121,17 @@ github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymF
  github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
  github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
  github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
@@ -229,6 +233,16 @@ index 99c583994..08f2d5a33 100644
  github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
  github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
  github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
+ github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
+ github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
+ github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
+-github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
+-github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
++github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
++github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+ github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+ github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
+ github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 @@ -131,11 +153,15 @@ github.com/go-quicktest/qt v1.101.0/go.mod h1:14Bz/f7NwaXPtdYEgzsx46kqSxVwTbzVZs
  github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
  github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
@@ -381,8 +395,8 @@ index 99c583994..08f2d5a33 100644
  go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0/go.mod h1:69uWxva0WgAA/4bu2Yy70SLDBwZXuQ6PbBpbsa5iZrQ=
 -go.opentelemetry.io/otel v1.38.0 h1:RkfdswUDRimDg0m2Az18RKOsnI8UDzppJAtj01/Ymk8=
 -go.opentelemetry.io/otel v1.38.0/go.mod h1:zcmtmQ1+YmQM9wrNsTGV/q/uyusom3P8RxwExxkZhjM=
-+go.opentelemetry.io/otel v1.39.0 h1:8yPrr/S0ND9QEfTfdP9V+SiwT4E0G7Y5MO7p85nis48=
-+go.opentelemetry.io/otel v1.39.0/go.mod h1:kLlFTywNWrFyEdH0oj2xK0bFYZtHRYUdv1NklR/tgc8=
++go.opentelemetry.io/otel v1.41.0 h1:YlEwVsGAlCvczDILpUXpIpPSL/VPugt7zHThEMLce1c=
++go.opentelemetry.io/otel v1.41.0/go.mod h1:Yt4UwgEKeT05QbLwbyHXEwhnjxNO6D8L5PQP51/46dE=
  go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0 h1:1fTNlAIJZGWLP5FVu0fikVry1IsiUnXjf7QFvoNN3Xw=
  go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0/go.mod h1:zjPK58DtkqQFn+YUMbx0M2XV3QgKU0gS9LeGohREyK4=
  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.35.0 h1:m639+BofXTvcY1q8CGs4ItwQarYtJPOWmVobfM1HpVI=
@@ -397,14 +411,14 @@ index 99c583994..08f2d5a33 100644
 -go.opentelemetry.io/otel/sdk/metric v1.38.0/go.mod h1:dg9PBnW9XdQ1Hd6ZnRz689CbtrUp0wMMs9iPcgT9EZA=
 -go.opentelemetry.io/otel/trace v1.38.0 h1:Fxk5bKrDZJUH+AMyyIXGcFAPah0oRcT+LuNtJrmcNLE=
 -go.opentelemetry.io/otel/trace v1.38.0/go.mod h1:j1P9ivuFsTceSWe1oY+EeW3sc+Pp42sO++GHkg4wwhs=
-+go.opentelemetry.io/otel/metric v1.39.0 h1:d1UzonvEZriVfpNKEVmHXbdf909uGTOQjA0HF0Ls5Q0=
-+go.opentelemetry.io/otel/metric v1.39.0/go.mod h1:jrZSWL33sD7bBxg1xjrqyDjnuzTUB0x1nBERXd7Ftcs=
++go.opentelemetry.io/otel/metric v1.41.0 h1:rFnDcs4gRzBcsO9tS8LCpgR0dxg4aaxWlJxCno7JlTQ=
++go.opentelemetry.io/otel/metric v1.41.0/go.mod h1:xPvCwd9pU0VN8tPZYzDZV/BMj9CM9vs00GuBjeKhJps=
 +go.opentelemetry.io/otel/sdk v1.39.0 h1:nMLYcjVsvdui1B/4FRkwjzoRVsMK8uL/cj0OyhKzt18=
 +go.opentelemetry.io/otel/sdk v1.39.0/go.mod h1:vDojkC4/jsTJsE+kh+LXYQlbL8CgrEcwmt1ENZszdJE=
 +go.opentelemetry.io/otel/sdk/metric v1.39.0 h1:cXMVVFVgsIf2YL6QkRF4Urbr/aMInf+2WKg+sEJTtB8=
 +go.opentelemetry.io/otel/sdk/metric v1.39.0/go.mod h1:xq9HEVH7qeX69/JnwEfp6fVq5wosJsY1mt4lLfYdVew=
-+go.opentelemetry.io/otel/trace v1.39.0 h1:2d2vfpEDmCJ5zVYz7ijaJdOF59xLomrvj7bjt6/qCJI=
-+go.opentelemetry.io/otel/trace v1.39.0/go.mod h1:88w4/PnZSazkGzz/w84VHpQafiU4EtqqlVdxWy+rNOA=
++go.opentelemetry.io/otel/trace v1.41.0 h1:Vbk2co6bhj8L59ZJ6/xFTskY+tGAbOnCtQGVVa9TIN0=
++go.opentelemetry.io/otel/trace v1.41.0/go.mod h1:U1NU4ULCoxeDKc09yCWdWe+3QoyweJcISEVa1RBzOis=
  go.opentelemetry.io/proto/otlp v1.5.0 h1:xJvq7gMzB31/d406fB8U5CBdyQGw4P399D1aQWU/3i4=
  go.opentelemetry.io/proto/otlp v1.5.0/go.mod h1:keN8WnHxOy8PG0rQZjJJ5A2ebUoafqWp0eVQ4yIXvJ4=
  go.uber.org/automaxprocs v1.6.0 h1:O3y2/QNTOdbF+e/dpXNNW7Rx2hZ4sTIPyybbxyNqTUs=

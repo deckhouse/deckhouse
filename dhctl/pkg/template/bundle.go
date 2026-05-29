@@ -18,25 +18,19 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-)
-
-var (
-	candiDir         = "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
 )
 
 const (
@@ -74,7 +68,7 @@ func PrepareBundle(
 	nodeIP string,
 	devicePath string,
 	metaConfig *config.MetaConfig,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
 	defer span.End()
@@ -85,21 +79,14 @@ func PrepareBundle(
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
+	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, globalOptions); err != nil {
 		return err
 	}
 
 	if err := prepareNodeGroupConfigurationSteps(ctx, templateController, metaConfig.ResourcesYAML, bashibleData); err != nil {
 		return err
 	}
-
-	_, err = os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
@@ -113,16 +100,9 @@ func PrepareBashibleBundle(
 	templateData map[string]interface{},
 	provider string,
 	devicePath string,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
-	_, err := os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
@@ -143,7 +123,7 @@ func PrepareBashibleBundle(
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
+			from: filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
 			to:   stepsDir,
 			data: templateData,
 		})
@@ -173,18 +153,18 @@ func PrepareBashibleBundle(
 //
 // controlPlaneEndpoint is the address that will be added to the apiserver
 // certificate SAN list and used in kubeconfigs as the API server URL.
-func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, templateData map[string]interface{}) error {
+func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig) error {
 	if templateController == nil {
 		return fmt.Errorf("templateController is nil")
 	}
 	artifactsDir := filepath.Join(templateController.TmpDir+bashibleDir, "control-plane")
-	return generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint, templateData, artifactsDir)
+	return generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint, cfg, artifactsDir)
 }
 
 // generatePKIArtifacts writes PKI and kubeconfigs for the local
 // control-plane node into artifactsDir. The function is decoupled from the
 // template Controller for testability.
-func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templateData map[string]interface{}, artifactsDir string) error {
+func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig, artifactsDir string) error {
 	if nodeName == "" {
 		return fmt.Errorf("nodeName is empty")
 	}
@@ -200,24 +180,26 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templat
 		return fmt.Errorf("invalid node IP %q", nodeIP)
 	}
 
-	clusterCfg, ok := templateData["clusterConfiguration"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("templateData.clusterConfiguration is missing or has invalid type")
+	// TODO: read from cfg.Settings once serviceSubnetCIDR is migrated to ModuleConfig.
+	serviceSubnetCIDR, _ := cfg.ClusterConfiguration["serviceSubnetCIDR"].(string)
+	if serviceSubnetCIDR == "" {
+		return fmt.Errorf("serviceSubnetCIDR is missing or empty in clusterConfiguration")
 	}
-	serviceCIDR, ok := clusterCfg["serviceSubnetCIDR"].(string)
-	if !ok || serviceCIDR == "" {
-		return fmt.Errorf("clusterConfiguration.serviceSubnetCIDR is missing or empty")
-	}
-	dnsDomain, ok := clusterCfg["clusterDomain"].(string)
-	if !ok || dnsDomain == "" {
-		return fmt.Errorf("clusterConfiguration.clusterDomain is missing or empty")
+	// TODO: read from cfg.Settings once clusterDomain is migrated to ModuleConfig.
+	clusterDomain, _ := cfg.ClusterConfiguration["clusterDomain"].(string)
+	if clusterDomain == "" {
+		return fmt.Errorf("clusterDomain is missing or empty in clusterConfiguration")
 	}
 
-	encryptionAlgorithm, _ := clusterCfg["encryptionAlgorithm"].(string)
+	encryptionAlgorithm, _ := cfg.Settings["encryptionAlgorithm"].(string)
+	if encryptionAlgorithm == "" {
+		// TODO: remove fallback once encryptionAlgorithm is fully migrated to ModuleConfig.
+		encryptionAlgorithm, _ = cfg.ClusterConfiguration["encryptionAlgorithm"].(string)
+	}
 
 	pkiDir := filepath.Join(artifactsDir, "pki")
 
-	if _, err := pki.CreatePKIBundle(nodeName, dnsDomain, ip, serviceCIDR,
+	if _, err := pki.CreatePKIBundle(nodeName, clusterDomain, ip, serviceSubnetCIDR,
 		pki.WithControlPlaneEndpoint(controlPlaneEndpoint),
 		pki.WithPKIDir(pkiDir),
 		pki.WithEncryptionAlgorithmType(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
@@ -246,34 +228,15 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templat
 	return nil
 }
 
-func PrepareControlPlaneManifests(templateController *Controller, templateData map[string]interface{}, dc *directoryconfig.DirectoryConfig) error {
-	_, err := os.Stat(candiDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-	}
-
+func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, globalOptions *options.GlobalOptions) error {
 	saveInfo := saveFromTo{
-		from: filepath.Join(candiDir, "control-plane"),
+		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
 		to:   filepath.Join(bashibleDir, "control-plane"),
-		data: templateData,
+		data: cfg.ToMap(),
 	}
 	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
 	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
 		return err
 	}
 	return nil
-}
-
-func InitGlobalVars(pwd string) {
-	candiDir = pwd + "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
-	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
-	checkDeckhouseUserScriptPath = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
-	preflightScriptDirPath = candiBashibleDir + "/preflight/"
-	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
-	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
 }

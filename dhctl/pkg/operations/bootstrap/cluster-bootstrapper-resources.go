@@ -71,12 +71,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 			return err
 		}
 
-		onComplete := func() {
-			pb := progressbar.GetDefaultPb()
-			pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-			pb.MultiPrinter.Stop()
-		}
-		defer onComplete()
+		defer progressbar.FinishDefaultProgressBar()
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Create resources", func(ctx context.Context) error {

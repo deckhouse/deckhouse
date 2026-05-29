@@ -20,11 +20,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRulesExtension_sshPrivateKey(t *testing.T) {
-	newStore := newSchemaStore(nil, []string{"/tmp"})
+	newStore := newSchemaStore(&options.New().Global, []string{"/tmp"})
 
 	err := newStore.upload([]byte(`
 kind: TestKind

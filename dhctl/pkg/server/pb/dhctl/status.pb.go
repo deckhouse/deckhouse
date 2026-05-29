@@ -21,10 +21,11 @@
 package dhctl
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -165,12 +166,15 @@ func file_status_proto_rawDescGZIP() []byte {
 	return file_status_proto_rawDescData
 }
 
-var file_status_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_status_proto_goTypes = []interface{}{
-	(*GetStatusRequest)(nil),  // 0: dhctl.GetStatusRequest
-	(*GetStatusResponse)(nil), // 1: dhctl.GetStatusResponse
-	nil,                       // 2: dhctl.GetStatusResponse.RequestsByMethodEntry
-}
+var (
+	file_status_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+	file_status_proto_goTypes  = []interface{}{
+		(*GetStatusRequest)(nil),  // 0: dhctl.GetStatusRequest
+		(*GetStatusResponse)(nil), // 1: dhctl.GetStatusResponse
+		nil,                       // 2: dhctl.GetStatusResponse.RequestsByMethodEntry
+	}
+)
+
 var file_status_proto_depIdxs = []int32{
 	2, // 0: dhctl.GetStatusResponse.requests_by_method:type_name -> dhctl.GetStatusResponse.RequestsByMethodEntry
 	1, // [1:1] is the sub-list for method output_type

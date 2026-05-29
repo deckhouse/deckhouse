@@ -241,14 +241,25 @@ func (s *Storage) openapiDefaultsTransformer(schemaType schema.Type) transformer
 }
 
 // validateValues validates values against the values OpenAPI schema.
+// Previously merged result values are passed as the old state so that
+// x-deckhouse-validations transition rules (rules referencing oldSelf) can
+// catch attempts to mutate immutable fields via values patches.
 func (s *Storage) validateValues(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
-	return s.schemaStorage.Validate(schema.TypeValues, s.name, validatableValues)
+	var oldValidatable addonutils.Values
+	if s.resultValues != nil {
+		oldValidatable = addonutils.Values{s.name: s.resultValues}
+	}
+
+	return s.schemaStorage.ValidateTransition(schema.TypeValues, s.name, validatableValues, oldValidatable)
 }
 
 // validateConfigValues validates values against the config OpenAPI schema.
 // Returns error if values are provided but no config schema is defined.
+// Previously stored user settings are passed as the old state so that
+// x-deckhouse-validations transition rules (rules referencing oldSelf) can
+// implement immutability and other update-time invariants on ModuleConfig.
 func (s *Storage) validateSettings(values addonutils.Values) error {
 	validatableValues := addonutils.Values{s.name: values}
 
@@ -256,5 +267,10 @@ func (s *Storage) validateSettings(values addonutils.Values) error {
 		return errors.New("config schema is not defined but config values were provided")
 	}
 
-	return s.schemaStorage.Validate(schema.TypeSettings, s.name, validatableValues)
+	var oldValidatable addonutils.Values
+	if s.settings != nil {
+		oldValidatable = addonutils.Values{s.name: s.settings}
+	}
+
+	return s.schemaStorage.ValidateTransition(schema.TypeSettings, s.name, validatableValues, oldValidatable)
 }

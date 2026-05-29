@@ -26,7 +26,6 @@ import (
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
-	shapp "github.com/flant/shell-operator/pkg/app"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
@@ -293,10 +292,11 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 // Also sets a custom timeout for patch operations to prevent hanging on slow API calls.
 func (r *Runtime) buildObjectPatcher() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("object-patcher-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.ObjectPatcherKubeClientQps, shapp.ObjectPatcherKubeClientBurst)
-	client.WithTimeout(shapp.ObjectPatcherKubeClientTimeout)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.ObjectPatcherKubeClientQPS, addonapp.ObjectPatcherKubeClientBurst)
+	client.WithTimeout(addonapp.ObjectPatcherKubeClientTimeout)
+	client.WithMetricPrefix("packages_object_patcher_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize object patcher client: %w", err)
@@ -317,9 +317,10 @@ func (r *Runtime) buildObjectPatcher() error {
 //   - Converting Kubernetes events into binding contexts for hook execution
 func (r *Runtime) buildKubeEventsManager() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("kube-events-manager-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithMetricPrefix("packages_kube_events_manager_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize kube events manager client: %w", err)
@@ -356,9 +357,10 @@ func (r *Runtime) buildKubeEventsManager() error {
 // Rate limits are specific to monitoring workloads (different from patch or watch clients).
 func (r *Runtime) buildNelmService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("nelm-monitor-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
+	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
@@ -399,9 +401,10 @@ func (r *Runtime) buildNelmService() error {
 // goroutine start later via r.healthService.Start, paired with Stop on shutdown.
 func (r *Runtime) buildHealthService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithMetricPrefix("packages_health_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize health service client: %w", err)
@@ -433,12 +436,7 @@ func (r *Runtime) buildHealthService() error {
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
-		if len(discovery) == 0 {
-			return nil, fmt.Errorf("discovery section not found in global values")
-		}
-
-		value, ok := discovery[deckhouseVersionValue]
+		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -643,34 +641,41 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
-// PreservePackage identifies one downloaded package version to preserve during cleanup.
+// PreservePackage identifies one installed Package instance to preserve during Cleanup.
 type PreservePackage struct {
-	// Name is the downloaded package directory name.
-	Name string
-	// Version is the downloaded package version name.
-	Version string
-	// Repository is the downloaded repository directory name.
-	Repository string
+	PackageName string
+	Repository  string
+	Version     string
+
+	ReleaseName      string
+	ReleaseNamespace string
 }
 
-// Cleanup removes deployed packages that are not listed in preserve from both app and module deployers.
-func (r *Runtime) Cleanup(ctx context.Context, preserve []PreservePackage) {
+// Cleanup removes downloaded application packages on disk and orphan nelm
+// releases in the cluster that are not in preserves. Runs once during preflight.
+func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	converted := make([]deployer.PreservePackage, 0, len(preserve))
-	for _, packageVersion := range preserve {
-		converted = append(converted, deployer.PreservePackage{
-			Name:       packageVersion.Name,
-			Repository: packageVersion.Repository,
-			Version:    packageVersion.Version,
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
+	keepReleases := make(map[string]struct{}, len(preserves))
+	for _, preserve := range preserves {
+		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
 		})
+
+		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
 	}
 
-	if err := r.appDeployer.Cleanup(ctx, converted); err != nil {
+	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
 		r.logger.Warn("cleanup apps failed", log.Err(err))
 		return
 	}
+
+	// do not cleanup modules namespace
+	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
 }
 
 // Status returns package status service for external access
@@ -688,7 +693,10 @@ func (r *Runtime) ResumeScheduler() {
 	r.scheduler.Resume()
 }
 
-// CheckConstraints checks constraints in scheduler
-func (r *Runtime) CheckConstraints(constraints schedule.Constraints) error {
-	return r.scheduler.CheckConstraints(constraints)
+// CheckConstraints validates the proposed package constraints against the
+// current cluster state and dependency graph. The `name` is the scheduler-side
+// identifier (apps.BuildName for applications, module name for modules) and is
+// used by the cycle simulation step to identify the proposed graph vertex.
+func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints) error {
+	return r.scheduler.CheckConstraints(name, constraints)
 }

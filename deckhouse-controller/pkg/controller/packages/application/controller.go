@@ -101,18 +101,12 @@ func RegisterController(
 	r.status = status.NewService(r.client, packageRuntime.Status().GetStatus, r.logger)
 	r.status.Start(context.Background(), packageRuntime.Status().GetCh())
 
-	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
-
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.Application{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(applicationController)
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		Complete(r)
 }
 
 func (r *reconciler) preflight(ctx context.Context) error {
@@ -131,12 +125,15 @@ func (r *reconciler) preflight(ctx context.Context) error {
 		return fmt.Errorf("list applications: %w", err)
 	}
 
-	var preserve []packageruntime.PreservePackage
+	preserve := make([]packageruntime.PreservePackage, 0, len(appsList.Items))
 	for _, app := range appsList.Items {
 		preserve = append(preserve, packageruntime.PreservePackage{
-			Name:       app.Spec.PackageName,
-			Version:    app.Spec.PackageVersion,
-			Repository: app.Spec.PackageRepositoryName,
+			PackageName: app.Spec.PackageName,
+			Repository:  app.Spec.PackageRepositoryName,
+			Version:     app.Spec.PackageVersion,
+
+			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
+			ReleaseNamespace: app.Namespace,
 		})
 	}
 
