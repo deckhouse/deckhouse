@@ -254,16 +254,21 @@ func summarize(state condmap.State) (string, string, string) {
 }
 
 // reconcileSummaryChain lists the internal gates that degrade a running app,
-// in priority order. intScaled is last: a real artifact, hook or manifest
-// failure outranks workload health. Only a False is a degradation — the health
-// monitor reports both Reconciling and Degraded as Scaled=False, while Unknown
-// means "no workloads to observe", which is not a problem.
+// in priority order. It mirrors what the mapper actually breaks on reconcile
+// so the summary cannot disagree with the conditions: the reconcileChain gates
+// (which break Ready/Managed) first, then Configured (which breaks only
+// ConfigurationApplied), then Scaled (workload health).
+//
+// intScaled is last: a real artifact, hook or manifest failure outranks
+// workload health. Only a False is a degradation — the health monitor reports
+// both Reconciling and Degraded as Scaled=False, while Unknown means "no
+// workloads to observe", which is not a problem.
 var reconcileSummaryChain = []string{
 	intReadyOnFilesystem,
 	intLoaded,
-	intConfigured,
 	intHooksProcessed,
 	intManifestsApplied,
+	intConfigured,
 	intScaled,
 }
 

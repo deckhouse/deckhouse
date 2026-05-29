@@ -144,17 +144,10 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	// dependency-disabled helpers, so the two cannot drift, and reads the
 	// internal conditions directly instead of reverse-deriving reasons.
 	state, message, tip := summarize(mapperStatus)
-	// summarize always classifies the application into one of the lifecycle
-	// states (ready included), so the Summary is always present. The empty
-	// guard only covers the unreachable phase fallthrough.
-	if state == "" {
-		app.Status.Summary = nil
-	} else {
-		app.Status.Summary = &v1alpha1.ApplicationStatusSummary{
-			State:   state,
-			Message: message,
-			Tip:     tip,
-		}
+	app.Status.Summary = &v1alpha1.ApplicationStatusSummary{
+		State:   state,
+		Message: message,
+		Tip:     tip,
 	}
 }
 

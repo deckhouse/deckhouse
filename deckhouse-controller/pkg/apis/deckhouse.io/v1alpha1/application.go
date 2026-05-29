@@ -107,12 +107,11 @@ type ApplicationSpec struct {
 
 type ApplicationStatus struct {
 	// Summary aggregates the high-level user-facing state, message and
-	// resolution hint for the application. It is the single source of
-	// truth for the UI; clients should not derive these values themselves.
-	//
-	// A pointer is used so that the field is omitted from the serialized
-	// status until summarize actually produces something — Go's
-	// `omitempty` does not elide empty struct values otherwise.
+	// resolution hint for the application. The controller always populates it
+	// on reconcile — every application maps to exactly one lifecycle state — so
+	// it is the single source of truth for the UI; clients should not re-derive
+	// these values from the conditions. The pointer leaves it absent only
+	// before the first status computation.
 	// +optional
 	Summary *ApplicationStatusSummary `json:"summary,omitempty"`
 
@@ -140,10 +139,10 @@ type ApplicationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-// ApplicationStatusSummary aggregates the high-level lifecycle state derived
-// from the application conditions. It is consumed by the UI as a single
-// source of truth so that the frontend does not have to re-implement the
-// state machine on top of conditions.
+// ApplicationStatusSummary aggregates the high-level lifecycle state, message
+// and resolution hint for the application. It is consumed by the UI as a single
+// source of truth so that the frontend does not have to re-implement the state
+// machine on top of conditions.
 type ApplicationStatusSummary struct {
 	// State is the high-level lifecycle state observed for the application.
 	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.

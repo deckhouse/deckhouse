@@ -187,7 +187,7 @@ func phaseOf(state condmap.State) phase {
 
 // installPipeline lists every gate from requirements to manifests in priority
 // order. The other chains are slices into it (so they cannot drift apart);
-// reconcileChain combines the filesystem gate with late-stage gates because
+// reconcileChain combines the filesystem gates with late-stage gates because
 // settings failures don't break a running app on reconcile.
 var installPipeline = []string{
 	intRequirementsMet,   // [0] install only
@@ -203,8 +203,11 @@ var (
 	configPipeline = installPipeline[3:] // settings + hooks + manifests
 	lateStage      = installPipeline[4:] // hooks + manifests
 
-	// reconcileChain: gates that break a running app on reconcile.
-	reconcileChain = []string{intReadyOnFilesystem, intHooksProcessed, intManifestsApplied}
+	// reconcileChain: gates that break a running app on reconcile — the
+	// filesystem gates (download/mount and load) plus the late-stage gates.
+	// Settings (Configured) is excluded: an invalid new config does not break
+	// the already-running version.
+	reconcileChain = []string{intReadyOnFilesystem, intLoaded, intHooksProcessed, intManifestsApplied}
 )
 
 // firstFalse returns the first internal condition in chain whose status is False.
@@ -321,7 +324,7 @@ func mapUpdateInstalled(state condmap.State) metav1.Condition {
 		}
 	}
 	if state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
-		return emit(state, ConditionUpdateInstalled, metav1.ConditionTrue, intScaled)
+		return emit(state, ConditionUpdateInstalled, metav1.ConditionTrue, intManifestsApplied)
 	}
 
 	return metav1.Condition{}

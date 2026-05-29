@@ -175,12 +175,11 @@ spec:
               summary:
                 description: |-
                   Summary aggregates the high-level user-facing state, message and
-                  resolution hint derived from conditions. It is the single source of
-                  truth for the UI; clients should not derive these values themselves.
-
-                  A pointer is used so that the field is omitted from the serialized
-                  status until DeriveStatus actually produces something — Go's
-                  `omitempty` does not elide empty struct values otherwise.
+                  resolution hint for the application. The controller always populates it
+                  on reconcile — every application maps to exactly one lifecycle state — so
+                  it is the single source of truth for the UI; clients should not re-derive
+                  these values from the conditions. The pointer leaves it absent only
+                  before the first status computation.
                 properties:
                   message:
                     description: Message is a human-readable description of the current
@@ -189,8 +188,7 @@ spec:
                   state:
                     description: |-
                       State is the high-level lifecycle state observed for the application.
-                      One of: Pending, Failed, Updating. Empty when the application is
-                      operating normally and there is nothing actionable to report.
+                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
                     type: string
                   tip:
                     description: |-
