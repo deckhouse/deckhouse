@@ -67,28 +67,28 @@ var summaryTable = map[phase]map[string]advice{
 		},
 		"RequirementsUnmet": {
 			statePending,
-			"Installation is blocked: module requirements are not satisfied",
-			"Check the module's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
+			"Installation is blocked: application requirements are not satisfied",
+			"Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
 		},
 		"DownloadFailed": {
 			stateFailed,
-			"Installation failed: module package could not be downloaded or mounted",
+			"Installation failed: application package could not be downloaded or mounted",
 			"Check network connectivity to the registry, verify imagePullSecret and package signature. Fix the issue — the controller will retry on the next reconcile.",
 		},
 		"LoadFromFilesystemFailed": {
 			stateFailed,
-			"Installation failed: module package on disk could not be loaded",
+			"Installation failed: application package on disk could not be loaded",
 			"The on-disk artifact is corrupted or has an invalid structure. Delete the cached package from the node disk and re-pull the image. The controller will retry on the next reconcile.",
 		},
 		"SettingsInvalid": {
 			stateFailed,
-			"Installation failed: module settings did not pass validation",
+			"Installation failed: application settings did not pass validation",
 			"Fix the ModuleConfig fields that fail OpenAPI validation. The controller will retry automatically after the config is changed.",
 		},
 		"HookInitializationFailed": {
 			stateFailed,
 			"Installation failed: hook synchronization phase failed",
-			"Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the module version if needed.",
+			"Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the application version if needed.",
 		},
 		"HookFailed": {
 			stateFailed,
@@ -98,7 +98,7 @@ var summaryTable = map[phase]map[string]advice{
 		"ManifestsApplyFailed": {
 			stateFailed,
 			"Installation failed: Helm could not apply manifests",
-			"Check helm history and events in the module namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
+			"Check helm history and events in the application namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
 		},
 	},
 
@@ -131,12 +131,12 @@ var summaryTable = map[phase]map[string]advice{
 		"HookInitializationFailed": {
 			stateFailed,
 			"Update failed during hook synchronization; previous version is no longer serving",
-			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or manually roll back the module version.",
+			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or manually roll back the application version.",
 		},
 		"HookFailed": {
 			stateFailed,
 			"Update failed: startup or runtime hooks of the new version failed; previous version is no longer serving",
-			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the module version manually.",
+			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the application version manually.",
 		},
 		"ManifestsApplyFailed": {
 			stateFailed,
@@ -155,7 +155,7 @@ var summaryTable = map[phase]map[string]advice{
 		},
 		"LoadFromFilesystemFailed": {
 			stateDegraded,
-			"Reconcile failed: module could not be loaded from filesystem; runtime state can no longer be trusted",
+			"Reconcile failed: application could not be loaded from filesystem; runtime state can no longer be trusted",
 			"Delete the corrupted package cache on the node. The controller will retry loading; conditions will be restored based on reconcile progress.",
 		},
 		"SettingsInvalid": {
@@ -198,7 +198,7 @@ var summaryTable = map[phase]map[string]advice{
 // was disabled.
 var summarySuspended = advice{
 	state:   stateSuspended,
-	message: "Module is suspended: a required dependency has been disabled",
+	message: "Application is suspended: a required dependency has been disabled",
 	tip:     "Enable the disabled dependent module back. After it converges, the controller will automatically restore all conditions and resume operation.",
 }
 

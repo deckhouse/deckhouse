@@ -26,15 +26,6 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeInstalled                    = "Installed"
-	ApplicationConditionTypeReady                        = "Ready"
-	ApplicationConditionReasonReconciled                 = "Reconciled"
-	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
-	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
-	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
-	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
-
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 
 	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"

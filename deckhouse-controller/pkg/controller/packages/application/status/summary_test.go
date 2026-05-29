@@ -95,8 +95,8 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionReady:     {metav1.ConditionFalse, "RequirementsUnmet"},
 			},
 			state:   statePending,
-			message: "Installation is blocked: module requirements are not satisfied",
-			tip:     "Check the module's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
+			message: "Installation is blocked: application requirements are not satisfied",
+			tip:     "Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
 		},
 		{
 			name: "install: download/mount failed",
@@ -106,7 +106,7 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionReady:     {metav1.ConditionFalse, "DownloadFailed"},
 			},
 			state:   stateFailed,
-			message: "Installation failed: module package could not be downloaded or mounted",
+			message: "Installation failed: application package could not be downloaded or mounted",
 			tip:     "Check network connectivity to the registry, verify imagePullSecret and package signature. Fix the issue — the controller will retry on the next reconcile.",
 		},
 		{
@@ -117,7 +117,7 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionReady:     {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
 			},
 			state:   stateFailed,
-			message: "Installation failed: module package on disk could not be loaded",
+			message: "Installation failed: application package on disk could not be loaded",
 			tip:     "The on-disk artifact is corrupted or has an invalid structure. Delete the cached package from the node disk and re-pull the image. The controller will retry on the next reconcile.",
 		},
 		{
@@ -129,7 +129,7 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionConfigurationApplied: {metav1.ConditionFalse, "SettingsInvalid"},
 			},
 			state:   stateFailed,
-			message: "Installation failed: module settings did not pass validation",
+			message: "Installation failed: application settings did not pass validation",
 			tip:     "Fix the ModuleConfig fields that fail OpenAPI validation. The controller will retry automatically after the config is changed.",
 		},
 		{
@@ -144,7 +144,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateFailed,
 			message: "Installation failed: hook synchronization phase failed",
-			tip:     "Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the module version if needed.",
+			tip:     "Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the application version if needed.",
 		},
 		{
 			name: "install: startup/runtime hooks failed",
@@ -168,7 +168,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateFailed,
 			message: "Installation failed: Helm could not apply manifests",
-			tip:     "Check helm history and events in the module namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
+			tip:     "Check helm history and events in the application namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
 		},
 
 		// ── Update (installed, version change in progress) ────────────
@@ -233,7 +233,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateFailed,
 			message: "Update failed during hook synchronization; previous version is no longer serving",
-			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or manually roll back the module version.",
+			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or manually roll back the application version.",
 		},
 		{
 			name: "update: startup/runtime hooks failed, old version down",
@@ -245,7 +245,7 @@ func TestLifecycleScenarios(t *testing.T) {
 			},
 			state:   stateFailed,
 			message: "Update failed: startup or runtime hooks of the new version failed; previous version is no longer serving",
-			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the module version manually.",
+			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the application version manually.",
 		},
 		{
 			name: "update: Helm apply failed",
@@ -300,7 +300,7 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionConfigurationApplied: {metav1.ConditionTrue, ConditionConfigurationApplied},
 			},
 			state:   stateDegraded,
-			message: "Reconcile failed: module could not be loaded from filesystem; runtime state can no longer be trusted",
+			message: "Reconcile failed: application could not be loaded from filesystem; runtime state can no longer be trusted",
 			tip:     "Delete the corrupted package cache on the node. The controller will retry loading; conditions will be restored based on reconcile progress.",
 		},
 		{
@@ -366,7 +366,7 @@ func TestLifecycleScenarios(t *testing.T) {
 				ConditionUpdateInstalled:      nil,
 			},
 			state:   stateSuspended,
-			message: "Module is suspended: a required dependency has been disabled",
+			message: "Application is suspended: a required dependency has been disabled",
 			tip:     "Enable the disabled dependent module back. After it converges, the controller will automatically restore all conditions and resume operation.",
 		},
 	}
@@ -467,7 +467,7 @@ func TestSummarize_SuspendedVsPending(t *testing.T) {
 	t.Run("suspended when previously installed and requirements drop", func(t *testing.T) {
 		state, message, _ := summaryFor(installed(), intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))
 		assert.Equal(t, stateSuspended, state)
-		assert.Equal(t, "Module is suspended: a required dependency has been disabled", message)
+		assert.Equal(t, "Application is suspended: a required dependency has been disabled", message)
 	})
 
 	t.Run("pending when requirements unmet on first install", func(t *testing.T) {
@@ -475,6 +475,6 @@ func TestSummarize_SuspendedVsPending(t *testing.T) {
 		// requirements, not a running app that lost a dependency.
 		state, message, _ := summaryFor(intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))
 		assert.Equal(t, statePending, state)
-		assert.NotEqual(t, "Module is suspended: a required dependency has been disabled", message)
+		assert.NotEqual(t, "Application is suspended: a required dependency has been disabled", message)
 	})
 }

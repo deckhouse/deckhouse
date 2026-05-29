@@ -25,7 +25,7 @@ import (
 const (
 	// ConditionInstalled reflects the state of the first install of the application.
 	// True when the install pipeline completed; False while it is blocked or has failed
-	// at one of: waiting for module converge (Pending), unmet requirements, download,
+	// at one of: waiting for dependent modules to converge (Pending), unmet requirements, download,
 	// load from filesystem, settings validation, hooks, or Helm manifest apply.
 	// Sticky: once True it is never retracted — subsequent failures surface on
 	// UpdateInstalled instead.
