@@ -45,7 +45,7 @@ import (
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	hookcontext "github.com/flant/shell-operator/test/hook/context"
 	"github.com/go-openapi/spec"
-	"github.com/go-openapi/swag"
+	"github.com/go-openapi/swag/yamlutils"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	. "github.com/onsi/gomega"
@@ -460,7 +460,7 @@ func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec
 					schemas[crd.Spec.Names.Kind] = make(map[string]*spec.Schema, 0)
 				}
 
-				rawJSON, err := swag.YAMLToJSON(version.Schema.OpenAPIV3Schema)
+				rawJSON, err := yamlutils.YAMLToJSON(version.Schema.OpenAPIV3Schema)
 				if err != nil {
 					return nil, fmt.Errorf("yaml to json: %w", err)
 				}

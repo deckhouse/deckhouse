@@ -33,6 +33,7 @@ import (
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
+	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
@@ -368,9 +369,6 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					rm.Unlock()
 					go func() {
 						defer rm.Release()
-						// give some time to real parent processes to reap their children if any
-						time.Sleep(time.Second)
-
 						processes, err := process.Processes()
 						if err != nil {
 							logger.Debug("get processes", log.Err(err))
@@ -391,7 +389,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 									continue
 								}
 
-								if ppid == 1 {
+								if ppid == 1 && !executor.Tracker().IsActive(int(ps.Pid)) {
 									var status syscall.WaitStatus
 									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
 									if err != nil {

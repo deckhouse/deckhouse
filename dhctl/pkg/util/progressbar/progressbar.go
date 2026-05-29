@@ -206,6 +206,15 @@ func WarnF(format string, a ...any) {
 	pterm.Warning.WithWriter(writer).Printf(format, a...)
 }
 
+func ErrorF(format string, a ...any) {
+	if defaultpb != nil {
+		writer := defaultpb.MultiPrinter.NewWriter()
+		pterm.Error.WithWriter(writer).Printf(format, a...)
+	} else {
+		pterm.Error.Printf(format, a...)
+	}
+}
+
 func phaseToString(p phases.Progress, completed bool) string {
 	// Butify bootstrap: phases with subphases
 	phasesMap := make(map[phases.OperationPhase]string)

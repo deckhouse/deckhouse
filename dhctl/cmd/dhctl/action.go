@@ -345,12 +345,16 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	}
 
 	logPath := i.params.debugLogFilePath
+	p := logPath
 
 	if logPath == "" {
 		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 		logPath = path.Join(tmpDir, logFile)
+		p = tmpDir
 	}
+
+	log.SetLoggerOpts(p, commandName)
 
 	outFile, err := os.Create(logPath)
 	if err != nil {

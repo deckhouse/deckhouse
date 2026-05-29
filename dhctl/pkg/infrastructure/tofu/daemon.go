@@ -183,8 +183,12 @@ func startProviderDaemon(pluginsDir string) (string, *exec.Cmd, error) {
 	cmd := exec.Command(binary, "-reattach-file="+reattachFile)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	// Forward stdout/stderr so panics & misconfig are visible in the dhctl debug log.
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
+	logger, err := log.NewLogToFile("daemon")
+	if err != nil {
+		return "", nil, err
+	}
+	cmd.Stdout = logger
+	cmd.Stderr = logger
 	cmd.Env = os.Environ()
 
 	if err := cmd.Start(); err != nil {
