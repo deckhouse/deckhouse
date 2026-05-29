@@ -57,9 +57,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
-// +kubebuilder:printcolumn:name=LastScan,type=date,JSONPath=.status.lastScanTime
-// +kubebuilder:printcolumn:name=NEW-VERSIONS,type=integer,JSONPath=.status.lastNewVersions
-// +kubebuilder:printcolumn:name=LAST-CHANGE,type=date,JSONPath=.status.lastChangeTime,priority=1
+// +kubebuilder:printcolumn:name=Scan,type=date,JSONPath=.status.lastScanTime
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 

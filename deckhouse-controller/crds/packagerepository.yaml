@@ -19,14 +19,7 @@ spec:
       name: Phase
       type: string
     - jsonPath: .status.lastScanTime
-      name: LastScan
-      type: date
-    - jsonPath: .status.lastNewVersions
-      name: NEW-VERSIONS
-      type: integer
-    - jsonPath: .status.lastChangeTime
-      name: LAST-CHANGE
-      priority: 1
+      name: Scan
       type: date
     - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
       name: MSG
