@@ -15,10 +15,10 @@ spec:
   metrics:
   - providers:
     - name: prometheus
-{{- with include "istio.tracing.telemetryAPIProviderName" . }}
+{{- if (include "istioTracingProvider" .) }}
   tracing:
   - providers:
-    - name: {{ . }}
-    randomSamplingPercentage: {{ $.Values.istio.tracing.sampling | default 1.0 }}
+    - name: deckhouse-tracing
+    randomSamplingPercentage: {{ .Values.istio.tracing.sampling | default 1.0 }}
 {{- end }}
 {{- end }}
