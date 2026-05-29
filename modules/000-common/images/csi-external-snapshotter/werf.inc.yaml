@@ -18,7 +18,6 @@ import:
   add: /csi-snapshotter
   to: /csi-snapshotter
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:

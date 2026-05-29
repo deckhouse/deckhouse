@@ -6,7 +6,6 @@ import:
   add: /src/registry-proxy-reloader
   to: /registry-proxy-reloader
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

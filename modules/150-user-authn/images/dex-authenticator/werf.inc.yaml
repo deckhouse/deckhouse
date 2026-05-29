@@ -2,15 +2,14 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
-    add: /src/oauth2-proxy
-    to: /bin/oauth2_proxy
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-artifact
-    add: /src/url-exec-prober
-    to: /usr/local/bin/url-exec-prober
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
+  add: /src/oauth2-proxy
+  to: /bin/oauth2_proxy
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-artifact
+  add: /src/url-exec-prober
+  to: /usr/local/bin/url-exec-prober
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

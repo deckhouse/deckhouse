@@ -1415,6 +1415,8 @@ To enable field protection, do the following:
 
 A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.
 
+<!--- Hidden because the feature is currently available in CSE Lite and CSE Pro only.
+
 ## How to verify the integrity control mechanism for data stored in etcd?
 
 {% alert level="warning" %}
@@ -1568,3 +1570,4 @@ Example output:
   }
 }
 ```
+--->

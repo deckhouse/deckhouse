@@ -227,7 +227,7 @@ type MockedContainer struct {
 	CRClient      *cr.ClientMock
 	CRClientMap   map[string]cr.Client
 	VsphereClient *vsphere.ClientMock
-	clock         clockwork.FakeClock
+	clock         *clockwork.FakeClock
 
 	clockOnce sync.Once
 }
@@ -304,7 +304,7 @@ func (c *MockedContainer) GetClock() clockwork.Clock {
 	return c.GetFakeClock()
 }
 
-func (c *MockedContainer) GetFakeClock() clockwork.FakeClock {
+func (c *MockedContainer) GetFakeClock() *clockwork.FakeClock {
 	c.clockOnce.Do(func() {
 		t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
 		cc := clockwork.NewFakeClockAt(t)

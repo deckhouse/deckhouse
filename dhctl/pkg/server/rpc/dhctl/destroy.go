@@ -199,7 +199,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
 			),
-			s.params.DownloadDirConfig,
+			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -282,13 +282,12 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir:          s.params.TmpDir,
-		LoggerProvider:  log.SimpleLoggerProvider(loggerFor),
-		IsDebug:         s.params.IsDebug,
-		SSHProvider:     sshProvider,
-		KubeProvider:    kubeProvider,
-		DirectoryConfig: s.params.DownloadDirConfig,
-		Options:         opts,
+		TmpDir:         s.params.TmpDir,
+		LoggerProvider: log.SimpleLoggerProvider(loggerFor),
+		IsDebug:        s.params.IsDebug,
+		SSHProvider:    sshProvider,
+		KubeProvider:   kubeProvider,
+		Options:        opts,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

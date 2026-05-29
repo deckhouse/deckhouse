@@ -35,6 +35,22 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ index $.Images "builder/src" }}
 final: false
+mount:
+- from: build_dir
+  to: /extra_apps
+import:
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /usr/bin/cp
+  to: /tools/cp
+  owner: "0"
+  group: "0"
+  before: install
+- from: {{ index $.Images "tools/libcap" }}
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: install
+  owner: "0"
+  group: "0"
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -56,6 +72,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  # copy extra tools
+  - cp -av /tools/* /extra_apps
+  #
   - mkdir -p /src
   - cd /src
   - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
@@ -67,7 +86,7 @@ shell:
   #
   - mkdir -p /src/nginx-deps
   - git clone -b {{ $nginxDepsBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
-    # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
+  # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
   - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
   - git clone -b {{ $nlohmannJsonBranch }} $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
   # Remove directory for fix CVE
@@ -663,14 +682,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
-mount:
-- from: build_dir
-  to: /apps
 import:
-- from: {{ index $.Images "tools/libcap" }}
-  add: /usr/sbin/setcap
-  to: /tools/setcap
-  before: install
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr
@@ -883,15 +895,12 @@ shell:
 
   - mkdir -p /chroot/modules_mount
   - ln -s /chroot/modules_mount /modules_mount
-
-  # Utils for final image
-  - cp -a /tools/setcap /apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 mount:
 - from: build_dir
-  to: /apps
+  to: /extra_apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -962,24 +971,21 @@ import:
   group: "0"
   includePaths:
   - usr/bin/test
-  - usr/bin/chroot
   - usr/bin/cat
-  - usr/bin/cp
   - usr/bin/tail
   before: install
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
 shell:
   install:
-  - /usr/bin/cp -alf /chroot/bin/. /bin/
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
-  - /apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
-  - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
-  - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /extra_apps/cp -alf /chroot/bin/. /bin/
+  - /extra_apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /extra_apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
+  - /extra_apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /extra_apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
+  - /extra_apps/setcap    cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /extra_apps/setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
+  - /extra_apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
+  - /extra_apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx

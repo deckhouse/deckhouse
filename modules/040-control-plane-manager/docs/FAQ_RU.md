@@ -1429,7 +1429,7 @@ d8 k get cpn
 ## Как проверить механизм контроля целостности данных, хранимых в etcd?
 
 {% alert level="warning" %}
-Контроль целостности данных, хранимых в etcd, доступен только в редакциях EE, CSE Lite и CSE Pro.
+Контроль целостности данных, хранимых в etcd, доступен только в редакциях CSE Lite и CSE Pro.
 {% endalert %}
 
 ### Проверка формата данных, хранящихся в etcd
@@ -1457,14 +1457,14 @@ d8 k get cpn
 
    Примеры вывода команды:
 
-   - Режим контроля целостности [`Enforce` или `Migrate`](configuration.html#parameters-apiserver-signature):
+   - Режим контроля целостности `Enforce` или `Migrate`:
 
      ```console
      /registry/secrets/default/test-secret
      {"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
      ```
 
-   - Режим контроля целостности [`Rollback`](configuration.html#parameters-apiserver-signature):
+   - Режим контроля целостности `Rollback`:
 
      ```console
      /registry/secrets/default/test-secret
@@ -1476,7 +1476,7 @@ d8 k get cpn
      foobarOpaque"
      ```
 
-   - Включено шифрование секретов ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), режим контроля целостности [`Rollback`](configuration.html#parameters-apiserver-signature):
+   - Включено шифрование секретов ([`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled)), режим контроля целостности `Rollback`:
 
      ```console
      /registry/secrets/default/test-secret
@@ -1523,7 +1523,7 @@ d8 k get cpn
    d8 k get secret test-secret 
    ```
 
-   Пример вывода (только в режиме контроля целостности [`Enforce`](configuration.html#parameters-apiserver-signature)):
+   Пример вывода (только в режиме контроля целостности `Enforce`):
 
    ```console
    Error from server (InternalError): Internal error occurred: bad signature, record rejected

@@ -9,7 +9,6 @@ import:
   add: /node-controller
   to: /node-controller
   before: setup
-git:
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

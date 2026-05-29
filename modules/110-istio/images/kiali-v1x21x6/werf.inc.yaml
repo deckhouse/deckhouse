@@ -15,7 +15,6 @@ import:
   add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

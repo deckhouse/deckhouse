@@ -189,6 +189,7 @@ read:
     - deckhouse.io/ingressmetrics
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
@@ -335,6 +336,7 @@ write:
     - cert-manager.io/certificates
     - cert-manager.io/issuers
     - configmaps
+    - deckhouse.io/daemonsetmetrics
     - deckhouse.io/deploymentmetrics
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -451,6 +453,7 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
+    - deckhouse.io/clusterdaemonsetmetrics
     - deckhouse.io/clusterdeploymentmetrics
     - deckhouse.io/clusteringressmetrics
     - deckhouse.io/clusterlogdestinations
@@ -574,6 +577,7 @@ write:
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projects

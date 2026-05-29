@@ -1,4 +1,4 @@
-// Copyright 2026 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package directoryconfig
+package providerinitializer
 
-type DirectoryConfig struct {
-	DownloadDir      string
-	DownloadCacheDir string
+import (
+	"context"
 
-	// VersionFilePath is the absolute path to the deckhouse installer image
-	// version file (typically /deckhouse/version inside the installer
-	// container). Consumed by config.MetaConfig.LoadInstallerVersion and
-	// config.DeckhouseInstaller.GetImageTag.
-	VersionFilePath string
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
+
+func CleanupSSHProvider(
+	ctx context.Context,
+	logger log.Logger,
+	sshProviderInitializer *SSHProviderInitializer,
+) {
+	if sshProviderInitializer == nil {
+		return
+	}
+
+	if err := sshProviderInitializer.Cleanup(ctx); err != nil && logger != nil {
+		logger.LogWarnF("failed to cleanup ssh provider: %v\n", err)
+	}
 }

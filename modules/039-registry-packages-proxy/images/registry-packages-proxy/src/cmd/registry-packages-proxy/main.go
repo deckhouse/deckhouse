@@ -23,6 +23,11 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
@@ -56,7 +61,7 @@ func main() {
 	defer stop()
 
 	// init kube clients
-	client, err := app.InitClient(config)
+	clientset, err := app.InitClient(config)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -66,8 +71,26 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
+	kubeConfig, err := clientcmd.BuildConfigFromFlags("", config.KubeConfig)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		logger.Fatal(err.Error())
+	}
+	if err := credentials.AddToScheme(scheme); err != nil {
+		logger.Fatal(err.Error())
+	}
+
+	k8sClient, err := ctrlclient.New(kubeConfig, ctrlclient.Options{Scheme: scheme})
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
 	// watch resources
-	watcher := credentials.NewWatcher(client, dynamicClient, time.Hour, logger)
+	watcher := credentials.NewWatcher(clientset, dynamicClient, k8sClient, time.Hour, logger)
 	go watcher.Watch(ctx)
 
 	// init cache

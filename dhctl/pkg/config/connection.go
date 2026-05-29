@@ -28,7 +28,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -203,7 +202,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 	log.DebugF("Connection config path: %s\n", connectionConfigPath)
 
-	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, p.opts.DirConfig())
+	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, &p.opts.Global)
 	if err != nil {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
@@ -263,7 +262,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	return nil
 }
 
-func parseConnectionConfigFromFile(path string, dirConfig *directoryconfig.DirectoryConfig) (*ConnectionConfig, error) {
+func parseConnectionConfigFromFile(path string, globalOptions *options.GlobalOptions) (*ConnectionConfig, error) {
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
@@ -271,7 +270,7 @@ func parseConnectionConfigFromFile(path string, dirConfig *directoryconfig.Direc
 
 	return ParseConnectionConfig(
 		string(configData),
-		NewSchemaStore(dirConfig),
+		NewSchemaStore(globalOptions),
 		ValidateOptionValidateExtensions(true),
 	)
 }

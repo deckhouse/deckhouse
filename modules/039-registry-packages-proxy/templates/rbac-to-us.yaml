@@ -73,3 +73,20 @@ rules:
       - "deployments/cli-binary"
     resourceNames: ["registry-packages-proxy"]
     verbs: ["get"]
+---
+# ClusterRole for future authenticated /v1/packages/* endpoints (icons are served
+# anonymously via kube-rbac-proxy excludePaths). Bind it when adding routes that still
+# require SubjectAccessReview with attributes:
+#   namespace=d8-cloud-instance-manager, group=apps, resource=deployments,
+#   subresource=packages, resourceName=registry-packages-proxy, verb=get.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:registry-packages-proxy:packages-download
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-packages-proxy")) | nindent 2 }}
+rules:
+  - apiGroups: ["apps"]
+    resources:
+      - "deployments/packages"
+    resourceNames: ["registry-packages-proxy"]
+    verbs: ["get"]

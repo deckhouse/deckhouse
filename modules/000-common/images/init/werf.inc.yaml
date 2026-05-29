@@ -7,7 +7,6 @@ import:
   add: /relocate
   to: /
   before: setup
-git:
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -20,4 +19,3 @@ shell:
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-

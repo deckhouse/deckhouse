@@ -173,7 +173,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
-			s.params.DownloadDirConfig,
+			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -251,7 +251,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
-		DownloadDir:      s.params.DownloadDirConfig.DownloadDir,
+		GlobalOptions:    s.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,

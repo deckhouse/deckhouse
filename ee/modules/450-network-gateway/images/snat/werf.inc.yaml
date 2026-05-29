@@ -12,7 +12,6 @@ fromImage: common/distroless
 git:
 - add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/iptables-loop.py
   to: /iptables-loop.py
-{{- include "image mount points" $ }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
@@ -29,3 +28,4 @@ import:
   - usr/lib/libc.so
   excludePaths:
   - usr/lib/python3*/site-packages/pip-25.3*
+{{- include "image mount points" $ }}

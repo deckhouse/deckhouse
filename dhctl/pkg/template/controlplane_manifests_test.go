@@ -26,7 +26,6 @@ import (
 )
 
 func TestControlplaneRendering(t *testing.T) {
-	InitGlobalVars("/deckhouse")
 
 	t.Run("Version Selection", testVersionSelection)
 	t.Run("Feature Gates", testFeatureGates)

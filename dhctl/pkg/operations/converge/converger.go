@@ -24,7 +24,6 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -58,10 +57,9 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 	ProviderGetter        infrastructure.CloudProviderGetter
 
-	TmpDir          string
-	Logger          log.Logger
-	IsDebug         bool
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 
 	NoSwitchToNodeUser bool
 
@@ -182,7 +180,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
-		DownloadDir:   c.Options.Global.DownloadDir,
+		GlobalOptions: &c.Options.Global,
 		Logger:        c.Logger,
 		DisableSwitch: true,
 	})
@@ -265,7 +263,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
 			Logger:                 c.Logger,
-			DirectoryConfig:        c.DirectoryConfig,
+			Opts:                   &c.Options.Global,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
@@ -275,7 +273,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.ProviderGetter,
 			Logger:                 c.Logger,
-			DirectoryConfig:        c.DirectoryConfig,
+			Opts:                   &c.Options.Global,
 		})
 	}
 
@@ -380,7 +378,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
-		DownloadDir:   c.Options.Global.DownloadDir,
+		GlobalOptions: &c.Options.Global,
 		Logger:        c.Logger,
 		IsDebug:       c.IsDebug,
 		DisableSwitch: c.NoSwitchToNodeUser,
@@ -476,10 +474,10 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 	c.Options.Bootstrap.DeckhouseTimeout = 1 * time.Hour
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
-		TmpDir:      c.TmpDir,
-		DownloadDir: c.Options.Global.DownloadDir,
-		Logger:      c.Logger,
-		IsDebug:     c.IsDebug,
+		TmpDir:        c.TmpDir,
+		GlobalOptions: &c.Options.Global,
+		Logger:        c.Logger,
+		IsDebug:       c.IsDebug,
 	})
 
 	convergeCtx.SetClientSwitcher(switcher)

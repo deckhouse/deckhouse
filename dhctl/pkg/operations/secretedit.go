@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -35,7 +35,7 @@ const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
 // editFunc allows tests to swap the editor with a deterministic mock without
 // reaching for package-level state (see secretedit_test.go).
-type editFunc func([]byte, *directoryconfig.DirectoryConfig, EditOptions) ([]byte, error)
+type editFunc func([]byte, *options.GlobalOptions, EditOptions) ([]byte, error)
 
 var abstractEditing editFunc = Edit
 
@@ -53,7 +53,7 @@ func SecretEdit(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient, name, namespace, secret, dataKey string,
 	labels map[string]string,
-	dirConfig *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 	editOpts EditOptions,
 ) error {
 	config, err := kubeCl.CoreV1().Secrets(namespace).Get(ctx, secret, metav1.GetOptions{})
@@ -77,11 +77,11 @@ func SecretEdit(
 	configData := config.Data[dataKey]
 
 	var modifiedData []byte
-	err = dh_config.PrepareCandiDir(ctx, kubeCl, log.GetDefaultLogger(), dirConfig)
+	err = dh_config.PrepareCandiDir(ctx, kubeCl, log.GetDefaultLogger(), globalOptions)
 	if err != nil {
 		return err
 	}
-	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, dirConfig, editOpts) })
+	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, globalOptions, editOpts) })
 	if err != nil {
 		return err
 	}

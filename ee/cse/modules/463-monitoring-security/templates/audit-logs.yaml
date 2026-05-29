@@ -1,3 +1,5 @@
+{{- if has "loki" .Values.global.enabledModules }}
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLoggingConfig
 metadata:
@@ -10,3 +12,4 @@ spec:
     include:
       - /var/log/kube-audit/audit.log
   type: File
+{{- end }}
