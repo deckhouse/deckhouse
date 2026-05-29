@@ -19,6 +19,7 @@ package pki
 import (
 	"crypto/x509"
 	"fmt"
+	"net"
 	"time"
 
 	certutil "k8s.io/client-go/util/cert"
@@ -38,6 +39,7 @@ type renewOptions struct {
 	certificatesDir  string
 	leafCertificates []LeafCertName
 	dryRun           bool
+	extraIP          net.IP
 }
 
 // WithRenewDir overrides the PKI directory used by Renew*.
@@ -61,6 +63,14 @@ func WithRenewLeafs(names ...LeafCertName) RenewOption {
 func WithDryRun() RenewOption {
 	return func(o *renewOptions) {
 		o.dryRun = true
+	}
+}
+
+// WithRenewExtraIP adds an extra IP SAN to renewed serving certificates.
+// Client certificates without IP SANs are renewed unchanged.
+func WithRenewExtraIP(ip net.IP) RenewOption {
+	return func(o *renewOptions) {
+		o.extraIP = ip
 	}
 }
 
@@ -125,7 +135,9 @@ func caForLeaf(name LeafCertName) (RootCertName, bool) {
 	return "", false
 }
 
-func renewLeafCert(pkiDir string, name LeafCertName, dryRun bool) error {
+func renewLeafCert(o *renewOptions, name LeafCertName) error {
+	pkiDir := o.certificatesDir
+
 	caName, ok := caForLeaf(name)
 	if !ok {
 		return fmt.Errorf("unknown leaf certificate %q", name)
@@ -164,6 +176,10 @@ func renewLeafCert(pkiDir string, name LeafCertName, dryRun bool) error {
 	cfg := certConfigFromX509(oldCert)
 	cfg.CertificateValidityPeriod = constants.CertificateValidityPeriod
 
+	if o.extraIP != nil && len(cfg.AltNames.IPs) > 0 {
+		cfg.AltNames.IPs = append(cfg.AltNames.IPs, o.extraIP)
+	}
+
 	newKey, err := pkiutil.NewPrivateKey(cfg.EncryptionAlgorithm)
 	if err != nil {
 		return fmt.Errorf("generate new key for cert %q: %w", name, err)
@@ -174,7 +190,7 @@ func renewLeafCert(pkiDir string, name LeafCertName, dryRun bool) error {
 		return fmt.Errorf("sign cert %q: %w", name, err)
 	}
 
-	if dryRun {
+	if o.dryRun {
 		return nil
 	}
 
@@ -197,7 +213,7 @@ func renewLeafCert(pkiDir string, name LeafCertName, dryRun bool) error {
 //   - any other error  — IO/permissions/signing failure (skipped)
 func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
-	return renewLeafCert(o.certificatesDir, name, o.dryRun)
+	return renewLeafCert(o, name)
 }
 
 // RenewCertificates renews a batch of leaf certificates by re-signing them with a fresh key.
@@ -221,7 +237,7 @@ func RenewCertificates(opts ...RenewOption) PKIRenewReport {
 		authority, _ := caForLeaf(info.Name)
 		path := certPath(o.certificatesDir, string(info.Name))
 
-		report.add(info.Name, path, authority, renewLeafCert(o.certificatesDir, info.Name, o.dryRun))
+		report.add(info.Name, path, authority, renewLeafCert(o, info.Name))
 	}
 
 	return report
