@@ -41,18 +41,48 @@ def detect_edition(report_path: Path) -> str:
     return parent or report_path.stem
 
 
-def load_digests(report_path: Path) -> dict:
+def load_report(report_path: Path) -> dict:
     with report_path.open(encoding="utf-8") as fh:
-        data = json.load(fh)
-    return {
-        name: info.get("DockerImageDigest", "")
-        for name, info in (data.get("Images") or {}).items()
-    }
+        return json.load(fh)
 
 
-def normalized_json(report_path: Path) -> list:
-    data = json.loads(report_path.read_text(encoding="utf-8"))
-    return json.dumps(data, sort_keys=True, indent=2).splitlines()
+def entry_lines(entry: dict) -> list:
+    return json.dumps(entry, sort_keys=True, indent=2).splitlines()
+
+
+# Deckhouse-specific: module images are rendered by .werf/defines/modules.tmpl as
+# "<ModuleName>/<ImageName>". Image names whose first segment is one of these is
+# a global meta-image, not a module (e.g. 'dev/install', 'base/vex').
+_NON_MODULE_PREFIXES = {"dev", "base"}
+
+# Images whose content is intentionally non-reproducible across runs and must
+# be skipped from the digest comparison:
+#
+# * release-channel-version / release-channel-version-prebuild
+#   .werf/werf-release-channel.yaml bakes the current Deckhouse version
+#   string, the per-tag CHANGELOG snippet, and the kubernetesVersions list
+#   into version.json/changelog.yaml. Even on the same commit these inputs
+#   can shift between runs (CHANGELOG additions on other branches, k8s
+#   version bumps), making the manifest digest unstable. The image is a
+#   pure metadata payload (no code), so it does not represent a build
+#   reproducibility risk and is excluded from the check.
+_IGNORED_IMAGES = {
+    "release-channel-version",
+    "release-channel-version-prebuild",
+}
+
+
+def split_module(image_name: str) -> tuple:
+    """Return (module, image_subname) for table display.
+
+    Returns ('—', image_name) for global images that don't belong to a module.
+    """
+    if "/" not in image_name:
+        return "—", image_name
+    head, _, tail = image_name.partition("/")
+    if head in _NON_MODULE_PREFIXES:
+        return "—", image_name
+    return head, tail
 
 
 def main(argv: list) -> int:
@@ -64,48 +94,64 @@ def main(argv: list) -> int:
     rerun_path = Path(argv[2])
     edition = detect_edition(baseline_path)
 
-    baseline = load_digests(baseline_path)
-    rerun = load_digests(rerun_path)
+    baseline_images = load_report(baseline_path).get("Images") or {}
+    rerun_images    = load_report(rerun_path).get("Images") or {}
+
+    all_names = sorted(set(baseline_images) | set(rerun_images))
+    ignored = sorted(n for n in all_names if n in _IGNORED_IMAGES)
 
     mismatched = []
-    for image in sorted(set(baseline) | set(rerun)):
-        b = baseline.get(image, "")
-        r = rerun.get(image, "")
-        if b != r:
-            mismatched.append((image, b, r))
+    for name in all_names:
+        if name in _IGNORED_IMAGES:
+            continue
+        b_digest = baseline_images.get(name, {}).get("DockerImageDigest", "")
+        r_digest = rerun_images.get(name, {}).get("DockerImageDigest", "")
+        if b_digest != r_digest:
+            mismatched.append((name, b_digest, r_digest))
 
     print(f"# Build reproducibility check ({edition})")
     print()
     print(f"Baseline: {baseline_path}")
     print(f"Rerun:    {rerun_path}")
-    print(f"Images in baseline: {len(baseline)}; in rerun: {len(rerun)}")
+    print(f"Images in baseline: {len(baseline_images)}; in rerun: {len(rerun_images)}")
+    if ignored:
+        print(f"Ignored (non-reproducible by design): {', '.join(ignored)}")
     print()
 
+    compared = len(all_names) - len(ignored)
     if not mismatched:
-        print(f"OK: all {len(baseline)} image digests match. Build is reproducible.")
+        print(f"OK: all {compared} compared image digests match. Build is reproducible.")
         return 0
 
     print(f"Digest mismatch: {len(mismatched)} image(s) differ.")
     print()
-    print("| Image | Baseline digest | Rerun digest |")
-    print("|---|---|---|")
-    for image, baseline_digest, rerun_digest in mismatched:
-        print(f"| `{image}` | `{baseline_digest or '—'}` | `{rerun_digest or '—'}` |")
+    print("| Module | Image | Baseline digest | Rerun digest |")
+    print("|---|---|---|---|")
+    for name, b_digest, r_digest in mismatched:
+        module, image = split_module(name)
+        print(f"| `{module}` | `{image}` | `{b_digest or '—'}` | `{r_digest or '—'}` |")
     print()
 
-    print("## JSON diff")
+    print("## Per-image diff")
     print()
-    print("```diff")
-    diff = difflib.unified_diff(
-        normalized_json(baseline_path),
-        normalized_json(rerun_path),
-        fromfile=str(baseline_path),
-        tofile=str(rerun_path),
-        lineterm="",
-    )
-    for line in diff:
-        print(line)
-    print("```")
+    for name, _, _ in mismatched:
+        b_entry = baseline_images.get(name, {})
+        r_entry = rerun_images.get(name, {})
+        print(f"### `{name}`")
+        print()
+        print("```diff")
+        diff = difflib.unified_diff(
+            entry_lines(b_entry),
+            entry_lines(r_entry),
+            fromfile=f"baseline:Images.{name}",
+            tofile=f"rerun:Images.{name}",
+            lineterm="",
+        )
+        for line in diff:
+            print(line)
+        print("```")
+        print()
+
     return 1
 
 

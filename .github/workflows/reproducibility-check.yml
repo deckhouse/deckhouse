@@ -306,6 +306,20 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.resolve_target.outputs.sha }}
       # </template: checkout_full_step>
+      - name: Print git context
+        run: |
+          # Diagnostic: which commit werf will actually build from.
+          # GITHUB_SHA is the workflow run's commit (immutable, runner-injected);
+          # git HEAD is what actions/checkout left in the work tree (may differ
+          # for runs that override `ref`, e.g. reproducibility-check.yml).
+          echo "==== git context ===="
+          echo "GITHUB_SHA env:        ${GITHUB_SHA}"
+          echo "GITHUB_REF env:        ${GITHUB_REF}"
+          echo "git HEAD (full):       $(git rev-parse HEAD)"
+          echo "git HEAD (short):      $(git rev-parse --short HEAD)"
+          git log -1 --pretty='format:  commit:  %H%n  author:  %an <%ae>%n  date:    %ad%n  subject: %s'
+          echo
+          echo "====================="
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
@@ -608,6 +622,20 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.resolve_target.outputs.sha }}
       # </template: checkout_full_step>
+      - name: Print git context
+        run: |
+          # Diagnostic: which commit werf will actually build from.
+          # GITHUB_SHA is the workflow run's commit (immutable, runner-injected);
+          # git HEAD is what actions/checkout left in the work tree (may differ
+          # for runs that override `ref`, e.g. reproducibility-check.yml).
+          echo "==== git context ===="
+          echo "GITHUB_SHA env:        ${GITHUB_SHA}"
+          echo "GITHUB_REF env:        ${GITHUB_REF}"
+          echo "git HEAD (full):       $(git rev-parse HEAD)"
+          echo "git HEAD (short):      $(git rev-parse --short HEAD)"
+          git log -1 --pretty='format:  commit:  %H%n  author:  %an <%ae>%n  date:    %ad%n  subject: %s'
+          echo
+          echo "====================="
 
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
