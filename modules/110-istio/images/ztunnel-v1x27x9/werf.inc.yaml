@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -82,3 +83,4 @@ git:
   tag: {{ $istioVersion }}
   to: /src/ztunnel
 ---
+{{- end }}

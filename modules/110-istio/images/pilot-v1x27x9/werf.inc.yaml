@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.27.9 -> v1x27x9 */}}
@@ -51,3 +52,4 @@ shell:
   - strip /src/istio/out/pilot-discovery
   - chmod 0700 /src/istio/out/pilot-discovery
   - chown 1337:1337 /src/istio/out/pilot-discovery
+{{- end }}
