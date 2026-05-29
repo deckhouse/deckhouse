@@ -28,6 +28,13 @@ data:
         },
         "externalIstiod": false,
         "jwtPolicy": {{ include "istioJWTPolicy" $ | quote }},
+        "pilotCertProvider": "istiod",
+        "trustBundleName": "istio-ca-root-cert",
+        "sds": {
+          "token": {
+            "aud": "istio-ca"
+          }
+        },
         "proxy": {
           "image": {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix)) | quote }},
           "clusterDomain": {{ $.Values.global.discovery.clusterDomain | quote }},
@@ -53,7 +60,6 @@ data:
           "tracer": "none",
           "resources": {}
         },
-        "pilotCertProvider": "istiod",
         "proxy_init": {
           "image": {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix)) | quote }},
           "resources": {

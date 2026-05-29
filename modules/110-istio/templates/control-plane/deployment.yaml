@@ -146,6 +146,8 @@ spec:
         - name: PILOT_ENABLE_AMBIENT
           value: "true"
         {{- end }}
+        - name: ENABLE_NATIVE_SIDECARS
+          value: "false"
         - name: GOMEMLIMIT
           valueFrom:
             resourceFieldRef:
