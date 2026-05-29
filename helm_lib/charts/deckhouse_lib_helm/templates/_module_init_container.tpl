@@ -16,6 +16,13 @@
     readOnlyRootFilesystem: true
     runAsUser: 0
     runAsGroup: 0
+    capabilities:
+      drop:
+        - ALL
+      add:
+        - CHOWN
+    seccompProfile:
+      type: RuntimeDefault
   volumeMounts:
   - name: {{ $volume_name }}
     mountPath: /tmp/data
@@ -41,6 +48,13 @@
     readOnlyRootFilesystem: true
     runAsUser: 0
     runAsGroup: 0
+    capabilities:
+      drop:
+        - ALL
+      add:
+        - CHOWN
+    seccompProfile:
+      type: RuntimeDefault
   volumeMounts:
   - name: {{ $volume_name }}
     mountPath: /tmp/data

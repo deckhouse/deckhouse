@@ -24,6 +24,15 @@ spec:
       metadata:
         description: |
           Default container runtime behavior for the root init container is required.
+    capabilities:
+      allowedValues:
+        add:
+          - CHOWN
+        drop:
+          - ALL
+      metadata:
+        description: |
+          The chown init container needs CAP_CHOWN to set ownership on the hostPath data directory; all other capabilities are dropped.
   network:
     hostNetwork:
       allowedValue: true

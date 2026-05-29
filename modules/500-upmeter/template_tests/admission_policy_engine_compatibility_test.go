@@ -141,6 +141,12 @@ var _ = Describe("Module :: upmeter :: admission-policy-engine compatibility", f
 `))
 			Expect(pseBase.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
 			Expect(pseBase.Field("spec.securityContext.allowPrivilegeEscalation.allowedValue").Bool()).To(BeTrue())
+			Expect(pseBase.Field("spec.securityContext.capabilities.allowedValues.add").String()).To(MatchYAML(`
+- CHOWN
+`))
+			Expect(pseBase.Field("spec.securityContext.capabilities.allowedValues.drop").String()).To(MatchYAML(`
+- ALL
+`))
 
 			Expect(f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter-agent-chown-init").Exists()).To(BeFalse())
 
@@ -148,6 +154,45 @@ var _ = Describe("Module :: upmeter :: admission-policy-engine compatibility", f
 			Expect(upmeterStatefulSet.Exists()).To(BeTrue())
 			Expect(upmeterStatefulSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("SecurityPolicyException", "d8-upmeter", "upmeter").Exists()).To(BeFalse())
+		})
+
+		It("must drop ALL capabilities on every container in the upmeter-agent DaemonSet (restricted PSS compliance)", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			daemonSet := f.KubernetesResource("DaemonSet", "d8-upmeter", "upmeter-agent")
+			Expect(daemonSet.Exists()).To(BeTrue())
+
+			initContainers := daemonSet.Field("spec.template.spec.initContainers").Array()
+			Expect(initContainers).ToNot(BeEmpty())
+			for _, c := range initContainers {
+				name := c.Get("name").String()
+				drops := c.Get("securityContext.capabilities.drop").Array()
+				dropStrings := make([]string, 0, len(drops))
+				for _, d := range drops {
+					dropStrings = append(dropStrings, d.String())
+				}
+				Expect(dropStrings).To(ContainElement("ALL"),
+					"initContainer %q must drop ALL capabilities under restricted PSS", name)
+			}
+
+			containers := daemonSet.Field("spec.template.spec.containers").Array()
+			Expect(containers).ToNot(BeEmpty())
+			for _, c := range containers {
+				name := c.Get("name").String()
+				drops := c.Get("securityContext.capabilities.drop").Array()
+				dropStrings := make([]string, 0, len(drops))
+				for _, d := range drops {
+					dropStrings = append(dropStrings, d.String())
+				}
+				Expect(dropStrings).To(ContainElement("ALL"),
+					"container %q must drop ALL capabilities under restricted PSS", name)
+			}
+
+			chownInit := daemonSet.Field("spec.template.spec.initContainers.#(name==\"chown-volume-data\")")
+			Expect(chownInit.Exists()).To(BeTrue())
+			Expect(chownInit.Get("securityContext.capabilities.add").String()).To(MatchYAML(`
+- CHOWN
+`))
 		})
 	})
 })
