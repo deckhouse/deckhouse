@@ -234,6 +234,16 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+            status:
+              properties:
+                engine:
+                  description: |
+                    Механизм, который используется для управления узлами в этой группе.
+
+                    Поддерживаемые значения:
+                    - `None` — узлы группы не управляются через MCM или CAPI;
+                    - `MCM` — узлы группы управляются через machine-controller-manager;
+                    - `CAPI` — узлы группы управляются через Cluster API.
     - name: v1alpha2
       schema:
         openAPIV3Schema:
@@ -462,6 +472,16 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+            status:
+              properties:
+                engine:
+                  description: |
+                    Механизм, который используется для управления узлами в этой группе.
+
+                    Поддерживаемые значения:
+                    - `None` — узлы группы не управляются через MCM или CAPI;
+                    - `MCM` — узлы группы управляются через machine-controller-manager;
+                    - `CAPI` — узлы группы управляются через Cluster API.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -980,3 +1000,13 @@ spec:
                           x-doc-default: 60s
                       required:
                         - timeout
+            status:
+              properties:
+                engine:
+                  description: |
+                    Механизм, который используется для управления узлами в этой группе.
+
+                    Поддерживаемые значения:
+                    - `None` — узлы группы не управляются через MCM или CAPI;
+                    - `MCM` — узлы группы управляются через machine-controller-manager;
+                    - `CAPI` — узлы группы управляются через Cluster API.
