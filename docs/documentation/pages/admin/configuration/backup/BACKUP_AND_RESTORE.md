@@ -122,6 +122,14 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
 
+1. Enable maintenance mode on the remaining master node to prevent `control-plane-manager` from creating new operations on it during the restore procedure (CPM will continue to remove components from the nodes being detached):
+
+   ```shell
+   d8 k label cpn <REMAINING_MASTER_NAME> control-plane-manager.deckhouse.io/maintenance=""
+   ```
+
+   > **Note.** The label will automatically disappear after restoring etcd from the backup, since the cluster state is taken from a snapshot that did not have this label.
+
 1. Switch the cluster to single master mode:
 
    - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
@@ -130,6 +138,12 @@ To properly restore a multi-master cluster, follow these steps:
    - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
+
+1. Make sure the maintenance mode label is removed from the remaining master node (after restoring from the backup it is usually already gone, but it is better to verify explicitly):
+
+   ```shell
+   d8 k label cpn <REMAINING_MASTER_NAME> control-plane-manager.deckhouse.io/maintenance-
+   ```
 
 1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
