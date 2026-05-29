@@ -1,6 +1,6 @@
 # Trivy version
 {{- $trivyVersion := "v0.55.2" }}
-{{- $trivyDbForkCommit := "df65ebde46f4ab443fb6f4702b05b8fe6332c356" }}
+{{- $trivyDbForkCommit := "167ba4f2faebe8b7c6daac6b8c86c415c9acc023" }}
 {{- $trivyDbPatchCommit := "bbed03c788ca3a04a5b93e2c7a2f2213659ed9ec" }}
 
 ---
