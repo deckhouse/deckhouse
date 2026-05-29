@@ -25,7 +25,6 @@ status:
     description:
       en: Test package
       ru: Ru Test package
-    requirements: {}
     stage: Preview
 ---
 apiVersion: deckhouse.io/v1alpha1

@@ -1399,6 +1399,10 @@ entries:
                 ru: Модуль metallb
               url: /architecture/network/metallb.html
             - title:
+                en: DNS modules
+                ru: Модули управления DNS
+              url: /architecture/network/dns-modules.html
+            - title:
                 en: Cluster-level Istio architecture
                 ru: Архитектура Istio на уровне кластера
               url: /architecture/network/cluster-with-istio.html
@@ -1436,20 +1440,56 @@ entries:
               url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: Storage system modules
-                ru: Модули системы хранения
+                ru: Модули систем хранения
               folders:
+                - title:
+                    en: Csi-hpe module
+                    ru: Модуль csi-hpe
+                  url: /architecture/storage/external/csi-hpe.html
+                - title:
+                    en: Csi-huawei module
+                    ru: Модуль csi-huawei
+                  url: /architecture/storage/external/csi-huawei.html
+                - title:
+                    en: Csi-netapp module
+                    ru: Модуль csi-netapp
+                  url: /architecture/storage/external/csi-netapp.html
                 - title:
                     en: Csi-nfs module
                     ru: Модуль csi-nfs
                   url: /architecture/storage/external/csi-nfs.html
+                - title:
+                    en: Csi-s3 module
+                    ru: Модуль csi-s3
+                  url: /architecture/storage/external/csi-s3.html
+                - title:
+                    en: Csi-scsi-generic module
+                    ru: Модуль csi-scsi-generic
+                  url: /architecture/storage/external/csi-scsi-generic.html
+                - title:
+                    en: Csi-yadro-tatlin-unified module
+                    ru: Модуль csi-yadro-tatlin-unified
+                  url: /architecture/storage/external/csi-yadro-tatlin-unified.html
             - title:
                 en: CSI drivers
                 ru: CSI-драйверы
               folders:
                 - title:
+                    en: Huawei CSI driver
+                    ru: CSI-драйвер Huawei
+                  url: /architecture/storage/csi-drivers/csi-driver-huawei.html
+                - title:
                     en: NFS CSI driver
                     ru: CSI-драйвер NFS
                   url: /architecture/storage/csi-drivers/csi-driver-nfs.html
+                - title:
+                    en: S3 CSI driver
+                    ru: CSI-драйвер S3
+                  url: /architecture/storage/csi-drivers/csi-driver-s3.html
+                - title:
+                    en: SCSI Generic CSI driver
+                    ru: CSI-драйвер SCSI Generic
+                  url: /architecture/storage/csi-drivers/csi-driver-scsi-generic.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
@@ -1466,6 +1506,22 @@ entries:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging.html
+        - title:
+            en: Virtualization subsystem
+            ru: Подсистема Virtualization
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/virtualization/
+            - title:
+                en: Deckhouse Virtualization Container Registry (DVCR)
+                ru: Deckhouse Virtualization Container Registry (DVCR)
+              url: /architecture/virtualization/dvcr.html
+            - title:
+                en: Containerized Data Importer (CDI)
+                ru: Containerized Data Importer (CDI)
+              url: /architecture/virtualization/cdi.html
     - title:
         en: Reference
         ru: Справка
@@ -1494,6 +1550,10 @@ entries:
             en: Revision comparison
             ru: Сравнение редакций
           url: /reference/revision-comparison.html
+        - title:
+            en: Container registry structure
+            ru: Структура хранилища образов контейнеров
+          url: /reference/container-registry-structure.html
         - title:
             en: Network interaction
             ru: Сетевое взаимодействие

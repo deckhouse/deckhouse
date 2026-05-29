@@ -27,9 +27,7 @@ const (
 	nodeUserExistsKey = "node-user-exists"
 )
 
-var (
-	errNotFoundCredentials = errors.New("Not found node user credentials")
-)
+var errNotFoundCredentials = errors.New("Not found node user credentials")
 
 type State struct {
 	cache state.Cache
@@ -51,7 +49,6 @@ func (s *State) SaveNodeUser(ctx context.Context, credentials *NodesWithCredenti
 
 func (s *State) NodeUser(ctx context.Context) (*NodesWithCredentials, error) {
 	exists, err := s.cache.InCache(ctx, nodeUserKey)
-
 	if err != nil {
 		return nil, err
 	}

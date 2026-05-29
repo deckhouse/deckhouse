@@ -29,8 +29,8 @@ import (
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
@@ -107,6 +107,7 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 		FSDIParams:       getTestFSDIParams(t, logger),
 		IsDebug:          false,
 		ProvidersCache:   newCloudProvidersMapCache(),
+		GlobalOptions:    &options.New().Global,
 	}
 }
 
@@ -947,7 +948,7 @@ func prepareLocalRun(t *testing.T, logger log.Logger) {
 		require.NoError(t, err, "Could not stat cloud-provider directory %s", cloudProvidersDir)
 	}
 
-	err = os.MkdirAll(cloudProvidersDir, 0755)
+	err = os.MkdirAll(cloudProvidersDir, 0o755)
 	require.NoError(t, err, "Could not create cloud-provider directory %s", cloudProvidersDir)
 
 	t.Cleanup(func() {
@@ -1230,7 +1231,7 @@ func assertCorrectExecutorStatesDir(t *testing.T, executor infrastructure.Execut
 	require.Equal(t, executorStatesDir, filepath.Join(provider.RootDir(), pluginVersion))
 }
 
-func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
+func assertFileExistsAndSymlink(t *testing.T, source, destination string) {
 	t.Helper()
 
 	stat, err := os.Lstat(destination)
@@ -1266,7 +1267,7 @@ func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
 	require.True(t, len(content) > 0, filePath)
 }
 
-func assertFileExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+func assertFileExistsAndHasContent(t *testing.T, filePath, expectedContent string) {
 	t.Helper()
 
 	assertFileExists(t, filePath)
@@ -1576,14 +1577,10 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	stat, err := os.Stat(configPath)
 	require.NoError(t, err)
 	require.False(t, stat.IsDir())
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 
 	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
 		logger: params.logger,
-	}), dc)
+	}), &options.New().Global)
 
 	require.NoError(t, err)
 	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)

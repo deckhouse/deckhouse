@@ -63,6 +63,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/039-registry-packages-proxy/hooks
+  to: /deckhouse/modules/039-registry-packages-proxy/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/040-control-plane-manager/hooks
   to: /deckhouse/modules/040-control-plane-manager/hooks
   excludePaths:

@@ -1764,24 +1764,20 @@ ccc: ddd
 
 	Context("CAPI", func() {
 		assertClusterResources := func(f *Config, clusterName string) {
+			// Cluster and MachineHealthCheck (cluster.x-k8s.io/v1beta1) are no
+			// longer rendered by helm — they are owned by the
+			// create_capi_cluster_resources hook on a dedicated queue (see
+			// hooks/create_capi_cluster_resources.go). Helm rendering used to
+			// race the capi conversion webhook. Hook-level tests cover their
+			// content; template tests only assert what helm still owns.
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", clusterName)
-			Expect(cluster.Exists()).To(BeTrue())
+			Expect(cluster.Exists()).To(BeFalse())
 
-			Expect(cluster.Field("spec.clusterNetwork.pods.cidrBlocks.0").String()).To(Equal("10.111.0.0/16"))
-			Expect(cluster.Field("spec.clusterNetwork.services.cidrBlocks.0").String()).To(Equal("10.222.0.0/16"))
-			Expect(cluster.Field("spec.clusterNetwork.serviceDomain").String()).To(Equal("cluster.local"))
-
-			Expect(cluster.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
-			Expect(cluster.Field("spec.controlPlaneRef.kind").String()).To(Equal("DeckhouseControlPlane"))
-			Expect(cluster.Field("spec.controlPlaneRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
-			Expect(cluster.Field("spec.controlPlaneRef.name").String()).To(Equal(fmt.Sprintf("%s-control-plane", clusterName)))
+			healthCheck := f.KubernetesResource("MachineHealthCheck", "d8-cloud-instance-manager", fmt.Sprintf("%s-machine-health-check", clusterName))
+			Expect(healthCheck.Exists()).To(BeFalse())
 
 			controlPlane := f.KubernetesResource("DeckhouseControlPlane", "d8-cloud-instance-manager", fmt.Sprintf("%s-control-plane", clusterName))
 			Expect(controlPlane.Exists()).To(BeTrue())
-
-			healthCheck := f.KubernetesResource("MachineHealthCheck", "d8-cloud-instance-manager", fmt.Sprintf("%s-machine-health-check", clusterName))
-			Expect(healthCheck.Exists()).To(BeTrue())
-			Expect(healthCheck.Field("spec.clusterName").String()).To(Equal(clusterName))
 
 			capiDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager")
 			Expect(capiDeploy.Exists()).To(BeTrue())

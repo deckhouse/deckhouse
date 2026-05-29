@@ -2,13 +2,13 @@
 {{- $moduleName := .moduleName | default "" }}
 {{- $moduleChannel := .moduleChannel | default "" }}
 {{- if and $moduleName $moduleChannel }}
-  {{- $moduleData := index (index $ctx.Site.Data.modules $moduleName) $moduleChannel }}
+  {{- $moduleData := index (index hugo.Data.modules $moduleName) $moduleChannel }}
   {{- $ossItems := slice }}
   {{- if $moduleData }}
     {{- $ossItems = index $moduleData "oss" }}
   {{- end }}
   {{- if not $ossItems }}
-    {{- $moduleData = index $ctx.Site.Data.modules $moduleName }}
+    {{- $moduleData = index hugo.Data.modules $moduleName }}
     {{- if $moduleData }}
       {{- $ossItems = index $moduleData "oss" }}
     {{- end }}

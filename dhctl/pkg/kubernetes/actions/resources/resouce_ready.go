@@ -80,7 +80,6 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		Resource(*gvr).
 		Namespace(doc.GetNamespace()).
 		Get(ctx, doc.GetName(), metav1.GetOptions{})
-
 	if err != nil {
 		logger.LogDebugF("Getting resource %s from cluster failed: %s\n", c.resourceName, err)
 		return false, nil
@@ -111,7 +110,6 @@ func newResourceIsReadyChecker(r *template.Resource, params constructorParams) (
 	resourceChecker, err := readiness.GetCheckerByGvk(&r.GVK, readiness.GetCheckerParams{
 		LoggerProvider: params.loggerProvider,
 	})
-
 	if err != nil {
 		return nil, err
 	}

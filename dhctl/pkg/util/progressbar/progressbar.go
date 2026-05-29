@@ -51,6 +51,7 @@ type Pb struct {
 	ProgressBarPrinter *pterm.ProgressbarPrinter
 	MultiPrinter       *pterm.MultiPrinter
 	SpinnerPrinter     *pterm.SpinnerPrinter
+	StopCh             chan struct{}
 }
 
 func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), chan phases.Progress, error) {
@@ -68,10 +69,9 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 	}
 
 	onComplete := func() {
-		pb := GetDefaultPb()
-		pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
-		pb.MultiPrinter.Stop()
+		FinishDefaultProgressBar()
 	}
+
 	return onComplete, phasesChan, nil
 }
 
@@ -91,24 +91,33 @@ func InitProgressBar(param *PbParam) error {
 		WithDelay(time.Hour).
 		WithWriter(multi.NewWriter())
 
-	multi.Start()
+	_, startErr := multi.Start()
+	if startErr != nil {
+		return startErr
+	}
 
 	var err error
 	p, err = p.Start(param.startMsg)
 	if err != nil {
 		return err
 	}
-	staticSpinner.Start("Current action: ")
+	_, err = staticSpinner.Start("Current action: ")
+	if err != nil {
+		return err
+	}
+
+	stopChan := make(chan struct{}, 2)
 
 	defaultpb = &Pb{
 		ProgressBarPrinter: p,
 		MultiPrinter:       &multi,
 		SpinnerPrinter:     staticSpinner,
+		StopCh:             stopChan,
 	}
 
 	log.WithProgressBar()
 
-	go updateProgress(p, param.labelChan, param.phasesChan, staticSpinner, &multi)
+	go updateProgress(p, param.labelChan, param.phasesChan, stopChan, staticSpinner, &multi)
 
 	return nil
 }
@@ -117,6 +126,7 @@ func updateProgress(
 	p *pterm.ProgressbarPrinter,
 	labelChan chan string,
 	successChan chan phases.Progress,
+	stopChan chan struct{},
 	spinner *pterm.SpinnerPrinter,
 	mp *pterm.MultiPrinter,
 ) {
@@ -133,6 +143,8 @@ func updateProgress(
 
 	for {
 		select {
+		case <-stopChan:
+			return
 		case msg, ok := <-labelChan:
 			if !ok {
 				return
@@ -149,7 +161,7 @@ func updateProgress(
 				for _, p := range msg.Phases {
 					phasesCount += len(p.SubPhases)
 				}
-				inc = int(100 / phasesCount)
+				inc = 100 / phasesCount
 
 				text := phaseToString(msg, false)
 				if text != "" {
@@ -192,6 +204,15 @@ func InfoF(format string, a ...any) {
 func WarnF(format string, a ...any) {
 	writer := defaultpb.MultiPrinter.NewWriter()
 	pterm.Warning.WithWriter(writer).Printf(format, a...)
+}
+
+func ErrorF(format string, a ...any) {
+	if defaultpb != nil {
+		writer := defaultpb.MultiPrinter.NewWriter()
+		pterm.Error.WithWriter(writer).Printf(format, a...)
+	} else {
+		pterm.Error.Printf(format, a...)
+	}
 }
 
 func phaseToString(p phases.Progress, completed bool) string {
@@ -262,4 +283,20 @@ func replaceStatus(msg string) string {
 	}
 
 	return res
+}
+
+func FinishDefaultProgressBar() {
+	pb := GetDefaultPb()
+	if pb == nil {
+		return
+	}
+
+	// stopping the updateProgress goroutine
+	pb.StopCh <- struct{}{}
+	time.Sleep(50 * time.Millisecond)
+
+	pb.ProgressBarPrinter.Add(100 - pb.ProgressBarPrinter.Current)
+	if _, err := pb.MultiPrinter.Stop(); err != nil {
+		log.WarnF("failed to stop multi printer: %v", err)
+	}
 }

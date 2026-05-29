@@ -269,28 +269,6 @@ func (m *MockSession) AvailableHosts() []string {
 	return args.Get(0).([]string)
 }
 
-type mockReverseTunnel struct {
-	mock.Mock
-}
-
-func (m *mockReverseTunnel) Up() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *mockReverseTunnel) StartHealthMonitor(ctx context.Context, checker libcon.ReverseTunnelChecker, killer libcon.ReverseTunnelKiller) {
-	m.Called(ctx, checker, killer)
-}
-
-func (m *mockReverseTunnel) Stop() {
-	m.Called()
-}
-
-func (m *mockReverseTunnel) String() string {
-	args := m.Called()
-	return args.String(0)
-}
-
 type MockNodeInterfaceWrapper struct {
 	mock.Mock
 	client libcon.SSHClient

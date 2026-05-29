@@ -1,8 +1,8 @@
 {!{ define "unit_run_args" }!}
 # <template: unit_run_args>
-args: 'make tests-controller tests-modules'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
-# <template: unit_run_args>
+args: 'sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse --user $(id -u):$(id -g) -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
+# </template: unit_run_args>
 {!{- end -}!}
 
 {!{ define "dhctl_run_args" }!}
@@ -12,18 +12,17 @@ docker_options: '-w /deckhouse/dhctl -v ~/go-pkg-cache:/go/pkg'
 # </template: dhctl_run_args>
 {!{- end -}!}
 
-{!{ define "golangci_lint_run_args" }!}
-# <template: golangci_lint_run_args>
-args: 'sh -c "go generate tools/register.go && golangci-lint version && GOGC=50 GOFLAGS=\"-buildvcs=false\" golangci-lint run"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
-# </template: golangci_lint_run_args>
-{!{- end -}!}
-
-{!{ define "golint_run_args" }!}
-# <template: golint_run_args>
-args: 'sh -c "git config --global --add safe.directory /deckhouse && go generate tools/register.go && golangci-lint version && make lint-all"'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
-# </template: golint_run_args>
+{!{/* Args for the "Go Lint Warning" job. Lints only Go modules touched by
+     the diff between $DIFF_BASE (set as job-level env) and HEAD; nested
+     go.mod modules handled via longest-prefix matching in
+     tools/lint-changed.sh. Runs inside the project's `tests` image which
+     already has golangci-lint at /usr/local/bin/golangci-lint (built from
+     the golangci-lint-artifact werf target), so no install dance needed. */}!}
+{!{ define "golint_diff_run_args" }!}
+# <template: golint_diff_run_args>
+args: 'sh -c "git config --global --add safe.directory /deckhouse && make lint-changed"'
+docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -e "DIFF_BASE=${DIFF_BASE}" -v ~/go-pkg-cache:/go/pkg -v ~/go-pkg-cache:/root/go/pkg -v ~/go-build-cache:/root/.cache/go-build -v ~/golangci-lint-cache:/root/.cache/golangci-lint'
+# </template: golint_diff_run_args>
 {!{- end -}!}
 
 {!{ define "openapi_test_cases_run_args" }!}
@@ -119,7 +118,12 @@ runs-on: [self-hosted, regular]
 steps:
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/b050f3bd-733f-4746-9640-9df80d484074/proxy" "DISTRO_PACKAGES_PROXY" "DISTRO_PACKAGES_PROXY" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   - name: Run python webhook tests
+    env:
+      DISTRO_PACKAGES_PROXY: "${{ steps.secrets.outputs.DISTRO_PACKAGES_PROXY }}"
     run: |
       make tests-webhooks
 # </template: tests_webhooks_template>

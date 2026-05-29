@@ -18,10 +18,13 @@ import (
 	"bytes"
 	"context"
 	"io"
-
-	external "github.com/deckhouse/lib-dhctl/pkg/log"
+	"os"
+	"path"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	external "github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
 var (
@@ -34,7 +37,13 @@ var (
 	defaultLogger Logger = newExternalLogger(external.NewDummyLogger(false))
 	emptyLogger   Logger = newExternalLogger(external.NewSilentLogger())
 	debugEnabled  bool
+	loggerOpts    logOpts
 )
+
+type logOpts struct {
+	LoggerPath string
+	Operation  string
+}
 
 const (
 	ProcessPreflight = "preflight"
@@ -99,6 +108,13 @@ func SetDebugEnabled(enabled bool) {
 	debugEnabled = enabled
 }
 
+func SetLoggerOpts(path, op string) {
+	loggerOpts = logOpts{
+		LoggerPath: path,
+		Operation:  op,
+	}
+}
+
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions, interactive bool) {
 	if err := initLoggerWithOptions(loggerType, opts, interactive); err != nil {
 		panic(err)
@@ -123,12 +139,18 @@ func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 
 	if ok {
 		ext = &ExternalLogger{logger: tee}
-		initExternalKlog(ext)
+		err := initExternalKlog(ext)
+		if err != nil {
+			return err
+		}
 
 		defaultLogger = ext
 	} else {
 		i := newInteractiveLogger(tee, true)
-		initInteractiveKlog(i)
+		err := initInteractiveKlog(i)
+		if err != nil {
+			return err
+		}
 
 		defaultLogger = i
 	}
@@ -420,4 +442,25 @@ func GetSilentLogger() Logger {
 		}
 		return defaultLogger.(*InteractiveLogger).NewSilentLogger()
 	}
+}
+
+func NewLogToFile(prefix string) (Logger, error) {
+	cmdStr := strings.Join([]string{loggerOpts.Operation, prefix}, "-")
+	logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+	logPath := path.Join(loggerOpts.LoggerPath, logFile)
+
+	outFile, err := os.Create(logPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bufSize := 1024
+	logger := ExternalLoggerProvider(emptyLogger)()
+
+	tee, err := external.WrapWithTeeLogger(logger, outFile, bufSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExternalLogger{logger: tee}, nil
 }

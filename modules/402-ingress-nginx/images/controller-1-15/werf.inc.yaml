@@ -1,6 +1,6 @@
 {{ $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-15" $ ) }}
 {{ $controllerBranch := printf "controller-v%s" $controllerVersion }}
-{{ $nginxVersion := "1.30.1" }}
+{{ $nginxVersion := "1.30.2" }}
 {{ $modsecurityDepsVersion := "1.0.4" }}
 {{ $nginxDepsBranch := (printf "controller-v%s-nginx-v%s-modsecurity-v%s" $controllerVersion $nginxVersion $modsecurityDepsVersion) }}
 {{ $nlohmannJsonBranch := printf "v%s" (include "get_oss_version_by_id" (list "nlohmannjson" $ )) }}
@@ -43,11 +43,6 @@ git:
       - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
   to: /src/rootfs
-  stageDependencies:
-    install:
-      - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/curl-chroot-wrapper.sh
-  to: /src/curl-chroot-wrapper.sh
   stageDependencies:
     install:
       - '**/*'
@@ -654,14 +649,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
-mount:
-- from: build_dir
-  to: /apps
 import:
-- from: {{ index $.Images "tools/libcap" }}
-  add: /usr/sbin/setcap
-  to: /tools/setcap
-  before: install
 #/bin/sh is required for modsecurity lib to work
 - from: {{ index $.Images "tools/bash" }}
   add: /usr
@@ -669,12 +657,6 @@ import:
   includePaths:
   - bin/bash
   - bin/sh
-  before: install
-- from: {{ index $.Images "tools/curl" }}
-  add: /usr/bin/curl-static
-  to: /chroot/usr/bin/curl
-  owner: "64535"
-  group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
@@ -882,15 +864,9 @@ shell:
   - ln -sf /chroot/var/log/nginx /var/log/nginx
   - chown -R deckhouse:deckhouse /chroot/var/log/nginx
   - ln -s /chroot/modules_mount /modules_mount
-
-  # Utils for final image
-  - cp -a /tools/setcap /apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
-mount:
-- from: build_dir
-  to: /apps
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /
@@ -929,12 +905,6 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/curl-chroot-wrapper.sh
-  to: /usr/bin/curl
-  owner: "64535"
-  group: "64535"
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
   owner: "64535"
@@ -943,15 +913,6 @@ import:
 - from: {{ index $.Images "tools/dumb-init" }}
   add: /dumb-init
   to: /usr/bin/dumb-init
-  before: install
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr
-  to: /
-  owner: "0"
-  group: "0"
-  includePaths:
-  - bin/bash
-  - bin/sh
   before: install
 - from: {{ index $.Images "tools/procps" }}
   add: /
@@ -986,10 +947,14 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
-git:
-{{- include "image mount points" $ }}
+{{- include "image mount points" . }}
+- from: {{ index $.Images "tools/libcap" }}
+  add: /usr/sbin/setcap
+  to: /apps/setcap
+  before: install
 shell:
   install:
+  - /usr/bin/cp -alf /chroot/bin/. /bin/
   - /usr/bin/cp -alf /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller

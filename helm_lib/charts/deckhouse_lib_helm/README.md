@@ -39,6 +39,8 @@
 | **Cloud Data Discoverer** |
 | [helm_lib_cloud_data_discoverer_manifests](#helm_lib_cloud_data_discoverer_manifests) |
 | [helm_lib_cloud_data_discoverer_pod_monitor](#helm_lib_cloud_data_discoverer_pod_monitor) |
+| **Cloud Provider User Authz Roles** |
+| [helm_lib_cloud_provider_user_authz_cluster_roles](#helm_lib_cloud_provider_user_authz_cluster_roles) |
 | **Csi Controller** |
 | [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Dns Policy** |
@@ -632,6 +634,24 @@ list:
 `{{ include "helm_lib_cloud_data_discoverer_pod_monitor" (list . $config) }} `
 
 
+## Cloud Provider User Authz Roles
+
+### helm_lib_cloud_provider_user_authz_cluster_roles
+
+ Renders user-authz ClusterRoles for provider-specific cloud resources. 
+ Includes User and ClusterAdmin ClusterRoles. 
+ Supported configuration parameters: 
+ + providerName (required) — provider name segment used in ClusterRole names. 
+ + instanceClassResource (required) — Deckhouse instance class resource name granted by the rules. 
+ + capiResources (optional, default: `[]`) — CAPI infrastructure resource names granted by the rules. 
+ + additionalUserRules (optional, default: `[]`) — extra rules appended to the User ClusterRole. 
+ + additionalClusterAdminRules (optional, default: `[]`) — extra rules appended to the ClusterAdmin ClusterRole. 
+
+#### Usage
+
+`{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $config) }} `
+
+
 ## Csi Controller
 
 ### helm_lib_csi_image_with_common_fallback
@@ -681,11 +701,13 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_envs_for_proxy" . }} `
+`{{ include "helm_lib_envs_for_proxy" . }} or {{ include "helm_lib_envs_for_proxy" (list . (list "extra1" "extra2")) }} `
 
 #### Arguments
 
+list:
 -  Template context with .Values, .Chart, etc 
+-  List of additional NO_PROXY entries (optional) 
 
 ## High Availability
 

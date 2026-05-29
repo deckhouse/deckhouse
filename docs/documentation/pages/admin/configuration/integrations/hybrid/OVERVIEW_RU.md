@@ -13,56 +13,17 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
 Для этого используйте параметр [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
 {% endalert %}
 
-## Гибридный кластер с OpenStack
-
-Выполните следующие шаги:
-
-1. Удалите `flannel` из `kube-system`:
-
-   ```shell
-   d8 k -n kube-system delete ds flannel-ds
-   ```
-
-2. Настройте интеграцию и пропишите необходимые для работы параметры.
-3. Создайте один или несколько кастомных ресурсов [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
-4. Создайте один или несколько кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
-
-{% alert level="warning" %}
-`Cloud-controller-manager` синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а `cloud-controller-manager` такие узлы игнорирует).
-{% endalert %}
-
-### Подключение storage
-
-Если вам требуются PersistentVolumes на узлах, подключаемых к кластеру из OpenStack, необходимо создать StorageClass с нужным OpenStack volume type. Получить список типов можно с помощью следующей команды:
-
-```shell
-openstack volume type list
-```
-
-Например, для volume type `ceph-ssd`:
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: ceph-ssd
-provisioner: csi-cinderplugin # Обязательно должно быть так.
-parameters:
-  type: ceph-ssd
-volumeBindingMode: WaitForFirstConsumer
-```
-
 ## Гибридный кластер с Yandex Cloud
 
-Для создания гибридного кластера, объединяющего статические узлы и узлы в Yandex Cloud, выполните описанные далее шаги.
+Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в Yandex Cloud с использованием Deckhouse Kubernetes Platform (DKP).
 
-### Предварительные требования
+### Предварительные требования для Yandex Cloud
 
 - Рабочий кластер с параметром `clusterType: Static`.
 - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
 - Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html).
 
-### Шаги по настройке
+### Добавление автоматически создаваемых узлов в Yandex Cloud
 
 1. Создайте Service Account в нужном каталоге Yandex Cloud:
 
@@ -225,6 +186,8 @@ volumeBindingMode: WaitForFirstConsumer
 
 Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в VMware vCloud Director (VCD) с использованием Deckhouse Kubernetes Platform (DKP).
 
+### Предварительные требования для VCD
+
 Перед началом убедитесь, что выполнены следующие условия:
 
 - **Инфраструктура**:
@@ -238,81 +201,59 @@ volumeBindingMode: WaitForFirstConsumer
   - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
   - Подготовлен [список необходимых ресурсов VCD](../virtualization/vcd/connection-and-authorization.html) (VDC, VAPP, шаблоны, политики и т.д.).
 
-### Настройка
+### Добавление автоматически создаваемых узлов в VCD
 
-1. Создайте файл конфигурации `cloud-provider-vcd-token.yml` со следующим содержимым:
+1. Создайте файл, например, `cloud-provider-vcd-mc.yaml` с ресурсом ModuleConfig:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VCDClusterConfiguration
-   layout: Standard
-   mainNetwork: <NETWORK_NAME>
-   internalNetworkCIDR: <NETWORK_CIDR>
-   organization: <ORGANIZATION>
-   virtualApplicationName: <VAPP_NAME>
-   virtualDataCenter: <VDC_NAME>
-   provider:
-     server: <API_URL>
-     apiToken: <PASSWORD>
-     username: <USER_NAME>
-     insecure: false
-   masterNodeGroup:
-     instanceClass:
-       etcdDiskSizeGb: 10
-       mainNetworkIPAddresses:
-       - 192.168.199.2
-       rootDiskSizeGb: 50
-       sizingPolicy: <SIZING_POLICY>
-       storageProfile: <STORAGE_PROFILE>
-       template: <VAPP_TEMPLATE>
-     replicas: 1
-   sshPublicKey: <SSH_PUBLIC_KEY>
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cloud-provider-vcd
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       mainNetwork: <NETWORK_NAME>
+       organization: <ORGANIZATION>
+       virtualDataCenter: <VDC_NAME>
+       virtualApplicationName: <VAPP_NAME>
+       sshPublicKey: <SSH_PUBLIC_KEY>
+       provider:
+         server: <API_URL>
+         username: <USER_NAME>
+         password: <PASSWORD>
+         insecure: false
    ```
 
    Где:
    - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в кластере VCD.
-   - `internalNetworkCIDR` — CIDR-адресация указанной сети.
    - `organization` — название вашей организации в VCD.
+   - `virtualDataCenter` — имя виртуального дата-центра.
    - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
-   - `virtualDataCenter` — имя виртуального датацентра.
-   - `template` — шаблон ВМ для создания узлов.
-   - `sizingPolicy` и `storageProfile` — соответствующие политики в VCD.
+   - `sshPublicKey` — публичный SSH-ключ для доступа к узлам.
    - `provider.server` — URL-адрес API вашего VCD.
-   - `provider.apiToken` — токен доступа (пароль) пользователя с правами администратора в VCD.
    - `provider.username` — имя статического пользователя, от имени которого будет происходить взаимодействие с VCD.
-   - `mainNetworkIPAddresses` — список IP-адресов из указанной сети, которые будут выделены для master-узлов.
-   - `storageProfile` — имя storage-профиля, определяющего хранилище для дисков создаваемых ВМ.
+   - `provider.password` — пароль пользователя с правами администратора в VCD.
+   - `provider.insecure` — установите значение `true`, если VCD использует самоподписанный TLS-сертификат.
 
-1. Закодируйте файл `cloud-provider-vcd-token.yml` в Base64:
-
-   ```shell
-   base64 -i $PWD/cloud-provider-vcd-token.yml
-   ```
-
-1. Создайте секрет со следующим содержимым:
+   Если для аутентификации используется токен, вместо `username` и `password` укажите `apiToken`:
 
    ```yaml
-   apiVersion: v1
-   data:
-     cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
-     cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
-   kind: Secret
-     metadata:
-       labels:
-         heritage: deckhouse
-         name: d8-provider-cluster-configuration
-       name: d8-provider-cluster-configuration
-       namespace: kube-system
-   type: Opaque
+   provider:
+     server: <API_URL>
+     apiToken: <API_TOKEN>
+     username: ""
+     password: ""
+     insecure: false
    ```
 
-1. Включите модуль `cloud-provider-vcd`:
+1. Примените ModuleConfig:
 
    ```shell
-   d8 system module enable cloud-provider-vcd
+   d8 k apply -f cloud-provider-vcd-mc.yaml
+   d8 k get mc cloud-provider-vcd
    ```
-
-1. Отредактируйте секрет `d8-cni-configuration`, чтобы значение параметра `mode` определялось из `mc cni-cilium` (измените `.data.cilium` на `.data.necilium` при необходимости).
 
 1. Убедитесь, что все поды в пространстве имён `d8-cloud-provider-vcd` находятся в состоянии `Running`:
 
@@ -320,9 +261,13 @@ volumeBindingMode: WaitForFirstConsumer
    d8 k get pods -n d8-cloud-provider-vcd
    ```
 
-1. Перезагрузите master-узел и дождитесь завершения инициализации.
+1. Убедитесь, что в кластере созданы StorageClass для VCD:
 
-1. Создайте классы инстансов в VCD:
+   ```shell
+   d8 k get sc
+   ```
+
+1. Создайте файл, например, `vcd-instanceclass-nodegroup.yaml` с ресурсами [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup):
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -334,16 +279,13 @@ volumeBindingMode: WaitForFirstConsumer
      sizingPolicy: <SIZING_POLICY>
      storageProfile: <STORAGE_PROFILE>
      template: <VAPP_TEMPLATE>
-   ```  
-
-1. Создайте ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup):
-
-   ```yaml
+   ---
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
      name: worker
    spec:
+     nodeType: CloudEphemeral
      cloudInstances:
        classReference:
          kind: VCDInstanceClass
@@ -353,11 +295,25 @@ volumeBindingMode: WaitForFirstConsumer
      nodeTemplate:
        labels:
          node-role/worker: ""
-     nodeType: CloudEphemeral
    ```
+
+1. Примените манифест:
+
+   ```shell
+   d8 k apply -f vcd-instanceclass-nodegroup.yaml
+   ```
+
+   После применения манифеста DKP начнёт создавать виртуальные машины в VCD, управляемые модулем `node-manager`.
 
 1. Убедитесь, что в кластере появилось требуемое количество узлов:
 
    ```shell
    d8 k get nodes -o wide
+   ```
+
+1. При сбоях создания ВМ проверьте объекты Machine, MachineSet и логи machine-controller-manager:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```

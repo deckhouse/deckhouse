@@ -15,10 +15,32 @@
 # limitations under the License.
 */}}
     
+EXPECTED_ID="64535"
+
+fail() {
+    echo "ERROR: $1"
+    echo ""
+    echo "To resolve this issue:"
+    echo "  - If the node was previously part of a Deckhouse cluster, run the cleanup script:"
+    echo "      chmod +x /var/lib/bashible/cleanup_static_node.sh"
+    echo "      sudo bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
+    echo "  - Otherwise, remove the conflicting account manually:"
+    echo "      sudo userdel deckhouse"
+    echo "      sudo groupdel deckhouse"
+    exit 1
+}
+
 uid="$(id -u deckhouse 2>/dev/null || true)"
 gid="$(getent group deckhouse | cut -d: -f3 || true)"
 
-if [ -n "$uid" ] || [ -n "$gid" ]; then
-    echo "deckhouse user or group already exists with id: uid=${uid}, gid=${gid}"
-    exit 1
+if [ -z "$uid" ] && [ -z "$gid" ]; then
+    exit 0
+fi
+
+if [ "$uid" != "$EXPECTED_ID" ] || [ "$gid" != "$EXPECTED_ID" ]; then
+    fail "deckhouse user or group exists with unexpected id: uid=${uid}, gid=${gid} (expected ${EXPECTED_ID})"
+fi
+
+if sudo -l -U deckhouse 2>/dev/null | grep -q "(ALL"; then
+    fail "deckhouse user has sudo privileges — this is a security risk"
 fi

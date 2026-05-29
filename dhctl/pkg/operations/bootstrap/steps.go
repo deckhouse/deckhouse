@@ -35,8 +35,8 @@ import (
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -45,9 +45,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -61,6 +63,11 @@ const (
 	BastionHostCacheKey = "bastion-hosts"
 )
 
+type ModulePreparator interface {
+	PrepareModule(ctx context.Context) error
+	Module() string
+}
+
 type BashiblePipelineParams struct {
 	Node           libcon.Interface
 	NodeIP         string
@@ -68,7 +75,7 @@ type BashiblePipelineParams struct {
 	DevicePath     string
 	CommanderMode  bool
 	IsDebug        bool
-	DirsConfig     *directoryconfig.DirectoryConfig
+	GlobalOpts     *options.GlobalOptions
 	LoggerProvider dhctllog.LoggerProvider
 }
 
@@ -81,8 +88,8 @@ func (p *BashiblePipelineParams) Validate() error {
 		return p.errIsNil("MetaConfig")
 	}
 
-	if govalue.IsNil(p.DirsConfig) {
-		return p.errIsNil("DirsConfig")
+	if govalue.IsNil(p.GlobalOpts) {
+		return p.errIsNil("GlobalOpts")
 	}
 
 	if govalue.IsNil(p.LoggerProvider) {
@@ -110,10 +117,11 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	cfg := params.MetaConfig
 	nodeInterface := params.Node
-	dc := params.DirsConfig
 	nodeIP := params.NodeIP
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
+
+	logger := loggerProvider()
 
 	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
 	if err := depsChecker.Check(ctx); err != nil {
@@ -126,13 +134,12 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	err := log.ProcessCtx(ctx, "bootstrap", "Preparing bootstrap", func(ctx context.Context) error {
 		log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
-		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, dc); err != nil {
+		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, params.GlobalOpts); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
 		return bashible.Prepare(ctx)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -143,26 +150,38 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		log.Success("Bashible already run! Skip bashible install\n")
+		logger.Success("Bashible already run! Skip bashible install")
 		return nil
 	}
 
+	// Bundle registry tunnel
+	bundleRegistryTunnelStop, err := registry.InitTunnel(ctx, registry.TunnelParams{
+		MetaConfig: cfg,
+		Node:       params.Node,
+		Logger:     params.LoggerProvider(),
+		GlobalOpts: params.GlobalOpts,
+	})
+	if err != nil {
+		return err
+	}
+	defer bundleRegistryTunnelStop()
+
+	// RPP + RPP tunnel
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
 		MetaConfig:     cfg,
 		Node:           nodeInterface,
 		LoggerProvider: params.LoggerProvider,
 		SignCheck:      config.GetRPPSignCheck(),
-		DirsConfig:     dc,
+		GlobalOpts:     params.GlobalOpts,
 		Interactive:    input.IsTerminal(),
 	})
-
 	if err != nil {
 		return err
 	}
 
 	defer registryPackagesProxyCleanup()
 
-	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, dc); err != nil {
+	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, params.GlobalOpts); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -175,24 +194,44 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
+	nodeInfo, err := bashible.ReadNodeInfo(ctx)
 	if err != nil {
-		return fmt.Errorf("read discovered node name: %w", err)
+		return fmt.Errorf("Cannot read node info: %w", err)
 	}
 
-	discoveredNodeIP, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
-	if err != nil {
-		return fmt.Errorf("read discovered node IP: %w", err)
-	}
-
-	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, dc); err != nil {
+	if err := PrepareControlPlaneArtifacts(nodeInfo, cfg, templateController, params.GlobalOpts); err != nil {
 		return err
+	}
+
+	modulesPreparators := getModulesPreparators(params)
+	for _, preparator := range modulesPreparators {
+		logger.DebugF("Starting prepare module %s", preparator.Module())
+		if err := preparator.PrepareModule(ctx); err != nil {
+			return err
+		}
 	}
 
 	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
 	})
+}
+
+func getModulesPreparators(params *BashiblePipelineParams) []ModulePreparator {
+	controlPlaneSettings := controlplane.NewSettingsExtractor(
+		params.MetaConfig,
+		config.NewSchemaStore(params.GlobalOpts),
+		config.GetEdition(),
+		params.LoggerProvider,
+	)
+
+	return []ModulePreparator{
+		controlplane.NewBootstrapPreparator(
+			controlPlaneSettings,
+			params.Node,
+			params.LoggerProvider,
+		),
+	}
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
@@ -252,7 +291,6 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			err := retry.NewLoopWithParams(p).RunContext(ctx, func() error {
 				return upload(ctx, scriptPath)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -266,10 +304,10 @@ func PrepareBashibleBundle(
 	nodeIP, devicePath string,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible", func(ctx context.Context) error {
-		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, dc)
+		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, globalOptions)
 	})
 }
 
@@ -277,15 +315,18 @@ func PrepareBashibleBundle(
 // control-plane static-pod manifests into the local template tmp dir for the
 // node identified by (nodeName, nodeIP).
 func PrepareControlPlaneArtifacts(
-	nodeName, nodeIP string,
+	nodeInfo *dhbashible.NodeInfo,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
+		nodeName := nodeInfo.NodeName
+		nodeIP := nodeInfo.NodeIP
+
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
 
-		controlPlaneData, err := metaConfig.ConfigForControlPlaneTemplates("")
+		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return fmt.Errorf("get control-plane template data: %w", err)
 		}
@@ -294,63 +335,16 @@ func PrepareControlPlaneArtifacts(
 		// control-plane endpoint that goes into the apiserver SAN list.
 		// Multi-master installations re-issue certificates later via
 		// control-plane-manager once additional master endpoints are known.
-		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneData); err != nil {
+		if err := template.PreparePKI(controller, nodeName, nodeIP, nodeIP, controlPlaneConfig); err != nil {
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneConfig, globalOptions); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
 		return nil
 	})
-}
-
-func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	cmd := nodeInterface.Command("cat", path)
-	cmd.Sudo(ctx)
-	cmd.WithTimeout(10 * time.Second)
-
-	stdout, stderr, err := cmd.Output(ctx)
-	if err != nil {
-		return "", fmt.Errorf("read remote file %s: %w; stderr: %s", path, err, string(stderr))
-	}
-
-	output := string(stdout)
-	// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
-	// strip everything up to and including the last occurrence so we keep only
-	// the actual file payload. For non-sudo paths the marker is absent and
-	// output stays untouched.
-	if idx := strings.LastIndex(output, "SUDO-SUCCESS"); idx >= 0 {
-		output = output[idx+len("SUDO-SUCCESS"):]
-	}
-
-	return strings.TrimSpace(output), nil
-}
-
-// readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
-func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
-	extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
-	p := retry.NewEmptyParams(
-		retry.WithName("Read remote file %s", path),
-		retry.WithAttempts(5),
-		retry.WithWait(3*time.Second),
-		retry.WithLogger(extLogger()),
-	)
-	var value string
-	err := retry.NewLoopWithParams(p).
-		RunContext(ctx, func() error {
-			v, err := readRemoteFile(ctx, nodeInterface, path)
-			if err != nil {
-				return err
-			}
-			value = v
-			return nil
-		})
-	if err != nil {
-		return "", err
-	}
-	return value, nil
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
@@ -363,9 +357,11 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClien
 
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 
+		// Poll every 2s instead of 5s — VM SSH typically comes up within ~10s after
+		// cloud-init finishes. Total timeout preserved at ~250s via larger attempt count.
 		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
-			retry.WithWait(5*time.Second),
-			retry.WithAttempts(50),
+			retry.WithWait(2*time.Second),
+			retry.WithAttempts(125),
 			retry.WithLogger(extLogger()),
 		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
@@ -401,7 +397,9 @@ func InstallDeckhouse(
 			return err
 		}
 
-		resManifests, err := deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
+		resManifests, err := withSpan(ctx, "InstallDeckhouse.CreateManifests", func(ctx context.Context) (*deckhouse.ManifestsResult, error) {
+			return deckhouse.CreateDeckhouseManifests(ctx, kubeCl, config, params.BeforeDeckhouseTask)
+		})
 		if err != nil {
 			return fmt.Errorf("Deckhouse create manifests: %w", err)
 		}
@@ -412,21 +410,35 @@ func InstallDeckhouse(
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
-		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
-		if err != nil {
+		if err := withSpanErr(ctx, "InstallDeckhouse.WaitDeckhouseReady", func(ctx context.Context) error {
+			return deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
+		}); err != nil {
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}
 
 		// Warning! This function must be called at the end of the Deckhouse installation phase.
 		// At the end of this function, the registry-init secret is deleted,
 		// which is used during DeckhouseInstall for certain registry operation modes.
-		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
-		if err != nil {
+		if err := withSpanErr(ctx, "InstallDeckhouse.WaitRegistryReady", func(ctx context.Context) error {
+			return registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		}); err != nil {
 			return fmt.Errorf("registry initialization: %v", err)
 		}
 
 		return nil
 	})
+}
+
+func withSpan[T any](ctx context.Context, name string, fn func(ctx context.Context) (T, error)) (T, error) {
+	ctx, span := telemetry.StartSpan(ctx, name)
+	defer span.End()
+	return fn(ctx)
+}
+
+func withSpanErr(ctx context.Context, name string, fn func(ctx context.Context) error) error {
+	ctx, span := telemetry.StartSpan(ctx, name)
+	defer span.End()
+	return fn(ctx)
 }
 
 func BootstrapTerraNodes(
@@ -435,9 +447,10 @@ func BootstrapTerraNodes(
 	metaConfig *config.MetaConfig,
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
 ) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Create CloudPermanent NG", func(ctx context.Context) error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions)
 	})
 }
 
@@ -465,7 +478,15 @@ func GetBastionHostFromCache(ctx context.Context) (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context, stateCache state.Cache) error {
+func BootstrapAdditionalMasterNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	addressTracker map[string]string,
+	infrastructureContext *infrastructure.Context,
+	stateCache state.Cache,
+	globalOptions *options.GlobalOptions,
+) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -478,7 +499,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext, globalOptions)
 			if err != nil {
 				return err
 			}
@@ -534,7 +555,6 @@ func BootstrapGetNodesFromCache(
 }
 
 func applyPostBootstrapModuleConfigs(
-	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	tasks []actions.ModuleConfigTask,
 ) error {
@@ -568,6 +588,6 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
-		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

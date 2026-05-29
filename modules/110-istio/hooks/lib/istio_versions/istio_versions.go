@@ -21,11 +21,12 @@ import "encoding/json"
 type IstioVersionsMap map[string]IstioVersionInfo
 
 type IstioVersionInfo struct {
-	FullVersion     string `json:"fullVersion"`
-	Revision        string `json:"revision"`
-	ImageSuffix     string `json:"imageSuffix"`
-	IsReady         bool   `json:"isReady"`
-	SupportsAmbient bool   `json:"supportsAmbient"`
+	FullVersion      string `json:"fullVersion"`
+	Revision         string `json:"revision"`
+	ImageSuffix      string `json:"imageSuffix"`
+	IsReady          bool   `json:"isReady"`
+	SupportsAmbient  bool   `json:"supportsAmbient"`
+	SupportsOperator bool   `json:"supportsOperator"`
 }
 
 func (vm IstioVersionsMap) GetVersionByRevision(rev string) string {
@@ -62,6 +63,23 @@ func (vm IstioVersionsMap) DoesSupportAmbient(fullVer string) bool {
 		}
 	}
 	return false
+}
+
+func (vm IstioVersionsMap) DoesSupportOperator(fullVer string) bool {
+	for _, istioVerInfo := range vm {
+		if istioVerInfo.FullVersion == fullVer {
+			return istioVerInfo.SupportsOperator
+		}
+	}
+	return false
+}
+
+func (vm IstioVersionsMap) DoesVersionSupportOperator(version string) bool {
+	istioVerInfo, ok := vm[version]
+	if !ok {
+		return false
+	}
+	return istioVerInfo.SupportsOperator
 }
 
 func (vm IstioVersionsMap) IsRevisionSupported(rev string) bool {
