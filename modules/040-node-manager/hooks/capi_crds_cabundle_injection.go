@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -42,6 +43,10 @@ var capiCRDs = []string{
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Settings: &go_hook.HookConfigSettings{
+		ExecutionMinInterval: 5 * time.Second,
+		ExecutionBurst:       3,
+	},
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:       "/modules/node-manager/capi-crds-conversions",
 	Kubernetes: []go_hook.KubernetesConfig{
