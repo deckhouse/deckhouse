@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -37,13 +38,22 @@ func BootstrapTerraNodes(
 	metaConfig *config.MetaConfig,
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
 ) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Create CloudPermanent NG", func(ctx context.Context) error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
+		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions)
 	})
 }
 
-func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, infrastructureContext *infrastructure.Context, stateCache state.Cache) error {
+func BootstrapAdditionalMasterNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	addressTracker map[string]string,
+	infrastructureContext *infrastructure.Context,
+	stateCache state.Cache,
+	globalOptions *options.GlobalOptions,
+) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -56,7 +66,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext)
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext, globalOptions)
 			if err != nil {
 				return err
 			}

@@ -35,7 +35,7 @@ require (
 	go.etcd.io/etcd/api/v3 v3.6.0
 	go.etcd.io/etcd/client/v3 v3.6.0
 	google.golang.org/grpc v1.80.0
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1

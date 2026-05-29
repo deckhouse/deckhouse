@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/relay"
 )
@@ -160,7 +160,7 @@ func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
 type ExecuteBundleParams struct {
 	BundleDir     string
 	CommanderMode bool
-	DirsConfig    *directoryconfig.DirectoryConfig
+	GlobalOpts    *options.GlobalOptions
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
@@ -181,7 +181,7 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 			Span:       span,
 			Node:       r.nodeInterface,
 			Logger:     r.loggerProvider(),
-			DirsConfig: params.DirsConfig,
+			GlobalOpts: params.GlobalOpts,
 		})
 		if err != nil {
 			return fmt.Errorf("init OTel relay: %w", err)

@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -41,7 +41,7 @@ type RelayParams struct {
 	Span       trace.Span
 	Node       libcon.Interface
 	Logger     log.Logger
-	DirsConfig *directoryconfig.DirectoryConfig
+	GlobalOpts *options.GlobalOptions
 }
 
 type Relay struct {
@@ -96,10 +96,10 @@ func InitRelay(ctx context.Context, params RelayParams) (stopFunc, updateRelaySp
 	// Create checker/killer for health monitor
 	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
 		fmt.Sprintf("http://%s:%s/healthz", RelayAddress, RelayPort),
-		params.DirsConfig,
+		params.GlobalOpts,
 	)
 	if err == nil {
-		killScript, err := template.RenderAndSaveKillReverseTunnelScript(RelayAddress, RelayPort, params.DirsConfig)
+		killScript, err := template.RenderAndSaveKillReverseTunnelScript(RelayAddress, RelayPort, params.GlobalOpts)
 		if err == nil {
 			checker := utils.NewRunScriptReverseTunnelChecker(wrapper.Client(), checkScript)
 			killer := utils.NewRunScriptReverseTunnelKiller(wrapper.Client(), killScript)

@@ -33,8 +33,8 @@ import (
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
@@ -53,9 +53,9 @@ type BashiblePipelineParams struct {
 	DevicePath             string
 	CommanderMode          bool
 	IsDebug                bool
-	DirsConfig             *directoryconfig.DirectoryConfig
 	LoggerProvider         dhctllog.LoggerProvider
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	GlobalOpts             *options.GlobalOptions
 }
 
 func (p *BashiblePipelineParams) Validate() error {
@@ -65,10 +65,6 @@ func (p *BashiblePipelineParams) Validate() error {
 
 	if govalue.IsNil(p.MetaConfig) {
 		return p.errIsNil("MetaConfig")
-	}
-
-	if govalue.IsNil(p.DirsConfig) {
-		return p.errIsNil("DirsConfig")
 	}
 
 	if govalue.IsNil(p.LoggerProvider) {
@@ -96,10 +92,10 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	cfg := params.MetaConfig
 	nodeInterface := params.Node
-	dc := params.DirsConfig
 	nodeIP := params.NodeIP
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
+	globalOpts := params.GlobalOpts
 
 	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
 	if err := depsChecker.Check(ctx); err != nil {
@@ -112,7 +108,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	err := log.ProcessCtx(ctx, "bootstrap", "Preparing bootstrap", func(ctx context.Context) error {
 		log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
-		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, dc); err != nil {
+		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, globalOpts); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -139,7 +135,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		Node:           nodeInterface,
 		LoggerProvider: params.LoggerProvider,
 		SignCheck:      config.GetRPPSignCheck(),
-		DirsConfig:     dc,
+		GlobalOpts:     globalOpts,
 		Interactive:    input.IsTerminal(),
 	})
 
@@ -150,7 +146,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	defer registryPackagesProxyCleanup()
 	params.PhasedExecutionContext.CompleteSubPhase(phases.InstallKubernetesSubPhaseRegistryPackagesProxy)
 
-	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, dc); err != nil {
+	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, globalOpts); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -175,7 +171,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return fmt.Errorf("read discovered node IP: %w", err)
 	}
 
-	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, dc); err != nil {
+	if err := PrepareControlPlaneArtifacts(nodeName, discoveredNodeIP, cfg, templateController, globalOpts); err != nil {
 		return err
 	}
 
@@ -184,7 +180,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if err := bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
-		DirsConfig:    params.DirsConfig,
+		GlobalOpts:    params.GlobalOpts,
 	}); err != nil {
 		return err
 	}
@@ -264,10 +260,10 @@ func PrepareBashibleBundle(
 	nodeIP, devicePath string,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
-	dc *directoryconfig.DirectoryConfig,
+	globalOpts *options.GlobalOptions,
 ) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible", func(ctx context.Context) error {
-		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, dc)
+		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, globalOpts)
 	})
 }
 
@@ -275,7 +271,7 @@ func PrepareControlPlaneArtifacts(
 	nodeName, nodeIP string,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
-	dc *directoryconfig.DirectoryConfig,
+	globalOpts *options.GlobalOptions,
 ) error {
 	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
 		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
@@ -293,7 +289,7 @@ func PrepareControlPlaneArtifacts(
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, dc); err != nil {
+		if err := template.PrepareControlPlaneManifests(controller, controlPlaneData, globalOpts); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
