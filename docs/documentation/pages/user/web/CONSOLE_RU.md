@@ -32,7 +32,7 @@ lang: ru
 
 В подразделе «Обзор» представлена ключевая информация о кластере Deckhouse Kubernetes Platform (DKP) и его компонентах.
 
-![Интерфейс подраздела «Обзор»](../../images/console/console_main.png)
+![Интерфейс подраздела «Обзор»](../../images/console/console_main.ru.png)
 
 Основные элементы веб-интерфейса:
 
@@ -59,13 +59,13 @@ lang: ru
 
 В подразделе «Обновления» содержится информация о релизах DKP.
 
-![Интерфейс подраздела «Обновления»](../../images/console/releases.png)
+![Интерфейс подраздела «Обновления»](../../images/console/releases.ru.png)
 
 ### Подраздел «Модули»
 
 В подразделе «Модули» перечислены запущенные и отключенные модули. Для поиска необходимого модуля предусмотрен фильтр.
 
-![Интерфейс подраздела «Модули»](../../images/console/modules.png)
+![Интерфейс подраздела «Модули»](../../images/console/modules.ru.png)
 
 ### Подраздел «Глобальные настройки»
 
@@ -80,15 +80,15 @@ lang: ru
 Эти настройки влияют на стабильность, безопасность и отказоустойчивость кластера, поэтому изменяйте их с осторожностью.
 {% endalert %}
 
-![Интерфейс подраздела «Глобальные настройки»](../../images/console/global_settings.png)
+![Интерфейс подраздела «Глобальные настройки»](../../images/console/global_settings.ru.png)
 
 ### Подраздел «Kubernetes»
 
 На вкладках подраздела «Kubernetes» собрана базовая информация о кластере Kubernetes.
 
-![Вкладка «Конфигурация» подраздела «Kubernetes»](../../images/console/system-management-deckhouse-cluster-configuration.png)
+![Вкладка «Конфигурация» подраздела «Kubernetes»](../../images/console/system-management-deckhouse-cluster-configuration.ru.png)
 
-![Вкладка «Облако» подраздела «Kubernetes»](../../images/console/system-management-deckhouse-cluster-configuration-cloud.png)
+![Вкладка «Облако» подраздела «Kubernetes»](../../images/console/system-management-deckhouse-cluster-configuration-cloud.ru.png)
 
 ## Управление узлами
 
@@ -105,13 +105,13 @@ lang: ru
 
 В нижней части формы находятся дополнительные настройки, включая параметры обновления узлов, шаблон узла, системные параметры, а также параметры Chaos Monkey, которые также можно раскрыть для детальной конфигурации.
 
-![Интерфейс подраздела «Группы узлов»](../../images/console/system-management-nodes-node-groups-ftname-worker.png)
+![Интерфейс подраздела «Группы узлов»](../../images/console/system-management-nodes-node-groups-ftname-worker.ru.png)
 
-![Данные о статусе группы в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-worker.png)
+![Данные о статусе группы в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-worker.ru.png)
 
-![Редактирование параметров шаблона узла в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-worker-3.png)
+![Редактирование параметров шаблона узла в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-worker-3.ru.png)
 
-![Редактирование системных параметров узлов в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-worker-2.png)
+![Редактирование системных параметров узлов в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-worker-2.ru.png)
 
 В карточке группы узлов отображаются:
 
@@ -120,32 +120,32 @@ lang: ru
 - метрики нагрузки (CPU, память, диск);
 - тейнты и лейблы.
 
-![Карточка группы в подразделе «Группы узлов»](../../images/console/master_card.png)
+![Карточка группы в подразделе «Группы узлов»](../../images/console/master_card.ru.png)
 
 Кнопка «Создать» в правом верхнем углу открывает форму создания новой группы узлов.
 
-![Кнопка создания новой группы в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-ftname-worker-2.png)
+![Кнопка создания новой группы в подразделе «Группы узлов»](../../images/console/system-management-nodes-node-groups-ftname-worker-2.ru.png)
 
 В форме можно задать необходимые параметры создаваемой группы узлов.
 
-![Редактирование основных параметров](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-3.png)
+![Редактирование основных параметров](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-3.ru.png)
 
-![Редактирование параметров автомасштабирования](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-4.png)
+![Редактирование параметров автомасштабирования](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-4.ru.png)
 
-![Редактирование параметров обновления узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-5.png)
+![Редактирование параметров обновления узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-5.ru.png)
 
-![Редактирование параметров шаблона узла](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-6.png)
+![Редактирование параметров шаблона узла](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-6.ru.png)
 
-![Редактирование системных параметров узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-8.png)
+![Редактирование системных параметров узлов](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-8.ru.png)
 
 ### Подраздел «Классы машин»
 
 Этот подраздел предназначен для управления классами машин, используемых в кластере.
 Список классов можно сортировать.
 
-![Интерфейс подраздела «Классы машин»](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
+![Интерфейс подраздела «Классы машин»](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.ru.png)
 
-![Информация о выбранном классе машин](../../images/console/system-management-dvpinstanceclasses-deckhouse-io-worker.png)
+![Информация о выбранном классе машин](../../images/console/system-management-dvpinstanceclasses-deckhouse-io-worker.ru.png)
 
 В форме «Добавление класса машин» можно задаются параметры новой конфигурации машин для кластера.
 
@@ -183,7 +183,7 @@ lang: ru
 
 Также здесь представлены графики загрузки CPU, памяти, диска и сетевого трафика, что позволяет отслеживать производительность узла. Для управления доступностью узла в кластере предусмотрены кнопки «Cordon» и «Cordon+Drain».
 
-![Интерфейс подраздела «Узлы»](../../images/console/system-management-nodes-nodes.png)
+![Интерфейс подраздела «Узлы»](../../images/console/system-management-nodes-nodes.ru.png)
 
 ### Подраздел «Статические машины»
 
@@ -202,7 +202,7 @@ lang: ru
 
 Дополнительно можно задать лейблы, указав ключи и значения для дальнейшей идентификации и управления машиной.
 
-![Форма добавления новой машины](../../images/console/new_mashine.png)
+![Форма добавления новой машины](../../images/console/new_machine.ru.png)
 
 Кнопка «Добавить SSH-доступ» на вкладке «SSH-доступы» открывает форму настройки подключения к узлам через SSH. В форме необходимо указать:
 
@@ -213,7 +213,7 @@ lang: ru
 
 Дополнительно доступны поля для изменения SSH-порта и добавления дополнительных SSH-аргументов.
 
-![Форма добавления SSH-доступа](../../images/console/ssh_access.png)
+![Форма добавления SSH-доступа](../../images/console/ssh_access.ru.png)
 
 ## Мультитенантность
 
@@ -229,7 +229,7 @@ lang: ru
 
 Для управления доступом, ограничения ресурсов и настройки сетевой изоляции используются стандартные механизмы Kubernetes. Это позволяет управлять безопасностью и нагрузкой внутри неймспейса.
 
-![Интерфейс подраздела «Проекты»](../../images/console/projects.png)
+![Интерфейс подраздела «Проекты»](../../images/console/projects.ru.png)
 
 Кнопка «Создать проект» открывает форму добавления нового проекта на основе выбранного шаблона. В форме необходимо задать имя проекта, а также можно опционально добавить лейблы и аннотации.
 
@@ -238,7 +238,7 @@ lang: ru
 
 В нижней части формы предусмотрены поля для ввода параметров шаблона, а также для отображения его структуры.
 
-![Форма создания нового проекта](../../images/console/system-management-multitenancy-projects-new-spec-2.png)
+![Форма создания нового проекта](../../images/console/system-management-multitenancy-projects-new-spec-2.ru.png)
 
 ### Подраздел «Шаблоны проектов»
 
@@ -246,7 +246,7 @@ lang: ru
 
 Шаблоны проектов по умолчанию включают базовые сценарии использования и демонстрируют возможности DKP. Для добавления нового шаблона используется кнопка «Создать» в правом верхнем углу.
 
-![Интерфейс подраздела «Шаблоны проектов»](../../images/console/system-management-projecttemplates-deckhouse-io.png)
+![Интерфейс подраздела «Шаблоны проектов»](../../images/console/system-management-projecttemplates-deckhouse-io.ru.png)
 
 Форма «Новый шаблон проекта» позволяет задать имя шаблона, а также добавить лейблы и аннотации для его идентификации.
 
@@ -255,11 +255,11 @@ lang: ru
 - «Схема OpenAPI» — для описания спецификации значений в формате JSON;
 - «Шаблон ресурсов проекта» — для определения ресурсов, совместимых с Helm, и управления окружением проекта.
 
-![Вкладка «Схема OpenAPI»](../../images/console/system-management-multitenancy-project-templates-default-spec.png)
+![Вкладка «Схема OpenAPI»](../../images/console/system-management-multitenancy-project-templates-default-spec.ru.png)
 
-![Вкладка «Шаблон ресурсов проекта»](../../images/console/system-management-multitenancy-project-templates-default-spec-template.png)
+![Вкладка «Шаблон ресурсов проекта»](../../images/console/system-management-multitenancy-project-templates-default-spec-template.ru.png)
 
-Новые шаблон можно создать на основе уже существующего.
+Новый шаблон можно создать на основе уже существующего.
 
 ![Создание нового шаблона на основе существующего](../../images/console/system-management-multitenancy-project-templates-new-spec-copyfrom-default.png)
 
@@ -269,17 +269,17 @@ lang: ru
 
 В секции «Обзор» предоставлена информация об общем состоянии неймспейса.
 
-![Секция «Обзор» подраздела «Пользовательские неймспейсы»](../../images/console/projects-user-namespaces-commander-project-1.png)
+![Секция «Обзор» подраздела «Пользовательские неймспейсы»](../../images/console/projects-user-namespaces-commander-project-1.ru.png)
 
 Здесь можно управлять параметрами Deployment и других сущностей кластера.
 
-![Настройка Deployment пользовательского неймспейса](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-affinity.png)
+![Настройка Deployment пользовательского неймспейса](../../images/console/projects-user-namespaces-commander-project-1-apps-deployments-nginx-spec-placement-affinity.ru.png)
 
 Кроме того, можно настраивать лимиты и квоты ресурсов.
 
-![Настройка лимитов в пользовательском неймспейсе](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core-new-2.png)
+![Настройка лимитов в пользовательском неймспейсе](../../images/console/projects-user-namespaces-commander-project-1-limitranges-core-new-2.ru.png)
 
-![Настройка квот в пользовательском неймспейсе](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
+![Настройка квот в пользовательском неймспейсе](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.ru.png)
 
 ## Доступ
 
@@ -287,13 +287,13 @@ lang: ru
 
 Подраздел предоставляет интерфейс управления пользователями.
 
-![Интерфейс подраздела «Операции над пользователями»](../../images/console/operation-with-users-1.png)
+![Интерфейс подраздела «Операции над пользователями»](../../images/console/operation-with-users-1.ru.png)
 
 При необходимости вы можете заблокировать пользователя или сбросить пароль.
 
-![Форма блокировки пользователя](../../images/console/operation-with-users-2.png)
+![Форма блокировки пользователя](../../images/console/operation-with-users-2.ru.png)
 
-![Форма сброса пароля пользователя](../../images/console/operation-with-users-6.png)
+![Форма сброса пароля пользователя](../../images/console/operation-with-users-6.ru.png)
 
 ## Сеть
 
@@ -328,25 +328,25 @@ lang: ru
 
 Подраздел предназначен для управления классами хранилищ.
 
-![Интерфейс подраздела «Классы хранилищ»](../../images/console/system-management-storage-storage-classes.png)
+![Интерфейс подраздела «Классы хранилищ»](../../images/console/system-management-storage-storage-classes.ru.png)
 
 ### Подраздел «Persistent volume»
 
 Подраздел предназначен для управления постоянными томами.
 
-![Интерфейс подраздела «Persistent volume»](../../images/console/system-management-persistentvolumes-core.png)
+![Интерфейс подраздела «Persistent volume»](../../images/console/system-management-persistentvolumes-core.ru.png)
 
 ### Подраздел «Локальные тома»
 
 Подраздел предназначен для управления локальными томами. Содержит четыре секции для управления пулами, группами томов, логическими томами и блочными устройствами.
 
-![Интерфейс секции «Пулы»](../../images/console/system-management-storage-lvm-replicatedstoragepools.png)
+![Интерфейс секции «Пулы»](../../images/console/system-management-storage-lvm-replicatedstoragepools.ru.png)
 
-![Интерфейс секции «Группы томов»](../../images/console/system-management-storage-lvm-volume-groups.png)
+![Интерфейс секции «Группы томов»](../../images/console/system-management-storage-lvm-volume-groups.ru.png)
 
-![Интерфейс секции «Логические тома»](../../images/console/system-management-storage-lvm-logical-volumes.png)
+![Интерфейс секции «Логические тома»](../../images/console/system-management-storage-lvm-logical-volumes.ru.png)
 
-![Интерфейс секции «Блочные устройства»](../../images/console/system-management-blockdevices-storage-deckhouse-io.png)
+![Интерфейс секции «Блочные устройства»](../../images/console/system-management-blockdevices-storage-deckhouse-io.ru.png)
 
 ## Безопасность
 
@@ -359,7 +359,7 @@ lang: ru
 - Вкладка «Отчеты об уязвимостях» отображает результаты последних сканирований. Здесь представлена информация о проверенном объекте, включая его имя, неймспейс, тип и имя ресурса, контейнер, а также используемый образ. Если уязвимости не обнаружены, отображается зеленый индикатор. Кнопка «Пересканировать» позволяет выполнить повторное сканирование.
 - Вкладка «Сканируемые неймспейсы» предназначена для управления неймспейсами, которые подлежат сканированию. Интерфейс поддерживает сортировку по имени и параметрам сканирования. Опционально можно скрыть системные неймспейсы. Доступен выбор нужных неймспейсов для сканирования и запуск процессов проверки кнопкой «Пересканировать», а также просмотр отчётов по каждому объекту.
 
-![Интерфейс подраздела «Сканер CVE»](../../images/console/scaner_cve.png)
+![Интерфейс подраздела «Сканер CVE»](../../images/console/scaner_cve.ru.png)
 
 ## Мониторинг
 
@@ -371,23 +371,23 @@ lang: ru
 
 На вкладке «Состояние» отображается список работающих подов с указанием имени, узла размещения, статуса, IP-адреса, возраста, а также загрузки CPU и памяти. Для каждого пода указаны компоненты, такие как `init-config-reloader`, [`prometheus`](/modules/prometheus/), `config-reloader` и `kube-rbac-proxy`, обеспечивающие его работу. Кнопка справа позволяет удалить выбранный под.
 
-![Вкладка «Состояние»](../../images/console/monitoring_review.png)
+![Вкладка «Состояние»](../../images/console/monitoring_review.ru.png)
 
 На вкладке «Конфигурация» представлены раскрывающиеся секции для настройки различных аспектов работы Prometheus, включая оперативные и ретроспективные метрики, аутентификацию и подключение к Grafana, а также управление ресурсами. Этот интерфейс предназначен для отслеживания состояния метрик в реальном времени и гибкой настройки интеграции с другими сервисами.
 
-![Вкладка «Конфигурация»](../../images/console/monitoring_review1.png)
+![Вкладка «Конфигурация»](../../images/console/monitoring_review1.ru.png)
 
 ### Подраздел «Обработка метрик»
 
 Подраздел позволяет создавать и управлять правилами обработки метрик. При добавлении нового правила задайте его название и укажите группу обработки. Это даст возможность организовывать и модифицировать поступающие метрики перед их дальнейшей передачей.
 
-![Форма создания нового правила обработки метрик](../../images/console/metrics_processing.png)
+![Форма создания нового правила обработки метрик](../../images/console/metrics_processing.ru.png)
 
 ### Подраздел «Отправка метрик»
 
 Подраздел предназначен для настройки экспорта данных в локальный или внешний сервер Prometheus. В процессе добавления нового ресурса указываются URL-адреса для отправки метрик, а также настраиваются параметры TLS, аутентификация и возможность предварительной обработки метрик перед отправкой.
 
-![Форма настройки отправки метрик](../../images/console/sending_metrics.png)
+![Форма настройки отправки метрик](../../images/console/sending_metrics.ru.png)
 
 ### Подраздел «Источники для Grafana»
 
@@ -395,7 +395,7 @@ lang: ru
 
 Чтобы создать новый источник данных, задайте его название, тип, URL-адрес, параметры доступа и настройки аутентификации.
 
-![Форма создания нового источника данных для Grafana](../../images/console/add_grafana.png)
+![Форма создания нового источника данных для Grafana](../../images/console/add_grafana.ru.png)
 
 ### Подраздел «Дашборды для Grafana»
 
@@ -412,7 +412,7 @@ lang: ru
 1. Задайте имя нового дашборда и папку, в которой он будет храниться (если папка не существует, она будет автоматически создана).
 1. Введите JSON-манифест, содержащий описание конфигурации дашборда. Важно, чтобы в манифесте не было локального ID (кроме UID), иначе дашборд может некорректно отображаться в Grafana.
 
-![Интерфейс подраздела «Дашборды для Grafana»](../../images/console/grafana_dashboard.png)
+![Интерфейс подраздела «Дашборды для Grafana»](../../images/console/grafana_dashboard.ru.png)
 
 ### Подраздел «Активные алерты»
 
@@ -423,7 +423,7 @@ lang: ru
 
 Чтобы получить подробную информацию об алерте, нажмите «Читать описание». В самом низу отображается пояснение о причине срабатывания алерта.
 
-![Интерфейс подраздела «Активные алерты»](../../images/console/active_alerts.png)
+![Интерфейс подраздела «Активные алерты»](../../images/console/active_alerts.ru.png)
 
 Список всех доступных алертов системы мониторинга DKP приведён на [отдельной странице документации](../../reference/alerts.html).
 
@@ -454,7 +454,7 @@ lang: ru
    - ограничения отправки, позволяющие задать частоту отправки записей;
    - исключения, позволяющие фильтровать определенные логи.
 
-![Форма настройки отправки логов](../../images/console/logs-send.png)
+![Форма настройки отправки логов](../../images/console/logs-send.ru.png)
 
 ### Подраздел «Сбор логов»
 
@@ -472,14 +472,14 @@ lang: ru
    - «Разделитель строк» (опционально) — задайте символ, разделяющий записи в файле;
    - «Фильтрация логов» (опционально) — добавьте правила фильтрации по лейблам и фильтры, чтобы сохранять только нужные записи.
 
-![Форма настройки источника сбора логов](../../images/console/log_rule.png)
+![Форма настройки источника сбора логов](../../images/console/log_rule.ru.png)
 
 ## Просмотр информации об API
 
 Чтобы просмотреть информацию об API в формате Swagger, нажмите кнопку со знаком вопроса в левом нижнем углу интерфейса в выпадающем пользовательском меню.
 
-![Кнопка для просмотра информации об API](../../images/console/releases.png)
+![Кнопка для просмотра информации об API](../../images/console/releases.ru.png)
 
-![Окно с общей информацией об API](../../images/console/swagger-1.png)
+![Окно с общей информацией об API](../../images/console/swagger-1.ru.png)
 
-![Просмотр детальной информации о запросе](../../images/console/swagger-3.png)
+![Просмотр детальной информации о запросе](../../images/console/swagger-3.ru.png)

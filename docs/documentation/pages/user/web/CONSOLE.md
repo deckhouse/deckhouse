@@ -137,9 +137,9 @@ The form lets you specify the required parameters for the new node group.
 
 ![Editing node system parameters](../../images/console/system-management-nodes-node-groups-new-type-cloudephemeral-8.png)
 
-### "Machine classes" subsection
+### "Instance classes" subsection
 
-This subsection is intended for managing machine classes used in the cluster.
+This subsection is intended for managing instance classes used in the cluster.
 The class list can be sorted.
 
 !["Machine classes" subsection interface](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
@@ -201,7 +201,7 @@ The "Add instance" button on the "Instances" tab opens the form for adding a new
 
 Additionally, you can specify labels by defining keys and values for further identification and management of the instance.
 
-![New instance creation form](../../images/console/new_mashine.png)
+![New instance creation form](../../images/console/new_machine.png)
 
 The "Add SSH access" button on the "SSH access" tab opens the form for configuring SSH connections to nodes. The form requires the following information:
 
