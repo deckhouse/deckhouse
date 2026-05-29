@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
-type LeafCertificateInfo struct {
+type leafCertificateInfo struct {
 	Name        LeafCertName
 	Description string
 }
@@ -255,8 +255,8 @@ func LeafDescription(name LeafCertName) string {
 }
 
 // defaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
-func defaultLeafCertificates() []LeafCertificateInfo {
-	return []LeafCertificateInfo{
+func defaultLeafCertificates() []leafCertificateInfo {
+	return []leafCertificateInfo{
 		{ApiserverCertName, "certificate for serving the Kubernetes API"},
 		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
 		{ApiserverEtcdClientCertName, "certificate the apiserver uses to access etcd"},
@@ -269,7 +269,7 @@ func defaultLeafCertificates() []LeafCertificateInfo {
 
 // selectLeafs returns the inventory with only the given names, preserving the canonical order.
 // When names is empty, returned default inventory.
-func selectLeafs(names []LeafCertName) []LeafCertificateInfo {
+func selectLeafs(names []LeafCertName) []leafCertificateInfo {
 	full := defaultLeafCertificates()
 	if len(names) == 0 {
 		return full
@@ -280,7 +280,7 @@ func selectLeafs(names []LeafCertName) []LeafCertificateInfo {
 		wanted[n] = struct{}{}
 	}
 
-	result := make([]LeafCertificateInfo, 0, len(names))
+	result := make([]leafCertificateInfo, 0, len(names))
 	for _, info := range full {
 		if _, ok := wanted[info.Name]; ok {
 			result = append(result, info)

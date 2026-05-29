@@ -32,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/util/pkiutil"
 )
 
-type FileInfo struct {
+type fileInfo struct {
 	File        File
 	Description string
 }
@@ -50,8 +50,8 @@ func FileDescription(file File) string {
 
 // defaultRenewableFiles returns the canonical list of renewable kubeconfig files.
 // The kubelet.conf entry is intentionally omitted — kubelet manages its own client certificate rotation.
-func defaultRenewableFiles() []FileInfo {
-	return []FileInfo{
+func defaultRenewableFiles() []fileInfo {
+	return []fileInfo{
 		{Admin, "certificate embedded in the kubeconfig file for the admin to use"},
 		{SuperAdmin, "certificate embedded in the kubeconfig file for the super-admin"},
 		{ControllerManager, "certificate embedded in the kubeconfig file for the controller manager to use"},
@@ -262,7 +262,7 @@ func RenewClientCerts(opts ...RenewOption) KubeconfigRenewReport {
 
 // selectFiles returns the inventory with only the given files, preserving the canonical order.
 // When files is empty, returned default inventory.
-func selectFiles(files []File) []FileInfo {
+func selectFiles(files []File) []fileInfo {
 	full := defaultRenewableFiles()
 	if len(files) == 0 {
 		return full
@@ -273,7 +273,7 @@ func selectFiles(files []File) []FileInfo {
 		wanted[f] = struct{}{}
 	}
 
-	result := make([]FileInfo, 0, len(files))
+	result := make([]fileInfo, 0, len(files))
 	for _, info := range full {
 		if _, ok := wanted[info.File]; ok {
 			result = append(result, info)
