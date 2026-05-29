@@ -19,54 +19,35 @@ package hooks
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
-
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 type autoscalerNodeGroup struct {
-	Name       string
-	Engine     ngv1.NodeGroupEngine
-	UseMCM     bool
-	NodeType   ngv1.NodeType
-	MinPerZone int32
-	MaxPerZone int32
-	CloudZones []string
+	Name string
 }
 
 func autoscalerNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var ng ngv1.NodeGroup
+	return autoscalerNodeGroup{Name: obj.GetName()}, nil
+}
 
-	err := sdk.FromUnstructured(obj, &ng)
-	if err != nil {
-		return nil, err
-	}
+type autoscalerNodeGroupValue struct {
+	Name           string                `json:"name"`
+	Engine         ngv1.NodeGroupEngine  `json:"engine"`
+	NodeType       ngv1.NodeType         `json:"nodeType"`
+	CloudInstances autoscalerCloudValues `json:"cloudInstances"`
+}
 
-	var minPerZone int32
-	if ng.Spec.CloudInstances.MinPerZone != nil {
-		minPerZone = *ng.Spec.CloudInstances.MinPerZone
-	}
-
-	var maxPerZone int32
-	if ng.Spec.CloudInstances.MaxPerZone != nil {
-		maxPerZone = *ng.Spec.CloudInstances.MaxPerZone
-	}
-
-	return autoscalerNodeGroup{
-		Name:       ng.Name,
-		Engine:     ng.Status.Engine,
-		UseMCM:     ng.GetAnnotations()[useMCMAnnotation] != "",
-		NodeType:   ng.Spec.NodeType,
-		MinPerZone: minPerZone,
-		MaxPerZone: maxPerZone,
-		CloudZones: ng.Spec.CloudInstances.Zones,
-	}, nil
+type autoscalerCloudValues struct {
+	MinPerZone *int32   `json:"minPerZone"`
+	MaxPerZone *int32   `json:"maxPerZone"`
+	Zones      []string `json:"zones"`
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -91,33 +72,31 @@ func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_
 	prefix := input.Values.Get("nodeManager.internal.instancePrefix").String()
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 
-	snaps := input.Snapshots.Get("node_group")
-	for ng, err := range sdkobjectpatch.SnapshotIter[autoscalerNodeGroup](snaps) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
-		}
+	var nodeGroups []autoscalerNodeGroupValue
+	if err := json.Unmarshal([]byte(input.Values.Get("nodeManager.internal.nodeGroups").String()), &nodeGroups); err != nil {
+		return fmt.Errorf("failed to unmarshal 'nodeManager.internal.nodeGroups': %w", err)
+	}
 
+	for _, ng := range nodeGroups {
 		if ng.NodeType != ngv1.NodeTypeCloudEphemeral {
 			continue
 		}
-		if ng.MinPerZone == ng.MaxPerZone {
+		if ng.CloudInstances.MinPerZone == nil || ng.CloudInstances.MaxPerZone == nil {
+			continue
+		}
+		if *ng.CloudInstances.MinPerZone == *ng.CloudInstances.MaxPerZone {
 			continue
 		}
 
-		engine := ng.Engine
-		if engine == "" {
-			engine = defaultCloudEphemeralNodeGroupEngineForNewNodeGroups(input, ng.UseMCM)
-		}
-
-		for _, zoneName := range ng.CloudZones {
+		for _, zoneName := range ng.CloudInstances.Zones {
 			mdSuffix := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%v%v", clusterUUID, zoneName))))[:8]
 			mdName := fmt.Sprintf("%s-%s", ng.Name, mdSuffix)
 			if prefix != "" {
 				mdName = fmt.Sprintf("%s-%s", prefix, mdName)
 			}
-			arg := fmt.Sprintf("--nodes=%d:%d:d8-cloud-instance-manager.%s", ng.MinPerZone, ng.MaxPerZone, mdName)
+			arg := fmt.Sprintf("--nodes=%d:%d:d8-cloud-instance-manager.%s", *ng.CloudInstances.MinPerZone, *ng.CloudInstances.MaxPerZone, mdName)
 
-			switch engine {
+			switch ng.Engine {
 			case ngv1.NodeGroupEngineMCM:
 				deployMCM = true
 				mcmNodes = append(mcmNodes, arg)
