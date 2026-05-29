@@ -10,6 +10,12 @@ search: global custom resources, global configuration, global parameters, гло
 {{ site.data.schemas.crds.cni-migration | format_crd: "global" }}
 {{ site.data.schemas.crds.cni-node-migration | format_crd: "global" }}
 
+{{ site.data.schemas.crds.packagerepository | format_crd: "global" }}
+{{ site.data.schemas.crds.applicationpackage | format_crd: "global" }}
+{{ site.data.schemas.crds.application | format_crd: "global" }}
+{{ site.data.schemas.crds.applicationpackageversion | format_crd: "global" }}
+{{ site.data.schemas.crds.packagerepositoryoperation | format_crd: "global" }}
+
 {{ site.data.schemas.crds.deckhouse-release | format_crd: "global" }}
 
 {{ site.data.schemas.crds.init_configuration | format_cluster_configuration }}
