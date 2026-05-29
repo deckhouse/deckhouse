@@ -1443,6 +1443,10 @@ entries:
                 ru: Модули систем хранения
               folders:
                 - title:
+                    en: Csi-ceph module
+                    ru: Модуль csi-ceph
+                  url: /architecture/storage/external/csi-ceph.html
+                - title:
                     en: Csi-hpe module
                     ru: Модуль csi-hpe
                   url: /architecture/storage/external/csi-hpe.html
@@ -1474,6 +1478,10 @@ entries:
                 en: CSI drivers
                 ru: CSI-драйверы
               folders:
+                - title:
+                    en: Ceph RBD CSI driver
+                    ru: CSI-драйвер Ceph RBD
+                  url: /architecture/storage/csi-drivers/csi-driver-ceph-rbd.html
                 - title:
                     en: Huawei CSI driver
                     ru: CSI-драйвер Huawei
