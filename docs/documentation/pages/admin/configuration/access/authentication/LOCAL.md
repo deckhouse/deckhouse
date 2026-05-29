@@ -124,7 +124,7 @@ spec:
 
 Where `members` is a list of users belonging to the group.
 
-Once the group is created and includes all necessary users, proceed by configuring [authorization](../../access/authorization/).
+Once the group is created and includes all necessary users, proceed by configuring [authorization](../authorization/).
 
 ## Configuring password policy
 
