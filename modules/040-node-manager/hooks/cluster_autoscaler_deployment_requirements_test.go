@@ -27,20 +27,6 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: cluster_autoscaler_deployment_requirements ::", func() {
-	const nodeGroupWithoutZones = `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  nodeType: CloudEphemeral
-  cloudInstances:
-    minPerZone: 0
-    maxPerZone: 2
-status: {}
-`
-
 	f := HookExecutionConfigInit(`
 global:
   discovery:
@@ -50,7 +36,28 @@ nodeManager:
     instancePrefix: "sandbox"
     nodeGroups: []
 `, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+	Context("nodeManager.internal.nodeGroups is absent", func() {
+		emptyValuesF := HookExecutionConfigInit(`
+global:
+  discovery:
+    clusterUUID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+nodeManager:
+  internal:
+    instancePrefix: "sandbox"
+`, `{}`)
+
+		BeforeEach(func() {
+			emptyValuesF.BindingContexts.Set(emptyValuesF.GenerateBeforeHelmContext())
+			emptyValuesF.RunHook()
+		})
+
+		It("must not fail", func() {
+			Expect(emptyValuesF).To(ExecuteSuccessfully())
+			Expect(emptyValuesF.ValuesGet("nodeManager.internal.autoscalerNodes").Exists()).To(BeFalse())
+			Expect(emptyValuesF.ValuesGet("nodeManager.internal.autoscalerMCMNodes").Exists()).To(BeFalse())
+		})
+	})
 
 	Context("NodeGroup CR has no zones but values are enriched by get_crds", func() {
 		BeforeEach(func() {
@@ -65,7 +72,7 @@ nodeManager:
     - ru-central1-a
     - ru-central1-b
 `))
-			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(nodeGroupWithoutZones, 1))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 

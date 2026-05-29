@@ -24,18 +24,9 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
-
-type autoscalerNodeGroup struct {
-	Name string
-}
-
-func autoscalerNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return autoscalerNodeGroup{Name: obj.GetName()}, nil
-}
 
 type autoscalerNodeGroupValue struct {
 	Name           string                `json:"name"`
@@ -53,14 +44,6 @@ type autoscalerCloudValues struct {
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 11},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "node_group",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "NodeGroup",
-			FilterFunc: autoscalerNodeGroupFilter,
-		},
-	},
 }, handleClusterAutoscalerDeploymentRequirements)
 
 func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_hook.HookInput) error {
@@ -73,7 +56,11 @@ func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 
 	var nodeGroups []autoscalerNodeGroupValue
-	if err := json.Unmarshal([]byte(input.Values.Get("nodeManager.internal.nodeGroups").String()), &nodeGroups); err != nil {
+	rawNodeGroups := input.Values.Get("nodeManager.internal.nodeGroups")
+	if !rawNodeGroups.Exists() || rawNodeGroups.String() == "" {
+		return nil
+	}
+	if err := json.Unmarshal([]byte(rawNodeGroups.String()), &nodeGroups); err != nil {
 		return fmt.Errorf("failed to unmarshal 'nodeManager.internal.nodeGroups': %w", err)
 	}
 
