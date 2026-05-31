@@ -426,6 +426,36 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "MODULES_DIR",
 			Value: strings.Join(modulesDirs, pathSeparator),
 		},
+		// Disable client-side rate limiting during bootstrap. The bootstrap
+		// incarnation installs hundreds of CRDs + runs initial kube-binding
+		// Synchronization against a fresh, idle apiserver; the default client QPS
+		// (5/10) serialized that into tens of seconds (client-side throttling).
+		// QPS<0 makes client-go skip the rate limiter entirely (QPS=0 would fall
+		// back to the 5 default, not disable) and defer fairness to apiserver APF.
+		{
+			Name:  "KUBE_CLIENT_QPS",
+			Value: "-1",
+		},
+		{
+			Name:  "KUBE_CLIENT_BURST",
+			Value: "-1",
+		},
+		{
+			Name:  "OBJECT_PATCHER_KUBE_CLIENT_QPS",
+			Value: "-1",
+		},
+		{
+			Name:  "OBJECT_PATCHER_KUBE_CLIENT_BURST",
+			Value: "-1",
+		},
+		{
+			Name:  "HELM_MONITOR_KUBE_CLIENT_QPS",
+			Value: "-1",
+		},
+		{
+			Name:  "HELM_MONITOR_KUBE_CLIENT_BURST",
+			Value: "-1",
+		},
 	}
 
 	// Deployment composition
