@@ -144,6 +144,8 @@ type Executor struct {
 	timeout time.Duration
 }
 
+var RegisterStoppables = true
+
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
 	return NewExecutor(DefaultSession, cmd)
 }
@@ -503,8 +505,10 @@ func (e *Executor) Start() error {
 	e.ProcessWait()
 	e.started.Store(true)
 
-	log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
-	e.Session.RegisterStoppable(e)
+	if RegisterStoppables {
+		log.DebugF("Register stoppable: '%s'\n", e.cmd.String())
+		e.Session.RegisterStoppable(e)
+	}
 
 	return nil
 }
