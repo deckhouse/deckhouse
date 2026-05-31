@@ -95,7 +95,7 @@ type ReverseTunnel interface {
 }
 
 type KubeProxy interface {
-	Start(useLocalPort int) (port string, err error)
+	Start(ctx context.Context, useLocalPort int) (port string, err error)
 
 	StopAll()
 

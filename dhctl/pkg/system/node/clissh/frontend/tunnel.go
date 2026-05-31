@@ -65,9 +65,17 @@ func NewTunnel(sess *session.Session, ttype, address string) *Tunnel {
 }
 
 func (t *Tunnel) Up() error {
+	return t.UpContext(context.Background())
+}
+
+func (t *Tunnel) UpContext(ctx context.Context) error {
 	if t.Session == nil {
 		return fmt.Errorf("up tunnel '%s': SSH client is undefined", t.String())
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	t.stopOnce = sync.Once{}
 	t.stopped.Store(false)
 	t.stopCh = make(chan struct{}, 1)
@@ -82,7 +90,7 @@ func (t *Tunnel) Up() error {
 			fmt.Sprintf("-%s", t.Type), t.Address,
 		).
 		WithCommand("echo", "SUCCESS", "&&", "cat").
-		Cmd(context.Background())
+		Cmd(ctx)
 
 	stdoutReadPipe, stdoutWritePipe, err := os.Pipe()
 	if err != nil {
@@ -105,6 +113,11 @@ func (t *Tunnel) Up() error {
 	t.stdinReadPipe = stdinReadPipe
 	t.stdinWritePipe = stdinWritePipe
 	t.pipesMutex.Unlock()
+
+	if err = ctx.Err(); err != nil {
+		t.closePipes()
+		return err
+	}
 
 	err = t.sshCmd.Start()
 	if err != nil {
@@ -138,6 +151,9 @@ func (t *Tunnel) Up() error {
 		t.closePipes()
 		return fmt.Errorf("cannot open tunnel '%s': %w", t.String(), err)
 	case <-tunnelReadyCh:
+	case <-ctx.Done():
+		t.Stop()
+		return ctx.Err()
 	}
 
 	return nil

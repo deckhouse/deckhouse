@@ -496,6 +496,7 @@ func (e *Executor) Start() error {
 
 	err = e.cmd.Start()
 	if err != nil {
+		e.forceClosePipes()
 		return err
 	}
 

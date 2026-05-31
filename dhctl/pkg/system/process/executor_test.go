@@ -187,6 +187,29 @@ func TestExecutor_Run_CleansUpReadPipesOnNormalExit(t *testing.T) {
 	}, 5*time.Second, 10*time.Millisecond, "executor must clean up read-side pipes after normal exit")
 }
 
+func TestExecutor_Start_CleansUpPipesWhenCommandStartFails(t *testing.T) {
+	e := NewDefaultExecutor(exec.Command("missing-binary-for-executor-test"))
+	e.CaptureStdout(nil)
+	e.CaptureStderr(nil)
+	e.WithStdoutHandler(func(_ string) {})
+	e.WithStderrHandler(func(_ string) {})
+
+	err := e.Start()
+	require.Error(t, err)
+
+	require.Eventually(t, func() bool {
+		e.pipesMutex.Lock()
+		defer e.pipesMutex.Unlock()
+
+		return e.stdoutPipeFile == nil &&
+			e.stderrPipeFile == nil &&
+			e.stdoutReadPipe == nil &&
+			e.stderrReadPipe == nil &&
+			e.stdoutHandlerReadPipe == nil &&
+			e.stderrHandlerReadPipe == nil
+	}, 5*time.Second, 10*time.Millisecond, "executor must clean up pipes when command start fails")
+}
+
 func waitForReady(t *testing.T, ready <-chan struct{}, timeoutMessage string) {
 	t.Helper()
 	waitForSignal(t, ready, 5*time.Second, timeoutMessage, nil)
