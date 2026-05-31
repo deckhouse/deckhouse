@@ -161,7 +161,10 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 
 	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
 
+	var newVersionsTotal int
 	for _, pkg := range packages {
+		newVersionsTotal += pkg.NewVersions
+
 		pkgType := pkg.Type
 		if pkgType == "" {
 			pkgType = cachedTypes[pkg.Name]
@@ -175,9 +178,19 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 		})
 	}
 
+	now := metav1.NewTime(time.Now())
+
 	s.repo.Status.PackagesCount = len(s.repo.Status.Packages)
 	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-	s.repo.Status.SyncTime = metav1.NewTime(time.Now())
+
+	s.repo.Status.LastScanTime = &now
+	s.repo.Status.LastNewVersions = newVersionsTotal
+
+	// LastChangeTime is preserved across scans that find nothing new, so only
+	// advance it when the current scan actually found versions.
+	if newVersionsTotal > 0 {
+		s.repo.Status.LastChangeTime = &now
+	}
 
 	if err := s.client.Status().Patch(ctx, s.repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update repository status: %w", err)
