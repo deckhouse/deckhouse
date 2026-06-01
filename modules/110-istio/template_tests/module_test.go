@@ -114,7 +114,10 @@ const istioValues = `
       ingressGateway:
         inlet: LoadBalancer
         nodePort: {}
-    tracing: {}
+    tracing:
+      collector:
+        opentelemetry: {}
+        zipkin: {}
     controlPlane:
       replicasManagement:
         mode: Standard
@@ -308,7 +311,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(foundZipkinIOP).To(BeTrue())
 		})
 
-		It("adds OpenTelemetry tracing to main-access-log-format and deckhouse-tracing-otlp extension provider when collector.opentelemetry is set", func() {
+		It("adds OpenTelemetry tracing to main-access-log-format and deckhouse-tracing extension provider when collector.opentelemetry is set", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.ValuesSet("istio.tracing.enabled", true)
 			f.ValuesSet("istio.tracing.collector.opentelemetry.service", "opentelemetry-collector.observability.svc.cluster.local")
@@ -319,17 +322,16 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			mesh := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
-			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing-otlp"))
+			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
 
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
 			foundOtelEP := false
 			for _, ep := range istioV25.Field("spec.values.meshConfig.extensionProviders").Array() {
-				if ep.Get("name").String() == "deckhouse-tracing-otlp" {
+				if ep.Get("name").String() == "deckhouse-tracing" {
 					Expect(ep.Get("opentelemetry.service").String()).To(Equal("opentelemetry-collector.observability.svc.cluster.local"))
 					Expect(ep.Get("opentelemetry.port").Int()).To(Equal(int64(4317)))
 					foundOtelEP = true
 				}
-				Expect(ep.Get("name").String()).NotTo(Equal("deckhouse-tracing"))
 			}
 			Expect(foundOtelEP).To(BeTrue())
 		})
