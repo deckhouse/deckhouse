@@ -216,6 +216,8 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -239,6 +241,8 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -263,6 +267,8 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -290,6 +296,8 @@ function prepare_environment() {
       \"sshBastionUser\": \"${bastion_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -306,6 +314,8 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -323,6 +333,8 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -342,6 +354,8 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -358,6 +372,8 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
     ;;
 
@@ -383,6 +399,8 @@ function prepare_environment() {
       \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
 
     ;;
@@ -417,6 +435,8 @@ function prepare_environment() {
     \"sshBastionUser\": \"${ssh_user}\",
     \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
     \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+    \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
   }"
     ;;
 
@@ -1378,6 +1398,8 @@ function run-test() {
             \"imagesRepo\": \"${IMAGES_REPO}\",
             \"branch\": \"${DEV_BRANCH}\",
             \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
+            \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+            \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
           }"
   elif [[ ${PROVIDER} == "Static-cse" ]]; then
     bootstrap_static || return $?
@@ -1401,6 +1423,8 @@ function run-test() {
       \"sshSystemHost\": \"${system_ip}\",
       \"sshSystemUser\": \"${ssh_mosos_user}\",
       \"sshPrivateKey\": \"${SSH_KEY}\"
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\"
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
     }"
   fi
   if [[ ${PROVIDER} == "VCD" ]]; then
