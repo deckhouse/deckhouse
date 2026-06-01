@@ -37,7 +37,7 @@ description: Архитектура модуля csi-netapp в Deckhouse Kuberne
 
     Состоит из одного основного контейнера **controller**.
 
-1. **CSI-драйвер (netapp)** — реализация CSI-драйвера, использующего provisioner `csi.trident.netapp.io`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI-драйвер (netapp)** — реализация CSI-драйвера, использующего provisioner `csi.trident.netapp.io`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
 
 ## Взаимодействия модуля
 

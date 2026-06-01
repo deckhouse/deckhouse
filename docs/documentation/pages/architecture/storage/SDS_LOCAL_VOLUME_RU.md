@@ -37,7 +37,7 @@ description: Архитектура модуля sds-local-volume в Deckhouse K
 
 1. **Sds-local-volume-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов, использующих локальные тома логику размещения. При планировании учитывается свободное место на узлах, используемых для размещения на них локальных томов, а также размер дискового пространства, которое надо зарезервировать под эти тома.
 
-1. **CSI-драйвер (`sds-local-volume`)** — реализация CSI-драйвера для `local.csi.storage.deckhouse.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html). CSI-драйвер (`sds-local-volume`) — разработка компании Флант.
+1. **CSI-драйвер (`sds-local-volume`)** — реализация CSI-драйвера для `local.csi.storage.deckhouse.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../storage/csi-drivers/csi-driver.html). CSI-драйвер (`sds-local-volume`) — разработка компании Флант.
 
 ## Взаимодействия модуля
 

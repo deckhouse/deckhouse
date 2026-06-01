@@ -50,7 +50,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-1. **CSI driver (aws)**: It is an implementation of the CSI driver for AWS. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../infrastructure/csi-driver.html) section.
+1. **CSI driver (aws)**: It is an implementation of the CSI driver for AWS. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section.
 
 1. **Node-termination-handler**: [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler). It is responsible for gracefully handling the termination of EC2 instances in the Kubernetes control plane.
 

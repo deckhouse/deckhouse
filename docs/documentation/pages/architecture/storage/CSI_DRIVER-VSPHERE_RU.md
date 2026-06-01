@@ -1,6 +1,6 @@
 ---
-title: CSI-драйвер (VMware vSphere)
-permalink: ru/architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
+title: CSI-драйвер VMware vSphere
+permalink: ru/architecture/storage/csi-drivers/csi-driver-vsphere.html
 lang: ru
 search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
 description: Описание архитектуры CSI-драйвера для VMware vSphere в Deckhouse Kubernetes Platform.
@@ -10,7 +10,7 @@ description: Описание архитектуры CSI-драйвера для
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) — это стандартный интерфейс, который унифицирует доступ к хранилищам и упрощает интеграцию различных систем хранения в кластеры.
 
-В модуле [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) используется [`csi-vsphere`](/modules/csi-vsphere/) (основан на [vSphere CSI Driver](https://github.com/kubernetes-sigs/vsphere-csi-driver)), который отличается от драйверов, применяемых в других модулях `cloud-provider-*` DKP, наличием компонента syncer, специфичного для VMware vSphere.
+В модуле [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) используется [`csi-vsphere`](/modules/csi-vsphere/) (основан на [vSphere CSI Driver](https://github.com/kubernetes-sigs/vsphere-csi-driver)), который отличается от драйверов, применяемых в DKP, наличием компонента syncer, специфичного для VMware vSphere.
 
 ## Архитектура драйвера
 
@@ -24,7 +24,7 @@ description: Описание архитектуры CSI-драйвера для
 Архитектура CSI-драйвера [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура CSI-драйвера csi-vsphere](../../../../images/architecture/cluster-and-infrastructure/c4-l2-csi-driver-vsphere.ru.png)
+![Архитектура CSI-драйвера csi-vsphere](../../../../images/architecture/storage/c4-l2-csi-driver-vsphere.ru.png)
 
 ## Компоненты драйвера
 

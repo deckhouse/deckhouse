@@ -36,7 +36,7 @@ The module consists of the following components:
 
     It consists of a single container, **controller**.
 
-1. **CSI driver (netapp)**: CSI driver implementation for the `csi.trident.netapp.io` provisioner. To study the typical CSI driver architecture used in DKP, refer to the [CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI driver (netapp)**: CSI driver implementation for the `csi.trident.netapp.io` provisioner. To study the typical CSI driver architecture used in DKP, refer to the [CSI driver documentation page](../csi-drivers/csi-driver.html).
 
 ## Module interactions
 

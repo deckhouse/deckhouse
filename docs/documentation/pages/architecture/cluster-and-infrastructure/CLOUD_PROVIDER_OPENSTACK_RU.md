@@ -51,7 +51,7 @@ description: Архитектура модуля cloud-provider-openstack в Dec
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-3. **CSI-драйвер (openstack)** — реализация CSI-драйвера для OpenStack. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../infrastructure/csi-driver.html).
+3. **CSI-драйвер (openstack)** — реализация CSI-драйвера для OpenStack. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (openstack) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

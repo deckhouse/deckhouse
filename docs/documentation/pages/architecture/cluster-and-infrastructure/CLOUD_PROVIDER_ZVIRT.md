@@ -59,7 +59,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-4. **CSI driver (zvirt)**: It is an implementation of the CSI driver for zVirt. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
+4. **CSI driver (zvirt)**: It is an implementation of the CSI driver for zVirt. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
 
    CSI driver (zvirt) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 

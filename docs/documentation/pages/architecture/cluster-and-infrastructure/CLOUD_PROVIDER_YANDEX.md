@@ -57,7 +57,7 @@ The module consists of the following components:
    * **cloud-metrics-exporter**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-metrics-exporter metrics.
 
-4. **CSI driver (yandex)**: It is an implementation of the CSI driver for Yandex Cloud. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../infrastructure/csi-driver.html).
+4. **CSI driver (yandex)**: It is an implementation of the CSI driver for Yandex Cloud. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
 
    CSI driver (yandex) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 
