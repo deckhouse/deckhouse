@@ -47,6 +47,58 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 * `apache2-htpasswd` — для ALT Linux.
 {% endalert %}
 
+## Операции над локальным пользователем
+
+Для административных действий над локальными пользователями используйте команды [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam). Они создают ресурс [UserOperation](/modules/user-authn/cr.html#useroperation), дожидаются выполнения операции и выводят результат.
+
+При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
+
+Примеры использования команд [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam):
+
+- интерактивный сброс пароля:
+
+  ```shell
+  d8 iam user reset-password admin
+  ```
+
+- сброс пароля с чтением нового из stdin:
+
+  ```shell
+  echo "N3wPa$$wo#d" | d8 iam user reset-password admin --password-stdin
+  ```
+
+- сброс пароля с автоматической генерацией нового:
+
+  ```shell
+  d8 iam user reset-password admin --generate-password
+  ```
+
+- сброс пароля в захешированном виде (если пароль захеширован, передайте bcrypt-хеш без кодирования в Base64):
+
+  ```shell
+  d8 iam user reset-password admin --password-hash '$2y$10$abcdef...'
+  ```
+
+- сброс 2FA:
+
+  ```shell
+  d8 iam user reset2fa admin
+  ```
+
+- блокировка пользователя на 30 минут:
+
+  ```shell
+  d8 iam user lock admin 30m
+  ```
+
+- разблокировка пользователя:
+
+  ```shell
+  d8 iam user unlock admin
+  ```
+
+По умолчанию команды ожидают завершения операции. Чтобы только создать UserOperation и вывести его имя, используйте флаг `--wait=false`.
+
 ## Добавление пользователя в группу
 
 {% alert level="warning" %}
@@ -72,7 +124,7 @@ spec:
 
 Здесь `members` — список пользователей, которые входят в группу.
 
-После создания группы и добавления в неё пользователей, необходимо настроить [авторизацию](../../access/authorization/).
+После создания группы и добавления в неё пользователей необходимо настроить [авторизацию](../authorization/).
 
 ## Настройка парольной политики
 
