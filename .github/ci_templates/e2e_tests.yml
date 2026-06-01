@@ -734,6 +734,8 @@ check_e2e_labels:
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+        E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+        E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
 {!{- if not (has $commanderProviders $provider) }!}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
 {!{- end }!}
