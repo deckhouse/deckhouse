@@ -33,6 +33,9 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 	}),
 
 	CN: cn,
+	// Issue a certificate accepted by strict validators: distinct CA Subject and a
+	// real "server auth" EKU. Legacy certificates are re-issued automatically.
+	StrictTLS: true,
 
 	Namespace:            "d8-cloud-instance-manager",
 	TLSSecretName:        "capi-webhook-tls",
