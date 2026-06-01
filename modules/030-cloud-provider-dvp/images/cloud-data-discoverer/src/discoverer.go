@@ -36,9 +36,10 @@ import (
 )
 
 const (
-	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
-	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
-	skipSCAnnotation        = "cloud-provider.deckhouse.io/skip-storage-class"
+	stableDefaultAnnotation  = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation    = "storageclass.beta.kubernetes.io/is-default-class"
+	skipSCAnnotation         = "cloud-provider.deckhouse.io/skip-storage-class"
+	defaultVolumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
 )
 
 type CloudConfig struct {
@@ -155,11 +156,6 @@ func mergeStorageDomains(
 	result := []cloudDataV1.DVPStorageClass{}
 	cloudSdsMap := make(map[string]cloudDataV1.DVPStorageClass)
 	for _, sc := range cloudSds {
-		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
-		if sc.VolumeBindingMode != nil {
-			volumeBindingMode = *sc.VolumeBindingMode
-		}
-
 		reclaimPolicy := corev1.PersistentVolumeReclaimDelete
 		if sc.ReclaimPolicy != nil {
 			reclaimPolicy = *sc.ReclaimPolicy
@@ -172,7 +168,7 @@ func mergeStorageDomains(
 
 		cloudSdsMap[sc.Name] = cloudDataV1.DVPStorageClass{
 			Name:                 sc.Name,
-			VolumeBindingMode:    string(volumeBindingMode),
+			VolumeBindingMode:    string(defaultVolumeBindingMode),
 			ReclaimPolicy:        string(reclaimPolicy),
 			AllowVolumeExpansion: allowVolumeExpansion,
 			IsEnabled:            true,

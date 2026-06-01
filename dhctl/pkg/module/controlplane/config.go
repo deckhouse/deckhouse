@@ -60,8 +60,12 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 
 	logger := e.loggerProvider()
 
-	if !config.IsEEEdition(e.edition) {
-		logger.DebugF("Got not ee edition '%s'. Returns no signature mode", e.edition)
+	// TODO after enable signature for ee and fe after full ready sig-migrate
+	// change to !config.IsEEEdition
+	// and after change fix config_test.go (see TODO comments)
+	if !config.IsCSEdition(e.edition) {
+		// TODO fix cse to ee after enable in ee and fe
+		logger.DebugF("Got not cse edition '%s'. Returns no signature mode", e.edition)
 		return NoSignatureMode, nil
 	}
 

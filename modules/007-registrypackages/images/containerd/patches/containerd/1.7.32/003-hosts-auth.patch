@@ -20,7 +20,7 @@ index 28bc4d43b..4802fa253 100644
  	if clicontext.Bool("plain-http") {
  		hostOptions.DefaultScheme = "http"
 diff --git a/pkg/cri/sbserver/image_pull.go b/pkg/cri/sbserver/image_pull.go
-index e8dead03f..cb1301295 100644
+index a2fdc647d..730c30c96 100644
 --- a/pkg/cri/sbserver/image_pull.go
 +++ b/pkg/cri/sbserver/image_pull.go
 @@ -425,15 +425,11 @@ func (c *criService) registryHosts(ctx context.Context, auth *runtime.AuthConfig
@@ -44,7 +44,7 @@ index e8dead03f..cb1301295 100644
  		hostOptions.HostDir = hostDirFromRoots(paths)
  
 diff --git a/pkg/cri/server/image_pull.go b/pkg/cri/server/image_pull.go
-index 6b321515b..e76d09bc1 100644
+index dd2264e74..b88b4d1c2 100644
 --- a/pkg/cri/server/image_pull.go
 +++ b/pkg/cri/server/image_pull.go
 @@ -427,15 +427,10 @@ func (c *criService) registryHosts(ctx context.Context, auth *runtime.AuthConfig
@@ -67,7 +67,7 @@ index 6b321515b..e76d09bc1 100644
  		hostOptions.HostDir = hostDirFromRoots(paths)
  
 diff --git a/remotes/docker/config/hosts.go b/remotes/docker/config/hosts.go
-index ce655a587..31df545c5 100644
+index dfdabbad6..faeb682a9 100644
 --- a/remotes/docker/config/hosts.go
 +++ b/remotes/docker/config/hosts.go
 @@ -20,6 +20,7 @@ package config
@@ -75,10 +75,10 @@ index ce655a587..31df545c5 100644
  	"context"
  	"crypto/tls"
 +	"encoding/base64"
- 	"errors"
  	"fmt"
  	"net"
-@@ -58,9 +59,18 @@ type hostConfig struct {
+ 	"net/http"
+@@ -57,9 +58,18 @@ type hostConfig struct {
  
  	rewrites []hostPathRewrite
  
@@ -97,7 +97,7 @@ index ce655a587..31df545c5 100644
  type hostPathRewrite struct {
  	regexp      *regexp.Regexp
  	replacement string
-@@ -176,18 +186,22 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+@@ -175,18 +185,22 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  			}
  		}
  
@@ -127,7 +127,7 @@ index ce655a587..31df545c5 100644
  			if host.caCerts != nil || host.clientPairs != nil || host.skipVerify != nil {
  				explicitTLS = true
  				tr := defaultTransport.Clone()
-@@ -251,7 +265,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+@@ -250,7 +264,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  				rhosts[i].Authorizer = docker.NewDockerAuthorizer(append(authOpts, docker.WithAuthClient(&c))...)
  			} else {
  				rhosts[i].Client = client
@@ -136,7 +136,7 @@ index ce655a587..31df545c5 100644
  			}
  
  			// When TLS has been configured for the operation or host and
-@@ -378,6 +392,19 @@ type hostFileConfig struct {
+@@ -377,6 +391,19 @@ type hostFileConfig struct {
  		Replacement string `toml:"replace"`
  	} `toml:"rewrite"`
  
@@ -156,7 +156,7 @@ index ce655a587..31df545c5 100644
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
  
-@@ -564,6 +591,13 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
+@@ -563,6 +590,13 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
  		}
  	}
  
@@ -170,7 +170,7 @@ index ce655a587..31df545c5 100644
  	return result, nil
  }
  
-@@ -651,3 +685,31 @@ func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
+@@ -650,3 +684,31 @@ func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
  	}
  	return hosts, nil
  }
