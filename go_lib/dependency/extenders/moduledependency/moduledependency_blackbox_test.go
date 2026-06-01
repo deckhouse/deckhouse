@@ -428,6 +428,98 @@ func TestFilter(t *testing.T) {
 	}
 }
 
+// TestCheckEnabling verifies that enabling a module is validated against constraints of
+// already enabled dependent modules, even when the enabled module declares no requirements
+// of its own (e.g. enabling 'sdn', which is an optional dependency of an enabled 'virtualization').
+func TestCheckEnabling(t *testing.T) {
+	tests := []struct {
+		name           string
+		moduleName     string
+		moduleVersion  string
+		dependents     map[string]map[string]string // dependent module -> its requirements
+		enabledModules []string
+		expectError    bool
+		errorContains  string
+	}{
+		{
+			name:           "module without requirements and no dependents can be enabled",
+			moduleName:     "standalone",
+			moduleVersion:  "1.0.0",
+			enabledModules: []string{},
+			expectError:    false,
+		},
+		{
+			name:          "enabling optional dependency with incompatible version is rejected",
+			moduleName:    "sdn",
+			moduleVersion: "0.6.2",
+			dependents: map[string]map[string]string{
+				"virtualization": {"sdn": ">=0.6.3 !optional"},
+			},
+			enabledModules: []string{"virtualization"},
+			expectError:    true,
+			errorContains:  "not meet requirement if module 'sdn' enabled",
+		},
+		{
+			name:          "enabling optional dependency with compatible version is allowed",
+			moduleName:    "sdn",
+			moduleVersion: "0.6.3",
+			dependents: map[string]map[string]string{
+				"virtualization": {"sdn": ">=0.6.3 !optional"},
+			},
+			enabledModules: []string{"virtualization"},
+			expectError:    false,
+		},
+		{
+			name:          "incompatible version is ignored when dependent module is disabled",
+			moduleName:    "sdn",
+			moduleVersion: "0.6.2",
+			dependents: map[string]map[string]string{
+				"virtualization": {"sdn": ">=0.6.3 !optional"},
+			},
+			enabledModules: []string{},
+			expectError:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			extender := moduledependency.Instance()
+
+			versions := map[string]string{tt.moduleName: tt.moduleVersion}
+			extender.SetModulesVersionHelper(func(name string) (string, error) {
+				if v, ok := versions[name]; ok {
+					return v, nil
+				}
+				return "1.0.0", nil
+			})
+			extender.SetModulesStateHelper(func() []string { return tt.enabledModules })
+
+			// register dependents' constraints, then clean them up after the test
+			registered := make([]string, 0, len(tt.dependents))
+			for dependent, reqs := range tt.dependents {
+				require.NoError(t, extender.AddConstraint(dependent, reqs))
+				registered = append(registered, dependent)
+			}
+			extender.DeleteConstraint(tt.moduleName)
+			t.Cleanup(func() {
+				for _, dependent := range registered {
+					extender.DeleteConstraint(dependent)
+				}
+			})
+
+			err := extender.CheckEnabling(tt.moduleName)
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.errorContains != "" {
+					assert.Contains(t, err.Error(), tt.errorContains)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 // TestVersionHandlingWithPrereleaseAndMetadata tests the handling of prerelease and metadata in versions
 func TestVersionHandlingWithPrereleaseAndMetadata(t *testing.T) {
 	extender := moduledependency.Instance()
