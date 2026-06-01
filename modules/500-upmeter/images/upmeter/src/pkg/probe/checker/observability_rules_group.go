@@ -665,15 +665,15 @@ kind: ObservabilityMetricsRulesGroup
 metadata:
   labels:
     heritage: upmeter
-    upmeter-agent: %s
+    upmeter-agent: %q
     upmeter-group: monitoring-and-autoscaling
     upmeter-probe: observability-recording
-  name: %s
-  namespace: %s
+  name: %q
+  namespace: %q
 spec:
   interval: "30s"
   rules:
-  - record: %s
+  - record: %q
     expr: kube_namespace_created
 `, agentID, name, namespace, metric)
 }
@@ -685,19 +685,19 @@ kind: ObservabilityMetricsRulesGroup
 metadata:
   labels:
     heritage: upmeter
-    upmeter-agent: %s
+    upmeter-agent: %q
     upmeter-group: monitoring-and-autoscaling
     upmeter-probe: alertmanager
-  name: %s
-  namespace: %s
+  name: %q
+  namespace: %q
 spec:
   interval: "30s"
   rules:
-  - alert: %s
+  - alert: %q
     expr: kube_namespace_created > 0
     labels:
       severity: warning
-      %s: %s
+      %q: %q
     annotations:
       summary: "upmeter observability mini e2e alert"
 `, agentID, name, namespace, alertName, alertLabelKey, alertLabelValue)
@@ -710,17 +710,17 @@ kind: ObservabilityNotificationSilence
 metadata:
   labels:
     heritage: upmeter
-    upmeter-agent: %s
+    upmeter-agent: %q
     upmeter-group: monitoring-and-autoscaling
     upmeter-probe: alertmanager
-  name: %s
-  namespace: %s
+  name: %q
+  namespace: %q
 spec:
-  startsAt: "%s"
-  endsAt: "%s"
+  startsAt: %q
+  endsAt: %q
   selector:
     matchLabels:
-      %s: %s
+      %q: %q
 `,
 		agentID,
 		name,
