@@ -76,13 +76,13 @@ spec:
         {{- end }}
         - '--ignored-images={{ $ignoredImages | join "~" }}'
         - --namespace-label=extended-monitoring.deckhouse.io/enabled
+        - --capath=/etc/ssl/certs/ca-certificates.crt
         {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify }}
         - --skip-registry-cert-verification
         {{- end }}
         {{- if eq .Values.extendedMonitoring.imageAvailability.registry.scheme "HTTP" }}
         - --allow-plain-http
         {{- end }}
-        - --capath=/etc/ssl/certs/ca-certificates.crt
         {{- with .Values.global.modulesImages.registry.CA }}
         - --capath=/deckhouse-registry-root-ca/ca.crt
         {{- end }}
