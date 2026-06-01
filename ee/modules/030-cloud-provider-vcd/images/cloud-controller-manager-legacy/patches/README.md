@@ -77,3 +77,13 @@ Files:
 Changes:
 
 - Fixes TCP health monitors removal during an update of the pool
+
+### 007-support-load-balancer-ip-annotation.patch
+
+Files:
+
+- pkg/ccm/loadbalancer.go
+
+Changes:
+
+- Add support for the `vcd.cpi.flant.com/load-balancer-ip` annotation

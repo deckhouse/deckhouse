@@ -4,35 +4,27 @@ You need to create a Yandex Cloud service account with the editor role to manage
 
 Create a user named `deckhouse`:
 
-{% snippetcut %}
 ```shell
 yc iam service-account create --name deckhouse
 ```
-{% endsnippetcut %}
 
 The command output will contain its parameters:
 
-{% snippetcut %}
 ```console
 id: <userID>
 folder_id: <folderID>
 created_at: "YYYY-MM-DDTHH:MM:SSZ"
 name: deckhouse
 ```
-{% endsnippetcut %}
 
 Assign the `editor` role to the newly created user:
 
-{% snippetcut %}
 ```shell
 yc resource-manager folder add-access-binding <folderID> --role editor --subject serviceAccount:<userID>
 ```
-{% endsnippetcut %}
 
 Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
 
-{% snippetcut %}
 ```shell
 yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
 ```
-{% endsnippetcut %}

@@ -211,7 +211,7 @@ func TestPipelineWrapper(t *testing.T) {
 		},
 	}
 
-	assertTypedError := func(t *testing.T, err error, expectedErr error, msg string) {
+	assertTypedError := func(t *testing.T, err, expectedErr error, msg string) {
 		if expectedErr == nil {
 			require.NoError(t, err)
 			return

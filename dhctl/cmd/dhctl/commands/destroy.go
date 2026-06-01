@@ -71,7 +71,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		if !opts.Global.SanityCheck {
-			logger.LogWarnLn(destroyApprovalsMessage)
+			log.InteractiveWarnLn(destroyApprovalsMessage)
 
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
@@ -93,15 +93,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		destroyerParams := &destroy.Params{
-			SSHProvider:     sshProvider,
-			KubeProvider:    kubeProvider,
-			StateCache:      cache.Global(),
-			SkipResources:   opts.Destroy.SkipResources,
-			LoggerProvider:  log.SimpleLoggerProvider(logger),
-			IsDebug:         opts.Global.IsDebug,
-			TmpDir:          opts.Global.TmpDir,
-			DirectoryConfig: opts.DirConfig(),
-			Options:         opts,
+			SSHProvider:    sshProvider,
+			KubeProvider:   kubeProvider,
+			StateCache:     cache.Global(),
+			SkipResources:  opts.Destroy.SkipResources,
+			LoggerProvider: log.SimpleLoggerProvider(logger),
+			IsDebug:        opts.Global.IsDebug,
+			TmpDir:         opts.Global.TmpDir,
+			Options:        opts,
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {

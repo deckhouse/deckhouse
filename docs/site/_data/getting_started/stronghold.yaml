@@ -53,7 +53,7 @@ installTypes:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
-        template: getting_started/stronghold/global/STEP_FINISH.md
+        template: getting_started/stronghold/existing-dkp/STEP_FINISH.md
   vsphere:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     ce_only: true

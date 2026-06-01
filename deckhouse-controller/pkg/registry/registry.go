@@ -23,7 +23,7 @@ import (
 	"regexp"
 	"strings"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,57 +51,74 @@ const (
 	ReleaseChannelRockSolid   = "rock-solid"
 )
 
-func DefineRegistryCommand(kpApp *kingpin.Application, logger *log.Logger) {
-	registryCmd := kpApp.Command("registry", "Deckhouse repository work.").
-		PreAction(func(_ *kingpin.ParseContext) error {
-			kpApp.UsageTemplate(kingpin.DefaultUsageTemplate)
-			return nil
-		})
+func DefineRegistryCommand(rootCmd *cobra.Command, logger *log.Logger) {
+	registryCmd := &cobra.Command{
+		Use:   "registry",
+		Short: "Deckhouse repository work.",
+	}
+	rootCmd.AddCommand(registryCmd)
 
-	registryGetCmd := registryCmd.Command("get", "get from registry").
-		PreAction(func(_ *kingpin.ParseContext) error {
-			kpApp.UsageTemplate(kingpin.DefaultUsageTemplate)
-			return nil
-		})
+	registryGetCmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get from registry.",
+	}
+	registryCmd.AddCommand(registryGetCmd)
 
 	registerReleaseCommand(registryGetCmd, logger)
 	registerSourceCommand(registryGetCmd)
 	registerModuleCommand(registryGetCmd, logger)
 }
 
-func registerReleaseCommand(parentCMD *kingpin.CmdClause, logger *log.Logger) {
-	releasesCmd := parentCMD.Command("releases", "Release resource. Aliases: 'release','rel'").
-		Alias("release").Alias("rel")
+func registerReleaseCommand(parent *cobra.Command, logger *log.Logger) {
+	var (
+		releaseChannel string
+		all            bool
+	)
 
-	releaseChannel := releasesCmd.Flag("channel", "Release channel."+
-		" If release is 'auto' - using default channel from configuration."+
-		" If there is not default channel in configuration - use 'stable'").Short('c').
-		Enum(ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable, ReleaseChannelEarlyAccess, ReleaseChannelRockSolid, ReleaseChannelAuto)
-	allFlag := releasesCmd.Flag("all", "Output without restrictions.").Bool()
-	releasesCmd.Action(func(_ *kingpin.ParseContext) error {
-		ctx := context.TODO()
+	releasesCmd := &cobra.Command{
+		Use:     "releases",
+		Aliases: []string{"release", "rel"},
+		Short:   "Release resource. Aliases: 'release','rel'",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctx := context.TODO()
 
-		registry, channel, rconf, err := getDeckhouseRegistry(ctx)
-		if err != nil {
-			return fmt.Errorf("get deckhouse registry: %w", err)
-		}
-
-		svc := newDeckhouseReleaseService(registry, rconf, logger)
-
-		if *releaseChannel != "" {
-			if *releaseChannel != ReleaseChannelAuto {
-				channel = *releaseChannel
+			registry, channel, rconf, err := getDeckhouseRegistry(ctx)
+			if err != nil {
+				return fmt.Errorf("get deckhouse registry: %w", err)
 			}
 
-			if channel == "" || channel == UnknownReleaseChannelSecretDiscovery {
-				channel = ReleaseChannelStable
+			svc := newDeckhouseReleaseService(registry, rconf, logger)
+
+			if releaseChannel != "" {
+				if releaseChannel != ReleaseChannelAuto {
+					channel = releaseChannel
+				}
+
+				if channel == "" || channel == UnknownReleaseChannelSecretDiscovery {
+					channel = ReleaseChannelStable
+				}
+
+				return handleGetDeckhouseRelease(ctx, svc, channel, all)
 			}
 
-			return handleGetDeckhouseRelease(ctx, svc, channel, *allFlag)
-		}
-
-		return handleListDeckhouseReleases(ctx, svc, *allFlag)
-	})
+			return handleListDeckhouseReleases(ctx, svc, all)
+		},
+	}
+	releasesCmd.Flags().StringVarP(&releaseChannel, "channel", "c",
+		"",
+		"Release channel."+
+			" If release is 'auto' - using default channel from configuration."+
+			" If there is not default channel in configuration - use 'stable'."+
+			fmt.Sprintf(" Allowed: %s, %s, %s, %s, %s, %s.",
+				ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable,
+				ReleaseChannelEarlyAccess, ReleaseChannelRockSolid, ReleaseChannelAuto))
+	releasesCmd.Flags().BoolVar(&all, "all", false, "Output without restrictions.")
+	releasesCmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
+		return validateEnumFlag(cmd, "channel", releaseChannel,
+			ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable,
+			ReleaseChannelEarlyAccess, ReleaseChannelRockSolid, ReleaseChannelAuto)
+	}
+	parent.AddCommand(releasesCmd)
 }
 
 func handleListDeckhouseReleases(ctx context.Context, svc *deckhouseReleaseService, all bool) error {
@@ -167,67 +184,107 @@ func handleGetDeckhouseRelease(ctx context.Context, svc *deckhouseReleaseService
 	return nil
 }
 
-func registerSourceCommand(parentCMD *kingpin.CmdClause) {
-	sourcesCmd := parentCMD.Command("sources", "Source resources. Aliases: 'source','src'").
-		Alias("source").Alias("src")
-	sourcesCmd.Action(func(_ *kingpin.ParseContext) error {
-		ctx := context.TODO()
+func registerSourceCommand(parent *cobra.Command) {
+	sourcesCmd := &cobra.Command{
+		Use:     "sources",
+		Aliases: []string{"source", "src"},
+		Short:   "Source resources. Aliases: 'source','src'",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			ctx := context.TODO()
 
-		k8sClient, err := newKubernetesClient()
-		if err != nil {
-			panic(err)
-		}
-
-		msl := new(v1alpha1.ModuleSourceList)
-		if err := k8sClient.List(ctx, msl); err != nil {
-			return fmt.Errorf("list ModuleSource: %w", err)
-		}
-
-		srcs := make([]string, 0, len(msl.Items))
-		for _, ms := range msl.Items {
-			srcs = append(srcs, ms.GetName())
-		}
-
-		fmt.Printf("Module sources found (%d):\n\n", len(srcs))
-
-		for _, src := range srcs {
-			fmt.Printf("%s\n", src)
-		}
-
-		return nil
-	})
-}
-
-func registerModuleCommand(parentCMD *kingpin.CmdClause, logger *log.Logger) {
-	// deckhouse-controller registry list modules <module-source>
-	modulesCmd := parentCMD.Command("modules", "Show modules list. Aliases: 'module','mod'").
-		Alias("module").Alias("mod")
-	moduleSource := modulesCmd.Arg("module-source", "Module source name.").Required().String()
-	moduleName := modulesCmd.Arg("module-name", "Module name.").String()
-	moduleChannel := modulesCmd.Flag("channel", "Module name.").Short('c').
-		Enum(ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable, ReleaseChannelEarlyAccess, ReleaseChannelRockSolid)
-	allFlag := modulesCmd.Flag("all", "Complete list of tags.").Bool()
-
-	modulesCmd.Action(func(_ *kingpin.ParseContext) error {
-		ctx := context.TODO()
-
-		registry, rconf, err := getModuleRegistry(ctx, *moduleSource)
-		if err != nil {
-			return fmt.Errorf("get module registry: %w", err)
-		}
-
-		svc := newModuleReleaseService(registry, rconf, logger)
-
-		if *moduleName != "" {
-			if *moduleChannel != "" {
-				return handleGetModuleInfoInChannel(ctx, svc, *moduleName, *moduleChannel, *allFlag)
+			k8sClient, err := newKubernetesClient()
+			if err != nil {
+				panic(err)
 			}
 
-			return handleListModulesVersions(ctx, svc, *moduleName, *allFlag)
-		}
+			msl := new(v1alpha1.ModuleSourceList)
+			if err := k8sClient.List(ctx, msl); err != nil {
+				return fmt.Errorf("list ModuleSource: %w", err)
+			}
 
-		return handleListModulesNames(ctx, svc, *allFlag)
-	})
+			srcs := make([]string, 0, len(msl.Items))
+			for _, ms := range msl.Items {
+				srcs = append(srcs, ms.GetName())
+			}
+
+			fmt.Printf("Module sources found (%d):\n\n", len(srcs))
+
+			for _, src := range srcs {
+				fmt.Printf("%s\n", src)
+			}
+
+			return nil
+		},
+	}
+	parent.AddCommand(sourcesCmd)
+}
+
+func registerModuleCommand(parent *cobra.Command, logger *log.Logger) {
+	var (
+		moduleChannel string
+		all           bool
+	)
+
+	// deckhouse-controller registry get modules <module-source> [<module-name>]
+	modulesCmd := &cobra.Command{
+		Use:     "modules MODULE_SOURCE [MODULE_NAME]",
+		Aliases: []string{"module", "mod"},
+		Short:   "Show modules list. Aliases: 'module','mod'",
+		Args:    cobra.RangeArgs(1, 2),
+		RunE: func(_ *cobra.Command, args []string) error {
+			ctx := context.TODO()
+
+			moduleSource := args[0]
+			moduleName := ""
+			if len(args) == 2 {
+				moduleName = args[1]
+			}
+
+			registry, rconf, err := getModuleRegistry(ctx, moduleSource)
+			if err != nil {
+				return fmt.Errorf("get module registry: %w", err)
+			}
+
+			svc := newModuleReleaseService(registry, rconf, logger)
+
+			if moduleName != "" {
+				if moduleChannel != "" {
+					return handleGetModuleInfoInChannel(ctx, svc, moduleName, moduleChannel, all)
+				}
+
+				return handleListModulesVersions(ctx, svc, moduleName, all)
+			}
+
+			return handleListModulesNames(ctx, svc, all)
+		},
+	}
+	modulesCmd.Flags().StringVarP(&moduleChannel, "channel", "c", "",
+		"Release channel."+
+			fmt.Sprintf(" Allowed: %s, %s, %s, %s, %s.",
+				ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable,
+				ReleaseChannelEarlyAccess, ReleaseChannelRockSolid))
+	modulesCmd.Flags().BoolVar(&all, "all", false, "Complete list of tags.")
+	modulesCmd.PreRunE = func(cmd *cobra.Command, _ []string) error {
+		return validateEnumFlag(cmd, "channel", moduleChannel,
+			ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable,
+			ReleaseChannelEarlyAccess, ReleaseChannelRockSolid)
+	}
+	parent.AddCommand(modulesCmd)
+}
+
+// validateEnumFlag returns an error when the named flag is set to a value
+// outside the allowed set. Empty values are treated as "unset" and skip the
+// check, matching kingpin's behavior for optional Enum flags.
+func validateEnumFlag(_ *cobra.Command, name, value string, allowed ...string) error {
+	if value == "" {
+		return nil
+	}
+	for _, v := range allowed {
+		if v == value {
+			return nil
+		}
+	}
+	return fmt.Errorf("flag --%s must be one of: %s", name, strings.Join(allowed, ", "))
 }
 
 func handleGetModuleInfoInChannel(ctx context.Context, svc *moduleReleaseService, name string, channel string, all bool) error {

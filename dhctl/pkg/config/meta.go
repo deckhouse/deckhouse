@@ -34,7 +34,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
@@ -62,7 +61,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{}  `json:"-"`
 	Images                    imagesDigests           `json:"-"`
-	Registry                  registry_config.Config  `json:"-"`
+	Registry                  registry.Config         `json:"-"`
 	UUID                      string                  `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                  `json:"-"`
 	ResourcesYAML             string                  `json:"-"`
@@ -70,6 +69,7 @@ type MetaConfig struct {
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
 	DownloadCacheDir          string                  `json:"-"`
+	ShowProgress              bool                    `json:"-"`
 
 	// VersionFilePath is the absolute path to the deckhouse version file
 	// embedded in the installer image. Required by LoadInstallerVersion and
@@ -479,11 +479,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 	// Registry
 	registryContext, err := m.Registry.
 		Manifest().
-		BashibleContext(registry_config.GeneratePKI)
+		BashibleContext(registry.GeneratePKI)
 	if err != nil {
 		return nil, fmt.Errorf("create registry bashible context: %s", err)
 	}
 	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
+
+	if tag := m.deckhouseImageTag(); tag != "" && registryContext.ImagesBase != "" {
+		configForBashibleBundleTemplate["deckhouseImageRef"] = fmt.Sprintf("%s:%s", registryContext.ImagesBase, tag)
+	}
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
@@ -744,6 +748,33 @@ func (m *MetaConfig) LoadImagesDigests() error {
 	m.Images = imagesDigests
 
 	return nil
+}
+
+// FindModuleConfig
+// if not found returns nil
+func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
+	if len(m.ModuleConfigs) == 0 {
+		return nil
+	}
+
+	for _, moduleConfig := range m.ModuleConfigs {
+		if moduleConfig.Name == module {
+			return moduleConfig
+		}
+	}
+
+	return nil
+}
+
+// deckhouseImageTag returns the deckhouse-controller image tag for the bashible
+// prefetch: semver from the installer's version file, falling back to DevBranch.
+func (m *MetaConfig) deckhouseImageTag() string {
+	if m.VersionFilePath != "" {
+		if tag, ok := ReadVersionTagFromInstallerContainer(m.VersionFilePath, m.DownloadRootDir); ok {
+			return tag
+		}
+	}
+	return m.DeckhouseConfig.DevBranch
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {

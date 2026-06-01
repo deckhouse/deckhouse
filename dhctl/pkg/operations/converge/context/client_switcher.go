@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -50,7 +51,7 @@ type KubeClientSwitcher struct {
 
 type KubeClientSwitcherParams struct {
 	TmpDir        string
-	DownloadDir   string
+	GlobalOptions *options.GlobalOptions
 	IsDebug       bool
 	Logger        log.Logger
 	DisableSwitch bool
@@ -363,7 +364,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 			state:    stateBytes,
 			settings: settings,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -411,7 +411,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	}
 
 	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
-
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
@@ -715,7 +714,7 @@ func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractor
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           e.tmpDir,
-		DownloadDir:      e.switcher.params.DownloadDir,
+		GlobalOptions:    e.switcher.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           logger,
 		IsDebug:          e.switcher.params.IsDebug,
@@ -748,4 +747,8 @@ func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, err
 	}
 
 	return statePath, nil
+}
+
+func (s *KubeClientSwitcher) GetGlobalOptions() *options.GlobalOptions {
+	return s.params.GlobalOptions
 }

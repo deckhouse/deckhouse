@@ -20,15 +20,14 @@ import (
 	"net"
 	"strings"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -37,7 +36,7 @@ type TunnelParams struct {
 	MetaConfig *config.MetaConfig
 	Node       libcon.Interface
 	Logger     log.Logger
-	DirsConfig *directoryconfig.DirectoryConfig
+	GlobalOpts *options.GlobalOptions
 }
 
 func (params TunnelParams) Validate() error {
@@ -53,8 +52,8 @@ func (params TunnelParams) Validate() error {
 		return fmt.Errorf("internal error: logger is required")
 	}
 
-	if params.DirsConfig == nil {
-		return fmt.Errorf("internal error: directory config is required")
+	if params.GlobalOpts == nil {
+		return fmt.Errorf("internal error: global options is required")
 	}
 
 	return nil
@@ -84,7 +83,7 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	logger := params.Logger
 	logger.DebugF("Up bundle registry tunnel...")
 
-	tunnel := newTunnel(params.DirsConfig, wrapper.Client())
+	tunnel := newTunnel(params.GlobalOpts, wrapper.Client())
 	if err := tunnel.start(ctx); err != nil {
 		return nop, fmt.Errorf("start bundle registry tunnel: %w", err)
 	}
@@ -97,23 +96,23 @@ func InitTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 }
 
 // newTunnel creates a Tunnel pre-configured with the bundle-specific scheme, address, and port.
-func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *tunnel {
+func newTunnel(globalOptions *options.GlobalOptions, sshCl libcon.SSHClient) *tunnel {
 	return &tunnel{
-		dc:      dc,
-		sshCl:   sshCl,
-		scheme:  constant.BundleScheme,
-		address: constant.BundleAddress,
-		port:    constant.BundlePort,
+		globalOptions: globalOptions,
+		sshCl:         sshCl,
+		scheme:        constant.BundleScheme,
+		address:       constant.BundleAddress,
+		port:          constant.BundlePort,
 	}
 }
 
 // tunnel manages the SSH reverse tunnel lifecycle for the bundle registry.
 type tunnel struct {
-	dc      *directoryconfig.DirectoryConfig
-	sshCl   libcon.SSHClient
-	scheme  constant.SchemeType
-	address string
-	port    string
+	globalOptions *options.GlobalOptions
+	sshCl         libcon.SSHClient
+	scheme        constant.SchemeType
+	address       string
+	port          string
 
 	tunnel libcon.ReverseTunnel
 }
@@ -125,12 +124,12 @@ func (t *tunnel) start(ctx context.Context) error {
 		net.JoinHostPort(t.address, t.port),
 	)
 
-	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.dc)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.globalOptions)
 	if err != nil {
 		return fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(t.address, t.port, t.dc)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(t.address, t.port, t.globalOptions)
 	if err != nil {
 		return fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}

@@ -36,10 +36,10 @@ const ProxyTunnelPort = "22323"
 // must reflect the SSH backend the supplied client uses (legacy clissh
 // vs modern gossh) — they need different forwarding-direction syntax.
 // Pass sshclient.Config.IsLegacyMode() at the call site.
-func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyUrl *url.URL, legacyMode bool) (libcon.Tunnel, error) {
-	port := proxyUrl.Port()
+func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyURL *url.URL, legacyMode bool) (libcon.Tunnel, error) {
+	port := proxyURL.Port()
 	if port == "" {
-		switch proxyUrl.Scheme {
+		switch proxyURL.Scheme {
 		case "http":
 			port = "80"
 		case "https":
@@ -49,9 +49,9 @@ func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, prox
 
 	var tunnel string
 	if legacyMode {
-		tunnel = strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
+		tunnel = strings.Join([]string{ProxyTunnelPort, proxyURL.Hostname(), port}, ":")
 	} else {
-		tunnel = strings.Join([]string{proxyUrl.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")
+		tunnel = strings.Join([]string{proxyURL.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")
 	}
 
 	tun := sshCl.Tunnel(tunnel)
@@ -61,8 +61,8 @@ func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, prox
 	return tun, nil
 }
 
-func BuildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
-	localhostProxy := proxyUrl
+func BuildHTTPClientWithLocalhostProxy(proxyURL *url.URL) *http.Client {
+	localhostProxy := proxyURL
 	localhostProxy.Host = net.JoinHostPort("localhost", ProxyTunnelPort)
 	return &http.Client{
 		Transport: &http.Transport{
@@ -105,12 +105,12 @@ func GetProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, 
 		return nil, nil, fmt.Errorf(`%w: malformed proxy address: "%v"`, ErrBadProxyConfig, proxyAddr)
 	}
 
-	proxyUrl, err := url.Parse(proxyAddr)
+	proxyURL, err := url.Parse(proxyAddr)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`%s: %w`, ErrBadProxyConfig, err)
 	}
 
-	return proxyUrl, noProxyAddresses, nil
+	return proxyURL, noProxyAddresses, nil
 }
 
 func ShouldSkipProxyCheck(serviceAddress string, noProxyAddresses []string) bool {

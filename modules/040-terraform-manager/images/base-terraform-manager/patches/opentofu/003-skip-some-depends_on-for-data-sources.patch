@@ -154,58 +154,67 @@ index 0000000000..c4a5ee921f
 +	}
 +}
 diff --git a/internal/tofu/node_resource_abstract_instance.go b/internal/tofu/node_resource_abstract_instance.go
-index 3200163e81..3d53c53006 100644
+index 735d6372c7..57081fd423 100644
 --- a/internal/tofu/node_resource_abstract_instance.go
 +++ b/internal/tofu/node_resource_abstract_instance.go
-@@ -6,12 +6,16 @@
- package tofu
+@@ -7,14 +7,18 @@ package tofu
  
  import (
+ 	"context"
 +	"encoding/json"
  	"fmt"
  	"log"
 +	"os"
  	"strings"
+ 	"sync/atomic"
  
 +	gocmp "github.com/google/go-cmp/cmp"
  	"github.com/hashicorp/hcl/v2"
  	"github.com/zclconf/go-cty/cty"
+ 	"github.com/zclconf/go-cty/cty/convert"
 +	ctyjson "github.com/zclconf/go-cty/cty/json"
  
  	"github.com/opentofu/opentofu/internal/addrs"
  	"github.com/opentofu/opentofu/internal/checks"
-@@ -1844,7 +1848,7 @@ func (n *NodeAbstractResourceInstance) planDataSource(ctx EvalContext, checkRule
+@@ -2235,7 +2239,7 @@ func (n *NodeAbstractResourceInstance) planDataSource(ctx context.Context, evalC
  	}
  
  	configKnown := configVal.IsWhollyKnown()
--	depsPending := n.dependenciesHavePendingChanges(ctx)
-+	depsPending := n.dependenciesHavePendingChanges(ctx, providerSchema)
+-	depsPending := n.dependenciesHavePendingChanges(evalCtx)
++	depsPending := n.dependenciesHavePendingChanges(evalCtx, providerSchema, true)
  	// If our configuration contains any unknown values, or we depend on any
  	// unknown values then we must defer the read to the apply phase by
  	// producing a "Read" change for this resource, and a placeholder value for
-@@ -1997,7 +2001,7 @@ func (n *NodeAbstractResourceInstance) nestedInCheckBlock() (*configs.Check, boo
- // receiver depends on has a change pending in the plan, in which case we'd
- // need to override the usual behavior of immediately reading from the data
+@@ -2390,7 +2394,7 @@ func (n *NodeAbstractResourceInstance) nestedInCheckBlock() (*configs.Check, boo
  // source where possible, and instead defer the read until the apply step.
--func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalContext) bool {
-+func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalContext, providerSchema providers.ProviderSchema) bool {
+ // The deferral applies to the opening of the ephemeral resources, too, when
+ // the dependent managed resource is having pending changes.
+-func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(evalCtx EvalContext) bool {
++func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(evalCtx EvalContext, providerSchema providers.ProviderSchema, dataSource bool) bool {
  	nModInst := n.Addr.Module
  	nMod := nModInst.Module()
  
-@@ -2018,6 +2022,8 @@ func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalCo
+@@ -2411,6 +2415,8 @@ func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(evalCtx Ev
  		}
  	}
  
 +	pendingDeps := make(map[string]struct{})
 +
  	for _, d := range depsToUse {
- 		if d.Resource.Mode == addrs.DataResourceMode {
+ 		if n.Addr.Resource.Resource.Mode == addrs.DataResourceMode && d.Resource.Mode == addrs.DataResourceMode {
  			// Data sources have no external side effects, so they pose a need
-@@ -2041,11 +2047,199 @@ func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalCo
+@@ -2443,11 +2449,215 @@ func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(evalCtx Ev
  			}
  
  			if change != nil && change.Action != plans.NoOp {
 -				return true
++				// dependenciesHavePendingChanges now used for ephemeral
++				// and data sources, for ephemeral we bo not check deps
++				// returns immediately
++				if !dataSource {
++					return true
++				}
++
 +				if n.allowDataDepsChanges(d, change, providerSchema) {
 +					pendingDeps[d.String()] = struct{}{}
 +					break
@@ -214,6 +223,13 @@ index 3200163e81..3d53c53006 100644
  		}
  	}
 -	return false
++
++	// dependenciesHavePendingChanges now used for ephemeral
++	// and data sources, for ephemeral we bo not check deps
++	// returns immediately
++	if !dataSource {
++		return false
++	}
 +
 +	return n.handleDataHavePendingDeps(pendingDeps)
 +}
@@ -258,9 +274,11 @@ index 3200163e81..3d53c53006 100644
 +
 +	resourceSchema, _ := providerSchema.SchemaForResourceAddr(d.Resource)
 +
-+	iType := resourceSchema.ImpliedType()
++	if resourceSchema == nil {
++		return logDebugAndAllowChange("resource schema is nil for resource %s", d.String())
++	}
 +
-+	totalChanges, err := change.DeepCopy().Decode(iType)
++	totalChanges, err := change.DeepCopy().Decode(resourceSchema)
 +	if err != nil {
 +		return logDebugAndAllowChange("cannot decode total changes: %v", err)
 +	}
@@ -403,3 +421,12 @@ index 3200163e81..3d53c53006 100644
  }
  
  // apply deals with the main part of the data resource lifecycle: either
+@@ -3358,7 +3568,7 @@ func (n *NodeAbstractResourceInstance) planEphemeralResource(ctx context.Context
+ 	}
+ 
+ 	configKnown := configVal.IsWhollyKnown()
+-	depsPending := n.dependenciesHavePendingChanges(evalCtx)
++	depsPending := n.dependenciesHavePendingChanges(evalCtx, providerSchema, false)
+ 	// If our configuration contains any unknown values, or we depend on any
+ 	// unknown values then we must defer the opening to the apply phase by
+ 	// producing an "Open" change for this resource, and a placeholder value for

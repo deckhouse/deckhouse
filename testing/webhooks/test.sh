@@ -15,6 +15,11 @@
 # limitations under the License.
 set -Eeo pipefail
 
+echo "Proxy: $DISTRO_PACKAGES_PROXY"
+
+if [ -n "${DISTRO_PACKAGES_PROXY}" ]; then
+    sed -iE "s|https://dl-cdn.alpinelinux.org|http://$DISTRO_PACKAGES_PROXY/repository|g" /etc/apk/repositories
+fi
 apk update && apk add --no-cache python3 py3-pip findutils grep
 
 pip3 install --break-system-packages -r /requirements.txt

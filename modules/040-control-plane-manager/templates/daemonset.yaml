@@ -113,6 +113,9 @@ memory: 10Mi
   {{- if hasKey .Values.controlPlaneManager.apiserver "serviceAccount" }}
     {{ $_ := set $tpl_context.apiserver "serviceAccount" .Values.controlPlaneManager.apiserver.serviceAccount }}
   {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.apiserver "signature" }}
+    {{ $_ := set $tpl_context.apiserver "signature" .Values.controlPlaneManager.apiserver.signature }}
+  {{- end }}
 {{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
@@ -171,9 +174,8 @@ extra-file-authn-webhook-config.yaml: {{ include "authnWebhookTemplate" (dict "w
 extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- end }}
 
-  {{- if $tpl_context.apiserver.secretEncryptionKey }}
-extra-file-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) | b64enc }}
-  {{- end }}
+{{ include "encryptionConfig" $tpl_context }}
+
 extra-file-authentication-config.yaml: {{ include "authenticationConfiguration" $tpl_context | b64enc }}
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
 extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
@@ -235,6 +237,8 @@ kind: DaemonSet
 metadata:
   name: {{ $dsMode }}
   namespace: kube-system
+  annotations:
+    signature/enabled: {{ include "signatureEnabledString" $tpl_context | quote }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 spec:
   selector:
@@ -289,6 +293,31 @@ spec:
         - mountPath: /tmp
           name: tmp
         env:
+        # cpm is hostNetwork on every control-plane node and talks to the
+        # apiserver via controller-runtime. The auto-injected env vars point
+        # at the apiserver ClusterIP (10.233.0.1:443), which during the first
+        # bootstrap is unreachable for the few seconds while cilium installs
+        # its eBPF/iptables rules — cpm's leader-election lease renewal hits
+        # `EPERM` and the container dies with "leader election lost". Each
+        # restart loses progress and forces cpm to redo manifest application,
+        # which then triggers an extra cpm-rewrite of the static-pod manifests.
+        # Route apiserver traffic through the local kubernetes-api-proxy
+        # static pod (the same path cilium-agent itself uses) so cpm never
+        # depends on cilium being initialised.
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        # Leader election is only needed on HA clusters (>1 master) where
+        # multiple cpm pods could otherwise race on the cluster-wide pieces.
+        # On a single-master cluster every cpm controller is already
+        # node-partitioned by `spec.nodeName`, and the lease renewal pressure
+        # is pure overhead — when cpm rewrites the apiserver/etcd manifests
+        # during the first reconcile the apiserver is unreachable for ~60s
+        # via the local kubernetes-api-proxy and the lease is lost,
+        # crashlooping cpm and forcing an extra static-pod restart.
+        - name: LEADER_ELECTION
+          value: {{ include "helm_lib_is_ha_to_value" (list $ "true" "false") | quote }}
         - name: MY_IP
           valueFrom:
             fieldRef:
@@ -316,6 +345,10 @@ spec:
         {{- if eq (include "cpm.disableRootKubeconfigSymlink" $ | trim) "true" }}
         - name: NODE_ADMIN_KUBECONFIG
           value: "false"
+        {{- end }}
+        {{- if eq $profile "etcd-arbiter" }}
+        - name: ETCD_ARBITER
+          value: "true"
         {{- end }}
         ports:
         - containerPort: 4296

@@ -151,8 +151,16 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Optimistically register the app before AddNode so a successful schedule
+	// can resolve it; if AddNode rejects the addition (dependency cycle),
+	// roll back the map entry so we never expose a package the scheduler
+	// never accepted.
 	r.apps[app.GetName()] = app
-	r.scheduler.AddNode(app)
+	if err = r.scheduler.AddNode(app); err != nil {
+		delete(r.apps, app.GetName())
+		span.SetStatus(codes.Error, err.Error())
+		return "", status.NewError("DependencyCycle", err)
+	}
 
 	return app.GetVersion().String(), nil
 }

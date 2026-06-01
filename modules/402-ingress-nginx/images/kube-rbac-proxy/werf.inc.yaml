@@ -12,6 +12,9 @@ git:
     stageDependencies:
       install:
         - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/controller-probe-artifact
 from: {{ index $.Images "builder/golang-alpine" }}

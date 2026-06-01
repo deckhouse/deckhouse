@@ -158,7 +158,7 @@ func reconcileEtcdJoin(
 	}
 
 	logger.Info("etcd join: preparing manifest")
-	manifest, err := prepareManifestBytes(component, secretData, annotations)
+	manifest, err := prepareManifestWithOverrides(component, secretData, annotations, node)
 	if err != nil {
 		logger.Error("failed to prepare etcd manifest", log.Err(err))
 		return fmt.Errorf("prepare etcd manifest: %w", err)

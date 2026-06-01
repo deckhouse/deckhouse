@@ -24,12 +24,12 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (
@@ -121,7 +121,7 @@ func ReadVersionTagFromInstallerContainer(versionFile, downloadDir string) (stri
 	return tag, true
 }
 
-func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig) (*DeckhouseInstaller, error) {
+func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, globalOptions *options.GlobalOptions) (*DeckhouseInstaller, error) {
 	_, span := telemetry.StartSpan(ctx, "PrepareDeckhouseInstallConfig")
 	defer span.End()
 
@@ -167,12 +167,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig) 
 		DeckhouseSettings.
 		ToMap()
 
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      metaConfig.DownloadRootDir,
-		DownloadCacheDir: metaConfig.DownloadCacheDir,
-	}
-
-	schemasStore := NewSchemaStore(dc)
+	schemasStore := NewSchemaStore(globalOptions)
 
 	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release

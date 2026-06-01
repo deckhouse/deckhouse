@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -87,9 +86,7 @@ provider:
 `
 )
 
-var (
-	yandexProviderClusterDataDiscovery = []byte(`{"a": "b"}`)
-)
+var yandexProviderClusterDataDiscovery = []byte(`{"a": "b"}`)
 
 func TestStaticClusterClusterManifestConverge(t *testing.T) {
 	// need for prevent set equal versions during add new k8s version
@@ -526,15 +523,11 @@ func testCreateConvergeManifestTest(t *testing.T, p testConvergeManifestsParams)
 
 func testCreateMetaConfigForConvergeManifests(t *testing.T, ctx context.Context, params commander.CommanderModeParams, clusterUUID string) *config.MetaConfig {
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 	metaConfig, err := config.ParseConfigFromData(
 		ctx,
 		configData,
 		config.DummyPreparatorProvider(),
-		dc,
+		nil,
 	)
 
 	require.NoError(t, err)
@@ -588,7 +581,7 @@ func assertConfigMap(t *testing.T, kubeCl *client.KubernetesClient, configMap *c
 	}
 }
 
-func assertKV(t *testing.T, k string, expectedV []byte, v []byte) {
+func assertKV(t *testing.T, k string, expectedV, v []byte) {
 	var yamlV any
 	err := yaml.Unmarshal(v, &yamlV)
 	if err != nil {

@@ -25,14 +25,12 @@ You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/ma
 
 After the installation is complete, set the environment variables required to work with vCenter:
 
-{% snippetcut %}
 ```shell
 export GOVC_URL=example.com
 export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
-{% endsnippetcut %}
 
 ### Creating tags and tag categories
 
@@ -40,39 +38,31 @@ Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Clus
 
 Create a tag category using the following commands:
 
-{% snippetcut %}
 ```shell
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
-{% endsnippetcut %}
 
 Create tags in each category. If you intend to use multiple "zones" (`Cluster`), create a tag for each one of them:
 
-{% snippetcut %}
 ```shell
 govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
-{% endsnippetcut %}
 
 Attach the "region" tag to `Datacenter`:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
-{% endsnippetcut %}
 
 Attach "zone" tags to `Cluster` objects:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
-{% endsnippetcut %}
 
 #### Datastore configuration
 
@@ -82,7 +72,6 @@ For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on 
 
 Assign the "region" and "zone" tags to the `Datastore` objects to automatically create a `StorageClass` in the Kubernetes cluster:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
@@ -90,7 +79,6 @@ govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreN
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
-{% endsnippetcut %}
 
 ### Creating and assigning a role
 
@@ -102,7 +90,6 @@ The role that you are asked to create next includes the privileges from the sect
 
 Create a role with the required privileges:
 
-{% snippetcut %}
 ```shell
 govc role.create deckhouse \
    Cns.Searchable \
@@ -138,15 +125,12 @@ govc role.create deckhouse \
    VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
    VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
-{% endsnippetcut %}
 
 Assign the role to a user on the `vCenter` object:
 
-{% snippetcut %}
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
-{% endsnippetcut %}
 
 ### Preparing a virtual machine image
 

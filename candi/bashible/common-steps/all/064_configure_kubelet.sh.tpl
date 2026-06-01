@@ -348,7 +348,7 @@ featureGates:
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
 {{- end }}
-fileCheckFrequency: 20s
+fileCheckFrequency: 2s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
 imageGCLowThresholdPercent: 65

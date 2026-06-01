@@ -18,7 +18,6 @@ import:
   add: /livenessprobe
   to: /livenessprobe
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
@@ -49,7 +48,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -63,8 +62,7 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash git
+  - pm install git
   install:
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
@@ -73,5 +71,7 @@ shell:
   - cp bin/livenessprobe /livenessprobe
   - chown 64535:64535 /livenessprobe
   - chmod 0755 /livenessprobe
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

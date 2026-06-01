@@ -294,7 +294,8 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	// Normalize timestamps for consistent golden files
 	resultStr := result.String()
 	resultStr = regexp.MustCompile(`startTime: "[^"]*"`).ReplaceAllString(resultStr, `startTime: "2025-10-31T12:00:00Z"`)
-	resultStr = regexp.MustCompile(`syncTime: "[^"]*"`).ReplaceAllString(resultStr, `syncTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastScanTime: "[^"]*"`).ReplaceAllString(resultStr, `lastScanTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastChangeTime: "[^"]*"`).ReplaceAllString(resultStr, `lastChangeTime: "2025-10-31T12:00:00Z"`)
 	resultStr = regexp.MustCompile(`completionTime: "[^"]*"`).ReplaceAllString(resultStr, `completionTime: "2025-10-31T12:00:00Z"`)
 
 	return []byte(resultStr)
@@ -690,6 +691,59 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createFakePSM(ic)
 
 		suite.setupController("legacy-module-old-registry.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags with legacy /release", func() {
+		// /version path exists but has only non-semver tags (no semver tags to process).
+		// On a full scan this must behave identically to NAME_UNKNOWN: fall back to /release.
+		// /release has semver tags + channel names -> legacy v1alpha1 module processed.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-legacy-release.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags and no /release", func() {
+		// /version exists with only non-semver tags, /release does not exist at all.
+		// Must emit the same error as the NAME_UNKNOWN+no-/release path:
+		// "package %q has neither /version nor /release path".
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		// Intentionally NOT adding any test-package/release image.
+		// Note: the fake registry returns an empty tag list for a missing repo (not NAME_UNKNOWN),
+		// so this exercises the "empty /release tags" branch -> "no semver release tags found".
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-no-release.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

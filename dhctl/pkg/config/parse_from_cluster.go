@@ -66,6 +66,7 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 
 	return nil, nil
 }
+
 func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
 	fillEmptyStaticConfigAndReturn := func(cfg *MetaConfig) (nilType, error) {
 		cfg.StaticClusterConfig = nil

@@ -136,7 +136,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
-			DownloadDir:      c.Options.Global.DownloadDir,
+			GlobalOptions:    &c.Options.Global,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           c.logger,
 			IsDebug:          c.IsDebug,
@@ -173,7 +173,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	hasTerraformState := false
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
+		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext, &c.Options.Global)
 		if err != nil {
 			return nil, cleaner, fmt.Errorf("unable to check infra state: %w", err)
 		}
@@ -266,7 +266,7 @@ type InfraResult struct {
 	MigrationOpentofuStatus CheckStatus
 }
 
-func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
+func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context, globalOptions *options.GlobalOptions) (*InfraResult, error) {
 	defer c.switchPhase(ctx, phases.CheckInfra)()
 
 	stat, hasTerraformState, err := CheckState(
@@ -276,6 +276,7 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 			StateCache:    c.StateCache,
 		},
 		false,
+		globalOptions,
 	)
 	if err != nil {
 		return nil, err

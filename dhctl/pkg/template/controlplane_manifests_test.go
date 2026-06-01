@@ -26,7 +26,6 @@ import (
 )
 
 func TestControlplaneRendering(t *testing.T) {
-	InitGlobalVars("/deckhouse")
 
 	t.Run("Version Selection", testVersionSelection)
 	t.Run("Feature Gates", testFeatureGates)
@@ -173,6 +172,14 @@ func testFeatureGates(t *testing.T) {
 					if !strings.Contains(featureGates, expected) {
 						t.Errorf("Expected feature gate %s not found in: %s of manifest %s", expected, featureGates, name)
 					}
+				}
+
+				if name == "kube-apiserver.yaml" {
+					if !strings.Contains(featureGates, "CRDSensitiveData=true") {
+						t.Errorf("Expected CRDSensitiveData=true in kube-apiserver, got: %s", featureGates)
+					}
+				} else if strings.Contains(featureGates, "CRDSensitiveData=true") {
+					t.Errorf("CRDSensitiveData must be kube-apiserver-only, found in %s: %s", name, featureGates)
 				}
 
 				if tt.k8sVersion >= "1.30" {
@@ -1198,6 +1205,9 @@ func testMissingCoverage(t *testing.T) {
 				}
 				if !strings.Contains(featureGates, "AnonymousAuthConfigurableEndpoints=true") {
 					t.Errorf("Expected feature gate not found for Kubernetes 1.31 in %s", name)
+				}
+				if name == "kube-apiserver.yaml" && !strings.Contains(featureGates, "CRDSensitiveData=true") {
+					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.31 in %s", name)
 				}
 			}
 		}

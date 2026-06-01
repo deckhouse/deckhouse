@@ -77,6 +77,11 @@ spec:
     - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
     - --snapshot-count=10000
     - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+    env:
+    - name: ETCD_HEARTBEAT_INTERVAL
+      value: "100"
+    - name: ETCD_ELECTION_TIMEOUT
+      value: "1000"
     volumeMounts:
     - name: etcd-data
       mountPath: /var/lib/etcd

@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
@@ -74,6 +75,28 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 	return initializer
 }
 
+func (i *SSHProviderInitializer) Reinitialize(ctx context.Context, logger log.Logger, baseProviderSettings *settings.BaseProviders, config *sshconfig.ConnectionConfig) {
+	if i == nil {
+		return
+	}
+
+	i.mut.Lock()
+	defer i.mut.Unlock()
+
+	if govalue.NotNil(i.provider) {
+		if err := i.provider.Cleanup(ctx); err != nil && logger != nil {
+			logger.LogWarnF("failed to cleanup ssh provider: %v\n", err)
+		}
+	}
+
+	other := NewSSHProviderInitializer(baseProviderSettings, config)
+
+	i.provider = other.provider
+	i.baseProviderSettings = other.baseProviderSettings
+	i.config = other.config
+	i.hostsProvider = other.hostsProvider
+}
+
 func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHProvider, error) {
 	if i == nil {
 		return nil, nil
@@ -102,6 +125,8 @@ func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
 		return nil
 	}
 
+	i.mut.Lock()
+	defer i.mut.Unlock()
 	return i.provider.Cleanup(ctx)
 }
 

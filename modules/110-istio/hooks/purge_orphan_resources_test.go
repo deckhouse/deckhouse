@@ -325,4 +325,77 @@ metadata:
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Istio deleted\",\"name\":\"v1x16\""))
 		})
 	})
+
+	Context("Cluster with operator-free 1.27 resources", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.ValuesSetFromYaml("istio", []byte(`
+internal:
+  versionMap:
+    "1.21":
+      revision: "v1x21"
+      supportsOperator: true
+    "1.25":
+      revision: "v1x25"
+      supportsOperator: true
+    "1.27":
+      revision: "v1x27"
+      supportsOperator: false
+`))
+			f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-istio
+  annotations:
+    deletionTimestamp: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ns1
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: v1x21
+  namespace: d8-istio
+spec:
+  revision: v1x21
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x25
+  namespace: d8-istio
+spec:
+  revision: v1x25
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x27
+  namespace: d8-istio
+spec:
+  revision: v1x27
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-ca-root-cert
+  namespace: ns1
+`)
+			f.RunHook()
+		})
+
+		It("Should keep operator-free resources and clean operator-supported ones", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x21").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x25").Exists()).To(BeFalse())
+
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeTrue())
+		})
+	})
 })

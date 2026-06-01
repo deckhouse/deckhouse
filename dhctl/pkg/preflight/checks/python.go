@@ -39,6 +39,7 @@ func (PythonCheck) Description() string {
 func (PythonCheck) Phase() preflight.Phase {
 	return preflight.PhasePostInfra
 }
+
 func (PythonCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.DefaultRetryPolicy
 }

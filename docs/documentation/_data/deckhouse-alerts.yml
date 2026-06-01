@@ -1331,6 +1331,36 @@ alerts:
         Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
       severity: "4"
       markupFormat: markdown
+    - name: D8DexProviderLDAPTLSConflict
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        DexProvider `{{ $labels.name }}` combines mutually exclusive LDAP TLS settings: `{{ $labels.conflict }}`. Dex silently ignores the redundant flag, which masks misconfiguration:
+
+        * `insecureNoSSL + startTLS`: TLS is disabled (ldap://, port 389), so `startTLS` is ignored.
+        * `insecureNoSSL + insecureSkipVerify`: TLS is disabled, there is no certificate to verify.
+        * `insecureNoSSL + rootCAData`: TLS is disabled, the CA chain is ignored.
+
+        The CRD schema rejects this combination on create/update; this DexProvider was created before the validation was added and remains active.
+
+        Update the DexProvider to remove the conflict:
+
+        * Plaintext LDAP (port 389): keep `spec.ldap.insecureNoSSL: true`, remove `startTLS`, `insecureSkipVerify`, and `rootCAData`.
+        * STARTTLS on port 389: set `spec.ldap.insecureNoSSL: false`, `spec.ldap.startTLS: true`. Use `insecureSkipVerify` or `rootCAData` as needed.
+        * `ldaps://` on port 636: leave `insecureNoSSL` and `startTLS` at `false`. Use `insecureSkipVerify` or `rootCAData` as appropriate.
+
+        Audit all LDAP DexProvider objects:
+
+        ```bash
+        kubectl get dexproviders.deckhouse.io -o yaml \
+          | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
+        ```
+      summary: |
+        DexProvider {{ $labels.name }} has a conflicting LDAP TLS configuration.
+      severity: "8"
+      markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
@@ -1520,6 +1550,31 @@ alerts:
       summary: |
         The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"
+      markupFormat: markdown
+    - name: D8HuaweiCloudMachineStuckInDeleting
+      sourceFile: ee/modules/030-cloud-provider-huaweicloud/monitoring/prometheus-rules/caphc-controller-manager.tpl
+      moduleUrl: 030-cloud-provider-huaweicloud
+      module: cloud-provider-huaweicloud
+      edition: ee
+      description: |
+        The HuaweiCloudMachine `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has been stuck in Deleting state for more than 24 hours.
+
+        This usually means the deletion job in HuaweiCloud is failing or the API is unavailable.
+
+        To inspect the machine status, run:
+
+        ```shell
+        d8 k get huaweicloudmachine -n {{ $labels.namespace }} {{ $labels.name }} -o yaml
+        ```
+
+        Check the controller logs for errors:
+
+        ```shell
+        d8 k logs -n d8-cloud-provider-huaweicloud -l app=caphc-controller-manager
+        ```
+      summary: |
+        HuaweiCloudMachine {{ $labels.name }} is stuck in Deleting for more than 24h.
+      severity: "6"
       markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
@@ -2550,7 +2605,7 @@ alerts:
       edition: ce
       description: |
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
-        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
       summary: |
         Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
@@ -7251,6 +7306,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager

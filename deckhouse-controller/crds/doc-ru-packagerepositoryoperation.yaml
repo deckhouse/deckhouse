@@ -108,12 +108,28 @@ spec:
                           foundVersions:
                             description: |
                               Количество версий, найденных в рамках данной операции.
+                          newVersions:
+                            description: |
+                              Количество новых версий в рамках данной операции.
+                              
+                              Версия считается новой, если её `ApplicationPackageVersion`
+                              или `ModulePackageVersion` отсутствовал в кластере, либо (только
+                              для `ApplicationPackageVersion`) имел пометку «нет в реестре» и
+                              его образ был найден в реестре в рамках этой операции.
                     processedOverall:
                       description: |
                         Общее количество обработанных пакетов.
                     total:
                       description: |
                         Общее количество найденных пакетов.
+                    newVersionsOverall:
+                      description: |
+                        Общее количество новых версий по всем пакетам в рамках операции.
+                        
+                        Версия считается новой, если её `ApplicationPackageVersion`
+                        или `ModulePackageVersion` отсутствовал в кластере, либо (только
+                        для `ApplicationPackageVersion`) имел пометку «нет в реестре» и его
+                        образ был найден в реестре в рамках этой операции.
                 startTime:
                   description: |
                     Время начала операции.

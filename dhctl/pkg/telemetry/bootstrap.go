@@ -28,6 +28,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -56,6 +57,8 @@ func Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	// resource.New always returns a non-nil *resource.Resource even when some
+	// detectors fail; the error indicates partial data we intentionally tolerate.
 	otelResource, err := resource.New(
 		ctx,
 		resource.WithSchemaURL(semconv.SchemaURL),
@@ -77,22 +80,41 @@ func Bootstrap(ctx context.Context) error {
 		),
 	)
 	if err != nil {
-		// probably, we need to log this.
-		// resource.New always returns *resource.Resource, but some data may be missed
+		log.WarnF("failed to initialize OTel resource completely: %v", err)
 	}
 
-	tracesShutdown, _ := initTraces(tracesExporter, otelResource)
-	metricsShutdown, _ := initMetrics(metricsExporter, otelResource)
-	logsShutdown, _ := initLogs(logsExporter, otelResource)
+	tracesShutdown := initTraces(tracesExporter, otelResource)
 
-	tomb.RegisterOnShutdown("OTel: traces", func() { tracesShutdown(ctx) })
-	tomb.RegisterOnShutdown("OTel: metrics", func() { metricsShutdown(ctx) })
-	tomb.RegisterOnShutdown("OTel: logs", func() { logsShutdown(ctx) })
+	metricsShutdown, err := initMetrics(metricsExporter, otelResource)
+	if err != nil {
+		return fmt.Errorf("failed to init metrics: %w", err)
+	}
+
+	logsShutdown := initLogs(logsExporter, otelResource)
+
+	tomb.RegisterOnShutdown("OTel: traces", func() {
+		err := tracesShutdown(ctx)
+		if err != nil {
+			log.WarnF("failed to shutdown traces: %v", err)
+		}
+	})
+	tomb.RegisterOnShutdown("OTel: metrics", func() {
+		err := metricsShutdown(ctx)
+		if err != nil {
+			log.WarnF("failed to shutdown metrics: %v", err)
+		}
+	})
+	tomb.RegisterOnShutdown("OTel: logs", func() {
+		err := logsShutdown(ctx)
+		if err != nil {
+			log.WarnF("failed to shutdown logs: %v", err)
+		}
+	})
 
 	return nil
 }
 
-func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) (ShutdownFunc, error) {
+func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) ShutdownFunc {
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(r),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -109,7 +131,7 @@ func initTraces(exporter sdktrace.SpanExporter, r *resource.Resource) (ShutdownF
 			return fmt.Errorf("failed to shutdown traces: %v", err)
 		}
 		return nil
-	}, nil
+	}
 }
 
 func initMetrics(exporter sdkmetric.Exporter, r *resource.Resource) (ShutdownFunc, error) {
@@ -135,7 +157,7 @@ func initMetrics(exporter sdkmetric.Exporter, r *resource.Resource) (ShutdownFun
 	}, nil
 }
 
-func initLogs(exporter sdklog.Exporter, r *resource.Resource) (ShutdownFunc, error) {
+func initLogs(exporter sdklog.Exporter, r *resource.Resource) ShutdownFunc {
 	provider := sdklog.NewLoggerProvider(
 		sdklog.WithResource(r),
 		sdklog.WithProcessor(
@@ -146,7 +168,7 @@ func initLogs(exporter sdklog.Exporter, r *resource.Resource) (ShutdownFunc, err
 	global.SetLoggerProvider(provider)
 
 	// todo: add to external logger?
-	//slog.SetDefault(
+	// slog.SetDefault(
 	//	slog.New(
 	//		slogmulti.Fanout(
 	//			slog.Default().Handler(),
@@ -168,5 +190,5 @@ func initLogs(exporter sdklog.Exporter, r *resource.Resource) (ShutdownFunc, err
 			return fmt.Errorf("failed to shutdown traces: %v", err)
 		}
 		return nil
-	}, nil
+	}
 }

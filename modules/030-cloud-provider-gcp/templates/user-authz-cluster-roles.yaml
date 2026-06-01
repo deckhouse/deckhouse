@@ -1,36 +1,4 @@
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  annotations:
-    user-authz.deckhouse.io/access-level: User
-  name: d8:user-authz:cloud-provider-gcp:user
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-rules:
-- apiGroups:
-  - deckhouse.io
-  resources:
-  - gcpinstanceclasses
-  verbs:
-  - get
-  - list
-  - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  annotations:
-    user-authz.deckhouse.io/access-level: ClusterAdmin
-  name: d8:user-authz:cloud-provider-gcp:cluster-admin
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-rules:
-- apiGroups:
-  - deckhouse.io
-  resources:
-  - gcpinstanceclasses
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - patch
-  - update
+{{- $userAuthzConfig := dict -}}
+{{- $_ := set $userAuthzConfig "providerName" "cloud-provider-gcp" -}}
+{{- $_ := set $userAuthzConfig "instanceClassResource" "gcpinstanceclasses" -}}
+{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $userAuthzConfig) }}

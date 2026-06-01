@@ -308,7 +308,6 @@ func (p *Provider) logRootDir() {
 
 		return nil
 	})
-
 	if err != nil {
 		p.logger.LogDebugF("Failed to fully log root dir '%s' for %s: %v\n", p.rootDir, p.String(), err)
 		return
@@ -385,7 +384,7 @@ Root versions file %s
 	if rewriteRootVersionsFile {
 		p.logger.LogDebugF("Root versions file %s for %s needs to rewrite\n", versionsRootFile, p.String())
 
-		err = os.WriteFile(versionsRootFile, versionContent, 0644)
+		err = os.WriteFile(versionsRootFile, versionContent, 0o644)
 		if err != nil {
 			return fmt.Errorf("Cannot write root versions %s file for %s: %w", versionsRootFile, p.String(), err)
 		}
@@ -425,7 +424,7 @@ Root versions file %s
 }
 
 func (p *Provider) makeDir(dir, errPrefix string) error {
-	err := os.MkdirAll(dir, 0777)
+	err := os.MkdirAll(dir, 0o777)
 	if err == nil {
 		return nil
 	}
@@ -447,7 +446,7 @@ func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string,
 
 	p.logger.LogDebugF("Create modules destination %s for %s\n", destination, p.String())
 
-	err := os.MkdirAll(destination, 0777)
+	err := os.MkdirAll(destination, 0o777)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create destination modules dir %s for %s: %w", destination, p.String(), err)
 	}
@@ -479,7 +478,7 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 
 	p.logger.LogDebugF("Create plugins dir destination %s for %s version %s\n", destinationDir, p.String(), version)
 
-	err := os.MkdirAll(destinationDir, 0755)
+	err := os.MkdirAll(destinationDir, 0o755)
 	if err != nil {
 		return "", fmt.Errorf("Cannot create plugins destination dir %s for %s: %w", destinationDir, p.String(), err)
 	}

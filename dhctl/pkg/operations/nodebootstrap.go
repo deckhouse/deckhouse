@@ -24,6 +24,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -55,6 +56,7 @@ func BootstrapAdditionalNode(
 	step infrastructure.Step,
 	nodeGroupName, cloudConfig string,
 	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
@@ -67,7 +69,6 @@ func BootstrapAdditionalNode(
 		kubeCl: kubeCl,
 		logger: log.GetDefaultLogger(),
 	})
-
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func BootstrapAdditionalNode(
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.OnlyState)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, infrastructure.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,14 @@ func BootstrapAdditionalNode(
 	return nil
 }
 
-func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
+func BootstrapSequentialTerraNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	terraNodeGroups []config.TerraNodeGroupSpec,
+	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
+) error {
 	for _, ng := range terraNodeGroups {
 		err := log.ProcessCtx(ctx, "bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func(ctx context.Context) error {
 			err := entity.CreateNodeGroup(ctx, kubeCl, ng.Name, log.GetDefaultLogger(), metaConfig.NodeGroupManifest(ng))
@@ -121,14 +129,13 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, infrastructureContext)
+				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, infrastructureContext, globalOptions)
 				if err != nil {
 					return err
 				}
 			}
 			return nil
 		})
-
 		if err != nil {
 			return err
 		}
@@ -145,6 +152,7 @@ func BootstrapAdditionalNodeForParallelRun(
 	nodeGroupName, cloudConfig string,
 	infrastructureContext *infrastructure.Context,
 	runnerLogger log.Logger,
+	globalOptions *options.GlobalOptions,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
@@ -162,12 +170,11 @@ func BootstrapAdditionalNodeForParallelRun(
 		// allow use state cache because in parallel run we cannot get correct output from user
 		AllowUseStateCache: true,
 	})
-
 	if err != nil {
 		return err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.OnlyState)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, infrastructure.OnlyState)
 	if err != nil {
 		return err
 	}
@@ -194,6 +201,7 @@ func ParallelBootstrapAdditionalNodes(
 	infrastructureContext *infrastructure.Context,
 	ngLogger log.Logger,
 	saveLogToBuffer bool,
+	globalOptions *options.GlobalOptions,
 ) ([]string, error) {
 	var (
 		nodesToWait []string
@@ -221,7 +229,6 @@ func ParallelBootstrapAdditionalNodes(
 			kubeCl: kubeCl,
 			logger: ngLogger,
 		})
-
 		if err != nil {
 			nodesCheckErrors = multierror.Append(nodesCheckErrors, err)
 		}
@@ -258,6 +265,7 @@ func ParallelBootstrapAdditionalNodes(
 				cloudConfig,
 				infrastructureContext,
 				nodeLogger,
+				globalOptions,
 			)
 
 			resultsChan <- checkResult{
@@ -310,6 +318,7 @@ func ParallelCreateNodeGroup(
 	metaConfig *config.MetaConfig,
 	terraNodeGroups []config.TerraNodeGroupSpec,
 	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
 ) error {
 	msg := "Create NodeGroups "
 	for _, group := range terraNodeGroups {
@@ -374,7 +383,7 @@ func ParallelCreateNodeGroup(
 					nodesIndexToCreate = append(nodesIndexToCreate, i)
 				}
 
-				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, nodeCloudConfig, infrastructureContext, ngLogger, saveLogToBuffer)
+				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, nodeCloudConfig, infrastructureContext, ngLogger, saveLogToBuffer, globalOptions)
 
 				resultsChan <- checkResult{
 					name:    group.Name,
@@ -428,6 +437,7 @@ func BootstrapAdditionalMasterNode(
 	index int,
 	cloudConfig string,
 	infrastructureContext *infrastructure.Context,
+	globalOptions *options.GlobalOptions,
 ) (*infrastructure.PipelineOutputs, error) {
 	nodeGroupName := global.MasterNodeGroupName
 	nodeName := NodeName(cfg, nodeGroupName, index)
@@ -441,7 +451,6 @@ func BootstrapAdditionalMasterNode(
 		kubeCl: kubeCl,
 		logger: log.GetDefaultLogger(),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +471,7 @@ func BootstrapAdditionalMasterNode(
 		return nil, err
 	}
 
-	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.GetMasterNodeResult)
+	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, globalOptions, infrastructure.GetMasterNodeResult)
 	if err != nil {
 		return nil, err
 	}

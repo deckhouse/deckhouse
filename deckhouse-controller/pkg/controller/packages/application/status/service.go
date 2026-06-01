@@ -122,14 +122,7 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 		})
 	}
 
-	// We can lose versionChanged=true during different events processing.
-	//
-	// So we need to commit version when ReadyInCluster (internal condition) is True.
-	// ReadyInCluster is the last condition in the chain, so when it's True,
-	// all other conditions (Downloaded, ReadyOnFilesystem, ReadyInRuntime) are also True.
-	//
-	// And this means we can commit the resulted version.
-	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionScaled) {
+	if packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
 
 		if packageStatus.Settings != nil {
@@ -139,8 +132,23 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 		}
 	}
 
-	raw, _ := json.Marshal(packageStatus.Tracking)
-	app.Status.Tracking = runtime.RawExtension{Raw: raw}
+	// Skip writing tracking if there's nothing to report — preserves the previous
+	// tracking field on the CR through trailing empty progress events from nelm.
+	if len(packageStatus.Tracking.Report.Operations) > 0 {
+		raw, _ := json.Marshal(packageStatus.Tracking)
+		app.Status.Tracking = runtime.RawExtension{Raw: raw}
+	}
+
+	// Summary is computed from the same pre-mapping state the mapper consumed,
+	// not from the merged conditions: summarize shares the mapper's phase and
+	// dependency-disabled helpers, so the two cannot drift, and reads the
+	// internal conditions directly instead of reverse-deriving reasons.
+	state, message, tip := summarize(mapperStatus)
+	app.Status.Summary = &v1alpha1.ApplicationStatusSummary{
+		State:   state,
+		Message: message,
+		Tip:     tip,
+	}
 }
 
 // buildMapperStatus creates mapper input from Application and internal conditions.
@@ -171,14 +179,4 @@ func (s *Service) buildMapperStatus(versionChanged bool, external []metav1.Condi
 	mapperStatus.Updating = versionChanged
 
 	return mapperStatus
-}
-
-// internalConditionIsTrue checks if an internal condition with the given name has status True.
-func internalConditionIsTrue(conditions []status.Condition, condName status.ConditionType) bool {
-	for _, cond := range conditions {
-		if cond.Type == condName && cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
 }

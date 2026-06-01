@@ -21,11 +21,12 @@
 package dhctl
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -781,23 +782,26 @@ func file_bootstrap_proto_rawDescGZIP() []byte {
 	return file_bootstrap_proto_rawDescData
 }
 
-var file_bootstrap_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_bootstrap_proto_goTypes = []interface{}{
-	(*BootstrapRequest)(nil),      // 0: dhctl.BootstrapRequest
-	(*BootstrapResponse)(nil),     // 1: dhctl.BootstrapResponse
-	(*BootstrapStart)(nil),        // 2: dhctl.BootstrapStart
-	(*BootstrapPhaseEnd)(nil),     // 3: dhctl.BootstrapPhaseEnd
-	(*BootstrapContinue)(nil),     // 4: dhctl.BootstrapContinue
-	(*BootstrapCancel)(nil),       // 5: dhctl.BootstrapCancel
-	(*BootstrapStartOptions)(nil), // 6: dhctl.BootstrapStartOptions
-	(*BootstrapResult)(nil),       // 7: dhctl.BootstrapResult
-	nil,                           // 8: dhctl.BootstrapPhaseEnd.CompletedPhaseStateEntry
-	(*Logs)(nil),                  // 9: dhctl.Logs
-	(*Progress)(nil),              // 10: dhctl.Progress
-	(Continue)(0),                 // 11: dhctl.Continue
-	(*durationpb.Duration)(nil),   // 12: google.protobuf.Duration
-	(*OperationOptions)(nil),      // 13: dhctl.OperationOptions
-}
+var (
+	file_bootstrap_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+	file_bootstrap_proto_goTypes  = []interface{}{
+		(*BootstrapRequest)(nil),      // 0: dhctl.BootstrapRequest
+		(*BootstrapResponse)(nil),     // 1: dhctl.BootstrapResponse
+		(*BootstrapStart)(nil),        // 2: dhctl.BootstrapStart
+		(*BootstrapPhaseEnd)(nil),     // 3: dhctl.BootstrapPhaseEnd
+		(*BootstrapContinue)(nil),     // 4: dhctl.BootstrapContinue
+		(*BootstrapCancel)(nil),       // 5: dhctl.BootstrapCancel
+		(*BootstrapStartOptions)(nil), // 6: dhctl.BootstrapStartOptions
+		(*BootstrapResult)(nil),       // 7: dhctl.BootstrapResult
+		nil,                           // 8: dhctl.BootstrapPhaseEnd.CompletedPhaseStateEntry
+		(*Logs)(nil),                  // 9: dhctl.Logs
+		(*Progress)(nil),              // 10: dhctl.Progress
+		(Continue)(0),                 // 11: dhctl.Continue
+		(*durationpb.Duration)(nil),   // 12: google.protobuf.Duration
+		(*OperationOptions)(nil),      // 13: dhctl.OperationOptions
+	}
+)
+
 var file_bootstrap_proto_depIdxs = []int32{
 	2,  // 0: dhctl.BootstrapRequest.start:type_name -> dhctl.BootstrapStart
 	4,  // 1: dhctl.BootstrapRequest.continue:type_name -> dhctl.BootstrapContinue

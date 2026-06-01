@@ -13,17 +13,23 @@
 # limitations under the License.
 
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
-# Read previously discovered IP
 
-bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
 {{- if eq .runType "Normal" }}
-{{ .clusterMasterKubeAPIEndpoints | toJson }}
+upstreams_json='{{ .clusterMasterKubeAPIEndpoints | toJson }}'
+if ! jq -e 'arrays | length > 0' <<< "${upstreams_json}" > /dev/null 2>&1; then
+  bb-log-error "clusterMasterKubeAPIEndpoints is empty or invalid, skipping upstreams.json update to prevent kube-api-proxy outage"
+  exit 1
+fi
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
+${upstreams_json}
+EOF
 {{- else if eq .runType "ClusterBootstrap" }}
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
 {{- $list := list }}
   {{- $list = append $list "$(bb-d8-node-ip):6443" }}
 {{ toJson $list }}
-{{- end }}
 EOF
+{{- end }}
 
 {{ if eq .runType "Normal" }}
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/ca.crt - << EOF

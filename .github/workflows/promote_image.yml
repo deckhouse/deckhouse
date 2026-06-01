@@ -37,8 +37,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
-  WERF_VERSION: "v2.63.1"
+  WERF_VERSION: "v2.69.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -145,15 +144,6 @@ jobs:
 
       # </template: import_secrets>
 
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -232,7 +222,7 @@ jobs:
           set -euo pipefail
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -267,7 +257,7 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
@@ -376,15 +366,6 @@ jobs:
 
       # </template: import_secrets>
 
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -463,7 +444,7 @@ jobs:
           set -euo pipefail
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -498,7 +479,7 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
@@ -607,15 +588,6 @@ jobs:
 
       # </template: import_secrets>
 
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -694,7 +666,7 @@ jobs:
           set -euo pipefail
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -729,7 +701,7 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
@@ -838,15 +810,6 @@ jobs:
 
       # </template: import_secrets>
 
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -925,7 +888,7 @@ jobs:
           set -euo pipefail
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -960,7 +923,7 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
@@ -1069,15 +1032,6 @@ jobs:
 
       # </template: import_secrets>
 
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -1156,7 +1110,7 @@ jobs:
           set -euo pipefail
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -1191,7 +1145,7 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
@@ -1300,15 +1254,6 @@ jobs:
 
       # </template: import_secrets>
 
-      # <template: d8cli_install_step>
-      - name: Install d8 CLI
-        run: |
-          mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
-          echo "$(pwd)/bin" >> "$GITHUB_PATH"
-      # </template: d8cli_install_step>
-
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -1387,7 +1332,7 @@ jobs:
           set -euo pipefail
 
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
@@ -1422,7 +1367,7 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
 
-          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
 
           STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
           PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"

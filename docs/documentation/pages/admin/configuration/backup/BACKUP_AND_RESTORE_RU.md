@@ -553,14 +553,18 @@ mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
 Пример фрагмента конфигурации:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
 spec:
-  etcd:
-    backup:
-      enabled: true
-      cronSchedule: "0 1 * * *"
-      hostPath: "/var/lib/etcd"
+  version: 3
+  enabled: true
+  settings:
+    etcd:
+      backup:
+        cronSchedule: 0 14 * * *
+        enabled: true
 ```
 
 ### Резервное копирование конфигурации кластера

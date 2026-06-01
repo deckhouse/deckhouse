@@ -28,6 +28,11 @@ import (
 	"k8s.io/client-go/util/keyutil"
 )
 
+// LoadCert loads an X.509 certificate from the given file path.
+func LoadCert(path string) (*x509.Certificate, error) {
+	return loadCert(path)
+}
+
 // LoadKey loads a private key from the given file path.
 // Only RSA and ECDSA formats are accepted.
 func LoadKey(path string) (crypto.Signer, error) {
@@ -54,6 +59,9 @@ func loadCert(path string) (*x509.Certificate, error) {
 	certs, err := certutil.CertsFromFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't load certificate file %s: %w", path, err)
+	}
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("certificate file %s contains no certificates", path)
 	}
 	// Safely pick the first one because the sender's certificate must come first in the list.
 	// For details, see: https://www.rfc-editor.org/rfc/rfc4346#section-7.4.2

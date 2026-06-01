@@ -278,7 +278,7 @@ func WaitForServicesDeletion(ctx context.Context, kubeCl *client.KubernetesClien
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range filteredResources {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.Namespace, item.Name))
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.Namespace, item.Name)
 			}
 			return fmt.Errorf("%d Services left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
@@ -310,7 +310,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 		if skipPVsCount != 0 {
 			skipPVsInfo := strings.Builder{}
 			for _, item := range skipPVs {
-				skipPVsInfo.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				fmt.Fprintf(&skipPVsInfo, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
 			log.InfoF("%d PersistentVolumes provided manually or with reclaimPolicy other than Delete was skipped.\n%s\n", skipPVsCount, strings.TrimSuffix(skipPVsInfo.String(), "\n"))
 		}
@@ -319,7 +319,7 @@ func WaitForPVDeletion(ctx context.Context, kubeCl *client.KubernetesClient) err
 		if count != 0 {
 			remainingPVs := strings.Builder{}
 			for _, item := range filteredResources {
-				remainingPVs.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				fmt.Fprintf(&remainingPVs, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
 			return fmt.Errorf("%d PersistentVolumes left in the cluster\n%s", count, strings.TrimSuffix(remainingPVs.String(), "\n"))
 		}
@@ -347,7 +347,7 @@ func WaitForPVCDeletion(ctx context.Context, kubeCl *client.KubernetesClient) er
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range resources.Items {
-				builder.WriteString(fmt.Sprintf("\t\t%s | %s\n", item.Name, item.Status.Phase))
+				fmt.Fprintf(&builder, "\t\t%s | %s\n", item.Name, item.Status.Phase)
 			}
 			return fmt.Errorf("%d PersistentVolumeClaims left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
@@ -430,7 +430,7 @@ func WaitForMCMMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesCl
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range resources.Items {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
 			}
 			return fmt.Errorf("%d Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}
@@ -566,7 +566,7 @@ func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesC
 		if count != 0 {
 			builder := strings.Builder{}
 			for _, item := range machines {
-				builder.WriteString(fmt.Sprintf("\t\t%s/%s\n", item.GetNamespace(), item.GetName()))
+				fmt.Fprintf(&builder, "\t\t%s/%s\n", item.GetNamespace(), item.GetName())
 			}
 			return fmt.Errorf("%d CAPI Machines left in the cluster\n%s", count, strings.TrimSuffix(builder.String(), "\n"))
 		}

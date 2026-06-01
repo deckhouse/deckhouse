@@ -64,12 +64,13 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 			}
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
 			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			ResetInitialState:      false,
-			DirectoryConfig:        opts.DirConfig(),
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
 			Options:                opts,

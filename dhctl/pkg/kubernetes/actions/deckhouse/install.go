@@ -20,9 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -74,7 +76,6 @@ func prepareDeckhouseDeploymentForUpdate(
 }
 
 func controllerDeploymentTask(
-	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	cfg *config.DeckhouseInstaller,
 ) actions.ManifestTask {
@@ -649,34 +650,79 @@ func CreateDeckhouseManifests(
 		tasks = append(tasks, *lockCmTask)
 	}
 
-	tasks = append(tasks, controllerDeploymentTask(ctx, kubeCl, cfg))
+	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
 	result := &ManifestsResult{}
 
 	if len(cfg.ModuleConfigs) > 0 {
 		prepareModuleConfig(ctx, cfg.ModuleConfigs[0], result)
-		tasks = append(tasks, createModuleConfigManifestTask(ctx, kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
+		tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
 
 		for i := 1; i < len(cfg.ModuleConfigs); i++ {
 			prepareModuleConfig(ctx, cfg.ModuleConfigs[i], result)
-			tasks = append(tasks, createModuleConfigManifestTask(ctx, kubeCl, cfg.ModuleConfigs[i], ""))
+			tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
 		}
 	}
 
 	err = log.ProcessCtx(ctx, "default", "Create Manifests", func(ctx context.Context) error {
-		for _, task := range tasks {
-			err := retry.NewSilentLoop(task.Name, 60, 5*time.Second).RunContext(
+		if len(tasks) == 0 {
+			return nil
+		}
+
+		// The first task is the d8-system Namespace; everything else (RBAC,
+		// SAs, ConfigMaps, ModuleConfigs, the controller Deployment, etc.) is
+		// either cluster-scoped or namespace-scoped to d8-system. Run the
+		// Namespace serially first, then fan out the remaining tasks through
+		// errgroup. Tasks use Get-then-Create or simple Create-or-Update flows
+		// and target distinct API resources, so they are independent.
+		// Retry interval was 5s, which dominates the create-manifests phase
+		// whenever a task hits a transient error (e.g. ModuleConfig CRD not yet
+		// installed by the deckhouse Deployment that is being applied in
+		// parallel). The total deadline stays the same (60 attempts × 1s = 60s
+		// per task) but the loop reacts to the CRD appearing in ~1s instead of
+		// dead-waiting 5s.
+		runTask := func(task actions.ManifestTask) error {
+			return retry.NewSilentLoop(task.Name, 60, 1*time.Second).RunContext(
 				ctx,
 				func() error {
 					return task.CreateOrUpdate(ctx)
 				},
 			)
-			if err != nil {
-				return err
-			}
 		}
 
-		return nil
+		if err := runTask(tasks[0]); err != nil {
+			return err
+		}
+
+		rest := tasks[1:]
+		if len(rest) == 0 {
+			return nil
+		}
+
+		// Cap concurrency to avoid hammering the freshly-bootstrapped
+		// apiserver with too many parallel writes.
+		const maxParallel = 8
+		eg, egCtx := errgroup.WithContext(ctx)
+		eg.SetLimit(maxParallel)
+
+		var logMu sync.Mutex
+		for i := range rest {
+			task := rest[i]
+			eg.Go(func() error {
+				if egCtx.Err() != nil {
+					return egCtx.Err()
+				}
+				if err := runTask(task); err != nil {
+					logMu.Lock()
+					log.ErrorF("manifest task %q failed: %v\n", task.Name, err)
+					logMu.Unlock()
+					return err
+				}
+				return nil
+			})
+		}
+
+		return eg.Wait()
 	})
 	if err != nil {
 		return nil, err
@@ -723,11 +769,9 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 }
 
 func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	task := controllerDeploymentTask(ctx, kubeCl, cfg)
+	task := controllerDeploymentTask(kubeCl, cfg)
 
-	return log.ProcessCtx(ctx, "default", "Create Deployment", func(ctx context.Context) error {
-		return task.CreateOrUpdate(ctx)
-	})
+	return log.ProcessCtx(ctx, "default", "Create Deployment", task.CreateOrUpdate)
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {

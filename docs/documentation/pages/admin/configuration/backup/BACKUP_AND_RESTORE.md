@@ -338,7 +338,27 @@ To restore etcd objects after changing the master node's IP address, follow thes
    - Review kubelet's system configuration files (typically found in `/etc/systemd/system/kubelet.service.d/` or similar directories).
    - Update the IP address in any other configurations that reference the old address, if necessary.
 
-1. Regenerate certificates that were issued for the old IP. Delete or move old certificates related to the API server and etcd (if applicable). Then generate new certificates, specifying the new master node IP address as a SAN (Subject Alternative Name).
+1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig so that `control-plane-manager` regenerates the `kube-apiserver` certificate with the updated SAN list:
+
+   ```shell
+   d8 k edit mc control-plane-manager
+   ```
+
+   Add the new IP to `spec.settings.apiserver.certSANs`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         certSANs:
+           - <NEW_IP>
+   ```
 
 1. Restart all services that use the updated configurations and certificates. Force kubelet to restart control-plane manifests (API server, etcd, etc.). Either restart the system services manually (e.g., `systemctl restart kubelet`) or ensure they restart automatically.
 
@@ -355,11 +375,9 @@ To simplify cluster recovery after the master node's IP address changes, use the
    - `OLD_IP`: The old master node IP address used when the backup was created.
    - `NEW_IP`: The new IP address of the master node.
 
-1. Make sure the Kubernetes version (`KUBERNETES_VERSION`) matches the one used in the cluster. This is necessary for downloading the correct version of kubeadm.
-
 1. [Download](#restoring-a-cluster-with-a-single-control-plane-node) `etcdutl` if it is not installed.
 
-1. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
+1. After running the script, add the new IP to `certSANs` in the `control-plane-manager` ModuleConfig (see step 3 above), then wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
 
 {% offtopic title="Object extraction script" %}
 
@@ -367,29 +385,19 @@ To simplify cluster recovery after the master node's IP address changes, use the
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
 OLD_IP=10.242.32.34                         # Old master node IP address.
 NEW_IP=10.242.32.21                         # New master node IP address.
-KUBERNETES_VERSION=1.28.0                   # Kubernetes version.
 
-mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
+mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
 ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
-ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
+ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd
 
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
 find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-
-mkdir -p ./old_certs/etcd
-mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
-
-curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-chmod +x kubeadm
-./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -403,7 +411,7 @@ systemctl restart kubelet.service
 
 ### Manual object restore after changing the IP address
 
-If you prefer to manually make changes during cluster recovery after the master node’s IP address has changed, follow these steps:
+If you prefer to manually make changes during cluster recovery after the master node's IP address has changed, follow these steps:
 
 1. Restore etcd from the backup:
 
@@ -420,7 +428,7 @@ If you prefer to manually make changes during cluster recovery after the master 
      mv /var/lib/etcd ./etcd_old
      ```
 
-   - Find or download the `etcdutl` utility if it’s not available, and perform the snapshot restore:
+   - Find or download the `etcdutl` utility if it's not available, and perform the snapshot restore:
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
@@ -441,54 +449,63 @@ If you prefer to manually make changes during cluster recovery after the master 
 
 1. Update the IP address in static configuration files. If the old IP address is used in manifests or kubelet services, replace it with the new one:
 
-    ```shell
-    OLD_IP=10.242.32.34                         # Old master node IP address.
-    NEW_IP=10.242.32.21                         # New master node IP address.
+   ```shell
+   OLD_IP=10.242.32.34                         # Old master node IP address.
+   NEW_IP=10.242.32.21                         # New master node IP address.
 
-    find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-    find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-    find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
-    ```
+   find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+   find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+   find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
+   ```
 
-1. Regenerate certificates issued for the old IP address:
+1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig. `control-plane-manager` will detect the change in `cert-sans` inside `d8-control-plane-manager-config`, create a `ControlPlaneOperation` with a `RenewPKICerts` step, and regenerate the `kube-apiserver` certificate with the updated SAN list:
 
-   - Prepare a directory to store the old certificates:
+   ```shell
+   d8 k edit mc control-plane-manager
+   ```
 
-     ```shell
-     mkdir -p ./old_certs/etcd
-     mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-     mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-     mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
-     ```
+   Add the new IP to `spec.settings.apiserver.certSANs`:
 
-   - Install or download kubeadm to match the current Kubernetes version:
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         certSANs:
+           - <NEW_IP>
+   ```
 
-     ```shell
-     KUBERNETES_VERSION=1.28.0 # Kubernetes version.
-     curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-     chmod +x kubeadm
-     ```
+   Monitor the certificate renewal progress:
 
-   - Generate new certificates with the updated IP:
+   ```shell
+   d8 k get cpo -o wide -w
+   ```
 
-     ```shell
-     ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
-     ```
+   Wait until the renewal operation reaches `Phase=Succeeded`. Then verify that the `ControlPlaneNode` shows healthy certificates:
 
-     The new IP address will be included in the generated certificates.
+   ```shell
+   d8 k get cpn
+   ```
+
+   The `CERTIFICATES` column must show `True`.
 
 1. Restart all services that use the updated configuration and certificates. To immediately stop active containers, run:
 
-    ```shell
-    crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
-    crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
-    crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
+   ```shell
+   crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
+   crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
+   crictl ps --name 'etcd' -o json | jq -r '.containers[].id' | xargs crictl stop
 
-    systemctl daemon-reload
-    systemctl restart kubelet.service
-    ```
+   systemctl daemon-reload
+   systemctl restart kubelet.service
+   ```
 
-    Kubelet will restart the necessary pods, and Kubernetes components will load the new certificates.
+   Kubelet will restart the necessary pods, and Kubernetes components will load the new certificates.
 
 1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
 
@@ -555,14 +572,18 @@ To configure automatic etcd backups, use the [`control-plane-manager`](/modules/
 Example configuration fragment:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
 spec:
-  etcd:
-    backup:
-      enabled: true
-      cronSchedule: "0 1 * * *"
-      hostPath: "/var/lib/etcd"
+  version: 3
+  enabled: true
+  settings:
+    etcd:
+      backup:
+        cronSchedule: 0 14 * * *
+        enabled: true
 ```
 
 ### Cluster configuration backup

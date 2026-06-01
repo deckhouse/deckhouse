@@ -21,10 +21,11 @@
 package dhctl
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -417,15 +418,18 @@ func file_common_proto_rawDescGZIP() []byte {
 	return file_common_proto_rawDescData
 }
 
-var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_common_proto_goTypes = []interface{}{
-	(Continue)(0),                       // 0: dhctl.Continue
-	(*Logs)(nil),                        // 1: dhctl.Logs
-	(*Progress)(nil),                    // 2: dhctl.Progress
-	(*OperationOptions)(nil),            // 3: dhctl.OperationOptions
-	(*Progress_PhaseWithSubPhases)(nil), // 4: dhctl.Progress.PhaseWithSubPhases
-}
+var (
+	file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_common_proto_msgTypes  = make([]protoimpl.MessageInfo, 4)
+	file_common_proto_goTypes   = []interface{}{
+		(Continue)(0),                       // 0: dhctl.Continue
+		(*Logs)(nil),                        // 1: dhctl.Logs
+		(*Progress)(nil),                    // 2: dhctl.Progress
+		(*OperationOptions)(nil),            // 3: dhctl.OperationOptions
+		(*Progress_PhaseWithSubPhases)(nil), // 4: dhctl.Progress.PhaseWithSubPhases
+	}
+)
+
 var file_common_proto_depIdxs = []int32{
 	4, // 0: dhctl.Progress.phases:type_name -> dhctl.Progress.PhaseWithSubPhases
 	1, // [1:1] is the sub-list for method output_type

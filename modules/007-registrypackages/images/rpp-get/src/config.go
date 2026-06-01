@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -52,29 +51,6 @@ type cliConfig struct {
 	kubeAPIServerEndpoints string
 }
 
-func loadConfig(ctx context.Context, args []string) (config, error) {
-	cli, err := parseArgs(args)
-	if err != nil {
-		return config{}, err
-	}
-
-	if err := cli.resolve(ctx); err != nil {
-		return config{}, err
-	}
-
-	if cli.mode != modeUninstall {
-		if !filepath.IsAbs(cli.tempDir) {
-			return config{}, fmt.Errorf("temp-dir must be an absolute path, got %q", cli.tempDir)
-		}
-
-		if err := os.MkdirAll(cli.tempDir, 0o755); err != nil {
-			return config{}, fmt.Errorf("create temp dir: %w", err)
-		}
-	}
-
-	return cli.config, nil
-}
-
 func defaultConfig() config {
 	return config{
 		tempDir:        defaultTempDir,
@@ -84,7 +60,7 @@ func defaultConfig() config {
 	}
 }
 
-func parseArgs(args []string) (cliConfig, error) {
+func parseConfig(args []string) (cliConfig, error) {
 	if len(args) == 0 {
 		return cliConfig{}, fmt.Errorf("mode is required, expected one of: %s, %s, %s", modeFetch, modeInstall, modeUninstall)
 	}
@@ -191,6 +167,7 @@ func (c *cliConfig) resolveFromKube(ctx context.Context) error {
 		return fmt.Errorf("init kube client from kubelet config: %w", err)
 	}
 	if err == nil {
+		log.Printf("rpp endpoints not provided via flag or env, querying kube-apiserver via kubelet config for pods app=registry-packages-proxy in d8-cloud-instance-manager")
 		return c.retryKubeFetch(ctx, func(_ int) (kube.Client, error) {
 			return kubeClient, nil
 		})
@@ -201,6 +178,7 @@ func (c *cliConfig) resolveFromKube(ctx context.Context) error {
 		return errNoBootstrapAPIServerEndpoints
 	}
 
+	log.Printf("rpp endpoints not provided and no kubelet config found, querying kube-apiserver directly via bootstrap endpoints %v for pods app=registry-packages-proxy in d8-cloud-instance-manager", apiServerEndpoints)
 	return c.retryKubeFetch(ctx, func(attempt int) (kube.Client, error) {
 		endpoint := apiServerEndpoints[(attempt-1)%len(apiServerEndpoints)]
 		return kube.NewBootstrapClient(endpoint)
@@ -211,7 +189,8 @@ func (c *cliConfig) retryKubeFetch(ctx context.Context, clientFn func(attempt in
 	var lastErr error
 	for attempt := 1; attempt <= kubeRetries; attempt++ {
 		if attempt > 1 {
-			log.Printf("kube retry %d/%d (previous error: %v)", attempt, kubeRetries, lastErr)
+			log.Printf("kube-apiserver request failed (attempt %d/%d): %s; retrying in %s",
+				attempt-1, kubeRetries, friendlyKubeError(lastErr), kubeRetryDelay)
 			if err := waitRetry(ctx, kubeRetryDelay); err != nil {
 				return err
 			}
@@ -229,7 +208,8 @@ func (c *cliConfig) retryKubeFetch(ctx context.Context, clientFn func(attempt in
 		}
 		return nil
 	}
-	return lastErr
+	return fmt.Errorf("kube-apiserver unreachable after %d attempts: %s (last error: %w)",
+		kubeRetries, friendlyKubeError(lastErr), lastErr)
 }
 
 func (c *cliConfig) fetchFromKube(ctx context.Context, kubeClient kube.Client) error {
@@ -247,4 +227,27 @@ func (c *cliConfig) fetchFromKube(ctx context.Context, kubeClient kube.Client) e
 	c.token = token
 	log.Printf("rpp endpoints obtained from kube: %v", c.endpoints)
 	return nil
+}
+
+func friendlyKubeError(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "EOF"):
+		return "connection closed by kube-apiserver before response (EOF) — apiserver may be down, restarting, or rejecting the connection"
+	case strings.Contains(msg, "connection refused"):
+		return "kube-apiserver refused the connection — apiserver is not listening on this address"
+	case strings.Contains(msg, "no such host"):
+		return "kube-apiserver host could not be resolved — check DNS or endpoint configuration"
+	case strings.Contains(msg, "i/o timeout"), strings.Contains(msg, "context deadline exceeded"):
+		return "kube-apiserver did not respond in time — apiserver overloaded or network blocked"
+	case strings.Contains(msg, "x509"), strings.Contains(msg, "certificate"):
+		return "TLS handshake with kube-apiserver failed — check CA bundle"
+	case strings.Contains(msg, "401"), strings.Contains(msg, "403"):
+		return "kube-apiserver rejected credentials — token missing or insufficient RBAC for pods in d8-cloud-instance-manager"
+	default:
+		return msg
+	}
 }

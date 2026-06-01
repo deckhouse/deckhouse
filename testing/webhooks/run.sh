@@ -19,6 +19,7 @@ BASE="$(bin/yq '.REGISTRY_PATH' < candi/base_images.yml)"
 TAG="$(bin/yq '."builder/alpine"' < candi/base_images.yml)"
 
 docker run --rm \
+  -e DISTRO_PACKAGES_PROXY="${DISTRO_PACKAGES_PROXY}" \
   -v "${PWD}":/src \
   -v "${PWD}/modules/002-deckhouse/images/webhook-handler/src/requirements.txt":/requirements.txt \
   -v "${PWD}/testing/webhooks/test.sh":/test.sh \

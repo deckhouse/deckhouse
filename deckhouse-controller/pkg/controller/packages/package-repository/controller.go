@@ -20,13 +20,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -66,18 +69,12 @@ func RegisterController(
 		logger: logger,
 	}
 
-	packageRepositoryController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
-
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.PackageRepository{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(packageRepositoryController)
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		Complete(r)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -126,6 +123,14 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 	logger := r.logger.With(slog.String("name", repo.Name))
 
 	logger.Debug("handle resource")
+
+	if !controllerutil.ContainsFinalizer(repo, v1alpha1.PackageRepositoryFinalizerPackageVersionExists) {
+		original := repo.DeepCopy()
+		controllerutil.AddFinalizer(repo, v1alpha1.PackageRepositoryFinalizerPackageVersionExists)
+		if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("add finalizer: %w", err)
+		}
+	}
 
 	if err := r.syncRegistrySettings(ctx, repo); err != nil {
 		return ctrl.Result{}, fmt.Errorf("sync registry settings: %w", err)
@@ -179,7 +184,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 			Labels: map[string]string{
 				v1alpha1.PackagesRepositoryOperationLabelRepository:       repo.Name,
 				v1alpha1.PackagesRepositoryOperationLabelOperationTrigger: v1alpha1.PackagesRepositoryTriggerAuto,
-				v1alpha1.PackagesRepositoryOperationLabelOperationType:    v1alpha1.PackageRepositoryOperationTypeUpdate,
+				v1alpha1.PackagesRepositoryOperationLabelOperationType:    string(v1alpha1.PackageRepositoryOperationTypeUpdate),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -260,27 +265,80 @@ func (r *reconciler) checkPaginationSupport(ctx context.Context, repo *v1alpha1.
 }
 
 func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) error {
-	logger := r.logger.With("name", packageRepository.Name)
+	logger := r.logger.With(slog.String("name", packageRepository.Name))
 
 	logger.Info("deleting PackageRepository")
 
-	// Delete all PackageRepositoryOperations associated with this repository
-	operationList := &v1alpha1.PackageRepositoryOperationList{}
-	err := r.client.List(ctx, operationList, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: packageRepository.Name,
-	})
-	if err != nil {
-		return fmt.Errorf("list operations: %w", err)
+	appPackages := &v1alpha1.ApplicationPackageList{}
+	if err := r.client.List(ctx, appPackages); err != nil && !meta.IsNoMatchError(err) {
+		return fmt.Errorf("list application packages: %w", err)
+	}
+	for _, pkg := range appPackages.Items {
+		if err := r.cleanupApplicationPackage(ctx, &pkg, packageRepository.Name); err != nil {
+			return err
+		}
 	}
 
-	for _, op := range operationList.Items {
-		if err := r.client.Delete(ctx, &op); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to delete operation %s: %w", op.Name, err)
+	modulePackages := &v1alpha1.ModulePackageList{}
+	if err := r.client.List(ctx, modulePackages); err != nil && !meta.IsNoMatchError(err) {
+		return fmt.Errorf("list module packages: %w", err)
+	}
+	for _, pkg := range modulePackages.Items {
+		if err := r.cleanupModulePackage(ctx, &pkg, packageRepository.Name); err != nil {
+			return err
+		}
+	}
+
+	if controllerutil.ContainsFinalizer(packageRepository, v1alpha1.PackageRepositoryFinalizerPackageVersionExists) {
+		original := packageRepository.DeepCopy()
+		controllerutil.RemoveFinalizer(packageRepository, v1alpha1.PackageRepositoryFinalizerPackageVersionExists)
+		if err := r.client.Patch(ctx, packageRepository, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("remove finalizer: %w", err)
 		}
 	}
 
 	logger.Info("cleanup completed")
 
+	return nil
+}
+
+// cleanupApplicationPackage removes repoName from pkg.Status.AvailableRepositories.
+// Lifecycle of the ApplicationPackage CR itself is handled by Kubernetes GC via ownerRefs;
+// this function only updates the status. Returns nil (no-op) when the package was not
+// contributed by repoName.
+func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha1.ApplicationPackage, repoName string) error {
+	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		return nil
+	}
+
+	original := pkg.DeepCopy()
+	pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
+		return name == repoName
+	})
+
+	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch application package %s status: %w", pkg.Name, err)
+	}
+	return nil
+}
+
+// cleanupModulePackage removes repoName from pkg.Status.AvailableRepositories.
+// Lifecycle of the ModulePackage CR itself is handled by Kubernetes GC via ownerRefs;
+// this function only updates the status. Returns nil (no-op) when the package was not
+// contributed by repoName.
+func (r *reconciler) cleanupModulePackage(ctx context.Context, pkg *v1alpha1.ModulePackage, repoName string) error {
+	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		return nil
+	}
+
+	original := pkg.DeepCopy()
+	pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
+		return name == repoName
+	})
+
+	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch module package %s status: %w", pkg.Name, err)
+	}
 	return nil
 }
 

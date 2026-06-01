@@ -16,8 +16,6 @@ package telemetry
 
 import (
 	"context"
-	"runtime"
-	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -45,25 +43,4 @@ func StartSpan(ctx context.Context, name string, opts ...ottrace.SpanStartOption
 
 func SpanFromContext(ctx context.Context) ottrace.Span {
 	return ottrace.SpanFromContext(ctx)
-}
-
-func traceName() string {
-	pc, _, _, ok := runtime.Caller(2)
-	if !ok {
-		return "unknown"
-	}
-
-	// It contains full path of pkg, caller and func
-	details := runtime.FuncForPC(pc)
-
-	functionFullNameS := strings.Split(details.Name(), "/")
-
-	functionFullName := functionFullNameS[len(functionFullNameS)-1]
-
-	functionFullName = strings.ReplaceAll(functionFullName, ".", "/")
-	functionFullName = strings.ReplaceAll(functionFullName, "(", "")
-	functionFullName = strings.ReplaceAll(functionFullName, ")", "")
-	functionFullName = strings.ReplaceAll(functionFullName, "*", "")
-
-	return functionFullName
 }

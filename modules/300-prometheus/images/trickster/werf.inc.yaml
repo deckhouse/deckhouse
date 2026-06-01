@@ -12,7 +12,6 @@ import:
   add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

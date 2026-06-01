@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -44,7 +44,7 @@ data:
 `
 )
 
-func EditMock(data []byte, _ *directoryconfig.DirectoryConfig, _ EditOptions) ([]byte, error) {
+func EditMock(data []byte, _ *options.GlobalOptions, _ EditOptions) ([]byte, error) {
 	newData := string(data) + "test: \"25\"\n"
 	return []byte(newData), nil
 }
@@ -59,7 +59,6 @@ func TestSecretEdit(t *testing.T) {
 	f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Create(context.TODO(), secretTest, metav1.CreateOptions{})
 
 	t.Run("Secret editing", func(t *testing.T) {
-
 		abstractEditing = EditMock
 		err := SecretEdit(
 			t.Context(),

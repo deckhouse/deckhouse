@@ -139,3 +139,12 @@ func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool
 
 	return false
 }
+
+func findContainerByName(pod *corev1.Pod, name string) *corev1.Container {
+	for i := range pod.Spec.Containers {
+		if pod.Spec.Containers[i].Name == name {
+			return &pod.Spec.Containers[i]
+		}
+	}
+	return nil
+}

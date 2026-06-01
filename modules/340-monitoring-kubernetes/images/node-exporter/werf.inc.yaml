@@ -6,7 +6,6 @@ import:
   add: /src/node_exporter
   to: /bin/node_exporter
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

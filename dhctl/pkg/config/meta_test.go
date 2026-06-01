@@ -29,9 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -221,12 +220,8 @@ func generateOldDockerCfg(host string, username, password *string) string {
 
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
 
-	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), dc)
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), &options.New().Global)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -273,7 +268,8 @@ func TestPrepareRegistry(t *testing.T) {
 		})
 		t.Run("ModuleConfig Deckhouse -> from moduleConfig && not legacy", func(t *testing.T) {
 			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
-				"manifests": []string{`
+				"manifests": []string{
+					`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:

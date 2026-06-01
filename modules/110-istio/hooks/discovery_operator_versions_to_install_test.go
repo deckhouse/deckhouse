@@ -36,8 +36,10 @@ internal:
   versionMap:
      "1.1":
         revision: "v1x1"
+        supportsOperator: true
      "1.2":
         revision: "v1x2"
+        supportsOperator: true
   versionsToInstall: ["1.1"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -65,14 +67,19 @@ internal:
   versionMap:
     "1.1":
         revision: "v1x1"
+        supportsOperator: true
     "1.8":
         revision: "v1x8"
+        supportsOperator: true
     "1.2":
         revision: "v1x2"
+        supportsOperator: true
     "1.3":
         revision: "v1x3"
+        supportsOperator: true
     "1.4":
         revision: "v1x4"
+        supportsOperator: true
   versionsToInstall: ["1.3", "1.4"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -114,14 +121,19 @@ internal:
   versionMap:
     "1.1":
         revision: "v1x1"
+        supportsOperator: true
     "1.8":
         revision: "v1x8"
+        supportsOperator: true
     "1.2":
         revision: "v1x2"
+        supportsOperator: true
     "1.3":
         revision: "v1x3"
+        supportsOperator: true
     "1.4":
         revision: "v1x4"
+        supportsOperator: true
   versionsToInstall: ["1.3", "1.4"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -163,14 +175,19 @@ internal:
   versionMap:
     "1.1":
         revision: "v1x1"
+        supportsOperator: true
     "1.8":
         revision: "v1x8"
+        supportsOperator: true
     "1.2":
         revision: "v1x2"
+        supportsOperator: true
     "1.3":
         revision: "v1x3"
+        supportsOperator: true
     "1.4":
         revision: "v1x4"
+        supportsOperator: true
   versionsToInstall: ["1.3", "1.4"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
@@ -211,6 +228,119 @@ spec:
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("1.2"))
+		})
+	})
+
+	Context("Operator-free versions are excluded from operatorVersionsToInstall", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.25":
+        revision: "v1x25"
+        supportsOperator: true
+    "1.27":
+        revision: "v1x27"
+        supportsOperator: false
+  versionsToInstall: ["1.25", "1.27"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should include only operator-supported versions", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.25"))
+		})
+	})
+
+	Context("Operator-free IstioOperator in cluster is ignored", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.27":
+        revision: "v1x27"
+        supportsOperator: false
+  versionsToInstall: []
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: v1x27
+  namespace: d8-istio
+spec:
+  revision: v1x27
+`))
+			f.RunHook()
+		})
+
+		It("Should not add operator-free version from CRD", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
+
+			_, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeFalse())
+		})
+	})
+
+	Context("Unknown versions in versionsToInstall are skipped", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.25":
+        revision: "v1x25"
+        supportsOperator: true
+  versionsToInstall: ["1.25", "1.30"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should keep only known operator-supported versions", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
+
+			value, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("1.25"))
+		})
+	})
+
+	Context("All operator-free versions clear minimal version", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.27":
+        revision: "v1x27"
+        supportsOperator: false
+    "1.28":
+        revision: "v1x28"
+        supportsOperator: false
+  versionsToInstall: ["1.27", "1.28"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should keep operatorVersionsToInstall empty and remove requirement", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
+
+			_, exists := requirements.GetValue(minVersionValuesKey)
+			Expect(exists).To(BeFalse())
 		})
 	})
 })

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# bashible: parallel-group=light-labels
+
 {{- if eq .runType "Normal" }}
 # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
 kubeconfig="/etc/kubernetes/kubelet.conf"

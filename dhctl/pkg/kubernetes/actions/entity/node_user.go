@@ -35,9 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(45, 10*time.Second)
-)
+var createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(45, 10*time.Second)
 
 func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeUser *v1.NodeUser, loopParams retry.Params) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
@@ -129,7 +127,6 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 				Vals:     nodeUser.NodeGroups,
 			},
 		})
-
 		if err != nil {
 			return err
 		}

@@ -78,6 +78,10 @@ check() {
         fail=1
         return
     fi
+    if [ "$fn" = "baseEditConfigCMD" ]; then
+        echo "OK:   $fn (drift allowed: copied to break the dependency chain)"
+        return
+    fi
 
     if [ "$src_body" = "$dst_body" ]; then
         echo "OK:   $fn"

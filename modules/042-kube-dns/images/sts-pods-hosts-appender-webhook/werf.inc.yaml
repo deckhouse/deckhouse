@@ -8,6 +8,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
@@ -35,11 +38,10 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/sts-pods-hosts-appender-webhook
-    to: /sts-pods-hosts-appender-webhook
-    before: setup
-git:
+- image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/sts-pods-hosts-appender-webhook
+  to: /sts-pods-hosts-appender-webhook
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

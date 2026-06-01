@@ -254,6 +254,16 @@ Resource ready resource handlers produces a lot of trace and debug logs.
 You can pass `TF_RESOURCE_READY_TRACE_AND_DEBUG_AS_INFO=true` env to switch
 debug and trace logs to info level.
 
+# 005-openapi-cache.patch
+On-disk cache for the `/openapi/v2` response in `manifest/provider/clients.go`. Every fresh provider process lazily fetches a ~10 MB schema doc from kube-apiserver (12-17 s on a populated parent DKP); we cache it at `$TMPDIR/kube-provider-openapi-cache/<sha256-of-host>.openapi.v2.json` so subsequent `tofu plan/apply` invocations within the same bootstrap reuse it.
+
+Default TTL 10 min — long enough to span base-infra + master pipelines, short enough that newly-installed CRDs show up on the next plan. Knobs: `KUBE_PROVIDER_OPENAPI_CACHE_DIR=off` to disable, `KUBE_PROVIDER_OPENAPI_CACHE_TTL` for a custom Go-duration TTL.
+
+# 006-openapi-skip.patch
+Replaces the monolithic `/openapi/v2` fetch with lazy per-group `/openapi/v3/apis/<group>/<version>` requests (`manifest/openapi/multi_v3.go` + `manifest/provider/clients.go`). A typical bootstrap touches only a few groups, dropping schema traffic from ~10 MB to <1 MB. Compiled `tftypes.Type`s are kept in a process-wide `globalTypeCache` and mirrored to disk under `/tmp/dhctl/openapi-tftype-cache/`, so repeat lookups for the same GVK are microseconds. When v3 is active `TFTypeFromOpenAPI` also skips the cluster-wide `fetchCRDs()` list (~16 s on populated clusters) and only falls back to it for legacy CRDs without a structural schema. v3 is now the default; opt out via `KUBE_PROVIDER_OPENAPI=v2` (k8s < 1.27); `KUBE_PROVIDER_SKIP_OPENAPI=1` remains as an emergency stub-foundry bypass.
+
+`main.go` adds `-reattach-file=PATH`: the provider runs in `tf5server.WithDebug` mode and atomically writes the `TF_REATTACH_PROVIDERS` JSON (under both `registry.terraform.io/...` and `registry.opentofu.org/...` keys) so dhctl can spawn it once per bootstrap and reuse the same warm gRPC connection across every `tofu init/plan/show/apply` instead of cold-spawning 5-6 fresh provider processes per pipeline. Measured effect on DKP-on-DVP bootstrap: base-infra plan 12.9s → 5.8s, master plan 12.2s → 3.5s, total cloud infrastructure 161s → 85s (-47%).
+
 # 099-node-taint-resource-test-fix.patch
 This patch uses for improve developer experience and not affect provider logic. 
 Fix `kubernetes/resource_kubernetes_node_taint_test.go` file.

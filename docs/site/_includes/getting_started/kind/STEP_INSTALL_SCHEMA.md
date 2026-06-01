@@ -15,8 +15,8 @@ When using kind on Windows, monitoring (Grafana, Prometheus) may not be availabl
 {% offtopic title="Computer minimal requirements..." %}
 - Operating system: macOS or Linux (Windows isn't supported).
 - Installed container runtime (docker, containerd) and docker client.
-    - For containers to work, at least 4 CPU and 8 GB of RAM must be allocated (_Settings -> Resources_ in Docker Desktop).
-    - The `Enable privileged port mapping` parameter must be enabled on macOS (_Settings -> Advanced -> Enable privileged port mapping_ in Docker Desktop)
+  - For containers to work, at least 4 CPU and 8 GB of RAM must be allocated (_Settings → Resources_ in Docker Desktop).
+  - The `Enable privileged port mapping` parameter must be enabled on macOS (_Settings → Advanced → Enable privileged port mapping_ in Docker Desktop)
 - HTTPS access to the `registry.deckhouse.io` container image registry.
 {% endofftopic %}
 
@@ -29,10 +29,13 @@ To do this, in the Docker Desktop interface, go to `Settings > General > Virtual
 
 A Kubernetes cluster will be deployed and Deckhouse will be installed into a cluster using [the Shell script](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
 - Run the following command for installing Deckhouse **Community Edition**:
+
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
+
 - Or run the following command for installing a commercial edition of Deckhouse Kubernetes Platform by providing a license key:
+
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.io
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)" -- --key <LICENSE_KEY>
@@ -41,6 +44,7 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 After installation is complete, you will get the `admin` user password for accessing Grafana. Grafana will be available at the URL [http://grafana.127.0.0.1.sslip.io](http://grafana.127.0.0.1.sslip.io).
 
 {% offtopic title="Example of the output..." %}
+
 ```text
 Waiting for the Ingress controller to be ready.........................................
 Ingress controller is running.
@@ -61,9 +65,11 @@ The information above is saved to /home/user/.kind-d8/info.txt file.
 
 Good luck!
 ```
+
 {% endofftopic %}
 
 The user `admin` password for Grafana can also be found by running the command:
+
 ```shell
 kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 ```

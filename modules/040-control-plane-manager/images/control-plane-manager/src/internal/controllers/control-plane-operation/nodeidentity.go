@@ -32,6 +32,7 @@ type NodeIdentity struct {
 	HomeDir             string
 	KubeconfigDir       string
 	NodeAdminKubeconfig bool
+	EtcdArbiter         bool
 }
 
 func nodeIdentityFromEnv() (NodeIdentity, error) {
@@ -57,6 +58,8 @@ func nodeIdentityFromEnv() (NodeIdentity, error) {
 		nodeAdminKubeconfig = false
 	}
 
+	etcdArbiter := os.Getenv(constants.EtcdArbiterEnvVar) == "true"
+
 	return NodeIdentity{
 		Name:                name,
 		AdvertiseIP:         ip,
@@ -65,5 +68,6 @@ func nodeIdentityFromEnv() (NodeIdentity, error) {
 		HomeDir:             homeDir,
 		KubeconfigDir:       kubeconfigDir,
 		NodeAdminKubeconfig: nodeAdminKubeconfig,
+		EtcdArbiter:         etcdArbiter,
 	}, nil
 }

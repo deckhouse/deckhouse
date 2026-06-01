@@ -27,10 +27,18 @@ bb-deckhouse-get-disruptive-update-approval
 bb-log-info "Rebooting machine"
 bb-flag-unset reboot
 
-# If it is first run bashible on bootstrap simple reboot node
+# Skip the reboot on the very first bashible run to save ~30-40s of provisioning
+# wall-clock (reboot itself plus SSH reconnect plus kubelet/etcd warm-up after).
+# All sysctl/kernel-module changes that flagged reboot were applied at runtime in
+# their respective steps (sysctl -p, modprobe, etc.) — the reboot was a safety
+# blanket for VM-image-baked tuning that no longer applies on cloud-init images.
+# Watch the first bashible cycle for iptables/kube-proxy/coredns regressions; if
+# anything misbehaves, fall back to the historical `shutdown -r -t 5` path.
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  bb-log-info "Skipping reboot on first bashible run (perf optimization)."
   bb-flag-unset disruption
-  shutdown -r -t 5
+  bb-label-node-bashible-first-run-finished
+  touch $BASHIBLE_INITIALIZED_FILE
   exit 0
 fi
 

@@ -50,9 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-var (
-	rootTmpDirCloud = path.Join(os.TempDir(), "dhctl-test-cloud-destroy")
-)
+var rootTmpDirCloud = path.Join(os.TempDir(), "dhctl-test-cloud-destroy")
 
 func TestCloudDestroy(t *testing.T) {
 	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
@@ -568,7 +566,6 @@ func TestCloudDestroy(t *testing.T) {
 			})
 		}
 	})
-
 }
 
 type testCloudDestroyTestParams struct {

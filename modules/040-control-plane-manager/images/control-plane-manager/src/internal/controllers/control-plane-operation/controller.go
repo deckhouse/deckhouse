@@ -26,6 +26,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -84,6 +86,13 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 
 	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
 	r.enforceNodePolicy(r.log)
+
+	// todo reconcile normal way not in start controller
+	// todo refact to use controller runtime client
+	// instead of client-go
+	if err := r.renewSignatureKeysIfNeed(mgr.GetConfig()); err != nil {
+		return err
+	}
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -219,6 +228,20 @@ func (r *Reconciler) enforceNodePolicy(logger *log.Logger) {
 	if err := updateRootKubeconfig(r.node.KubeconfigDir, r.node.HomeDir, r.node.NodeAdminKubeconfig); err != nil {
 		logger.Warn("failed to enforce root kubeconfig symlink", log.Err(err))
 	}
+}
+
+// TODO Move to normal reconciler, not on start only
+func (r *Reconciler) renewSignatureKeysIfNeed(kubeConfig *rest.Config) error {
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return fmt.Errorf("cannot create kube client for etcd key signature renewer: %w", err)
+	}
+
+	if err := getEtcdKeySignatureRenewer().Renew(kubeClient); err != nil {
+		return fmt.Errorf("cannot renew signature keys for etcd key: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Reconciler) ensureOperationStartedAt(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) error {

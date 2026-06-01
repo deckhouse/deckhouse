@@ -41,6 +41,7 @@ const (
 	OperationStartedAtAnnotationKey     = "control-plane-manager.deckhouse.io/operation-started-at"
 	NodeNameEnvVar                      = "NODE_NAME"
 	DaemonSetNameEnvVar                 = "DAEMONSET_NAME"
+	EtcdArbiterEnvVar                   = "ETCD_ARBITER"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"

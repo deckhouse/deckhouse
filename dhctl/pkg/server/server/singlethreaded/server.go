@@ -77,7 +77,7 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 		slog.String("network", params.Network),
 		slog.String("address", params.Address),
 		slog.String("tmp_dir", params.TmpDir),
-		slog.String("cache directory", cacheDir),
+		slog.String("cache_directory", cacheDir),
 	)
 
 	s := grpc.NewServer(
@@ -107,13 +107,13 @@ func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 
 	// init services
 	dhctlService := dhctl.New(dhctl.ServiceParams{
-		PodName:           podName,
-		PodNamespace:      podNamespace,
-		CacheDir:          cacheDir,
-		SchemaStore:       config.NewSchemaStore(params.DownloadDirConfig),
-		TmpDir:            params.TmpDir,
-		IsDebug:           false,
-		DownloadDirConfig: params.DownloadDirConfig,
+		PodName:       podName,
+		PodNamespace:  podNamespace,
+		CacheDir:      cacheDir,
+		SchemaStore:   config.NewSchemaStore(params.GlobalOptions),
+		TmpDir:        params.TmpDir,
+		IsDebug:       false,
+		GlobalOptions: params.GlobalOptions,
 	})
 
 	// register services

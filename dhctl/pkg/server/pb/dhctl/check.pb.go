@@ -21,11 +21,12 @@
 package dhctl
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -607,19 +608,22 @@ func file_check_proto_rawDescGZIP() []byte {
 	return file_check_proto_rawDescData
 }
 
-var file_check_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_check_proto_goTypes = []interface{}{
-	(*CheckRequest)(nil),        // 0: dhctl.CheckRequest
-	(*CheckResponse)(nil),       // 1: dhctl.CheckResponse
-	(*CheckStart)(nil),          // 2: dhctl.CheckStart
-	(*CheckCancel)(nil),         // 3: dhctl.CheckCancel
-	(*CheckStartOptions)(nil),   // 4: dhctl.CheckStartOptions
-	(*CheckResult)(nil),         // 5: dhctl.CheckResult
-	(*Logs)(nil),                // 6: dhctl.Logs
-	(*Progress)(nil),            // 7: dhctl.Progress
-	(*durationpb.Duration)(nil), // 8: google.protobuf.Duration
-	(*OperationOptions)(nil),    // 9: dhctl.OperationOptions
-}
+var (
+	file_check_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+	file_check_proto_goTypes  = []interface{}{
+		(*CheckRequest)(nil),        // 0: dhctl.CheckRequest
+		(*CheckResponse)(nil),       // 1: dhctl.CheckResponse
+		(*CheckStart)(nil),          // 2: dhctl.CheckStart
+		(*CheckCancel)(nil),         // 3: dhctl.CheckCancel
+		(*CheckStartOptions)(nil),   // 4: dhctl.CheckStartOptions
+		(*CheckResult)(nil),         // 5: dhctl.CheckResult
+		(*Logs)(nil),                // 6: dhctl.Logs
+		(*Progress)(nil),            // 7: dhctl.Progress
+		(*durationpb.Duration)(nil), // 8: google.protobuf.Duration
+		(*OperationOptions)(nil),    // 9: dhctl.OperationOptions
+	}
+)
+
 var file_check_proto_depIdxs = []int32{
 	2, // 0: dhctl.CheckRequest.start:type_name -> dhctl.CheckStart
 	3, // 1: dhctl.CheckRequest.cancel:type_name -> dhctl.CheckCancel

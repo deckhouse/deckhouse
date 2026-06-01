@@ -53,9 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var (
-	rootTmpDirStatic = path.Join(os.TempDir(), "dhctl-test-static-destroy")
-)
+var rootTmpDirStatic = path.Join(os.TempDir(), "dhctl-test-static-destroy")
 
 func TestStaticDestroy(t *testing.T) {
 	defer func() {
@@ -1227,7 +1225,6 @@ func TestStaticDestroy(t *testing.T) {
 			})
 		}
 	})
-
 }
 
 type testStaticDestroyTestParams struct {

@@ -60,6 +60,8 @@ spec:
                 type: string
               type:
                 description: Type of operation to perform.
+                enum:
+                - Update
                 type: string
               update:
                 description: Configuration for update operations.
@@ -185,6 +187,15 @@ spec:
                       - name
                       type: object
                     type: array
+                  newVersionsOverall:
+                    description: |-
+                      Total number of newly found versions across all packages in this operation.
+                      
+                      A version is counted as new if its ApplicationPackageVersion or
+                      ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
+                      only) existed with the "not in registry" mark and its image was found in the
+                      registry during this operation.
+                    type: integer
                   processed:
                     description: List of packages successfully processed.
                     items:
@@ -195,6 +206,15 @@ spec:
                         name:
                           description: Name of the processed package.
                           type: string
+                        newVersions:
+                          description: |-
+                            Number of newly found versions during this operation.
+                            
+                            A version is counted as new if its ApplicationPackageVersion or
+                            ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
+                            only) existed with the "not in registry" mark and its image was found in the
+                            registry during this operation.
+                          type: integer
                         type:
                           description: Type of the package.
                           type: string

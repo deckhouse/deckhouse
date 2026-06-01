@@ -21,6 +21,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type kubeClientProvider struct {
@@ -45,7 +46,10 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 }
 
 func (p *kubeClientProvider) Cleanup(stopSSH bool) {
-	p.kubeProvider.Cleanup(context.Background())
+	err := p.kubeProvider.Cleanup(context.Background())
+	if err != nil {
+		log.WarnF("failed to cleanup kube provider: %v", err)
+	}
 }
 
 type kubeClientErrorProvider struct {
@@ -57,6 +61,7 @@ func newKubeClientErrorProvider(msg string) *kubeClientErrorProvider {
 		msg: msg,
 	}
 }
+
 func (p *kubeClientErrorProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return nil, fmt.Errorf("Unable to get kube client: '%s'", p.msg)
 }

@@ -369,3 +369,26 @@ shutdown -P now
 * Если балансировщик был активирован после успешного создания кластера DKP, компоненты автоматически подхватят изменения в течение часа (дополнительных действий не требуется).
 * Для каждого открытого порта создаётся связка Pool + Virtual Service.
 * При наличии межсетевого экрана необходимо создать разрешающее правило для внешнего IP-адреса балансировщика и соответствующих портов.
+
+Чтобы задать предопределённый внешний IP-адрес для VCD-балансировщика, добавьте к соответствующему сервису (объект Service) аннотацию `vcd.cpi.flant.com/load-balancer-ip`.
+
+Если заданы и аннотация `vcd.cpi.flant.com/load-balancer-ip`, и поле `.spec.loadBalancerIP`, приоритет имеет аннотация. Поле `spec.loadBalancerIP` остаётся доступным для совместимости.
+
+Пример:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: example
+  annotations:
+    vcd.cpi.flant.com/load-balancer-ip: "192.0.2.10"
+spec:
+  type: LoadBalancer
+  selector:
+    app: example
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
+```

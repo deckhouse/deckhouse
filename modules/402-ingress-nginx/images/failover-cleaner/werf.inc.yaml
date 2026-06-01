@@ -10,6 +10,9 @@ git:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/failover-cleaner-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
@@ -38,7 +41,6 @@ import:
   add: /failover-cleaner
   to: /failover-cleaner
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

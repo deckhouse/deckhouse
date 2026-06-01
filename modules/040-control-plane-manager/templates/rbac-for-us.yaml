@@ -29,6 +29,10 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create"]
+- apiGroups: [""]
+  resourceNames: ["d8-pki"]
+  resources: ["secrets"]
+  verbs: ["get", "update"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -136,12 +140,10 @@ rules:
 - apiGroups: [""]
   resources: ["nodes/status"]
   verbs: ["get", "patch", "update"]
-# Required for kube-apiserver-kubelet-client (group kubeadm:cluster-admins per kubeadm 1.29+ defaults):
-# every kubelet API call from apiserver (exec, attach, logs, portforward) is authorized as nodes/proxy.
-# Deliberately kept OUT of user-authz:cluster-admin so that the high-level ClusterAdmin role
-# (granted to users via ClusterAuthorizationRule.accessLevel=ClusterAdmin) does NOT silently turn
-# into a root-on-every-node permission via the kubelet API. nodes/proxy is admin.conf-specific
-# and lives only in this supplement bound to Group/kubeadm:cluster-admins.
+# nodes/proxy is intentionally granted only via the admin.conf path
+# (Group/kubeadm:cluster-admins) and not via user-authz:cluster-admin.
+# This prevents the high-level ClusterAdmin access level from silently becoming
+# root-on-every-node through the kubelet API.
 - apiGroups: [""]
   resources: ["nodes/proxy"]
   verbs: ["get", "create"]
