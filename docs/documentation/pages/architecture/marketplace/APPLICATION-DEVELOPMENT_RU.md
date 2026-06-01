@@ -82,14 +82,19 @@ name: redis
 descriptions:
   ru: "Redis — in-memory база данных"
   en: "Redis — in-memory database"
-version: "v1.0.1"      # Инжектируется автоматически при сборке
+version: "v1.0.1"      # Инжектируется автоматически при сборке.
 stage: "Preview"
 category: "Databases"
+# Требования к окружению.
 requirements:
-  deckhouse: ">= 1.76"
-  kubernetes: ">= 1.31"
+  deckhouse: 
+    constraint: ">= 1.70"
+  kubernetes: 
+    constraint: ">= 1.31"
   modules:
-    cert-manager: ">= 1.0.0"
+    mandatory:
+      - name: cert-manager 
+        constraint: ">= 1.0.0"
 ```
 
 **Справочник полей:**

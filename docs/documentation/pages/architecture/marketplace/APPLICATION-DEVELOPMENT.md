@@ -78,16 +78,22 @@ apiVersion: v1
 type: "Application"
 name: redis
 descriptions:
-  ru: "Redis — in-memory база данных"
-  en: "Redis — in-memory database"
-version: "v1.0.1"      # Injected automatically at build time
+  ru: "Redis - in-memory база данных"
+  en: "Redis - in-memory database"
+# Injected automatically at build time.
+version: "v1.0.1"
 stage: "Preview"
 category: "Databases"
+# Environmental Requirements.
 requirements:
-  deckhouse: ">= 1.76"
-  kubernetes: ">= 1.31"
+  deckhouse: 
+    constraint: ">= 1.70"
+  kubernetes: 
+    constraint: ">= 1.31"
   modules:
-    cert-manager: ">= 1.0.0"
+    mandatory:
+      - name: cert-manager 
+        constraint: ">= 1.0.0"
 ```
 
 **Field reference:**
