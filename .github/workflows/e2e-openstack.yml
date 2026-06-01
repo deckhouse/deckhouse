@@ -596,6 +596,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1107,6 +1109,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1618,6 +1622,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -2129,6 +2135,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -2640,6 +2648,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -3151,6 +3161,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -3662,6 +3674,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -4173,6 +4187,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -4684,6 +4700,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -5195,6 +5213,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -5706,6 +5726,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -6217,6 +6239,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -6728,6 +6752,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -7239,6 +7265,8 @@ jobs:
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          E2E_LOG_AGENT_PULL_ARTIFACT: ${{ steps.secrets.outputs.E2E_LOG_AGENT_PULL_ARTIFACT }}
+          E2E_LOG_AGENT_TOKEN: ${{ steps.secrets.outputs.E2E_LOG_AGENT_TOKEN }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
