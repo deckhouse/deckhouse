@@ -71,7 +71,10 @@ spec:
         scheme: HTTPS
         # [<en>] The root CA certificate (in PEM format) for validating the container registry’s server certificate.
         # [<ru>] Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
-        ca: <REGISTRY_CA>
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters

@@ -1288,7 +1288,10 @@ spec:
         password: <PASSWORD>
         scheme: HTTPS
         # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
-        ca: <REGISTRY_CA>
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # Глобальные настройки Deckhouse.
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B

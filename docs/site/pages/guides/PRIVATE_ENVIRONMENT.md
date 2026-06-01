@@ -1245,7 +1245,10 @@ spec:
         password: <PASSWORD>
         scheme: HTTPS
         # The root CA certificate (in PEM format) for validating the container registry’s server certificate.
-        ca: <REGISTRY_CA>
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # Global Deckhouse settings.
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
