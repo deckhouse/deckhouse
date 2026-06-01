@@ -381,7 +381,7 @@ func checkGithub(ctx context.Context, dc dependency.Container, result *dexProvid
 		return
 	}
 
-	checkHTTPReachability(ctx, dc, result, "githubAPI", "https://api.github.com/meta", "", false, nil)
+	checkHTTPReachability(ctx, dc, result, "githubAPI", "https://api.github.com/meta", "")
 }
 
 func checkGitlab(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -394,7 +394,7 @@ func checkGitlab(ctx context.Context, dc dependency.Container, result *dexProvid
 	if baseURL == "" {
 		baseURL = "https://gitlab.com"
 	}
-	checkHTTPReachability(ctx, dc, result, "gitlabURL", baseURL, provider.Spec.Gitlab.RootCAData, false, nil)
+	checkHTTPReachability(ctx, dc, result, "gitlabURL", baseURL, provider.Spec.Gitlab.RootCAData)
 }
 
 func checkBitbucket(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -407,7 +407,7 @@ func checkBitbucket(ctx context.Context, dc dependency.Container, result *dexPro
 		return
 	}
 
-	checkHTTPReachability(ctx, dc, result, "bitbucketAPI", "https://api.bitbucket.org/2.0/", "", false, nil)
+	checkHTTPReachability(ctx, dc, result, "bitbucketAPI", "https://api.bitbucket.org/2.0/", "")
 }
 
 func checkCrowd(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -580,7 +580,7 @@ func checkSAML(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 
-	checkHTTPReachability(ctx, dc, result, "samlSSOURL", provider.Spec.SAML.SSOURL, provider.Spec.SAML.RootCAData, false, nil)
+	checkHTTPReachability(ctx, dc, result, "samlSSOURL", provider.Spec.SAML.SSOURL, provider.Spec.SAML.RootCAData)
 }
 
 func checkHTTPReachability(
@@ -590,16 +590,14 @@ func checkHTTPReachability(
 	stepName string,
 	rawURL string,
 	rootCAData string,
-	insecureSkipVerify bool,
-	headers map[string]string,
 ) {
 	if _, err := url.ParseRequestURI(rawURL); err != nil {
 		result.fail(stepName, "URL %q is invalid: %v", rawURL, err)
 		return
 	}
 
-	client := dc.GetHTTPClient(httpOptions(rootCAData, insecureSkipVerify)...)
-	statusCode, _, err := httpGet(ctx, client, rawURL, headers)
+	client := dc.GetHTTPClient(httpOptions(rootCAData, false)...)
+	statusCode, _, err := httpGet(ctx, client, rawURL, nil)
 	if err != nil {
 		result.fail(stepName, "URL %q is not reachable: %v", rawURL, err)
 		return
@@ -674,7 +672,7 @@ func ldapReachable(ctx context.Context, cfg *DexProviderLDAPForCheck) error {
 	return conn.Close()
 }
 
-func ldapAddress(cfg *DexProviderLDAPForCheck) (addr string, serverName string, err error) {
+func ldapAddress(cfg *DexProviderLDAPForCheck) (string, string, error) {
 	host, port, err := net.SplitHostPort(cfg.Host)
 	if err == nil {
 		return net.JoinHostPort(host, port), host, nil

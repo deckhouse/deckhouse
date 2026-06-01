@@ -555,6 +555,7 @@ read-write:
     - cluster.x-k8s.io/machines
     - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
+    - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
     - deckhouse.io/nodeusers
