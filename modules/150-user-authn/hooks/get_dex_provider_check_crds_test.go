@@ -189,20 +189,39 @@ func TestOIDCDiscoveryMissingEndpoints(t *testing.T) {
 	}
 }
 
-func TestProbeOAuthClientCredentials(t *testing.T) {
+// TestProbeClientSecret exercises the single, unified client-secret probe used
+// by the OIDC, GitLab and Bitbucket credential checks. The test server selects a
+// canned token-endpoint response based on the client_id, mirroring the real
+// behaviour observed across providers (including Bitbucket, which answers
+// unauthorized_client for invalid consumer credentials).
+func TestProbeClientSecret(t *testing.T) {
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = r.ParseForm()
 		w.Header().Set("Content-Type", "application/json")
-		switch r.PostFormValue("client_id") {
-		case "valid":
+		// The client id is sent via HTTP Basic auth, with a form-body fallback.
+		clientID, _, _ := r.BasicAuth()
+		if clientID == "" {
+			clientID = r.PostFormValue("client_id")
+		}
+		switch clientID {
+		case "good-bad-code":
+			// Valid secret; only the bogus authorization code is rejected.
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_grant","error_description":"Code not valid"}`))
+		case "good-bad-request":
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_request"}`))
+		case "good-token":
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"access_token":"token","token_type":"bearer"}`))
-		case "grant-disabled":
+		case "bad-unauthorized-client":
+			// Bitbucket-style: invalid consumer credentials.
 			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(`{"error":"unauthorized_client"}`))
+			_, _ = w.Write([]byte(`{"error":"unauthorized_client","error_description":"Invalid OAuth client credentials"}`))
 		default:
+			// invalid_client / HTTP 401: standard client authentication failure.
 			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"error":"invalid_client"}`))
+			_, _ = w.Write([]byte(`{"error":"invalid_client","error_description":"Invalid client credentials"}`))
 		}
 	}))
 	defer srv.Close()
@@ -214,16 +233,18 @@ func TestProbeOAuthClientCredentials(t *testing.T) {
 		clientID     string
 		wantAccepted bool
 	}{
-		{name: "valid credentials issue a token", clientID: "valid", wantAccepted: true},
-		{name: "valid client but grant disabled is accepted", clientID: "grant-disabled", wantAccepted: true},
-		{name: "wrong secret is rejected", clientID: "wrong", wantAccepted: false},
+		{name: "valid secret, bogus code rejected", clientID: "good-bad-code", wantAccepted: true},
+		{name: "valid secret, other grant error", clientID: "good-bad-request", wantAccepted: true},
+		{name: "valid secret, token issued", clientID: "good-token", wantAccepted: true},
+		{name: "wrong secret, invalid_client", clientID: "bad-invalid-client", wantAccepted: false},
+		{name: "wrong secret, unauthorized_client (Bitbucket)", clientID: "bad-unauthorized-client", wantAccepted: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			accepted, detail, err := probeOAuthClientCredentials(context.Background(), client, srv.URL, tt.clientID, "secret")
+			accepted, detail, err := probeClientSecret(context.Background(), client, srv.URL, tt.clientID, "secret")
 			if err != nil {
-				t.Fatalf("probeOAuthClientCredentials returned error: %v", err)
+				t.Fatalf("probeClientSecret returned error: %v", err)
 			}
 			if accepted != tt.wantAccepted {
 				t.Fatalf("expected accepted=%v, got %v (detail: %s)", tt.wantAccepted, accepted, detail)
