@@ -737,7 +737,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
-		// Intentionally NOT adding any test-package/release image -> /release NAME_UNKNOWN.
+		// Intentionally NOT adding any test-package/release image.
+		// Note: the fake registry returns an empty tag list for a missing repo (not NAME_UNKNOWN),
+		// so this exercises the "empty /release tags" branch -> "no semver release tags found".
 
 		psm := createFakePSM(newInternalClient(reg))
 
