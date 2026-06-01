@@ -127,8 +127,8 @@ func (d *Destroyer) AfterResourcesDelete(context.Context) error {
 	return nil
 }
 
-func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
-	d.params.KubeProvider.Cleanup(false)
+func (d *Destroyer) CleanupBeforeDestroy(ctx context.Context) error {
+	d.params.KubeProvider.Cleanup(ctx, false)
 	return nil
 }
 

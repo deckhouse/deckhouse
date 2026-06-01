@@ -44,10 +44,10 @@ func TestCleanupsDoesNotPanic(t *testing.T) {
 	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 	require.NoError(t, err)
 
-	provider := newKubeClientProvider(kubeProvider)
+	provider := newKubeClientProvider(kubeProvider, sshProvider)
 
 	cleanupTest := func() {
-		provider.Cleanup(true)
+		provider.Cleanup(t.Context(), true)
 	}
 	require.NotPanics(t, cleanupTest)
 	// double call not panic

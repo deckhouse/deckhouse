@@ -711,7 +711,7 @@ func (p *fakeKubeClientProvider) KubeClientCtx(context.Context) (*client.Kuberne
 	return p.kubeCl, nil
 }
 
-func (p *fakeKubeClientProvider) Cleanup(stopSSH bool) {
+func (p *fakeKubeClientProvider) Cleanup(_ context.Context, stopSSH bool) {
 	p.cleaned = true
 	p.stopSSH = stopSSH
 }
