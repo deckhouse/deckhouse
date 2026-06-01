@@ -395,34 +395,34 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "1400MiB",
 		},
 		{
-			// Default client-go QPS/Burst is 5/10 and causes 5-second-class
-			// stalls on the first converge while deckhouse mass-applies CRDs
-			// (see "client-side throttling, not priority and fairness" in
-			// addon-operator logs). Bumping all three clients (main, object
-			// patcher, helm monitor) lets the bootstrap pod saturate kube-
-			// apiserver instead of itself.
+			// Disable client-side rate limiting during bootstrap. The bootstrap
+			// incarnation installs hundreds of CRDs + runs initial kube-binding
+			// Synchronization against a fresh, idle apiserver; the default client QPS
+			// (5/10) serialized that into tens of seconds (client-side throttling).
+			// QPS<0 makes client-go skip the rate limiter entirely (QPS=0 would fall
+			// back to the 5 default, not disable) and defer fairness to apiserver APF.
 			Name:  "KUBE_CLIENT_QPS",
-			Value: "50",
+			Value: "-1",
 		},
 		{
 			Name:  "KUBE_CLIENT_BURST",
-			Value: "100",
+			Value: "-1",
 		},
 		{
 			Name:  "OBJECT_PATCHER_KUBE_CLIENT_QPS",
-			Value: "50",
+			Value: "-1",
 		},
 		{
 			Name:  "OBJECT_PATCHER_KUBE_CLIENT_BURST",
-			Value: "100",
+			Value: "-1",
 		},
 		{
 			Name:  "HELM_MONITOR_KUBE_CLIENT_QPS",
-			Value: "50",
+			Value: "-1",
 		},
 		{
 			Name:  "HELM_MONITOR_KUBE_CLIENT_BURST",
-			Value: "100",
+			Value: "-1",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
