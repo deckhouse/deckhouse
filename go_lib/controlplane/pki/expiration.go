@@ -95,12 +95,13 @@ func WithRootCertificates(names ...RootCertName) ExpirationOption {
 
 // ListCertificateExpirations enumerates the selected certificates and returns a structured report.
 // The caller iterates report.Entries and decides per-entry what to do.
-func ListCertificateExpirations(opts ...ExpirationOption) ExpirationReport {
+// Returned error is reserved for an invalid request — an unknown certificate name passed
+func ListCertificateExpirations(opts ...ExpirationOption) (ExpirationReport, error) {
 	options := newExpirationOptions(opts...)
 
 	inventory, err := buildCertificateInventory(options)
 	if err != nil {
-		panic(err)
+		return ExpirationReport{}, err
 	}
 
 	var report ExpirationReport
@@ -118,7 +119,7 @@ func ListCertificateExpirations(opts ...ExpirationOption) ExpirationReport {
 		}
 	}
 
-	return report
+	return report, nil
 }
 
 // skeletonExpiration builds a CertificateExpiration for failed cases:

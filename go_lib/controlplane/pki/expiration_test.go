@@ -42,7 +42,8 @@ func TestListCertificateExpirations_DefaultInventory(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	report := ListCertificateExpirations(WithCertificatesDir(dir))
+	report, err := ListCertificateExpirations(WithCertificatesDir(dir))
+	require.NoError(t, err)
 	require.Len(t, report.Entries, 10)
 
 	paths := make([]string, 0, len(report.Entries))
@@ -61,10 +62,11 @@ func TestListCertificateExpirations_MissingEntries(t *testing.T) {
 
 	require.NoError(t, writeCert(dir, string(CACertName), caCert))
 
-	report := ListCertificateExpirations(
+	report, err := ListCertificateExpirations(
 		WithCertificatesDir(dir),
 		WithRootCertificates(CACertName, CACertName, EtcdCACertName),
 	)
+	require.NoError(t, err)
 	require.Len(t, report.Entries, 2)
 
 	byName := make(map[string]ExpirationEntry, len(report.Entries))

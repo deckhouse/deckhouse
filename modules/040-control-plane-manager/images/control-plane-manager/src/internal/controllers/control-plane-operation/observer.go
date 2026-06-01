@@ -41,10 +41,14 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	var readErrs []error
 
 	if leafNames := deps.leafCertFiles(); len(leafNames) > 0 {
-		report := pki.ListCertificateExpirations(
+		report, err := pki.ListCertificateExpirations(
 			pki.WithCertificatesDir(constants.KubernetesPkiPath),
 			pki.WithLeafCertificates(leafNames...),
 		)
+		if err != nil {
+			logger.Warn("cannot list cert expirations", "error", err)
+			readErrs = append(readErrs, err)
+		}
 		for _, e := range report.Entries {
 			if e.Err != nil {
 				logger.Warn("cannot read cert expiration", "name", e.Name, "path", e.Path, "error", e.Err)
