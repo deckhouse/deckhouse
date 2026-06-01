@@ -443,6 +443,26 @@ func TestSummarize_EdgeCases(t *testing.T) {
 		assert.Empty(t, tip)
 	})
 
+	t.Run("update mid-apply is updating, not ready, even over a sticky failure", func(t *testing.T) {
+		// Regression: a working version is installed, then switched to a broken
+		// one. The new version's manifests fail, so the mapper records
+		// UpdateInstalled/Ready=False/ManifestsApplyFailed (sticky). On the next
+		// reconcile attempt nelm re-enters the apply window and emits
+		// ManifestsApplied=False/ApplyingManifests, which firstFalse skips as
+		// transient progress — so the update pipeline reads clear and the mapper
+		// leaves the sticky failure untouched (Scaled=False keeps mapReady from
+		// re-asserting True). summarize sees the same state and must NOT jump to
+		// Ready: an update with manifests not yet applied is still updating, never
+		// ready. Before the fix this returned stateReady, contradicting the
+		// conditions a client also reads.
+		opts := updatingApp(
+			intCond(intManifestsApplied, metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+			intCond(intScaled, metav1.ConditionFalse, "Reconciling"),
+		)
+		state, _, _ := summaryFor(opts...)
+		assert.Equal(t, stateUpdating, state)
+	})
+
 	t.Run("unknown reconcile reason falls back to generic phrasing", func(t *testing.T) {
 		// The health monitor is the only writer that can produce an arbitrary
 		// reason (it passes through), so it exercises the defensive fallback.

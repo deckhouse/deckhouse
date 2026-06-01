@@ -207,6 +207,17 @@ var summarySuspended = advice{
 // there is no message or tip.
 var summaryReady = advice{state: stateReady}
 
+// summaryUpdating is the fixed Summary for an update that is mid-flight with no
+// failing gate: the new version's manifests are still being applied
+// (ManifestsApplied=False/ApplyingManifests), so the previous version is the
+// one serving. It is the positive-progress counterpart to summaryReady — see
+// the update branch of summarize for why "no blocker" alone cannot mean Ready.
+var summaryUpdating = advice{
+	state:   stateUpdating,
+	message: "Update in progress: the new version is being applied; the previous version is still serving",
+	tip:     "The previous version continues to serve while the new version is applied. No action is required unless this state persists.",
+}
+
 // summarize computes the user-facing Summary (state, message, tip) from the
 // same condmap.State the mappers consume. It is a pure function — no I/O.
 //
@@ -238,7 +249,19 @@ func summarize(state condmap.State) (string, string, string) {
 	case phaseUpdate:
 		blocker, ok := pipelineBlocker(state, updatePipeline)
 		if !ok {
-			return summaryReady.state, summaryReady.message, summaryReady.tip // update done
+			// "No blocker" is not the same as "update finished". firstFalse skips a
+			// transient ManifestsApplied=False/ApplyingManifests exactly as the
+			// mapper does, so the update pipeline reads clear during every re-apply
+			// window. But mapUpdateInstalled only flips UpdateInstalled (and mapReady
+			// only flips Ready) to True once ManifestsApplied is actually True; until
+			// then it returns empty and leaves the previous — possibly failed —
+			// conditions sticky. Mirror that success gate here, otherwise a mid-apply
+			// retry over a failed update would report Ready while the conditions a
+			// client also reads still say ManifestsApplyFailed.
+			if state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
+				return summaryReady.state, summaryReady.message, summaryReady.tip // update done
+			}
+			return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
 		}
 		return adviseFor(phaseUpdate, reasonOf(state, blocker))
 
