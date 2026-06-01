@@ -197,7 +197,6 @@ func (d *DiskService) GetDiskByName(ctx context.Context, diskName string) (*v1al
 
 const (
 	DefaultDiskDeletionTimeout = 5 * time.Minute
-	DefaultDiskAttachTimeout   = 10 * time.Minute
 )
 
 func (d *DiskService) RemoveDiskByName(ctx context.Context, diskName string) error {

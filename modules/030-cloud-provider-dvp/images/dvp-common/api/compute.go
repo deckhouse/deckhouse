@@ -48,6 +48,8 @@ const (
 const (
 	// DefaultVMDeletionTimeout is the maximum time to wait for VM deletion
 	DefaultVMDeletionTimeout = 10 * time.Minute
+	// DefaultDiskAttachTimeout is the maximum time to wait for a VirtualDisk to attach to a VM
+	DefaultDiskAttachTimeout = 10 * time.Minute
 )
 
 type ComputeService struct {
