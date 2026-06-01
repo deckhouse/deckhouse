@@ -32,16 +32,12 @@ import (
 )
 
 const (
-	capiAPIVersion             = "cluster.x-k8s.io/v1beta1"
+	capiAPIVersion               = "cluster.x-k8s.io/v1beta1"
 	capiInfrastructureAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
+	capiInfraVCDAPIVersion       = "infrastructure.cluster.x-k8s.io/v1beta2"
+	capiInfraZvirtAPIVersion     = "infrastructure.cluster.x-k8s.io/v1"
 )
 
-const (
-	capiInfraVCDAPIVersion   = "infrastructure.cluster.x-k8s.io/v1beta2"
-	capiInfraZvirtAPIVersion = "infrastructure.cluster.x-k8s.io/v1"
-)
-
-// kind→apiVersion for MachineDeployment, MachineSet, MachinePool (infrastructureRef.kind = *Template)
 var capiMachineTemplateAPIVersions = map[string]string{
 	"DeckhouseMachineTemplate":   capiInfrastructureAPIVersion,
 	"DynamixMachineTemplate":     capiInfrastructureAPIVersion,
@@ -51,7 +47,6 @@ var capiMachineTemplateAPIVersions = map[string]string{
 	"ZvirtMachineTemplate":       capiInfraZvirtAPIVersion,
 }
 
-// kind→apiVersion for Machine (infrastructureRef.kind = *Machine)
 var capiMachineAPIVersions = map[string]string{
 	"DeckhouseMachine":   capiInfrastructureAPIVersion,
 	"DynamixMachine":     capiInfrastructureAPIVersion,
@@ -61,7 +56,6 @@ var capiMachineAPIVersions = map[string]string{
 	"ZvirtMachine":       capiInfraZvirtAPIVersion,
 }
 
-// kind→apiVersion for Cluster (infrastructureRef.kind = *Cluster)
 var capiClusterInfraAPIVersions = map[string]string{
 	"DeckhouseCluster":   capiInfrastructureAPIVersion,
 	"DynamixCluster":     capiInfrastructureAPIVersion,
@@ -71,12 +65,10 @@ var capiClusterInfraAPIVersions = map[string]string{
 	"ZvirtCluster":       capiInfraZvirtAPIVersion,
 }
 
-// kind→apiVersion for Cluster (controlPlaneRef.kind)
 var capiControlPlaneAPIVersions = map[string]string{
 	"DeckhouseControlPlane": capiInfrastructureAPIVersion,
 }
 
-// capiInfraRef is a common structure for resources with a single infrastructureRef.
 type capiInfraRef struct {
 	Name       string
 	Namespace  string
@@ -84,14 +76,13 @@ type capiInfraRef struct {
 	APIVersion string
 }
 
-// capiClusterRefs holds both infrastructureRef and controlPlaneRef from a Cluster resource.
 type capiClusterRefs struct {
-	Name                      string
-	Namespace                 string
-	InfraKind                 string
-	InfraAPIVersion           string
-	ControlPlaneKind          string
-	ControlPlaneAPIVersion    string
+	Name                   string
+	Namespace              string
+	InfraKind              string
+	InfraAPIVersion        string
+	ControlPlaneKind       string
+	ControlPlaneAPIVersion string
 }
 
 func filterTemplateInfraRef(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -198,50 +189,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterClusterRefs,
 		},
 	},
-}, handleSetInfraRefAPIVersion)
+}, handleSetAPIVersionOnCAPIResources)
 
-// patchTemplateInfraRefs patches spec.template.spec.infrastructureRef.apiVersion for resources
-// like MachineDeployment, MachineSet, MachinePool.
-func patchTemplateInfraRefs(input *go_hook.HookInput, snaps []pkg.Snapshot, kindMap map[string]string, resourceKind string) error {
-	for ref, err := range sdkobjectpatch.SnapshotIter[capiInfraRef](snaps) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over %s snapshots: %w", resourceKind, err)
-		}
-
-		apiVersion, ok := kindMap[ref.Kind]
-		if !ok {
-			input.Logger.Warn("unknown infrastructure template kind", slog.String("resource", resourceKind), slog.String("name", ref.Name), slog.String("kind", ref.Kind))
-			continue
-		}
-
-		if ref.APIVersion == apiVersion {
-			continue
-		}
-
-		if ref.APIVersion != "" {
-			input.Logger.Debug("infrastructureRef.apiVersion already set", slog.String("resource", resourceKind), slog.String("name", ref.Name), slog.String("apiVersion", ref.APIVersion))
-			continue
-		}
-
-		patch := map[string]interface{}{
-			"spec": map[string]interface{}{
-				"template": map[string]interface{}{
-					"spec": map[string]interface{}{
-						"infrastructureRef": map[string]interface{}{
-							"apiVersion": apiVersion,
-						},
-					},
-				},
-			},
-		}
-
-		input.PatchCollector.PatchWithMerge(patch, capiAPIVersion, resourceKind, ref.Namespace, ref.Name)
-	}
-	return nil
-}
-
-// patchDirectInfraRefs patches spec.infrastructureRef.apiVersion for resources like Machine.
-func patchDirectInfraRefs(input *go_hook.HookInput, snaps []pkg.Snapshot, kindMap map[string]string, resourceKind string) error {
+func patchInfraRefs(input *go_hook.HookInput, snaps []pkg.Snapshot, kindMap map[string]string, resourceKind string, buildPatch func(string) map[string]interface{}) error {
 	for ref, err := range sdkobjectpatch.SnapshotIter[capiInfraRef](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over %s snapshots: %w", resourceKind, err)
@@ -262,86 +212,96 @@ func patchDirectInfraRefs(input *go_hook.HookInput, snaps []pkg.Snapshot, kindMa
 			continue
 		}
 
-		patch := map[string]interface{}{
-			"spec": map[string]interface{}{
-				"infrastructureRef": map[string]interface{}{
-					"apiVersion": apiVersion,
-				},
-			},
-		}
-
-		input.PatchCollector.PatchWithMerge(patch, capiAPIVersion, resourceKind, ref.Namespace, ref.Name)
+		input.PatchCollector.PatchWithMerge(buildPatch(apiVersion), capiAPIVersion, resourceKind, ref.Namespace, ref.Name)
 	}
 	return nil
 }
 
-// patchClusterRefs patches both spec.infrastructureRef.apiVersion and spec.controlPlaneRef.apiVersion
-// on Cluster resources.
+func templateInfraRefPatch(apiVersion string) map[string]interface{} {
+	return map[string]interface{}{
+		"spec": map[string]interface{}{
+			"template": map[string]interface{}{
+				"spec": map[string]interface{}{
+					"infrastructureRef": map[string]interface{}{
+						"apiVersion": apiVersion,
+					},
+				},
+			},
+		},
+	}
+}
+
+func directInfraRefPatch(apiVersion string) map[string]interface{} {
+	return map[string]interface{}{
+		"spec": map[string]interface{}{
+			"infrastructureRef": map[string]interface{}{
+				"apiVersion": apiVersion,
+			},
+		},
+	}
+}
+
+func controlPlaneRefPatch(apiVersion string) map[string]interface{} {
+	return map[string]interface{}{
+		"spec": map[string]interface{}{
+			"controlPlaneRef": map[string]interface{}{
+				"apiVersion": apiVersion,
+			},
+		},
+	}
+}
+
 func patchClusterRefs(input *go_hook.HookInput, snaps []pkg.Snapshot) error {
 	for cluster, err := range sdkobjectpatch.SnapshotIter[capiClusterRefs](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over Cluster snapshots: %w", err)
 		}
 
-		// Patch infrastructureRef
-		if infraAPIVersion, ok := capiClusterInfraAPIVersions[cluster.InfraKind]; ok {
-			if cluster.InfraAPIVersion == "" {
-				patch := map[string]interface{}{
-					"spec": map[string]interface{}{
-						"infrastructureRef": map[string]interface{}{
-							"apiVersion": infraAPIVersion,
-						},
-					},
-				}
-				input.PatchCollector.PatchWithMerge(patch, capiAPIVersion, "Cluster", cluster.Namespace, cluster.Name)
-			} else if cluster.InfraAPIVersion != infraAPIVersion {
-				input.Logger.Debug("cluster infrastructureRef.apiVersion already set", slog.String("cluster", cluster.Name), slog.String("apiVersion", cluster.InfraAPIVersion))
-			}
-		} else if cluster.InfraKind != "" {
-			input.Logger.Warn("unknown infrastructure cluster kind", slog.String("cluster", cluster.Name), slog.String("kind", cluster.InfraKind))
-		}
-
-		// Patch controlPlaneRef
-		if cpAPIVersion, ok := capiControlPlaneAPIVersions[cluster.ControlPlaneKind]; ok {
-			if cluster.ControlPlaneAPIVersion == "" {
-				patch := map[string]interface{}{
-					"spec": map[string]interface{}{
-						"controlPlaneRef": map[string]interface{}{
-							"apiVersion": cpAPIVersion,
-						},
-					},
-				}
-				input.PatchCollector.PatchWithMerge(patch, capiAPIVersion, "Cluster", cluster.Namespace, cluster.Name)
-			} else if cluster.ControlPlaneAPIVersion != cpAPIVersion {
-				input.Logger.Debug("cluster controlPlaneRef.apiVersion already set", slog.String("cluster", cluster.Name), slog.String("apiVersion", cluster.ControlPlaneAPIVersion))
-			}
-		} else if cluster.ControlPlaneKind != "" {
-			input.Logger.Warn("unknown control plane kind", slog.String("cluster", cluster.Name), slog.String("kind", cluster.ControlPlaneKind))
-		}
+		patchRefIfEmpty(input, cluster.Name, cluster.Namespace, cluster.InfraKind, cluster.InfraAPIVersion, capiClusterInfraAPIVersions, directInfraRefPatch)
+		patchRefIfEmpty(input, cluster.Name, cluster.Namespace, cluster.ControlPlaneKind, cluster.ControlPlaneAPIVersion, capiControlPlaneAPIVersions, controlPlaneRefPatch)
 	}
 	return nil
 }
 
-func handleSetInfraRefAPIVersion(_ context.Context, input *go_hook.HookInput) error {
-	if err := patchTemplateInfraRefs(input, input.Snapshots.Get("capi_machine_deployments"), capiMachineTemplateAPIVersions, "MachineDeployment"); err != nil {
+func patchRefIfEmpty(input *go_hook.HookInput, name, namespace, kind, currentAPIVersion string, kindMap map[string]string, buildPatch func(string) map[string]interface{}) {
+	if kind == "" {
+		return
+	}
+
+	expectedAPIVersion, ok := kindMap[kind]
+	if !ok {
+		input.Logger.Warn("unknown kind", slog.String("cluster", name), slog.String("kind", kind))
+		return
+	}
+
+	if currentAPIVersion == expectedAPIVersion {
+		return
+	}
+
+	if currentAPIVersion != "" {
+		input.Logger.Debug("apiVersion already set", slog.String("cluster", name), slog.String("apiVersion", currentAPIVersion))
+		return
+	}
+
+	input.PatchCollector.PatchWithMerge(buildPatch(expectedAPIVersion), capiAPIVersion, "Cluster", namespace, name)
+}
+
+func handleSetAPIVersionOnCAPIResources(_ context.Context, input *go_hook.HookInput) error {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_deployments"), capiMachineTemplateAPIVersions, "MachineDeployment", templateInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchTemplateInfraRefs(input, input.Snapshots.Get("capi_machine_sets"), capiMachineTemplateAPIVersions, "MachineSet"); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_sets"), capiMachineTemplateAPIVersions, "MachineSet", templateInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchTemplateInfraRefs(input, input.Snapshots.Get("capi_machine_pools"), capiMachineTemplateAPIVersions, "MachinePool"); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machine_pools"), capiMachineTemplateAPIVersions, "MachinePool", templateInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchDirectInfraRefs(input, input.Snapshots.Get("capi_machines"), capiMachineAPIVersions, "Machine"); err != nil {
+	if err := patchInfraRefs(input, input.Snapshots.Get("capi_machines"), capiMachineAPIVersions, "Machine", directInfraRefPatch); err != nil {
 		return err
 	}
 
-	if err := patchClusterRefs(input, input.Snapshots.Get("capi_clusters")); err != nil {
-		return err
-	}
-
-	return nil
+	return patchClusterRefs(input, input.Snapshots.Get("capi_clusters"))
 }
