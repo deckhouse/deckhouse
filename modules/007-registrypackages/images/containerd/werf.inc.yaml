@@ -74,7 +74,7 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  - pm install libseccomp-devel
+  - pm install libseccomp-devel git
   - mkdir -p /out
   install:
   - cd /src
@@ -183,7 +183,7 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  - pm install libseccomp-devel
+  - pm install libseccomp-devel git
   - mkdir -p /out
   install:
   - cd /src/containerd
