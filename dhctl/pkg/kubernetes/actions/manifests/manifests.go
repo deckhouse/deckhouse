@@ -377,20 +377,24 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "3",
 		},
 		{
-			// The helm-chart deckhouse uses GOGC=50 for steady-state memory
-			// frugality. During the first converge — when the heap doubles
-			// while LoadModulesFromFS parses ~60 OpenAPI schemas and helm
-			// renders charts — aggressive GC wastes CPU on the critical path.
-			// 100 (the Go default) reduces GC frequency by ~50% and shortens
-			// the cold start measurably; helm later overrides this to 50 in
-			// the post-converge Deployment.
+			// GC trigger: a cycle runs once the heap grows GOGC% over the live set.
+			// The in-cluster deckhouse runs GOGC=50 (fires at +50%) for steady-state
+			// RSS frugality, and helm restores that on the post-converge Deployment.
+			// The first converge is allocation-heavy — LoadModulesFromFS parses ~60
+			// OpenAPI schemas, helm renders charts, hundreds of CRDs are applied — so
+			// 50 collects ~twice as often, and Go's concurrent GC steals CPU from the
+			// converge on a 2-vCPU master also running etcd/apiserver. 100 (the Go
+			// default) roughly halves those cycles; the extra heap is bounded by the
+			// GOMEMLIMIT backstop below.
 			Name:  "GOGC",
 			Value: "100",
 		},
 		{
-			// Soft memory ceiling that the Go runtime honors when triggering
-			// GC. Set just below the resource request above so the runtime
-			// starts shrinking before kubelet would even consider eviction.
+			// Soft heap ceiling — a backstop, not a speedup. With GOGC=100 the heap
+			// may grow to ~2x live size and this pod carries no memory limit, so an
+			// absolute cap keeps a pathological spike from eating the master VM's RAM
+			// (shared with etcd/apiserver/kubelet during bootstrap). It only engages
+			// near the limit; in the common case peak heap stays well below it.
 			Name:  "GOMEMLIMIT",
 			Value: "1400MiB",
 		},
