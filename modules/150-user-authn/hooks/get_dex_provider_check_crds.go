@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -50,6 +51,7 @@ const (
 	dexProviderCheckTimeout         = 20 * time.Second
 	dexProviderCheckHTTPTimeout     = 5 * time.Second
 	dexProviderCheckLDAPTimeout     = 5 * time.Second
+	dexProviderCertExpiryWarnWindow = 14 * 24 * time.Hour
 
 	userAuthnNamespace = "d8-user-authn"
 	dexDiscoveryURL    = "https://dex.d8-user-authn/.well-known/openid-configuration"
@@ -394,6 +396,8 @@ func checkGitlab(ctx context.Context, dc dependency.Container, result *dexProvid
 	if baseURL == "" {
 		baseURL = "https://gitlab.com"
 	}
+	checkCABundle(result, "gitlabCABundle", provider.Spec.Gitlab.RootCAData)
+	checkTLSCertificate(result, "gitlabCertificate", baseURL, provider.Spec.Gitlab.RootCAData, false)
 	checkHTTPReachability(ctx, dc, result, "gitlabURL", baseURL, provider.Spec.Gitlab.RootCAData)
 }
 
@@ -458,6 +462,9 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 
+	checkCABundle(result, "oidcCABundle", provider.Spec.OIDC.RootCAData)
+	checkTLSCertificate(result, "oidcCertificate", issuer, provider.Spec.OIDC.RootCAData, provider.Spec.OIDC.InsecureSkipVerify)
+
 	client := dc.GetHTTPClient(httpOptions(provider.Spec.OIDC.RootCAData, provider.Spec.OIDC.InsecureSkipVerify)...)
 	discoveryURL := issuer + "/.well-known/openid-configuration"
 	statusCode, body, err := httpGet(ctx, client, discoveryURL, nil)
@@ -470,10 +477,7 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 
-	var discovery struct {
-		Issuer  string `json:"issuer"`
-		JWKSURI string `json:"jwks_uri"`
-	}
+	var discovery oidcDiscoveryDocument
 	if err := json.Unmarshal(body, &discovery); err != nil {
 		result.fail("oidcDiscovery", "OIDC discovery returned invalid JSON: %v", err)
 		return
@@ -483,6 +487,18 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 	result.succeed("oidcDiscovery", "OIDC discovery is reachable")
+
+	if strings.TrimRight(discovery.Issuer, "/") != issuer {
+		result.fail("oidcIssuerMatch", "discovery issuer %q does not match the configured issuer %q", discovery.Issuer, issuer)
+	} else {
+		result.succeed("oidcIssuerMatch", "discovery issuer matches the configured issuer")
+	}
+
+	if missing := discovery.missingEndpoints(); len(missing) > 0 {
+		result.fail("oidcEndpoints", "OIDC discovery is missing endpoints: %s", strings.Join(missing, ", "))
+	} else {
+		result.succeed("oidcEndpoints", "authorization and token endpoints are advertised")
+	}
 
 	statusCode, body, err = httpGet(ctx, client, discovery.JWKSURI, nil)
 	if err != nil {
@@ -524,10 +540,22 @@ func checkLDAP(
 		return
 	}
 
-	if err := ldapReachable(ctx, provider.Spec.LDAP); err != nil {
+	checkCABundle(result, "ldapCABundle", provider.Spec.LDAP.RootCAData)
+
+	certs, err := ldapReachable(ctx, provider.Spec.LDAP)
+	if err != nil {
 		result.fail("ldapReachable", "LDAP endpoint is not reachable: %v", err)
 	} else {
 		result.succeed("ldapReachable", "LDAP endpoint is reachable")
+	}
+
+	switch {
+	case provider.Spec.LDAP.InsecureNoSSL:
+		result.skip("ldapCertificate", "TLS is disabled (insecureNoSSL)")
+	case err != nil:
+		result.skip("ldapCertificate", "skipped because the LDAP endpoint is not reachable")
+	default:
+		reportLeafExpiry(result, "ldapCertificate", certs)
 	}
 
 	checkLDAPKerberosKeytab(ctx, input, dc, result, provider)
@@ -580,6 +608,8 @@ func checkSAML(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 
+	checkCABundle(result, "samlCABundle", provider.Spec.SAML.RootCAData)
+	checkTLSCertificate(result, "samlCertificate", provider.Spec.SAML.SSOURL, provider.Spec.SAML.RootCAData, false)
 	checkHTTPReachability(ctx, dc, result, "samlSSOURL", provider.Spec.SAML.SSOURL, provider.Spec.SAML.RootCAData)
 }
 
@@ -642,24 +672,139 @@ func httpGet(ctx context.Context, client d8http.Client, rawURL string, headers m
 	return resp.StatusCode, body, nil
 }
 
-func ldapReachable(ctx context.Context, cfg *DexProviderLDAPForCheck) error {
+type oidcDiscoveryDocument struct {
+	Issuer                string `json:"issuer"`
+	JWKSURI               string `json:"jwks_uri"`
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+	TokenEndpoint         string `json:"token_endpoint"`
+}
+
+func (d oidcDiscoveryDocument) missingEndpoints() []string {
+	var missing []string
+	if d.AuthorizationEndpoint == "" {
+		missing = append(missing, "authorization_endpoint")
+	}
+	if d.TokenEndpoint == "" {
+		missing = append(missing, "token_endpoint")
+	}
+	return missing
+}
+
+// checkCABundle validates a user-supplied PEM CA bundle: that it parses and
+// that its certificates are not expired. It needs no provider credentials.
+func checkCABundle(result *dexProviderCheckResult, stepName, rootCAData string) {
+	if rootCAData == "" {
+		result.skip(stepName, "No custom CA provided; using the system trust store")
+		return
+	}
+
+	notAfter, err := earliestCertExpiry([]byte(rootCAData))
+	if err != nil {
+		result.fail(stepName, "rootCAData is invalid: %v", err)
+		return
+	}
+	reportExpiry(result, stepName, "rootCAData certificate", notAfter)
+}
+
+// earliestCertExpiry returns the soonest NotAfter among the certificates in a
+// PEM bundle. It is the limiting factor for the bundle's validity.
+func earliestCertExpiry(pemData []byte) (time.Time, error) {
+	rest := pemData
+	var earliest time.Time
+	found := false
+	for {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("parse certificate: %w", err)
+		}
+		if !found || cert.NotAfter.Before(earliest) {
+			earliest = cert.NotAfter
+			found = true
+		}
+	}
+	if !found {
+		return time.Time{}, errors.New("no certificates found")
+	}
+	return earliest, nil
+}
+
+// checkTLSCertificate performs a TLS handshake against an HTTPS endpoint and
+// reports the validity window of the server certificate. It is a transport-only
+// probe and requires no provider credentials.
+func checkTLSCertificate(result *dexProviderCheckResult, stepName, rawURL, rootCAData string, insecureSkipVerify bool) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Scheme != "https" {
+		result.skip(stepName, "endpoint is not HTTPS; certificate check skipped")
+		return
+	}
+
+	port := parsed.Port()
+	if port == "" {
+		port = "443"
+	}
+	tlsConfig, err := buildTLSConfig(rootCAData, parsed.Hostname(), insecureSkipVerify)
+	if err != nil {
+		result.fail(stepName, "cannot build TLS config: %v", err)
+		return
+	}
+
+	dialer := &net.Dialer{Timeout: dexProviderCheckHTTPTimeout}
+	conn, err := tls.DialWithDialer(dialer, "tcp", net.JoinHostPort(parsed.Hostname(), port), tlsConfig)
+	if err != nil {
+		result.fail(stepName, "cannot establish TLS connection: %v", err)
+		return
+	}
+	defer conn.Close()
+	reportLeafExpiry(result, stepName, conn.ConnectionState().PeerCertificates)
+}
+
+func reportLeafExpiry(result *dexProviderCheckResult, stepName string, certs []*x509.Certificate) {
+	if len(certs) == 0 {
+		result.fail(stepName, "server did not present a TLS certificate")
+		return
+	}
+	reportExpiry(result, stepName, "server TLS certificate", certs[0].NotAfter)
+}
+
+func reportExpiry(result *dexProviderCheckResult, stepName, subject string, notAfter time.Time) {
+	remaining := time.Until(notAfter)
+	expiry := notAfter.UTC().Format(time.RFC3339)
+	switch {
+	case remaining <= 0:
+		result.fail(stepName, "%s expired on %s", subject, expiry)
+	case remaining <= dexProviderCertExpiryWarnWindow:
+		result.succeed(stepName, "%s expires soon, on %s", subject, expiry)
+	default:
+		result.succeed(stepName, "%s is valid until %s", subject, expiry)
+	}
+}
+
+func ldapReachable(ctx context.Context, cfg *DexProviderLDAPForCheck) ([]*x509.Certificate, error) {
 	host, serverName, err := ldapAddress(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dialer := &net.Dialer{Timeout: dexProviderCheckLDAPTimeout}
 	if cfg.InsecureNoSSL {
 		conn, err := dialer.DialContext(ctx, "tcp", host)
 		if err != nil {
-			return fmt.Errorf("dial tcp: %w", err)
+			return nil, fmt.Errorf("dial tcp: %w", err)
 		}
-		return conn.Close()
+		return nil, conn.Close()
 	}
 
-	tlsConfig, err := ldapTLSConfig(cfg, serverName)
+	tlsConfig, err := buildTLSConfig(cfg.RootCAData, serverName, cfg.InsecureSkipVerify)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if cfg.StartTLS {
 		return ldapStartTLS(ctx, dialer, host, tlsConfig)
@@ -667,9 +812,10 @@ func ldapReachable(ctx context.Context, cfg *DexProviderLDAPForCheck) error {
 
 	conn, err := tls.DialWithDialer(dialer, "tcp", host, tlsConfig)
 	if err != nil {
-		return fmt.Errorf("dial tls: %w", err)
+		return nil, fmt.Errorf("dial tls: %w", err)
 	}
-	return conn.Close()
+	defer conn.Close()
+	return conn.ConnectionState().PeerCertificates, nil
 }
 
 func ldapAddress(cfg *DexProviderLDAPForCheck) (string, string, error) {
@@ -688,12 +834,15 @@ func ldapAddress(cfg *DexProviderLDAPForCheck) (string, string, error) {
 	return "", "", fmt.Errorf("parse LDAP host %q: %w", cfg.Host, err)
 }
 
-func ldapTLSConfig(cfg *DexProviderLDAPForCheck, serverName string) (*tls.Config, error) {
+// buildTLSConfig builds a tls.Config that trusts the system roots plus an
+// optional PEM-encoded CA bundle. It is shared by the LDAP and HTTPS
+// certificate checks so that custom CAs are honoured consistently.
+func buildTLSConfig(rootCAData, serverName string, insecureSkipVerify bool) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: cfg.InsecureSkipVerify,
+		InsecureSkipVerify: insecureSkipVerify,
 		ServerName:         serverName,
 	}
-	if cfg.InsecureSkipVerify {
+	if insecureSkipVerify {
 		return tlsConfig, nil
 	}
 
@@ -701,17 +850,17 @@ func ldapTLSConfig(cfg *DexProviderLDAPForCheck, serverName string) (*tls.Config
 	if err != nil {
 		return nil, fmt.Errorf("load system CA pool: %w", err)
 	}
-	if cfg.RootCAData != "" && !pool.AppendCertsFromPEM([]byte(cfg.RootCAData)) {
-		return nil, errors.New("append LDAP rootCAData: no certificates found")
+	if rootCAData != "" && !pool.AppendCertsFromPEM([]byte(rootCAData)) {
+		return nil, errors.New("append rootCAData: no certificates found")
 	}
 	tlsConfig.RootCAs = pool
 	return tlsConfig, nil
 }
 
-func ldapStartTLS(ctx context.Context, dialer *net.Dialer, addr string, tlsConfig *tls.Config) error {
+func ldapStartTLS(ctx context.Context, dialer *net.Dialer, addr string, tlsConfig *tls.Config) ([]*x509.Certificate, error) {
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return fmt.Errorf("dial tcp: %w", err)
+		return nil, fmt.Errorf("dial tcp: %w", err)
 	}
 	defer conn.Close()
 
@@ -720,26 +869,27 @@ func ldapStartTLS(ctx context.Context, dialer *net.Dialer, addr string, tlsConfi
 		deadline = time.Now().Add(dexProviderCheckLDAPTimeout)
 	}
 	if err := conn.SetDeadline(deadline); err != nil {
-		return fmt.Errorf("set LDAP connection deadline: %w", err)
+		return nil, fmt.Errorf("set LDAP connection deadline: %w", err)
 	}
 
 	if _, err := conn.Write(ldapStartTLSRequest); err != nil {
-		return fmt.Errorf("send LDAP StartTLS request: %w", err)
+		return nil, fmt.Errorf("send LDAP StartTLS request: %w", err)
 	}
 	buf := make([]byte, 1024)
 	n, err := conn.Read(buf)
 	if err != nil {
-		return fmt.Errorf("read LDAP StartTLS response: %w", err)
+		return nil, fmt.Errorf("read LDAP StartTLS response: %w", err)
 	}
 	if !bytes.Contains(buf[:n], ldapSuccessResultCode) {
-		return fmt.Errorf("LDAP StartTLS request was not accepted")
+		return nil, fmt.Errorf("LDAP StartTLS request was not accepted")
 	}
 
 	tlsConn := tls.Client(conn, tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
-		return fmt.Errorf("LDAP StartTLS handshake: %w", err)
+		return nil, fmt.Errorf("LDAP StartTLS handshake: %w", err)
 	}
-	return tlsConn.Close()
+	certs := tlsConn.ConnectionState().PeerCertificates
+	return certs, tlsConn.Close()
 }
 
 var (

@@ -18,7 +18,11 @@ package hooks
 
 import (
 	"context"
+	"encoding/pem"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -106,4 +110,97 @@ func TestLDAPAddressDefaultsPortFromTLSMode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEarliestCertExpiry(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer ts.Close()
+
+	cert := ts.Certificate()
+	pemBytes := pem.EncodeToMemory(&pem.Block{Bytes: cert.Raw, Type: "CERTIFICATE"})
+
+	got, err := earliestCertExpiry(pemBytes)
+	if err != nil {
+		t.Fatalf("earliestCertExpiry returned error: %v", err)
+	}
+	if !got.Equal(cert.NotAfter) {
+		t.Fatalf("expected %s, got %s", cert.NotAfter, got)
+	}
+
+	if _, err := earliestCertExpiry([]byte("not a pem")); err == nil {
+		t.Fatal("expected error for input without certificates")
+	}
+}
+
+func TestReportExpiry(t *testing.T) {
+	tests := []struct {
+		name     string
+		notAfter time.Time
+		want     string
+	}{
+		{name: "expired", notAfter: time.Now().Add(-time.Hour), want: dexProviderCheckStepFailed},
+		{name: "expires soon", notAfter: time.Now().Add(24 * time.Hour), want: dexProviderCheckStepSucceeded},
+		{name: "valid", notAfter: time.Now().Add(365 * 24 * time.Hour), want: dexProviderCheckStepSucceeded},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &dexProviderCheckResult{}
+			reportExpiry(result, "cert", "test certificate", tt.notAfter)
+			if len(result.checks) != 1 || result.checks[0].Status != tt.want {
+				t.Fatalf("expected status %q, got %#v", tt.want, result.checks)
+			}
+		})
+	}
+}
+
+func TestCheckTLSCertificate(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer ts.Close()
+
+	t.Run("reachable https reports certificate validity", func(t *testing.T) {
+		result := &dexProviderCheckResult{}
+		checkTLSCertificate(result, "tls", ts.URL, "", true)
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSucceeded {
+			t.Fatalf("expected success, got %#v", result.checks)
+		}
+	})
+
+	t.Run("non-https endpoint is skipped", func(t *testing.T) {
+		result := &dexProviderCheckResult{}
+		checkTLSCertificate(result, "tls", "http://example.com", "", false)
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSkipped {
+			t.Fatalf("expected skipped, got %#v", result.checks)
+		}
+	})
+}
+
+func TestOIDCDiscoveryMissingEndpoints(t *testing.T) {
+	full := oidcDiscoveryDocument{AuthorizationEndpoint: "https://idp/auth", TokenEndpoint: "https://idp/token"}
+	if missing := full.missingEndpoints(); len(missing) != 0 {
+		t.Fatalf("expected no missing endpoints, got %v", missing)
+	}
+
+	empty := oidcDiscoveryDocument{}
+	if missing := empty.missingEndpoints(); len(missing) != 2 {
+		t.Fatalf("expected 2 missing endpoints, got %v", missing)
+	}
+}
+
+func TestCheckCABundle(t *testing.T) {
+	t.Run("empty is skipped", func(t *testing.T) {
+		result := &dexProviderCheckResult{}
+		checkCABundle(result, "ca", "")
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSkipped {
+			t.Fatalf("expected skipped, got %#v", result.checks)
+		}
+	})
+
+	t.Run("invalid bundle fails", func(t *testing.T) {
+		result := &dexProviderCheckResult{}
+		checkCABundle(result, "ca", "-----BEGIN CERTIFICATE-----\nbroken\n-----END CERTIFICATE-----")
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepFailed {
+			t.Fatalf("expected failure, got %#v", result.checks)
+		}
+	})
 }
