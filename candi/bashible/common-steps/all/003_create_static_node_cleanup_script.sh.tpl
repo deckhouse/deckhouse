@@ -19,7 +19,6 @@ MOTD_FILE="/etc/motd"
 MARKER="D8_CLEANUP_STATIC_NODE"
 CLEANUP_FAILED=0
 SCRIPT_PATH="/var/lib/bashible/cleanup_static_node.sh"
-SCRIPT_BACKUP="/tmp/cleanup_static_node.sh.bak"
 
 PATHS_TO_REMOVE=(
   /var/cache/registrypackages
@@ -133,27 +132,13 @@ remove_path() {
   [ ! -e "$path" ] && return 0
 
   for i in {1..5}; do
-    if [ -d "$path" ]; then
-      # For each mountpoint under $path (deepest first): if it's a persistent writable volume,
-      # clear its data before unmounting so the device comes up empty on next boot.
-      while IFS= read -r mnt; do
-        local fstype
-        fstype=$(findmnt --noheadings --output FSTYPE --mountpoint "$mnt" 2>/dev/null)
-        case "$fstype" in
-          overlay|tmpfs|nsfs|autofs|erofs)
-            # No persistent data — just unmount (erofs is read-only, find -delete would fail)
-            ;;
-          *)
-            # Persistent writable volume (ext4, xfs, nfs4, etc.) — clear data first
-            log_info "Clearing data on $fstype volume at $mnt"
-            if ! find "$mnt" -mindepth 1 -delete 2>/dev/null; then
-              log_err "ERROR: failed to clear data at $mnt"
-              CLEANUP_FAILED=1
-            fi
-            ;;
-        esac
-        umount -l "$mnt" 2>/dev/null || true
-      done < <(mount | grep -F "$path" | awk '{print $3}' | sort -r)
+    # If the path is a separate mount, wipe its data first so the device comes up empty
+    # on next bootstrap, then unmount it. -xdev keeps find on this device, so it never
+    # crosses into PVC or other nested mounted volumes.
+    if mountpoint -q "$path"; then
+      log_info "Clearing data on volume at $path"
+      find "$path" -xdev -mindepth 1 -delete 2>/dev/null
+      umount -l "$path" 2>/dev/null || true
     fi
     rm -rf "$path" 2>/dev/null && return 0
     sleep 1
@@ -167,10 +152,6 @@ remove_path() {
 
 # --- Main ---
 log_info "Starting static node cleanup"
-
-# Backup current script for potential rerun
-cp -f "$0" "$SCRIPT_BACKUP" 2>/dev/null || log_err "Failed to backup cleanup script to $SCRIPT_BACKUP"
-chmod +x "$SCRIPT_BACKUP" 2>/dev/null || true
 
 if [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; then
   log_err "Needed flag isn't passed, exit without any action (--yes-i-am-sane-and-i-understand-what-i-am-doing)"
@@ -188,6 +169,8 @@ done
 
 # Kill Processes
 kill_and_wait "bash /var/lib/bashible/bashible"
+# Remove the bashible entrypoint right away so it cannot be re-launched while we clean up.
+remove_path /var/lib/bashible/bashible.sh
 kill_and_wait "containerd-shim"
 
 # Remove immutable bit
@@ -227,14 +210,7 @@ EOF_CRON
   (cat /root/old_crontab; echo "@reboot /root/d8-user-cleanup.sh") | crontab -
 fi
 
-remove_path /var/lib/bashible/ || CLEANUP_FAILED=1
-
 if [ "$CLEANUP_FAILED" -ne 0 ]; then
-  if [ ! -f "$SCRIPT_PATH" ]; then
-    mkdir -p /var/lib/bashible/
-    cp -f "$SCRIPT_BACKUP" "$SCRIPT_PATH"
-    chmod +x "$SCRIPT_PATH"
-  fi
   log_err "Cleanup finished with errors. Reboot the server and run as root user $SCRIPT_PATH --yes-i-am-sane-and-i-understand-what-i-am-doing again, or fix the issues above manually"
   exit 2
 fi
@@ -261,9 +237,16 @@ if [ "${#FSTAB_HITS[@]}" -gt 0 ]; then
   echo "# Remove or comment out those entries from /etc/fstab before rebooting,"
   echo "################################################################################"
   echo ""
+  # Exit before removing the script (below) so it stays on disk. A retry then re-runs
+  # it and re-hits this safeguard, instead of caps-controller-manager treating a
+  # missing script as "done" and rebooting with a stale /etc/fstab entry.
   log_err "Skipping reboot: manual /etc/fstab cleanup required (see WARNING above)"
   exit 3
 fi
+
+# Remove the script (and the rest of /var/lib/bashible) last, only once we are
+# committed to rebooting — every earlier exit path keeps it on disk for a rerun.
+remove_path /var/lib/bashible/
 
 log_info "Rebooting"
 shutdown -r -t 5
