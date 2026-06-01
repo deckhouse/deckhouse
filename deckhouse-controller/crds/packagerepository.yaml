@@ -18,8 +18,8 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .status.syncTime
-      name: Sync
+    - jsonPath: .status.lastScanTime
+      name: Scan
       type: date
     - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
       name: MSG
@@ -150,6 +150,21 @@ spec:
                   - type
                   type: object
                 type: array
+              lastChangeTime:
+                description: |-
+                  Time of the most recent scan that found at least one new version.
+                  Scans that found nothing new do not advance this timestamp.
+                format: date-time
+                type: string
+              lastNewVersions:
+                description: |-
+                  Number of new versions found by the most recent scan.
+                  Set to zero when the last scan found nothing new.
+                type: integer
+              lastScanTime:
+                description: Time of the most recent scan of any outcome.
+                format: date-time
+                type: string
               message:
                 description: Human-readable message about the repository status.
                 type: string
@@ -176,10 +191,6 @@ spec:
                 type: boolean
               phase:
                 description: Current phase of the repository.
-                type: string
-              syncTime:
-                description: Last time the repository was synchronized.
-                format: date-time
                 type: string
             type: object
         required:

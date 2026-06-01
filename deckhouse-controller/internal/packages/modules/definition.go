@@ -34,14 +34,39 @@ type Definition struct {
 
 // Requirements specifies dependencies required by the module.
 type Requirements struct {
-	Kubernetes *semver.Constraints   `json:"kubernetes" yaml:"kubernetes"`
-	Deckhouse  *semver.Constraints   `json:"deckhouse" yaml:"deckhouse"`
-	Modules    map[string]Dependency `json:"modules" yaml:"modules"`
+	Kubernetes *semver.Constraints `json:"kubernetes" yaml:"kubernetes"`
+	Deckhouse  *semver.Constraints `json:"deckhouse" yaml:"deckhouse"`
+	Modules    ModulesRequirements `json:"modules" yaml:"modules"`
 }
 
-type Dependency struct {
-	Constraints *semver.Constraints `json:"constraints" yaml:"constraints"`
-	Optional    bool                `json:"optional" yaml:"optional"`
+// ModulesRequirements groups module dependencies by how they affect module startup.
+type ModulesRequirements struct {
+	// Mandatory lists modules that MUST be present (and satisfy constraint, if any)
+	// for the module to start. The map value is nil when no version constraint applies.
+	Mandatory map[string]*semver.Constraints `json:"mandatory" yaml:"mandatory"`
+	// Conditional lists modules that are not required to be present, but if installed
+	// must satisfy the version constraint. The map value is nil when no version constraint applies.
+	Conditional map[string]*semver.Constraints `json:"conditional" yaml:"conditional"`
+	// AnyOf lists groups of alternative dependencies; at least one member of each
+	// group must be present (and satisfy its constraint, if any) for the module to
+	// start. AnyOf groups are checker-only — they add no edges to the dependency
+	// graph, so fallback chains across packages do not produce cycles.
+	AnyOf []ModuleGroup `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
+	// NoneOf lists groups of forbidden dependencies; no member of any group may be
+	// present for the module to start. A nil constraint on a member forbids any
+	// installed version; a non-nil constraint narrows the forbidden range so
+	// versions outside it remain acceptable. Checker-only — adds no graph edges.
+	NoneOf []ModuleGroup `json:"noneOf,omitempty" yaml:"noneOf,omitempty"`
+}
+
+// ModuleGroup is a named group of module dependencies shared by the AnyOf and
+// NoneOf buckets; the containing field decides whether members are alternatives
+// (at least one must be installed) or forbidden (none may be installed). Members
+// maps each member's module name to its semver constraint (nil meaning "any
+// version"). Name is the stable identifier used by the scheduler in diagnostics.
+type ModuleGroup struct {
+	Name    string                         `json:"name" yaml:"name"`
+	Members map[string]*semver.Constraints `json:"members" yaml:"members"`
 }
 
 // DisableOptions configures application disablement behavior.
@@ -50,13 +75,39 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
+// Constraints projects the module definition onto the scheduler input shape,
+// flattening mandatory and conditional module requirements into a single dependency
+// map and projecting AnyOf groups onto schedule.AnyOfGroup. Mandatory entries win
+// over conditional entries when both reference the same module.
 func (d Definition) Constraints() schedule.Constraints {
-	deps := make(map[string]schedule.Dependency)
-	for module, dep := range d.Requirements.Modules {
-		deps[module] = schedule.Dependency{
-			Constraint: dep.Constraints,
-			Optional:   dep.Optional,
+	deps := make(map[string]schedule.Dependency, len(d.Requirements.Modules.Mandatory)+len(d.Requirements.Modules.Conditional))
+	for name, constraint := range d.Requirements.Modules.Conditional {
+		deps[name] = schedule.Dependency{
+			Constraint: constraint,
+			Optional:   true,
 		}
+	}
+	for name, constraint := range d.Requirements.Modules.Mandatory {
+		deps[name] = schedule.Dependency{
+			Constraint: constraint,
+			Optional:   false,
+		}
+	}
+
+	anyOf := make([]schedule.AnyOfGroup, 0, len(d.Requirements.Modules.AnyOf))
+	for _, g := range d.Requirements.Modules.AnyOf {
+		anyOf = append(anyOf, schedule.AnyOfGroup{
+			Name:    g.Name,
+			Members: g.Members,
+		})
+	}
+
+	noneOf := make([]schedule.NoneOfGroup, 0, len(d.Requirements.Modules.NoneOf))
+	for _, g := range d.Requirements.Modules.NoneOf {
+		noneOf = append(noneOf, schedule.NoneOfGroup{
+			Name:    g.Name,
+			Members: g.Members,
+		})
 	}
 
 	order := schedule.Order(d.Weight)
@@ -69,5 +120,7 @@ func (d Definition) Constraints() schedule.Constraints {
 		Kubernetes:   d.Requirements.Kubernetes,
 		Deckhouse:    d.Requirements.Deckhouse,
 		Dependencies: deps,
+		AnyOf:        anyOf,
+		NoneOf:       noneOf,
 	}
 }

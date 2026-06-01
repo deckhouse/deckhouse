@@ -24,8 +24,8 @@ import (
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
-	"github.com/go-openapi/swag"
 	"github.com/go-openapi/swag/loading"
+	"github.com/go-openapi/swag/yamlutils"
 	"github.com/go-openapi/validate"
 	"github.com/hashicorp/go-multierror"
 	"sigs.k8s.io/yaml"
@@ -51,7 +51,7 @@ func init() {
 	// Add loader to override swag.BytesToYAML marshaling into yaml.MapSlice.
 	// This type doesn't support map merging feature of YAML anchors. So additional
 	// loader is required to unmarshal into ordinary interface{} before converting to JSON.
-	loads.AddLoader(swag.YAMLMatcher, YAMLDocLoader)
+	loads.AddLoader(loading.YAMLMatcher, YAMLDocLoader)
 }
 
 // YAMLDocLoader loads a yaml document from either http or a file and converts it to json.
@@ -72,7 +72,7 @@ func yamlBytesToJSONDoc(data []byte) (json.RawMessage, error) {
 		return nil, fmt.Errorf("yaml unmarshal: %v", err)
 	}
 
-	doc, err := swag.YAMLToJSON(yamlObj)
+	doc, err := yamlutils.YAMLToJSON(yamlObj)
 	if err != nil {
 		return nil, fmt.Errorf("yaml to json: %v", err)
 	}
