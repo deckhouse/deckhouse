@@ -29,6 +29,18 @@ spec:
 
 ## Configuring a provider
 
+### Checking provider connectivity
+
+The Console provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
+
+The check verifies that:
+
+- the referenced [DexProvider](cr.html#dexprovider) exists and is enabled;
+- the in-cluster Dex discovery endpoint is reachable;
+- the external provider endpoint is reachable.
+
+For OIDC providers, the check also reads the discovery document and JWKS. For LDAP providers, it verifies TCP/TLS/StartTLS reachability and, when Kerberos is enabled, that the keytab Secret exists. The check does not perform a full login flow and does not validate a test user password.
+
 ### GitHub
 
 The example shows the provider's settings for integration with GitHub.
