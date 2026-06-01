@@ -1,5 +1,6 @@
 # Trivy version
 {{- $trivyVersion := "v0.55.2" }}
+{{- $trivyCommitSHA := "928c7c0f1a5c9432a2ba2daa5268dae53dc8eb7b" }}
 {{- $trivyDbForkCommit := "167ba4f2faebe8b7c6daac6b8c86c415c9acc023" }}
 {{- $trivyDbPatchCommit := "bbed03c788ca3a04a5b93e2c7a2f2213659ed9ec" }}
 
@@ -31,7 +32,8 @@ shell:
   - cd /src/trivy-db && git checkout {{ $trivyDbForkCommit }}
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy-db.git /src/trivy-db-patch
   - cd /src/trivy-db-patch && git checkout {{ $trivyDbPatchCommit }}
-  - git clone --depth 1 --branch {{ $trivyVersion }} $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
+  - git clone $(cat /run/secrets/SOURCE_REPO)/aquasecurity/trivy.git /src/trivy
+  - cd /src/trivy && git checkout {{ $trivyCommitSHA }}
   - git clone git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/trivy.git /src/trivy-patch
   - cd /src/trivy-patch && git checkout b7e5795dfd1ad07be2f3553b9ae292c2e263414d # last commit from branch main. Werf trigger for rebuild
   - cd /src/trivy-db && git apply --verbose --whitespace=fix /src/trivy-db-patch/patches/{{ $trivyVersion }}/*.patch
