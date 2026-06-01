@@ -76,7 +76,7 @@ var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
 		"clusterConfiguration": {
-			"kubernetesVersion": "1.31"
+			"kubernetesVersion": "1.35"
 		},
 		"modulesImages": {
 			"registry": {
