@@ -82,3 +82,9 @@ Fixec CVEs:
 - CVE-2026-35206
 - GHSA-xmrv-pmrh-hhx2
 - GHSA-3xc5-wrhm-f963
+
+# 017-fix-cve5.patch
+
+Fixes CVE:
+
+- GHSA-pmwq-pjrm-6p5r
