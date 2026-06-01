@@ -157,7 +157,6 @@ func TestLoad_AllFields(t *testing.T) {
 		"DEDUP_CLIENT_RECONSTRUCT_LRU_SIZE": "1024",
 		"DEDUP_CLIENT_GC_INTERVAL":          "2m",
 		"DEDUP_CLIENT_SNAPSHOT_STORE":       "true",
-		"DEDUP_CLIENT_HELM_RESOURCES_CACHE": "true",
 
 		// Debug.
 		"DEBUG_UNIX_SOCKET":      "/tmp/shell-operator-debug.socket",
@@ -224,7 +223,6 @@ func TestLoad_AllFields(t *testing.T) {
 		{"DedupClient.ReconstructLRUSize", cfg.DedupClient.ReconstructLRUSize, 1024},
 		{"DedupClient.GCInterval", cfg.DedupClient.GCInterval, 2 * time.Minute},
 		{"DedupClient.SnapshotStore", cfg.DedupClient.SnapshotStore, true},
-		{"DedupClient.HelmResourcesCache", cfg.DedupClient.HelmResourcesCache, true},
 
 		{"Debug.UnixSocket", cfg.Debug.UnixSocket, "/tmp/shell-operator-debug.socket"},
 		{"Debug.HTTPServerAddr", cfg.Debug.HTTPServerAddr, "127.0.0.1:9652"},
