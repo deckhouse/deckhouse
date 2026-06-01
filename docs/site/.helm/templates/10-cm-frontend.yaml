@@ -120,16 +120,19 @@ data:
 
         # DVP documentation
         location ~* ^/products/((virtualization-platform)/(documentation|guides|modules|gs|reference)/.*)$  {
+            error_page 403 404 /products/virtualization-platform/documentation/404.html;
             try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
         }
 
         # Stronghold Getting Started
         location ~* ^/products/((stronghold)/(gs)/.*)$  {
+            error_page 403 404 /products/stronghold/documentation/404.html;
             try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
         }
 
         # Code documentation
         location ~* ^/products/(code/(documentation|reference)/.*)$  {
+            error_page 403 404 /products/code/documentation/404.html;
             try_files /$lang/$1 /$lang/$1/index.html /$lang/$1/ $1 $1/index.html $1/ =404;
         }
 
