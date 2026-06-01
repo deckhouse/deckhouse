@@ -456,22 +456,15 @@ func checkGitlabCredentials(
 	cfg *DexProviderGitlabForCheck,
 	baseURL string,
 ) {
-	if cfg.ClientID == "" || cfg.ClientSecret == "" {
-		result.skip("gitlabCredentials", "clientID or clientSecret is empty")
-		return
-	}
-
 	tokenURL := strings.TrimRight(baseURL, "/") + "/oauth/token"
 	client := dc.GetHTTPClient(httpOptions(cfg.RootCAData, false)...)
-	accepted, detail, err := probeOAuthClientCredentials(ctx, client, tokenURL, cfg.ClientID, cfg.ClientSecret)
-	switch {
-	case err != nil:
-		result.fail("gitlabCredentials", "cannot reach the GitLab token endpoint: %v", err)
-	case !accepted:
-		result.fail("gitlabCredentials", "GitLab rejected the client credentials: %s", detail)
-	default:
-		result.succeed("gitlabCredentials", "GitLab client credentials are valid (%s)", detail)
-	}
+	reportOAuthClientSecret(ctx, client, result, oauthClientSecretCheck{
+		stepName:     "gitlabCredentials",
+		providerName: "GitLab",
+		tokenURL:     tokenURL,
+		clientID:     cfg.ClientID,
+		clientSecret: cfg.ClientSecret,
+	})
 }
 
 func checkBitbucket(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -494,22 +487,15 @@ func checkBitbucketCredentials(
 	result *dexProviderCheckResult,
 	cfg *DexProviderBitbucketForCheck,
 ) {
-	if cfg.ClientSecret == "" {
-		result.skip("bitbucketCredentials", "clientSecret is empty")
-		return
-	}
-
 	const tokenURL = "https://bitbucket.org/site/oauth2/access_token"
 	client := dc.GetHTTPClient(d8http.WithTimeout(dexProviderCheckHTTPTimeout))
-	accepted, detail, err := probeOAuthClientCredentials(ctx, client, tokenURL, cfg.ClientID, cfg.ClientSecret)
-	switch {
-	case err != nil:
-		result.fail("bitbucketCredentials", "cannot reach the Bitbucket token endpoint: %v", err)
-	case !accepted:
-		result.fail("bitbucketCredentials", "Bitbucket rejected the OAuth consumer credentials: %s", detail)
-	default:
-		result.succeed("bitbucketCredentials", "Bitbucket OAuth consumer credentials are valid (%s)", detail)
-	}
+	reportOAuthClientSecret(ctx, client, result, oauthClientSecretCheck{
+		stepName:     "bitbucketCredentials",
+		providerName: "Bitbucket",
+		tokenURL:     tokenURL,
+		clientID:     cfg.ClientID,
+		clientSecret: cfg.ClientSecret,
+	})
 }
 
 func checkCrowd(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -631,24 +617,18 @@ func checkOIDCCredentials(
 	cfg *DexProviderOIDCForCheck,
 	tokenEndpoint string,
 ) {
-	if cfg.ClientID == "" || cfg.ClientSecret == "" {
-		result.skip("oidcCredentials", "clientID or clientSecret is empty")
-		return
-	}
 	if tokenEndpoint == "" {
 		result.skip("oidcCredentials", "OIDC discovery does not advertise a token endpoint")
 		return
 	}
 
-	accepted, detail, err := probeOAuthClientCredentials(ctx, client, tokenEndpoint, cfg.ClientID, cfg.ClientSecret)
-	switch {
-	case err != nil:
-		result.fail("oidcCredentials", "cannot reach the OIDC token endpoint: %v", err)
-	case !accepted:
-		result.fail("oidcCredentials", "OIDC token endpoint rejected the client credentials: %s", detail)
-	default:
-		result.succeed("oidcCredentials", "OIDC client credentials are valid (%s)", detail)
-	}
+	reportOAuthClientSecret(ctx, client, result, oauthClientSecretCheck{
+		stepName:     "oidcCredentials",
+		providerName: "OIDC",
+		tokenURL:     tokenEndpoint,
+		clientID:     cfg.ClientID,
+		clientSecret: cfg.ClientSecret,
+	})
 }
 
 func checkLDAP(
@@ -852,28 +832,76 @@ func httpPostForm(
 	return resp.StatusCode, body, nil
 }
 
-// probeOAuthClientCredentials posts a client_credentials grant to an OAuth 2.0
-// token endpoint to verify that the configured client_id/client_secret pair is
-// accepted. It deliberately never completes a user login: an issued token or a
-// "grant not allowed" style error both prove the credentials are valid, whereas
-// invalid_client proves they are wrong. Credentials are sent both via HTTP Basic
-// auth and in the form body to satisfy providers that expect either style.
-func probeOAuthClientCredentials(
+// oauthClientSecretCheck describes a single OAuth 2.0 / OIDC client-secret
+// verification against a provider's token endpoint.
+type oauthClientSecretCheck struct {
+	stepName     string
+	providerName string
+	tokenURL     string
+	clientID     string
+	clientSecret string
+}
+
+// reportOAuthClientSecret verifies a confidential client secret and records the
+// result. It unifies the OIDC, GitLab and Bitbucket credential steps so they
+// share the same probing logic and messages.
+func reportOAuthClientSecret(
+	ctx context.Context,
+	client d8http.Client,
+	result *dexProviderCheckResult,
+	check oauthClientSecretCheck,
+) {
+	if check.clientID == "" || check.clientSecret == "" {
+		result.skip(check.stepName, "clientID or clientSecret is empty")
+		return
+	}
+
+	accepted, detail, err := probeClientSecret(ctx, client, check.tokenURL, check.clientID, check.clientSecret)
+	switch {
+	case err != nil:
+		result.fail(check.stepName, "cannot reach the %s token endpoint: %v", check.providerName, err)
+	case !accepted:
+		result.fail(check.stepName, "%s rejected the client credentials: %s", check.providerName, detail)
+	default:
+		result.succeed(check.stepName, "%s client credentials are valid (%s)", check.providerName, detail)
+	}
+}
+
+// probeClientSecret verifies a confidential OAuth 2.0 / OIDC client secret
+// without performing an interactive login. It sends an authorization_code token
+// request with a deliberately invalid code: the authorization server
+// authenticates the client *before* validating the code, so the response
+// reveals whether the secret is correct.
+//
+//   - "invalid_client"/"unauthorized_client" or HTTP 401 → the secret is wrong.
+//     RFC 6749 mandates invalid_client; some providers (e.g. Bitbucket) answer
+//     unauthorized_client with "Invalid OAuth client credentials" instead.
+//   - any other error (invalid_grant, invalid_request, …) or a 2xx response →
+//     the client authenticated and only the bogus code was rejected.
+//
+// The authorization_code grant is used rather than client_credentials because it
+// is always enabled for interactive login clients, whereas client_credentials is
+// frequently disabled and then answered with unauthorized_client regardless of
+// whether the secret is correct — which would yield false positives.
+//
+// The secret is sent via both HTTP Basic auth and the form body to satisfy
+// providers expecting either client authentication style.
+func probeClientSecret(
 	ctx context.Context,
 	client d8http.Client,
 	tokenURL, clientID, clientSecret string,
 ) (bool, string, error) {
 	form := url.Values{}
-	form.Set("grant_type", "client_credentials")
-	form.Set("client_id", clientID)
-	form.Set("client_secret", clientSecret)
+	form.Set("grant_type", "authorization_code")
+	form.Set("code", "deckhouse-dex-provider-check")
+	form.Set("redirect_uri", "https://deckhouse.local/dex-provider-check")
 
 	statusCode, body, err := httpPostForm(ctx, client, tokenURL, clientID, clientSecret, form)
 	if err != nil {
 		return false, "", err
 	}
 	if statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices {
-		return true, "token endpoint accepted the client credentials", nil
+		return true, "token endpoint accepted the client", nil
 	}
 
 	var oauthErr struct {
@@ -882,19 +910,20 @@ func probeOAuthClientCredentials(
 	}
 	_ = json.Unmarshal(body, &oauthErr)
 
-	switch oauthErr.Error {
-	case "invalid_client", "unauthorized":
-		return false, "token endpoint rejected the client credentials", nil
-	case "":
-		if statusCode == http.StatusUnauthorized {
-			return false, "token endpoint returned HTTP 401", nil
+	clientAuthFailed := statusCode == http.StatusUnauthorized ||
+		oauthErr.Error == "invalid_client" ||
+		oauthErr.Error == "unauthorized_client"
+	if clientAuthFailed {
+		if oauthErr.Error != "" {
+			return false, fmt.Sprintf("client authentication failed (%s)", oauthErr.Error), nil
 		}
-		return true, fmt.Sprintf("token endpoint returned HTTP %d", statusCode), nil
-	default:
-		// unauthorized_client, unsupported_grant_type, invalid_grant, invalid_scope, …
-		// The client itself was authenticated; only the grant was refused.
-		return true, fmt.Sprintf("credentials accepted (grant not completed: %s)", oauthErr.Error), nil
+		return false, "client authentication failed (HTTP 401)", nil
 	}
+
+	if oauthErr.Error != "" {
+		return true, fmt.Sprintf("client authenticated; test code rejected (%s)", oauthErr.Error), nil
+	}
+	return true, fmt.Sprintf("token endpoint returned HTTP %d", statusCode), nil
 }
 
 type oidcDiscoveryDocument struct {
