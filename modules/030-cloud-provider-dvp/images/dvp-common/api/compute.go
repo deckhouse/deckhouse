@@ -283,16 +283,19 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		return err
 	}
 
+	vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
+
 	vmbda, err := c.getVMBDA(ctx, diskName, vmHostname)
 	if vmbda != nil && err == nil {
-		return nil
+		// vmBDA already exists but may be InProgress — wait for it instead of returning OK prematurely.
+		waitCtx, cancel := context.WithTimeout(ctx, DefaultDiskAttachTimeout)
+		defer cancel()
+		return c.WaitDiskAttaching(waitCtx, vmBDAName)
 	}
 
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
-
-	vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
 
 	vmbda = &v1alpha2.VirtualMachineBlockDeviceAttachment{
 		TypeMeta: metav1.TypeMeta{
@@ -332,12 +335,9 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 		return err
 	}
 
-	err = c.WaitDiskAttaching(ctx, vmBDAName)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	attachCtx, cancel := context.WithTimeout(ctx, DefaultDiskAttachTimeout)
+	defer cancel()
+	return c.WaitDiskAttaching(attachCtx, vmBDAName)
 }
 
 func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, vmName string) error {

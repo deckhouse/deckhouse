@@ -574,6 +574,18 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 		return ctrl.Result{}, fmt.Errorf("delete VirtualDisks: %w", err)
 	}
 
+	var orphanedDisks []string
+	for k := range dvpMachine.Annotations {
+		if strings.HasPrefix(k, OrphanedDiskAnnotationPrefix) {
+			orphanedDisks = append(orphanedDisks, strings.TrimPrefix(k, OrphanedDiskAnnotationPrefix))
+		}
+	}
+	if len(orphanedDisks) > 0 {
+		logger.Error(nil, "VirtualDisks timed out and were not deleted — manual cleanup required in parent DVP cluster",
+			"orphaned_disks", orphanedDisks,
+		)
+	}
+
 	controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
 
 	if vmDeletionFailed {
