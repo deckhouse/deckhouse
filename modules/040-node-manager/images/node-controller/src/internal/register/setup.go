@@ -22,6 +22,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 func setupController(mgr ctrl.Manager, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int) error {
@@ -42,6 +44,9 @@ func setupController(mgr ctrl.Manager, name string, obj client.Object, r Reconci
 		}
 	}
 
+	gvk := common.GVKLabel(mgr.GetScheme(), obj)
+	addWatchedType(gvk, obj)
+
 	b := ctrl.NewControllerManagedBy(mgr).
 		Named(name).
 		For(obj).
@@ -49,7 +54,7 @@ func setupController(mgr ctrl.Manager, name string, obj client.Object, r Reconci
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 		})
 
-	w := &builderWatcher{b: b}
+	w := &builderWatcher{b: b, scheme: mgr.GetScheme()}
 	r.SetupWatches(w)
 
 	if err := b.Complete(r); err != nil {
