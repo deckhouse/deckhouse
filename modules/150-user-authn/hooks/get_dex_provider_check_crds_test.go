@@ -26,6 +26,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 )
 
 func TestExecuteDexProviderCheckFailsWhenProviderIsMissing(t *testing.T) {
@@ -184,6 +186,49 @@ func TestOIDCDiscoveryMissingEndpoints(t *testing.T) {
 	empty := oidcDiscoveryDocument{}
 	if missing := empty.missingEndpoints(); len(missing) != 2 {
 		t.Fatalf("expected 2 missing endpoints, got %v", missing)
+	}
+}
+
+func TestProbeOAuthClientCredentials(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		w.Header().Set("Content-Type", "application/json")
+		switch r.PostFormValue("client_id") {
+		case "valid":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"access_token":"token","token_type":"bearer"}`))
+		case "grant-disabled":
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"unauthorized_client"}`))
+		default:
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"invalid_client"}`))
+		}
+	}))
+	defer srv.Close()
+
+	client := d8http.NewClient(d8http.WithInsecureSkipVerify(), d8http.WithTimeout(5*time.Second))
+
+	tests := []struct {
+		name         string
+		clientID     string
+		wantAccepted bool
+	}{
+		{name: "valid credentials issue a token", clientID: "valid", wantAccepted: true},
+		{name: "valid client but grant disabled is accepted", clientID: "grant-disabled", wantAccepted: true},
+		{name: "wrong secret is rejected", clientID: "wrong", wantAccepted: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			accepted, detail, err := probeOAuthClientCredentials(context.Background(), client, srv.URL, tt.clientID, "secret")
+			if err != nil {
+				t.Fatalf("probeOAuthClientCredentials returned error: %v", err)
+			}
+			if accepted != tt.wantAccepted {
+				t.Fatalf("expected accepted=%v, got %v (detail: %s)", tt.wantAccepted, accepted, detail)
+			}
+		})
 	}
 }
 

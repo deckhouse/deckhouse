@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -35,6 +34,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/go-ldap/ldap/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -47,7 +47,7 @@ import (
 
 const (
 	dexProviderCheckQueue           = "/modules/user-authn/dex_provider_check"
-	dexProviderCheckRetentionPeriod = 24 * time.Hour
+	dexProviderCheckRetentionPeriod = 6 * time.Hour
 	dexProviderCheckTimeout         = 20 * time.Second
 	dexProviderCheckHTTPTimeout     = 5 * time.Second
 	dexProviderCheckLDAPTimeout     = 5 * time.Second
@@ -114,16 +114,20 @@ type DexProviderForCheckSpec struct {
 }
 
 type DexProviderGithubForCheck struct {
-	ClientID string `json:"clientID"`
+	ClientID     string `json:"clientID"`
+	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
 type DexProviderGitlabForCheck struct {
-	BaseURL    string `json:"baseURL,omitempty"`
-	RootCAData string `json:"rootCAData,omitempty"`
+	ClientID     string `json:"clientID,omitempty"`
+	ClientSecret string `json:"clientSecret,omitempty"`
+	BaseURL      string `json:"baseURL,omitempty"`
+	RootCAData   string `json:"rootCAData,omitempty"`
 }
 
 type DexProviderBitbucketForCheck struct {
-	ClientID string `json:"clientID"`
+	ClientID     string `json:"clientID"`
+	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
 type DexProviderCrowdForCheck struct {
@@ -133,6 +137,8 @@ type DexProviderCrowdForCheck struct {
 }
 
 type DexProviderOIDCForCheck struct {
+	ClientID           string `json:"clientID,omitempty"`
+	ClientSecret       string `json:"clientSecret,omitempty"`
 	Issuer             string `json:"issuer"`
 	RootCAData         string `json:"rootCAData,omitempty"`
 	InsecureSkipVerify bool   `json:"insecureSkipVerify,omitempty"`
@@ -144,6 +150,8 @@ type DexProviderLDAPForCheck struct {
 	StartTLS           bool                             `json:"startTLS,omitempty"`
 	RootCAData         string                           `json:"rootCAData,omitempty"`
 	InsecureSkipVerify bool                             `json:"insecureSkipVerify,omitempty"`
+	BindDN             string                           `json:"bindDN,omitempty"`
+	BindPW             string                           `json:"bindPW,omitempty"`
 	Kerberos           *DexProviderLDAPKerberosForCheck `json:"kerberos,omitempty"`
 }
 
@@ -292,11 +300,11 @@ func (r *dexProviderCheckResult) fail(name, format string, args ...any) {
 	})
 }
 
-func (r *dexProviderCheckResult) skip(name, format string, args ...any) {
+func (r *dexProviderCheckResult) skip(name, message string) {
 	r.checks = append(r.checks, DexProviderCheckStepStatus{
 		Name:    name,
 		Status:  dexProviderCheckStepSkipped,
-		Message: fmt.Sprintf(format, args...),
+		Message: message,
 	})
 }
 
@@ -384,6 +392,45 @@ func checkGithub(ctx context.Context, dc dependency.Container, result *dexProvid
 	}
 
 	checkHTTPReachability(ctx, dc, result, "githubAPI", "https://api.github.com/meta", "")
+	checkGithubCredentials(ctx, dc, result, provider.Spec.Github)
+}
+
+// checkGithubCredentials verifies the GitHub OAuth app client_id/client_secret
+// without a user flow. GitHub's access_token endpoint reports
+// "incorrect_client_credentials" when the secret is wrong and
+// "bad_verification_code" when the credentials are valid but the (intentionally
+// bogus) authorization code is not, which lets us tell the two apart.
+func checkGithubCredentials(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, cfg *DexProviderGithubForCheck) {
+	if cfg.ClientSecret == "" {
+		result.skip("githubCredentials", "clientSecret is empty")
+		return
+	}
+
+	form := url.Values{}
+	form.Set("client_id", cfg.ClientID)
+	form.Set("client_secret", cfg.ClientSecret)
+	form.Set("code", "deckhouse-dex-provider-check")
+
+	client := dc.GetHTTPClient(d8http.WithTimeout(dexProviderCheckHTTPTimeout))
+	statusCode, body, err := httpPostForm(ctx, client, "https://github.com/login/oauth/access_token", "", "", form)
+	if err != nil {
+		result.fail("githubCredentials", "cannot reach the GitHub token endpoint: %v", err)
+		return
+	}
+	if statusCode != http.StatusOK {
+		result.fail("githubCredentials", "GitHub token endpoint returned HTTP %d", statusCode)
+		return
+	}
+
+	var githubErr struct {
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(body, &githubErr)
+	if githubErr.Error == "incorrect_client_credentials" {
+		result.fail("githubCredentials", "GitHub rejected the client credentials")
+		return
+	}
+	result.succeed("githubCredentials", "GitHub accepted the client credentials")
 }
 
 func checkGitlab(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -399,6 +446,32 @@ func checkGitlab(ctx context.Context, dc dependency.Container, result *dexProvid
 	checkCABundle(result, "gitlabCABundle", provider.Spec.Gitlab.RootCAData)
 	checkTLSCertificate(result, "gitlabCertificate", baseURL, provider.Spec.Gitlab.RootCAData, false)
 	checkHTTPReachability(ctx, dc, result, "gitlabURL", baseURL, provider.Spec.Gitlab.RootCAData)
+	checkGitlabCredentials(ctx, dc, result, provider.Spec.Gitlab, baseURL)
+}
+
+func checkGitlabCredentials(
+	ctx context.Context,
+	dc dependency.Container,
+	result *dexProviderCheckResult,
+	cfg *DexProviderGitlabForCheck,
+	baseURL string,
+) {
+	if cfg.ClientID == "" || cfg.ClientSecret == "" {
+		result.skip("gitlabCredentials", "clientID or clientSecret is empty")
+		return
+	}
+
+	tokenURL := strings.TrimRight(baseURL, "/") + "/oauth/token"
+	client := dc.GetHTTPClient(httpOptions(cfg.RootCAData, false)...)
+	accepted, detail, err := probeOAuthClientCredentials(ctx, client, tokenURL, cfg.ClientID, cfg.ClientSecret)
+	switch {
+	case err != nil:
+		result.fail("gitlabCredentials", "cannot reach the GitLab token endpoint: %v", err)
+	case !accepted:
+		result.fail("gitlabCredentials", "GitLab rejected the client credentials: %s", detail)
+	default:
+		result.succeed("gitlabCredentials", "GitLab client credentials are valid (%s)", detail)
+	}
 }
 
 func checkBitbucket(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -412,6 +485,31 @@ func checkBitbucket(ctx context.Context, dc dependency.Container, result *dexPro
 	}
 
 	checkHTTPReachability(ctx, dc, result, "bitbucketAPI", "https://api.bitbucket.org/2.0/", "")
+	checkBitbucketCredentials(ctx, dc, result, provider.Spec.BitbucketCloud)
+}
+
+func checkBitbucketCredentials(
+	ctx context.Context,
+	dc dependency.Container,
+	result *dexProviderCheckResult,
+	cfg *DexProviderBitbucketForCheck,
+) {
+	if cfg.ClientSecret == "" {
+		result.skip("bitbucketCredentials", "clientSecret is empty")
+		return
+	}
+
+	const tokenURL = "https://bitbucket.org/site/oauth2/access_token"
+	client := dc.GetHTTPClient(d8http.WithTimeout(dexProviderCheckHTTPTimeout))
+	accepted, detail, err := probeOAuthClientCredentials(ctx, client, tokenURL, cfg.ClientID, cfg.ClientSecret)
+	switch {
+	case err != nil:
+		result.fail("bitbucketCredentials", "cannot reach the Bitbucket token endpoint: %v", err)
+	case !accepted:
+		result.fail("bitbucketCredentials", "Bitbucket rejected the OAuth consumer credentials: %s", detail)
+	default:
+		result.succeed("bitbucketCredentials", "Bitbucket OAuth consumer credentials are valid (%s)", detail)
+	}
 }
 
 func checkCrowd(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult, provider DexProviderForCheck) {
@@ -500,6 +598,8 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 		result.succeed("oidcEndpoints", "authorization and token endpoints are advertised")
 	}
 
+	checkOIDCCredentials(ctx, client, result, provider.Spec.OIDC, discovery.TokenEndpoint)
+
 	statusCode, body, err = httpGet(ctx, client, discovery.JWKSURI, nil)
 	if err != nil {
 		result.fail("oidcJWKS", "OIDC JWKS is not reachable: %v", err)
@@ -524,6 +624,33 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 	result.succeed("oidcJWKS", "OIDC JWKS is reachable")
 }
 
+func checkOIDCCredentials(
+	ctx context.Context,
+	client d8http.Client,
+	result *dexProviderCheckResult,
+	cfg *DexProviderOIDCForCheck,
+	tokenEndpoint string,
+) {
+	if cfg.ClientID == "" || cfg.ClientSecret == "" {
+		result.skip("oidcCredentials", "clientID or clientSecret is empty")
+		return
+	}
+	if tokenEndpoint == "" {
+		result.skip("oidcCredentials", "OIDC discovery does not advertise a token endpoint")
+		return
+	}
+
+	accepted, detail, err := probeOAuthClientCredentials(ctx, client, tokenEndpoint, cfg.ClientID, cfg.ClientSecret)
+	switch {
+	case err != nil:
+		result.fail("oidcCredentials", "cannot reach the OIDC token endpoint: %v", err)
+	case !accepted:
+		result.fail("oidcCredentials", "OIDC token endpoint rejected the client credentials: %s", detail)
+	default:
+		result.succeed("oidcCredentials", "OIDC client credentials are valid (%s)", detail)
+	}
+}
+
 func checkLDAP(
 	ctx context.Context,
 	input *go_hook.HookInput,
@@ -542,10 +669,11 @@ func checkLDAP(
 
 	checkCABundle(result, "ldapCABundle", provider.Spec.LDAP.RootCAData)
 
-	certs, err := ldapReachable(ctx, provider.Spec.LDAP)
+	conn, err := ldapDial(provider.Spec.LDAP)
 	if err != nil {
 		result.fail("ldapReachable", "LDAP endpoint is not reachable: %v", err)
 	} else {
+		defer conn.Close()
 		result.succeed("ldapReachable", "LDAP endpoint is reachable")
 	}
 
@@ -555,10 +683,33 @@ func checkLDAP(
 	case err != nil:
 		result.skip("ldapCertificate", "skipped because the LDAP endpoint is not reachable")
 	default:
-		reportLeafExpiry(result, "ldapCertificate", certs)
+		if state, ok := conn.TLSConnectionState(); ok {
+			reportLeafExpiry(result, "ldapCertificate", state.PeerCertificates)
+		} else {
+			result.fail("ldapCertificate", "TLS connection state is not available")
+		}
 	}
 
+	checkLDAPBind(result, provider.Spec.LDAP, conn, err)
 	checkLDAPKerberosKeytab(ctx, input, dc, result, provider)
+}
+
+// checkLDAPBind performs a real LDAP simple bind with the configured service
+// account so that bindDN/bindPW (the credentials Dex uses to search the
+// directory) are validated, not just the network reachability.
+func checkLDAPBind(result *dexProviderCheckResult, cfg *DexProviderLDAPForCheck, conn *ldap.Conn, dialErr error) {
+	switch {
+	case dialErr != nil:
+		result.skip("ldapBind", "skipped because the LDAP endpoint is not reachable")
+	case cfg.BindDN == "":
+		result.skip("ldapBind", "no bindDN configured (anonymous access)")
+	default:
+		if err := conn.Bind(cfg.BindDN, cfg.BindPW); err != nil {
+			result.fail("ldapBind", "LDAP service account bind failed: %v", err)
+		} else {
+			result.succeed("ldapBind", "LDAP service account bind succeeded")
+		}
+	}
 }
 
 func checkLDAPKerberosKeytab(
@@ -670,6 +821,80 @@ func httpGet(ctx context.Context, client d8http.Client, rawURL string, headers m
 		return resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
 	}
 	return resp.StatusCode, body, nil
+}
+
+func httpPostForm(
+	ctx context.Context,
+	client d8http.Client,
+	rawURL, basicUser, basicPass string,
+	form url.Values,
+) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return 0, nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	if basicUser != "" {
+		req.SetBasicAuth(basicUser, basicPass)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("do request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
+	}
+	return resp.StatusCode, body, nil
+}
+
+// probeOAuthClientCredentials posts a client_credentials grant to an OAuth 2.0
+// token endpoint to verify that the configured client_id/client_secret pair is
+// accepted. It deliberately never completes a user login: an issued token or a
+// "grant not allowed" style error both prove the credentials are valid, whereas
+// invalid_client proves they are wrong. Credentials are sent both via HTTP Basic
+// auth and in the form body to satisfy providers that expect either style.
+func probeOAuthClientCredentials(
+	ctx context.Context,
+	client d8http.Client,
+	tokenURL, clientID, clientSecret string,
+) (bool, string, error) {
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_id", clientID)
+	form.Set("client_secret", clientSecret)
+
+	statusCode, body, err := httpPostForm(ctx, client, tokenURL, clientID, clientSecret, form)
+	if err != nil {
+		return false, "", err
+	}
+	if statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices {
+		return true, "token endpoint accepted the client credentials", nil
+	}
+
+	var oauthErr struct {
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	_ = json.Unmarshal(body, &oauthErr)
+
+	switch oauthErr.Error {
+	case "invalid_client", "unauthorized":
+		return false, "token endpoint rejected the client credentials", nil
+	case "":
+		if statusCode == http.StatusUnauthorized {
+			return false, "token endpoint returned HTTP 401", nil
+		}
+		return true, fmt.Sprintf("token endpoint returned HTTP %d", statusCode), nil
+	default:
+		// unauthorized_client, unsupported_grant_type, invalid_grant, invalid_scope, …
+		// The client itself was authenticated; only the grant was refused.
+		return true, fmt.Sprintf("credentials accepted (grant not completed: %s)", oauthErr.Error), nil
+	}
 }
 
 type oidcDiscoveryDocument struct {
@@ -787,35 +1012,51 @@ func reportExpiry(result *dexProviderCheckResult, stepName, subject string, notA
 	}
 }
 
-func ldapReachable(ctx context.Context, cfg *DexProviderLDAPForCheck) ([]*x509.Certificate, error) {
+// ldapDial opens an LDAP connection honouring the provider's TLS settings
+// (ldaps, StartTLS or plain ldap). The caller owns the returned connection and
+// must close it. It uses the go-ldap library so that the StartTLS handshake and
+// later bind follow the protocol correctly.
+func ldapDial(cfg *DexProviderLDAPForCheck) (*ldap.Conn, error) {
 	host, serverName, err := ldapAddress(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	dialer := &net.Dialer{Timeout: dexProviderCheckLDAPTimeout}
+	dialOpts := []ldap.DialOpt{ldap.DialWithDialer(&net.Dialer{Timeout: dexProviderCheckLDAPTimeout})}
+
 	if cfg.InsecureNoSSL {
-		conn, err := dialer.DialContext(ctx, "tcp", host)
+		conn, err := ldap.DialURL("ldap://"+host, dialOpts...)
 		if err != nil {
-			return nil, fmt.Errorf("dial tcp: %w", err)
+			return nil, fmt.Errorf("dial ldap: %w", err)
 		}
-		return nil, conn.Close()
+		conn.SetTimeout(dexProviderCheckLDAPTimeout)
+		return conn, nil
 	}
 
 	tlsConfig, err := buildTLSConfig(cfg.RootCAData, serverName, cfg.InsecureSkipVerify)
 	if err != nil {
 		return nil, err
 	}
+
 	if cfg.StartTLS {
-		return ldapStartTLS(ctx, dialer, host, tlsConfig)
+		conn, err := ldap.DialURL("ldap://"+host, dialOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("dial ldap: %w", err)
+		}
+		conn.SetTimeout(dexProviderCheckLDAPTimeout)
+		if err := conn.StartTLS(tlsConfig); err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("LDAP StartTLS: %w", err)
+		}
+		return conn, nil
 	}
 
-	conn, err := tls.DialWithDialer(dialer, "tcp", host, tlsConfig)
+	conn, err := ldap.DialURL("ldaps://"+host, append(dialOpts, ldap.DialWithTLSConfig(tlsConfig))...)
 	if err != nil {
-		return nil, fmt.Errorf("dial tls: %w", err)
+		return nil, fmt.Errorf("dial ldaps: %w", err)
 	}
-	defer conn.Close()
-	return conn.ConnectionState().PeerCertificates, nil
+	conn.SetTimeout(dexProviderCheckLDAPTimeout)
+	return conn, nil
 }
 
 func ldapAddress(cfg *DexProviderLDAPForCheck) (string, string, error) {
@@ -856,49 +1097,3 @@ func buildTLSConfig(rootCAData, serverName string, insecureSkipVerify bool) (*tl
 	tlsConfig.RootCAs = pool
 	return tlsConfig, nil
 }
-
-func ldapStartTLS(ctx context.Context, dialer *net.Dialer, addr string, tlsConfig *tls.Config) ([]*x509.Certificate, error) {
-	conn, err := dialer.DialContext(ctx, "tcp", addr)
-	if err != nil {
-		return nil, fmt.Errorf("dial tcp: %w", err)
-	}
-	defer conn.Close()
-
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		deadline = time.Now().Add(dexProviderCheckLDAPTimeout)
-	}
-	if err := conn.SetDeadline(deadline); err != nil {
-		return nil, fmt.Errorf("set LDAP connection deadline: %w", err)
-	}
-
-	if _, err := conn.Write(ldapStartTLSRequest); err != nil {
-		return nil, fmt.Errorf("send LDAP StartTLS request: %w", err)
-	}
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		return nil, fmt.Errorf("read LDAP StartTLS response: %w", err)
-	}
-	if !bytes.Contains(buf[:n], ldapSuccessResultCode) {
-		return nil, fmt.Errorf("LDAP StartTLS request was not accepted")
-	}
-
-	tlsConn := tls.Client(conn, tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
-		return nil, fmt.Errorf("LDAP StartTLS handshake: %w", err)
-	}
-	certs := tlsConn.ConnectionState().PeerCertificates
-	return certs, tlsConn.Close()
-}
-
-var (
-	ldapStartTLSRequest = []byte{
-		0x30, 0x1d, // LDAPMessage sequence, 29 bytes
-		0x02, 0x01, 0x01, // messageID = 1
-		0x77, 0x18, // extendedReq, 24 bytes
-		0x80, 0x16, // requestName, 22 bytes
-		'1', '.', '3', '.', '6', '.', '1', '.', '4', '.', '1', '.', '1', '4', '6', '6', '.', '2', '0', '0', '3', '7',
-	}
-	ldapSuccessResultCode = []byte{0x0a, 0x01, 0x00}
-)
