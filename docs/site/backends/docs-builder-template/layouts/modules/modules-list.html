@@ -194,15 +194,15 @@
         <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
+          {{- if eq $moduleStage "General Availability" }}
+          <span class='button-tile__stage' data-stage="generalAvailability"></span>
+          {{- else }}
           {{- $stageKey := lower $moduleStage }}
           {{- $stageIcon := $stageKey }}
-          {{- if eq $moduleStage "General Availability" }}
-            {{- $stageKey = "generalAvailability" }}
-            {{- $stageIcon = "general_availability" }}
-          {{- end }}
           <span class='button-tile__stage button-tile__stage-{{ $stageKey }}'>
             <img src="/images/{{ $stageIcon }}.svg" alt="{{- $moduleStage }}">
           </span>
+          {{- end }}
         {{- end }}
         <h2 class="button-tile__title">{{ .module }}</h2>
 
