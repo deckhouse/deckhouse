@@ -518,8 +518,9 @@ done
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
 1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
@@ -985,8 +986,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl` с помощью команды:

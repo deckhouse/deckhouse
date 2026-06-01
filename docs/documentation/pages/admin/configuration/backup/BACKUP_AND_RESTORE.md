@@ -13,7 +13,9 @@ To properly restore the cluster, follow these steps on the master node:
 1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
    ```shell
-   cp $(find /var/lib/containerd/ -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl`:
@@ -391,7 +393,8 @@ NEW_IP=10.242.32.21                         # New master node IP address.
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
+ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -438,7 +441,8 @@ If you prefer to manually make changes during cluster recovery after the master 
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
-     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
+     ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+     ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \

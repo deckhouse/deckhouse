@@ -14,7 +14,9 @@ lang: ru
 1. Подготовьте утилиту `etcdutl`. Найдите и скопируйте исполняемый файл на узле:
 
    ```shell
-   cp $(find /var/lib/containerd/ -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl`:
@@ -391,7 +393,8 @@ NEW_IP=10.242.32.21                         # IP-адрес нового master-
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
+ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -438,7 +441,8 @@ systemctl restart kubelet.service
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
-     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
+     ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+     ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \

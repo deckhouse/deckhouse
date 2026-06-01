@@ -512,8 +512,9 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
 1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
@@ -975,8 +976,9 @@ Follow these steps to restore a single-master cluster on master node:
 1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl` using the command:
