@@ -32,7 +32,6 @@ import (
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	shapp "github.com/flant/shell-operator/pkg/app"
-	"github.com/flant/shell-operator/pkg/executor"
 	"github.com/flant/shell-operator/pkg/kube/dedupclient"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
@@ -403,16 +402,24 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 									continue
 								}
 
-								if ppid == 1 && !executor.Tracker().IsActive(int(ps.Pid)) {
-									var status syscall.WaitStatus
-									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
-									if err != nil {
-										// ignore if a child has already been reaped
-										if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
-											logger.Error("process SIGCHLD signal", log.Err(err))
-										}
+							// Reap orphaned zombies re-parented to PID 1. The
+							// shell-operator executor used to expose a PID
+							// registry (executor.Tracker) so this reaper could
+							// skip children it was actively waiting on; that API
+							// was removed upstream. We rely on the non-blocking
+							// Wait4 and tolerate ECHILD/ESRCH, which is returned
+							// when the executor's own cmd.Wait already reaped the
+							// child first.
+							if ppid == 1 {
+								var status syscall.WaitStatus
+								_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
+								if err != nil {
+									// ignore if a child has already been reaped
+									if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+										logger.Error("process SIGCHLD signal", log.Err(err))
 									}
 								}
+							}
 							}
 						}
 					}()

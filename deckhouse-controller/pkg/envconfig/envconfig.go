@@ -141,29 +141,20 @@ type Config struct {
 	// "<group>/<version>/<kind>" (group is empty for core resources, e.g.
 	// "/v1/Pod").
 	//
-	// DedupClientEnabled, DedupClientSnapshotStore and
-	// DedupClientHelmResourcesCache are three INDEPENDENT toggles:
+	// DedupClientEnabled and DedupClientSnapshotStore are two INDEPENDENT
+	// toggles:
 	//   - Enabled spins up shell-operator's runtime dedup kubeclient for
 	//     hooks/extensions.
 	//   - SnapshotStore swaps every kube-events-manager monitor's
 	//     per-object cache for a process-wide deduplicated store
 	//     (refcounted *Unstructured bodies live exactly once in memory).
-	//   - HelmResourcesCache routes addon-operator's helm-resources
-	//     list-watch through an addon-operator-owned
-	//     kubeclient.SharedStoreManager instead of the dedicated
-	//     controller-runtime cache (trades the watch-level
-	//     heritage=addon-operator filter and metadata-only informers for
-	//     value-deduplicated storage; net memory direction depends on
-	//     cluster topology — benchmark before flipping).
-	// ReconstructLRUSize is shared between Enabled and HelmResourcesCache.
-	// Either, both, all three, or none may be active.
+	// Either, both, or none may be active.
 	DedupClientEnabled            bool          `env:"DEDUP_CLIENT_ENABLED"`
 	DedupClientNamespaces         []string      `env:"DEDUP_CLIENT_NAMESPACES" envSeparator:","`
 	DedupClientWatchGVKs          []string      `env:"DEDUP_CLIENT_WATCH_GVKS" envSeparator:","`
 	DedupClientReconstructLRUSize int           `env:"DEDUP_CLIENT_RECONSTRUCT_LRU_SIZE"`
 	DedupClientGCInterval         time.Duration `env:"DEDUP_CLIENT_GC_INTERVAL"`
 	DedupClientSnapshotStore      bool          `env:"DEDUP_CLIENT_SNAPSHOT_STORE"`
-	DedupClientHelmResourcesCache bool          `env:"DEDUP_CLIENT_HELM_RESOURCES_CACHE"`
 
 	// Debug settings (shared between addon-operator and shell-operator
 	// — addon-operator copies DebugUnixSocket into the shapp global).
@@ -278,7 +269,6 @@ func (c *Config) Apply(cfg *ad_app.Config) {
 	cfg.DedupClient.ReconstructLRUSize = c.DedupClientReconstructLRUSize
 	cfg.DedupClient.GCInterval = c.DedupClientGCInterval
 	cfg.DedupClient.SnapshotStore = c.DedupClientSnapshotStore
-	cfg.DedupClient.HelmResourcesCache = c.DedupClientHelmResourcesCache
 
 	cfg.Debug.UnixSocket = c.DebugUnixSocket
 	cfg.Debug.HTTPServerAddr = c.DebugHTTPServerAddr
@@ -331,7 +321,6 @@ func fromAddonOperator(cfg *ad_app.Config) *Config {
 		DedupClientReconstructLRUSize:  cfg.DedupClient.ReconstructLRUSize,
 		DedupClientGCInterval:          cfg.DedupClient.GCInterval,
 		DedupClientSnapshotStore:       cfg.DedupClient.SnapshotStore,
-		DedupClientHelmResourcesCache:  cfg.DedupClient.HelmResourcesCache,
 		DebugUnixSocket:                cfg.Debug.UnixSocket,
 		DebugHTTPServerAddr:            cfg.Debug.HTTPServerAddr,
 		DebugKeepTmpFiles:              cfg.Debug.KeepTmpFiles,
