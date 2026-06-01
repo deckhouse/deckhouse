@@ -25,7 +25,7 @@ const (
 	connectTimeout        = 10 * time.Second
 	responseHeaderTimeout = 60 * time.Second
 
-	defaultInstallWorkers  = 8
+	defaultInstallWorkers = 8
 	// Fetch is network-bound (HTTP GET through ssh reverse-tunnel during
 	// bootstrap, or in-cluster registry-packages-proxy later) — runtime.NumCPU
 	// is the wrong cap for it. Master nodes typically have 2 vCPUs, which
