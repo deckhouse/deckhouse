@@ -204,6 +204,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -560,6 +562,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -916,6 +920,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -1272,6 +1278,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -1628,6 +1636,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -1984,6 +1994,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -2340,6 +2352,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -2696,6 +2710,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -3052,6 +3068,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -3408,6 +3426,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -3764,6 +3784,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -4120,6 +4142,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -4476,6 +4500,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -4832,6 +4858,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 

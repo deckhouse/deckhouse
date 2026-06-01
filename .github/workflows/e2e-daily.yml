@@ -213,6 +213,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
@@ -449,6 +451,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
@@ -518,6 +522,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
@@ -624,6 +630,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
@@ -1156,6 +1164,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure subscriptionId | LAYOUT_AZURE_SUBSCRIPTION_ID ;
@@ -1396,6 +1406,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
@@ -1469,6 +1481,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_AZURE_SUBSCRIPTION_ID=${LAYOUT_AZURE_SUBSCRIPTION_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
@@ -1577,6 +1591,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
@@ -1812,6 +1828,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
@@ -1881,6 +1899,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
@@ -1987,6 +2007,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
@@ -2225,6 +2247,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
@@ -2296,6 +2320,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
@@ -2403,6 +2429,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
@@ -2637,6 +2665,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -2704,6 +2734,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -2809,6 +2841,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new e2e-username | LAYOUT_VSPHERE_USERNAME ;
@@ -3047,6 +3081,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_VSPHERE_USERNAME=${LAYOUT_VSPHERE_USERNAME:-not_provided}
           export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
           export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
@@ -3118,6 +3154,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_VSPHERE_USERNAME=${LAYOUT_VSPHERE_USERNAME:-not_provided}
           export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
           export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
@@ -3225,6 +3263,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
@@ -3468,6 +3508,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided}
           export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided}
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
@@ -3545,6 +3587,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided}
           export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided}
           export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
@@ -3656,6 +3700,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
@@ -3894,6 +3940,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
           export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
           export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
@@ -3965,6 +4013,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
           export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
           export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
@@ -4074,6 +4124,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
@@ -4308,6 +4360,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -4375,6 +4429,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
@@ -4480,6 +4536,8 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent e2e_log_agent_token | E2E_LOG_AGENT_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-log-agent pull_artifact_token | E2E_LOG_AGENT_PULL_ARTIFACT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
@@ -4715,6 +4773,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
@@ -4783,6 +4843,8 @@ jobs:
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export E2E_LOG_AGENT_TOKEN=${E2E_LOG_AGENT_TOKEN}
+          export E2E_LOG_AGENT_PULL_ARTIFACT=${E2E_LOG_AGENT_PULL_ARTIFACT}
           export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
           export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
           export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
