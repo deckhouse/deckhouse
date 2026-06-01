@@ -361,13 +361,25 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.Int("versions", len(foundTags)),
 	)
 
-	// /version path exists but no new semver tags to process
+	// /version path exists but no new semver tags to process.
+	//
+	// On a full scan an empty foundTags means /version has no semver tags
+	// for this package. Treat this identically to "no /version path at all":
+	// fall back to /release (legacy v1alpha1 module). The downstream error
+	// surface ("neither /version nor /release" / "no semver release tags
+	// found for legacy module") is therefore the same in both cases.
+	//
+	// On an incremental scan, an empty foundTags only means "no new versions
+	// since lastVersion" — /version itself may still be populated. Do NOT
+	// fall back in that case: it would needlessly hit /release on every
+	// already-fully-processed package.
 	if len(foundTags) == 0 {
 		if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
 			s.logger.Warn(
-				"no release images found for package",
+				"no semver tags found in /version path for package, falling back to /release",
 				slog.String("package", packageName),
 			)
+			return s.handleMissingVersionPath(ctx, packageName)
 		}
 
 		return &PackageProcessResult{}, nil

@@ -30,16 +30,57 @@ status:
     status: "True"
     type: Completed
   packages:
-    failed:
-    - errors:
-      - message: no semver release tags found for legacy module "test-package"
-        version: ""
-      name: test-package
+    newVersionsOverall: 1
     processed:
-    - name: test-package
+    - foundVersions: 1
+      name: test-package
+      newVersions: 1
+      type: Module
     processedOverall: 1
     total: 1
   startTime: "2025-10-31T12:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/legacy: "true"
+    packages.deckhouse.io/package: test-package
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-package-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "1"
+spec:
+  packageName: test-package
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test-package
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
@@ -57,7 +98,12 @@ status:
     reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
-  lastNewVersions: 0
+  lastChangeTime: "2025-10-31T12:00:00Z"
+  lastNewVersions: 1
   lastScanTime: "2025-10-31T12:00:00Z"
+  packages:
+  - name: test-package
+    type: Module
+  packagesCount: 1
   partialScanAvailable: false
   phase: Active
