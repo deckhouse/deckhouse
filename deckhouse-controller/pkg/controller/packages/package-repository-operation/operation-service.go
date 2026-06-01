@@ -343,7 +343,7 @@ func latestVersionString(versions []*semver.Version) string {
 
 // ProcessPackageVersions processes a single package: lists version tags from <package>/version,
 // detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
-// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN).
+// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN) or has no semver tags on a full scan.
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
@@ -451,12 +451,12 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	}, nil
 }
 
-// handleMissingVersionPath - fallback when <package>/version doesn't exist (NAME_UNKNOWN).
-// Checks the <package>/release path for legacy module (v1alpha1) version tags.
+// handleMissingVersionPath - fallback when <package>/version is absent (NAME_UNKNOWN) or
+// has no semver tags. Checks the <package>/release path for legacy module (v1alpha1) version tags.
 // Creates ModulePackageVersion resources with legacy=true label.
 func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
 	s.logger.Info(
-		"package has no /version path, checking /release for legacy module (v1alpha1)",
+		"no semver tags in /version path, checking /release for legacy module (v1alpha1)",
 		slog.String("package", packageName),
 	)
 
