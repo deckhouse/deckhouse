@@ -17,7 +17,6 @@ limitations under the License.
 package moduledependency
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -351,65 +350,78 @@ func (e *Extender) CheckEnabling(moduleName string) error {
 	e.logger.Debug("check module enabling", slog.String("module", moduleName))
 	validateErr := &multierror.Error{ErrorFormat: errorFormatter}
 
-	req, found := e.modules[moduleName]
-	if !found {
-		e.logger.Warn("no module requirements found", slog.String("module", moduleName))
-		return nil
-	}
-
 	enabledModules := e.modulesStateHelper()
 
-	// check if the new requirements are satisfied
-	for _, parentModule := range req.matcher.GetConstraintsNames() {
-		parentVersion, err := e.modulesVersionHelper(parentModule)
-		if err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("could not get the '%s' module version: %s", parentModule, err.Error()))
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-		}
-
-		// check if the parent module is disabled/absent
-		if parentVersion == "" || !slices.Contains(enabledModules, parentModule) {
-			// if parent req is optional and disabled just skip it
-			if _, ok := req.optional[parentModule]; ok {
-				e.logger.Debug("module`s requirement not met, but its optional",
-					slog.String("module", moduleName), slog.String("required", parentModule))
-				continue
+	// check if the new requirements are satisfied (only for modules that declare their own dependencies)
+	if req, found := e.modules[moduleName]; found {
+		for _, parentModule := range req.matcher.GetConstraintsNames() {
+			parentVersion, err := e.modulesVersionHelper(parentModule)
+			if err != nil {
+				validateErr = multierror.Append(validateErr, fmt.Errorf("could not get the '%s' module version: %s", parentModule, err.Error()))
+				if apierrors.IsNotFound(err) {
+					continue
+				}
 			}
 
-			validateErr = multierror.Append(validateErr, fmt.Errorf(`'%s' is not deployed`, parentModule))
-			continue
-		}
+			// check if the parent module is disabled/absent
+			if parentVersion == "" || !slices.Contains(enabledModules, parentModule) {
+				// if parent req is optional and disabled just skip it
+				if _, ok := req.optional[parentModule]; ok {
+					e.logger.Debug("module`s requirement not met, but its optional",
+						slog.String("module", moduleName), slog.String("required", parentModule))
+					continue
+				}
 
-		parsedParentVersion, err := parseParentVersion(parentVersion)
-		if err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' has unparsable version: %s", parentModule, parentVersion))
-			continue
-		}
+				validateErr = multierror.Append(validateErr, fmt.Errorf(`'%s' is not deployed`, parentModule))
+				continue
+			}
 
-		if err = req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' not meet version constraint: %s", parentModule, err.Error()))
+			parsedParentVersion, err := parseParentVersion(parentVersion)
+			if err != nil {
+				validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' has unparsable version: %s", parentModule, parentVersion))
+				continue
+			}
+
+			if err = req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
+				validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' not meet version constraint: %s", parentModule, err.Error()))
+			}
 		}
+	} else {
+		e.logger.Warn("no module requirements found", slog.String("module", moduleName))
 	}
 
-	raw, err := e.modulesVersionHelper(moduleName)
-	if err != nil {
-		return errors.New("could not get current module version")
-	}
-
-	version, err := parseParentVersion(raw)
-	if err != nil {
-		return errors.New("could not parse current module version")
-	}
-
-	// check if the new module's version breaks current constraints
+	// check if enabling the module breaks constraints of already enabled dependent modules.
+	// this must run even if the module itself has no requirements, otherwise enabling a
+	// dependency with an incompatible version silently disables the dependent module.
+	var version *semver.Version
 	for dependent, r := range e.modules {
-		if slices.Contains(enabledModules, dependent) {
-			e.logger.Debug("check dependent", slog.String("module", moduleName), slog.String("dependent", dependent), slog.String("version", version.String()))
-			if err = r.matcher.ValidateModuleVersion(moduleName, version); err != nil {
-				validateErr = multierror.Append(validateErr, fmt.Errorf("module '%s' not meet requirement if module '%s' enabled: %s", dependent, moduleName, err.Error()))
+		if dependent == moduleName || r == nil || r.matcher == nil {
+			continue
+		}
+
+		// only dependents that actually constrain this module and are currently enabled matter
+		if !r.matcher.Has(moduleName) || !slices.Contains(enabledModules, dependent) {
+			continue
+		}
+
+		// lazily resolve the module version only when there is a dependent to validate against
+		if version == nil {
+			raw, err := e.modulesVersionHelper(moduleName)
+			if err != nil {
+				validateErr = multierror.Append(validateErr, fmt.Errorf("could not get the '%s' module version: %s", moduleName, err.Error()))
+				break
 			}
+
+			version, err = parseParentVersion(raw)
+			if err != nil {
+				validateErr = multierror.Append(validateErr, fmt.Errorf("could not parse the '%s' module version: %s", moduleName, err.Error()))
+				break
+			}
+		}
+
+		e.logger.Debug("check dependent", slog.String("module", moduleName), slog.String("dependent", dependent), slog.String("version", version.String()))
+		if err := r.matcher.ValidateModuleVersion(moduleName, version); err != nil {
+			validateErr = multierror.Append(validateErr, fmt.Errorf("module '%s' not meet requirement if module '%s' enabled: %s", dependent, moduleName, err.Error()))
 		}
 	}
 
