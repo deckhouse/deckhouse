@@ -6,6 +6,9 @@
   id: ccm-azure
   versions:
     - condition:
+        k8s: "1.31"
+      version: v1.31.12
+    - condition:
         k8s: "1.32"
       version: v1.32.11
     - condition:
@@ -28,6 +31,9 @@
   license: Apache License 2.0
   id: csi-azure
   versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.12
     - condition:
         k8s: "1.32"
       version: v1.32.12
