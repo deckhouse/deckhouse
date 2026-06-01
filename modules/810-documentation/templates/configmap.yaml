@@ -93,7 +93,7 @@ data:
 
         root   /app;
         index  index.html readme.html;
-        error_page 403 404 /$lang/404.html;
+        error_page 403 404 /$redirection_lang/404.html;
 
         charset utf-8;
         access_log     /dev/stdout json_combined;
