@@ -137,14 +137,19 @@ remove_path() {
       # cannot recurse into them and delete data we do not own. Their data is never touched.
       mount | grep -F "$path" | awk '{print $3}' | grep -vxF "$path" | sort -r | xargs -r -n1 umount -l 2>/dev/null
 
-      # If the path itself is a separate mount, wipe its data (so the device comes up empty
-      # on next bootstrap) and unmount it, but keep the empty directory: it is a mountpoint
-      # and an fstab entry may remount the device here on reboot. -xdev keeps find on this device.
+      # If the path itself is a separate mount, wipe its data so the device comes up empty
+      # on next bootstrap, then unmount it. -xdev keeps find on this device. The empty
+      # directory is kept as a mountpoint so an fstab entry can remount the device on reboot.
+      # If the wipe fails (read-only fs, busy entries, I/O error) retry, and let the loop
+      # report failure rather than rebooting with stale data still on the device.
       if mountpoint -q "$path"; then
         log_info "Clearing data on volume at $path"
-        find "$path" -xdev -mindepth 1 -delete 2>/dev/null
-        umount -l "$path" 2>/dev/null || true
-        return 0
+        if find "$path" -xdev -mindepth 1 -delete 2>/dev/null; then
+          umount -l "$path" 2>/dev/null || true
+          return 0
+        fi
+        sleep 1
+        continue
       fi
     fi
     rm -rf "$path" 2>/dev/null && return 0
