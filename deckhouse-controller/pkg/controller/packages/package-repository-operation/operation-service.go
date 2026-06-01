@@ -370,7 +370,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	// found for legacy module") is therefore the same in both cases.
 	//
 	// On an incremental scan, an empty foundTags only means "no new versions
-	// since lastVersion" — /version itself may still be populated. Do NOT
+	// since lastVersion" - /version itself may still be populated. Do NOT
 	// fall back in that case: it would needlessly hit /release on every
 	// already-fully-processed package.
 	if len(foundTags) == 0 {

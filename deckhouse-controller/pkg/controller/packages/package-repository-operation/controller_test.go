@@ -706,7 +706,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("empty /version tags with legacy /release", func() {
 		// /version path exists but has only non-semver tags (no semver tags to process).
 		// On a full scan this must behave identically to NAME_UNKNOWN: fall back to /release.
-		// /release has semver tags + channel names → legacy v1alpha1 module processed.
+		// /release has semver tags + channel names -> legacy v1alpha1 module processed.
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
@@ -737,7 +737,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		reg := fakeRegistry.NewRegistry(registryHost)
 		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
 		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
-		// Intentionally NOT adding any test-package/release image → /release NAME_UNKNOWN.
+		// Intentionally NOT adding any test-package/release image -> /release NAME_UNKNOWN.
 
 		psm := createFakePSM(newInternalClient(reg))
 
