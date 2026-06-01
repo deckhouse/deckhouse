@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: e2e-safe-to-evict
+spec:
+  cloudInstances:
+    classReference:
+      kind: DVPInstanceClass
+      name: e2e-worker-small
+    maxPerZone: 1
+    minPerZone: 0
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      app: e2e-autoscaler-test
+    taints:
+      - key: dedicated
+        value: "safe-to-evict"
+        effect: NoExecute

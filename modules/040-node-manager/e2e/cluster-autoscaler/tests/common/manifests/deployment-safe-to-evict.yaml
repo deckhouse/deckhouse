@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2e-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: e2e-nginx
+  template:
+    metadata:
+      labels:
+        app: e2e-nginx
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+      nodeSelector:
+        app: e2e-autoscaler-test
+      tolerations:
+        - key: dedicated
+          operator: Equal
+          value: "safe-to-evict"
+          effect: NoExecute
