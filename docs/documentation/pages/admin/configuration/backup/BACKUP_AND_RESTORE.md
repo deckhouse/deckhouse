@@ -350,9 +350,19 @@ To restore etcd objects after changing the master node's IP address, follow thes
    - Review kubelet's system configuration files (typically found in `/etc/systemd/system/kubelet.service.d/` or similar directories).
    - Update the IP address in any other configurations that reference the old address, if necessary.
 
-1. Restart all services that use the updated configurations. Force kubelet to restart control-plane manifests (API server, etcd, etc.).
+1. Back up the current certificates:
 
-1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig. `control-plane-manager` will regenerate the `kube-apiserver` certificate with the updated SAN list automatically.
+   ```shell
+   cp -r /etc/kubernetes/pki ./pki-backup
+   ```
+
+1. Renew control-plane certificates with the new IP address added to SANs. This step works locally without API access:
+
+   ```shell
+   d8 tools pki certs renew all --san <NEW_IP>
+   ```
+
+1. Restart all services so that components load the updated certificates and configurations.
 
 1. Wait for kubelet to regenerate its own certificate.
 
@@ -369,7 +379,7 @@ To simplify cluster recovery after the master node's IP address changes, use the
 
 1. [Download](#restoring-a-cluster-with-a-single-control-plane-node) `etcdutl` if it is not installed.
 
-1. After running the script, add the new IP to `certSANs` in the `control-plane-manager` ModuleConfig (see step 4 above), then wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
+1. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
 
 {% offtopic title="Object extraction script" %}
 
@@ -391,10 +401,9 @@ find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 
-mkdir -p ./old_certs/etcd
-mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+cp -r /etc/kubernetes/pki ./pki-backup
+
+d8 tools pki certs renew all --san $NEW_IP
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -458,13 +467,16 @@ If you prefer to manually make changes during cluster recovery after the master 
 1. Back up the current certificates:
 
    ```shell
-   mkdir -p ./old_certs/etcd
-   mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-   mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-   mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+   cp -r /etc/kubernetes/pki ./pki-backup
    ```
 
-1. Restart all services that use the updated configuration. To immediately stop active containers, run:
+1. Renew control-plane certificates with the new IP address added to SANs. This step works locally without API access:
+
+   ```shell
+   d8 tools pki certs renew all --san <NEW_IP>
+   ```
+
+1. Restart all services so that components load the updated certificates and configurations. To immediately stop active containers, run:
 
     ```shell
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -474,44 +486,6 @@ If you prefer to manually make changes during cluster recovery after the master 
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
-
-    Kubelet will restart the necessary pods, and Kubernetes components will load the new configuration.
-
-1. Add the new IP address to the `certSANs` list in the `control-plane-manager` ModuleConfig. `control-plane-manager` will detect the change in `cert-sans` inside `d8-control-plane-manager-config`, create a `ControlPlaneOperation` with a `RenewPKICerts` step, and regenerate the `kube-apiserver` certificate with the updated SAN list:
-
-   ```shell
-   d8 k edit mc control-plane-manager
-   ```
-
-   Add the new IP to `spec.settings.apiserver.certSANs`:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: control-plane-manager
-   spec:
-     version: 3
-     enabled: true
-     settings:
-       apiserver:
-         certSANs:
-           - <NEW_IP>
-   ```
-
-   Monitor the certificate renewal progress:
-
-   ```shell
-   d8 k get cpo -o wide -w
-   ```
-
-   Wait until the renewal operation reaches `Phase=OperationCompleted`. Then verify that the `ControlPlaneNode` shows healthy certificates:
-
-   ```shell
-   d8 k get cpn
-   ```
-
-   The `CERTIFICATES` column must show `True`.
 
 1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
 
