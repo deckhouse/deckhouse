@@ -292,6 +292,30 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			},
 			expectValid: false,
 		},
+		{
+			name: "new version Automatic resolves to current version, " +
+				"maxUsedControlPlaneKubernetesVersion is greater than current version",
+			oldVersion: "1.33.0",
+			newVersion: "Automatic",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.33.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.34.0"),
+			},
+			expectValid: true, // Automatic equals current version, not a downgrade despite higher maxUsed
+			expectError: false,
+		},
+		{
+			name: "new version Automatic is real downgrade, " +
+				"maxUsedControlPlaneKubernetesVersion is greater than current version",
+			oldVersion: "1.34.0",
+			newVersion: "Automatic",
+			secretData: map[string][]byte{
+				"deckhouseDefaultKubernetesVersion":    []byte("1.33.0"),
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.34.0"),
+			},
+			expectValid: false, // Automatic below current version is still rejected
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
