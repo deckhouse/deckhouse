@@ -39,7 +39,7 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  - pm install python@3.12 gnu-glibc perl python-wheel coreutils
+  - pm install python@3.12 gnu-glibc gnu-gcc-lib gnu-glibc-locale perl python-wheel coreutils curl
   - pip3 install -f file:///wheels --no-index cryptography==44.0.1
   install:
   - mv /mk-ca-bundle.pl /ca-certificates/mozilla
