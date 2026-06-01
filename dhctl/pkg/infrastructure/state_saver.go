@@ -143,7 +143,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 
-	outputs, err := OnlyState(ctx, s.runner)
+	outputs, err := OnlyState(ctx, s.runner, nil)
 	if err != nil {
 		log.ErrorF("Parse intermediate state: %v\n", err)
 		return

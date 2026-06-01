@@ -685,11 +685,8 @@
     ]
   },
   "stronghold": {
-    "commercialBadgeMessage": {
-      "en": "A separate license is required",
-      "ru": "Требуется отдельная лицензия"
-    },
     "editionsWithRestrictions": [
+      "ce",
       "be",
       "se",
       "se-plus",
@@ -699,8 +696,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A separate license is required",
-        "ru": "Требуется отдельная лицензия"
+        "en": "Some features are available depending on the selected Deckhouse Stronghold license. For more details, see the <a href='/products/stronghold/documentation/about/editions/'>&quot;Editions&quot;</a> section of the Deckhouse Stronghold documentation.",
+        "ru": "Некоторые функции доступны в зависимости от выбранной лицензии Deckhouse Stronghold. Подробнее можно ознакомиться в разделе <a href='/products/stronghold/documentation/about/editions/'>«Редакции»</a> документации Deckhouse Stronghold."
       }
     },
     "external": "true",

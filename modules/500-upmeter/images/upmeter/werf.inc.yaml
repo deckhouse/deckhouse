@@ -12,7 +12,6 @@ git:
     install:
     - go.mod
     - go.sum
-    setup:
     - "**/*.go"
 secrets:
 - id: SOURCE_REPO
@@ -65,5 +64,4 @@ import:
   add: /upmeter
   to: /upmeter
   before: setup
-git:  
 {{- include "image mount points" . }}  

@@ -5,13 +5,11 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
-fromCacheVersion: "2025-07-25-3"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /control-plane-manager
   to: /control-plane-manager
   before: install
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
@@ -41,7 +39,12 @@ secrets:
 shell:
   install:
     - cd /src/cmd/control-plane-manager
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /control-plane-manager .
+    {{ if eq $.Env "CSE"}}
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=true"
+    {{ else }}
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=false"
+    {{ end }}
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $BUILD_TAGS -ldflags="-s -w $ETCD_SIGN_ENABLED" -o /control-plane-manager .
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025-07-25-3"
@@ -64,3 +67,6 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+shell:
+  install:
+  - cd /src

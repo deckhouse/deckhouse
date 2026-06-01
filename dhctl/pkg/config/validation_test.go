@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/stretchr/testify/require"
 )
 
@@ -178,7 +179,7 @@ metadata:
 
 func TestValidateClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(nil, []string{schemasDir})
+	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -278,7 +279,7 @@ func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
 	if info, err := os.Stat(schemasDir); err != nil || !info.IsDir() {
 		t.Skipf("%s not present; run `make test` after werf bundles cloud-providers, or skip", schemasDir)
 	}
-	newStore := newSchemaStore(nil, []string{schemasDir})
+	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 
 	tests := map[string]struct {
 		config        string
@@ -465,7 +466,7 @@ sshPublicKey: ssh-key`,
 
 func TestValidateStaticClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(nil, []string{schemasDir})
+	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 
 	tests := map[string]struct {
 		config      string

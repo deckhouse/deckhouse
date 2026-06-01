@@ -23,7 +23,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -32,7 +32,7 @@ import (
 
 type PortsCheck struct {
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
-	dc                     *directoryconfig.DirectoryConfig
+	globalOptions          *options.GlobalOptions
 }
 
 const PortsCheckName preflight.CheckName = "ports-availability"
@@ -54,11 +54,11 @@ func (c PortsCheck) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return checkAvailabilityPorts(ctx, nodeInterface, c.dc)
+	return checkAvailabilityPorts(ctx, nodeInterface, c.globalOptions)
 }
 
-func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface, dc *directoryconfig.DirectoryConfig) error {
-	file, err := template.RenderAndSavePreflightCheckPortsScript(dc)
+func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface, globalOptions *options.GlobalOptions) error {
+	file, err := template.RenderAndSavePreflightCheckPortsScript(globalOptions)
 	if err != nil {
 		return err
 	}
@@ -81,8 +81,8 @@ func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface,
 	return nil
 }
 
-func Ports(sshProviderInitializer *providerinitializer.SSHProviderInitializer, dc *directoryconfig.DirectoryConfig) preflight.Check {
-	check := PortsCheck{SSHProviderInitializer: sshProviderInitializer, dc: dc}
+func Ports(sshProviderInitializer *providerinitializer.SSHProviderInitializer, globalOptions *options.GlobalOptions) preflight.Check {
+	check := PortsCheck{SSHProviderInitializer: sshProviderInitializer, globalOptions: globalOptions}
 	return preflight.Check{
 		Name:        PortsCheckName,
 		Description: check.Description(),

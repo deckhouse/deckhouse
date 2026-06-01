@@ -18,7 +18,6 @@ import:
   add: /csi-provisioner
   to: /csi-provisioner
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:

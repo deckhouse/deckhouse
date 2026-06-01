@@ -123,6 +123,9 @@ git:
   stageDependencies:
     install:
     - "**/*"
+shell:
+  install:
+  - set -e
 {{- end }}
 
 #  render create ln part of setup script

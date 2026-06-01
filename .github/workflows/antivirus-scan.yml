@@ -28,14 +28,14 @@ on:
         type: string
         default: main
 
-env:
-  SCAN_RESULTS_DIR: 'scans'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   get-tags:
     name: Get tags for scanning
     runs-on: [self-hosted, regular]
-
     if: github.repository == 'deckhouse/deckhouse'
     outputs:
       tags: ${{ steps.set-manual-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
@@ -54,7 +54,7 @@ jobs:
             echo "is_manual=true" >> $GITHUB_OUTPUT
             echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
           else
-            echo "Scheduled run or manual without specific branch"
+            echo "Scheduled run"
             echo "is_manual=false" >> $GITHUB_OUTPUT
           fi
 
@@ -115,12 +115,10 @@ jobs:
           fi
 
 
-
-
+  # <template: drweb_scan_job>
   drweb-scan:
     name: Dr.Web Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
-
     if: github.repository == 'deckhouse/deckhouse'
     needs: get-tags
     strategy:
@@ -213,17 +211,32 @@ jobs:
       - name: Upload scan artifacts
         if: github.repository == 'deckhouse/deckhouse' && always()
         uses: actions/upload-artifact@v4.4.0
-        with:    
+        with:
           name: drweb-scan-results-${{ steps.scan.outputs.scan_id }}
           path: scans/${{ steps.scan.outputs.scan_id }}
           retention-days: 5
 
+      - name: Cleanup scan results on runner
+        if: always()
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          CONTAINER_NAME=registry_drweb
+          rm -rf "scans/${SCAN_ID}"
+          docker exec ${CONTAINER_NAME} rm -rf /drweb/scans/${SCAN_ID} || true
+
+  # </template: drweb_scan_job>
 
 
+
+  # <template: kaspersky_scan_job>
   kaspersky-scan:
     name: Kaspersky Scan ${{ matrix.branch }}
     runs-on: [self-hosted, antivirus]
-
     if: github.repository == 'deckhouse/deckhouse'
     needs: get-tags
     strategy:
@@ -316,12 +329,29 @@ jobs:
       - name: Upload scan artifacts
         if: github.repository == 'deckhouse/deckhouse' && always()
         uses: actions/upload-artifact@v4.4.0
-        with:    
+        with:
           name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}
           path: scans/${{ steps.scan.outputs.scan_id }}
           retention-days: 5
 
+      - name: Cleanup scan results on runner
+        if: always()
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          CONTAINER_NAME=registry_kaspersky
+          rm -rf "scans/${SCAN_ID}"
+          docker exec ${CONTAINER_NAME} rm -rf /antivirus/scans/${SCAN_ID} || true
 
+  # </template: kaspersky_scan_job>
+
+
+
+  # <template: antivirus_notify_failure_job>
   notify-failure:
     name: Send failure notification
     runs-on: [self-hosted, regular]
@@ -377,8 +407,14 @@ jobs:
           MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
           MESSAGE+="**Failed jobs:**\n"
           MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+          if [ "${{ github.event_name }}" == "pull_request_target" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+            MESSAGE+="**PR:** [#${{ github.event.pull_request.number }}]($pr_url)\n"
+          fi
           MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
 
           curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
             -H "Content-Type: application/json" \
             --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
+  # </template: antivirus_notify_failure_job>
+

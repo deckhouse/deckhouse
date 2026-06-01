@@ -176,9 +176,10 @@ type ControlPlaneOperationStatus struct {
 	// Conditions reflects the operation progress.
 	//
 	// The primary condition is "Completed". Its "reason" field is shown in the Phase column of `kubectl get cpo`:
-	//   - InProgress — the operation is running. The current step name is shown in the CurrentStep column.
-	//   - Succeeded  — the operation finished successfully.
-	//   - Failed     — the operation finished with an error; details are in "message".
+	//   - OperationInProgress — the operation is running. The current step name is shown in the CurrentStep column.
+	//   - OperationCompleted  — the operation finished successfully.
+	//   - OperationFailed     — the operation finished with an error; details are in "message".
+	//   - OperationAbandoned  — desired checksums became stale before the operation finished.
 	//
 	// In addition to "Completed", a separate condition is created for each executed step,
 	// where "type" equals the step name (for example RenewPKICerts, SyncManifests).

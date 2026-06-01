@@ -2,11 +2,10 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/user-api
-    to: /user-api
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/user-api
+  to: /user-api
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

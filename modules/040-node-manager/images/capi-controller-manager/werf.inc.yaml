@@ -7,7 +7,6 @@ import:
   add: /capi-controller-manager
   to: /capi-controller-manager
   before: setup
-git:
 {{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

@@ -50,12 +50,11 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /tmp/manager
-    to: /manager
-    before: setup
-git:
-{{- include "image mount points" $ }}
+- image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+  add: /tmp/manager
+  to: /manager
+  before: setup
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/manager"]

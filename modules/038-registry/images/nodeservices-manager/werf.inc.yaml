@@ -15,6 +15,9 @@ git:
     stageDependencies:
       install:
         - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang-alpine" }}
@@ -41,15 +44,14 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /manager
-    to: /manager
-    before: setup
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-git:
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  add: /manager
+  to: /manager
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

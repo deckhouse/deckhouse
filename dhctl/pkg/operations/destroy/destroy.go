@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -51,7 +50,7 @@ type infraDestroyer interface {
 }
 
 type metaConfigPopulator interface {
-	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, globalOptions *options.GlobalOptions) (*config.MetaConfig, error)
 }
 
 type Params struct {
@@ -72,10 +71,9 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	TmpDir          string
-	LoggerProvider  log.LoggerProvider
-	IsDebug         bool
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	TmpDir         string
+	LoggerProvider log.LoggerProvider
+	IsDebug        bool
 
 	// Options carries the per-operation parsed configuration. RPC handlers
 	// must populate this with a fresh *options.Options to avoid sharing global
@@ -148,9 +146,9 @@ type ClusterDestroyer struct {
 
 	pipeline phases.DefaultPipeline
 
-	d8Destroyer     *deckhouse.Destroyer
-	infraProvider   *infraDestroyerProvider
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	d8Destroyer   *deckhouse.Destroyer
+	infraProvider *infraDestroyerProvider
+	globalOptions *options.GlobalOptions
 }
 
 // NewClusterDestroyer
@@ -212,9 +210,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 				controller.ClusterInfraOptions{
 					PhasedExecutionContext: pec,
 					TmpDir:                 params.TmpDir,
-					DownloadDir:            params.Options.Global.DownloadDir,
 					IsDebug:                params.IsDebug,
 					Logger:                 logger,
+					GlobalOptions:          &params.Options.Global,
 				},
 			), nil
 		},
@@ -230,9 +228,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		pipeline: pipeline,
 
-		d8Destroyer:     d8Destroyer,
-		infraProvider:   infraProvider,
-		DirectoryConfig: params.DirectoryConfig,
+		d8Destroyer:   d8Destroyer,
+		infraProvider: infraProvider,
+		globalOptions: &params.Options.Global,
 	}, nil
 }
 
@@ -248,7 +246,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
+	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.globalOptions)
 	if err != nil {
 		return err
 	}
