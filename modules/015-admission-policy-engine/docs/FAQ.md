@@ -10,11 +10,66 @@ For DKP to work correctly, extended privileges are required to run and operate s
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
 
+## Does DKP have templates for creating custom policies?
+
+DKP includes pre-built templates for Gatekeeper that you can also use for your own policies.
+To view the available templates, use the following command:
+
+```shell
+d8 k get constrainttemplates.templates.gatekeeper.sh
+```
+
+Output example with a list of templates:
+
+```console
+NAME                                AGE
+d8allowedcapabilities               2d17h
+d8allowedclusterroles               2d17h
+d8allowedflexvolumes                2d17h
+d8allowedhostpaths                  2d17h
+d8allowedingresses                  2d17h
+d8allowedprocmount                  2d17h
+d8allowedrepos                      2d17h
+d8allowedseccompprofiles            2d17h
+d8allowedservicetypes               2d17h
+d8allowedsysctls                    2d17h
+d8allowedusers                      2d17h
+d8allowedvolumetypes                2d17h
+d8allowprivilegeescalation          2d17h
+d8allowrbacwildcards                2d17h
+d8apparmor                          2d17h
+d8automountserviceaccounttokenpod   2d17h
+d8containerduplicates               2d17h
+d8denyexec                          2d17h
+d8denyexecheritage                  2d17h
+d8disallowedtags                    2d17h
+d8disallowedtolerations             2d17h
+d8dnspolicy                         2d17h
+d8hostnetwork                       2d17h
+d8hostprocesses                     2d17h
+d8imagepullpolicy                   2d17h
+d8ingressclass                      2d17h
+d8priorityclass                     2d17h
+d8privilegedcontainer               2d17h
+d8readonlyrootfilesystem            2d17h
+d8replicalimits                     2d17h
+d8requiredannotations               2d17h
+d8requiredlabels                    2d17h
+d8requiredprobes                    2d17h
+d8requiredresources                 2d17h
+d8revisionhistorylimit              2d17h
+d8selinux                           2d17h
+d8storageclass                      2d17h
+d8verifyimagesignatures             2d17h
+d8vulnerableimages                  2d17h
+```
+
 ## How do I configure policy selectors?
 
 In `OperationPolicy` and `SecurityPolicy`, the `spec.match` field determines which specific objects (pods) in the cluster the policy will apply to. It must be present in the configuration. Filtering is performed by combining two main criteria: a pod selector (`labelSelector`) and a namespace selector (`namespaceSelector`).
 
 If both selectors are specified, the policy is applied only to those pods that **simultaneously**:
+
 - satisfy the pod selection conditions.
 - located in namespaces that passed the filtering.
 
@@ -155,6 +210,7 @@ Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restric
 {% endalert %}
 
 To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
+
 - Create a constraint template for the check (`ConstraintTemplate`).
 - Bind it to the `restricted` or `baseline` policy.
 
