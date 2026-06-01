@@ -132,13 +132,20 @@ remove_path() {
   [ ! -e "$path" ] && return 0
 
   for i in {1..5}; do
-    # If the path is a separate mount, wipe its data first so the device comes up empty
-    # on next bootstrap, then unmount it. -xdev keeps find on this device, so it never
-    # crosses into PVC or other nested mounted volumes.
-    if mountpoint -q "$path"; then
-      log_info "Clearing data on volume at $path"
-      find "$path" -xdev -mindepth 1 -delete 2>/dev/null
-      umount -l "$path" 2>/dev/null || true
+    if [ -d "$path" ]; then
+      # Detach nested mounts (e.g. pod/CSI/PVC volumes), deepest first, so the rm below
+      # cannot recurse into them and delete data we do not own. Their data is never touched.
+      mount | grep -F "$path" | awk '{print $3}' | grep -vxF "$path" | sort -r | xargs -r -n1 umount -l 2>/dev/null
+
+      # If the path itself is a separate mount, wipe its data (so the device comes up empty
+      # on next bootstrap) and unmount it, but keep the empty directory: it is a mountpoint
+      # and an fstab entry may remount the device here on reboot. -xdev keeps find on this device.
+      if mountpoint -q "$path"; then
+        log_info "Clearing data on volume at $path"
+        find "$path" -xdev -mindepth 1 -delete 2>/dev/null
+        umount -l "$path" 2>/dev/null || true
+        return 0
+      fi
     fi
     rm -rf "$path" 2>/dev/null && return 0
     sleep 1
@@ -215,10 +222,8 @@ if [ "$CLEANUP_FAILED" -ne 0 ]; then
   exit 2
 fi
 
-log_info "Cleanup completed successfully, restoring MOTD"
-restore_motd_message
-
-# Check if any of the cleaned paths are still in fstab — they will be remounted on next boot.
+# Inform which cleaned paths are still present in /etc/fstab — their devices will be
+# remounted (empty, since we wiped them) on next boot. This is informational only.
 FSTAB_HITS=()
 for p in "${PATHS_TO_REMOVE[@]}" /var/lib/bashible; do
   while IFS= read -r hit; do
@@ -229,20 +234,17 @@ done
 if [ "${#FSTAB_HITS[@]}" -gt 0 ]; then
   echo ""
   echo "################################################################################"
-  echo "# WARNING: the following paths are present in /etc/fstab as mountpoints:"
+  echo "# NOTE: the following paths are present in /etc/fstab and will be remounted on"
+  echo "# next boot:"
   for p in "${FSTAB_HITS[@]}"; do
     echo "#   $p"
   done
-  echo "#"
-  echo "# Remove or comment out those entries from /etc/fstab before rebooting,"
   echo "################################################################################"
   echo ""
-  # Exit before removing the script (below) so it stays on disk. A retry then re-runs
-  # it and re-hits this safeguard, instead of caps-controller-manager treating a
-  # missing script as "done" and rebooting with a stale /etc/fstab entry.
-  log_err "Skipping reboot: manual /etc/fstab cleanup required (see WARNING above)"
-  exit 3
 fi
+
+log_info "Cleanup completed successfully, restoring MOTD"
+restore_motd_message
 
 # Remove the script (and the rest of /var/lib/bashible) last, only once we are
 # committed to rebooting — every earlier exit path keeps it on disk for a rerun.
