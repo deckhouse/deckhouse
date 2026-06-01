@@ -20,20 +20,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-4660"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/hashicorp/go-getter"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "CVE-2026-4660 связана с произвольным чтением файлов через специально сформированный URL в go-getter. Фикс требует v1.8.6 которая несовместима с текущей версией Go в сборочном образе (go 1.25.7 < 1.25.8). opentofu использует go-getter для загрузки модулей из доверенных источников, URL контролируется пользователем terraform-конфигурации, а не внешним атакующим",
-      "timestamp": "2026-05-15T12:00:00Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-39882"
       },
       "products": [
