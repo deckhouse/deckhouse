@@ -275,20 +275,10 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	return nil
 }
 
-// cleanupManualInterventionExitCode is the exit code cleanup_static_node.sh returns
-// when it skips the reboot because /etc/fstab still references cleaned-up mountpoints.
-// Retrying cannot fix it — an operator must edit /etc/fstab first — so we stop the loop.
-const cleanupManualInterventionExitCode = 3
-
-func isManualCleanupRequired(err error) bool {
-	var ee *exec.ExitError
-	return errors.As(err, &ee) && ee.ExitCode() == cleanupManualInterventionExitCode
-}
-
 func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
 	d.logger().LogDebugF("Starting cleanup process for host %s\n", host)
 
-	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).BreakIf(isManualCleanupRequired).RunContext(ctx, func() error {
+	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
 		c := sshClient.Command(cmd)
 		c.Sudo(ctx)
 		c.WithTimeout(30 * time.Second)
@@ -310,10 +300,6 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHC
 		return err
 	})
 	if err != nil {
-		if isManualCleanupRequired(err) {
-			return fmt.Errorf("static node cleanup on host %s requires manual /etc/fstab cleanup before it can finish (see the warning above): %w", host.String(), err)
-		}
-
 		return err
 	}
 
