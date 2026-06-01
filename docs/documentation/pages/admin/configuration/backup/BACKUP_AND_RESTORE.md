@@ -358,7 +358,7 @@ To restore etcd objects after changing the master node's IP address, follow thes
    cp -r /etc/kubernetes/pki ./pki-backup
    ```
 
-1. Renew control-plane certificates with the new IP address added to SANs. This step works locally without API access:
+1. Renew control-plane certificates with the new IP address added to SANs:
 
    ```shell
    d8 tools pki certs renew all --san <NEW_IP>
@@ -474,7 +474,7 @@ If you prefer to manually make changes during cluster recovery after the master 
    cp -r /etc/kubernetes/pki ./pki-backup
    ```
 
-1. Renew control-plane certificates with the new IP address added to SANs. This step works locally without API access:
+1. Renew control-plane certificates with the new IP address added to SANs:
 
    ```shell
    d8 tools pki certs renew all --san <NEW_IP>

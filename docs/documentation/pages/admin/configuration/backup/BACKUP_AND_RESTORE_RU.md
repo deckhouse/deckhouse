@@ -359,7 +359,7 @@ lang: ru
    cp -r /etc/kubernetes/pki ./pki-backup
    ```
 
-1. Перевыпустите сертификаты control-plane с новым IP-адресом в SANs. Этот шаг выполняется локально на ноде без доступа к API:
+1. Перевыпустите сертификаты control-plane с новым IP-адресом в SANs:
 
    ```shell
    d8 tools pki certs renew all --san <NEW_IP>
@@ -474,7 +474,7 @@ systemctl restart kubelet.service
    cp -r /etc/kubernetes/pki ./pki-backup
    ```
 
-1. Перевыпустите сертификаты control-plane с новым IP-адресом в SANs. Этот шаг выполняется локально на ноде без доступа к API:
+1. Перевыпустите сертификаты control-plane с новым IP-адресом в SANs:
 
    ```shell
    d8 tools pki certs renew all --san <NEW_IP>
