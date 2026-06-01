@@ -17,80 +17,131 @@ locals {
 
   has_pcc = var.providerClusterConfiguration != null
 
-  has_node_groups       = var.nodeGroups != null && length(var.nodeGroups) > 0
-  has_instance_classes  = var.instanceClasses != null && length(var.instanceClasses) > 0
-  has_credential_secret = var.secrets != null && length(var.secrets) > 0
+  _mc_version        = try(var.settings.spec.version, 0)
+  _master_class_name = try(var.nodeGroups["master"].spec.cloudInstances.classReference.name, "")
 
-  # New resources are considered complete only when all three parts are present.
-  new_resources_complete = local.has_node_groups && local.has_instance_classes && local.has_credential_secret
+  _has_master_ng = try(var.nodeGroups["master"], null) != null
+  _has_master_ic = local._master_class_name != "" && try(var.instanceClasses[local._master_class_name], null) != null
+  _has_credential_secret = try(
+    length([for _, s in var.secrets : s if try(s.type, "") == "cloud-provider.deckhouse.io/credentials"]),
+    0
+  ) > 0
+
+  # New resources are considered complete only when MC version >= 2, master NodeGroup,
+  # corresponding DVPInstanceClass, and a credential Secret are all present.
+  new_resources_complete = local._mc_version >= 2 && local._has_master_ng && local._has_master_ic && local._has_credential_secret
 
   # Use PCC when it is present and new resources are not yet complete (migration in progress).
   use_pcc = local.has_pcc && !local.new_resources_complete
 
-  # --- PCC-derived values ---
+  # --- PCC shorthand ---
 
-  pcc_kubeconfig     = try(var.providerClusterConfiguration.provider.kubeconfigDataBase64, "")
-  pcc_namespace      = try(var.providerClusterConfiguration.provider.namespace, "")
-  pcc_network_policy = try(var.providerClusterConfiguration.provider.networkPolicy, "Isolated")
-  pcc_ssh_public_key = try(var.providerClusterConfiguration.sshPublicKey, "")
-  pcc_region         = try(var.providerClusterConfiguration.region, "")
-  pcc_zones          = try(var.providerClusterConfiguration.zones, [])
+  _pcc = var.providerClusterConfiguration
 
-  pcc_master_node_group = {
-    replicas      = try(var.providerClusterConfiguration.masterNodeGroup.replicas, 1)
-    zones         = try(var.providerClusterConfiguration.masterNodeGroup.zones, null)
-    instanceClass = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass, {})
+  # --- Synthesised module_config ---
+
+  _pcc_module_config = {
+    apiVersion = "deckhouse.io/v1alpha1"
+    kind       = "ModuleConfig"
+    metadata   = { name = "cloud-provider-dvp" }
+    spec = {
+      enabled = true
+      version = 2
+      settings = {
+        provider = {
+          parameters = {
+            namespace     = try(local._pcc.provider.namespace, "")
+            networkPolicy = try(local._pcc.provider.networkPolicy, "Isolated")
+          }
+        }
+        nodes = {
+          parameters = {
+            sshPublicKey = try(local._pcc.sshPublicKey, "")
+            region       = try(local._pcc.region, "")
+            zones        = try(local._pcc.zones, [])
+          }
+        }
+      }
+    }
   }
 
-  pcc_node_groups = try(var.providerClusterConfiguration.nodeGroups, [])
+  # --- Synthesised node_groups map ---
 
-  # --- New-resources-derived values ---
-
-  # First Secret of type "cloud-provider.deckhouse.io/credentials" provides the kubeconfig.
-  new_kubeconfig = try(
+  # Build a unified list of all PCC node groups: master + workers.
+  _pcc_all_ngs_list = concat(
     [
-      for name, s in var.secrets : s.stringData.secret
-      if try(s.stringData.secret, null) != null && try(s.type, "") == "cloud-provider.deckhouse.io/credentials"
-    ][0],
-    ""
+      {
+        name          = "master"
+        replicas      = try(local._pcc.masterNodeGroup.replicas, 1)
+        zones         = try(local._pcc.masterNodeGroup.zones, null)
+        instanceClass = try(local._pcc.masterNodeGroup.instanceClass, {})
+      }
+    ],
+    [
+      for ng in try(local._pcc.nodeGroups, []) : {
+        name          = ng.name
+        replicas      = try(ng.replicas, 1)
+        zones         = try(ng.zones, null)
+        instanceClass = try(ng.instanceClass, {})
+      }
+    ]
   )
 
-  new_namespace      = try(var.settings.spec.settings.provider.parameters.namespace, "")
-  new_network_policy = try(var.settings.spec.settings.provider.parameters.networkPolicy, "Isolated")
-  new_ssh_public_key = try(var.settings.spec.settings.nodes.parameters.sshPublicKey, "")
-  new_region         = try(var.settings.spec.settings.nodes.parameters.region, "")
-  new_zones          = try(var.settings.spec.settings.nodes.parameters.zones, [])
-
-  new_master_node_group = {
-    replicas = try(var.nodeGroups["master"].spec.cloudInstances.minPerZone, 1)
-    zones    = try(var.nodeGroups["master"].spec.cloudInstances.zones, null)
-    instanceClass = try(
-      var.instanceClasses[try(var.nodeGroups["master"].spec.cloudInstances.classReference.name, "")].spec,
-      {}
-    )
+  _pcc_node_groups = {
+    for ng in local._pcc_all_ngs_list : ng.name => {
+      apiVersion = "deckhouse.io/v1"
+      kind       = "NodeGroup"
+      metadata   = { name = ng.name }
+      spec = {
+        cloudInstances = {
+          classReference = {
+            kind = "DVPInstanceClass"
+            name = "${ng.name}-dvp"
+          }
+          minPerZone = ng.replicas
+          maxPerZone = ng.replicas
+          zones      = ng.zones != null ? ng.zones : try(local._pcc.zones, [])
+        }
+        nodeType = "CloudPermanent"
+      }
+    }
   }
 
-  new_node_groups = [
-    for name, ng in var.nodeGroups : {
-      name     = name
-      replicas = try(ng.spec.cloudInstances.minPerZone, 1)
-      zones    = try(ng.spec.cloudInstances.zones, null)
-      instanceClass = try(
-        var.instanceClasses[try(ng.spec.cloudInstances.classReference.name, "")].spec,
-        {}
+  # --- Synthesised instance_classes map ---
+
+  # Strip ipAddresses from virtualMachine — it is not part of DVPInstanceClass.spec.
+  _pcc_instance_classes = {
+    for ng in local._pcc_all_ngs_list : "${ng.name}-dvp" => {
+      apiVersion = "deckhouse.io/v1alpha1"
+      kind       = "DVPInstanceClass"
+      metadata   = { name = "${ng.name}-dvp" }
+      spec = merge(
+        ng.instanceClass,
+        {
+          virtualMachine = {
+            for k, v in try(ng.instanceClass.virtualMachine, {}) : k => v
+            if k != "ipAddresses"
+          }
+        }
       )
     }
-    if name != "master"
-  ]
+  }
 
-  # --- Unified outputs ---
+  # --- Synthesised credential_secrets map ---
 
-  kubeconfig_base64 = local.use_pcc ? local.pcc_kubeconfig : local.new_kubeconfig
-  namespace         = local.use_pcc ? local.pcc_namespace : local.new_namespace
-  network_policy    = local.use_pcc ? local.pcc_network_policy : local.new_network_policy
-  ssh_public_key    = local.use_pcc ? local.pcc_ssh_public_key : local.new_ssh_public_key
-  region            = local.use_pcc ? local.pcc_region : local.new_region
-  zones             = local.use_pcc ? local.pcc_zones : local.new_zones
-  master_node_group = local.use_pcc ? local.pcc_master_node_group : local.new_master_node_group
-  node_groups       = local.use_pcc ? local.pcc_node_groups : local.new_node_groups
+  _pcc_credential_secrets = {
+    "d8-credentials" = {
+      apiVersion = "v1"
+      kind       = "Secret"
+      metadata = {
+        name      = "d8-credentials"
+        namespace = try(local._pcc.provider.namespace, "")
+      }
+      stringData = {
+        authScheme = "kubeconfig"
+        secret     = try(local._pcc.provider.kubeconfigDataBase64, "")
+      }
+      type = "cloud-provider.deckhouse.io/credentials"
+    }
+  }
 }

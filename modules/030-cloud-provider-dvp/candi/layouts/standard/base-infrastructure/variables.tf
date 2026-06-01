@@ -55,9 +55,8 @@ module "migration" {
 }
 
 locals {
-  project_namespace = module.migration.namespace
-
-  network_policy_raw = module.migration.network_policy
+  project_namespace  = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  network_policy_raw = try(module.migration.settings.spec.settings.provider.parameters.networkPolicy, "Isolated")
   network_policy_mode = (
     local.network_policy_raw == null || trimspace(tostring(local.network_policy_raw)) == ""
   ) ? "Isolated" : tostring(local.network_policy_raw)
@@ -151,9 +150,10 @@ locals {
 
 # Extract locals needed for validation module
 locals {
-  namespace         = module.migration.namespace
-  master_node_group = module.migration.master_node_group
-  instance_class    = local.master_node_group.instanceClass
+  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  _master_ng     = module.migration.nodeGroups["master"]
+  _master_ic_name = try(local._master_ng.spec.cloudInstances.classReference.name, "")
+  instance_class = try(module.migration.instanceClasses[local._master_ic_name].spec, {})
 
   root_disk_image = {
     kind = local.instance_class.rootDisk.image.kind

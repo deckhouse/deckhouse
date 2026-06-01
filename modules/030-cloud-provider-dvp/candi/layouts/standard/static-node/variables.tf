@@ -76,12 +76,24 @@ module "migration" {
 }
 
 locals {
-  prefix         = var.clusterConfiguration.cloud.prefix
-  node_index     = var.nodeIndex
-  namespace      = module.migration.namespace
-  ng             = [for i in module.migration.node_groups : i if i.name == var.nodeGroupName][0]
-  instance_class = local.ng["instanceClass"]
+  prefix     = var.clusterConfiguration.cloud.prefix
+  node_index = var.nodeIndex
 
+  _ng            = module.migration.nodeGroups[var.nodeGroupName]
+  _ic_name       = try(local._ng.spec.cloudInstances.classReference.name, "")
+  instance_class = try(module.migration.instanceClasses[local._ic_name].spec, {})
+
+  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  ssh_public_key = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
+  region         = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
+  actual_zones   = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
+  zones          = try(local._ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._ng.spec.cloudInstances.zones)) : local.actual_zones
+  zone           = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
+
+  ipv4_address = try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], null) == null ? "Auto" : (
+    var.nodeIndex + 1 > length(try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], [])) ? "Auto" :
+    try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], [])[var.nodeIndex]
+  )
 
   cluster_uuid = var.clusterUUID
 
@@ -99,7 +111,6 @@ locals {
     }
   ]
 
-
   cpu = {
     cores         = local.instance_class.virtualMachine.cpu.cores
     core_fraction = lookup(local.instance_class.virtualMachine.cpu, "coreFraction", "100%")
@@ -115,24 +126,13 @@ locals {
     "AlwaysOnUnlessStoppedManually",
   )
 
-  ssh_public_key = module.migration.ssh_public_key
-
-  ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
-
-  region = module.migration.region
-
-  actual_zones = module.migration.zones
-  zones        = lookup(local.ng, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.ng["zones"])) : local.actual_zones
-  zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
-
   additional_labels      = lookup(local.instance_class.virtualMachine, "additionalLabels", {})
   additional_annotations = lookup(local.instance_class.virtualMachine, "additionalAnnotations", {})
   priority_class_name    = lookup(local.instance_class.virtualMachine, "priorityClassName", null)
   node_selector          = lookup(local.instance_class.virtualMachine, "nodeSelector", {})
   tolerations            = lookup(local.instance_class.virtualMachine, "tolerations", null)
 
-  node_group = local.ng.name
+  node_group = var.nodeGroupName
   hostname   = join("-", [local.prefix, local.node_group, local.node_index])
   user_data  = var.cloudConfig == "" ? "" : var.cloudConfig
 }
-

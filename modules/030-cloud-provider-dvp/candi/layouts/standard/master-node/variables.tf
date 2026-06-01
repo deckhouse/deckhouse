@@ -72,12 +72,26 @@ module "migration" {
 }
 
 locals {
-  prefix            = var.clusterConfiguration.cloud.prefix
-  node_index        = var.nodeIndex
-  namespace         = module.migration.namespace
-  master_node_group = module.migration.master_node_group
-  instance_class    = local.master_node_group.instanceClass
+  prefix     = var.clusterConfiguration.cloud.prefix
+  node_index = var.nodeIndex
 
+  _master_ng      = module.migration.nodeGroups["master"]
+  _master_ic_name = try(local._master_ng.spec.cloudInstances.classReference.name, "")
+  instance_class  = try(module.migration.instanceClasses[local._master_ic_name].spec, {})
+
+  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  ssh_public_key = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
+  region         = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
+  actual_zones   = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
+  zones          = try(local._master_ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._master_ng.spec.cloudInstances.zones)) : local.actual_zones
+  zone           = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
+
+  node_replicas = try(local._master_ng.spec.cloudInstances.minPerZone, 1)
+
+  ipv4_address = try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses["master"], null) == null ? "Auto" : (
+    var.nodeIndex + 1 > length(try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses["master"], [])) ? "Auto" :
+    try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses["master"], [])[var.nodeIndex]
+  )
 
   cluster_uuid = var.clusterUUID
 
@@ -109,18 +123,8 @@ locals {
     "AlwaysOnUnlessStoppedManually",
   )
 
-  ssh_public_key = module.migration.ssh_public_key
-
-  ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
-
   kubernetes_data_disk_storage_class = lookup(local.instance_class.etcdDisk, "storageClass", null)
   kubernetes_data_disk_size          = local.instance_class.etcdDisk.size
-
-  region = module.migration.region
-
-  actual_zones = module.migration.zones
-  zones        = lookup(local.master_node_group, "zones", null) != null ? tolist(setintersection(local.actual_zones, local.master_node_group["zones"])) : local.actual_zones
-  zone         = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 
   additional_labels      = lookup(local.instance_class.virtualMachine, "additionalLabels", {})
   additional_annotations = lookup(local.instance_class.virtualMachine, "additionalAnnotations", {})

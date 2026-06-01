@@ -12,44 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "kubeconfig_base64" {
-  description = "Base64-encoded kubeconfig for connecting to the parent DVP cluster."
-  value       = local.kubeconfig_base64
+output "settings" {
+  description = "Resolved ModuleConfig object for cloud-provider-dvp."
+  value       = local.use_pcc ? local._pcc_module_config : var.settings
+}
+
+output "nodeGroups" {
+  description = "Map of resolved NodeGroup objects keyed by node group name."
+  value       = local.use_pcc ? local._pcc_node_groups : var.nodeGroups
+}
+
+output "instanceClasses" {
+  description = "Map of resolved DVPInstanceClass objects keyed by instance class name."
+  value       = local.use_pcc ? local._pcc_instance_classes : var.instanceClasses
+}
+
+output "secrets" {
+  description = "Map of resolved credential Secret objects keyed by secret name."
   sensitive   = true
-}
-
-output "namespace" {
-  description = "Namespace in the parent DVP cluster where VM resources are managed."
-  value       = local.namespace
-}
-
-output "network_policy" {
-  description = "Network policy mode for the parent DVP cluster (e.g. Isolated)."
-  value       = local.network_policy
-}
-
-output "ssh_public_key" {
-  description = "SSH public key injected into provisioned nodes."
-  value       = local.ssh_public_key
-  sensitive   = true
-}
-
-output "region" {
-  description = "Region label used for zone-aware scheduling."
-  value       = local.region
-}
-
-output "zones" {
-  description = "List of availability zones available for node placement."
-  value       = local.zones
-}
-
-output "master_node_group" {
-  description = "Resolved master NodeGroup definition compatible with PCC.masterNodeGroup shape."
-  value       = local.master_node_group
-}
-
-output "node_groups" {
-  description = "List of resolved worker NodeGroup definitions compatible with PCC.nodeGroups shape."
-  value       = local.node_groups
+  value       = local.use_pcc ? local._pcc_credential_secrets : var.secrets
 }
