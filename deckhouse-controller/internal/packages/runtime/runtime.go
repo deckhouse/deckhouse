@@ -23,9 +23,8 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
-	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	klient "github.com/flant/kube-client/client"
+	"github.com/flant/shell-operator/pkg/kube/dedupclient"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
@@ -94,6 +93,7 @@ type Runtime struct {
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
 
+	kubeClient        *dedupclient.Client                 // Shared deduplicated kube client (same instance as addon/shell-operator)
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
@@ -123,7 +123,11 @@ type moduleManagerI interface {
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+//
+// kubeClient is the single deduplicated kube client shared with addon-operator
+// and shell-operator: the object patcher, kube-events manager, NELM monitor and
+// health monitor all reuse it instead of opening their own connections.
+func New(cli kclient.Client, kubeClient *dedupclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -131,6 +135,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services
+	r.kubeClient = kubeClient
 	r.addonModuleManager = moduleManager
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
@@ -167,15 +172,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
-	// Build object patcher with optimized rate limits for batch operations
-	if err := r.buildObjectPatcher(); err != nil {
-		return nil, fmt.Errorf("build object patcher: %w", err)
-	}
+	// Build object patcher on the shared dedup client
+	r.buildObjectPatcher()
 
 	// Build Kubernetes events manager for watching cluster resources
-	if err := r.buildKubeEventsManager(); err != nil {
-		return nil, fmt.Errorf("build kube events manager: %w", err)
-	}
+	r.buildKubeEventsManager()
 
 	r.hookEventHandler = hookevent.NewHandler(hookevent.Config{
 		KubeEventsManager: r.kubeEventsManager,
@@ -282,51 +283,24 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 	return nil
 }
 
-// buildObjectPatcher creates a Kubernetes client optimized for patch operations.
-//
-// Uses dedicated rate limits (QPS and burst) tuned for batch resource patching.
-// Hooks can generate multiple patch operations (create/update/delete resources)
-// that need to be applied quickly, so this client has higher throughput limits
-// than the general-purpose event watching client.
-//
-// Also sets a custom timeout for patch operations to prevent hanging on slow API calls.
-func (r *Runtime) buildObjectPatcher() error {
-	client := klient.New(klient.WithLogger(r.logger.Named("object-patcher-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.ObjectPatcherKubeClientQPS, addonapp.ObjectPatcherKubeClientBurst)
-	client.WithTimeout(addonapp.ObjectPatcherKubeClientTimeout)
-	client.WithMetricPrefix("packages_object_patcher_")
-
-	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize object patcher client: %w", err)
-	}
-
-	r.objectPatcher = objectpatch.NewObjectPatcher(client, r.logger.Named("object-patcher"))
-	return nil
+// buildObjectPatcher wires the object patcher onto the shared deduplicated kube
+// client. The patcher only needs the typed/dynamic surface (kubernetes.Interface,
+// Dynamic and GroupVersionResource), all of which the dedup client exposes, so it
+// reuses the single shared connection instead of opening a dedicated one.
+func (r *Runtime) buildObjectPatcher() {
+	r.objectPatcher = objectpatch.NewObjectPatcher(r.kubeClient, r.logger.Named("object-patcher"))
 }
 
-// buildKubeEventsManager creates a Kubernetes client for watching cluster resources.
-//
-// This client is used by hooks to watch for resource changes (create/update/delete).
-// Uses standard rate limits appropriate for long-running watches and informers.
+// buildKubeEventsManager wires the Kubernetes events manager onto the shared
+// deduplicated kube client. KubeEventsManager requires a *dedupclient.Client, so
+// it consumes the same shared instance used by the rest of the operator.
 //
 // The KubeEventsManager handles:
 //   - Setting up informers/watchers based on hook configurations
 //   - Filtering events based on namespaces, labels, and field selectors
 //   - Converting Kubernetes events into binding contexts for hook execution
-func (r *Runtime) buildKubeEventsManager() error {
-	client := klient.New(klient.WithLogger(r.logger.Named("kube-events-manager-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
-	client.WithMetricPrefix("packages_kube_events_manager_")
-
-	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize kube events manager client: %w", err)
-	}
-
-	r.kubeEventsManager = kubeeventsmanager.NewKubeEventsManager(context.Background(), client, r.logger.Named("kube-events-manager"))
+func (r *Runtime) buildKubeEventsManager() {
+	r.kubeEventsManager = kubeeventsmanager.NewKubeEventsManager(context.Background(), r.kubeClient, r.logger.Named("kube-events-manager"))
 
 	// Initialize metric storage for the kube events manager
 	// This is required to record metrics during hook initialization and execution
@@ -335,16 +309,13 @@ func (r *Runtime) buildKubeEventsManager() error {
 		metricsstorage.WithNewRegistry(),
 	)
 	r.kubeEventsManager.WithMetricStorage(metricStorage)
-
-	return nil
 }
 
 // buildNelmService creates the NELM (Helm) service with monitoring capabilities.
 //
 // NELM manages Helm releases and monitors their resources for drift detection.
-// This requires:
-//  1. A dedicated Kubernetes client with rate limits tuned for monitoring
-//  2. A controller-runtime cache for efficient resource queries
+// This requires a controller-runtime cache for efficient resource queries,
+// built on top of the shared deduplicated kube client.
 //
 // The cache must be started and synced before the NELM service can function:
 //   - cache.Start() runs the cache informers in the background
@@ -354,20 +325,12 @@ func (r *Runtime) buildKubeEventsManager() error {
 //   - Missing resources (deleted outside of Helm)
 //   - Configuration drift between desired and actual state
 //
-// Rate limits are specific to monitoring workloads (different from patch or watch clients).
+// The controller-runtime cache is derived from the shared dedup client's REST
+// config, so monitoring reuses the same connection settings as the rest of the
+// operator instead of opening a dedicated client.
 func (r *Runtime) buildNelmService() error {
-	client := klient.New(klient.WithLogger(r.logger.Named("nelm-monitor-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
-	client.WithMetricPrefix("packages_nelm_monitor_")
-
-	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize nelm service client: %w", err)
-	}
-
 	// Create controller-runtime cache for efficient resource queries during monitoring
-	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
+	cache, err := runtimecache.New(r.kubeClient.RestConfig(), runtimecache.Options{})
 	if err != nil {
 		return fmt.Errorf("create runtime cache: %w", err)
 	}
@@ -397,20 +360,11 @@ func (r *Runtime) buildNelmService() error {
 // Reconciling, Degraded, or Unknown. Transitions are pushed back into the status
 // service via r.status.UpdateHealth, which encodes them on ConditionScaled.
 //
-// Construction is I/O-free apart from client.Init; informers and the reconcile
-// goroutine start later via r.healthService.Start, paired with Stop on shutdown.
+// Construction is I/O-free; informers and the reconcile goroutine start later
+// via r.healthService.Start, paired with Stop on shutdown. The health monitor
+// only needs the typed kubernetes.Interface that the shared dedup client embeds.
 func (r *Runtime) buildHealthService() error {
-	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
-	client.WithContextName(addonapp.KubeContext)
-	client.WithConfigPath(addonapp.KubeConfig)
-	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
-	client.WithMetricPrefix("packages_health_monitor_")
-
-	if err := client.Init(); err != nil {
-		return fmt.Errorf("initialize health service client: %w", err)
-	}
-
-	healthService, err := health.NewService(client, r.status.UpdateHealth, r.logger)
+	healthService, err := health.NewService(r.kubeClient, r.status.UpdateHealth, r.logger)
 	if err != nil {
 		return fmt.Errorf("create health service failed: %w", err)
 	}

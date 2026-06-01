@@ -31,9 +31,9 @@ import (
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
-	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/executor"
+	"github.com/flant/shell-operator/pkg/kube/dedupclient"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
@@ -45,6 +45,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/leaderelection"
@@ -118,6 +119,18 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 		// Initialize addon-operator specific metrics
 		admetrics.InitMetrics(cfg.App.PrometheusMetricsPrefix)
 
+		// Build the single deduplicated kube client up front and inject it
+		// into addon-operator via WithKubeClient. addon-operator forwards it
+		// to shell-operator, so this becomes THE client used everywhere under
+		// the hood (hooks, kube-events monitors, object patcher, helm-resources
+		// monitor, leader election, CRD installer) and the same instance is
+		// reused by the package runtime instead of spinning up its own clients.
+		kubeClient, err := newDedupKubeClient(cfg, logger)
+		if err != nil {
+			logger.Error("build dedup kube client", log.Err(err))
+			os.Exit(1)
+		}
+
 		// Hand the fully-built *Config to addon-operator via WithConfig: it
 		// then calls app.ApplyConfig internally to populate its package
 		// globals and projects the relevant subset onto shell-operator's
@@ -125,6 +138,7 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 		// are re-parsed downstream. See deckhouse-controller/pkg/envconfig.
 		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage,
 			addonoperator.WithConfig(cfg),
+			addonoperator.WithKubeClient(kubeClient),
 			addonoperator.WithLogger(logger.Named("addon-operator")),
 		)
 
@@ -435,7 +449,63 @@ const (
 	cmNamespace = "d8-system"
 )
 
-func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
+// newDedupKubeClient builds the singleton deduplicated kube client from the
+// resolved addon-operator config. It mirrors shell-operator's
+// initSingletonKubeClient: the same Kube.* connection settings and DedupClient.*
+// cache tuning feed dedupclient.New, so the client deckhouse-controller injects
+// is identical to the one shell-operator would have built on its own.
+func newDedupKubeClient(cfg *aoapp.Config, logger *log.Logger) (*dedupclient.Client, error) {
+	gvks, err := parseWatchGVKs(cfg.DedupClient.WatchGVKs)
+	if err != nil {
+		return nil, fmt.Errorf("parse watched GVKs: %w", err)
+	}
+
+	return dedupclient.New(dedupclient.Config{
+		Context:            cfg.Kube.Context,
+		Config:             cfg.Kube.Config,
+		Server:             cfg.Kube.Server,
+		QPS:                cfg.Kube.ClientQPS,
+		Burst:              cfg.Kube.ClientBurst,
+		Namespaces:         cfg.DedupClient.Namespaces,
+		WatchGVKs:          gvks,
+		ReconstructLRUSize: cfg.DedupClient.ReconstructLRUSize,
+		GCInterval:         cfg.DedupClient.GCInterval,
+	}, logger.Named("dedup-kube-client"))
+}
+
+// parseWatchGVKs converts a list of "group/version/kind" strings into
+// schema.GroupVersionKind values, accepting an empty group (leading "/") for
+// core resources, e.g. "/v1/Pod". It replicates shell-operator's own parseGVKs
+// so malformed entries fail fast at startup rather than being silently ignored.
+func parseWatchGVKs(specs []string) ([]schema.GroupVersionKind, error) {
+	if len(specs) == 0 {
+		return nil, nil
+	}
+	out := make([]schema.GroupVersionKind, 0, len(specs))
+	for _, raw := range specs {
+		spec := strings.TrimSpace(raw)
+		if spec == "" {
+			continue
+		}
+		parts := strings.SplitN(spec, "/", 3)
+		if len(parts) != 3 {
+			return nil, fmt.Errorf("expected \"<group>/<version>/<kind>\", got %q", raw)
+		}
+		version := strings.TrimSpace(parts[1])
+		kind := strings.TrimSpace(parts[2])
+		if version == "" || kind == "" {
+			return nil, fmt.Errorf("version and kind must be non-empty in %q", raw)
+		}
+		out = append(out, schema.GroupVersionKind{
+			Group:   strings.TrimSpace(parts[0]),
+			Version: version,
+			Kind:    kind,
+		})
+	}
+	return out, nil
+}
+
+func lockOnBootstrap(ctx context.Context, kubeClient *dedupclient.Client, logger *log.Logger) error {
 	bk := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.2,
@@ -449,7 +519,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		// retry on any error
 		return true
 	}, func() error {
-		if _, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
+		if _, err := kubeClient.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
@@ -462,7 +532,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 			FieldSelector: "metadata.name=" + cmLockName,
 			Watch:         true,
 		}
-		wch, err := client.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
+		wch, err := kubeClient.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
 		if err != nil {
 			return fmt.Errorf("watch configmaps: %w", err)
 		}
