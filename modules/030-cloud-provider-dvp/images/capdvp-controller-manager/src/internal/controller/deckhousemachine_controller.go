@@ -60,6 +60,8 @@ const (
 	OrphanedVMAnnotation = "dvp.deckhouse.io/orphaned-vm"
 	// OrphanedVMTimestampAnnotation records when VM became orphaned
 	OrphanedVMTimestampAnnotation = "dvp.deckhouse.io/orphaned-vm-timestamp"
+	// OrphanedDiskAnnotationPrefix is the prefix for annotations marking timed-out disk deletions
+	OrphanedDiskAnnotationPrefix = "dvp.deckhouse.io/orphaned-disk-"
 )
 
 type ownedResourceCreator struct {
@@ -564,7 +566,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 				if dvpMachine.Annotations == nil {
 					dvpMachine.Annotations = make(map[string]string)
 				}
-				dvpMachine.Annotations["dvp.deckhouse.io/orphaned-disk-"+disk] = time.Now().Format(time.RFC3339)
+				dvpMachine.Annotations[OrphanedDiskAnnotationPrefix+disk] = time.Now().Format(time.RFC3339)
 				continue
 			}
 			merr = multierror.Append(merr, fmt.Errorf("delete VirtualDisk %s: %w", disk, err))
