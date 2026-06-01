@@ -2,8 +2,8 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5d195d15939683637393fa45a68bff40324ab22e443c55904b61b51596efa3f5",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-10-23T15:35:52.818817+03:00",
-  "version": 1,
+  "timestamp": "2026-05-21T15:30:00.000000+03:00",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -18,6 +18,20 @@
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость CVE-2023-45142 связана с компонентом Trickster и его интеграцией с OpenTelemetry. В Deckhouse Kubernetes Platform Trickster используется как прокси для Prometheus, однако в поставляемых в составе Deckhouse компонентах Prometheus и Trickster интеграция с OpenTelemetry полностью отключена. Пользователи платформы не имеют возможности самостоятельно включить или сконфигурировать поддержку OpenTelemetry для данных компонентов. В связи с отсутствием поддержки и недоступностью функционала OpenTelemetry в Trickster и Prometheus под управлением Deckhouse, соответствующие уязвимые участки кода остаются недостижимыми для пользователей и приложений внутри кластера. Таким образом, эксплуатация уязвимости CVE-2023-45142 в Deckhouse Kubernetes Platform невозможна."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41602"
+      },
+      "timestamp": "2026-05-21T15:30:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/apache/thrift@v0.13.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-41602 представляет собой Integer Overflow/Wraparound в Go-реализации TFramedTransport библиотеки Apache Thrift (фикс в v0.23.0). Образ trickster v1.1.5 в Deckhouse подтягивает github.com/apache/thrift v0.13.0 исключительно как транзитивную зависимость через github.com/influxdata/influxdb v1.8.4 и go.opentelemetry.io/otel/exporters/trace/jaeger v0.16.0. Бинарь /usr/local/bin/trickster выступает HTTP-кэширующим прокси перед Prometheus: он не реализует InfluxDB Thrift-протокол (InfluxDB поддерживается только через свой HTTP API без TFramedTransport), а интеграция с OpenTelemetry/Jaeger полностью отключена в Deckhouse-сборке (см. конфигурацию модуля 300-prometheus и общий VEX CVE-2023-45142 для этого же образа), поэтому Thrift-кодек используется как транзитивная зависимость без рантайм-вызова уязвимого пути. Прямой бамп thrift до v0.23.0 невозможен без массового рефакторинга: API thrift между v0.13 и v0.23 несовместимы (требуют context.Context в каждом методе, TException вместо error), а вендорированный jaeger-экспортер otel v0.16.0 содержит сгенерированный код под старый API, и в связке с trickster v1.1.5 (последний релиз 2021 года) поднять otel выше невозможно без выпуска новой мажорной версии trickster. Уязвимый исполняемый путь TFramedTransport в данном контексте не активируется."
     }
   ]
 }

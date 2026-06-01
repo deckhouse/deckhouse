@@ -22,7 +22,7 @@ import (
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
@@ -36,10 +36,8 @@ var terraformProviders = []string{
 	"openstack",
 	"aws",
 	gcp.ProviderName,
-	"vsphere",
 	"azure",
 	vcd.ProviderName,
-	"huaweicloud",
 }
 
 var tofuProviders = []string{
@@ -47,10 +45,12 @@ var tofuProviders = []string{
 	"dynamix",
 	"zvirt",
 	dvp.ProviderName,
+	"vsphere",
+	"huaweicloud",
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(""), log.GetDefaultLogger())
+	s, err := loadTerraformVersionFileSettings(options.DefaultInfrastructureVersions, log.GetDefaultLogger())
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -60,7 +60,7 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(""), log.GetDefaultLogger())
+	s, err := loadTerraformVersionFileSettings(options.DefaultInfrastructureVersions, log.GetDefaultLogger())
 	require.NoError(t, err)
 
 	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
@@ -107,7 +107,7 @@ func TestProviderSettingsLoadError(t *testing.T) {
 }
 
 func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
-	file := infrastructure.GetInfrastructureVersions("")
+	file := options.DefaultInfrastructureVersions
 	logger := log.GetDefaultLogger()
 
 	assertOneStoreInCache := func(t *testing.T, store *SettingsProvider) {

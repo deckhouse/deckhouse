@@ -10,6 +10,7 @@ memory: 100Mi
 
 {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- if get $versionInfo "supportsOperator" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{ $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $revision := get $versionInfo "revision" }}
@@ -91,8 +92,8 @@ spec:
             - ALL
           privileged: false
           readOnlyRootFilesystem: true
-          runAsGroup: 64535
-          runAsUser: 64535
+          runAsGroup: 1337
+          runAsUser: 1337
           runAsNonRoot: true
         imagePullPolicy: IfNotPresent
         {{- if (hasPrefix "1.25" $fullVersion) }}
@@ -104,9 +105,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-              {{- include "istio_proxy_resources" . | nindent 12 }}
-            {{- end }}
+  {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "istio_proxy_resources" . | nindent 12 }}
+  {{- end }}
+
         ports:
         {{- if (hasPrefix "1.25" $fullVersion) }}
         - containerPort: 8443
@@ -141,4 +143,5 @@ spec:
               path: config.properties
           name: operator-config
       {{- end }}
+  {{- end }}
 {{- end }}

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
 
 {{- if eq .cri "ContainerdV2" }}
 echo 'systemd' > /var/lib/bashible/cgroup_config
@@ -76,6 +77,7 @@ bb-sync-file /opt/deckhouse/bin/d8-containerd-cgroup-migration.sh - << "EOF"
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
 
 # Migration already done
 if [ -f /var/lib/bashible/cgroup_config ]; then

@@ -106,7 +106,11 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 	var versionsToInstallResult = input.Values.Get("istio.internal.versionsToInstall").Array()
 	for _, versionResult := range versionsToInstallResult {
-		operatorVersionsToInstall = append(operatorVersionsToInstall, versionResult.String())
+		version := versionResult.String()
+		if !versionMap.DoesVersionSupportOperator(version) {
+			continue
+		}
+		operatorVersionsToInstall = append(operatorVersionsToInstall, version)
 	}
 
 	for iopInfo, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdInfo](input.Snapshots.Get("istiooperators")) {
@@ -117,6 +121,9 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 		iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
 		if !versionMap.IsRevisionSupported(iopInfo.Revision) {
 			unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
+			continue
+		}
+		if !versionMap.DoesVersionSupportOperator(iopVer) {
 			continue
 		}
 		if !lib.Contains(operatorVersionsToInstall, iopVer) {
@@ -149,6 +156,9 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 			istioVer := versionMap.GetVersionByRevision(istioInfo.Revision)
 			if !versionMap.IsRevisionSupported(istioInfo.Revision) {
 				unsupportedRevisions = append(unsupportedRevisions, istioInfo.Revision)
+				continue
+			}
+			if !versionMap.DoesVersionSupportOperator(istioVer) {
 				continue
 			}
 			if !lib.Contains(operatorVersionsToInstall, istioVer) {

@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ type StaticInstanceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The IP address of the host.
-	//+kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
+	// +kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
 	Address string `json:"address"`
 
 	// The reference to the `SSHCredentials` object.
@@ -77,14 +77,14 @@ const (
 	StaticInstanceStatusCurrentStatusPhaseCleaning      StaticInstanceStatusCurrentStatusPhase = "Cleaning"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
-//+kubebuilder:subresource:status
-//+kubebuilder:metadata:labels="heritage=deckhouse"
-//+kubebuilder:metadata:labels="module=node-manager"
-//+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.currentStatus.phase",description="Static instance state"
-//+kubebuilder:printcolumn:name="Node",type="string",JSONPath=".status.nodeRef.name",description="Node associated with this static instance"
-//+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".status.machineRef.name",description="Static machine associated with this static instance"
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:subresource:status
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=node-manager"
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.currentStatus.phase",description="Static instance state"
+// +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".status.nodeRef.name",description="Node associated with this static instance"
+// +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".status.machineRef.name",description="Static machine associated with this static instance"
 
 // StaticInstance describes a machine for the Cluster API Provider Static.
 type StaticInstance struct {
@@ -95,8 +95,8 @@ type StaticInstance struct {
 	Status StaticInstanceStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:resource:scope=Cluster
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // StaticInstanceList contains a list of StaticInstance
 type StaticInstanceList struct {

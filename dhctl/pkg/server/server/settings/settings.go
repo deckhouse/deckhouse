@@ -19,14 +19,14 @@ import (
 	"path"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 type ServerGeneralParams struct {
-	Network           string
-	Address           string
-	TmpDir            string
-	DownloadDirConfig *directoryconfig.DirectoryConfig
+	Network       string
+	Address       string
+	TmpDir        string
+	GlobalOptions *options.GlobalOptions
 }
 
 func (p *ServerGeneralParams) Validate() error {

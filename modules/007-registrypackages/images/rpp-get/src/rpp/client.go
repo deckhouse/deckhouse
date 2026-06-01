@@ -246,8 +246,10 @@ func (c *Client) retry(ctx context.Context, ref packageRef, attempts int, should
 }
 
 func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
+	overallStart := time.Now()
 	c.logf(ref, "starting install for %s", ref.raw)
 
+	t := time.Now()
 	skip, err := c.shouldSkipInstalled(ref)
 	if err != nil {
 		return err
@@ -255,10 +257,13 @@ func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	if skip {
 		return c.writeResult(resultSkipped, ref.name)
 	}
+	skipCheckDur := time.Since(t)
 
+	t = time.Now()
 	if err := c.ensureFetchedArchive(ctx, ref); err != nil {
 		return err
 	}
+	fetchDur := time.Since(t)
 
 	workDir, err := c.createWorkDir(ref)
 	if err != nil {
@@ -266,23 +271,35 @@ func (c *Client) installPackageOnce(ctx context.Context, ref packageRef) error {
 	}
 	defer c.cleanupWorkDir(ref, workDir)
 
+	t = time.Now()
 	if err := c.extractArchive(ctx, ref, workDir); err != nil {
 		return err
 	}
+	extractDur := time.Since(t)
 
+	t = time.Now()
 	if err := c.runInstallScript(ctx, ref, workDir); err != nil {
 		return err
 	}
+	scriptDur := time.Since(t)
 
+	t = time.Now()
 	if err := c.storeInstalledPackage(ref, workDir); err != nil {
 		return err
 	}
-
 	if err := c.cleanupFetchedPackage(ref); err != nil {
 		return err
 	}
+	storeDur := time.Since(t)
 
-	c.logf(ref, "install completed")
+	c.logf(ref, "install completed in %s (skipCheck=%s fetch=%s extract=%s script=%s store=%s)",
+		time.Since(overallStart).Truncate(time.Millisecond),
+		skipCheckDur.Truncate(time.Millisecond),
+		fetchDur.Truncate(time.Millisecond),
+		extractDur.Truncate(time.Millisecond),
+		scriptDur.Truncate(time.Millisecond),
+		storeDur.Truncate(time.Millisecond),
+	)
 	return c.writeResult(resultInstalled, ref.name)
 }
 
@@ -303,17 +320,28 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 }
 
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
+	start := time.Now()
 	response, err := c.httpClient.Get(ctx, ref.digest)
 	if err != nil {
 		return err
 	}
 	defer response.Body.Close()
+	httpDur := time.Since(start)
 
-	if err := writeResponseBody(ref.archivePath, response.Body); err != nil {
+	bodyStart := time.Now()
+	n, err := writeResponseBody(ref.archivePath, response.Body)
+	if err != nil {
 		return fmt.Errorf("write response body from %s: %w", response.Request.URL.String(), err)
 	}
+	bodyDur := time.Since(bodyStart)
 
-	c.logf(ref, "archive downloaded from %s (%s)", response.Request.URL.Host, formatSize(response.ContentLength))
+	var throughput string
+	if bodyDur > 0 && n > 0 {
+		mbps := float64(n) / 1024.0 / 1024.0 / bodyDur.Seconds()
+		throughput = fmt.Sprintf(", %.2f MB/s", mbps)
+	}
+	c.logf(ref, "archive downloaded from %s: %d bytes, http=%s body=%s%s",
+		response.Request.URL.Host, n, httpDur.Truncate(time.Millisecond), bodyDur.Truncate(time.Millisecond), throughput)
 	return nil
 }
 

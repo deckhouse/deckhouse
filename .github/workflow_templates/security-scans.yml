@@ -1,0 +1,215 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . }!}
+
+name: Security Scans
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+# Cancel in-progress security scans for the same PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+{!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "block-until-image-is-not-ready" . | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Gitleaks — secret scanning on PR diff.
+  # NOTE: does NOT depend on block-until-image-is-not-ready (text scan, no images).
+  # ============================================================================
+  gitleaks_scan:
+    name: Gitleaks scan
+    runs-on: ubuntu-slim
+    needs: pull_request_info
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
+      # The action checks out refs/pull/<num>/merge itself,
+      # so the PR branch is scanned (not the base branch).
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: diff
+          gitleaks_version: v8.28.0
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  set_security_gitleaks_requirement_status:
+    name: Set commit status after gitleaks scan run
+    runs-on: "ubuntu-slim"
+    needs: gitleaks_scan
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.gitleaks_scan.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed" --remove-label "security/gitleaks/success"
+          fi
+
+  # ============================================================================
+  # CVE — Trivy scan on PR images.
+  # ============================================================================
+  test_cve_report_main:
+    name: Trivy scan dev images
+    # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: [self-hosted, large]
+    env:
+      WORKDIR: "cve-scan"
+    steps:
+{!{ tmpl.Exec "checkout_full_step"           $ctx | strings.Indent 6 }!}
+{!{ tmpl.Exec "link_bin_step"                     | strings.Indent 6 }!}
+{!{ tmpl.Exec "cve_scan_type_pr"                  | strings.Indent 6 }!}
+{!{ tmpl.Exec "cve_scan_deckhouse_images"         | strings.Indent 6 }!}
+{!{ tmpl.Exec "cve_tests_upload_reports_artifacts"| strings.Indent 6 }!}
+{!{ tmpl.Exec "unlink_bin_step"                   | strings.Indent 6 }!}
+{!{ tmpl.Exec "send_fail_report" .                | strings.Indent 6 }!}
+
+{!{ tmpl.Exec "set_security_scan_requirement_status" slice | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Rootless — default-user validation on PR images.
+  # ============================================================================
+  security_scan_images:
+    name: Security scan images
+    runs-on: [self-hosted, large]
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr" "with_fail_report") | strings.Indent 4 }!}
+
+{!{ tmpl.Exec "set_security_rootless_requirement_status" $ctx | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Antivirus — Dr.Web and Kaspersky scans on PR images.
+  # ============================================================================
+  get-tags:
+    name: Get PR tag for scanning
+    runs-on: [self-hosted, regular]
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+    if: github.repository == 'deckhouse/deckhouse'
+    outputs:
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
+    steps:
+      - name: Set PR tag
+        id: set-pr-tag
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
+
+{!{ tmpl.Exec "drweb_scan_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "kaspersky_scan_job" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "set_security_antivirus_requirement_status" . | strings.Indent 2 }!}
+
+{!{ tmpl.Exec "antivirus_notify_failure_job" . | strings.Indent 2 }!}
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if any scan did not finish with success
+  # (covers blocker failure, scan failure, and skipped due to upstream issues).
+  # ============================================================================
+  security_scans_required:
+    name: Security scans required
+    runs-on: ubuntu-slim
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+      - gitleaks_scan
+      - test_cve_report_main
+      - security_scan_images
+      - drweb-scan
+      - kaspersky-scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [blocker]="${{ needs.block-until-image-is-not-ready.result }}"
+            [gitleaks]="${{ needs.gitleaks_scan.result }}"
+            [cve]="${{ needs.test_cve_report_main.result }}"
+            [rootless]="${{ needs.security_scan_images.result }}"
+            [drweb]="${{ needs.drweb-scan.result }}"
+            [kaspersky]="${{ needs.kaspersky-scan.result }}"
+          )
+          # Antivirus jobs intentionally skip in test repositories (self-hosted antivirus runners are only in main repo).
+          IS_MAIN_REPO=false
+          if [[ "${{ github.repository }}" == "deckhouse/deckhouse" ]]; then
+            IS_MAIN_REPO=true
+          fi
+
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (allowed in test repository)"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

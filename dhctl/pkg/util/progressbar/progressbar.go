@@ -72,8 +72,6 @@ func InitProgressBarWithDeferredFunc(name string, logger log.Logger) (func(), ch
 		FinishDefaultProgressBar()
 	}
 
-	defer onComplete()
-
 	return onComplete, phasesChan, nil
 }
 
@@ -114,6 +112,7 @@ func InitProgressBar(param *PbParam) error {
 		ProgressBarPrinter: p,
 		MultiPrinter:       &multi,
 		SpinnerPrinter:     staticSpinner,
+		StopCh:             stopChan,
 	}
 
 	log.WithProgressBar()
@@ -205,6 +204,15 @@ func InfoF(format string, a ...any) {
 func WarnF(format string, a ...any) {
 	writer := defaultpb.MultiPrinter.NewWriter()
 	pterm.Warning.WithWriter(writer).Printf(format, a...)
+}
+
+func ErrorF(format string, a ...any) {
+	if defaultpb != nil {
+		writer := defaultpb.MultiPrinter.NewWriter()
+		pterm.Error.WithWriter(writer).Printf(format, a...)
+	} else {
+		pterm.Error.Printf(format, a...)
+	}
 }
 
 func phaseToString(p phases.Progress, completed bool) string {

@@ -28,6 +28,6 @@
 {{- $context := . -}}
 
 shell:
-  setup:
+  install:
   - echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
 {{- end }}

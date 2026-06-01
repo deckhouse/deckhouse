@@ -95,10 +95,8 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)
 		cmd.Sudo(ctx)
+		//nolint: errcheck
 		err = cmd.Run(ctx)
-		if err != nil {
-			log.WarnF("Cannot remove output file for script: %v", err)
-		}
 	}()
 
 	script := sshClient.UploadScript(e.path)

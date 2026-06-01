@@ -6,8 +6,8 @@ import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/ztunnel/bin/ztunnel
     to: /usr/local/bin/ztunnel
-    owner: 64535
-    group: 64535
+    owner: 1337
+    group: 1337
     before: install
   - from: {{ index $.Images "libs/glibc-v2.41" }}
     add: /lib64/libc.so.6
@@ -31,8 +31,8 @@ import:
     before: install
 imageSpec:
   config:
-    user: "64535:64535"
-    env:
+    user: "1337:1337"
+    env:  
       ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     entrypoint: ["/usr/local/bin/ztunnel"]
 ---
@@ -44,6 +44,11 @@ import:
   add: /src/ztunnel
   to: /src/ztunnel
   before: install
+secrets:
+- id: CARGO_PROXY
+  value: {{ .CargoProxy }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -51,6 +56,16 @@ shell:
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src/ztunnel
+  - |
+    export CARGO_PROXY=$(cat /run/secrets/CARGO_PROXY)
+    if ! [[ "${CARGO_PROXY}" = "false" ]]; then
+      echo '[source.crates-io]' >> .cargo/config.toml
+      echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+      echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+      echo 'index = "sparse+http://'${CARGO_PROXY}'/index/"' >> .cargo/config.toml
+    fi
+  - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - |
     cargo build \
     --release 

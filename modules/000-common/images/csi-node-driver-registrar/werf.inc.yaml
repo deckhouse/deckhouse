@@ -18,7 +18,6 @@ import:
   add: /csi-node-driver-registrar
   to: /csi-node-driver-registrar
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
@@ -70,5 +69,7 @@ shell:
   - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
   - chown 64535:64535 /csi-node-driver-registrar
   - chmod 0755 /csi-node-driver-registrar
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

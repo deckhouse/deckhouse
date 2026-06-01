@@ -345,6 +345,8 @@
 {{- $rootContext := $context.rootContext -}}
 
 shell:
+  install:
+  - set -e
   setup:
   - |
     ln -fs /dhctl /usr/bin/dhctl

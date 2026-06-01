@@ -32,4 +32,9 @@ var ErrPackageNotFound = errors.New("package not found")
 
 type Client interface {
 	GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error)
+	// ResolveTag returns the manifest digest of an image identified by repository path and tag.
+	// The returned digest is suitable for passing as the `digest` argument to GetPackage.
+	ResolveTag(ctx context.Context, log log.Logger, config *ClientConfig, path string, tag string) (string, error)
+	// ListTags returns all tags available for an image identified by repository path.
+	ListTags(ctx context.Context, log log.Logger, config *ClientConfig, path string) ([]string, error)
 }

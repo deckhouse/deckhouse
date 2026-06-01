@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 const testRPPBootstrapServerPort = 4282
@@ -76,12 +76,7 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 }
 
 func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *testing.T) {
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
-
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), dc)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.New().Global)
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))

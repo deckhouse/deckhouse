@@ -53,6 +53,10 @@ ci:
     - summary: Added the ability to use a .trivyignore file when checking DKP components.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17793
   fixes:
+    - summary: Fixed registry path resolution for release semver tags.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20293
+    - summary: Updated EKS e2e logic to always use registry-stage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20073
     - summary: Fix e2e EKS registry path & publish e2e-eks-opentofu image to registry-stage
       pull_request: https://github.com/deckhouse/deckhouse/pull/20006
     - summary: >-
@@ -224,6 +228,8 @@ cloud-provider-vcd:
     - summary: Added secrets with `node-manager` dependencies.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18112
   fixes:
+    - summary: Fix LogrAdapter panic in VCD infra-controller-manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20107
     - summary: Fixed SecurityPolicyException for VCD components.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19021
     - summary: Fixed CVEs in `cloud-provider-vcd`.
@@ -286,6 +292,11 @@ cni-flannel:
         cluster.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16499
       impact: All flannel agents will restart.
+  fixes:
+    - summary: >-
+        Reverted module stage from Deprecated back to General Availability to stop false deprecation
+        alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20294
 cni-simple-bridge:
   features:
     - summary: >-
@@ -343,6 +354,8 @@ control-plane-manager:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19160
 deckhouse:
   features:
+    - summary: Add marketplace features.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20178
     - summary: Webhook-handler will reload exited shell-operator now.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19592
     - summary: Granted RBAC permissions for applications to Deckhouse.
@@ -370,6 +383,8 @@ deckhouse:
     - summary: Improved webhook-handler with webhook-operator and CRDs for more complex user flow.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15160
   fixes:
+    - summary: Switch docs-builder to builder/golang to fix Go stdlib CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20111
     - summary: Revoke permission to use moduleconfig to user.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19672
     - summary: >-
@@ -406,6 +421,8 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/18161
 deckhouse-controller:
   features:
+    - summary: validation check oldself
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20119
     - summary: >-
         Expose application settings (config values with defaults) in Helm templates as
         .Application.Settings
@@ -516,6 +533,8 @@ dhctl:
       pull_request: https://github.com/deckhouse/deckhouse/pull/17564
 docs:
   features:
+    - summary: Add multitenancy-manager module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19502
     - summary: Add cert-manager module architecture section.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19452
     - summary: Add admission-policy-engine module architecture section.
@@ -526,6 +545,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19087
     - summary: Added docs about creating a local account when LDAP synchronization is enabled.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18916
+    - summary: Add csi-ceph module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18909
     - summary: Added an alert for failed documentation renderings.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18756
     - summary: Updates the DVP requirements page.
@@ -541,6 +562,8 @@ docs:
     - summary: Add section for Ldap manual synchronization
       pull_request: https://github.com/deckhouse/deckhouse/pull/18160
   fixes:
+    - summary: Add a general description of container registers DKP
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19976
     - summary: Improvements to the processing of OSS info pages in the PDF version of the documentation.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19873
     - summary: Exclude PDF assets from documentation version upload.
@@ -595,6 +618,12 @@ documentation:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
 ingress-nginx:
   fixes:
+    - summary: Nginx was updated to 1.30.2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20173
+      impact: All Ingress-nginx controller pods will be restarted.
+    - summary: Fixing mount points in a geoproxy image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20099
+      impact: Geoproxy image will be restarted.
     - summary: Nginx is updated up to 1.30.1.
       pull_request: https://github.com/deckhouse/deckhouse/pull/19846
       impact: All Ingress-nginx controller pods will be restarted.
@@ -637,6 +666,8 @@ istio:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
   fixes:
+    - summary: Added CARGO_PROXY to ztunnel image build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20042
     - summary: CNI-node readonly root filesystem enable fix
       pull_request: https://github.com/deckhouse/deckhouse/pull/19920
       impact: When using containerdV2, the performance of istio-cni breaks when mounting internal paths.
@@ -687,6 +718,19 @@ kube-proxy:
         cluster.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16499
       impact: All kube-proxy agents will restart.
+local-path-provisioner:
+  fixes:
+    - summary: >-
+        Grant the default kubeadm `kubernetes-admin` user (`kubeadm:cluster-admins` group) and the
+        user-authz `User` / `ClusterAdmin` access levels permissions on `LocalPathProvisioner` so
+        that `kubectl create -f` on a `LocalPathProvisioner` no longer fails with "Forbidden".
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20286
+    - summary: >-
+        Grant the default kubeadm `kubernetes-admin` user (`kubeadm:cluster-admins` group) and the
+        user-authz `User` / `ClusterEditor` access levels permissions on `LocalPathProvisioner` and
+        the module's `ModuleConfig` so that `kubectl create -f` on a `LocalPathProvisioner` no
+        longer fails with "Forbidden".
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20245
 log-shipper:
   features:
     - summary: Added new transformations and parsing features.
@@ -708,6 +752,12 @@ network-gateway:
   fixes:
     - summary: Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*)
       pull_request: https://github.com/deckhouse/deckhouse/pull/19933
+network-policy-engine:
+  fixes:
+    - summary: >-
+        Reverted module stage from Deprecated back to General Availability to stop false deprecation
+        alerts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20294
 node-local-dns:
   features:
     - summary: Implemented a new `nodeLocalDns` option to disable IPv6 DNS resolving.
@@ -741,6 +791,8 @@ node-manager:
         the API server may occur. This change exposes a new hostPort `6480` for health checks and
         upstreams statistics.
   fixes:
+    - summary: fix webook validation in node-controller on cri changes in nodegroup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20050
     - summary: Added cleanup for oversized MCM MachineSet revision history annotation
       pull_request: https://github.com/deckhouse/deckhouse/pull/19655
     - summary: >-
@@ -803,6 +855,10 @@ registry:
     - summary: Updated auth image Go dependencies to fix Go CVEs.
       pull_request: https://github.com/deckhouse/deckhouse/pull/18234
       impact: Registry pods will be restarted.
+registry-packages-proxy:
+  features:
+    - summary: Add support for download packages icons.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20154
 registrypackages:
   fixes:
     - summary: Replace symlinks with actual files in kubernetes artifacts for werf 2.57.1 compatibility
@@ -836,6 +892,8 @@ tools:
     - summary: add pkg registry fake client
       pull_request: https://github.com/deckhouse/deckhouse/pull/19115
   fixes:
+    - summary: fix data race webhook handler
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20109
     - summary: remove deprecated logger methods
       pull_request: https://github.com/deckhouse/deckhouse/pull/17495
 upmeter:
@@ -843,6 +901,10 @@ upmeter:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
   fixes:
+    - summary: >-
+        observability probes no longer fail when run.ID() produces a digits-only hash of the node
+        name
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20217
     - summary: fix invalid promql expr
       pull_request: https://github.com/deckhouse/deckhouse/pull/19571
     - summary: fix D8UpmeterProbeGarbagePodsFromDeployments flapping
@@ -867,6 +929,8 @@ user-authn:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
       impact: All dex-authenticator pods will be restarted
   fixes:
+    - summary: Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20089
     - summary: fixed openapi test in cse
       pull_request: https://github.com/deckhouse/deckhouse/pull/19088
     - summary: Add "cache" get parameter to prevent stale caches from breaking login page

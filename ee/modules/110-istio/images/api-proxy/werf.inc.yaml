@@ -8,7 +8,6 @@ import:
   owner: "64535"
   group: "64535"
   after: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

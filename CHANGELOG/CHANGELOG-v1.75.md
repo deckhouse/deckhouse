@@ -133,6 +133,7 @@
  - **[admission-policy-engine]** Fixed multiple CVEs in admission-policy-engine module images (ratify, gatekeeper) by updating. dependencies. [#17667](https://github.com/deckhouse/deckhouse/pull/17667)
  - **[admission-policy-engine]** Fixed tri-state semantics for empty arrays and avoided empty objects in OperationPolicy/SecurityPolicy values. [#17343](https://github.com/deckhouse/deckhouse/pull/17343)
  - **[admission-policy-engine]** Added and extend unit tests to cover tri-state behavior (omitted / empty / non-empty) and nested empty-array cases for both hooks. [#17308](https://github.com/deckhouse/deckhouse/pull/17308)
+ - **[admission-policy-engine]** Refactor main documentation page. [#20048](https://github.com/deckhouse/deckhouse/pull/20048)
  - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#19448](https://github.com/deckhouse/deckhouse/pull/19448)
  - **[candi]** Server bootstrap logs are no longer transmitted via nc; Python is used instead. [#17451](https://github.com/deckhouse/deckhouse/pull/17451)
  - **[candi]** Improved static node cleanup script. [#17418](https://github.com/deckhouse/deckhouse/pull/17418)
@@ -189,8 +190,9 @@
     etcd will restart.
  - **[control-plane-manager]** Switched kube-apiserver to structured authorization config with fail-closed webhook. [#17183](https://github.com/deckhouse/deckhouse/pull/17183)
     Authorization webhook now works in fail-closed mode. If the webhook is unavailable, authorization requests are denied instead of falling back to RBAC.
- - **[deckhouse]** Fix exp modules auto enabling. [#19670](https://github.com/deckhouse/deckhouse/pull/19670)
+ - **[csi-vsphere]** Fixed the Deckhouse queue getting stuck [#20092](https://github.com/deckhouse/deckhouse/pull/20092)
  - **[deckhouse]** Fixed global configuration generation. [#19689](https://github.com/deckhouse/deckhouse/pull/19689)
+ - **[deckhouse]** Fix exp modules auto enabling. [#19670](https://github.com/deckhouse/deckhouse/pull/19670)
  - **[deckhouse]** Overwrite currentReleaseImageName on mismatch. [#19412](https://github.com/deckhouse/deckhouse/pull/19412)
  - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19277](https://github.com/deckhouse/deckhouse/pull/19277)
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19169](https://github.com/deckhouse/deckhouse/pull/19169)
@@ -250,6 +252,8 @@
  - **[docs]** Added docs about how NGC execution works. [#17870](https://github.com/deckhouse/deckhouse/pull/17870)
  - **[docs]** Fixed registry-modules-watcher deleting all documentation when registry returns an error. [#16771](https://github.com/deckhouse/deckhouse/pull/16771)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
+ - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20171](https://github.com/deckhouse/deckhouse/pull/20171)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** CVE-2025-15566 is fixed in 1.10 and 1.12 controllers. [#19205](https://github.com/deckhouse/deckhouse/pull/19205)
@@ -291,6 +295,7 @@
     This update triggers a rolling update of the kube-proxy pods.
  - **[log-shipper]** Fixed source-specific log label enrichment and simplified transform processing. [#16989](https://github.com/deckhouse/deckhouse/pull/16989)
     Changing the order of transformations only affects the operation of the log-shipper.
+ - **[monitoring-deckhouse]** Fix module-release alerts (`ModuleReleaseIsWaitingManualApproval`, `ModuleReleaseIsOutdated`, `ModuleReleaseIsBlockedByRequirements`, `ModuleIsInMaintenanceMode`, `D8ModuleOutdatedByMajorVersion`) that never fired on 1.75.x clusters due to a `moduleName`→`module` label mismatch introduced when addon-operator was bumped to v1.19.7 in v1.75.1. [#20112](https://github.com/deckhouse/deckhouse/pull/20112)
  - **[monitoring-kubernetes]** Added unsupported ValidatingAdmissionPolicy API versions on Kubernetes 1.34. [#17007](https://github.com/deckhouse/deckhouse/pull/17007)
  - **[multitenancy-manager]** Fixed multiple CVEs in multitenancy-manager module images by updating dependencies. [#17534](https://github.com/deckhouse/deckhouse/pull/17534)
  - **[network-gateway]** Updated python image source and mitigated pip CVE-2026-1703 [#19114](https://github.com/deckhouse/deckhouse/pull/19114)
@@ -331,6 +336,7 @@
     Containerd will restart.
  - **[terraform-manager]** Fix opentofu patches build after pull request 19080. [#19453](https://github.com/deckhouse/deckhouse/pull/19453)
  - **[terraform-manager]** Fixed terraform CVE. [#17862](https://github.com/deckhouse/deckhouse/pull/17862)
+ - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20076](https://github.com/deckhouse/deckhouse/pull/20076)
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
  - **[user-authn]** Fixed LDAP authentication failure when filter field contains trailing newline from YAML literal block scalar. [#17950](https://github.com/deckhouse/deckhouse/pull/17950)
  - **[user-authn]** Ships Dex Kubernetes storage CRDs with the module to prevent missing-CRD bootstrap failures. [#17885](https://github.com/deckhouse/deckhouse/pull/17885)

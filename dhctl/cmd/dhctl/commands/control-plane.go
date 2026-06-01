@@ -53,11 +53,12 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		if err != nil {
 			return err
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
@@ -104,11 +105,12 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 		if err != nil {
 			return err
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}
-
-		defer cleanupSSHProvider(ctx, sshProviderInitializer)
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {

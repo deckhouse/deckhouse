@@ -27,3 +27,16 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - apps.kruise.io
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

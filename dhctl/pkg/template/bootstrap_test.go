@@ -24,17 +24,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
-
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), dc)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), &options.GlobalOptions{})
 	require.NoError(t, err)
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
@@ -43,7 +38,7 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	templateController := NewTemplateController("")
 	defer templateController.Close()
 
-	err = PrepareBootstrap(context.TODO(), templateController, "127.0.0.1", metaConfig, dc)
+	err = PrepareBootstrap(context.TODO(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: options.DefaultCandiDir})
 	require.NoError(t, err)
 
 	renderedBootstrap, err := os.ReadFile(filepath.Join(templateController.TmpDir, "bootstrap", "01-bootstrap-prerequisites.sh"))

@@ -85,9 +85,27 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		pprofAddr = pprofBindAddress
 	}
 
+	// Leader election is needed only when multiple cpm pods may compete for
+	// cluster-wide work. cpm controllers that touch a specific master (static
+	// pod manifest writes, per-master CRs) are already partitioned by
+	// `spec.nodeName` (see controlPlanePodPredicate, operations-approver, ...),
+	// so on a single-master cluster there is exactly one pod and nothing to
+	// coordinate. Toggle by the LEADER_ELECTION env (set by helm based on
+	// master replica count): true on HA (>1 master), false on single-master.
+	//
+	// Why this matters during bootstrap: cpm's very first reconcile rewrites
+	// the etcd and kube-apiserver static-pod manifests, kubelet restarts those
+	// pods, and the local kubernetes-api-proxy returns RST for the ~60s of the
+	// restart cycle. With LE on, lease renewal exceeded RenewDeadline and the
+	// manager exited with "leader election lost" — kubelet restarted cpm,
+	// progress was lost, cpm redid SyncManifests producing an extra static-pod
+	// restart and a knock-on cilium endpoint regeneration. With LE off (the
+	// single-master case) the renewal pressure is gone entirely.
+	leaderElection := os.Getenv("LEADER_ELECTION") == "true"
+
 	runtimeManager, err := controllerruntime.NewManager(cfg, controllerruntime.Options{
 		Scheme:           scheme,
-		LeaderElection:   true,
+		LeaderElection:   leaderElection,
 		LeaderElectionID: constants.CpcControllerName,
 		BaseContext: func() context.Context {
 			return ctx

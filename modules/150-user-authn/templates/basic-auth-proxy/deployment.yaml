@@ -145,7 +145,7 @@ spec:
         {{- if eq $type "LDAP" }}
         - --ldap-base-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
         - --ldap-client-id=kubernetes
-        - --ldap-client-secret={{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
+        - {{ printf "--ldap-client-secret=%s" .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
         - --ldap-include-user-info-claims=true
         - --ldap-basic-auth-unsupported={{ $config.basicAuthUnsupported | default false }}
         {{- if $config.scopes }}

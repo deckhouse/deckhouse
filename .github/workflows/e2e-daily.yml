@@ -25,7 +25,7 @@ env:
   WERF_DRY_RUN: "false"
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0-dk"
+  WERF_VERSION: "v2.69.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -56,7 +56,7 @@ permissions:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -68,7 +68,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     needs:
     - skip_tests_repos
     outputs:
@@ -896,6 +896,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -912,6 +913,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -930,6 +932,7 @@ jobs:
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e WERF_ENV=${WERF_ENV} \
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
@@ -1026,6 +1029,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \

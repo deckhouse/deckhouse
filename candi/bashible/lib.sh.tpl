@@ -403,6 +403,50 @@ bb-package-remove() {
 
   return "${rc}"
 }
+
+# Wait until rpp-get's prefetched archive for "<name>:<digest>" is on disk. Used by
+# install steps that follow 001_prefetch_registry_packages.sh so each step waits only
+# for the package it actually needs (per-step pipelining: install N starts as soon as
+# its package finishes downloading, instead of waiting for the full prefetch batch).
+#
+# The archive path is the same one rpp-get's installPackage hits in its cache check
+# (`<TempDir>/registrypackages/<name>/<digest>.tar.gz` — utils.go:31). rpp-get writes
+# the file atomically via `<archive>.part` → rename, so the file's existence implies
+# a complete download.
+#
+# If the prefetch unit died (failed/missing) or the wait times out, return non-zero
+# so the caller falls back to inline rpp-get install/fetch (which re-downloads).
+bb-rpp-wait-fetched() {
+  local name="$1"
+  local digest="$2"
+  local tempdir="${BB_RP_FETCHED_STORE:-/opt/deckhouse/tmp/registrypackages}"
+  local archive="${tempdir}/${name}/${digest}.tar.gz"
+  local deadline=$((SECONDS + 600))
+  local svc="rpp-prefetch.service"
+  local svc_state
+
+  while [ $SECONDS -lt $deadline ]; do
+    if [ -f "$archive" ]; then
+      return 0
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+      svc_state="$(systemctl is-active "$svc" 2>/dev/null || true)"
+      case "$svc_state" in
+        active|activating|reloading)
+          # Prefetch still running — keep waiting for this specific archive.
+          ;;
+        *)
+          # Service finished (inactive/dead/failed) and our archive is not on disk —
+          # this package was not in the prefetch batch (or prefetch failed for it).
+          # Bail out so caller falls back to inline rpp-get install.
+          return 1
+          ;;
+      esac
+    fi
+    sleep 1
+  done
+  return 1
+}
 {{- end }}
 
 {{- define "get-phase2" -}}

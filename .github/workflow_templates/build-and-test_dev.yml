@@ -123,16 +123,6 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
-  security_scan_images:
-    name: Security scan images
-    if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
-    runs-on: [self-hosted, large]
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
-
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
@@ -210,7 +200,7 @@ jobs:
       - go_generate
       - dhctl_tests
       - tests
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run

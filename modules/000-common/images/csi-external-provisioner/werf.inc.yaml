@@ -18,7 +18,6 @@ import:
   add: /csi-provisioner
   to: /csi-provisioner
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
@@ -72,5 +71,7 @@ shell:
   - cp bin/csi-provisioner /csi-provisioner
   - chown 64535:64535 /csi-provisioner
   - chmod 0755 /csi-provisioner
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

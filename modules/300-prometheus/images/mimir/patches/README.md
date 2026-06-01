@@ -43,16 +43,31 @@ does not evaluate PromQL, so only parser-level recognition is needed.
 Bump dependencies to fix CVEs:
 - [CVE-2026-33186](https://github.com/advisories/GHSA-prj3-ccx8-p6x4) — `google.golang.org/grpc` bumped from v1.65.0 (replace pin) / v1.66.0 (require) to v1.79.3.
 - [CVE-2026-34986](https://github.com/advisories/GHSA-78h2-9frx-2jm8) — `github.com/go-jose/go-jose/v4` bumped from v4.0.5 to v4.1.4.
+- [CVE-2026-29181](https://github.com/advisories/GHSA-mh2q-q3fh-2475) — `go.opentelemetry.io/otel` bumped from v1.29.0 to v1.43.0 (multi-value `baggage` header extraction causes excessive allocations).
+- [CVE-2026-24051](https://github.com/advisories/GHSA-9h8m-3fm2-qjrq) — `go.opentelemetry.io/otel/sdk` bumped from v1.28.0 to v1.43.0 (Darwin `ioreg` PATH hijacking in resource detection).
+- [CVE-2026-39883](https://github.com/advisories/GHSA-hfvc-g4fc-pqhx) — `go.opentelemetry.io/otel/sdk` bumped from v1.28.0 to v1.43.0 (BSD/Solaris `kenv` PATH hijacking in resource detection).
+
+The `replace google.golang.org/grpc => google.golang.org/grpc v1.65.0` pin
+from upstream `go.mod` is removed by this patch.
+
+`go.opentelemetry.io/otel v1.43.0` requires `go >= 1.25.0` in its `go.mod`,
+so the `go` directive is bumped from `1.24.0` to `1.25.8`.
 
 Generated with:
 
 ```sh
-go get google.golang.org/grpc@v1.79.3
-go get github.com/go-jose/go-jose/v4@v4.1.4
+go mod edit -dropreplace=google.golang.org/grpc -go=1.25.8
+go get google.golang.org/grpc@v1.79.3 \
+       github.com/go-jose/go-jose/v4@v4.1.4 \
+       go.opentelemetry.io/otel@v1.43.0 \
+       go.opentelemetry.io/otel/metric@v1.43.0 \
+       go.opentelemetry.io/otel/trace@v1.43.0 \
+       go.opentelemetry.io/otel/sdk@v1.43.0
 go mod tidy
 ```
 
-`go mod tidy` pulls a few transitive bumps that grpc `v1.79.x` requires.
+`go mod tidy` pulls a few transitive bumps that grpc `v1.79.x` and otel
+`v1.43.x` require.
 
 ### 005-grpc-health-list.patch
 

@@ -25,7 +25,7 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -62,8 +62,8 @@ type moduleMetadata struct {
 
 // packageChangelog represents user-facing release notes for a package version.
 type packageChangelog struct {
-	Features []string `yaml:"features,omitempty"`
-	Fixes    []string `yaml:"fixes,omitempty"`
+	Features []string `yaml:"features,omitempty" json:"features,omitempty"`
+	Fixes    []string `yaml:"fixes,omitempty" json:"fixes,omitempty"`
 }
 
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
@@ -109,14 +109,14 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 	switch {
 	case mr.packageReader.Len() > 0:
 		var def dto.ModuleDefinition
-		if err := yaml.NewDecoder(mr.packageReader).Decode(&def); err != nil {
+		if err := yaml.Unmarshal(mr.packageReader.Bytes(), &def); err != nil {
 			return nil, fmt.Errorf("decode package.yaml: %w", err)
 		}
 
 		meta.packageDefinition = &def
 	case mr.moduleReader.Len() > 0:
 		var def moduletypes.Definition
-		if err := yaml.NewDecoder(mr.moduleReader).Decode(&def); err != nil {
+		if err := yaml.Unmarshal(mr.moduleReader.Bytes(), &def); err != nil {
 			return nil, fmt.Errorf("decode module.yaml: %w", err)
 		}
 
@@ -124,7 +124,7 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 	}
 
 	if mr.changelogReader.Len() > 0 {
-		if err := yaml.NewDecoder(mr.changelogReader).Decode(&meta.changelog); err != nil {
+		if err := yaml.Unmarshal(mr.changelogReader.Bytes(), &meta.changelog); err != nil {
 			r.logger.Warn("unmarshal package changelog", log.Err(err))
 		}
 	}
