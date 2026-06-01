@@ -43,11 +43,11 @@ spec:
                   description: |
                     Indicates who initiated the check. Possible values:
 
-                    * `admin`: By an administrator.
-                    * `system`: Automatically by the system.
+                    * `Admin`: By an administrator.
+                    * `System`: Automatically by the system.
                   enum:
-                    - "admin"
-                    - "system"
+                    - "Admin"
+                    - "System"
             status:
               type: object
               properties:
