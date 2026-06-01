@@ -73,7 +73,6 @@ import:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    user: "1337:1337"
     env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489", "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
     workingDir: "/"
     entrypoint: ["/usr/local/bin/pilot-agent"]

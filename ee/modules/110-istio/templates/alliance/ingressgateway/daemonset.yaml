@@ -175,6 +175,9 @@ spec:
           timeoutSeconds: 3
           failureThreshold: 30
         securityContext:
+          allowPrivilegeEscalation: false
+          seccompProfile:
+            type: RuntimeDefault
           runAsGroup: 1337
           runAsNonRoot: true
           runAsUser: 1337

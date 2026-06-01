@@ -18,7 +18,6 @@ import:
   after: setup
 imageSpec:
   config:
-    user: "1337:1337"
     entrypoint: ["/usr/local/bin/operator"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
