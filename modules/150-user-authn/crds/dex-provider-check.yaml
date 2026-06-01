@@ -1,0 +1,107 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dexproviderchecks.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: dexproviderchecks
+    singular: dexprovidercheck
+    kind: DexProviderCheck
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes a one-time connectivity check for a DexProvider.
+
+            The check verifies that the provider exists, is enabled, Dex is reachable,
+            and the provider endpoint is reachable. It does not perform a full user
+            authentication flow.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - providerName
+              properties:
+                providerName:
+                  type: string
+                  description: Name of the DexProvider resource to check.
+                  x-doc-examples: ['my-oidc']
+                initiatorType:
+                  type: string
+                  description: |
+                    Indicates who initiated the check. Possible values:
+
+                    * `admin`: By an administrator.
+                    * `system`: Automatically by the system.
+                  enum:
+                    - "admin"
+                    - "system"
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    Current phase of the check. Possible values:
+
+                    * `Succeeded`: Connectivity check completed successfully.
+                    * `Failed`: Connectivity check failed.
+                  enum:
+                    - "Succeeded"
+                    - "Failed"
+                message:
+                  type: string
+                  description: Optional summary of the result or failure reason.
+                observedDexProviderGeneration:
+                  type: integer
+                  format: int64
+                  description: DexProvider generation observed by the check.
+                checks:
+                  type: array
+                  description: Detailed results for individual check steps.
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - status
+                    properties:
+                      name:
+                        type: string
+                        description: Check step name.
+                      status:
+                        type: string
+                        description: Check step status.
+                        enum:
+                          - "Succeeded"
+                          - "Failed"
+                          - "Skipped"
+                      message:
+                        type: string
+                        description: Optional check step message.
+                completedAt:
+                  type: string
+                  description: Time when the check completed.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Provider
+          type: string
+          jsonPath: .spec.providerName
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: CompletedAt
+          type: string
+          jsonPath: .status.completedAt
