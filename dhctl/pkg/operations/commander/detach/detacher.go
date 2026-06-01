@@ -22,7 +22,7 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -83,7 +83,7 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 
 	_, _ = op.PhasedExecutionContext.StartPhase(ctx, phases.CommanderDetachCheckPhase, false, stateCache)
 
-	err = log.ProcessCtx(ctx, "commander/detach", "Check cluster", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Check cluster", func(ctx context.Context) error {
 		op.Checker.SetExternalPhasedContext(op.PhasedExecutionContext)
 
 		checkRes, cleanup, err := op.Checker.Check(ctx)
@@ -103,7 +103,7 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 	defer func() {
 		err = providerCleanup()
 		if err != nil {
-			op.Checker.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot cleanup provider: %v", err))
 		}
 	}()
 
@@ -113,8 +113,9 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 
 	_, _ = op.PhasedExecutionContext.SwitchPhase(ctx, phases.CommanderDetachDetachPhase, false, stateCache, nil)
 
-	err = log.ProcessCtx(ctx, "commander/detach", "Update resources", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Update resources", func(ctx context.Context) error {
 		detachResources, err := template.ParseResourcesContent(
+			ctx,
 			op.CreateDetachResources.Template,
 			op.CreateDetachResources.Values,
 		)
@@ -127,7 +128,7 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, detachResources, nil)
+		checkers, err := resources.GetCheckers(ctx, kubeClient, detachResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
@@ -143,8 +144,9 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = log.ProcessCtx(ctx, "commander/detach", "Remove commander resources", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Remove commander resources", func(ctx context.Context) error {
 		detachResources, err := template.ParseResourcesContent(
+			ctx,
 			op.DeleteDetachResources.Template,
 			op.DeleteDetachResources.Values,
 		)

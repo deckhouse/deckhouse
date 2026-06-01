@@ -26,7 +26,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var versionsForTest = []string{legacyVersion, "3.14.1"}
@@ -60,7 +59,7 @@ func TestVersionsContentLegacy(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithClient(context.TODO(), testGetLegacyClient(), set, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithClient(context.TODO(), testGetLegacyClient(), set)
 
 	require.NoError(t, err)
 	require.Equal(t, version, legacyVersion)
@@ -84,7 +83,7 @@ func TestVersionsContentCurrent(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithClient(context.TODO(), testGetCurrentClient(), set, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithClient(context.TODO(), testGetCurrentClient(), set)
 
 	require.NoError(t, err)
 	require.Equal(t, version, versionsForTest[1])
@@ -102,10 +101,8 @@ terraform {
 }
 
 func TestVCDClientProvider(t *testing.T) {
-	logger := log.GetDefaultLogger()
-
 	assertError := func(t *testing.T, c *config.MetaConfig) {
-		_, err := newVcdCloudClient(c, logger)
+		_, err := newVcdCloudClient(c)
 		require.Error(t, err)
 	}
 
@@ -150,7 +147,7 @@ func TestVCDClientProvider(t *testing.T) {
 
 	// valid url
 	setProviderConfig(t, cfg, "https://my-server:8080")
-	c, err := newVcdCloudClient(cfg, logger)
+	c, err := newVcdCloudClient(cfg)
 	require.NoError(t, err)
 	require.False(t, govalue.IsNil(c))
 }

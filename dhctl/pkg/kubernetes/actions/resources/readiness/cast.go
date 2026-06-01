@@ -15,10 +15,10 @@
 package readiness
 
 import (
+	"context"
 	"fmt"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"reflect"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type (
@@ -75,16 +75,16 @@ func castVal[T any](raw any, castErr castErrorFunc) castResult[T] {
 	}
 }
 
-func notFoundFuncDebugLogNotReady(logger log.Logger, resourceName string) castErrorFunc {
+func notFoundFuncDebugLogNotReady(ctx context.Context, resourceName string) castErrorFunc {
 	return func(key, _ string) (bool, error) {
-		logger.LogDebugF("Resource %s is not ready, because key %s not found.\n", resourceName, key)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s is not ready, because key %s not found.", resourceName, key))
 		return false, nil
 	}
 }
 
-func notFoundFuncDebugLogReady(logger log.Logger, resourceName string) castErrorFunc {
+func notFoundFuncDebugLogReady(ctx context.Context, resourceName string) castErrorFunc {
 	return func(key, _ string) (bool, error) {
-		logger.LogDebugF("Resource %s is ready, because key %s not found.\n", resourceName, key)
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Resource %s is ready, because key %s not found.", resourceName, key))
 		return true, nil
 	}
 }

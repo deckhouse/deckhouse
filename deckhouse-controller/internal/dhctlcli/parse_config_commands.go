@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -42,10 +41,8 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		var err error
 		var metaConfig *config.MetaConfig
 
-		logger := log.GetDefaultLogger()
-
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(logger),
+			infrastructureprovider.NewPreparatorProviderParams(),
 		)
 
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.

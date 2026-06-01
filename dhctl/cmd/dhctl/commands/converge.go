@@ -20,6 +20,8 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -27,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -46,9 +48,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
@@ -63,7 +63,6 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
 			GlobalOptions:    &opts.Global,
 		})
@@ -83,7 +82,6 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			},
 			ProviderGetter:     providerGetter,
 			TmpDir:             opts.Global.TmpDir,
-			Logger:             logger,
 			IsDebug:            opts.Global.IsDebug,
 			Options:            opts,
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
@@ -95,7 +93,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		}
 
 		if sshProviderInitializer != nil {
-			if sshProviderInitializer.CheckHosts() {
+			if sshProviderInitializer.CheckHosts(ctx) {
 				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 				if err != nil {
 					return err
@@ -143,9 +141,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
 			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
@@ -160,7 +156,6 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
 			GlobalOptions:    &opts.Global,
 		})
@@ -180,7 +175,6 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 			},
 			ProviderGetter: providerGetter,
 			TmpDir:         opts.Global.TmpDir,
-			Logger:         logger,
 			IsDebug:        opts.Global.IsDebug,
 			Options:        opts,
 		})
@@ -201,9 +195,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		logger := log.GetDefaultLogger()
-
-		loggerProvider := log.ExternalLoggerProvider(logger)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
@@ -216,12 +208,9 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			}
 		}
 
-		loggerFor := log.GetDefaultLogger()
-
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           loggerFor,
 			IsDebug:          opts.Global.IsDebug,
 			GlobalOptions:    &opts.Global,
 		})
@@ -242,7 +231,6 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			CheckHasTerraformStateBeforeMigration: opts.Converge.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
 			TmpDir:                                opts.Global.TmpDir,
-			Logger:                                loggerFor,
 			IsDebug:                               opts.Global.IsDebug,
 			Options:                               opts,
 		})
@@ -253,7 +241,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 		}
 
 		if sshProviderInitializer != nil {
-			if sshProviderInitializer.CheckHosts() {
+			if sshProviderInitializer.CheckHosts(ctx) {
 				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 				if err != nil {
 					return err

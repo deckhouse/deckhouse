@@ -47,7 +47,7 @@ func TestCleanupsDoesNotPanic(t *testing.T) {
 	provider := newKubeClientProvider(kubeProvider)
 
 	cleanupTest := func() {
-		provider.Cleanup(true)
+		provider.Cleanup(context.Background(), true)
 	}
 	require.NotPanics(t, cleanupTest)
 	// double call not panic

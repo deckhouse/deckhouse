@@ -17,6 +17,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/name212/govalue"
 
@@ -24,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
@@ -34,7 +34,7 @@ import (
 
 type infraDestroyerProvider struct {
 	stateCache           dhctlstate.Cache
-	loggerProvider       log.LoggerProvider
+	logger               *slog.Logger
 	kubeProvider         kube.ClientProviderWithCleanup
 	phasesActionProvider phases.DefaultActionProvider
 
@@ -71,9 +71,9 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 	}
 
 	return cloud.NewDestroyer(&cloud.DestroyerParams{
-		LoggerProvider: f.loggerProvider,
-		KubeProvider:   f.kubeProvider,
-		State:          cloud.NewDestroyState(f.stateCache),
+		Logger:       f.logger,
+		KubeProvider: f.kubeProvider,
+		State:        cloud.NewDestroyState(f.stateCache),
 
 		ClusterInfra: clusterInfra,
 		StateLoader:  stateLoader,
@@ -97,7 +97,7 @@ func (f *infraDestroyerProvider) Static(context.Context, *config.MetaConfig) (in
 		SSHClientProvider:    f.sshClientProvider,
 		KubeProvider:         f.kubeProvider,
 		State:                static.NewDestroyState(f.stateCache),
-		LoggerProvider:       f.loggerProvider,
+		Logger:               f.logger,
 		PhasedActionProvider: f.phasesActionProvider,
 
 		TmpDir: f.tmpDir,

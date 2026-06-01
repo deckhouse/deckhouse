@@ -24,14 +24,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func TestExporterGetStatistic(t *testing.T) {
-	log.InitLogger("json", false)
 
 	kubeCl := client.NewFakeKubernetesClient()
 	retry.InTestEnvironment = true
@@ -47,7 +45,6 @@ func TestExporterGetStatistic(t *testing.T) {
 			GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
 			CounterMetrics:  make(map[string]*prometheus.CounterVec),
 			isDebug:         false,
-			logger:          log.GetDefaultLogger(),
 			tmpDir:          t.TempDir(),
 		}
 	}
@@ -55,8 +52,9 @@ func TestExporterGetStatistic(t *testing.T) {
 	exporter.registerMetrics()
 
 	t.Run("Should increment errors metric because nothing exists in a cluster", func(t *testing.T) {
-		dummyCleaner := cache.NewDummyTmpCleaner(log.GetDefaultLoggerProvider(), "")
-		exporter.recordStatistic(exporter.getStatistic(context.Background(), dummyCleaner))
+		dummyCleaner := cache.NewDummyTmpCleaner("")
+		stat, hasTerraformState := exporter.getStatistic(context.Background(), dummyCleaner)
+		exporter.recordStatistic(context.Background(), stat, hasTerraformState)
 
 		errorsCounter, err := exporter.CounterMetrics["errors"].GetMetricWith(prometheus.Labels{})
 		require.NoError(t, err)
@@ -74,7 +72,7 @@ func TestExporterGetStatistic(t *testing.T) {
 			},
 		}
 
-		exporter.recordStatistic(&statistic, false)
+		exporter.recordStatistic(context.Background(), &statistic, false)
 		firstNodesStatus, err := exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-0",
@@ -104,7 +102,7 @@ func TestExporterGetStatistic(t *testing.T) {
 		}
 
 		// if node disappears from statistic, we should mark its status as 0
-		exporter.recordStatistic(&statisticWithoutOneNode, false)
+		exporter.recordStatistic(context.Background(), &statisticWithoutOneNode, false)
 
 		secondNodeStatus, err = exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",

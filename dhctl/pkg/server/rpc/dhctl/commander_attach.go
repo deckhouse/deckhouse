@@ -27,6 +27,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -168,7 +169,7 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	loggerFor := initDhctlLogger(ctx, p)
+	ctx = initDhctlLoggerCtx(ctx, p)
 
 	opts := newRequestOptions(
 		s.params.CacheDir,
@@ -177,15 +178,15 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
 
-	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
 
 	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
 		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
@@ -224,7 +225,6 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 		},
 		ScanOnly: p.request.ScanOnly,
 		TmpDir:   s.params.TmpDir,
-		Logger:   loggerFor,
 		IsDebug:  s.params.IsDebug,
 		Options:  opts,
 	})

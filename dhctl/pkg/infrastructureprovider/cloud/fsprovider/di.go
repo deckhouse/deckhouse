@@ -15,12 +15,12 @@
 package fsprovider
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -72,7 +72,7 @@ func isFile(file, errPrefix string) error {
 	return nil
 }
 
-func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
+func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 	if params == nil {
 		return nil, fmt.Errorf("no fs.DI params provided")
 	}
@@ -94,9 +94,9 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 	}
 
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
-		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
-		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
-		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
+		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, loadOrGetStore),
+		InfraUtilProvider:   newInfrastructureUtilProvider(params.BinariesDir),
+		InfraPluginProvider: newPluginsProvider(params.PluginsDir),
+		ModulesProvider:     newModulesProvider(params.CloudProviderDir),
 	}, nil
 }

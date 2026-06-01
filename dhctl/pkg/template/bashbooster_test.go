@@ -59,7 +59,7 @@ func TestRenderBashBooster(t *testing.T) {
 	}
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(context.Background(), "10.0.0.2")
 	if err != nil {
 		t.Fatalf("ConfigForBashibleBundleTemplate error: %v", err)
 	}

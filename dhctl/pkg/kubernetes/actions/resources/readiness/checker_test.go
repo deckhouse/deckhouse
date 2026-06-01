@@ -23,8 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestStaticInstanceChecker(t *testing.T) {
@@ -2024,12 +2022,7 @@ func assertChecker(t *testing.T, tst testChecker) {
 	gvk := obj.GroupVersionKind()
 	require.False(t, gvk.Empty(), tst.testName)
 
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
-	params := GetCheckerParams{
-		LoggerProvider: log.SimpleLoggerProvider(logger),
-	}
-
-	checker, err := GetCheckerByGvk(&gvk, params)
+	checker, err := GetCheckerByGvk(&gvk, GetCheckerParams{})
 	require.NoError(t, err, tst.testName)
 	require.False(t, govalue.IsNil(checker), tst.testName)
 	require.IsType(t, tst.checkerType, checker, tst.testName)

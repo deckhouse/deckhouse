@@ -15,11 +15,12 @@
 package infrastructure
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -71,7 +72,8 @@ func IsTerraformState(output []byte) (bool, error) {
 		return false, err
 	}
 
-	log.DebugF("Terraform Version: %s\n", parsedVersion)
+	ctx := context.Background()
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Terraform Version: %s", parsedVersion))
 
 	res := parsedVersion == DefaultTerraformVersions.Terraform
 

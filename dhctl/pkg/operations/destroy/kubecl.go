@@ -17,11 +17,12 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type kubeClientProvider struct {
@@ -45,10 +46,10 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 	return &client.KubernetesClient{KubeClient: kubeCl}, nil
 }
 
-func (p *kubeClientProvider) Cleanup(stopSSH bool) {
-	err := p.kubeProvider.Cleanup(context.Background())
+func (p *kubeClientProvider) Cleanup(ctx context.Context, stopSSH bool) {
+	err := p.kubeProvider.Cleanup(ctx)
 	if err != nil {
-		log.WarnF("failed to cleanup kube provider: %v", err)
+		dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf("failed to cleanup kube provider: %v", err), "\n"))
 	}
 }
 
@@ -65,4 +66,4 @@ func newKubeClientErrorProvider(msg string) *kubeClientErrorProvider {
 func (p *kubeClientErrorProvider) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
 	return nil, fmt.Errorf("Unable to get kube client: '%s'", p.msg)
 }
-func (p *kubeClientErrorProvider) Cleanup(bool) {}
+func (p *kubeClientErrorProvider) Cleanup(context.Context, bool) {}

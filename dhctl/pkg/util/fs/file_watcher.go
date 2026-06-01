@@ -15,12 +15,14 @@
 package fs
 
 import (
+	"context"
+	"fmt"
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
-func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}, logger log.Logger) (*fsnotify.Watcher, error) {
+func StartFileWatcher(ctx context.Context, path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}) (*fsnotify.Watcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -30,7 +32,7 @@ func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), do
 		return nil, err
 	}
 
-	logger.LogInfoF("Start watcher for file %s\n", path)
+	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Start watcher for file %s", path))
 
 	go func() {
 		defer close(done)
@@ -49,7 +51,7 @@ func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), do
 					// r.stateWatcher.Close() was called
 					return
 				}
-				logger.LogWarnF("fs watcher: %v\n", err.Error())
+				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("fs watcher: %v", err.Error()))
 			}
 		}
 	}()

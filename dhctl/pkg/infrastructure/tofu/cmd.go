@@ -24,7 +24,7 @@ import (
 	"syscall"
 
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 type RunExecutorParams struct {
@@ -55,7 +55,7 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 	if workingDir != "" {
 		fullArgs = append([]string{fmt.Sprintf("-chdir=%s", workingDir)}, args...)
 	}
-	log.DebugF("Tofu Command:\n opentofu %s\n", strings.Join(fullArgs, " "))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Tofu Command:\n opentofu %s", strings.Join(fullArgs, " ")))
 
 	cmd := exec.CommandContext(ctx, params.TofuBinPath, fullArgs...)
 
@@ -72,7 +72,7 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		fmt.Sprintf("TF_DATA_DIR=%s", dataDir),
 	)
 
-	envs = appendLogEnvs(envs)
+	envs = appendLogEnvs(ctx, envs)
 
 	// this uses for skip destructive changes after migration to ready resource
 	// in cloud provider dvp, because changing depends_on data source produce
@@ -115,12 +115,12 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		cmd.Env = append(cmd.Env, "TF_REATTACH_PROVIDERS="+reattach)
 	}
 
-	log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Tofu Command envs:\n %s", strings.Join(cmd.Env, " ")))
 
 	return cmd
 }
 
-func appendLogEnvs(envs []string) []string {
+func appendLogEnvs(ctx context.Context, envs []string) []string {
 	const (
 		coreEnv     = "TF_LOG_CORE"
 		providerEnv = "TF_LOG_PROVIDER"
@@ -131,13 +131,13 @@ func appendLogEnvs(envs []string) []string {
 
 	for _, e := range envs {
 		if strings.HasPrefix(e, coreEnv) {
-			log.DebugF("Found opentofu core log env %s\n", e)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found opentofu core log env %s", e))
 			coreVal = ""
 			continue
 		}
 
 		if strings.HasPrefix(e, providerEnv) {
-			log.DebugF("Found opentofu provider log env %s\n", e)
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found opentofu provider log env %s", e))
 			providerVal = ""
 			continue
 		}

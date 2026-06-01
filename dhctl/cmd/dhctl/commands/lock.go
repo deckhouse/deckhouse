@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -48,12 +47,11 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params, err := app.DefaultProviderParams(&opts.Global)
+		params, err := app.DefaultProviderParams(ctx, &opts.Global)
 		if err != nil {
 			return err
 		}
@@ -69,7 +67,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return err
 		}
 
-		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
@@ -102,7 +100,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return nil
 		}
 
-		cnf := lock.GetLockLeaseConfig("lock-releaser", opts.SSH.User)
+		cnf := lock.GetLockLeaseConfig(ctx, "lock-releaser", opts.SSH.User)
 		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
 }

@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -35,13 +34,11 @@ var versionFile = "terraform_versions.yml"
 type pluginsProvider struct {
 	m sync.Mutex
 
-	logger     log.Logger
 	pluginsDir string
 }
 
-func newPluginsProvider(logger log.Logger, pluginsDir string) *pluginsProvider {
+func newPluginsProvider(pluginsDir string) *pluginsProvider {
 	return &pluginsProvider{
-		logger:     logger,
 		pluginsDir: pluginsDir,
 	}
 }
@@ -53,7 +50,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	source := fsproviderpath.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
 	_, err := os.Stat(source)
 	if err == nil {
-		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
 	sectionName := params.Settings.CloudName()
@@ -71,7 +68,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		if err := copyTFVersionFile(conf.DownloadRootDir); err != nil {
 			return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 		}
-		return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
@@ -81,7 +78,7 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fmt.Errorf("could not copy terraform_versions.yml: %w", err)
 	}
 
-	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 }
 
 func copyTFVersionFile(downloadRootDir string) error {

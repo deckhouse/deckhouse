@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,14 +25,15 @@ import (
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
+	"log/slog"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 var testTmpDirLockCheckDir = path.Join(os.TempDir(), "dhctl-check-lock-tmp")
 
-func cleanupTmpLockCheckTestDir(logger log.Logger) {
+func cleanupTmpLockCheckTestDir(logger *slog.Logger) {
 	incorrect := []string{"", ".", ".."}
 	if slices.Contains(incorrect, testTmpDirLockCheckDir) {
 		return
@@ -48,15 +50,15 @@ func cleanupTmpLockCheckTestDir(logger log.Logger) {
 	err := os.RemoveAll(testTmpDirLockCheckDir)
 
 	if err != nil {
-		logger.LogErrorF("Error cleaning up test dir '%s': %v\n", testTmpDirLockCheckDir, err)
+		logger.Error(fmt.Sprintf("Error cleaning up test dir '%s': %v\n", testTmpDirLockCheckDir, err))
 		return
 	}
 
-	logger.LogInfoF("Test dir '%s' was removed\n", testTmpDirLockCheckDir)
+	logger.Info(fmt.Sprintf("Test dir '%s' was removed\n", testTmpDirLockCheckDir))
 }
 
 func TestTmpDirLockAlreadyAcquired(t *testing.T) {
-	logger := log.GetDefaultLogger()
+	logger := dhlog.Discard()
 
 	defer cleanupTmpLockCheckTestDir(logger)
 
@@ -253,7 +255,7 @@ func TestTmpDirLockAlreadyAcquired(t *testing.T) {
 type tmpDirLockAlreadyAcquiredBase struct {
 	title       string
 	errorPrefix *string
-	logger      log.Logger
+	logger      *slog.Logger
 }
 
 type tmpDirLockAlreadyAcquiredParams struct {
@@ -267,7 +269,7 @@ type tmpDirLockAlreadyAcquiredTest struct {
 	tmpDirLockAlreadyAcquiredBase
 
 	dirForCheck string
-	logger      log.Logger
+	logger      *slog.Logger
 }
 
 func createTmpDirLockAlreadyAcquiredTest(t *testing.T, params tmpDirLockAlreadyAcquiredParams) tmpDirLockAlreadyAcquiredTest {

@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -1021,7 +1020,7 @@ func testResourceReadinessChecker(t *testing.T, resourceYAML string) *resourceRe
 func testResourceReadinessCheckerWithOptionalCreatingResource(t *testing.T, resourceYAML string, createResource bool) *resourceReadinessChecker {
 	require.NotEmpty(t, resourceYAML)
 
-	resources, err := template.ParseResourcesContent(resourceYAML, make(map[string]any))
+	resources, err := template.ParseResourcesContent(context.Background(), resourceYAML, make(map[string]any))
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
 
@@ -1062,10 +1061,8 @@ func testResourceReadinessCheckerWithOptionalCreatingResource(t *testing.T, reso
 	}
 
 	kubeProvider := kubernetes.NewSimpleKubeClientGetter(kubeCl)
-	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
 
 	checker, err := newResourceIsReadyChecker(resource, constructorParams{
-		loggerProvider: log.SimpleLoggerProvider(logger),
 		// do not need
 		metaConfig:   nil,
 		kubeProvider: kubeProvider,

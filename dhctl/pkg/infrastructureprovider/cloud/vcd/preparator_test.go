@@ -22,16 +22,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPreparator {
 	p := NewMetaConfigPreparator(MetaConfigPreparatorParams{
 		PrepareMetaConfig:     prepareConfig,
 		ValidateClusterPrefix: true,
-	}, log.GetDefaultLogger())
+	})
 
-	p.clientProvider = func(_ *config.MetaConfig, _ log.Logger) (cloudClient, error) {
+	p.clientProvider = func(_ *config.MetaConfig) (cloudClient, error) {
 		return client, nil
 	}
 

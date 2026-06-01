@@ -35,7 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -115,7 +115,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	}
 
 	if !runner.HasVMDestruction() {
-		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return false, nil
 	}
 
@@ -141,7 +141,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
 		h.oldMasterIPForSSH = ""
-		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s.", h.nodeToConverge))
 		return false, nil
 	}
 
@@ -177,7 +177,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	}
 
 	if !runner.HasVMDestruction() {
-		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		dhlog.FromContext(ctx).InfoContext(ctx, "Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return nil
 	}
 
@@ -191,7 +191,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	}
 
 	if !h.commanderMode {
-		cl, err := h.sshProvider.Client(context.Background())
+		cl, err := h.sshProvider.Client(ctx)
 		if err != nil {
 			panic("Node interface is not ssh")
 		}

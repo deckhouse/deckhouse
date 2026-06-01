@@ -793,7 +793,7 @@ func TestPullImage(t *testing.T) {
 				}
 				ref, err := name.ParseReference(c.imgRef)
 				require.NoError(t, err)
-				opts, err := getOptsFromRegistryConfig(ref, c.rc)
+				opts, err := getOptsFromRegistryConfig(context.Background(), ref, c.rc)
 				require.NoError(t, err)
 
 				_, err = pullImage(context.Background(), ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"), false)

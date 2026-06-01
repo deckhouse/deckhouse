@@ -18,4 +18,6 @@
 {{- $wrapperIndex := "systemctlPowerCommandsWrapper" }}
 {{- $wrapperVersion := "0.2" | replace "." "" }}
 
+some-syntaxis-error
+
 rpp-get install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"

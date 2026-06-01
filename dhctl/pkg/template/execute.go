@@ -16,12 +16,13 @@ package template
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 const (
@@ -38,10 +39,10 @@ type RenderedTemplate struct {
 // RenderTemplatesDir renders each file in templatesDir.
 // Files are rendered separately, so no support for
 // libraries, like in Helm.
-func RenderTemplatesDir(templatesDir string, data map[string]interface{}, ignoreMap map[string]struct{}) ([]RenderedTemplate, error) {
+func RenderTemplatesDir(ctx context.Context, templatesDir string, data map[string]interface{}, ignoreMap map[string]struct{}) ([]RenderedTemplate, error) {
 	files, err := os.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
-		log.InfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Templates directory %q does not exist. Skipping...", templatesDir))
 		return nil, nil
 	}
 
@@ -124,8 +125,8 @@ func NewTemplateController(tmpDir string) *Controller {
 	return &Controller{TmpDir: tmpDir}
 }
 
-func (t *Controller) RenderAndSaveTemplates(fromDir, toDir string, data map[string]interface{}, ignoreMap map[string]struct{}) error {
-	renderedTemplates, err := RenderTemplatesDir(fromDir, data, ignoreMap)
+func (t *Controller) RenderAndSaveTemplates(ctx context.Context, fromDir, toDir string, data map[string]interface{}, ignoreMap map[string]struct{}) error {
+	renderedTemplates, err := RenderTemplatesDir(ctx, fromDir, data, ignoreMap)
 	if err != nil {
 		return fmt.Errorf("render templates: %v", err)
 	}

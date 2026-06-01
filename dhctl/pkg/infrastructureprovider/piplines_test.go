@@ -207,7 +207,7 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 		providerYandex, err := getter(ctx, providerYandexMetaConfig)
 		require.NoError(t, err, "should provide meta config")
 
-		executor, err := providerYandex.Executor(ctx, infrastructure.MasterNodeStep, params.Logger)
+		executor, err := providerYandex.Executor(ctx, infrastructure.MasterNodeStep)
 		require.NoError(t, err, "should create executor")
 
 		for _, c := range cases {
@@ -222,7 +222,7 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 		providerGCP, err := getter(ctx, cfgProviderGCP)
 		require.NoError(t, err, "should provide meta config")
 
-		executor, err := providerGCP.Executor(ctx, infrastructure.MasterNodeStep, params.Logger)
+		executor, err := providerGCP.Executor(ctx, infrastructure.MasterNodeStep)
 		require.NoError(t, err, "should create executor")
 
 		for _, c := range cases {
@@ -358,7 +358,7 @@ func TestPipelineGetMasterIPs(t *testing.T) {
 		providerYandex, err := getter(ctx, providerYandexMetaConfig)
 		require.NoError(t, err, "should provide meta config")
 
-		executor, err := providerYandex.Executor(ctx, infrastructure.MasterNodeStep, params.Logger)
+		executor, err := providerYandex.Executor(ctx, infrastructure.MasterNodeStep)
 		require.NoError(t, err, "should create executor")
 
 		for _, c := range cases {
@@ -373,7 +373,7 @@ func TestPipelineGetMasterIPs(t *testing.T) {
 		providerGCP, err := getter(ctx, cfgProviderGCP)
 		require.NoError(t, err, "should provide meta config")
 
-		executor, err := providerGCP.Executor(ctx, infrastructure.MasterNodeStep, params.Logger)
+		executor, err := providerGCP.Executor(ctx, infrastructure.MasterNodeStep)
 		require.NoError(t, err, "should create executor")
 
 		for _, c := range cases {

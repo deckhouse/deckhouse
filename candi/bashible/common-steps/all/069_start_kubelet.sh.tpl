@@ -43,7 +43,7 @@ if bb-flag? kubelet-need-restart; then
     rm -f /var/lib/kubelet/pod_status_manager_state
   fi
   {{ end }}
-  
+
   systemctl restart "kubelet.service"
   {{ if ne .runType "ClusterBootstrap" }}
   if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]] && ! bb-flag? reboot; then

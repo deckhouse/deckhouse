@@ -25,7 +25,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -186,7 +185,7 @@ func TestBackupStates(t *testing.T) {
 	masterSecret := createSecret(t, fakeClient, master)
 	nodeSecret := createSecret(t, fakeClient, node)
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger())
+	backuper := NewTofuMigrationStateBackuper(provider)
 
 	err := backuper.BackupStates(context.TODO())
 	require.NoError(t, err)
@@ -235,7 +234,7 @@ func TestBackupStatesForCommander(t *testing.T) {
 	saveCacheState(t, c, "fake-nmit-delete-12-03-master-0.tfstate", "secret")
 	saveCacheState(t, c, "fake-nmit-delete-12-03-khm-0.tfstate", "secret")
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger()).WithCommanderMode(&TofuBackupCommanderMode{
+	backuper := NewTofuMigrationStateBackuper(provider).WithCommanderMode(&TofuBackupCommanderMode{
 		Cache:      c,
 		MetaConfig: &config.MetaConfig{ClusterPrefix: "fake"},
 	})
@@ -270,7 +269,7 @@ func TestSkipBackupStatesForCommander(t *testing.T) {
 	saveCacheState(t, c, "tf-fake-nmit-delete-12-03-master-0.terraform.backup", "secret1")
 	saveCacheState(t, c, "tf-fake-nmit-delete-12-03-khm-0.terraform.backup", "secret1")
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger()).WithCommanderMode(&TofuBackupCommanderMode{
+	backuper := NewTofuMigrationStateBackuper(provider).WithCommanderMode(&TofuBackupCommanderMode{
 		Cache:      c,
 		MetaConfig: &config.MetaConfig{ClusterPrefix: "fake"},
 	})
@@ -301,7 +300,7 @@ func TestSkipBackupStatesIfBackupExist(t *testing.T) {
 	masterBackupSecret := createSecret(t, fakeClient, backupMaster)
 	nodeBackupSecret := createSecret(t, fakeClient, backupNode)
 
-	backuper := NewTofuMigrationStateBackuper(provider, log.GetDefaultLogger())
+	backuper := NewTofuMigrationStateBackuper(provider)
 
 	err := backuper.BackupStates(context.TODO())
 	require.NoError(t, err)

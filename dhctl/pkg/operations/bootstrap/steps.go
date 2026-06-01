@@ -44,7 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
@@ -131,8 +131,8 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	templateController := template.NewTemplateController("")
 	bashible := dhbashible.NewRunner(nodeInterface, loggerProvider)
 
-	err := log.ProcessCtx(ctx, "bootstrap", "Preparing bootstrap", func(ctx context.Context) error {
-		log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing bootstrap", func(ctx context.Context) error {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Rendered templates directory %s", templateController.TmpDir))
 
 		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, params.GlobalOpts); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
@@ -199,7 +199,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return fmt.Errorf("Cannot read node info: %w", err)
 	}
 
-	if err := PrepareControlPlaneArtifacts(nodeInfo, cfg, templateController, params.GlobalOpts); err != nil {
+	if err := PrepareControlPlaneArtifacts(ctx, nodeInfo, cfg, templateController, params.GlobalOpts); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 
 		if _, err := os.Stat(scriptPath); err != nil {
 			if os.IsNotExist(err) {
-				log.InfoF("Script %s wasn't found\n", scriptPath)
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Script %s wasn't found", scriptPath))
 				return nil
 			}
 			return fmt.Errorf("script path: %v", err)
@@ -255,7 +255,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 		cmd := nodeInterface.UploadScript(scriptPath)
 		cmd.WithStdoutHandler(func(l string) {
 			logs = append(logs, l)
-			log.DebugLn(l)
+			dhlog.FromContext(ctx).DebugContext(ctx, l)
 		})
 		cmd.Sudo()
 
@@ -268,7 +268,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 				stderr = string(exitErr.Stderr)
 			}
 
-			log.ErrorF("%s\nstderr:\n%s\n", strings.Join(logs, "\n"), stderr)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("%s\nstderr:\n%s", strings.Join(logs, "\n"), stderr))
 
 			return fmt.Errorf("run %s: %w", scriptPath, err)
 		}
@@ -276,12 +276,12 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Initial bootstrap", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Initial bootstrap", func(ctx context.Context) error {
 		for _, bootstrapScript := range []string{"01-bootstrap-prerequisites.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			name := fmt.Sprintf("Execute %s", bootstrapScript)
-			extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+			extLogger := dhctllog.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 			p := retry.NewEmptyParams(
 				retry.WithName("%s", name),
 				retry.WithAttempts(30),
@@ -306,7 +306,7 @@ func PrepareBashibleBundle(
 	controller *template.Controller,
 	globalOptions *options.GlobalOptions,
 ) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare Bashible", func(ctx context.Context) error {
 		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, globalOptions)
 	})
 }
@@ -315,16 +315,17 @@ func PrepareBashibleBundle(
 // control-plane static-pod manifests into the local template tmp dir for the
 // node identified by (nodeName, nodeIP).
 func PrepareControlPlaneArtifacts(
+	ctx context.Context,
 	nodeInfo *dhbashible.NodeInfo,
 	metaConfig *config.MetaConfig,
 	controller *template.Controller,
 	globalOptions *options.GlobalOptions,
 ) error {
-	return log.Process("bootstrap", "Prepare control-plane manifests", func() error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Prepare control-plane manifests", func(ctx context.Context) error {
 		nodeName := nodeInfo.NodeName
 		nodeIP := nodeInfo.NodeIP
 
-		log.InfoF("Using node hostname %q and IP %q for control-plane manifests\n", nodeName, nodeIP)
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Using node hostname %q and IP %q for control-plane manifests", nodeName, nodeIP))
 
 		controlPlaneConfig, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
@@ -339,7 +340,7 @@ func PrepareControlPlaneArtifacts(
 			return fmt.Errorf("prepare PKI: %w", err)
 		}
 
-		if err := template.PrepareControlPlaneManifests(controller, controlPlaneConfig, globalOptions); err != nil {
+		if err := template.PrepareControlPlaneManifests(ctx, controller, controlPlaneConfig, globalOptions); err != nil {
 			return fmt.Errorf("prepare control plane manifests: %w", err)
 		}
 
@@ -348,14 +349,14 @@ func PrepareControlPlaneArtifacts(
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on Master become Ready", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Wait for SSH on Master become Ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
-		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
-			log.InfoLn(availabilityCheck.String())
+		_ = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Connection string", func(ctx context.Context) error {
+			dhlog.FromContext(ctx).InfoContext(ctx, availabilityCheck.String())
 			return nil
 		})
 
-		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+		extLogger := dhctllog.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 
 		// Poll every 2s instead of 5s — VM SSH typically comes up within ~10s after
 		// cloud-init finishes. Total timeout preserved at ~250s via larger attempt count.
@@ -388,7 +389,7 @@ func InstallDeckhouse(
 ) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
 
-	return res, log.ProcessCtx(ctx, "bootstrap", "Install Deckhouse", func(ctx context.Context) error {
+	return res, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Install Deckhouse", func(ctx context.Context) error {
 		ctx, span := telemetry.StartSpan(ctx, "InstallDeckhouse")
 		defer span.End()
 
@@ -449,14 +450,14 @@ func BootstrapTerraNodes(
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
 ) error {
-	return log.ProcessCtx(ctx, "bootstrap", "Create CloudPermanent NG", func(ctx context.Context) error {
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Create CloudPermanent NG", func(ctx context.Context) error {
 		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions)
 	})
 }
 
 func SaveBastionHostToCache(ctx context.Context, host string) {
 	if err := cache.Global().Save(ctx, BastionHostCacheKey, []byte(host)); err != nil {
-		log.ErrorF("Cannot save ssh hosts: %v\n", err)
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprintf("Cannot save ssh hosts: %v", err))
 	}
 }
 
@@ -488,12 +489,12 @@ func BootstrapAdditionalMasterNodes(
 	globalOptions *options.GlobalOptions,
 ) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
-		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skip bootstrap additional master nodes because replicas == 1")
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Bootstrap additional master nodes", func(ctx context.Context) error {
-		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs, log.GetDefaultLogger())
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
+		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 		if err != nil {
 			return err
 		}
@@ -555,11 +556,12 @@ func BootstrapGetNodesFromCache(
 }
 
 func applyPostBootstrapModuleConfigs(
+	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	tasks []actions.ModuleConfigTask,
 ) error {
 	for _, task := range tasks {
-		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
+		extLogger := dhctllog.SimpleLoggerProvider(dhlog.NewLibdhctlAdapter(ctx))
 		p := retry.NewEmptyParams(
 			retry.WithName("%s", task.Title),
 			retry.WithAttempts(15),
@@ -583,11 +585,11 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 	defer span.End()
 
 	if result == nil {
-		log.DebugF("Skip post install tasks because result is nil\n")
+		dhlog.FromContext(ctx).DebugContext(ctx, "Skip post install tasks because result is nil")
 		return nil
 	}
 
-	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
-		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Run post bootstrap actions", func(ctx context.Context) error {
+		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

@@ -100,7 +100,7 @@ func InitFromConfig(
 	nop := func() {}
 
 	configProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(configPaths)
+		return config.FetchDocuments(ctx, configPaths)
 	})
 	if err != nil {
 		return nop, err

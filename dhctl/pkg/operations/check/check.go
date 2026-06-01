@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -193,7 +193,7 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 	if nodeGroupState.Settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{nodeGroupState.Settings})
 		if err != nil {
-			log.ErrorLn(err)
+			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
 		} else {
 			// we use dummy preparator because metaConfig was prepared early
 			cfg, err = metaConfig.DeepCopy().Prepare(ctx, config.DummyPreparatorProvider())
@@ -253,7 +253,7 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 		nodeGroupName = global.MasterNodeGroupName
 	} else {
 		// Node group settings are only for the static node.
-		nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(nodeGroup.Name)
+		nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(ctx, nodeGroup.Name)
 	}
 
 	var stateSavers []infrastructure.SaverDestination
@@ -345,7 +345,7 @@ func CheckState(
 		hasTerraformState = baseRes.IsTerraformState
 	}
 
-	log.DebugF("Base infrastructure has terraform state %v\n", hasTerraformState)
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Base infrastructure has terraform state %v", hasTerraformState))
 
 	// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
 	// NOTE: In the commander mode nodes state should exist in the local state cache.
@@ -500,11 +500,11 @@ func CheckState(
 					statistics.InfrastructurePlan = append(statistics.InfrastructurePlan, nodeRes.Plan)
 				}
 
-				log.DebugF("Node %s has terraform state: %v\n", name, nodeRes.IsTerraformState)
+				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Node %s has terraform state: %v", name, nodeRes.IsTerraformState))
 
 				if nodeRes.IsTerraformState && !hasTerraformState {
 					hasTerraformState = nodeRes.IsTerraformState
-					log.DebugF("Has terraform state after node %s: %v\n", name, hasTerraformState)
+					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Has terraform state after node %s: %v", name, hasTerraformState))
 				}
 			}
 		}
@@ -549,7 +549,7 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 func getStatusForMissedNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
 	status := AbsentStatus
 
-	exists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName, log.GetDefaultLogger())
+	exists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName)
 	if err != nil {
 		*allErrs = multierror.Append(*allErrs, err)
 		status = ErrorStatus

@@ -28,7 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
@@ -68,13 +68,13 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
-func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
+func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) string {
 	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
 		return tag
 	}
 	tag := c.DevBranch
 	if forceVersionTag {
-		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer(c.VersionFilePath, c.DownloadDir)
+		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer(ctx, c.VersionFilePath, c.DownloadDir)
 		if foundValidTag {
 			tag = versionTag
 		}
@@ -86,13 +86,13 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 	return tag
 }
 
-func (c *DeckhouseInstaller) GetInclusterImage(forceVersionTag bool) string {
-	tag := c.GetImageTag(forceVersionTag)
+func (c *DeckhouseInstaller) GetInclusterImage(ctx context.Context, forceVersionTag bool) string {
+	tag := c.GetImageTag(ctx, forceVersionTag)
 	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
 }
 
-func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
-	tag := c.GetImageTag(forceVersionTag)
+func (c *DeckhouseInstaller) GetRemoteImage(ctx context.Context, forceVersionTag bool) string {
+	tag := c.GetImageTag(ctx, forceVersionTag)
 	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
 }
 
@@ -100,15 +100,15 @@ func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
 // versionFile is the absolute path to the embedded version file; downloadDir
 // is the directory where the deckhouse image is unpacked (used as a fallback
 // location for the version file).
-func ReadVersionTagFromInstallerContainer(versionFile, downloadDir string) (string, bool) {
+func ReadVersionTagFromInstallerContainer(ctx context.Context, versionFile, downloadDir string) (string, bool) {
 	rawFile, err := os.ReadFile(versionFile)
 	if err != nil {
 		rawFile, err = os.ReadFile(filepath.Join(downloadDir, "deckhouse", "version"))
 		if err != nil {
-			log.WarnF(
+			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf(
 				"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
 				versionFile, err,
-			)
+			), "\n"))
 			return "", false
 		}
 	}

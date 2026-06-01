@@ -69,11 +69,11 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 	if !ok {
 		return nil
 	}
-	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort), c.globalOptions)
+	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(ctx, healthURL(defaultTunnelRemotePort), c.globalOptions)
 	if err != nil {
 		return fmt.Errorf("render reverse tunnel script: %w", err)
 	}
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(localhost, strconv.Itoa(defaultTunnelRemotePort), c.globalOptions)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, localhost, strconv.Itoa(defaultTunnelRemotePort), c.globalOptions)
 	if err != nil {
 		return fmt.Errorf("render kill tunnel script: %w", err)
 	}

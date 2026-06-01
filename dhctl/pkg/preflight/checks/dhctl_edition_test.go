@@ -44,7 +44,7 @@ func TestEditionBad(t *testing.T) {
 		Registry: registryCfg,
 	}
 
-	image := installer.GetRemoteImage(true)
+	image := installer.GetRemoteImage(context.Background(), true)
 	ref, err := name.ParseReference(image)
 	require.NoError(t, err)
 
@@ -84,7 +84,7 @@ func TestOk(t *testing.T) {
 		Registry: registryCfg,
 	}
 
-	image := installer.GetRemoteImage(true)
+	image := installer.GetRemoteImage(context.Background(), true)
 	ref, err := name.ParseReference(image)
 	require.NoError(t, err)
 

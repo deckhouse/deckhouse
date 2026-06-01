@@ -15,11 +15,12 @@
 package dhctl
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhlog "github.com/deckhouse/deckhouse/dhctl/pkg/logger"
 )
 
 // newRequestOptions returns a per-request *options.Options seeded with the
@@ -48,24 +49,28 @@ func newRequestOptions(cacheDir string, skipPreflightChecks []string, timeouts .
 
 type logAfterReturnFunc func()
 
-func logInformationAboutInstance(params ServiceParams, logger log.Logger) logAfterReturnFunc {
+func logInformationAboutInstance(ctx context.Context, params ServiceParams) logAfterReturnFunc {
+	logger := dhlog.FromContext(ctx)
+
 	podName := params.PodName
 	podWithPrefix := fmt.Sprintf("pod/%s", podName)
 	warnAboutNs := ""
 	ns := params.PodNamespace
 
 	if ns == "" {
-		warnAboutNs = "Warning! Use default namespace\n"
+		warnAboutNs = "Warning! Use default namespace"
 		ns = "d8-commander"
 	}
 
-	logger.LogInfoF("Task is running by DHCTL Server %s\n", podWithPrefix)
+	logger.InfoContext(ctx, fmt.Sprintf("Task is running by DHCTL Server %s", podWithPrefix))
 
 	if warnAboutNs != "" {
-		logger.LogInfoLn(warnAboutNs)
+		logger.InfoContext(ctx, warnAboutNs)
 	}
 
-	logger.LogInfoF("DHCTL logs: d8 k -n %s logs %s\n", ns, podName)
+	logger.InfoContext(ctx, fmt.Sprintf("DHCTL logs: d8 k -n %s logs %s", ns, podName))
 
-	return func() { logger.LogInfoF("Task done by DHCTL Server %s\n", podWithPrefix) }
+	return func() {
+		logger.InfoContext(ctx, fmt.Sprintf("Task done by DHCTL Server %s", podWithPrefix))
+	}
 }
