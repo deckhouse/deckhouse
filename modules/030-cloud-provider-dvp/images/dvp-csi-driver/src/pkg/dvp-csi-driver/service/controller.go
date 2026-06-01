@@ -238,7 +238,9 @@ func (c *ControllerService) ControllerPublishVolume(
 	if exists {
 		vmBDAName := fmt.Sprintf("vmbda-%s-%s", diskName, vmHostname)
 		klog.Infof("Publish: vmBDA %s exists but not Attached yet, waiting", vmBDAName)
-		waitErr := c.dvpCloudAPI.ComputeService.WaitDiskAttaching(ctx, vmBDAName)
+		waitCtx, cancel := context.WithTimeout(ctx, dvpapi.DefaultDiskAttachTimeout)
+		defer cancel()
+		waitErr := c.dvpCloudAPI.ComputeService.WaitDiskAttaching(waitCtx, vmBDAName)
 		if waitErr != nil {
 			if errors.Is(waitErr, context.DeadlineExceeded) {
 				return nil, status.Errorf(codes.DeadlineExceeded,
@@ -247,7 +249,9 @@ func (c *ControllerService) ControllerPublishVolume(
 				)
 			}
 			klog.Errorf("Publish: vmBDA %s failed (%v), cleaning up for retry", vmBDAName, waitErr)
-			_ = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname)
+			if detachErr := c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname); detachErr != nil {
+				klog.Errorf("Publish: failed to cleanup vmBDA %s: %v", vmBDAName, detachErr)
+			}
 			return nil, status.Errorf(codes.Internal,
 				"Publish: vmBDA failed, cleaned up, retry: disk=%s vm=%s: %v",
 				diskName, vmHostname, waitErr,
