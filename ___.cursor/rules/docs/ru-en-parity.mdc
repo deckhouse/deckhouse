@@ -1,0 +1,25 @@
+---
+description: RU and EN parity and naming rules
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# RU EN Parity
+
+- For each EN page, create RU counterpart when RU docs are maintained.
+- Keep section structure aligned between EN and RU versions.
+- Allow wording differences, but preserve technical meaning and constraints.
+- For any update in one language, check paired file in second language and apply equivalent changes when they are relevant to both.
+- Do not leave EN/RU pair semantically diverged after an edit unless change is intentionally language-specific.
+
+# File Naming
+
+- Russian files must use suffix `.ru.md` only.
+- Forbidden variants: `.RU.md`, `_RU.md`, or any custom RU suffix.
+- Naming must stay Hugo-compatible.
+
+# Media Localization
+
+- Use localized file pairs for media when needed, for example:
+  - EN: `image1.jpg`
+  - RU: `image1.ru.jpg`
