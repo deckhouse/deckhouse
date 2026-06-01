@@ -47,7 +47,7 @@ shell:
 ---
 image: terraform-provider-huaweicloud
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
