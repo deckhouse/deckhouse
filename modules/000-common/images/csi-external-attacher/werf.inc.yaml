@@ -73,5 +73,7 @@ shell:
   - cp bin/csi-attacher /csi-attacher
   - chown 64535:64535 /csi-attacher
   - chmod 0755 /csi-attacher
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}
