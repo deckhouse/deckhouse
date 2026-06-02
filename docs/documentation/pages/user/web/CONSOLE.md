@@ -1,11 +1,11 @@
 ---
-title: "Deckhouse web UI"
+title: "Deckhouse Kubernetes Platform web UI"
 description: "Deckhouse Kubernetes Platform web interface. Monitoring, parameter configuration, node and module management, security and network configuration."
 permalink: en/user/web/ui.html
 search: web UI, web interface
 ---
 
-The Deckhouse web UI provides access to cluster management, including monitoring, parameter configuration, node and module management, as well as security and network configuration. Most operations available from the command line through the `d8` utility ([Deckhouse CLI](../../cli/d8/)) or `kubectl` can also be performed through the web UI.
+The Deckhouse Kubernetes Platform (DKP) web UI provides access to cluster management, including monitoring, parameter configuration, node and module management, as well as security and network configuration. Most operations available from the command line through the `d8` utility ([Deckhouse CLI](../../cli/d8/)) or `kubectl` can also be performed through the web UI.
 
 ## Accessing the web UI
 
