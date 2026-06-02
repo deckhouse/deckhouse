@@ -69,8 +69,9 @@ function nodeuser_patch() {
       fi
       bb-log-info "Current AVAILABLE_API_SERVERS: ${AVAILABLE_API_SERVERS[*]}"
       for server in "${AVAILABLE_API_SERVERS[@]}"; do
-        local server_addr=$(echo $server | cut -f1 -d":")
-        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+        # Handle IPv6 endpoints like [fe80::1]:6443 or IPv4 like 10.0.0.1:6443
+        local server_addr=$(echo $server | sed -e 's|^\[\(.*\)\]:.*$|\1|' -e 's|:[^:]*$||')
+        until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9a-fA-F\.:]+)')"; do
           bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
           sleep 1
         done

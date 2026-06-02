@@ -55,7 +55,7 @@ echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2> /dev/null)" ; then
-    echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
+    echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address]) | join(",")' > /var/lib/bashible/discovered-node-ip
   else
     bb-log-error "Unable to discover node IP for node object: No access to API server"
     exit 1
@@ -71,46 +71,95 @@ internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | qu
 
 if [[ -z "$internal_network_cidrs" ]]; then
   internal_network_cidrs="$(discover_internal_network_cidrs || true)"
-fi
-
-
-function is_ip_in_cidr() {
-  ip="$1"
-  IFS="/" read net_address net_prefix <<< "$2"
-
-  IFS=. read -r a b c d <<< "$ip"
-  ip_dec="$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
-
-  IFS=. read -r a b c d <<< "$net_address"
-  net_address_dec="$((a * 256 ** 3 + b * 256 ** 2 + c * 256 + d))"
-
-  netmask=$(((0xFFFFFFFF << (32 - net_prefix)) & 0xFFFFFFFF))
-
-  test $((netmask & ip_dec)) -eq $((netmask & net_address_dec))
-}
-
-if grep -q 'Ubuntu' /etc/os-release 2>/dev/null; then
-  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | select(.ifname != "lo") | .addr_info[] | .local')
-else
-  ip_in_system=$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}' | cut -d/ -f1)
-fi
-
-# DVP like case (with /32 addr)
-if [[ -z "$internal_network_cidrs" ]]; then
-  if slash32_node_ip="$(check_slash32_node_ip)"; then
-    echo "$slash32_node_ip" > /var/lib/bashible/discovered-node-ip
-    exit 0
   fi
-fi
 
-# Other cases
-for cidr in $internal_network_cidrs; do
-  for ip in $ip_in_system; do
-    if is_ip_in_cidr "$ip" "$cidr"; then
-      echo $ip > /var/lib/bashible/discovered-node-ip
-      exit 0
-    fi
-  done
-done
-{{- end }}
+  python3 - << 'EOF' > /var/lib/bashible/discovered-node-ip.tmp
+  import sys
+  import ipaddress
+  import subprocess
+  import os
+
+  def get_system_ips_and_prefixes():
+      ips = []
+      try:
+          output = subprocess.check_output(['ip', '-o', 'addr', 'show', 'up', 'scope', 'global'], universal_newlines=True)
+          for line in output.splitlines():
+              parts = line.split()
+              if len(parts) >= 4 and parts[1] != 'lo':
+                  addr_with_prefix = parts[3]
+                  if '/' in addr_with_prefix:
+                      ip, prefix = addr_with_prefix.split('/')
+                      try:
+                          ipaddress.ip_address(ip)
+                          ips.append((ip, prefix))
+                      except ValueError:
+                          pass
+      except Exception as e:
+          pass
+      return ips
+
+  def is_ip_in_cidr(ip_str, cidr_str):
+      try:
+          ip = ipaddress.ip_address(ip_str)
+          net = ipaddress.ip_network(cidr_str, strict=False)
+          return ip in net
+      except ValueError:
+          return False
+
+  def discover_ip(internal_network_cidrs_str):
+      system_ips_with_prefixes = get_system_ips_and_prefixes()
+    
+      if not internal_network_cidrs_str:
+          matched_ipv4 = None
+          matched_ipv6 = None
+          for ip, prefix in system_ips_with_prefixes:
+              try:
+                  obj = ipaddress.ip_address(ip)
+                  if obj.version == 4 and prefix == '32' and not matched_ipv4:
+                      matched_ipv4 = ip
+                  elif obj.version == 6 and prefix == '128' and not matched_ipv6:
+                      matched_ipv6 = ip
+              except:
+                  pass
+        
+          final_ips = [ip for ip in [matched_ipv4, matched_ipv6] if ip]
+          if final_ips:
+              return ",".join(final_ips)
+          return ""
+        
+      cidrs = internal_network_cidrs_str.split()
+      matched_ipv4 = None
+      matched_ipv6 = None
+    
+      for cidr in cidrs:
+          for ip, prefix in system_ips_with_prefixes:
+              if is_ip_in_cidr(ip, cidr):
+                  try:
+                      obj = ipaddress.ip_address(ip)
+                      if obj.version == 4 and not matched_ipv4:
+                          matched_ipv4 = ip
+                      elif obj.version == 6 and not matched_ipv6:
+                          matched_ipv6 = ip
+                  except:
+                      pass
+    
+      final_ips = [ip for ip in [matched_ipv4, matched_ipv6] if ip]
+      if final_ips:
+          return ",".join(final_ips)
+      return ""
+
+  if __name__ == '__main__':
+      cidrs = os.environ.get('internal_network_cidrs', "")
+      res = discover_ip(cidrs)
+      if res:
+          print(res)
+  EOF
+
+  if [ -s /var/lib/bashible/discovered-node-ip.tmp ]; then
+    mv /var/lib/bashible/discovered-node-ip.tmp /var/lib/bashible/discovered-node-ip
+    exit 0
+  else
+    rm -f /var/lib/bashible/discovered-node-ip.tmp
+  fi
+  {{- end }}
 
