@@ -869,7 +869,7 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, cfg *regis
 		return
 	}
 
-	imagePath := packageName
+	imagePath := packageName + "/version"
 	p.logger.Debugf("handleGetIcon for %q/%q:%q", cfg.Repository, imagePath, version)
 
 	if version == "" {
