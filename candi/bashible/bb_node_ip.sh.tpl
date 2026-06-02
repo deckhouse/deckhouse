@@ -55,7 +55,7 @@ echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2> /dev/null)" ; then
-    echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address]) | join(",")' > /var/lib/bashible/discovered-node-ip
+    echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address]) as $ips | (($ips | map(select(test(":") | not)) | .[0]) // null) as $v4 | (($ips | map(select(test(":"))) | .[0]) // null) as $v6 | [$v4, $v6] | map(select(. != null)) | join(",")' > /var/lib/bashible/discovered-node-ip
   else
     bb-log-error "Unable to discover node IP for node object: No access to API server"
     exit 1

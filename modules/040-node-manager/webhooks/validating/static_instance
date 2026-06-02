@@ -50,7 +50,7 @@ function __main__() {
   address=$(context::jq -r '.review.request.object.spec.address')
   credentialsName=$(context::jq -r '.review.request.object.spec.credentialsRef.name')
 
-  instanceWithTheSameAddress=$(context::jq -r '.snapshots.instances[].filterResult' | python3 -c '
+  instanceWithTheSameAddress=$(context::jq -c '.snapshots.instances[].filterResult' | python3 -c '
 import sys, json, ipaddress
 try:
     target_ip = ipaddress.ip_address(sys.argv[1])

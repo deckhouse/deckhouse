@@ -19,6 +19,7 @@ rm -f /var/lib/kubelet/kubeadm-flags.env
 
 # Read previously discovered IP
 discovered_node_ip="$(bb-d8-node-ip)"
+first_discovered_node_ip="${discovered_node_ip%%,*}"
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 cri_socket_path="/run/containerd/containerd.sock"
@@ -82,7 +83,7 @@ ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
     --kubeconfig=/etc/kubernetes/kubelet.conf \\
-    --address=${discovered_node_ip:-0.0.0.0} \\
+    --address=${first_discovered_node_ip:-0.0.0.0} \
 {{- /* During the first multi-network Node bootstrap `kubelet` discovers external IP getting it by Node's hostname. */ -}}
 {{- /* We have to bootstrap Node with the internal IP because the API certificate denies requests by external IP. */ -}}
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") -}}
