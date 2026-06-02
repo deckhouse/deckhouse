@@ -13,7 +13,7 @@ webhooks:
       name: capcd-controller-manager-webhook-service
       namespace: d8-cloud-provider-vcd
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta2-vcdmachine
-  failurePolicy: Fail
+  failurePolicy: Ignore
   name: validation.vcdmachine.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
