@@ -140,6 +140,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
 			Logger:                 c.Logger,
+			Opts:                   &c.Options.Global,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
@@ -149,6 +150,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			ChangeParams:           c.Params.ChangesSettings,
 			ProviderGetter:         c.Params.ProviderGetter,
 			Logger:                 c.Logger,
+			Opts:                   &c.Options.Global,
 		})
 	}
 
@@ -440,6 +442,7 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 		ChangeParams:           c.Params.ChangesSettings,
 		Logger:                 c.Logger,
 		ProviderGetter:         c.ProviderGetter,
+		Opts:                   &c.Options.Global,
 	})
 
 	metaConfig, err := convergeCtx.MetaConfig()
