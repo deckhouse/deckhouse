@@ -126,7 +126,8 @@ func (b *LogBox) Update() {
 			return
 		case msg, ok := <-b.logChan:
 			if !ok {
-				continue
+				b.started = false
+				return
 			}
 
 			new := strings.TrimSuffix(msg, "\n")
@@ -195,21 +196,21 @@ func (b *LogBox) ShiftUp(w io.Writer) {
 }
 
 type WriterFabric struct {
-	mp     *pterm.MultiPrinter
-	witers []io.Writer
+	mp      *pterm.MultiPrinter
+	writers []io.Writer
 }
 
 func newWriterFabric(mp *pterm.MultiPrinter) WriterFabric {
 	return WriterFabric{
-		mp:     mp,
-		witers: make([]io.Writer, 0),
+		mp:      mp,
+		writers: make([]io.Writer, 0),
 	}
 }
 
 func (w *WriterFabric) GetWriter() io.Writer {
-	if len(w.witers) != 0 {
-		writer := w.witers[0]
-		w.witers = w.witers[1:]
+	if len(w.writers) != 0 {
+		writer := w.writers[0]
+		w.writers = w.writers[1:]
 
 		return writer
 	}
@@ -218,7 +219,7 @@ func (w *WriterFabric) GetWriter() io.Writer {
 }
 
 func (w *WriterFabric) PutWriter(writer io.Writer) {
-	w.witers = append(w.witers, writer)
+	w.writers = append(w.writers, writer)
 }
 
 func (w *WriterFabric) Cleanup() {
@@ -226,8 +227,8 @@ func (w *WriterFabric) Cleanup() {
 		return
 	}
 
-	if len(w.witers) > 0 {
-		for range w.witers {
+	if len(w.writers) > 0 {
+		for range w.writers {
 			fmt.Print("\033[1F\033[2K")
 		}
 	}
