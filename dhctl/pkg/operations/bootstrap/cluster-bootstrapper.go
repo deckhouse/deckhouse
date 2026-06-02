@@ -448,6 +448,7 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             bctx.metaConfig,
 			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
+			GlobalOpts:             &b.Options.Global,
 		}, ctx)
 		if err != nil {
 			return err
