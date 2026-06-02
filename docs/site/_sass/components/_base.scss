@@ -42,7 +42,6 @@ ul.nav {
 }
 
 .heading {
-  font-family: 'Ubuntu', sans-serif;
   font-weight: 700;
   @include mixins.color(mixins.$ntrl-800);
 
