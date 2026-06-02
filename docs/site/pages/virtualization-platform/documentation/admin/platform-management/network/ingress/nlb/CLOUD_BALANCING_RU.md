@@ -15,7 +15,7 @@ lang: ru
 * [VMware vSphere](https://www.vmware.com/products/cloud-infrastructure/vsphere),
 * [Yandex Cloud](https://yandex.cloud/),
 * [zVirtExperimental](https://www.orionsoft.ru/zvirt),
-* [Базис.DynamiX](https://basistech.ru/products/dynamix).
+* [Basis Dynamix](https://basis.ru/products/dynamix).
 
 Настройка балансировки входящего трафика в кластерах на облачных платформах включает в себя создание Ingress-контроллера с указанием параметров LoadBalancer.
 На их основе облачный провайдер автоматически создаёт внешний балансировщик нагрузки.

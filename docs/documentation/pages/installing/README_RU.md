@@ -90,7 +90,7 @@ relatedLinks:
 
    * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
    * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [DynamixClusterConfiguration](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration) — Базис.DynamiX;
+   * [DynamixClusterConfiguration](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration) — Basis Dynamix;
    * [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) — Deckhouse Virtualization Platform;
    * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
    * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration) — Huawei Cloud;

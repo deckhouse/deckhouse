@@ -31,6 +31,7 @@ Integration is also possible with [private clouds](./private/overview.html) base
 - VK Cloud
 - OpenStack
 - Huawei Cloud
+- Basis Dynamix
 
 In addition to cloud providers, integration is supported with the following [virtualization systems](./virtualization/overview.html):
 
