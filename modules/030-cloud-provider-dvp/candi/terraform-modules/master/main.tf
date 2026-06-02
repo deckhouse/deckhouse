@@ -16,6 +16,7 @@ resource "kubernetes_secret" "cloudinit-secret" {
   metadata {
     name      = local.cloudinit_secret_name
     namespace = var.namespace
+    labels = local.cloudinit_secret_labels
   }
   data = {
     userData = templatefile("${path.module}/templates/cloudinit.tftpl", {
