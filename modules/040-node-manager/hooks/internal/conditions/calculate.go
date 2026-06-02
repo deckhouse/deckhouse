@@ -48,6 +48,7 @@ type Node struct {
 	Updating                  bool
 	CreationTimestamp         time.Time
 	WaitingDisruptiveApproval bool
+	UnderCAPS                 bool
 }
 
 func NodeToConditionsNode(node *corev1.Node) *Node {
@@ -88,6 +89,8 @@ func NodeToConditionsNode(node *corev1.Node) *Node {
 	}
 
 	res.Unschedulable = node.Spec.Unschedulable
+
+	_, res.UnderCAPS = node.Annotations["cluster.x-k8s.io/owner-kind"]
 
 	return res
 }
@@ -197,6 +200,8 @@ func CalculateNodeGroupConditions(
 		curTime, _ = time.Parse(time.RFC3339, timeStr)
 	}
 
+	staicDesired := ng.Desired
+
 	for _, node := range nodes {
 		if !node.Unschedulable {
 			schedulableNodes++
@@ -205,6 +210,13 @@ func CalculateNodeGroupConditions(
 			if node.Ready || inGracePeriod {
 				readySchedulableNodes++
 			}
+		}
+
+		if ng.Type == ngv1.NodeTypeStatic {
+			if node.UnderCAPS {
+				continue
+			}
+			staicDesired++
 		}
 
 		if node.Updating {
@@ -223,7 +235,7 @@ func CalculateNodeGroupConditions(
 	isReady := readySchedulableNodes >= minPerAllZone
 	if ng.Type == ngv1.NodeTypeStatic {
 		if ng.Desired > 0 {
-			isReady = readySchedulableNodes == int(ng.Desired)
+			isReady = readySchedulableNodes == int(staicDesired)
 		} else {
 			isReady = readySchedulableNodes == len(nodes)
 		}
