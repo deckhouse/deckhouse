@@ -355,6 +355,7 @@ imageGCLowThresholdPercent: 65
 kubeAPIBurst: 200
 kubeAPIQPS: 200
 hairpinMode: promiscuous-bridge
+httpCheckFrequency: 20s
 maxOpenFiles: 1000000
 {{- $max_pods := 120 }}
 {{- if (((.nodeGroup).kubelet).maxPods) }}

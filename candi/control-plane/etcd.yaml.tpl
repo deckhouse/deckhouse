@@ -7,18 +7,17 @@
 {{- $initialCluster := printf "%s=%s" $etcdName $initialAdvertisePeer -}}
 {{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
-{{- $quotaBackendBytes := "2147483648" }}
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
 metadata:
-  name: etcd
-  namespace: kube-system
+  annotations:
+    control-plane-manager.deckhouse.io/etcd.advertise-client-urls: {{ $advertiseClient }}
   labels:
     component: etcd
     tier: control-plane
-  annotations:
-    control-plane-manager.deckhouse.io/etcd.advertise-client-urls: {{ $advertiseClient }}
+  name: etcd
+  namespace: kube-system
 spec:
   containers:
   - command:
