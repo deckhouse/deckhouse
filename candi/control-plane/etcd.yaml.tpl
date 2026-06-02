@@ -40,10 +40,7 @@ spec:
     - --feature-gates=InitialCorruptCheck=true
     {{- end }}
     - --watch-progress-notify-interval=5s
-    {{- if hasKey .etcd "quotaBackendBytes" }}
-      {{ $quotaBackendBytes =  .etcd.quotaBackendBytes }}
-    {{- end }}
-    - --quota-backend-bytes={{ $quotaBackendBytes }}
+    - --quota-backend-bytes={{ (.etcd).quotaBackendBytes | default 2147483648 }}
     - --metrics=extensive
     - --key-file=/etc/kubernetes/pki/etcd/server.key
     - --listen-client-urls={{ $listenClient }}
