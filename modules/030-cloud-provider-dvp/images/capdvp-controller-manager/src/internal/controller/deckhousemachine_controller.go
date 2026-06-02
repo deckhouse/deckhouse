@@ -1111,8 +1111,9 @@ func (r *DeckhouseMachineReconciler) reconcileDisksStorageClass(
 		disks = append(disks, diskEntry{fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i), d.StorageClass})
 	}
 
-	for _, d := range disks {
-		migrating, err := r.migrateDiskStorageClassIfNeeded(ctx, logger, dvpMachine, d.name, d.sc)
+	for i, d := range disks {
+		required := i == 0 // boot disk must exist when VM is Running
+		migrating, err := r.migrateDiskStorageClassIfNeeded(ctx, logger, dvpMachine, d.name, d.sc, required)
 		if err != nil {
 			r.setDiskMigrationTerminalFailure(dvpMachine, fmt.Errorf("disk %s: %w", d.name, err))
 			return ctrl.Result{}
@@ -1136,10 +1137,14 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 	diskName, desiredStorageClass string,
+	required bool,
 ) (bool, error) {
 	disk, err := r.DVP.DiskService.GetDiskByName(ctx, diskName)
 	if err != nil {
 		if errors.Is(err, cloudprovider.DiskNotFound) {
+			if required {
+				return false, fmt.Errorf("disk %q not found", diskName)
+			}
 			return false, nil
 		}
 		return false, err
@@ -1164,6 +1169,13 @@ func (r *DeckhouseMachineReconciler) migrateDiskStorageClassIfNeeded(
 	case diskSCStepComplete:
 		return false, nil
 	case diskSCStepWait:
+		if !hasStarted && disk.Status.Phase == v1alpha2.DiskReady && virtualDiskSpecStorageClass(disk) == desiredStorageClass {
+			// disk.Status.Phase==Ready + specSC==desired + statusSC!=desired means the patch
+			// was already applied but the annotation was lost (e.g. controller restart).
+			// Record start time now so the timeout begins from this point.
+			markDiskMigrationStarted(dvpMachine, diskName, time.Now())
+			hasStarted = true
+		}
 		if hasStarted {
 			logger.Info("Waiting for disk storage class migration to complete",
 				"disk", diskName,
