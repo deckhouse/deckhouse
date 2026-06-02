@@ -14,6 +14,7 @@
   includePaths:
   - modules/*/openapi/config-values.yaml
   - global-hooks/openapi/config-values.yaml
+  - candi/terraform_versions.yml
   after: setup
 - image: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
