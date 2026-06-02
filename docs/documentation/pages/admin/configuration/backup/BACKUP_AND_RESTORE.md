@@ -61,6 +61,18 @@ To properly restore the cluster, follow these steps on the master node:
 
    This backup will allow you to roll back in case of issues.
 
+1. Place the etcd snapshot file. Copy or move the [`etcd-backup.snapshot`](#creating-backups-with-deckhouse-cli) file to the current user's (root) home directory:
+
+   ```shell
+   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
+   Ensure the file is readable:
+
+   ```shell
+   ls -la ~/etcd-backup.snapshot
+   ```
+
 1. Clean the etcd directory. Remove old data to prepare for restore:
 
    ```shell
@@ -71,18 +83,6 @@ To properly restore the cluster, follow these steps on the master node:
 
    ```shell
    ls -la /var/lib/etcd
-   ```
-
-1. Place the etcd snapshot file. Copy or move the `etcd-backup.snapshot` file to the current user's (root) home directory:
-
-   ```shell
-   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
-   ```
-
-   Ensure the file is readable:
-
-   ```shell
-   ls -la ~/etcd-backup.snapshot
    ```
 
 1. Restore the etcd database from the snapshot using `etcdutl`:

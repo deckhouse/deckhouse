@@ -939,13 +939,17 @@ Follow these steps to restore a single-master cluster on master node:
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
+1. Copy or move the [`etcd-backup.snapshot`](#how-to-manually-backup-etcd) file to the current user's (root) home directory:
+
+   ```shell
+   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
 1. Clean the etcd directory.
 
    ```shell
    rm -rf /var/lib/etcd
    ```
-
-1. Put the etcd backup to `~/etcd-backup.snapshot` file.
 
 1. Restore the etcd database.
 
