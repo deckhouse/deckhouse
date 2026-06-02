@@ -78,7 +78,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	sshClient, err := sshProvider.Client(ctx)
 	if err == nil {
 		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
 		}
 	}
 
