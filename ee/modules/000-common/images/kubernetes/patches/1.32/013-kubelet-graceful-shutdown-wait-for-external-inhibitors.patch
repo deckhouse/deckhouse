@@ -26,11 +26,12 @@ diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubele
 index 989f0dc76e0..560a43d83a5 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-@@ -21,6 +21,7 @@ limitations under the License.
+@@ -21,7 +21,8 @@ limitations under the License.
  package nodeshutdown
  
  import (
 +	"context"
+ 	"errors"
  	"fmt"
  	"os"
  	"path/filepath"

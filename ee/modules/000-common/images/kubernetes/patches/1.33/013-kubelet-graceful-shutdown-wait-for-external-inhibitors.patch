@@ -31,9 +31,9 @@ index 989f0dc76e0..560a43d83a5 100644
  
  import (
 +	"context"
+ 	"errors"
  	"fmt"
  	"os"
- 	"path/filepath"
 @@ -38,6 +39,7 @@ import (
  	"k8s.io/kubernetes/pkg/kubelet/metrics"
  	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
