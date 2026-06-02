@@ -39,7 +39,7 @@ data:
   {{- end }}
 
   {{- /* Pick the first IPv4 and the first IPv6 CIDR from a comma-separated dual-stack value. */}}
-  {{- $podSubnets := splitList "," .Values.global.discovery.podSubnet }}
+  {{- $podSubnets := splitList "," (.Values.global.discovery.podSubnet | default "" | toString) }}
   {{- $ipv4PodCIDR := "" }}
   {{- $ipv6PodCIDR := "" }}
   {{- range $subnet := $podSubnets }}
@@ -93,7 +93,7 @@ data:
   dhcpd-enabled: "true"
   {{- /* DHCP option-6 is IPv4-only; pick the first IPv4 address from a potentially dual-stack value. */}}
   {{- $dhcpDNS := "" }}
-  {{- range $addr := splitList "," .Values.global.discovery.clusterDNSAddress }}
+  {{- range $addr := splitList "," (.Values.global.discovery.clusterDNSAddress | default "" | toString) }}
     {{- $addr = trim $addr }}
     {{- if and (eq $dhcpDNS "") (ne $addr "") (not (contains ":" $addr)) }}
       {{- $dhcpDNS = $addr }}
