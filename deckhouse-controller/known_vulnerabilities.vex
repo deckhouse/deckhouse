@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 17,
+  "version": 18,
   "statements": [
     {
       "vulnerability": {
@@ -239,6 +239,7 @@
         "name": "CVE-2026-33997"
       },
       "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"},
         {"@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"}
       ],
       "status": "not_affected",
@@ -269,8 +270,68 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал обработки TAR/ZIP polyglot-архивов pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
       "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33809"
+      },
+      "products": [
+        {"@id": "pkg:golang/golang.org/x/image@v0.21.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-434 в golang.org/x/image v0.21.0 не эксплуатируема в образе deckhouse-oss: зависимость транзитивная и не входит в граф импорта бинарника deckhouse-controller (декодирование недоверенных изображений не выполняется), уязвимый путь не достигается в рамках исполнения компонента. Бамп зависимости будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27142"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не рендерит HTML и не отдаёт контент в браузер, XSS-пути стандартной библиотеки в рамках его исполнения не достигаются. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32282"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-59 (Improper Link Resolution Before File Access, symlink following) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не обрабатывает произвольные пути файловой системы от недоверенных пользователей. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32288"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: поверхность атаки ограничена, вектор подачи недоверенных данных в уязвимый путь отсутствует. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32289"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.5"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не работает как веб-сервер, выводящий контент в браузер, XSS-уязвимости стандартной библиотеки не достигаются. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
+      "timestamp": "2026-06-01T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-04-22T12:00:00Z"
+  "last_updated": "2026-06-01T12:00:00Z"
 }
