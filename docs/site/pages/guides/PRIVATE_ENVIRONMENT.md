@@ -1220,23 +1220,6 @@ proxy:
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
-# Initial cluster bootstrap settings for Deckhouse.
-# https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  # Docker registry address that hosts Deckhouse images.
-  imagesRepo: harbor.example/deckhouse/ee
-  # Docker registry credentials string.
-  registryDockerCfg: <DOCKER_CFG_BASE64>
-  # Registry access scheme (HTTP or HTTPS).
-  registryScheme: HTTPS
-  # Root CA certificate used to validate the registry certificate (if the registry uses a self-signed certificate).
-  registryCA: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----
----
 # deckhouse module settings.
 # https://deckhouse.io/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
@@ -1250,6 +1233,22 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # Settings for accessing the container registry with Deckhouse images.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Address of the Docker registry where the Deckhouse images are located.
+        imagesRepo: <IMAGES_REPO_URI>
+        # The username for authenticating with the container registry.
+        username: <USERNAME>
+        # The password for authenticating with the container image repository.
+        password: <PASSWORD>
+        scheme: HTTPS
+        # The root CA certificate (in PEM format) for validating the container registry’s server certificate.
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # Global Deckhouse settings.
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
