@@ -253,6 +253,59 @@ func TestProbeClientSecret(t *testing.T) {
 	}
 }
 
+func TestClusterInternalHostReason(t *testing.T) {
+	internal := []string{
+		"keycloak.keycloak1.svc",
+		"keycloak.keycloak1.svc.cluster.local",
+		"keycloak",
+		"localhost",
+		"idp.local",
+		"127.0.0.1",
+		"10.0.0.1",
+		"192.168.1.10",
+		"172.16.5.4",
+		"169.254.1.1",
+	}
+	for _, host := range internal {
+		if reason := clusterInternalHostReason(host); reason == "" {
+			t.Errorf("expected %q to be detected as cluster-internal", host)
+		}
+	}
+
+	public := []string{
+		"keycloak.example.com",
+		"accounts.google.com",
+		"idp.185.11.73.222.sslip.io",
+		"8.8.8.8",
+	}
+	for _, host := range public {
+		if reason := clusterInternalHostReason(host); reason != "" {
+			t.Errorf("expected %q to be public, got reason %q", host, reason)
+		}
+	}
+}
+
+func TestCheckPublicBrowserURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawURL string
+		want   string
+	}{
+		{name: "internal svc fails", rawURL: "https://keycloak.keycloak1.svc:8443/realms/d8test", want: dexProviderCheckStepFailed},
+		{name: "single label fails", rawURL: "https://keycloak:8443/realms/d8test", want: dexProviderCheckStepFailed},
+		{name: "public domain succeeds", rawURL: "https://keycloak.example.com/realms/d8test", want: dexProviderCheckStepSucceeded},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &dexProviderCheckResult{}
+			checkPublicBrowserURL(result, "public", tt.rawURL)
+			if len(result.checks) != 1 || result.checks[0].Status != tt.want {
+				t.Fatalf("expected status %q, got %#v", tt.want, result.checks)
+			}
+		})
+	}
+}
+
 func TestCheckCABundle(t *testing.T) {
 	t.Run("empty is skipped", func(t *testing.T) {
 		result := &dexProviderCheckResult{}
