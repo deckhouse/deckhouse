@@ -62,9 +62,6 @@ spec:
     image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager "etcd") }}
     imagePullPolicy: IfNotPresent
   {{- end }}
-      readOnlyRootFilesystem: true
-      seccompProfile:
-        type: RuntimeDefault
     livenessProbe:
       failureThreshold: 8
       httpGet:
@@ -94,12 +91,15 @@ spec:
         cpu: "{{ div (mul $millicpu 35) 100 }}m"
         memory: "{{ div (mul $memory 35) 100 }}"
     securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-      runAsGroup: 0
       capabilities:
         drop:
         - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
+      seccompProfile:
+        type: RuntimeDefault
     startupProbe:
       failureThreshold: 24
       httpGet:
@@ -111,24 +111,24 @@ spec:
       periodSeconds: 10
       timeoutSeconds: 15
     volumeMounts:
-    - name: etcd-data
-      mountPath: /var/lib/etcd
-    - name: etcd-certs
-      mountPath: /etc/kubernetes/pki/etcd
+    - mountPath: /var/lib/etcd
+      name: etcd-data
+    - mountPath: /etc/kubernetes/pki/etcd
+      name: etcd-certs
       readOnly: true
-  hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
+  hostNetwork: true
   priority: 2000001000
   priorityClassName: system-node-critical
   securityContext:
     seccompProfile:
       type: RuntimeDefault
   volumes:
-  - name: etcd-data
-    hostPath:
+  - hostPath:
       path: /var/lib/etcd
       type: DirectoryOrCreate
-  - name: etcd-certs
-    hostPath:
+    name: etcd-data
+  - hostPath:
       path: /etc/kubernetes/pki/etcd
       type: DirectoryOrCreate
+    name: etcd-certs
