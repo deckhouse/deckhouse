@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
+	"github.com/pterm/pterm"
 	otattribute "go.opentelemetry.io/otel/attribute"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
@@ -348,9 +349,9 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
 
-	printBanner()
-
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+	printBanner(interactive)
+
 	if interactive {
 		_, phasesChan, err := progressbar.InitProgressBarWithDeferredFunc("Bootstrap cluster", b.logger)
 		if err != nil {
@@ -557,6 +558,20 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 
 			bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 			state.SaveMasterHostsToCache(ctx, bctx.stateCache, bctx.masterAddressesForSSH)
+
+			interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
+			if interactive {
+				sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				sshString := sshClient.Session().String()
+				progressbar.GetDefaultPb().LogBox.WithStatusString(fmt.Sprintf("First master connection string: %s", sshString))
+			}
 			return nil
 		})
 		if err != nil {
@@ -634,6 +649,7 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 
 	return nil
 }
+
 func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *bootstrapContext) error {
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallKubernetesPhase, false, bctx.stateCache, nil); err != nil {
 		return err
@@ -864,7 +880,7 @@ func (b *ClusterBootstrapper) bootstrapFinalize(ctx context.Context, bctx *boots
 
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress
 	if interactive {
-		progressbar.InfoF("%s\n", "Deckhouse cluster was created successfully! Kubernetes Master Node addresses for SSH:")
+		progressbar.InfoF("%s", "Deckhouse cluster was created successfully! Kubernetes Master Node addresses for SSH:")
 	}
 
 	if bctx.metaConfig.ClusterType == config.CloudClusterType {
@@ -914,9 +930,12 @@ func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
 	return b.PhasedExecutionContext.GetLastState()
 }
 
-func printBanner() {
-	log.InteractiveInfoLn(banner)
-	log.InteractiveInfoLn("")
+func printBanner(iteractive bool) {
+	if iteractive {
+		pterm.Println(banner)
+	} else {
+		log.InfoLn(banner)
+	}
 }
 
 func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {
