@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -109,6 +110,9 @@ func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
 		if dnsAddress != "" && dnsAddress != s.ClusterIP {
 			return fmt.Errorf("ERROR: can't select a single service by 'k8s-app: kube-dns' label, found %s %s", dnsAddress, s.ClusterIP)
 		}
+		if dnsAddress != "" && !sameClusterIPs(dnsAddressArray, s.ClusterIPs) {
+			return fmt.Errorf("ERROR: services selected by 'k8s-app: kube-dns' label disagree on ClusterIPs: %v vs %v", dnsAddressArray, s.ClusterIPs)
+		}
 
 		dnsAddress = s.ClusterIP
 		dnsAddressArray = s.ClusterIPs
@@ -118,21 +122,44 @@ func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("DNS addresses not found")
 	}
 
-	finalDNSAddress := dnsAddress
-	if len(dnsAddressArray) > 1 {
-		// Dual stack: join IPs using comma to store as a single string
-		var ips []string
-		for _, ip := range dnsAddressArray {
-			if ip != "" && ip != "None" {
-				ips = append(ips, ip)
-			}
-		}
-		if len(ips) > 0 {
-			finalDNSAddress = strings.Join(ips, ",")
-		}
-	}
-
-	input.Values.Set("global.discovery.clusterDNSAddress", finalDNSAddress)
+	input.Values.Set("global.discovery.clusterDNSAddress", joinDNSAddresses(dnsAddress, dnsAddressArray))
 
 	return nil
+}
+
+// joinDNSAddresses returns the final clusterDNSAddress value:
+//   - For single-stack (or when ClusterIPs is empty), returns the primary ClusterIP unchanged.
+//   - For dual-stack, returns ClusterIPs joined with a comma, skipping empty/"None" entries.
+func joinDNSAddresses(primary string, all []string) string {
+	if len(all) <= 1 {
+		return primary
+	}
+	ips := make([]string, 0, len(all))
+	for _, ip := range all {
+		if ip != "" && ip != "None" {
+			ips = append(ips, ip)
+		}
+	}
+	if len(ips) == 0 {
+		return primary
+	}
+	return strings.Join(ips, ",")
+}
+
+// sameClusterIPs reports whether two ClusterIPs slices contain the same set of addresses.
+// Order is intentionally ignored: Kubernetes does not guarantee field order between objects.
+func sameClusterIPs(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	aCopy := append([]string(nil), a...)
+	bCopy := append([]string(nil), b...)
+	sort.Strings(aCopy)
+	sort.Strings(bCopy)
+	for i := range aCopy {
+		if aCopy[i] != bCopy[i] {
+			return false
+		}
+	}
+	return true
 }

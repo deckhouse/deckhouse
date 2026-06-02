@@ -234,8 +234,18 @@ bb-d8-node-ip() {
 }
 
 bb-d8-node-endpoint() {
-  local port=$1
-  local ip=$(cat /var/lib/bashible/discovered-node-ip | cut -d',' -f1)
+  local port="$1"
+  if [[ -z "$port" ]]; then
+    bb-log-error "bb-d8-node-endpoint: port argument is required"
+    return 1
+  fi
+  local ip
+  ip="$(< /var/lib/bashible/discovered-node-ip)"
+  ip="${ip%%,*}"
+  if [[ -z "$ip" ]]; then
+    bb-log-error "bb-d8-node-endpoint: /var/lib/bashible/discovered-node-ip is empty"
+    return 1
+  fi
   if [[ "$ip" == *:* ]]; then
     echo "[$ip]:$port"
   else

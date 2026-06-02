@@ -24,6 +24,7 @@ bb-set-proxy() {
   export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
   export https_proxy=${HTTPS_PROXY}
   {{- end }}
+  {{- /* NOTE: keep this noProxy list in sync with modules/040-node-manager/templates/bashible-apiserver/deployment.yaml */}}
   {{- $noProxy := list "127.0.0.1" "169.254.169.254" "registry.d8-system.svc" .Values.global.clusterConfiguration.clusterDomain .Values.global.clusterConfiguration.podSubnetCIDR .Values.global.clusterConfiguration.serviceSubnetCIDR }}
   {{- if .Values.global.clusterConfiguration.podSubnetCIDRIPv6 }}
     {{- $noProxy = append $noProxy .Values.global.clusterConfiguration.podSubnetCIDRIPv6 }}

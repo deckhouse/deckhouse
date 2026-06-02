@@ -117,6 +117,16 @@ apiVersions:
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
         default: "24"
+      podSubnetNodeCIDRPrefixIPv6:
+        type: string
+        x-unsafe: true
+        pattern: '^(12[0-8]|1[01][0-9]|[1-9][0-9]|[0-9])$'
+        description: |
+          The prefix size of the IPv6 Pod network allocated to each node (for dual-stack clusters).
+
+          Required only when `podSubnetCIDRIPv6` is set. Typical value: `"112"` for a `/56` cluster prefix.
+
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       serviceSubnetCIDR:
         type: string
         x-unsafe: true

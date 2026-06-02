@@ -41,6 +41,7 @@ apiVersions:
           Both IPv4 and IPv6 CIDRs are supported (for dual-stack clusters list IPv4 and IPv6 subnets together).
 
           > When changing the value, subnets in the new list must include IP addresses of currently joined nodes.
+          > In dual-stack clusters this means subnets for **both** address families must be covered.
         x-examples:
           - [ "192.168.42.0/24", "172.16.16.0/24" ]
           - [ "192.168.42.0/24", "fd00:10:42::/64" ]

@@ -261,17 +261,29 @@ cgroupsPerQOS: true
 cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
+  {{- if not .normal.clusterDNSAddress }}
+    {{- fail "normal.clusterDNSAddress is empty" }}
+  {{- end }}
 clusterDNS:
-{{- range (.normal.clusterDNSAddress | splitList ",") }}
-- {{ . }}
-{{- end }}
+  {{- range (.normal.clusterDNSAddress | splitList ",") }}
+    {{- $addr := trim . }}
+    {{- if $addr }}
+- {{ $addr }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 {{- if eq .runType "ClusterBootstrap" }}
 clusterDomain: {{ .clusterBootstrap.clusterDomain }}
+  {{- if not .clusterBootstrap.clusterDNSAddress }}
+    {{- fail "clusterBootstrap.clusterDNSAddress is empty" }}
+  {{- end }}
 clusterDNS:
-{{- range (.clusterBootstrap.clusterDNSAddress | splitList ",") }}
-- {{ . }}
-{{- end }}
+  {{- range (.clusterBootstrap.clusterDNSAddress | splitList ",") }}
+    {{- $addr := trim . }}
+    {{- if $addr }}
+- {{ $addr }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true

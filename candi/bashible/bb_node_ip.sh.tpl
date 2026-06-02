@@ -28,21 +28,6 @@ function discover_internal_network_cidrs() {
   fi
 }
 
-function check_slash32_node_ip() {
-  local inet_lines
-  inet_lines="$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}')"
-  if [[ -z "$inet_lines" || "$(wc -l <<< "${inet_lines}")" -ne 1 ]]; then
-    return 1
-  fi
-
-  local inet_line="${inet_lines}"
-  local addr="${inet_line%/*}"
-  local prefix="${inet_line#*/}"
-
-  [[ "$prefix" == "32" ]] && echo "$addr"
-}
-
-
 # Ensure we have file
 touch /var/lib/bashible/discovered-node-ip
 
@@ -71,95 +56,100 @@ internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | qu
 
 if [[ -z "$internal_network_cidrs" ]]; then
   internal_network_cidrs="$(discover_internal_network_cidrs || true)"
-  fi
+fi
 
-  python3 - << 'EOF' > /var/lib/bashible/discovered-node-ip.tmp
-  import sys
-  import ipaddress
-  import subprocess
-  import os
+# Pass CIDR list to Python via environment.
+# Python script discovers node IPs (IPv4 and/or IPv6) that match the given CIDRs.
+# If no CIDRs are provided, it falls back to the DVP-like case: single /32 (IPv4) or /128 (IPv6).
+export internal_network_cidrs
+internal_network_cidrs="${internal_network_cidrs}" python3 - > /var/lib/bashible/discovered-node-ip.tmp << 'PYEOF'
+import ipaddress
+import os
+import subprocess
 
-  def get_system_ips_and_prefixes():
-      ips = []
-      try:
-          output = subprocess.check_output(['ip', '-o', 'addr', 'show', 'up', 'scope', 'global'], universal_newlines=True)
-          for line in output.splitlines():
-              parts = line.split()
-              if len(parts) >= 4 and parts[1] != 'lo':
-                  addr_with_prefix = parts[3]
-                  if '/' in addr_with_prefix:
-                      ip, prefix = addr_with_prefix.split('/')
-                      try:
-                          ipaddress.ip_address(ip)
-                          ips.append((ip, prefix))
-                      except ValueError:
-                          pass
-      except Exception as e:
-          pass
-      return ips
 
-  def is_ip_in_cidr(ip_str, cidr_str):
-      try:
-          ip = ipaddress.ip_address(ip_str)
-          net = ipaddress.ip_network(cidr_str, strict=False)
-          return ip in net
-      except ValueError:
-          return False
+def get_system_ips_and_prefixes():
+    ips = []
+    try:
+        output = subprocess.check_output(
+            ['ip', '-o', 'addr', 'show', 'up', 'scope', 'global'],
+            universal_newlines=True,
+        )
+    except Exception:
+        return ips
 
-  def discover_ip(internal_network_cidrs_str):
-      system_ips_with_prefixes = get_system_ips_and_prefixes()
-    
-      if not internal_network_cidrs_str:
-          matched_ipv4 = None
-          matched_ipv6 = None
-          for ip, prefix in system_ips_with_prefixes:
-              try:
-                  obj = ipaddress.ip_address(ip)
-                  if obj.version == 4 and prefix == '32' and not matched_ipv4:
-                      matched_ipv4 = ip
-                  elif obj.version == 6 and prefix == '128' and not matched_ipv6:
-                      matched_ipv6 = ip
-              except:
-                  pass
-        
-          final_ips = [ip for ip in [matched_ipv4, matched_ipv6] if ip]
-          if final_ips:
-              return ",".join(final_ips)
-          return ""
-        
-      cidrs = internal_network_cidrs_str.split()
-      matched_ipv4 = None
-      matched_ipv6 = None
-    
-      for cidr in cidrs:
-          for ip, prefix in system_ips_with_prefixes:
-              if is_ip_in_cidr(ip, cidr):
-                  try:
-                      obj = ipaddress.ip_address(ip)
-                      if obj.version == 4 and not matched_ipv4:
-                          matched_ipv4 = ip
-                      elif obj.version == 6 and not matched_ipv6:
-                          matched_ipv6 = ip
-                  except:
-                      pass
-    
-      final_ips = [ip for ip in [matched_ipv4, matched_ipv6] if ip]
-      if final_ips:
-          return ",".join(final_ips)
-      return ""
+    for line in output.splitlines():
+        parts = line.split()
+        if len(parts) < 4 or parts[1] == 'lo':
+            continue
+        addr_with_prefix = parts[3]
+        if '/' not in addr_with_prefix:
+            continue
+        ip, prefix = addr_with_prefix.split('/', 1)
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        ips.append((ip, prefix))
+    return ips
 
-  if __name__ == '__main__':
-      cidrs = os.environ.get('internal_network_cidrs', "")
-      res = discover_ip(cidrs)
-      if res:
-          print(res)
-  EOF
 
-  if [ -s /var/lib/bashible/discovered-node-ip.tmp ]; then
-    mv /var/lib/bashible/discovered-node-ip.tmp /var/lib/bashible/discovered-node-ip
-    exit 0
-  else
-    rm -f /var/lib/bashible/discovered-node-ip.tmp
-  fi
-  {{- end }}
+def is_ip_in_cidr(ip_str, cidr_str):
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        net = ipaddress.ip_network(cidr_str, strict=False)
+    except ValueError:
+        return False
+    return ip in net
 
+
+def discover_ip(internal_network_cidrs_str):
+    system_ips = get_system_ips_and_prefixes()
+    matched_v4 = None
+    matched_v6 = None
+
+    if not internal_network_cidrs_str:
+        # DVP-like fallback: a single /32 IPv4 or /128 IPv6 address.
+        for ip, prefix in system_ips:
+            try:
+                version = ipaddress.ip_address(ip).version
+            except ValueError:
+                continue
+            if version == 4 and prefix == '32' and matched_v4 is None:
+                matched_v4 = ip
+            elif version == 6 and prefix == '128' and matched_v6 is None:
+                matched_v6 = ip
+    else:
+        for cidr in internal_network_cidrs_str.split():
+            for ip, _ in system_ips:
+                if not is_ip_in_cidr(ip, cidr):
+                    continue
+                try:
+                    version = ipaddress.ip_address(ip).version
+                except ValueError:
+                    continue
+                if version == 4 and matched_v4 is None:
+                    matched_v4 = ip
+                elif version == 6 and matched_v6 is None:
+                    matched_v6 = ip
+
+    final_ips = [ip for ip in (matched_v4, matched_v6) if ip]
+    return ",".join(final_ips)
+
+
+if __name__ == '__main__':
+    cidrs = os.environ.get('internal_network_cidrs', '')
+    res = discover_ip(cidrs)
+    if res:
+        print(res)
+PYEOF
+
+if [ -s /var/lib/bashible/discovered-node-ip.tmp ]; then
+  mv /var/lib/bashible/discovered-node-ip.tmp /var/lib/bashible/discovered-node-ip
+  exit 0
+else
+  rm -f /var/lib/bashible/discovered-node-ip.tmp
+  bb-log-error "Unable to discover node IP: no system address matches internal_network_cidrs='${internal_network_cidrs}'"
+  exit 1
+fi
+{{- end }}

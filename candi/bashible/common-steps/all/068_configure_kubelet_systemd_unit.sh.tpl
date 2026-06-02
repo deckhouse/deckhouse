@@ -83,7 +83,7 @@ ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
     --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf \\
     --config=/var/lib/kubelet/config.yaml \\
     --kubeconfig=/etc/kubernetes/kubelet.conf \\
-    --address=${first_discovered_node_ip:-0.0.0.0} \
+    --address=${first_discovered_node_ip:-0.0.0.0} \\
 {{- /* During the first multi-network Node bootstrap `kubelet` discovers external IP getting it by Node's hostname. */ -}}
 {{- /* We have to bootstrap Node with the internal IP because the API certificate denies requests by external IP. */ -}}
 {{- if or (eq .nodeGroup.nodeType "Static") (eq .runType "ClusterBootstrap") -}}

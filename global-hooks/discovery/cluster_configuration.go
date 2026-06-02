@@ -107,9 +107,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)
 
 		if podSubnetCIDR, ok := metaConfig.ClusterConfig["podSubnetCIDR"]; ok {
-			podSubnetValue := podSubnetCIDR
-			if podSubnetIPv6Raw, okv6 := metaConfig.ClusterConfig["podSubnetCIDRIPv6"]; okv6 {
-				podSubnetValue = appendCIDRs(podSubnetValue, podSubnetIPv6Raw)
+			podSubnetValue, err := joinDualStackCIDR(podSubnetCIDR, metaConfig.ClusterConfig["podSubnetCIDRIPv6"])
+			if err != nil {
+				return fmt.Errorf("build podSubnet value: %w", err)
 			}
 			input.Values.Set("global.discovery.podSubnet", podSubnetValue)
 		} else {
@@ -117,9 +117,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 
 		if serviceSubnetCIDR, ok := metaConfig.ClusterConfig["serviceSubnetCIDR"]; ok {
-			serviceSubnetValue := serviceSubnetCIDR
-			if serviceSubnetIPv6Raw, okv6 := metaConfig.ClusterConfig["serviceSubnetCIDRIPv6"]; okv6 {
-				serviceSubnetValue = appendCIDRs(serviceSubnetValue, serviceSubnetIPv6Raw)
+			serviceSubnetValue, err := joinDualStackCIDR(serviceSubnetCIDR, metaConfig.ClusterConfig["serviceSubnetCIDRIPv6"])
+			if err != nil {
+				return fmt.Errorf("build serviceSubnet value: %w", err)
 			}
 			input.Values.Set("global.discovery.serviceSubnet", serviceSubnetValue)
 		} else {
@@ -176,15 +176,34 @@ func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessag
 	return nil
 }
 
-func appendCIDRs(cidr1, cidr2 json.RawMessage) json.RawMessage {
-	var str1, str2 string
-	_ = json.Unmarshal(cidr1, &str1)
-	_ = json.Unmarshal(cidr2, &str2)
-	if str1 != "" && str2 != "" {
-		res, _ := json.Marshal(str1 + "," + str2)
-		return res
+// joinDualStackCIDR returns a JSON-encoded string equal to v4, optionally followed by
+// ",<v6>" when v6 is non-empty. The result is always a json.RawMessage holding a JSON string,
+// so it can be passed to input.Values.Set directly. Returns an error when v4 is missing or
+// cannot be parsed; v6 parse errors are reported as a hard error to avoid silently dropping
+// IPv6 subnets that an operator explicitly configured.
+func joinDualStackCIDR(v4, v6 json.RawMessage) (json.RawMessage, error) {
+	var v4Str string
+	if err := json.Unmarshal(v4, &v4Str); err != nil {
+		return nil, fmt.Errorf("unmarshal IPv4 CIDR: %w", err)
 	}
-	return cidr1
+	if v4Str == "" {
+		return nil, fmt.Errorf("IPv4 CIDR is empty")
+	}
+	if len(v6) == 0 {
+		return v4, nil
+	}
+	var v6Str string
+	if err := json.Unmarshal(v6, &v6Str); err != nil {
+		return nil, fmt.Errorf("unmarshal IPv6 CIDR: %w", err)
+	}
+	if v6Str == "" {
+		return v4, nil
+	}
+	res, err := json.Marshal(v4Str + "," + v6Str)
+	if err != nil {
+		return nil, fmt.Errorf("marshal joined CIDR: %w", err)
+	}
+	return res, nil
 }
 
 func rawMessageToString(message json.RawMessage) (string, error) {
