@@ -546,6 +546,7 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 
+	checkPublicBrowserURL(result, "oidcIssuerPublic", issuer)
 	checkCABundle(result, "oidcCABundle", provider.Spec.OIDC.RootCAData)
 	checkTLSCertificate(result, "oidcCertificate", issuer, provider.Spec.OIDC.RootCAData, provider.Spec.OIDC.InsecureSkipVerify)
 
@@ -739,6 +740,7 @@ func checkSAML(ctx context.Context, dc dependency.Container, result *dexProvider
 		return
 	}
 
+	checkPublicBrowserURL(result, "samlSSOURLPublic", provider.Spec.SAML.SSOURL)
 	checkCABundle(result, "samlCABundle", provider.Spec.SAML.RootCAData)
 	checkTLSCertificate(result, "samlCertificate", provider.Spec.SAML.SSOURL, provider.Spec.SAML.RootCAData, false)
 	checkHTTPReachability(ctx, dc, result, "samlSSOURL", provider.Spec.SAML.SSOURL, provider.Spec.SAML.RootCAData)
@@ -768,6 +770,61 @@ func checkHTTPReachability(
 		return
 	}
 	result.succeed(stepName, "URL %q is reachable with HTTP %d", rawURL, statusCode)
+}
+
+// checkPublicBrowserURL verifies that a browser-facing endpoint is not a
+// cluster-internal address. For OIDC the user's browser is redirected to the
+// issuer's authorization endpoint, and for SAML it is redirected to ssoURL, so
+// these URLs must resolve from outside the cluster. Backend connectivity checks
+// can pass against an in-cluster Service (e.g. *.svc) while real logins still
+// break in the browser; this step catches that misconfiguration.
+func checkPublicBrowserURL(result *dexProviderCheckResult, stepName, rawURL string) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Hostname() == "" {
+		result.fail(stepName, "URL %q is invalid: %v", rawURL, err)
+		return
+	}
+	if reason := clusterInternalHostReason(parsed.Hostname()); reason != "" {
+		result.fail(stepName,
+			"URL %q is not browser-reachable (%s); the user's browser is redirected here during login, so it must be a publicly resolvable domain",
+			rawURL, reason)
+		return
+	}
+	result.succeed(stepName, "URL %q uses a publicly resolvable host", rawURL)
+}
+
+// clusterInternalHostReason reports why a host is only reachable inside the
+// cluster, or an empty string if it looks publicly resolvable. It is a
+// best-effort heuristic: it flags loopback/private/link-local IPs, localhost,
+// Kubernetes service domains (*.svc, *.cluster.local), the .local mDNS suffix
+// and bare single-label hostnames.
+func clusterInternalHostReason(host string) string {
+	h := strings.ToLower(strings.TrimSuffix(host, "."))
+	if ip := net.ParseIP(h); ip != nil {
+		switch {
+		case ip.IsLoopback():
+			return "loopback IP address"
+		case ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast():
+			return "link-local IP address"
+		case ip.IsPrivate():
+			return "private IP address"
+		case ip.IsUnspecified():
+			return "unspecified IP address"
+		}
+		return ""
+	}
+	if h == "localhost" {
+		return "localhost"
+	}
+	for _, suffix := range []string{".cluster.local", ".svc", ".local"} {
+		if strings.HasSuffix(h, suffix) {
+			return "cluster-internal domain (" + suffix + ")"
+		}
+	}
+	if !strings.Contains(h, ".") {
+		return "single-label hostname resolvable only inside the cluster"
+	}
+	return ""
 }
 
 func httpOptions(rootCAData string, insecureSkipVerify bool) []d8http.Option {
