@@ -352,8 +352,8 @@ fileCheckFrequency: 2s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 70
 imageGCLowThresholdPercent: 65
-kubeAPIBurst: 100
-kubeAPIQPS: 100
+kubeAPIBurst: 200
+kubeAPIQPS: 200
 hairpinMode: promiscuous-bridge
 maxOpenFiles: 1000000
 {{- $max_pods := 120 }}
@@ -376,8 +376,8 @@ nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s
 podsPerCore: 0
 podPidsLimit: -1
 readOnlyPort: 0
-registryPullQPS: 30
-registryBurst: 60
+registryPullQPS: 100
+registryBurst: 200
 resolvConf: ${resolvConfPath}
 rotateCertificates: true
 runtimeRequestTimeout: 4m0s

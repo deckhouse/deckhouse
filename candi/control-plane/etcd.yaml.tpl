@@ -7,6 +7,7 @@
 {{- $initialCluster := printf "%s=%s" $etcdName $initialAdvertisePeer -}}
 {{- $millicpu := .resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := .resourcesRequestsMemoryControlPlane | default 536870912 }}
+{{- $quotaBackendBytes := "2147483648" }}
 {{- /* etcd */ -}}
 apiVersion: v1
 kind: Pod
@@ -19,29 +20,8 @@ metadata:
   annotations:
     control-plane-manager.deckhouse.io/etcd.advertise-client-urls: {{ $advertiseClient }}
 spec:
-  hostNetwork: true
-  dnsPolicy: ClusterFirstWithHostNet
-  priority: 2000001000
-  priorityClassName: system-node-critical
-  securityContext:
-    seccompProfile:
-      type: RuntimeDefault
-  volumes:
-  - name: etcd-data
-    hostPath:
-      path: /var/lib/etcd
-      type: DirectoryOrCreate
-  - name: etcd-certs
-    hostPath:
-      path: /etc/kubernetes/pki/etcd
-      type: DirectoryOrCreate
   containers:
-  - name: etcd
-  {{- if ((.images).controlPlaneManager).etcd }}  
-    image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager "etcd") }}
-    imagePullPolicy: IfNotPresent
-  {{- end }}
-    command:
+  - command:
     - etcd
     - --advertise-client-urls={{ $advertiseClient }}
     - --cert-file=/etc/kubernetes/pki/etcd/server.crt
@@ -53,8 +33,6 @@ spec:
     {{- if hasKey .etcd "existingCluster" }}
     {{- if .etcd.existingCluster }}
     - --initial-cluster-state=existing
-    {{- else }}
-    - --initial-cluster-state=new
     {{- end }}
     {{- end }}
     {{- end }}
@@ -63,8 +41,9 @@ spec:
     {{- end }}
     - --watch-progress-notify-interval=5s
     {{- if hasKey .etcd "quotaBackendBytes" }}
-    - --quota-backend-bytes={{ .etcd.quotaBackendBytes }}
+      {{ $quotaBackendBytes =  .etcd.quotaBackendBytes }}
     {{- end }}
+    - --quota-backend-bytes={{ $quotaBackendBytes }}
     - --metrics=extensive
     - --key-file=/etc/kubernetes/pki/etcd/server.key
     - --listen-client-urls={{ $listenClient }}
@@ -82,26 +61,24 @@ spec:
       value: "100"
     - name: ETCD_ELECTION_TIMEOUT
       value: "1000"
-    volumeMounts:
-    - name: etcd-data
-      mountPath: /var/lib/etcd
-    - name: etcd-certs
-      mountPath: /etc/kubernetes/pki/etcd
-      readOnly: true
-    resources:
-      requests:
-        cpu: "{{ div (mul $millicpu 35) 100 }}m"
-        memory: "{{ div (mul $memory 35) 100 }}"
-    securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-      runAsGroup: 0
-      capabilities:
-        drop:
-        - ALL
+  {{- if ((.images).controlPlaneManager).etcd }}  
+    image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager "etcd") }}
+    imagePullPolicy: IfNotPresent
+  {{- end }}
       readOnlyRootFilesystem: true
       seccompProfile:
         type: RuntimeDefault
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 127.0.0.1
+        path: /livez
+        port: probe-port
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    name: etcd
     ports:
     - containerPort: 2381
       name: probe-port
@@ -115,16 +92,17 @@ spec:
         scheme: HTTP
       periodSeconds: 1
       timeoutSeconds: 15
-    livenessProbe:
-      failureThreshold: 8
-      httpGet:
-        host: 127.0.0.1
-        path: /livez
-        port: probe-port
-        scheme: HTTP
-      initialDelaySeconds: 10
-      periodSeconds: 10
-      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: "{{ div (mul $millicpu 35) 100 }}m"
+        memory: "{{ div (mul $memory 35) 100 }}"
+    securityContext:
+      runAsNonRoot: false
+      runAsUser: 0
+      runAsGroup: 0
+      capabilities:
+        drop:
+        - ALL
     startupProbe:
       failureThreshold: 24
       httpGet:
@@ -135,3 +113,25 @@ spec:
       initialDelaySeconds: 10
       periodSeconds: 10
       timeoutSeconds: 15
+    volumeMounts:
+    - name: etcd-data
+      mountPath: /var/lib/etcd
+    - name: etcd-certs
+      mountPath: /etc/kubernetes/pki/etcd
+      readOnly: true
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  priority: 2000001000
+  priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+  - name: etcd-data
+    hostPath:
+      path: /var/lib/etcd
+      type: DirectoryOrCreate
+  - name: etcd-certs
+    hostPath:
+      path: /etc/kubernetes/pki/etcd
+      type: DirectoryOrCreate

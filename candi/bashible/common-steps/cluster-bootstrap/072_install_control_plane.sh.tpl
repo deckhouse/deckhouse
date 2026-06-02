@@ -15,7 +15,7 @@ set -x
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 {{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
-# Sub-step timing — emit `[bashible-timing] step=071_install_control_plane.sh
+# Sub-step timing — emit `[bashible-timing] step=072_install_control_plane.sh
 # section=<name> dur=<sec>` so dhctl-side parsing can attribute the (often >200s)
 # total of this step to one of: image-pull waits, kubelet Node registration,
 # RBAC/label/taint setup, or PKI upload.
@@ -24,7 +24,7 @@ __sec() {
   local now dur
   now=$(date +%s.%N)
   dur=$(awk -v s="$__sec_start" -v e="$now" 'BEGIN{printf "%.3f", e-s}')
-  echo "[bashible-timing] step=071_install_control_plane.sh section=$1 dur=${dur}s"
+  echo "[bashible-timing] step=072_install_control_plane.sh section=$1 dur=${dur}s"
   __sec_start=$now
 }
 
