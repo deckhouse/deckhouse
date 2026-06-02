@@ -120,7 +120,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 }
 
 func ValidateScriptFile(ctx context.Context, path string) error {
-	ctx, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript")
+	ctx, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript") //nolint:ineffassign,staticcheck // ctx reassigned for span propagation to future calls
 	defer span.End()
 
 	info, err := os.Stat(path)

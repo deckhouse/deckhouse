@@ -89,7 +89,7 @@ func InitRelay(ctx context.Context, params RelayParams) (stopFunc, updateRelaySp
 	tun := wrapper.Client().ReverseTunnel(addr)
 
 	if err := tun.Up(); err != nil {
-		r.server.Stop(ctx)
+		_ = r.server.Stop(ctx)
 		return nop, nopSpan, fmt.Errorf("start OTel relay reverse tunnel: %w", err)
 	}
 
@@ -114,7 +114,7 @@ func InitRelay(ctx context.Context, params RelayParams) (stopFunc, updateRelaySp
 			r.tunnel.Stop()
 		}
 		if r.server != nil {
-			r.server.Stop(context.Background())
+			_ = r.server.Stop(context.Background())
 		}
 	}, r.server.UpdateSpan, nil
 }

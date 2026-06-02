@@ -64,7 +64,7 @@ func (s *Server) UpdateSpan(span trace.Span) {
 	s.span = span
 }
 
-func (s *Server) Start(ctx context.Context, bindAddr string) error {
+func (s *Server) Start(_ context.Context, bindAddr string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -224,19 +224,21 @@ func (s *Server) handleTraces(w http.ResponseWriter, r *http.Request) {
 					otelAttrs = append(otelAttrs, attribute.String("external_span_id", sp.SpanID))
 				}
 				for _, attr := range sp.Attributes {
-					if attr.Value.StringValue != "" {
+					switch {
+					case attr.Value.StringValue != "":
 						otelAttrs = append(otelAttrs, attribute.String(attr.Key, attr.Value.StringValue))
-					} else if attr.Value.IntValue != "" {
+					case attr.Value.IntValue != "":
 						otelAttrs = append(otelAttrs, attribute.String(attr.Key, attr.Value.IntValue))
-					} else {
+					default:
 						otelAttrs = append(otelAttrs, attribute.Bool(attr.Key, attr.Value.BoolValue))
 					}
 				}
 				newSpan.SetAttributes(otelAttrs...)
 
-				if sp.Status.Code == 2 {
+				switch sp.Status.Code {
+				case 2:
 					newSpan.SetStatus(codes.Error, "")
-				} else if sp.Status.Code == 1 {
+				case 1:
 					newSpan.SetStatus(codes.Ok, "")
 				}
 

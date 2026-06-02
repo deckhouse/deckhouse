@@ -534,7 +534,9 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 
 			if baseOutputs.BastionHost != "" {
 				connectionConfig.Config.BastionHost = baseOutputs.BastionHost
-				SaveBastionHostToCache(ctx, bctx.stateCache, baseOutputs.BastionHost)
+				if err := SaveBastionHostToCache(ctx, bctx.stateCache, baseOutputs.BastionHost); err != nil {
+					log.WarnF("Cannot save bastion host to cache %v\n", err)
+				}
 			}
 
 			connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
@@ -591,7 +593,9 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 		if b.SSHProviderInitializer.CheckHosts() {
 			connectionConfig := b.SSHProviderInitializer.GetConfig()
 			if connectionConfig.Config.BastionHost != "" {
-				SaveBastionHostToCache(ctx, bctx.stateCache, connectionConfig.Config.BastionHost)
+				if err := SaveBastionHostToCache(ctx, bctx.stateCache, connectionConfig.Config.BastionHost); err != nil {
+					log.WarnF("Cannot save bastion host to cache %v\n", err)
+				}
 			}
 
 			state.SaveMasterHostsToCache(ctx, bctx.stateCache, map[string]string{
@@ -957,7 +961,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 	masterAddressesForSSH map[string]string,
 	infrastructureContext *infrastructure.Context,
 	globalOptions *options.GlobalOptions,
-	PhasedExecutionContext phases.DefaultPhasedExecutionContext,
+	pec phases.DefaultPhasedExecutionContext,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodesForCloudCluster")
 	defer span.End()
@@ -972,7 +976,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
-	PhasedExecutionContext.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
+	pec.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters)
 
 	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext, globalOptions); err != nil {
 		return err
@@ -992,7 +996,7 @@ func bootstrapAdditionalNodesForCloudCluster(
 			return err
 		}
 
-		PhasedExecutionContext.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes)
+		pec.CompleteSubPhase(phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes)
 
 		return nil
 	})

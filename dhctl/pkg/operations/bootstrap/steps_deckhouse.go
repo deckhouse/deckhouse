@@ -93,6 +93,9 @@ func applyPostBootstrapModuleConfigs(
 	kubeCl *client.KubernetesClient,
 	tasks []actions.ModuleConfigTask,
 ) error {
+	ctx, span := telemetry.StartSpan(ctx, "applyPostBootstrapModuleConfigs") //nolint:ineffassign,staticcheck // ctx reassigned for span propagation to future calls
+	defer span.End()
+
 	for _, task := range tasks {
 		extLogger := log.ExternalLoggerProvider(log.GetDefaultLogger())
 		p := retry.NewEmptyParams(

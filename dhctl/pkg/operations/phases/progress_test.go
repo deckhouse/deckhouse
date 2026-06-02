@@ -216,10 +216,11 @@ func TestProgressTracker_Complete(t *testing.T) {
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
+	require.NoError(t, progressTracker.Complete(phases.BaseInfraPhase))
 
 	lastPhases := phases.BootstrapPhases()
 	for i := range lastPhases {
-		// everything except BaseInfraPhase and RegistryPackagesProxyPhase should be skipped
+		// only PreInfraPreflights and BaseInfra are completed; everything after is skipped
 		if i <= 1 {
 			continue
 		}
@@ -238,16 +239,16 @@ func TestProgressTracker_Complete(t *testing.T) {
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         bootstrapPhases,
-			Progress:       0.125,
-			CompletedPhase: bootstrapPhases[0].Phase,
-			CurrentPhase:   bootstrapPhases[1].Phase,
-			NextPhase:      bootstrapPhases[2].Phase,
+			Progress:       float64(2) / float64(len(bootstrapPhases)),
+			CompletedPhase: bootstrapPhases[1].Phase,
+			CurrentPhase:   bootstrapPhases[2].Phase,
+			NextPhase:      bootstrapPhases[3].Phase,
 		},
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         lastPhases,
 			Progress:       1,
-			CompletedPhase: lastPhases[7].Phase,
+			CompletedPhase: lastPhases[len(lastPhases)-1].Phase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
