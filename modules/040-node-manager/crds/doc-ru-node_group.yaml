@@ -236,14 +236,129 @@ spec:
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
             status:
               properties:
+                conditionSummary:
+                  description: |
+                    Сводная информация о состоянии группы узлов.
+                  properties:
+                    ready:
+                      description: |
+                        Готовность группы узлов по сводному состоянию.
+                    statusMessage:
+                      description: |
+                        Сообщение о состоянии обработки группы узлов.
+                conditions:
+                  description: |
+                    Список условий, отражающих текущее состояние группы узлов.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        description: |
+                          Время последнего перехода условия из одного состояния в другое.
+                      message:
+                        description: |
+                          Человекочитаемое сообщение с подробностями последнего перехода.
+                      status:
+                        description: |
+                          Статус условия: `True` или `False`.
+                      type:
+                        description: |
+                          Тип условия группы узлов.
+                deckhouse:
+                  description: |
+                    Состояние обработки ресурса оператором Deckhouse.
+                  properties:
+                    observed:
+                      description: |
+                        Содержит время последнего обнаруженного оператором изменения ресурса и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней обнаруженной версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда оператор в последний раз обнаружил изменение ресурса.
+                    processed:
+                      description: |
+                        Содержит время последнего применения ресурса в кластере оператором и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней применённой версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда ресурс был в последний раз применён в кластере.
+                    synced:
+                      description: |
+                        `True`, если последняя обнаруженная версия ресурса успешно применена в кластере.
+                desired:
+                  description: |
+                    Желаемое количество машин в группе.
                 engine:
                   description: |
-                    Механизм, который используется для управления узлами в этой группе.
+                    Фактический механизм управления узлами в этой группе.
 
-                    Поддерживаемые значения:
+                    Значение поля определяет, каким компонентом управляются узлы:
+
                     - `None` — узлы группы не управляются через MCM или CAPI;
                     - `MCM` — узлы группы управляются через machine-controller-manager;
                     - `CAPI` — узлы группы управляются через Cluster API.
+                error:
+                  description: |
+                    Сообщение об ошибке при обработке группы узлов.
+                instances:
+                  description: |
+                    Количество инстансов в группе в любом состоянии.
+                kubernetesVersion:
+                  description: |
+                    Текущая версия Kubernetes на узлах или версия, до которой узлы будут обновлены.
+                lastMachineFailures:
+                  description: |
+                    Список последних ошибок машин в группе узлов.
+                  items:
+                    properties:
+                      lastOperation:
+                        description: |
+                          Последняя операция с машиной.
+                        properties:
+                          description:
+                            description: |
+                              Описание последней операции.
+                          lastUpdateTime:
+                            description: |
+                              Время последнего обновления статуса операции.
+                          state:
+                            description: |
+                              Состояние операции с машиной.
+                          type:
+                            description: |
+                              Тип операции.
+                      name:
+                        description: |
+                          Имя машины.
+                      ownerRef:
+                        description: |
+                          Имя владельца машины.
+                      providerID:
+                        description: |
+                          ProviderID машины.
+                max:
+                  description: |
+                    Максимальное количество инстансов в группе.
+                min:
+                  description: |
+                    Минимальное количество инстансов в группе.
+                nodes:
+                  description: |
+                    Количество Kubernetes-узлов в группе в любом состоянии.
+                ready:
+                  description: |
+                    Количество готовых Kubernetes-узлов в группе.
+                standby:
+                  description: |
+                    Количество резервных инстансов в группе.
+                upToDate:
+                  description: |
+                    Количество узлов в актуальном состоянии.
     - name: v1alpha2
       schema:
         openAPIV3Schema:
@@ -474,14 +589,129 @@ spec:
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
             status:
               properties:
+                conditionSummary:
+                  description: |
+                    Сводная информация о состоянии группы узлов.
+                  properties:
+                    ready:
+                      description: |
+                        Готовность группы узлов по сводному состоянию.
+                    statusMessage:
+                      description: |
+                        Сообщение о состоянии обработки группы узлов.
+                conditions:
+                  description: |
+                    Список условий, отражающих текущее состояние группы узлов.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        description: |
+                          Время последнего перехода условия из одного состояния в другое.
+                      message:
+                        description: |
+                          Человекочитаемое сообщение с подробностями последнего перехода.
+                      status:
+                        description: |
+                          Статус условия: `True` или `False`.
+                      type:
+                        description: |
+                          Тип условия группы узлов.
+                deckhouse:
+                  description: |
+                    Состояние обработки ресурса оператором Deckhouse.
+                  properties:
+                    observed:
+                      description: |
+                        Содержит время последнего обнаруженного оператором изменения ресурса и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней обнаруженной версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда оператор в последний раз обнаружил изменение ресурса.
+                    processed:
+                      description: |
+                        Содержит время последнего применения ресурса в кластере оператором и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней применённой версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда ресурс был в последний раз применён в кластере.
+                    synced:
+                      description: |
+                        `True`, если последняя обнаруженная версия ресурса успешно применена в кластере.
+                desired:
+                  description: |
+                    Желаемое количество машин в группе.
                 engine:
                   description: |
-                    Механизм, который используется для управления узлами в этой группе.
+                    Фактический механизм управления узлами в этой группе.
 
-                    Поддерживаемые значения:
+                    Значение поля определяет, каким компонентом управляются узлы:
+
                     - `None` — узлы группы не управляются через MCM или CAPI;
                     - `MCM` — узлы группы управляются через machine-controller-manager;
                     - `CAPI` — узлы группы управляются через Cluster API.
+                error:
+                  description: |
+                    Сообщение об ошибке при обработке группы узлов.
+                instances:
+                  description: |
+                    Количество инстансов в группе в любом состоянии.
+                kubernetesVersion:
+                  description: |
+                    Текущая версия Kubernetes на узлах или версия, до которой узлы будут обновлены.
+                lastMachineFailures:
+                  description: |
+                    Список последних ошибок машин в группе узлов.
+                  items:
+                    properties:
+                      lastOperation:
+                        description: |
+                          Последняя операция с машиной.
+                        properties:
+                          description:
+                            description: |
+                              Описание последней операции.
+                          lastUpdateTime:
+                            description: |
+                              Время последнего обновления статуса операции.
+                          state:
+                            description: |
+                              Состояние операции с машиной.
+                          type:
+                            description: |
+                              Тип операции.
+                      name:
+                        description: |
+                          Имя машины.
+                      ownerRef:
+                        description: |
+                          Имя владельца машины.
+                      providerID:
+                        description: |
+                          ProviderID машины.
+                max:
+                  description: |
+                    Максимальное количество инстансов в группе.
+                min:
+                  description: |
+                    Минимальное количество инстансов в группе.
+                nodes:
+                  description: |
+                    Количество Kubernetes-узлов в группе в любом состоянии.
+                ready:
+                  description: |
+                    Количество готовых Kubernetes-узлов в группе.
+                standby:
+                  description: |
+                    Количество резервных инстансов в группе.
+                upToDate:
+                  description: |
+                    Количество узлов в актуальном состоянии.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -1002,11 +1232,126 @@ spec:
                         - timeout
             status:
               properties:
+                conditionSummary:
+                  description: |
+                    Сводная информация о состоянии группы узлов.
+                  properties:
+                    ready:
+                      description: |
+                        Готовность группы узлов по сводному состоянию.
+                    statusMessage:
+                      description: |
+                        Сообщение о состоянии обработки группы узлов.
+                conditions:
+                  description: |
+                    Список условий, отражающих текущее состояние группы узлов.
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        description: |
+                          Время последнего перехода условия из одного состояния в другое.
+                      message:
+                        description: |
+                          Человекочитаемое сообщение с подробностями последнего перехода.
+                      status:
+                        description: |
+                          Статус условия: `True` или `False`.
+                      type:
+                        description: |
+                          Тип условия группы узлов.
+                deckhouse:
+                  description: |
+                    Состояние обработки ресурса оператором Deckhouse.
+                  properties:
+                    observed:
+                      description: |
+                        Содержит время последнего обнаруженного оператором изменения ресурса и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней обнаруженной версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда оператор в последний раз обнаружил изменение ресурса.
+                    processed:
+                      description: |
+                        Содержит время последнего применения ресурса в кластере оператором и его контрольную сумму.
+                      properties:
+                        checkSum:
+                          description: |
+                            Контрольная сумма последней применённой версии ресурса.
+                        lastTimestamp:
+                          description: |
+                            Время, когда ресурс был в последний раз применён в кластере.
+                    synced:
+                      description: |
+                        `True`, если последняя обнаруженная версия ресурса успешно применена в кластере.
+                desired:
+                  description: |
+                    Желаемое количество машин в группе.
                 engine:
                   description: |
-                    Механизм, который используется для управления узлами в этой группе.
+                    Фактический механизм управления узлами в этой группе.
 
-                    Поддерживаемые значения:
+                    Значение поля определяет, каким компонентом управляются узлы:
+                    
                     - `None` — узлы группы не управляются через MCM или CAPI;
                     - `MCM` — узлы группы управляются через machine-controller-manager;
                     - `CAPI` — узлы группы управляются через Cluster API.
+                error:
+                  description: |
+                    Сообщение об ошибке при обработке группы узлов.
+                instances:
+                  description: |
+                    Количество инстансов в группе в любом состоянии.
+                kubernetesVersion:
+                  description: |
+                    Текущая версия Kubernetes на узлах или версия, до которой узлы будут обновлены.
+                lastMachineFailures:
+                  description: |
+                    Список последних ошибок машин в группе узлов.
+                  items:
+                    properties:
+                      lastOperation:
+                        description: |
+                          Последняя операция с машиной.
+                        properties:
+                          description:
+                            description: |
+                              Описание последней операции.
+                          lastUpdateTime:
+                            description: |
+                              Время последнего обновления статуса операции.
+                          state:
+                            description: |
+                              Состояние операции с машиной.
+                          type:
+                            description: |
+                              Тип операции.
+                      name:
+                        description: |
+                          Имя машины.
+                      ownerRef:
+                        description: |
+                          Имя владельца машины.
+                      providerID:
+                        description: |
+                          ProviderID машины.
+                max:
+                  description: |
+                    Максимальное количество инстансов в группе.
+                min:
+                  description: |
+                    Минимальное количество инстансов в группе.
+                nodes:
+                  description: |
+                    Количество Kubernetes-узлов в группе в любом состоянии.
+                ready:
+                  description: |
+                    Количество готовых Kubernetes-узлов в группе.
+                standby:
+                  description: |
+                    Количество резервных инстансов в группе.
+                upToDate:
+                  description: |
+                    Количество узлов в актуальном состоянии.
