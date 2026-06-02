@@ -8,7 +8,6 @@ These tools let you automatically provision virtual machines and connect them to
 deploy clusters within private cloud environments, and scale resources as needed.
 
 - Deckhouse Virtualization Platform (DVP)
-- [Basis Dynamix](./dynamix/authorization.html)
 - [Huawei Cloud](./huaweicloud/authorization.html)
 - [OpenStack](./openstack/connection-and-authorization.html)
 - [VK Private Cloud](./vk/connection-and-authorization.html)
