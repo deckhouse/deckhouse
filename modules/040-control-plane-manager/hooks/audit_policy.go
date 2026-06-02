@@ -403,23 +403,6 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 		}
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
-
-	// Capture kubectl get logs requests.
-	{
-		rule := audit.PolicyRule{
-			Level: audit.LevelRequest,
-			Resources: []audit.GroupResources{
-				{
-					Resources: []string{"pods/log"},
-				},
-			},
-			Verbs: []string{"get"},
-			OmitStages: []audit.Stage{
-				audit.StageRequestReceived,
-			},
-		}
-		policy.Rules = append(policy.Rules, rule)
-	}
 }
 
 func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRuleWithDescription) {
