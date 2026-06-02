@@ -869,8 +869,8 @@ func (p *Proxy) handleGetIcon(w http.ResponseWriter, r *http.Request, cfg *regis
 		return
 	}
 
-	imagePath := packageName
-	p.logger.Debugf("handleGetIcon for %q/%q/version:%q", cfg.Repository, imagePath, version)
+	imagePath := packageName + "/version"
+	p.logger.Debugf("handleGetIcon for %q/%q:%q", cfg.Repository, imagePath, version)
 
 	if version == "" {
 		resolved, ok := p.resolveLatestVersion(w, r, cfg, imagePath)
