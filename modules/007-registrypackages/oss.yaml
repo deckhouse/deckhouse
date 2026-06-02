@@ -195,4 +195,4 @@
       version: v1.35.0
     - condition:
         k8s: "1.36"
-      version: v1.35.0
+      version: v1.36.0

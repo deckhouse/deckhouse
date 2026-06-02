@@ -74,8 +74,6 @@ secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
-  beforeInstall:
-  - pm install make bash
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export CGO_ENABLED=0
