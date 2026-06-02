@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -43,6 +44,10 @@ const (
 	// certificate encryption algorithm
 	keyAlgorithm = "ecdsa"
 	keySize      = 256
+
+	// caOrganization is placed in the CA Subject (O=) in StrictTLS mode so the
+	// CA Subject differs from the CN-only leaf Subject.
+	caOrganization = "Deckhouse"
 
 	SnapshotKey = "secret"
 )
@@ -82,6 +87,16 @@ type GenSelfSignedTLSHookConf struct {
 	// often it is module name
 	CN string
 
+	// StrictTLS opts the hook into issuing certificates accepted by strict
+	// external validators. When enabled:
+	//   - the CA Subject is made distinct from the leaf: CN="<CN>-ca" plus
+	//     O=Deckhouse, OU=<module>, so the leaf is not seen as depth-0 self-signed;
+	//   - the leaf gets a real "server auth" EKU by default (instead of the bogus
+	//     "requestheader-client" that yields an empty ExtendedKeyUsage);
+	//   - legacy certificates violating these rules are re-issued.
+	// Default (false) fully preserves the previous behavior.
+	StrictTLS bool
+
 	// Namespace - namespace for TLS secret
 	Namespace string
 	// TLSSecretName - TLS secret name
@@ -116,6 +131,15 @@ type GenSelfSignedTLSHookConf struct {
 
 func (gss GenSelfSignedTLSHookConf) path() string {
 	return strings.TrimSuffix(gss.FullValuesPathPrefix, ".")
+}
+
+// caOU derives the CA Organizational Unit for StrictTLS mode from Namespace
+// (stripping the "d8-" prefix), falling back to CN.
+func (gss GenSelfSignedTLSHookConf) caOU() string {
+	if trimmed := strings.TrimPrefix(gss.Namespace, "d8-"); trimmed != "" && trimmed != gss.Namespace {
+		return trimmed
+	}
+	return gss.CN
 }
 
 type certValues struct {
@@ -189,6 +213,13 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 			"key encipherment",
 			"requestheader-client",
 		}
+		if conf.StrictTLS {
+			usages = []string{
+				"signing",
+				"key encipherment",
+				"server auth",
+			}
+		}
 	} else {
 		for _, v := range conf.Usages {
 			usages = append(usages, string(v))
@@ -207,6 +238,11 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		var err error
 
 		cn, sans := conf.CN, conf.SANs(ctx, input)
+		caCN, caOU := cn, ""
+		if conf.StrictTLS {
+			caCN = cn + "-ca"
+			caOU = conf.caOU()
+		}
 
 		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, SnapshotKey)
 		if err != nil {
@@ -216,7 +252,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 		if len(certs) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
-			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			cert, err = generateNewSelfSignedTLS(input, caCN, caOU, cn, sans, usages)
 			if err != nil {
 				return err
 			}
@@ -235,10 +271,20 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, i
 				input.Logger.Error(err.Error())
 			}
 
-			// In case of errors, both these flags are false to avoid regeneration loop for the
+			// Strict-validation re-issue is opt-in via StrictTLS, so other modules
+			// keep their current certificates untouched.
+			certInvalid := false
+			if conf.StrictTLS {
+				certInvalid, err = isLegacyInvalidCert(cert.Cert)
+				if err != nil {
+					input.Logger.Error(err.Error())
+				}
+			}
+
+			// In case of errors, these flags are false to avoid regeneration loop for the
 			// certificate.
-			if caOutdated || certOutdated {
-				cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
+			if caOutdated || certOutdated || certInvalid {
+				cert, err = generateNewSelfSignedTLS(input, caCN, caOU, cn, sans, usages)
 				if err != nil {
 					return err
 				}
@@ -286,6 +332,26 @@ func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	return false, nil
 }
 
+// isLegacyInvalidCert reports whether a leaf certificate lacks the properties
+// required by strict TLS validators: a Subject distinct from the Issuer
+// (otherwise it looks depth-0 self-signed) and a non-empty ExtendedKeyUsage.
+func isLegacyInvalidCert(certData string) (bool, error) {
+	cert, err := certificate.ParseCertificate(certData)
+	if err != nil {
+		return false, fmt.Errorf("parse certificate: %w", err)
+	}
+
+	if cert.Subject.String() == cert.Issuer.String() {
+		return true, nil
+	}
+
+	if len(cert.ExtKeyUsage) == 0 && len(cert.UnknownExtKeyUsage) == 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func isOutdatedCA(ca string) (bool, error) {
 	// Issue a new certificate if there is no CA in the secret.
 	// Without CA it is not possible to validate the certificate.
@@ -305,12 +371,17 @@ func isOutdatedCA(ca string) (bool, error) {
 	return false, nil
 }
 
-func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages []string) (certificate.Certificate, error) {
-	ca, err := certificate.GenerateCA(input.Logger,
-		cn,
+func generateNewSelfSignedTLS(input *go_hook.HookInput, caCN, caOU, cn string, sans, usages []string) (certificate.Certificate, error) {
+	caOptions := []certificate.Option{
 		certificate.WithKeyAlgo(keyAlgorithm),
 		certificate.WithKeySize(keySize),
-		certificate.WithCAExpiry(caExpiryDurationStr))
+		certificate.WithCAExpiry(caExpiryDurationStr),
+	}
+	if caOU != "" {
+		caOptions = append(caOptions, certificate.WithNames(csr.Name{O: caOrganization, OU: caOU}))
+	}
+
+	ca, err := certificate.GenerateCA(input.Logger, caCN, caOptions...)
 	if err != nil {
 		return certificate.Certificate{}, err
 	}

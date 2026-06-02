@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cloudflare/cfssl/csr"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -53,18 +54,22 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 			certCA, err := x509.ParseCertificate(blockCA.Bytes)
 			Expect(err).To(BeNil())
 			Expect(certCA.IsCA).To(BeTrue())
-			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+			Expect(certCA.Subject.CommonName).To(Equal("capi-controller-manager-webhook-ca"))
+			Expect(certCA.Subject.Organization).To(ContainElement("Deckhouse"))
 
 			block, _ := pem.Decode([]byte(f.ValuesGet("nodeManager.internal.capiControllerManagerWebhookCert.crt").String()))
 			cert, err := x509.ParseCertificate(block.Bytes)
 			Expect(err).To(BeNil())
 			Expect(cert.IsCA).To(BeFalse())
 			Expect(cert.Subject.CommonName).To(Equal("capi-controller-manager-webhook"))
+
+			Expect(cert.Subject.String()).NotTo(Equal(cert.Issuer.String()))
+			Expect(cert.ExtKeyUsage).To(ContainElement(x509.ExtKeyUsageServerAuth))
 		})
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capi-manager-webhook", "capi-webhook-service")
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, cn, "capi-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
@@ -97,9 +102,10 @@ data:
 })
 
 func genWebhookCa(logEntry *log.Logger) (*certificate.Authority, error) {
-	ca, err := certificate.GenerateCA(logEntry, cn, certificate.WithKeyAlgo("ecdsa"),
+	ca, err := certificate.GenerateCA(logEntry, cn+"-ca", certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
-		certificate.WithCAExpiry("87600h"))
+		certificate.WithCAExpiry("87600h"),
+		certificate.WithNames(csr.Name{O: "Deckhouse", OU: "cloud-instance-manager"}))
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate CA: %v", err)
 	}
@@ -116,7 +122,7 @@ func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn strin
 		certificate.WithSigningDefaultExpiry((24*time.Hour)*365*10),
 		certificate.WithSigningDefaultUsage([]string{"signing",
 			"key encipherment",
-			"requestheader-client",
+			"server auth",
 		}),
 		certificate.WithSANs(
 			sanPrefix+".d8-cloud-instance-manager",
