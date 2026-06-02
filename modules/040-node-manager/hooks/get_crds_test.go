@@ -1653,9 +1653,9 @@ spec:
     zones: [a,b]
 `
 				f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-				setK8sVersionAsClusterConfig(f, "1.31")
-				f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
-				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.31.0")
+				setK8sVersionAsClusterConfig(f, "1.34")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.34.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.34.0")
 				f.RunHook()
 			})
 
@@ -1683,9 +1683,9 @@ spec:
   nodeType: Static
 `
 				f.BindingContexts.Set(f.KubeStateSet(ng))
-				setK8sVersionAsClusterConfig(f, "1.31")
-				f.ValuesSet("global.discovery.kubernetesVersion", "1.31.0")
-				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.31.0")
+				setK8sVersionAsClusterConfig(f, "1.34")
+				f.ValuesSet("global.discovery.kubernetesVersion", "1.34.0")
+				f.ValuesSet("global.discovery.kubernetesVersions.0", "1.34.0")
 				f.RunHook()
 			})
 
