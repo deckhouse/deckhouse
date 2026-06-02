@@ -13,7 +13,7 @@ The **first matching rule** determines the logging level.
 
 ## Policy structure
 
-Deckhouse Kubernetes Platform (DKP) deploys a built-in audit policy by default, which can be extended with user-defined rules.
+Deckhouse Kubernetes Platform (DKP) deploys a basic audit policy by default, which can be extended with user-defined rules.
 
 [Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)
 [Policy resource field structure](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-PolicyRule)
@@ -97,7 +97,7 @@ rules:
 {{- range .FullPolicyRules }}
 {{- if .InsertCustomCommentBefore }}
   ############
-  # User-defined rules from Secret kube-system/audit-policy are inserted here
+  # User-defined rules from secret kube-system/audit-policy are inserted here
   ############
 {{- end }}
   # {{ .Index }}: {{ .Description }}
