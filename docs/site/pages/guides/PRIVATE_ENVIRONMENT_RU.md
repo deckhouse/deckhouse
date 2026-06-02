@@ -1263,23 +1263,6 @@ proxy:
   httpsProxy: https://proxy.local:3128
   noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
-# Настройки первичной инициализации кластера Deckhouse.
-# https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  # Адрес Docker registry с образами Deckhouse.
-  imagesRepo: harbor.example/deckhouse/ee
-  # Строка с ключом для доступа к Docker registry.
-  registryDockerCfg: <DOCKER_CFG_BASE64>
-  # Протокол доступа к registry (HTTP или HTTPS).
-  registryScheme: HTTPS
-  # Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
-  registryCA: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----
----
 # Настройки модуля deckhouse.
 # https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
@@ -1293,6 +1276,22 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        # Адрес хранилища образов контейнеров с образами Deckhouse.
+        imagesRepo: <IMAGES_REPO_URI>
+        # Имя пользователя для аутентификации в хранилище образов контейнеров.
+        username: <USERNAME>
+        # Пароль для аутентификации в хранилище образов контейнеров.
+        password: <PASSWORD>
+        scheme: HTTPS
+        # Корневой сертификат центра сертификации (CA) в формате PEM для проверки серверного сертификата хранилища образов контейнеров.
+        ca: |
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
 ---
 # Глобальные настройки Deckhouse.
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B

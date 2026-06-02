@@ -743,6 +743,8 @@ const (
 	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
 )
 
+var nodeManagerAWSSpot = strings.Replace(nodeManagerAWS, "      instanceType: t2.medium\n", "      instanceType: t2.medium\n      spot: true\n", 1)
+
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -940,6 +942,27 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f)
+		})
+	})
+
+	Context("AWS spot", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWSSpot)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		It("sets creation timeout for spot node groups", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			machineDeploymentA := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-02320933")
+			machineDeploymentB := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-worker-6bdb5b0d")
+
+			Expect(machineDeploymentA.Exists()).To(BeTrue())
+			Expect(machineDeploymentA.Field("spec.template.spec.creationTimeout").String()).To(Equal("5m"))
+
+			Expect(machineDeploymentB.Exists()).To(BeTrue())
+			Expect(machineDeploymentB.Field("spec.template.spec.creationTimeout").String()).To(Equal("5m"))
 		})
 	})
 

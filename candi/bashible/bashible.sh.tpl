@@ -44,11 +44,17 @@ bb-curl-kube() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local -a auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem)
 
-  # If auth type is overridden (admin-cert for cluster-bootstrap), use those creds.
-  if [[ "${BB_KUBE_AUTH_TYPE:-}" == "admin-cert" ]]; then
-    auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
-    kubeconfig="/etc/kubernetes/admin.conf"
-  fi
+  # If auth type is overridden for cluster-bootstrap flows, use those creds.
+  case "${BB_KUBE_AUTH_TYPE:-}" in
+    admin-cert)
+      auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
+      kubeconfig="/etc/kubernetes/admin.conf"
+      ;;
+    super-admin-cert)
+      auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-super-admin-cert.pem" --key "${TMPDIR}/bb-kube-super-admin-key.pem")
+      kubeconfig="/etc/kubernetes/super-admin.conf"
+      ;;
+  esac
 
   if [[ -z "${BB_KUBE_APISERVER_URL:-}" ]]; then
     local kube_server
