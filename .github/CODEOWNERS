@@ -36,6 +36,7 @@
 **/007-registrypackages/images/virt-what                         @borg-z @090809
 **/007-registrypackages/images/which                             @borg-z @090809
 **/007-registrypackages/images/yq                                @borg-z @090809
+**/007-registrypackages/images/docker-registry                   @borg-z @090809
 015-admission-policy-engine/                                     @nabokihms @AlwxSin
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
