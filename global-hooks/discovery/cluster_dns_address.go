@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -54,8 +55,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, discoveryDNSAddress)
 
 type ServiceAddr struct {
-	Name      string
-	ClusterIP string
+	Name       string
+	ClusterIP  string
+	ClusterIPs []string
 }
 
 func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -65,7 +67,7 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
-	return ServiceAddr{service.Name, service.Spec.ClusterIP}, nil
+	return ServiceAddr{service.Name, service.Spec.ClusterIP, service.Spec.ClusterIPs}, nil
 }
 
 // Providers are deploying node-local-dns to cluster in different ways
@@ -91,6 +93,7 @@ func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	dnsAddress := ""
+	var dnsAddressArray []string
 
 	for _, s := range services {
 		if s.ClusterIP == "None" || s.ClusterIP == "" {
@@ -99,6 +102,7 @@ func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
 
 		if s.Name == "kube-dns" {
 			dnsAddress = s.ClusterIP
+			dnsAddressArray = s.ClusterIPs
 			break
 		}
 
@@ -107,13 +111,28 @@ func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		dnsAddress = s.ClusterIP
+		dnsAddressArray = s.ClusterIPs
 	}
 
 	if dnsAddress == "" {
 		return fmt.Errorf("DNS addresses not found")
 	}
 
-	input.Values.Set("global.discovery.clusterDNSAddress", dnsAddress)
+	finalDNSAddress := dnsAddress
+	if len(dnsAddressArray) > 1 {
+		// Dual stack: join IPs using comma to store as a single string
+		var ips []string
+		for _, ip := range dnsAddressArray {
+			if ip != "" && ip != "None" {
+				ips = append(ips, ip)
+			}
+		}
+		if len(ips) > 0 {
+			finalDNSAddress = strings.Join(ips, ",")
+		}
+	}
+
+	input.Values.Set("global.discovery.clusterDNSAddress", finalDNSAddress)
 
 	return nil
 }

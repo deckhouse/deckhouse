@@ -107,13 +107,21 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)
 
 		if podSubnetCIDR, ok := metaConfig.ClusterConfig["podSubnetCIDR"]; ok {
-			input.Values.Set("global.discovery.podSubnet", podSubnetCIDR)
+			podSubnetValue := podSubnetCIDR
+			if podSubnetIPv6Raw, okv6 := metaConfig.ClusterConfig["podSubnetCIDRIPv6"]; okv6 {
+				podSubnetValue = appendCIDRs(podSubnetValue, podSubnetIPv6Raw)
+			}
+			input.Values.Set("global.discovery.podSubnet", podSubnetValue)
 		} else {
 			return fmt.Errorf("no podSubnetCIDR field in clusterConfiguration")
 		}
 
 		if serviceSubnetCIDR, ok := metaConfig.ClusterConfig["serviceSubnetCIDR"]; ok {
-			input.Values.Set("global.discovery.serviceSubnet", serviceSubnetCIDR)
+			serviceSubnetValue := serviceSubnetCIDR
+			if serviceSubnetIPv6Raw, okv6 := metaConfig.ClusterConfig["serviceSubnetCIDRIPv6"]; okv6 {
+				serviceSubnetValue = appendCIDRs(serviceSubnetValue, serviceSubnetIPv6Raw)
+			}
+			input.Values.Set("global.discovery.serviceSubnet", serviceSubnetValue)
 		} else {
 			return fmt.Errorf("no serviceSubnetCIDR field in clusterConfiguration")
 		}
@@ -166,6 +174,17 @@ func maxNodesAmountMetric(input *go_hook.HookInput, podSubnetCIDR json.RawMessag
 
 	input.MetricsCollector.Set("d8_max_nodes_amount_by_pod_cidr", float64(maxNodesAmount), nil)
 	return nil
+}
+
+func appendCIDRs(cidr1, cidr2 json.RawMessage) json.RawMessage {
+	var str1, str2 string
+	_ = json.Unmarshal(cidr1, &str1)
+	_ = json.Unmarshal(cidr2, &str2)
+	if str1 != "" && str2 != "" {
+		res, _ := json.Marshal(str1 + "," + str2)
+		return res
+	}
+	return cidr1
 }
 
 func rawMessageToString(message json.RawMessage) (string, error) {
