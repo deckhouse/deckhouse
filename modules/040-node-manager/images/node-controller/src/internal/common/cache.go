@@ -47,10 +47,10 @@ func CacheOptions() (cache.Options, client.Options) {
 	})
 
 	cacheOpts := cache.Options{
-		DefaultTransform: InstrumentTransform(func(obj interface{}) (interface{}, error) {
+		DefaultTransform: func(obj interface{}) (interface{}, error) {
 			stripNodeHeavyFields(obj)
 			return stripManagedFields(obj)
-		}),
+		},
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Secret{}: {
 				Namespaces: map[string]cache.Config{

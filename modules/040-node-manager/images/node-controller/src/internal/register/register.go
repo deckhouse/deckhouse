@@ -30,21 +30,7 @@ type entry struct {
 	reconciler Reconciler
 }
 
-var (
-	entries      []entry
-	watchedTypes = make(map[string]client.Object)
-)
-
-func addWatchedType(gvk string, obj client.Object) {
-	if _, ok := watchedTypes[gvk]; !ok {
-		watchedTypes[gvk] = obj
-	}
-}
-
-// WatchedTypes returns all object types registered via controller watches.
-func WatchedTypes() map[string]client.Object {
-	return watchedTypes
-}
+var entries []entry
 
 func RegisterController(name string, obj client.Object, r Reconciler) {
 	entries = append(entries, entry{name: name, obj: obj, reconciler: r})

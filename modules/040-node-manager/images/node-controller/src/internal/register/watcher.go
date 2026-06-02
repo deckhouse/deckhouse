@@ -19,15 +19,12 @@ package register
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/deckhouse/node-controller/internal/common"
 )
 
 type Watcher interface {
@@ -45,8 +42,7 @@ type Reconciler interface {
 var _ Watcher = (*builderWatcher)(nil)
 
 type builderWatcher struct {
-	b      *ctrl.Builder
-	scheme *runtime.Scheme
+	b *ctrl.Builder
 }
 
 func (w *builderWatcher) Owns(object client.Object, opts ...builder.OwnsOption) {
@@ -54,9 +50,7 @@ func (w *builderWatcher) Owns(object client.Object, opts ...builder.OwnsOption) 
 }
 
 func (w *builderWatcher) Watches(object client.Object, eventHandler handler.EventHandler, opts ...builder.WatchesOption) {
-	gvk := common.GVKLabel(w.scheme, object)
-	addWatchedType(gvk, object)
-	w.b.Watches(object, common.InstrumentEventHandler(gvk, eventHandler), opts...)
+	w.b.Watches(object, eventHandler, opts...)
 }
 
 func (w *builderWatcher) WatchesRawSource(src source.Source) {
