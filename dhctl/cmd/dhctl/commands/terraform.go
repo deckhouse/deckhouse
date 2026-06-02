@@ -44,7 +44,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		ctx := kpcontext.ExtractContext(c)
 
 		// in general path we check that /deckhouse/modules, /deckhouse/global-hooks,
-		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry 
+		// /deckhouse/candi/version_map.yml is present and if not download all deps from registry
 		// but in exporter and autoconverger we do not need it
 		// and we reset it here
 		// unfortianally global params parsed in place when we do no have command
@@ -80,11 +80,11 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
-			Address:  opts.Converge.ListenAddress,
-			Path:     opts.Converge.MetricsPath,
-			Interval: opts.Converge.CheckInterval,
-			Logger:   logger,
-			KubeCl:   kubeCl,
+			Address:       opts.Converge.ListenAddress,
+			Path:          opts.Converge.MetricsPath,
+			Interval:      opts.Converge.CheckInterval,
+			Logger:        logger,
+			KubeCl:        kubeCl,
 			GlobalOptions: &opts.Global,
 		})
 
