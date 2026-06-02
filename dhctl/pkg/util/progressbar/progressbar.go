@@ -206,12 +206,22 @@ func WarnF(format string, a ...any) {
 	pterm.Warning.WithWriter(writer).Printf(format, a...)
 }
 
+func ErrorF(format string, a ...any) {
+	if defaultpb != nil {
+		writer := defaultpb.MultiPrinter.NewWriter()
+		pterm.Error.WithWriter(writer).Printf(format, a...)
+	} else {
+		pterm.Error.Printf(format, a...)
+	}
+}
+
 func phaseToString(p phases.Progress, completed bool) string {
-	// Butify bootstrap: phases with subphases
+	// Beautify bootstrap: phases with subphases
 	phasesMap := make(map[phases.OperationPhase]string)
+	phasesMap[phases.PreInfraPreflightsPhase] = "Common preflight checks"
+	phasesMap[phases.PostInfraPreflightsPhase] = "Static and post-infra preflight checks"
 	phasesMap[phases.BaseInfraPhase] = "Base Infrastructure"
-	phasesMap[phases.RegistryPackagesProxyPhase] = "Preparing registry packages proxy"
-	phasesMap[phases.ExecuteBashibleBundlePhase] = "Bootstrap Kubernetes on first master node"
+	phasesMap[phases.InstallKubernetesPhase] = "Install Kubernetes on the first master node"
 	phasesMap[phases.InstallDeckhousePhase] = "Install Deckhouse"
 	phasesMap[phases.CreateResourcesPhase] = "Create resources"
 	phasesMap[phases.InstallAdditionalMastersAndStaticNodes] = "Install additional master nodes and CloudPermanent nodes"
@@ -237,22 +247,60 @@ func phaseToString(p phases.Progress, completed bool) string {
 	subphasesMap[phases.InstallDeckhouseSubPhaseWait] = "Wait for the first master readiness"
 	subphasesMap[phases.OperationSubPhase(phases.CheckInfra)] = "Check Infrastructure"
 	subphasesMap[phases.OperationSubPhase(phases.CheckConfiguration)] = "Check configuration"
+	subphasesMap[phases.BaseInfraSubPhaseBaseInfra] = "Base Infrastructure"
+	subphasesMap[phases.BaseInfraSubPhaseFirstMaster] = "First master node"
+	subphasesMap[phases.InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters] = "Install additional master nodes"
+	subphasesMap[phases.InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes] = "Install additional static nodes"
+	subphasesMap[phases.InstallAdditionalMastersAndStaticNodesSubPhaseWait] = "Wait for control plane manager become ready"
+	subphasesMap[phases.InstallKubernetesSubPhaseBundlePreparation] = "Prepare bashible bundle"
+	subphasesMap[phases.InstallKubernetesSubPhaseRegistryPackagesProxy] = "Prepare registry packages proxy"
+	subphasesMap[phases.InstallKubernetesSubPhaseNodePreparation] = "Prepare node"
+	subphasesMap[phases.InstallKubernetesSubPhaseExecuteBashibleBundle] = "Execute bashible bundle"
 
+	// TODO: too complicated, has to be refactored
 	msg := ""
 	if completed {
 		if p.CompletedSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", phasesMap[p.CurrentPhase], subphasesMap[p.CompletedSubPhase])
+			currentPhase, ok := phasesMap[p.CurrentPhase]
+			if !ok {
+				currentPhase = string(p.CurrentPhase)
+			}
+			subPhase, ok := subphasesMap[p.CompletedSubPhase]
+			if !ok {
+				subPhase = string(p.CompletedSubPhase)
+			}
+			msg = fmt.Sprintf("%s: %s", currentPhase, subPhase)
 		} else {
-			msg = phasesMap[p.CompletedPhase]
+			completedPhase, ok := phasesMap[p.CompletedPhase]
+			if !ok {
+				completedPhase = string(p.CompletedPhase)
+			}
+			msg = completedPhase
 		}
 	} else {
 		if p.CurrentSubPhase != "" {
-			msg = fmt.Sprintf("%s: %s", phasesMap[p.CurrentPhase], subphasesMap[p.CurrentSubPhase])
+			currentPhase, ok := phasesMap[p.CurrentPhase]
+			if !ok {
+				currentPhase = string(p.CurrentPhase)
+			}
+			subPhase, ok := subphasesMap[p.CurrentSubPhase]
+			if !ok {
+				subPhase = string(p.CurrentSubPhase)
+			}
+			msg = fmt.Sprintf("%s: %s", currentPhase, subPhase)
 		} else {
 			if p.CurrentPhase != "" {
-				msg = phasesMap[p.CurrentPhase]
+				phase, ok := phasesMap[p.CurrentPhase]
+				if !ok {
+					phase = string(p.CurrentPhase)
+				}
+				msg = phase
 			} else {
-				msg = phasesMap[p.CompletedPhase]
+				phase, ok := phasesMap[p.CompletedPhase]
+				if !ok {
+					phase = string(p.CompletedPhase)
+				}
+				msg = phase
 			}
 		}
 	}

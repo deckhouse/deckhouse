@@ -161,7 +161,10 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 
 	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
 
+	var newVersionsTotal int
 	for _, pkg := range packages {
+		newVersionsTotal += pkg.NewVersions
+
 		pkgType := pkg.Type
 		if pkgType == "" {
 			pkgType = cachedTypes[pkg.Name]
@@ -175,9 +178,19 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 		})
 	}
 
+	now := metav1.NewTime(time.Now())
+
 	s.repo.Status.PackagesCount = len(s.repo.Status.Packages)
 	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
-	s.repo.Status.SyncTime = metav1.NewTime(time.Now())
+
+	s.repo.Status.LastScanTime = &now
+	s.repo.Status.LastNewVersions = newVersionsTotal
+
+	// LastChangeTime is preserved across scans that find nothing new, so only
+	// advance it when the current scan actually found versions.
+	if newVersionsTotal > 0 {
+		s.repo.Status.LastChangeTime = &now
+	}
 
 	if err := s.client.Status().Patch(ctx, s.repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update repository status: %w", err)
@@ -330,7 +343,7 @@ func latestVersionString(versions []*semver.Version) string {
 
 // ProcessPackageVersions processes a single package: lists version tags from <package>/version,
 // detects type (Application/Module) via detectPackageType, creates APV/MPV resources.
-// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN).
+// Delegates to handleMissingVersionPath when /version path doesn't exist (NAME_UNKNOWN) or has no semver tags on a full scan.
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
 	foundTags, err := s.foundTagsToProcess(ctx, packageName, operation)
 	if err != nil {
@@ -348,13 +361,25 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		slog.Int("versions", len(foundTags)),
 	)
 
-	// /version path exists but no new semver tags to process
+	// /version path exists but no new semver tags to process.
+	//
+	// On a full scan an empty foundTags means /version has no semver tags
+	// for this package. Treat this identically to "no /version path at all":
+	// fall back to /release (legacy v1alpha1 module). The downstream error
+	// surface ("neither /version nor /release" / "no semver release tags
+	// found for legacy module") is therefore the same in both cases.
+	//
+	// On an incremental scan, an empty foundTags only means "no new versions
+	// since lastVersion" - /version itself may still be populated. Do NOT
+	// fall back in that case: it would needlessly hit /release on every
+	// already-fully-processed package.
 	if len(foundTags) == 0 {
 		if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
 			s.logger.Warn(
-				"no release images found for package",
+				"no semver tags found in /version path for package, falling back to /release",
 				slog.String("package", packageName),
 			)
+			return s.handleMissingVersionPath(ctx, packageName)
 		}
 
 		return &PackageProcessResult{}, nil
@@ -426,12 +451,12 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 	}, nil
 }
 
-// handleMissingVersionPath - fallback when <package>/version doesn't exist (NAME_UNKNOWN).
-// Checks the <package>/release path for legacy module (v1alpha1) version tags.
+// handleMissingVersionPath - fallback when <package>/version is absent (NAME_UNKNOWN) or
+// has no semver tags. Checks the <package>/release path for legacy module (v1alpha1) version tags.
 // Creates ModulePackageVersion resources with legacy=true label.
 func (s *OperationService) handleMissingVersionPath(ctx context.Context, packageName string) (*PackageProcessResult, error) {
 	s.logger.Info(
-		"package has no /version path, checking /release for legacy module (v1alpha1)",
+		"no semver tags in /version path, checking /release for legacy module (v1alpha1)",
 		slog.String("package", packageName),
 	)
 

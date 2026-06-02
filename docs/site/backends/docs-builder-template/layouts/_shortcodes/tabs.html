@@ -1,6 +1,6 @@
-{{- .Page.Scratch.Add "tabset-counter" 1 -}}
-{{- $tabs_name := .Get "name" | default (printf "%s-%d" (.Page.RelPermalink) (.Page.Scratch.Get "tabset-counter") ) | anchorize -}}
-{{- $tabs := .Scratch.Get "tabs" -}}
+{{- .Page.Store.Add "tabset-counter" 1 -}}
+{{- $tabs_name := .Get "name" | default (printf "%s-%d" (.Page.RelPermalink) (.Page.Store.Get "tabset-counter") ) | anchorize -}}
+{{- $tabs := .Store.Get "tabs" -}}
 {{- if .Inner -}}{{- /* We don't use the inner content, but Hugo will complain if we don't reference it. */ -}}{{- end -}}
 <div class="tabs-block">
   <ul class="tabs__container tabs__container--title">

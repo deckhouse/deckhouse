@@ -15,8 +15,8 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -55,17 +55,17 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -85,7 +85,6 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			TmpDir:             opts.Global.TmpDir,
 			Logger:             logger,
 			IsDebug:            opts.Global.IsDebug,
-			DirectoryConfig:    opts.DirConfig(),
 			Options:            opts,
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
@@ -153,17 +152,17 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -179,12 +178,11 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 					},
 				},
 			},
-			ProviderGetter:  providerGetter,
-			TmpDir:          opts.Global.TmpDir,
-			Logger:          logger,
-			IsDebug:         opts.Global.IsDebug,
-			DirectoryConfig: opts.DirConfig(),
-			Options:         opts,
+			ProviderGetter: providerGetter,
+			TmpDir:         opts.Global.TmpDir,
+			Logger:         logger,
+			IsDebug:        opts.Global.IsDebug,
+			Options:        opts,
 		})
 
 		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
@@ -213,7 +211,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
@@ -222,10 +220,10 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           opts.Global.TmpDir,
-			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           loggerFor,
 			IsDebug:          opts.Global.IsDebug,
+			GlobalOptions:    &opts.Global,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -246,7 +244,6 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			TmpDir:                                opts.Global.TmpDir,
 			Logger:                                loggerFor,
 			IsDebug:                               opts.Global.IsDebug,
-			DirectoryConfig:                       opts.DirConfig(),
 			Options:                               opts,
 		})
 

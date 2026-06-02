@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# ../../../ee/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
+# ../../../ee/cse/modules/040-control-plane-manager/openapi/doc-ru-config-values.yaml
 properties:
   apiserver:
     description: |

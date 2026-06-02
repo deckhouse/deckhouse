@@ -28,6 +28,7 @@ func TestGetSandboxExtraReadIncludesValidationChrootAndConfig(t *testing.T) {
 	for _, want := range []string{
 		"/validation-chroot/*",
 		"/usr/local/nginx/sbin/nginx",
+		"/usr/local/sbin/sh",
 		configPath,
 	} {
 		if !slices.Contains(got, want) {

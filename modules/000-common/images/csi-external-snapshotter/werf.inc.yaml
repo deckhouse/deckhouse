@@ -18,7 +18,6 @@ import:
   add: /csi-snapshotter
   to: /csi-snapshotter
   before: setup
-git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
@@ -72,5 +71,7 @@ shell:
   - cp bin/snapshot-controller bin/csi-snapshotter bin/snapshot-validation-webhook /
   - chown 64535:64535 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
   - chmod 0755 /snapshot-controller /csi-snapshotter /snapshot-validation-webhook
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

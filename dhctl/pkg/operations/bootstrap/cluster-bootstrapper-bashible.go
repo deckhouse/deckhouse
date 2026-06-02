@@ -47,7 +47,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
-		b.DirectoryConfig,
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	sshClient, err := sshProvider.Client(ctx)
 	if err == nil {
 		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
 		}
 	}
 
@@ -94,7 +94,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		MetaConfig:     metaConfig,
 		CommanderMode:  b.CommanderMode,
 		IsDebug:        b.IsDebug,
-		DirsConfig:     b.DirectoryConfig,
+		GlobalOpts:     &b.Options.Global,
 		LoggerProvider: b.loggerProvider,
 	})
 

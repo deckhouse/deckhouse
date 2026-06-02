@@ -2,15 +2,14 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-artifact
-    add: /src/dex
-    to: /usr/local/bin/dex
-    before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
-    add: /web
-    to: /web
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-artifact
+  add: /src/dex
+  to: /usr/local/bin/dex
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
+  add: /web
+  to: /web
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

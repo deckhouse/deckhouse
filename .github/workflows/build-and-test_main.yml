@@ -61,7 +61,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -609,6 +609,7 @@ jobs:
           werf build tests \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
+            --final-images-only=true \
             --build-report-path images_tags_werf.json
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
@@ -1012,7 +1013,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
+          docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse --user $(id -u):$(id -g) -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
     # </template: tests_before_build_template>
 
   tests_python_webhooks:

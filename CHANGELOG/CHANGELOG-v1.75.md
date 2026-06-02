@@ -133,6 +133,7 @@
  - **[admission-policy-engine]** Fixed multiple CVEs in admission-policy-engine module images (ratify, gatekeeper) by updating. dependencies. [#17667](https://github.com/deckhouse/deckhouse/pull/17667)
  - **[admission-policy-engine]** Fixed tri-state semantics for empty arrays and avoided empty objects in OperationPolicy/SecurityPolicy values. [#17343](https://github.com/deckhouse/deckhouse/pull/17343)
  - **[admission-policy-engine]** Added and extend unit tests to cover tri-state behavior (omitted / empty / non-empty) and nested empty-array cases for both hooks. [#17308](https://github.com/deckhouse/deckhouse/pull/17308)
+ - **[admission-policy-engine]** Refactor main documentation page. [#20048](https://github.com/deckhouse/deckhouse/pull/20048)
  - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#19448](https://github.com/deckhouse/deckhouse/pull/19448)
  - **[candi]** Server bootstrap logs are no longer transmitted via nc; Python is used instead. [#17451](https://github.com/deckhouse/deckhouse/pull/17451)
  - **[candi]** Improved static node cleanup script. [#17418](https://github.com/deckhouse/deckhouse/pull/17418)
@@ -251,6 +252,8 @@
  - **[docs]** Added docs about how NGC execution works. [#17870](https://github.com/deckhouse/deckhouse/pull/17870)
  - **[docs]** Fixed registry-modules-watcher deleting all documentation when registry returns an error. [#16771](https://github.com/deckhouse/deckhouse/pull/16771)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
+ - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20171](https://github.com/deckhouse/deckhouse/pull/20171)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
     All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** CVE-2025-15566 is fixed in 1.10 and 1.12 controllers. [#19205](https://github.com/deckhouse/deckhouse/pull/19205)

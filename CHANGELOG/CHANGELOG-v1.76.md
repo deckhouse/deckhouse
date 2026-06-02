@@ -63,6 +63,7 @@
  - **[control-plane-manager]** Extend d8:control-plane-manager:admin-kubeconfig-supplement with granular permissions for standard Kubernetes resources not covered by user-authz:cluster-admin. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
  - **[control-plane-manager]** Updated RBAC model for admin kubeconfig when `user-authz` is enabled. [#18996](https://github.com/deckhouse/deckhouse/pull/18996)
  - **[control-plane-manager]** Added information to `d8-cluster-kubernetes` about the supported, available, and current `Automatic` versions of Kubernetes. [#18718](https://github.com/deckhouse/deckhouse/pull/18718)
+ - **[deckhouse]** Add marketplace features. [#20178](https://github.com/deckhouse/deckhouse/pull/20178)
  - **[deckhouse]** Webhook-handler will reload exited shell-operator now. [#19592](https://github.com/deckhouse/deckhouse/pull/19592)
  - **[deckhouse]** Granted RBAC permissions for applications to Deckhouse. [#19385](https://github.com/deckhouse/deckhouse/pull/19385)
  - **[deckhouse]** Added `lastAppliedConfiguration` to Application status. [#19303](https://github.com/deckhouse/deckhouse/pull/19303)
@@ -157,6 +158,7 @@
  - **[cloud-provider-yandex]** Fixed removing public IP addresses from nodes by deleting `externalIPAddresses`. [#18364](https://github.com/deckhouse/deckhouse/pull/18364)
  - **[cloud-provider-zvirt]** Fixed CVEs in `cloud-provider-zvirt`. [#18115](https://github.com/deckhouse/deckhouse/pull/18115)
  - **[cni-cilium]** Fixed constant `invalid sysctl parameter: "net.ipv4.conf..rp_filter"` errors in cilium-agent logs when using Egress Gateway with a Virtual IP. [#18952](https://github.com/deckhouse/deckhouse/pull/18952)
+ - **[cni-flannel]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20294](https://github.com/deckhouse/deckhouse/pull/20294)
  - **[common]** fix for replace kubectl binary with d8 k alias. [#18514](https://github.com/deckhouse/deckhouse/pull/18514)
  - **[common]** Fixed replacing the `kubectl` binary with the `d8 k` alias. [#18467](https://github.com/deckhouse/deckhouse/pull/18467)
  - **[control-plane-manager]** Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh clusters. [#19667](https://github.com/deckhouse/deckhouse/pull/19667)
@@ -186,6 +188,8 @@
  - **[dhctl]** Refactored preflight checks. [#17564](https://github.com/deckhouse/deckhouse/pull/17564)
  - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19505](https://github.com/deckhouse/deckhouse/pull/19505)
  - **[docs]** Updated the `d8 cni-migration` commands in the CNI migration guide to `d8 network cni-migration`. [#18547](https://github.com/deckhouse/deckhouse/pull/18547)
+ - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20173](https://github.com/deckhouse/deckhouse/pull/20173)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** Fixing mount points in a geoproxy image. [#20099](https://github.com/deckhouse/deckhouse/pull/20099)
     Geoproxy image will be restarted.
  - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19846](https://github.com/deckhouse/deckhouse/pull/19846)
@@ -212,6 +216,7 @@
     ServiceEntry and DestinationRule resources for federated public services will be recreated with new names. This causes a brief traffic interruption for cross-cluster federated service routing during the first reconciliation after the update.
  - **[monitoring-kubernetes]** Resolved port conflict with the runtime-audit-engine module and removed excessive pod privileges [#18868](https://github.com/deckhouse/deckhouse/pull/18868)
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
+ - **[network-policy-engine]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20294](https://github.com/deckhouse/deckhouse/pull/20294)
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#18673](https://github.com/deckhouse/deckhouse/pull/18673)
  - **[node-manager]** fix webook validation in node-controller on cri changes in nodegroup. [#20050](https://github.com/deckhouse/deckhouse/pull/20050)
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
@@ -230,6 +235,7 @@
  - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18234](https://github.com/deckhouse/deckhouse/pull/18234)
     Registry pods will be restarted.
  - **[registrypackages]** Replace symlinks with actual files in kubernetes artifacts for werf 2.57.1 compatibility [#18662](https://github.com/deckhouse/deckhouse/pull/18662)
+ - **[upmeter]** observability probes no longer fail when run.ID() produces a digits-only hash of the node name [#20217](https://github.com/deckhouse/deckhouse/pull/20217)
  - **[upmeter]** fix invalid promql expr [#19571](https://github.com/deckhouse/deckhouse/pull/19571)
  - **[upmeter]** fix D8UpmeterProbeGarbagePodsFromDeployments flapping [#19382](https://github.com/deckhouse/deckhouse/pull/19382)
  - **[upmeter]** checks for Observability module in Upmeter + fix Grafana v10 [#18111](https://github.com/deckhouse/deckhouse/pull/18111)
@@ -279,7 +285,9 @@
  - **[deckhouse-controller]** convert MPO CRD v1alpha1 to not served. [#18010](https://github.com/deckhouse/deckhouse/pull/18010)
  - **[deckhouse-controller]** Converted dashboard module to external source. [#17941](https://github.com/deckhouse/deckhouse/pull/17941)
  - **[dhctl]** add root context propagation, starting from dhctl kingping [#19254](https://github.com/deckhouse/deckhouse/pull/19254)
+ - **[docs]** Upgrade Hugo to v0.161.1. [#20131](https://github.com/deckhouse/deckhouse/pull/20131)
  - **[docs]** Info about editions for egressgateway has been edited. [#19545](https://github.com/deckhouse/deckhouse/pull/19545)
+ - **[documentation]** Fix CVEs. Upgrade Hugo to v0.161.1 in documentation builder. [#20131](https://github.com/deckhouse/deckhouse/pull/20131)
  - **[ingress-nginx]** The default version of ingress-nginx has been changed to 1.12. [#18612](https://github.com/deckhouse/deckhouse/pull/18612)
     All pods of Ingress-NGINX Controllers using default version  (the controllerVersion is not set) will be restarted and updated from 1.10 to 1.12.
  - **[ingress-nginx]** Missing mount points were added. [#18570](https://github.com/deckhouse/deckhouse/pull/18570)

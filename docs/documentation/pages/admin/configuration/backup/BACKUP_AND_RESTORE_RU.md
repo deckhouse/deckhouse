@@ -62,6 +62,18 @@ lang: ru
 
    В случае непредвиденных обстоятельств вы сможете вернуться к этим файлам.
 
+1. Переместите файл резервной копии etcd. Скопируйте или перенесите файл резервной копии etcd [`etcd-backup.snapshot`](#создание-резервных-копий-с-помощью-deckhousecli) в домашнюю директорию текущего пользователя (root):
+
+   ```shell
+   cp /путь/до/резервной/копии/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
+   Убедитесь, что файл доступен для чтения:
+
+   ```shell
+   ls -la ~/etcd-backup.snapshot
+   ```
+
 1. Очистите директорию etcd. Удалите старые данные, чтобы подготовить etcd к восстановлению из резервной копии:
 
    ```shell
@@ -72,18 +84,6 @@ lang: ru
 
    ```shell
    ls -la /var/lib/etcd
-   ```
-
-1. Переместите файл резервной копии etcd. Скопируйте или перенесите файл резервной копии etcd `etcd-backup.snapshot` в домашнюю директорию текущего пользователя (root):
-
-   ```shell
-   cp /путь/до/резервной/копии/etcd-backup.snapshot ~/etcd-backup.snapshot
-   ```
-
-   Убедитесь, что файл доступен для чтения:
-
-   ```shell
-   ls -la ~/etcd-backup.snapshot
    ```
 
 1. Восстановите базу данных etcd из резервной копии. Воспользуйтесь `etcdutl` для восстановления:
@@ -558,7 +558,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     etcd:

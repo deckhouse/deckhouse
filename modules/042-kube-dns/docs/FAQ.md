@@ -22,7 +22,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
      name: control-plane-manager
    spec:
      enabled: true
-     version: 1
+     version: 3
      settings:
        apiserver:
          certSANs:

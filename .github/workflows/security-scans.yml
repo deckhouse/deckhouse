@@ -1,0 +1,1164 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Security Scans
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+# Cancel in-progress security scans for the same PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+
+  # <template: pull_request_info>
+  pull_request_info:
+    name: Get pull request reference
+    runs-on: "ubuntu-slim"
+    outputs:
+      ref: ${{ steps.pr_props.outputs.ref }}
+      ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
+      pr_title: ${{ steps.pr_props.outputs.pr_title }}
+      pr_description: ${{ steps.pr_props.outputs.pr_description }}
+      diff_url: ${{ steps.pr_props.outputs.diff_url }}
+      labels: ${{ steps.pr_props.outputs.labels }}
+      changes_docs: ${{ steps.changes.outputs.docs }}
+      changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
+
+      build_CE: ${{ steps.pr_props.outputs.build_CE }}
+      build_EE: ${{ steps.pr_props.outputs.build_EE }}
+      build_BE: ${{ steps.pr_props.outputs.build_BE }}
+      build_SE: ${{ steps.pr_props.outputs.build_SE }}
+      build_SE-plus: ${{ steps.pr_props.outputs.build_SE-plus }}
+      build_CSE: ${{ steps.pr_props.outputs.build_CSE }}
+
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
+    steps:
+      - name: Get PR info for push trigger
+        id: push_info
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'push' trigger: find PR by commit SHA and pass response to pr_props step.
+            const { GITHUB_REF_NAME } = process.env
+            core.startGroup(`Fetching PR info for commit ${context.sha} in ${context.repo.name}:${GITHUB_REF_NAME} ...`)
+            try {
+              const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: context.sha
+              });
+              if (response.status !== 200 || !response.data || response.data.length === 0) {
+                return core.setFailed(`Bad response on listing PRs for commit ${context.sha}: ${JSON.stringify(response)}`);
+              }
+              // Get first associated pr.
+              let pr = response.data[0];
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.notice(`Found PR#{pr.number} for commit ${context.sha}`);
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Error listing pull requests for commit ${context.sha}: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Get PR info for pull_request trigger
+        id: pr_info
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            // Support for 'pull_request' and 'pull_request_target' triggers:
+            // find PR by its number to get current labels.
+            // Why? Workflow rerun of 'opened' pull request contains outdated labels.
+            const prNumber = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            core.startGroup(`Fetching info for PR#${prNumber} ...`);
+            try {
+              const response = await github.rest.pulls.get({owner, repo, pull_number: prNumber})
+              if (response.status != 200 || !response.data) {
+                return core.setFailed(`Bad response on getting PR#${prNumber} : ${JSON.stringify(response)}`);
+              }
+              // Only labels are needed.
+              let pr = response.data;
+              core.info(`Labels from context: ${JSON.stringify(context.payload.pull_request.labels)}`);
+              core.info(`Current labels: ${JSON.stringify(pr.labels)}`);
+              // Reduce size to fit output limits.
+              pr = {
+                url:      pr.url,
+                diff_url: pr.diff_url,
+                number:   pr.number,
+                labels:   pr.labels,
+                head:     pr.head,
+                title:    pr.title,
+                body:     pr.body,
+              }
+              core.setOutput('pr_info', JSON.stringify(pr));
+            } catch (error) {
+              return core.setFailed(`Fetch PR#${prNumber} error: ${error}`)
+            } finally {
+              core.endGroup()
+            }
+
+      - name: Check PR properties
+        id: pr_props
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_INFO: ${{ steps.push_info.outputs.pr_info || steps.pr_info.outputs.pr_info }}
+        with:
+          script: |
+            if (process.env.PR_INFO == '') {
+                return core.setFailed(`No pull request info: event_name=${context.eventName} action=${context.action} ref=${context.ref}`);
+            }
+            // Parse Pr info from environment variable.
+            const pr = JSON.parse(process.env.PR_INFO);
+
+            core.startGroup(`Detect PR properties`)
+            const pr_repo = pr.head.repo.full_name;
+            const target_repo = context.payload.repository.full_name;
+            const isInternal = pr_repo === target_repo;
+            const isDependabot = (context.actor === 'dependabot[bot]');
+            const isChangelog = pr.head.ref.startsWith('changelog/v');
+            const okToTest = pr.labels.some((l) => l.name === 'status/ok-to-test');
+            core.info(`PR head repo          ${pr_repo}`)
+            core.info(`PR commit SHA         ${pr.head.sha}`)
+            core.info(`PR head label         ${pr.head.label}`)
+            core.info(`Target repo           ${target_repo}`)
+            core.info(`PR internal?          ${isInternal}`)
+            core.info(`PR from dependabot?   ${isDependabot}`)
+            core.info(`PR changelog?         ${isChangelog}`)
+            core.info(`PR has 'ok-to-test'?  ${okToTest}`)
+            core.endGroup()
+
+            // Detect if PR can be ignored or should be checked for dangerous changes.
+            let shouldCheckFiles = false;
+            if (isInternal && !isDependabot) {
+              // Ignore changelog pull requests.
+              if (isChangelog) {
+                return core.setFailed(`PR#${pr.number} for changelog is ignored.`);
+              }
+            } else {
+              // External and dependabot pull requests should be labeled with 'status/ok-to-test'.
+              if (!okToTest) {
+                core.notice(`PR#${pr.number} requires label 'status/ok-to-test' to run tests and validations`)
+                return core.setFailed(`PR#${pr.number} without label 'status/ok-to-test' is ignored.`);
+              }
+              shouldCheckFiles = true;
+            }
+            if (shouldCheckFiles) {
+              core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
+            }
+
+            // Set editions from current labels to build_ce, build_ee and so on.
+            const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
+
+            // Construct head commit ref using pr number.
+            const ref = `refs/pull/${ pr.number }/head`;
+            core.notice(`Use ref: '${ref}'`)
+
+            // Pass pr.diff_url to download diff via regular request.
+            // Pass pr.url to get diff via API request.
+            let diff_url = pr.diff_url;
+            if (!!context.payload.repository.private) {
+              core.notice(`Detect private repo. Pass PR url to download diff via Github API.`);
+              diff_url = pr.url;
+            }
+
+            // Set outputs.
+            core.setCommandEcho(true)
+            core.setOutput('should_check', shouldCheckFiles.toString());
+            core.setOutput('ref', ref);
+            core.setOutput('ref_slug', `pr${pr.number}`);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_description', pr.body);
+            core.setOutput('diff_url', diff_url);
+            core.setOutput('labels', JSON.stringify(pr.labels));
+            core.startGroup('Set build editions based on pr labels')
+            for (build_edition of build_editions) {
+              core.setOutput(`${build_edition}`, 'true');
+              core.info(`${build_edition}`)
+            }
+            core.endGroup()
+            core.setCommandEcho(false);
+
+      # Checkhout the head commit of the PR branch.
+      - name: Checkout PR head commit
+        if: steps.pr_props.outputs.should_check == 'true'
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ steps.pr_props.outputs.ref }}
+
+      # Get info about other changes.
+      - name: Get info about PR changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          # dangerous - detect if changes not allowed to test for external PRs
+          # docs - detect changes in files that belong to the documentation scope
+          # not_markdown - detect changes not in markdown files
+          filters: |
+            dangerous:
+              - './.github/**'
+              - './tools/**'
+              - './testing/**'
+              - './docs/**/js/**'
+              - './docs/**/css/**'
+              - './docs/**/images/**'
+              - './docs/**/assets/**'
+            docs:
+              - './**/*.md'
+              - './docs/**'
+              - './**/crds/*'
+              - './**/openapi/*config-values.yaml'
+              - './candi/**/openapi/*'
+              - './ee/candi/**/openapi/*'
+            not_markdown:
+              - '!./**/*.md'
+
+      # Stop workflow if external PR contains dangerous changes.
+      - name: Fail workflow on dangerous changes
+        if: ${{ steps.pr_props.outputs.should_check == 'true' && steps.changes.outputs.dangerous == 'true' }}
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            core.setFailed('External PR contains dangerous changes.')
+
+  # </template: pull_request_info>
+
+
+  # </template: block-until-image-is-not-ready>
+  block-until-image-is-not-ready:
+    name: Block until the docker image is not ready
+    runs-on: "ubuntu-slim"
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3.5.2
+        with:
+          ref: "main"
+      - name: Block until the docker image is not ready
+        id: block-image-dont-ready
+        uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const githubAction = require('./.github/scripts/js/helpers/github-actions')({github, context, core});
+            const { isReleaseBranch } = require('./.github/scripts/js/helpers/utils');
+            const isTag = (branch) => branch.includes("/tags/")
+
+            let branchName;
+            let prNum;
+
+            if (context.eventName === 'pull_request' || context.eventName === 'pull_request_target') {
+              branchName = context.payload.pull_request.head.ref;
+              prNum = context.payload.pull_request.number;
+            } else if (context.eventName === 'workflow_dispatch') {
+              branchName = context.payload.inputs.ci_commit_ref_name;
+              prNum = context.payload.inputs.issue_number;
+            }
+
+            if (!branchName) {
+              branchName = githubAction.GetBranchNameFromContext(context);
+            }
+
+            if (!branchName) {
+              core.setFailed("Branch not found.");
+              return false;
+            }
+
+            core.info(`${branchName} is main? ${branchName === 'main'}`)
+            core.info(`${branchName} is release? ${isReleaseBranch(branchName)}`)
+            core.info(`${branchName} is tag? ${isTag(branchName)}`)
+            if (branchName === 'main' || isReleaseBranch(branchName) || isTag(branchName)) {
+              core.info(`Skip a job because it's a tag, release or main branch: ${branchName}`);
+              return true;
+            }
+
+            let infoText = `Check build workflow is completed for branch: ${branchName}`;
+            if (prNum) {
+              infoText += ` | PR: ${context.payload.repository.html_url}/pull/${prNum}`;
+            }
+            core.info(infoText);
+
+            const { waitForJobInWorkflowIsCompletedWithSuccess } = require('./.github/scripts/js/validators/validate-job-in-workflow-is-ready')({ github, context, core });
+            try {
+              let workflowName = 'Build and test for dev branches';
+              let jobName = 'Build FE';
+              await waitForJobInWorkflowIsCompletedWithSuccess(branchName, workflowName, jobName);
+            } catch(error) {
+              core.setFailed(error);
+            }
+
+
+  # </template: block-until-image-is-not-ready>
+
+  # ============================================================================
+  # Gitleaks — secret scanning on PR diff.
+  # NOTE: does NOT depend on block-until-image-is-not-ready (text scan, no images).
+  # ============================================================================
+  gitleaks_scan:
+    name: Gitleaks scan
+    runs-on: ubuntu-slim
+    needs: pull_request_info
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+      # The action checks out refs/pull/<num>/merge itself,
+      # so the PR branch is scanned (not the base branch).
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        with:
+          scan_mode: diff
+          gitleaks_version: v8.28.0
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
+
+  set_security_gitleaks_requirement_status:
+    name: Set commit status after gitleaks scan run
+    runs-on: "ubuntu-slim"
+    needs: gitleaks_scan
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.gitleaks_scan.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/gitleaks/success" --remove-label "security/gitleaks/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/gitleaks/failed" --remove-label "security/gitleaks/success"
+          fi
+
+  # ============================================================================
+  # CVE — Trivy scan on PR images.
+  # ============================================================================
+  test_cve_report_main:
+    name: Trivy scan dev images
+    # External/fork PRs gated by 'status/ok-to-test' via pull_request_info (setFailed → this job is skipped).
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: [self-hosted, large]
+    env:
+      WORKDIR: "cve-scan"
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+
+      - name: Set scan target type
+        id: scan_type
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          echo "PR_NUMBER=${PR_NUMBER}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "SCAN_SEVERAL_LATEST_RELEASES=False" >> $GITHUB_OUTPUT
+          echo "LATEST_RELEASES_AMOUNT=0" >> $GITHUB_OUTPUT
+
+      # <template: cve_scan_deckhouse_images>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/registry_host DECKHOUSE_READ_REGISTRY_HOST | PROD_READ_REGISTRY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token login | PROD_READ_REGISTRY_USER ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_read_token password | PROD_READ_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+      - name: Set up cosign
+        uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: "v3.0.4"
+
+      - name: Run Deckhouse images CVE tests on "${{ steps.scan_type.outputs.tag }}"
+        uses: deckhouse/modules-actions/cve_scan@main
+        with:
+          prod_registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          prod_registry_user: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          prod_registry_password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          dev_registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          dev_registry_user: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER}}"
+          dev_registry_password: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}"
+          source_tag: "${{ steps.scan_type.outputs.tag }}"
+          case: "deckhouse"
+          trivy_reports_log_output: 2
+          scan_several_latest_releases: "${{ steps.scan_type.outputs.scan_several_latest_releases }}"
+          latest_releases_amount: "${{ steps.scan_type.outputs.latest_releases_amount }}"
+          role_name: "${{ steps.split.outputs.name }}"
+      # </template: cve_scan_deckhouse_images>
+
+      # <template: cve_tests_upload_reports_artifacts>
+      - name: Archive report artifacts
+        if: success()
+        run: |
+          tar -zcvf ${{ env.WORKDIR }}/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+      - name: Create fail artifact
+        if: failure()
+        run: |
+          echo "Trivy tests for ${{ steps.scan_type.outputs.tag }} have failed." > "${{ env.WORKDIR }}/${{ steps.scan_type.outputs.tag }}_test-failed.txt"
+          tar -zcvf ${{ env.WORKDIR }}/trivy_json_reports.tar.gz ${{ env.WORKDIR }}/deckhouse
+      - name: Upload report artifacts
+        if: success()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: cve-reports
+          path: |
+            ${{ env.WORKDIR }}/trivy_json_reports.tar.gz
+      - name: Upload fail artifact
+        if: failure()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: cve-reports
+          path: |
+            ${{ env.WORKDIR }}/${{ steps.scan_type.outputs.tag }}_test-failed.txt
+            ${{ env.WORKDIR }}/trivy_json_reports.tar.gz
+      - name: Remove workdir
+        run: |
+          rm -r ${{ env.WORKDIR }}
+      # </template: cve_tests_upload_reports_artifacts>
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
+
+
+
+  # <template: set_security_scan_requirement_status>
+  set_security_scan_requirement_status:
+    name: Set commit status after security scan run
+    runs-on: "ubuntu-slim"
+    needs: test_cve_report_main
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.test_cve_report_main.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/cve/success" --remove-label "security/cve/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/cve/success" --remove-label "security/cve/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/cve/failed" --remove-label "security/cve/success"
+          fi
+  # </template: set_security_scan_requirement_status>
+
+  # ============================================================================
+  # Rootless — default-user validation on PR images.
+  # ============================================================================
+  security_scan_images:
+    name: Security scan images
+    runs-on: [self-hosted, large]
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+    # <template: security_scan_template>
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+      - name: Set PR scan tag
+        id: scan_tag
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{ steps.scan_tag.outputs.TAG }}
+          IMAGE: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+          DECKHOUSE_PRIVATE_REPO: ${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          make cve-base-images-check-default-user
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>
+    # </template: security_scan_template>
+
+
+
+  # <template: set_security_rootless_requirement_status>
+  set_security_rootless_requirement_status:
+    name: Set commit status after security rootless scan run
+    runs-on: "ubuntu-slim"
+    needs:
+      - pull_request_info
+      - security_scan_images
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.security_scan_images.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Result: $RESULT"
+          if [ "$RESULT" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/rootless/success" --remove-label "security/rootless/failed"
+          elif [ "$RESULT" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/rootless/success" --remove-label "security/rootless/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/rootless/failed" --remove-label "security/rootless/success"
+          fi
+  # </template: set_security_rootless_requirement_status>
+
+  # ============================================================================
+  # Antivirus — Dr.Web and Kaspersky scans on PR images.
+  # ============================================================================
+  get-tags:
+    name: Get PR tag for scanning
+    runs-on: [self-hosted, regular]
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+    if: github.repository == 'deckhouse/deckhouse'
+    outputs:
+      tags: ${{ steps.set-pr-tag.outputs.tags }}
+    steps:
+      - name: Set PR tag
+        id: set-pr-tag
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ ${REPO_SUFFIX} == ${GITHUB_REPOSITORY} ]] ; then
+            TAG="pr${PR_NUMBER}"
+          else
+            TAG="pr${PR_NUMBER}-${REPO_SUFFIX}"
+          fi
+          echo "PR tag to scan: $TAG"
+          echo "tags=$(printf '%s' "$TAG" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> $GITHUB_OUTPUT
+
+
+  # <template: drweb_scan_job>
+  drweb-scan:
+    name: Dr.Web Scan ${{ matrix.branch }}
+    runs-on: [self-hosted, antivirus]
+    if: github.repository == 'deckhouse/deckhouse'
+    needs: get-tags
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
+
+      # </template: import_secrets>
+      - name: Run drweb scan
+        id: scan
+        run: |
+          registry_image_path=/sys/deckhouse-oss
+          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+          if [ -z "${ref}" ]; then
+            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+          fi
+          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+          SCAN_TIME=$(date '+%s')
+          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "registry read"
+            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+            SCAN_ID+="-${edition}"
+            registry_image_path="/deckhouse/${edition}"
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            echo "registry stage"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+          else
+            echo "registry dev"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          fi
+          CONTAINER_NAME=registry_drweb
+          GID=$(id -g)
+          SCAN_ID+="-$CONTAINER_NAME"
+          SCAN_DIR=/opt/actions-runners/scans/drweb
+          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+          echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+          echo $CONTAINER_NAME
+          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+          docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
+
+          if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              exit 1
+            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            exit 1
+          fi
+
+          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+      - name: Upload scan artifacts
+        if: github.repository == 'deckhouse/deckhouse' && always()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: drweb-scan-results-${{ steps.scan.outputs.scan_id }}
+          path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
+          retention-days: 5
+
+      - name: Cleanup scan results on runner
+        if: always()
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+          SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
+            rm -rf ${SCAN_DIR}/${SCAN_ID} || true
+          fi
+
+  # </template: drweb_scan_job>
+
+
+
+  # <template: kaspersky_scan_job>
+  kaspersky-scan:
+    name: Kaspersky Scan ${{ matrix.branch }}
+    runs-on: [self-hosted, antivirus]
+    if: github.repository == 'deckhouse/deckhouse'
+    needs: get-tags
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
+
+      # </template: import_secrets>
+      - name: Run kaspersky scan
+        id: scan
+        run: |
+          registry_image_path=/sys/deckhouse-oss
+          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+          if [ -z "${ref}" ]; then
+            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+          fi
+          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+          SCAN_TIME=$(date '+%s')
+          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "registry read"
+            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+            SCAN_ID+="-${edition}"
+            registry_image_path="/deckhouse/${edition}"
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            echo "registry stage"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+          else
+            echo "registry dev"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          fi
+          CONTAINER_NAME=registry_kaspersky
+          GID=$(id -g)
+          SCAN_ID+="-$CONTAINER_NAME"
+          SCAN_DIR=/opt/actions-runners/scans/kaspersky
+          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+          echo "scan_dir=${SCAN_DIR}" >> $GITHUB_OUTPUT
+          echo $CONTAINER_NAME
+          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+          docker exec ${CONTAINER_NAME} chown -R ${UID}:${GID} scans/${SCAN_ID}
+
+          if [ -f ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' ${SCAN_DIR}/${SCAN_ID}/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              exit 1
+            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            exit 1
+          fi
+
+          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+      - name: Upload scan artifacts
+        if: github.repository == 'deckhouse/deckhouse' && always()
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}
+          path: ${{ steps.scan.outputs.scan_dir }}/${{ steps.scan.outputs.scan_id }}
+          retention-days: 5
+
+      - name: Cleanup scan results on runner
+        if: always()
+        env:
+          SCAN_ID: ${{ steps.scan.outputs.scan_id }}
+          SCAN_DIR: ${{ steps.scan.outputs.scan_dir }}
+        run: |
+          if [ -z "${SCAN_ID}" ]; then
+            echo "scan_id is empty, nothing to clean up"
+            exit 0
+          fi
+          if [[ -d ${SCAN_DIR}/${SCAN_ID} ]]; then
+            rm -rf ${SCAN_DIR}/${SCAN_ID} || true
+          fi
+
+  # </template: kaspersky_scan_job>
+
+
+
+  # <template: set_security_antivirus_requirement_status>
+  set_security_antivirus_requirement_status:
+    name: Set commit status after antivirus scan run
+    runs-on: "ubuntu-slim"
+    needs: [drweb-scan, kaspersky-scan]
+    if: ${{ always() }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+      - name: Auth with GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Set PR Label
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_REPO: ${{ github.repository }}
+          DRWEB: ${{ needs.drweb-scan.result }}
+          KASPERSKY: ${{ needs.kaspersky-scan.result }}
+        run: |
+          echo "PR Number: $PR_NUMBER | Dr.Web: $DRWEB | Kaspersky: $KASPERSKY"
+          if [ "$DRWEB" == "success" ] && [ "$KASPERSKY" == "success" ]; then
+            gh pr edit "$PR_NUMBER" --add-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+          elif [ "$DRWEB" == "skipped" ] && [ "$KASPERSKY" == "skipped" ]; then
+            gh pr edit "$PR_NUMBER" --remove-label "security/antivirus/success" --remove-label "security/antivirus/failed"
+          else
+            gh pr edit "$PR_NUMBER" --add-label "security/antivirus/failed" --remove-label "security/antivirus/success"
+          fi
+  # </template: set_security_antivirus_requirement_status>
+
+
+  # <template: antivirus_notify_failure_job>
+  notify-failure:
+    name: Send failure notification
+    runs-on: [self-hosted, regular]
+    needs: [drweb-scan, kaspersky-scan]
+    if: always() && (needs.drweb-scan.result == 'failure' || needs.kaspersky-scan.result == 'failure')
+    permissions:
+      id-token: write
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n_jobs_fails_url N8N_LOOP_NOTIFIER_URL | N8N_LOOP_NOTIFIER_URL ;
+
+      # </template: import_secrets>
+
+      - name: Check which jobs failed
+        id: check-failures
+        run: |
+          FAILED_JOBS=""
+          if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
+          fi
+          if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
+          fi
+
+          echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
+          echo "Failed jobs:"
+          echo "${FAILED_JOBS}"
+
+      - name: Send notification
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
+          MESSAGE+="**Failed jobs:**\n"
+          MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+          if [ "${{ github.event_name }}" == "pull_request_target" ]; then
+            pr_url="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+            MESSAGE+="**PR:** [#${{ github.event.pull_request.number }}]($pr_url)\n"
+          fi
+          MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
+
+          curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"
+  # </template: antivirus_notify_failure_job>
+
+
+  # ============================================================================
+  # Aggregator — single required check for branch protection.
+  # Fails if any scan did not finish with success
+  # (covers blocker failure, scan failure, and skipped due to upstream issues).
+  # ============================================================================
+  security_scans_required:
+    name: Security scans required
+    runs-on: ubuntu-slim
+    if: ${{ always() && needs.pull_request_info.result == 'success' }}
+    needs:
+      - pull_request_info
+      - block-until-image-is-not-ready
+      - gitleaks_scan
+      - test_cve_report_main
+      - security_scan_images
+      - drweb-scan
+      - kaspersky-scan
+    steps:
+      - name: Aggregate scan results
+        run: |
+          declare -A results=(
+            [blocker]="${{ needs.block-until-image-is-not-ready.result }}"
+            [gitleaks]="${{ needs.gitleaks_scan.result }}"
+            [cve]="${{ needs.test_cve_report_main.result }}"
+            [rootless]="${{ needs.security_scan_images.result }}"
+            [drweb]="${{ needs.drweb-scan.result }}"
+            [kaspersky]="${{ needs.kaspersky-scan.result }}"
+          )
+          # Antivirus jobs intentionally skip in test repositories (self-hosted antivirus runners are only in main repo).
+          IS_MAIN_REPO=false
+          if [[ "${{ github.repository }}" == "deckhouse/deckhouse" ]]; then
+            IS_MAIN_REPO=true
+          fi
+
+          failed=0
+          for name in "${!results[@]}"; do
+            r="${results[$name]}"
+            if [[ "$r" == "success" ]]; then
+              echo "✅ $name: $r"
+              continue
+            fi
+            if [[ "$IS_MAIN_REPO" == "false" && ( "$name" == "drweb" || "$name" == "kaspersky" ) && "$r" == "skipped" ]]; then
+              echo "ℹ️  $name: $r (allowed in test repository)"
+              continue
+            fi
+            echo "::error::Scan '$name' result: $r"
+            failed=1
+          done
+          exit $failed

@@ -15,8 +15,8 @@
 package bootstrap
 
 import (
+	"errors"
 	"fmt"
-	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -59,10 +59,12 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -70,7 +72,6 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 			KubeProvider:           kubeProvider,
 			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
-			DirectoryConfig:        opts.DirConfig(),
 			Options:                opts,
 		})
 
@@ -97,10 +98,12 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -108,7 +111,6 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause, opts *options
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
-			DirectoryConfig:        opts.DirConfig(),
 			Options:                opts,
 		})
 		return bootstraper.ExecuteBashible(ctx)
@@ -137,16 +139,17 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
 		)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
 			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
-			DirectoryConfig:        opts.DirConfig(),
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
 			Options:                opts,
@@ -176,10 +179,12 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -187,7 +192,6 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
-			DirectoryConfig:        opts.DirConfig(),
 			Options:                opts,
 		})
 
@@ -235,10 +239,12 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
@@ -246,7 +252,6 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 			IsDebug:                opts.Global.IsDebug,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
-			DirectoryConfig:        opts.DirConfig(),
 			Options:                opts,
 		})
 
@@ -273,16 +278,17 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause, opts *options.Options
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
-			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
 			}
 		}
+
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			TmpDir:                 opts.Global.TmpDir,
 			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
-			DirectoryConfig:        opts.DirConfig(),
 			Options:                opts,
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,

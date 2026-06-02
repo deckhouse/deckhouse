@@ -41,8 +41,9 @@ import (
 )
 
 const (
-	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
-	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
+	stableDefaultAnnotation  = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation    = "storageclass.beta.kubernetes.io/is-default-class"
+	defaultVolumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -114,6 +115,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 			if err != nil {
 				return fmt.Errorf("failed to iterate over 'storage_classes' snapshots: %v", err)
 			}
+			deleteOldStorageClass(input, &storageClassSnapshot)
 			storageClasses = append(storageClasses, storageClassToStorageClassValue(&storageClassSnapshot))
 		}
 		input.Logger.Info("Found DVP storage classes using StorageClass snapshots: %v", storageClasses)
@@ -135,7 +137,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/candi/cloud-providers/dvp/openapi", "/deckhouse/modules/030-cloud-provider-dvp/candi/openapi"})
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/candi/cloud-providers/dvp/openapi", "/deckhouse/modules/030-cloud-provider-dvp/candi/openapi"}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
@@ -176,6 +178,8 @@ func handleDiscoveryDataStorageClasses(
 			return fmt.Errorf("failed to iterate over 'storage_classes' snapshots: %v", err)
 		}
 
+		deleteOldStorageClass(input, &sc)
+
 		if _, ok := dvpstorageClass[sc.Name]; !ok {
 			storageClasses = append(storageClasses, storageClassToStorageClassValue(&sc))
 		}
@@ -197,7 +201,7 @@ func handleDiscoveryDataStorageClasses(
 		sc := storageClass{
 			Name:                 name,
 			DVPStorageClass:      sc.Name,
-			VolumeBindingMode:    sc.VolumeBindingMode,
+			VolumeBindingMode:    string(defaultVolumeBindingMode),
 			ReclaimPolicy:        sc.ReclaimPolicy,
 			AllowVolumeExpansion: sc.AllowVolumeExpansion,
 			IsDefault:            sc.IsDefault,
@@ -267,11 +271,6 @@ type storageClass struct {
 }
 
 func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
-	volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
-	if sc.VolumeBindingMode != nil {
-		volumeBindingMode = *sc.VolumeBindingMode
-	}
-
 	reclaimPolicy := corev1.PersistentVolumeReclaimDelete
 	if sc.ReclaimPolicy != nil {
 		reclaimPolicy = *sc.ReclaimPolicy
@@ -294,9 +293,21 @@ func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
 	return storageClass{
 		Name:                 sc.Name,
 		DVPStorageClass:      sc.Parameters["dvpStorageClass"],
-		VolumeBindingMode:    string(volumeBindingMode),
+		VolumeBindingMode:    string(defaultVolumeBindingMode),
 		ReclaimPolicy:        string(reclaimPolicy),
 		AllowVolumeExpansion: allowVolumeExpansion,
 		IsDefault:            isDefault,
 	}
+}
+
+func deleteOldStorageClass(input *go_hook.HookInput, sc *storagev1.StorageClass) {
+	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == defaultVolumeBindingMode {
+		return
+	}
+
+	input.Logger.Info(
+		"Deleting storage class because volumeBindingMode must be WaitForFirstConsumer.",
+		slog.String("storage_class", sc.Name),
+	)
+	input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 }

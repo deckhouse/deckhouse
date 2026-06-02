@@ -27,14 +27,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -361,6 +360,9 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 			}
 
 			log.ErrorLn(msg)
+			if input.IsTerminal() && !opts.Global.ShowProgress {
+				progressbar.ErrorF("%s\n", msg)
+			}
 			errorCode = 1
 		}
 		kptelemetry.EndCommand(err, errorCode)
@@ -398,9 +400,4 @@ func initGlobalVars() {
 	if len(commandsEnv) > 0 {
 		allowedCommands = strings.Split(commandsEnv, ", ")
 	}
-
-	// set relative path to config and template files
-	config.InitGlobalVars(dhctlPath)
-	template.InitGlobalVars(dhctlPath)
-	infrastructure.InitGlobalVars(dhctlPath)
 }

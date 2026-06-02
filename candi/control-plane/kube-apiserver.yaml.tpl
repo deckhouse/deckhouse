@@ -229,7 +229,7 @@ spec:
 {{- if .apiserver.auditWebhookURL }}
     - --audit-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
 {{- end }}
-{{- if .apiserver.secretEncryptionKey }}
+{{- if or (.apiserver.secretEncryptionKey) (.apiserver.signature) }}
     - --encryption-provider-config=/etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
     - --encryption-provider-config-automatic-reload=true
 {{- end }}
