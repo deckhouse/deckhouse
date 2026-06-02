@@ -10,6 +10,12 @@ description: Архитектура и функции модуля control-plane
 
 Управление компонентами control plane кластера осуществляется с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/), который запускается на всех master-узлах кластера (узлах с лейблом `node-role.kubernetes.io/control-plane: ""`).
 
+Модуль работает со следующими кастомными ресурсами:
+
+- [ControlPlaneNode](/modules/control-plane-manager/cr.html#controlplanenode) — описывает параметры и состояние узлов control plane кластера (master-узлов). Используется для управления жизненным циклом и конфигурацией каждого узла control plane;
+- [ControlPlaneOperation](/modules/control-plane-manager/cr.html#controlplaneoperation) — определяет операции над компонентами control plane (например, обновление, откат, добавление или удаление узлов), позволяет отслеживать и управлять выполнением этих операций на уровне кластера;
+- [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration) — описывает параметры и логику подключения внешних вебхуков к компоненту `kube-scheduler` для расширения его функциональности.
+
 Функции управления control plane:
 
 * **Управление сертификатами** — выпуск, продление и обновление сертификатов, необходимых для работы control plane. Позволяет автоматически поддерживать безопасную конфигурацию control plane и оперативно добавлять дополнительные альтернативные имена субъекта (Subject Alternative Name, SAN) для организации защищенного доступа к API Kubernetes.
@@ -43,7 +49,21 @@ description: Архитектура и функции модуля control-plane
 
 Модуль состоит из следующих компонентов:
 
-1. **d8-control-plane-manager** (DaemonSet) — управляет компонентами control plane кластера и запускается на всех master-узлах. Состоит из следующих контейнеров:
+1. **d8-control-plane-manager** (DaemonSet) — управляет компонентами control plane кластера и запускается на всех master-узлах.
+
+   Контроллер **d8-control-plane-manager** выполняет следующие действия:
+
+      - отслеживает Secret `d8-control-plane-manager-config` и `d8-pki` и, на основе информации в них, создаёт или обновляет кастомный ресурс ControlPlaneNode для каждого master-узла;
+
+      - в случае, если требуемая конфигурация узла отличается от текущей, создаёт ресурс ControlPlaneOperation для выполнения операций по актуализации конфигурации узла;
+
+      - принимает решение в каком порядке выполнять запрошенные операции (ControlPlaneOperation) для сохранения требуемой отказоустойчивости кластера в момент обновления;
+
+      - отслеживает выполнение операций, указанных в ресурсе ControlPlaneOperation;
+
+      - после завершения запрошенных операций обновляет текущее состояние master-узла в ресурсе ControlPlaneNode.
+
+   Состоит из следующих контейнеров:
 
    * **control-plane-manager** — основной контейнер. Является разработкой компании «Флант».
 
@@ -71,6 +91,8 @@ description: Архитектура и функции модуля control-plane
 1. **kube-apiserver**:
 
    * управление компонентами control-plane кластера;
+   * работает с кастомными ресурсами ControlPlaneNode и ControlPlaneOperation;
+   * отслеживание изменений в Secret `d8-control-plane-manager-config` и `d8-pki`;
    * проксирование и балансировка запросов к **kube-apiserver**, отправляемых на адрес `localhost`.
 
 2. **etcd**:
