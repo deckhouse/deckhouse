@@ -484,6 +484,27 @@ internalNetworkCIDRs:
 ---
 `,
 		},
+		"ok, IPv6": {
+			config: `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- fd00:10:42::/64
+---
+`,
+		},
+		"ok, dual-stack": {
+			config: `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.199.0/24
+- fd00:10:42::/64
+---
+`,
+		},
 		"ok, empty": {
 			config: ``,
 		},
@@ -509,9 +530,25 @@ kind: StaticClusterConfiguration
 internalNetworkCIDRs:
 - 192.168.199.0/24test`,
 			errContains: `ValidationFailed: [0] deckhouse.io/v1alpha1, Kind=StaticClusterConfiguration: "StaticClusterConfiguration, deckhouse.io/v1" document validation failed: 1 error occurred:
-	* internalNetworkCIDRs should match '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+	* internalNetworkCIDRs must be of type cidr: "192.168.199.0/24test"
 
 `,
+		},
+		"bad internalNetworkCIDRs, IPv4 missing mask": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.199.0`,
+			errContains: `internalNetworkCIDRs must be of type cidr: "192.168.199.0"`,
+		},
+		"bad internalNetworkCIDRs, malformed IPv6": {
+			config: `
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- fd00::1::/64`,
+			errContains: `internalNetworkCIDRs must be of type cidr: "fd00::1::/64"`,
 		},
 	}
 

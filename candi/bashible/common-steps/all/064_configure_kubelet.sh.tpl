@@ -262,12 +262,16 @@ cgroupDriver: ${cgroup_driver}
 {{- if eq .runType "Normal" }}
 clusterDomain: {{ .normal.clusterDomain }}
 clusterDNS:
-- {{ .normal.clusterDNSAddress }}
+{{- range (.normal.clusterDNSAddress | splitList ",") }}
+- {{ . }}
+{{- end }}
 {{- end }}
 {{- if eq .runType "ClusterBootstrap" }}
 clusterDomain: {{ .clusterBootstrap.clusterDomain }}
 clusterDNS:
-- {{ .clusterBootstrap.clusterDNSAddress }}
+{{- range (.clusterBootstrap.clusterDNSAddress | splitList ",") }}
+- {{ . }}
+{{- end }}
 {{- end }}
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true

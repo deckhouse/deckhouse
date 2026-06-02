@@ -45,7 +45,11 @@ spec:
         - --authentication-kubeconfig=/etc/kubernetes/controller-manager.conf
         - --authorization-kubeconfig=/etc/kubernetes/controller-manager.conf
         - --client-ca-file=/etc/kubernetes/pki/ca.crt
+        {{- if .clusterConfiguration.podSubnetCIDRIPv6 }}
+        - --cluster-cidr={{ .clusterConfiguration.podSubnetCIDR }},{{ .clusterConfiguration.podSubnetCIDRIPv6 }}
+        {{- else }}
         - --cluster-cidr={{ .clusterConfiguration.podSubnetCIDR }}
+        {{- end }}
         - --cluster-name=kubernetes
         - --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt
         - --cluster-signing-key-file=/etc/kubernetes/pki/ca.key
@@ -55,12 +59,19 @@ spec:
         - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
         - --root-ca-file=/etc/kubernetes/pki/ca.crt
         - --service-account-private-key-file=/etc/kubernetes/pki/sa.key
+        {{- if .clusterConfiguration.serviceSubnetCIDRIPv6 }}
+        - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }},{{ .clusterConfiguration.serviceSubnetCIDRIPv6 }}
+        {{- else }}
         - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }}
+        {{- end }}
         - --use-service-account-credentials=true
         - --profiling=false
         - --terminated-pod-gc-threshold={{ $gcThresholdCount }}
         - --feature-gates={{ $controllerManagerFeatureGatesStr }}
         - --node-cidr-mask-size={{ .clusterConfiguration.podSubnetNodeCIDRPrefix }}
+        {{- if .clusterConfiguration.podSubnetNodeCIDRPrefixIPv6 }}
+        - --node-cidr-mask-size-ipv6={{ .clusterConfiguration.podSubnetNodeCIDRPrefixIPv6 }}
+        {{- end }}
         - --bind-address=127.0.0.1
         {{- if hasKey . "arguments" }}
           {{- if hasKey .arguments "nodeMonitorPeriod" }}
