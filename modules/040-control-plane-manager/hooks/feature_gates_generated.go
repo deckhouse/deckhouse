@@ -84,6 +84,59 @@ func (cf *ComponentFeatures) GetFeatureGateInfo(component, featureName string) F
 }
 
 var FeatureGatesMap = map[string]ComponentFeatures{
+	"1.31": {
+		Deprecated: []string{
+			"AllowDNSOnlyNodeCSR",
+			"AllowInsecureKubeletCertificateSigningRequests",
+			"DisableNodeKubeProxyVersion",
+		},
+		Kubelet: []string{
+			"ConcurrentWatchObjectDecode",
+			"ImageVolume",
+			"InPlacePodVerticalScaling",
+			"KubeletPodResourcesGet",
+			"MemoryQoS",
+			"MutatingAdmissionPolicy",
+			"ResourceHealthStatus",
+			"SELinuxMount",
+			"RecoverVolumeExpansionFailure",
+		},
+		APIServer: []string{
+			"ConcurrentWatchObjectDecode",
+			"CrossNamespaceVolumeDataSource",
+			"HPAScaleToZero",
+			"ImageVolume",
+			"InPlacePodVerticalScaling",
+			"JobManagedBy",
+			"MaxUnavailableStatefulSet",
+			"MutatingAdmissionPolicy",
+			"ProcMountType",
+			"ResourceHealthStatus",
+			"SELinuxMount",
+			"AuthorizeNodeWithSelectors",
+			"AuthorizeWithSelectors",
+			"DisableAllocatorDualWrite",
+			"OrderedNamespaceDeletion",
+			"RecoverVolumeExpansionFailure",
+			"RelaxedEnvironmentVariableValidation",
+			"StrictCostEnforcementForVAP",
+			"StrictCostEnforcementForWebhooks",
+		},
+		KubeControllerManager: []string{
+			"ConcurrentWatchObjectDecode",
+			"CrossNamespaceVolumeDataSource",
+			"InPlacePodVerticalScaling",
+			"JobManagedBy",
+			"MaxUnavailableStatefulSet",
+			"SELinuxMount",
+			"RecoverVolumeExpansionFailure",
+		},
+		KubeScheduler: []string{
+			"ConcurrentWatchObjectDecode",
+			"InPlacePodVerticalScaling",
+			"SchedulerQueueingHints",
+		},
+	},
 	"1.32": {
 		Deprecated: []string{
 			"DisableNodeKubeProxyVersion",
