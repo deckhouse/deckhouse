@@ -33,7 +33,7 @@ type StaticInstanceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The IP address of the host.
-	//+kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
+	// +kubebuilder:validation:Pattern=`^[0-9a-fA-F:\.]+$`
 	Address string `json:"address"`
 
 	// The reference to the `SSHCredentials` object.

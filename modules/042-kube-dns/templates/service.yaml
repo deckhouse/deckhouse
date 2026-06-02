@@ -7,7 +7,19 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
 spec:
   type: ClusterIP
+  {{- $dnsAddresses := splitList "," .Values.global.discovery.clusterDNSAddress }}
+  {{- if gt (len $dnsAddresses) 1 }}
+  ipFamilies:
+  - IPv4
+  - IPv6
+  ipFamilyPolicy: PreferDualStack
+  clusterIPs:
+  {{- range $addr := $dnsAddresses }}
+  - {{ $addr | quote }}
+  {{- end }}
+  {{- else }}
   clusterIP: {{ .Values.global.discovery.clusterDNSAddress }}
+  {{- end }}
   selector:
     k8s-app: kube-dns
   ports:

@@ -25,9 +25,9 @@ ${upstreams_json}
 EOF
 {{- else if eq .runType "ClusterBootstrap" }}
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
-{{- $list := list }}
-  {{- $list = append $list "$(bb-d8-node-ip):6443" }}
-{{ toJson $list }}
+[
+  "$(bb-d8-node-endpoint 6443)"
+]
 EOF
 {{- end }}
 

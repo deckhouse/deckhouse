@@ -38,8 +38,19 @@ data:
   enable-l2-neigh-discovery: "false"
   {{- end }}
 
-  enable-ipv4: "true"
-  enable-ipv6: "false"
+  {{- $podSubnets := splitList "," .Values.global.discovery.podSubnet }}
+  {{- $ipv4PodCIDR := "" }}
+  {{- $ipv6PodCIDR := "" }}
+  {{- range $subnet := $podSubnets }}
+    {{- if contains ":" $subnet }}
+      {{- $ipv6PodCIDR = $subnet }}
+    {{- else }}
+      {{- $ipv4PodCIDR = $subnet }}
+    {{- end }}
+  {{- end }}
+
+  enable-ipv4: {{ if ne $ipv4PodCIDR "" }}"true"{{ else }}"false"{{ end }}
+  enable-ipv6: {{ if ne $ipv6PodCIDR "" }}"true"{{ else }}"false"{{ end }}
 
   enable-bpf-tproxy: "true"
 
@@ -96,7 +107,12 @@ data:
 
   enable-local-redirect-policy: "true"
 
-  ipv4-native-routing-cidr: {{ .Values.global.discovery.podSubnet }}
+  {{- if $ipv4PodCIDR }}
+  ipv4-native-routing-cidr: {{ $ipv4PodCIDR }}
+  {{- end }}
+  {{- if $ipv6PodCIDR }}
+  ipv6-native-routing-cidr: {{ $ipv6PodCIDR }}
+  {{- end }}
 
   enable-host-firewall: "true"
 

@@ -232,6 +232,16 @@ bb-d8-machine-name() {
 bb-d8-node-ip() {
   echo $(</var/lib/bashible/discovered-node-ip)
 }
+
+bb-d8-node-endpoint() {
+  local port=$1
+  local ip=$(cat /var/lib/bashible/discovered-node-ip | cut -d',' -f1)
+  if [[ "$ip" == *:* ]]; then
+    echo "[$ip]:$port"
+  else
+    echo "$ip:$port"
+  fi
+}
 {{- end }}
 
 {{- define "bb-discover-node-name" -}}

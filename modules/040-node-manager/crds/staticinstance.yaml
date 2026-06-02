@@ -58,7 +58,7 @@ spec:
               properties:
                 address:
                   description: The IP address of the host.
-                  pattern: ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$
+                  pattern: ^[0-9a-fA-F:\.]+$
                   type: string
                 credentialsRef:
                   description: The reference to the `SSHCredentials` object.
@@ -314,7 +314,7 @@ spec:
               properties:
                 address:
                   description: The IP address of the host.
-                  pattern: ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$
+                  pattern: ^[0-9a-fA-F:\.]+$
                   type: string
                 credentialsRef:
                   description: The reference to the `SSHCredentials` object.
