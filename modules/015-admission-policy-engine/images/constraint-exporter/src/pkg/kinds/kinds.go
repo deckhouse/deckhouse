@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -30,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/restmapper"
-	"k8s.io/klog/v2"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/yaml"
 
 	"github.com/flant/constraint_exporter/pkg/gatekeeper"
@@ -95,27 +96,7 @@ func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint,
 		return
 	}
 
-	klog.Info("Checksums are not equal. Updating")
-
-	cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			err = kt.createCM()
-			if err != nil {
-				klog.Errorf("Create kinds cm failed: %s", err)
-				return
-			}
-		} else {
-			klog.Errorf("Get kinds cm failed: %s", err)
-			return
-		}
-	}
-	if len(cm.Annotations) == 0 {
-		cm.Annotations = make(map[string]string, 0)
-	}
-	if len(cm.Data) == 0 {
-		cm.Data = make(map[string]string)
-	}
+	slog.Info("checksums changed, updating tracked objects configmap")
 
 	constraintKinds := make([]gatekeeper.MatchKind, 0, len(deduplicatedConstraintKinds))
 	for _, k := range deduplicatedConstraintKinds {
@@ -127,21 +108,16 @@ func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint,
 		mutationKinds = append(mutationKinds, m)
 	}
 
-	cm.Annotations[constraintChecksumAnnotation] = cchecksum
-	cm.Annotations[mutationChecksumAnnotation] = mchecksum
-
 	// convert kinds to the resources
 	resourceConstraintsData, resourceMutationsData, err := kt.convertKinds(constraintKinds, mutationKinds)
 	if err != nil {
-		klog.Errorf("Convert kinds to resources failed. Try later")
+		slog.Error("convert kinds to resources failed", "error", err)
 		return
 	}
-	cm.Data["validate-resources.yaml"] = string(resourceConstraintsData)
-	cm.Data["mutate-resources.yaml"] = string(resourceMutationsData)
 
-	_, err = kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Update(context.TODO(), cm, v1.UpdateOptions{})
+	err = kt.updateTrackedObjectsConfigMap(cchecksum, mchecksum, string(resourceConstraintsData), string(resourceMutationsData))
 	if err != nil {
-		klog.Errorf("Update tracked objects failed: %s", err)
+		slog.Error("update tracked objects failed", "error", err)
 		return
 	}
 
@@ -177,14 +153,19 @@ func (kt *KindTracker) FindInitialChecksum() error {
 	cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			klog.Info("Track objects configmap not found. Creating.")
+			slog.Info("track objects configmap not found, creating")
 			err = kt.createCM()
 			if err != nil {
 				return err
 			}
+			return nil
 		} else {
 			return err
 		}
+	}
+
+	if len(cm.Annotations) == 0 {
+		return nil
 	}
 
 	kt.latestConstraintsChecksum = cm.Annotations[constraintChecksumAnnotation]
@@ -213,6 +194,41 @@ func (kt *KindTracker) createCM() error {
 	_, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Create(context.TODO(), cm, v1.CreateOptions{})
 
 	return err
+}
+
+func (kt *KindTracker) updateTrackedObjectsConfigMap(constraintsChecksum, mutationsChecksum, validateData, mutateData string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		cm, err := kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return err
+			}
+
+			if createErr := kt.createCM(); createErr != nil && !errors.IsAlreadyExists(createErr) {
+				return createErr
+			}
+
+			cm, err = kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Get(context.TODO(), kt.cmName, v1.GetOptions{})
+			if err != nil {
+				return err
+			}
+		}
+
+		if len(cm.Annotations) == 0 {
+			cm.Annotations = make(map[string]string)
+		}
+		if len(cm.Data) == 0 {
+			cm.Data = make(map[string]string)
+		}
+
+		cm.Annotations[constraintChecksumAnnotation] = constraintsChecksum
+		cm.Annotations[mutationChecksumAnnotation] = mutationsChecksum
+		cm.Data["validate-resources.yaml"] = validateData
+		cm.Data["mutate-resources.yaml"] = mutateData
+
+		_, err = kt.client.CoreV1().ConfigMaps(kt.cmNamespace).Update(context.TODO(), cm, v1.UpdateOptions{})
+		return err
+	})
 }
 
 type matchResource struct {
@@ -268,7 +284,13 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 						restMapping, err := rm.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 						if err != nil {
 							// skip outdated resources, like extensions/Ingress
-							klog.Warningf("Skip wildcard resource mapping. Group: %q, Kind: %q, Version: %q. Error: %q", gvk.Group, gvk.Kind, gvk.Version, err)
+							slog.Warn(
+								"skip wildcard resource mapping",
+								"group", gvk.Group,
+								"kind", gvk.Kind,
+								"version", gvk.Version,
+								"error", err,
+							)
 							continue
 						}
 
@@ -302,7 +324,7 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 					})
 					if err != nil {
 						// skip outdated resources, like extensions/Ingress
-						klog.Warningf("Skip resource mapping. Group: %q, Kind: %q. Error: %q", apiGroup, kind, err)
+						slog.Warn("skip resource mapping", "group", apiGroup, "kind", kind, "error", err)
 						continue
 					}
 
