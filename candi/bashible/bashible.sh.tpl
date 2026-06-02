@@ -362,7 +362,6 @@ function main() {
 {{ end }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
-  # source opentelemetry vars for reverse proxy connection
   if [ -f "/var/lib/bashible/telemetry.env" ]; then
     source "/var/lib/bashible/telemetry.env"
   fi

@@ -604,8 +604,6 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 		}
 	}
 
-	// Now copy the bootstrapInfrastructure body here since the prompt wants bootstrapInfrastructure deleted and these to replace it!
-	// Wait, let's keep things clean:
 	if bctx.metaConfig.ResourcesYAML != "" {
 		parsedResources, err := template.ParseResourcesContent(bctx.metaConfig.ResourcesYAML, bctx.resourcesTemplateData)
 		if err != nil {
