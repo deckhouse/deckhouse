@@ -129,23 +129,8 @@ relatedLinks:
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
-<div class="tabs-block">
-  <ul class="tabs__container tabs__container--title">
-    <li id='tab_variant_new_config'
-      href="javascript:void(0)"
-      class="tabs__item tabs__item--title active"
-      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_variant_new_config');">
-      Конфигурация, применимая с версии 1.75 DKP
-    </li>
-    <li id='tab_variant_legacy_config'
-      href="javascript:void(0)"
-      class="tabs__item tabs__item--title"
-      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_variant_legacy_config');">
-      Устаревший вариант конфигурации
-    </li>
-  </ul>
-
-<div id='block_variant_new_config' class="tabs__container tabs__container--descr active" markdown="1">
+{% tabs variant %}
+{% tab "Конфигурация, применимая с версии 1.75 DKP" %}
 В этом примере доступ к хранилищу образов DKP настраивается с помощью ModuleConfig `deckhouse`.
 
 ```yaml
@@ -299,10 +284,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-
-<div id='block_variant_legacy_config' class="tabs__container tabs__container--descr" markdown="1">
-
+{% endtab %}
+{% tab "Устаревший вариант конфигурации" %}
 В этом примере доступ к хранилищу образов DKP настраивается с помощью InitConfiguration.
 
 ```yaml
@@ -454,8 +437,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-</div>
+{% endtab %}
+{% endtabs %}
 
 {% endofftopic %}
 

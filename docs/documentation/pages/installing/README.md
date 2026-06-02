@@ -120,23 +120,8 @@ Required and optional objects/resources that may be needed in the installation c
 
 {% offtopic title="An example of the installation config..." %}
 
-<div class="tabs-block">
-  <ul class="tabs__container tabs__container--title">
-    <li id='tab_variant_new_config'
-      href="javascript:void(0)"
-      class="tabs__item tabs__item--title active"
-      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_variant_new_config');">
-      Configuration applicable since DKP 1.75
-    </li>
-    <li id='tab_variant_legacy_config'
-      href="javascript:void(0)"
-      class="tabs__item tabs__item--title"
-      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_variant_legacy_config');">
-      Legacy configuration
-    </li>
-  </ul>
-
-<div id='block_variant_new_config' class="tabs__container tabs__container--descr active" markdown="1">
+{% tabs variant %}
+{% tab "Configuration applicable since DKP 1.75" %}
 In this example, access to the DKP container registry is configured using ModuleConfig `deckhouse`.
 
 ```yaml
@@ -290,10 +275,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-
-<div id='block_variant_legacy_config' class="tabs__container tabs__container--descr"  markdown="1">
-
+{% endtab %}
+{% tab "Legacy configuration" %}
 In this example, access to the DKP container registry is configured using InitConfiguration.
 
 ```yaml
@@ -445,8 +428,8 @@ spec:
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
 
-</div>
-</div>
+{% endtab %}
+{% endtabs %}
 
 {% endofftopic %}
 
