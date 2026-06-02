@@ -18,7 +18,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -58,6 +57,14 @@ type ErrorResponse struct {
 }
 
 const maxRequestBodySize = 1 << 20 // 1 MB
+
+// localDexConnectorID is the connector ID Dex assigns to tokens issued by its
+// built-in local password database (enablePasswordDB: true). Self-service
+// password reset is only meaningful for those users; tokens minted by external
+// connectors (LDAP, OIDC, GitHub, ...) carry a different connector ID and a
+// federated user must never be able to reset a local user's password by
+// presenting a claim that merely matches a local username.
+const localDexConnectorID = "local"
 
 func NewHandler(verifier auth.Verifier, k8sClient k8s.Client, logger *slog.Logger) *Handler {
 	registry := prometheus.NewRegistry()
@@ -121,6 +128,17 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Authoritative origin check: only tokens from Dex's local password DB may
+	// reset a password. This prevents an external/federated user from taking
+	// over a local account by setting a claim that matches a local username.
+	if claims.ConnectorID != localDexConnectorID {
+		h.logger.Warn("Password reset attempted with non-local connector token",
+			"username", claims.Username, "connector_id", claims.ConnectorID, "remote_addr", r.RemoteAddr)
+		h.reqCounter.WithLabelValues("/api/v1/password/reset", "403").Inc()
+		h.writeError(w, http.StatusForbidden, "forbidden", "Password reset is only available for local users")
+		return
+	}
+
 	h.logger.Info("Password reset request", "username", claims.Username, "remote_addr", r.RemoteAddr)
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
@@ -169,13 +187,8 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	operationName, err := h.k8sClient.CreatePasswordResetOperation(ctx, claims.Username, req.NewPasswordHash)
 	if err != nil {
 		h.logger.Error("Failed to create password reset operation", "error", err, "username", claims.Username)
-		if errors.Is(err, k8s.ErrOperationFailed) {
-			h.reqCounter.WithLabelValues("/api/v1/password/reset", "500").Inc()
-			h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to create password reset operation")
-			return
-		}
 		h.reqCounter.WithLabelValues("/api/v1/password/reset", "500").Inc()
-		h.writeError(w, http.StatusInternalServerError, "internal_error", "Unexpected error")
+		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to create password reset operation")
 		return
 	}
 

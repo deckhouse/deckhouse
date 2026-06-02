@@ -130,13 +130,28 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: validBcryptHash},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "testuser", Email: "test@example.com"},
+				claims: &auth.Claims{Username: "testuser", Email: "test@example.com", ConnectorID: "local"},
 			},
 			k8sClient: &mockK8sClient{
 				isLocal:       true,
 				operationName: "self-password-reset-abc123",
 			},
 			wantStatus: http.StatusAccepted,
+		},
+		{
+			name:       "non-local connector token is forbidden",
+			authHeader: "Bearer validtoken",
+			body:       PasswordResetRequest{NewPasswordHash: validBcryptHash},
+			verifier: &mockVerifier{
+				// Federated user whose username collides with a local user must
+				// not be able to reset the local user's password.
+				claims: &auth.Claims{Username: "testuser", ConnectorID: "github"},
+			},
+			k8sClient: &mockK8sClient{
+				isLocal: true,
+			},
+			wantStatus:  http.StatusForbidden,
+			wantErrCode: "forbidden",
 		},
 		{
 			name:       "missing auth header",
@@ -161,7 +176,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: ""},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "testuser"},
+				claims: &auth.Claims{Username: "testuser", ConnectorID: "local"},
 			},
 			k8sClient:   &mockK8sClient{},
 			wantStatus:  http.StatusBadRequest,
@@ -172,7 +187,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: "plaintext"},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "testuser"},
+				claims: &auth.Claims{Username: "testuser", ConnectorID: "local"},
 			},
 			k8sClient:   &mockK8sClient{},
 			wantStatus:  http.StatusBadRequest,
@@ -183,7 +198,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: "$2y$10$invalidhash"},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "testuser"},
+				claims: &auth.Claims{Username: "testuser", ConnectorID: "local"},
 			},
 			k8sClient:   &mockK8sClient{},
 			wantStatus:  http.StatusBadRequest,
@@ -194,7 +209,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: validBcryptHash},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "externaluser"},
+				claims: &auth.Claims{Username: "externaluser", ConnectorID: "local"},
 			},
 			k8sClient: &mockK8sClient{
 				isLocal: false,
@@ -207,7 +222,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: validBcryptHash},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "testuser"},
+				claims: &auth.Claims{Username: "testuser", ConnectorID: "local"},
 			},
 			k8sClient: &mockK8sClient{
 				isLocalErr: errors.New("k8s error"),
@@ -219,7 +234,7 @@ func TestHandler_ResetPassword(t *testing.T) {
 			authHeader: "Bearer validtoken",
 			body:       PasswordResetRequest{NewPasswordHash: validBcryptHash},
 			verifier: &mockVerifier{
-				claims: &auth.Claims{Username: "testuser"},
+				claims: &auth.Claims{Username: "testuser", ConnectorID: "local"},
 			},
 			k8sClient: &mockK8sClient{
 				isLocal:   true,
