@@ -91,7 +91,7 @@ spec:
         args:
         - --listen=:8443
         # In-cluster Dex Service for OIDC discovery (same address as dex-authenticator), so it works in closed-loop clusters.
-        - --dex-url=https://dex.d8-{{ .Chart.Name }}
+        - --dex-url=https://dex.d8-{{ .Chart.Name }}.svc
         # Public issuer from token "iss" claims; used for validation, not connectivity.
         - --issuer-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
         - --tls-cert-file=/certs/tls.crt
