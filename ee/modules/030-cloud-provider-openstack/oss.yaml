@@ -22,7 +22,7 @@
       version: v1.35.0
     - condition:
         k8s: "1.36"
-      version: v1.35.0
+      version: v1.36.0
 
 - name: OpenStack CSI driver
   link: https://github.com/kubernetes/cloud-provider-openstack
@@ -48,7 +48,7 @@
       version: v1.34.1
     - condition:
         k8s: "1.36"
-      version: v1.34.1
+      version: v1.36.0
 
 - name: OpenStack Terraform provider
   link: https://github.com/terraform-provider-openstack/terraform-provider-openstack

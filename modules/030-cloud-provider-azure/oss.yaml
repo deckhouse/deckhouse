@@ -22,7 +22,7 @@
       version: v1.34.3
     - condition:
         k8s: "1.36"
-      version: v1.34.3
+      version: v1.36.1
 
 - name: Microsoft Azure CSI driver
   link: https://github.com/kubernetes-sigs/azuredisk-csi-driver
