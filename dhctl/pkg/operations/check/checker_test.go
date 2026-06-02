@@ -595,6 +595,10 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	commanderUUID, err := uuid.NewUUID()
 	require.NoError(t, err, p.testName)
 
+	opts := options.New()
+	opts.Global.NeedDownload = false
+	options.SetPaths("/", &opts.Global)
+
 	return &testCheckClusterConfig{
 		testCheckClusterConfigBase: p.testCheckClusterConfigBase,
 		commanderMetaConfig:        commanderMetaConfig,
@@ -606,7 +610,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 			CommanderMode: true,
 			IsDebug:       false,
 			CommanderUUID: commanderUUID,
-			Options: options.New(),
+			Options: opts,
 		}),
 	}
 }
