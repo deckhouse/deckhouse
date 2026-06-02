@@ -1,4 +1,34 @@
-
+bashible: &bashible
+  os:
+    debian:
+      packageManager: apt
+      distributions:
+        - name: ubuntu
+          ids: [ubuntu]
+          bundle: ubuntu-lts
+        - name: debian
+          ids: [debian]
+        - name: astra
+          ids: [astra]
+    rhel:
+      packageManager: dnf
+      distributions:
+        - name: centos
+          ids: [centos, rocky, almalinux, rhel, ol]
+        - name: redos
+          ids: [redos]
+        - name: rosa
+          ids: [rosa, rels]
+    suse:
+      packageManager: zypper
+      distributions:
+        - name: opensuse
+          ids: [mosos-arbat, opensuse-leap]
+    altlinux:
+      packageManager: apt-rpm
+      distributions:
+        - name: altlinux
+          ids: [altlinux]
 k8s:
   "1.31":
     status: end-of-life
@@ -22,4 +52,4 @@ k8s:
     status: available
   "1.34":
   "1.35":
-  "1.36":
+  "1.3":
