@@ -21,12 +21,15 @@
 # pull path, registry auth and mirror config are exactly the ones kubelet itself uses —
 # no --hosts-dir, no manual namespace.
 #
-# The list is rendered below in start-priority order (xargs -P workers take lines
-# top-to-bottom): deckhouse-controller (tag-based `.deckhouseImageRef`, ~200 MiB, the
-# bootstrap pod's own image), deckhouse/*, cniCilium/*, coredns, controlPlaneManager,
-# nodeManager (minus nvidia*/nodeFeatureDiscovery/stale clusterAutoscaler), current
-# cloudProvider/*, common runtime bits, kubeProxy, csi-sidecars, common misc, then
-# chrony/*, registryPackagesProxy/*, monitoringKubernetes/* and kubeDns/*.
+# Pulled in two phases. Phase 1 (barrier) is the bootstrap-critical control-plane set
+# (controlPlaneManager/* = etcd, apiserver, controller-manager, scheduler) — step 072
+# blocks on these, so they go first and nothing else competes for bandwidth until they
+# are in the image store. Phase 2 (background) is everything else in start-priority order
+# (xargs -P workers take lines top-to-bottom): deckhouse-controller (tag-based
+# `.deckhouseImageRef`, ~200 MiB), deckhouse/*, cniCilium/*, coredns, nodeManager (minus
+# nvidia*/nodeFeatureDiscovery/stale clusterAutoscaler), current cloudProvider/*, common
+# runtime bits, kubeProxy, csi-sidecars, common misc, then chrony/*, registryPackagesProxy/*,
+# monitoringKubernetes/* and kubeDns/*.
 #
 # Each line is "<section>/<imageKey> <ref>"; pull_one splits on the first space.
 # Fire-and-forget: failures never block bashible; kubelet fetches anything missing later.
@@ -84,11 +87,25 @@ results_file="/run/ctr-prefetch.results"
 log_dir="/var/log/d8/bashible"
 log_file="${log_dir}/ctr-prefetch.log"
 runtime_endpoint="unix:///run/containerd/containerd.sock"
-parallelism=4
+parallelism=8
 per_image_total_deadline=600
 cri_ready_deadline=120
 
-# Image list, one "<section>/<imageKey> <ref>" per line. The single-quoted heredoc
+# Phase-1 list: bootstrap-critical control-plane images. Step 072 (install control
+# plane) blocks on etcd/apiserver/controller-manager/scheduler being in the image
+# store, so these are pulled first — as a barrier — before the bulky deckhouse image
+# and everything else compete for registry/containerd bandwidth.
+critical_images=$(cat <<'CRIT_EOF'
+{{- range $name := $cpmNames }}
+{{- $digest := index ($.images.controlPlaneManager | default dict) $name }}
+{{- if $digest }}
+controlPlaneManager/{{ $name }} {{ $base }}@{{ $digest }}
+{{- end }}
+{{- end }}
+CRIT_EOF
+)
+
+# Phase-2 list, one "<section>/<imageKey> <ref>" per line. The single-quoted heredoc
 # disables bash expansion; go-template substitutes its actions when rendering this file.
 images=$(cat <<'PREFETCH_EOF'
 {{- with .deckhouseImageRef }}
@@ -101,12 +118,6 @@ deckhouse/controller {{ . }}
 {{- end }}
 {{- with index ($.images.common | default dict) "coredns" }}
 common/coredns {{ $base }}@{{ . }}
-{{- end }}
-{{- range $name := $cpmNames }}
-{{- $digest := index ($.images.controlPlaneManager | default dict) $name }}
-{{- if $digest }}
-controlPlaneManager/{{ $name }} {{ $base }}@{{ $digest }}
-{{- end }}
 {{- end }}
 {{- range $name, $digest := (index $.images "nodeManager" | default dict) }}
 {{- if and (not (hasPrefix "nvidia" $name)) (ne $name "nodeFeatureDiscovery") (or (not (hasPrefix "clusterAutoscaler" $name)) (eq $name $caCurrent)) }}
@@ -153,7 +164,9 @@ ts() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 # lines are far below PIPE_BUF), so no flock is needed — same for $results_file below.
 log() { printf '%s\n' "$*" >> "$log_file"; echo "$*"; }
 
-total_count=$(printf '%s\n' "$images" | grep -c . || true)
+crit_count=$(printf '%s\n' "$critical_images" | grep -c . || true)
+rest_count=$(printf '%s\n' "$images" | grep -c . || true)
+total_count=$((crit_count + rest_count))
 if [ "${total_count:-0}" -eq 0 ]; then
   log "$(ts) image prefetch: empty list; nothing to do"
   rm -f "$script_file" "$results_file"
@@ -162,7 +175,7 @@ fi
 
 session_start=$(date +%s.%N)
 log "=== ctr-prefetch session started $(ts) ==="
-log "$(ts) START parallelism=${parallelism} count=${total_count}"
+log "$(ts) START parallelism=${parallelism} count=${total_count} control-plane=${crit_count}"
 
 deadline=$((SECONDS + cri_ready_deadline))
 until crictl --runtime-endpoint="$runtime_endpoint" info >/dev/null 2>&1; do
@@ -213,8 +226,18 @@ pull_one() {
 export -f ts log get_image_size pull_one
 export log_file results_file runtime_endpoint per_image_total_deadline
 
-printf '%s\n' "$images" | grep -v '^$' \
-  | xargs -d '\n' -P "$parallelism" -I {} bash -c 'pull_one "$@"' _ {}
+pull_list() {
+  printf '%s\n' "$1" | grep -v '^$' \
+    | xargs -d '\n' -P "$parallelism" -I {} bash -c 'pull_one "$@"' _ {}
+}
+
+# Phase 1 (barrier): control-plane images first. Step 072 blocks on these, so nothing
+# else competes for registry/containerd bandwidth until they are in the image store.
+log "$(ts) PHASE1 control-plane count=${crit_count}"
+pull_list "$critical_images"
+# Phase 2: the bulky deckhouse image and everything else, in the background.
+log "$(ts) PHASE2 rest count=${rest_count}"
+pull_list "$images"
 
 elapsed=$(awk -v s="$session_start" -v e="$(date +%s.%N)" 'BEGIN{printf "%.3f", e-s}')
 
