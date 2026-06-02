@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.30.17",
+  "version": "v0.30.18",
   "aliases": null,
   "flags": {
     "help": {
@@ -199,9 +199,19 @@
           "shorthand": "",
           "global": false
         },
+        "password": {
+          "description": "Registry password or token (overrides the Docker config; use with --username)",
+          "shorthand": "p",
+          "global": false
+        },
         "platform": {
           "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
           "shorthand": "",
+          "global": false
+        },
+        "username": {
+          "description": "Registry username (overrides the Docker config; use with --password)",
+          "shorthand": "u",
           "global": false
         },
         "verbose": {
@@ -231,9 +241,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -259,9 +279,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -292,6 +322,11 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
@@ -301,6 +336,11 @@
               "description": "Read the digest from a local tarball instead of the registry",
               "shorthand": "",
               "global": false
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
+              "global": true
             },
             "verbose": {
               "description": "Enable debug logs on stderr",
@@ -325,9 +365,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -353,9 +403,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -380,9 +440,19 @@
                   "shorthand": "",
                   "global": true
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
                   "global": true
                 },
                 "verbose": {
@@ -413,9 +483,19 @@
                   "shorthand": "o",
                   "global": false
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
                   "global": true
                 },
                 "verbose": {
@@ -446,9 +526,19 @@
                   "shorthand": "l",
                   "global": false
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
                   "global": true
                 },
                 "verbose": {
@@ -484,6 +574,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "password": {
+                  "description": "Registry password or token (overrides the Docker config; use with --username)",
+                  "shorthand": "p",
+                  "global": true
+                },
                 "platform": {
                   "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
                   "shorthand": "",
@@ -494,6 +589,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "username": {
+                  "description": "Registry username (overrides the Docker config; use with --password)",
+                  "shorthand": "u",
+                  "global": true
+                },
                 "verbose": {
                   "description": "Enable debug logs on stderr",
                   "shorthand": "v",
@@ -503,6 +603,44 @@
               "subcommands": null
             }
           ]
+        },
+        {
+          "name": "login [REGISTRY]",
+          "description": "Log in to a container registry",
+          "aliases": null,
+          "flags": {
+            "allow-nondistributable-artifacts": {
+              "description": "Include non-distributable (foreign) layers when pushing",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure": {
+              "description": "Allow plain HTTP and skip TLS verification (localhost and RFC1918 hosts already auto-allow HTTP)",
+              "shorthand": "",
+              "global": true
+            },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
+            "platform": {
+              "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
+              "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
+              "global": true
+            },
+            "verbose": {
+              "description": "Enable debug logs on stderr",
+              "shorthand": "v",
+              "global": true
+            }
+          },
+          "subcommands": null
         },
         {
           "name": "ls REPO",
@@ -529,9 +667,19 @@
               "shorthand": "O",
               "global": false
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -557,9 +705,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -595,9 +753,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -633,9 +801,19 @@
               "shorthand": "",
               "global": true
             },
+            "password": {
+              "description": "Registry password or token (overrides the Docker config; use with --username)",
+              "shorthand": "p",
+              "global": true
+            },
             "platform": {
               "description": "Resolve images to platform os/arch[/variant][:osversion] (image-level commands only)",
               "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Registry username (overrides the Docker config; use with --password)",
+              "shorthand": "u",
               "global": true
             },
             "verbose": {
@@ -45605,6 +45783,11 @@
               "shorthand": "e",
               "global": false
             },
+            "exclude-package": {
+              "description": "Blacklist specific packages from downloading. Format is \"package-name[@version]\". Use one flag per each package. Overridden by use of --include-package.",
+              "shorthand": "",
+              "global": false
+            },
             "force": {
               "description": "Overwrite existing bundle packages if they are conflicting with current pull operation.",
               "shorthand": "",
@@ -45628,6 +45811,11 @@
             "include-module": {
               "description": "Whitelist specific modules for downloading. Use one flag per each module. Disables blacklisting by --exclude-module.\"\n\nSemver constraints (caret, tilde, range) keep only the highest patch in each (major, minor) series, mirroring how platform releases are discovered.\nVersions explicitly named with an inclusive boundary operator (\u003e= or \u003c=) are always preserved — that boundary is part of the user's request and must round-trip even when a newer patch exists in the same minor.\nUse the exact-tag form (=) when you need a specific older patch unconditionally.\n\nExample:\nAvailable versions for \u003cmodule-name\u003e: v1.0.0, v1.1.0, v1.2.0, v1.3.0, v1.3.3, v1.4.0, v1.4.1\n\nmodule-name@1.3.0 → semver ^ constraint (^1.3.0): keep latest patch per minor — includes v1.3.3 (1.3.x) and v1.4.1 (1.4.x). Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@~1.3.0 → semver ~ constraint (\u003e=1.3.0 \u003c1.4.0): keep latest patch per minor in range — includes v1.3.3. Versions currently pinned by release channels are pulled in addition.\n\nmodule-name@\u003e=1.3.0 → range constraint with explicit \u003e= anchor: keep latest patch per minor AND the named anchor v1.3.0 — includes v1.3.0 (anchor), v1.3.3 (1.3.x latest), v1.4.1 (1.4.x latest).\n\nmodule-name@\u003e=1.3.0 \u003c=1.4.0 → both anchors honoured: includes v1.3.0, v1.3.3, v1.4.0; v1.4.1 is excluded by the upper bound.\n\nmodule-name@=v1.3.0 → exact tag match: include only v1.3.0 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=bobV1 → exact tag match: include only bobV1 and publish it to all release channels (alpha, beta, early-access, stable, rock-solid).\n\nmodule-name@=v1.3.0+stable → exact tag match: include only v1.3.0 and and publish it to stable channel\n\t\t",
               "shorthand": "i",
+              "global": false
+            },
+            "include-package": {
+              "description": "Whitelist specific packages for downloading. Use one flag per each package. Disables blacklisting by --exclude-package.\n\nPackages are mirrored exactly like modules (same name@version constraint dialect), but live under the packages/ registry segment with their release metadata under packages/\u003cname\u003e/version.",
+              "shorthand": "",
               "global": false
             },
             "include-platform": {
@@ -45662,6 +45850,11 @@
             },
             "no-modules": {
               "description": "Do not pull Deckhouse modules into bundle.",
+              "shorthand": "",
+              "global": false
+            },
+            "no-packages": {
+              "description": "Do not pull Deckhouse packages into bundle.",
               "shorthand": "",
               "global": false
             },
