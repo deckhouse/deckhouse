@@ -655,8 +655,8 @@ annotations:
 
 | Режим | Поведение |
 |-------|-----------|
-| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **всегда** создаёт **`Telemetry`** `main-access-log-format` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics`. |
-| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же **`Telemetry`** `main-access-log-format` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через **`deckhouse-tracing`** из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
+| **`false` (по умолчанию)** | Legacy: полностью включён `telemetry.v2` в ресурсе Istio Operator / `Istio` (в т.ч. `telemetry.v2.prometheus` для Sail). Модуль **всегда** создаёт **`Telemetry`** `d8-main` в `d8-istio` только для access log; без `spec.metrics` / `spec.tracing` и без `defaultProviders.metrics`. |
+| **`true`** | Режим Telemetry API: в `meshConfig` выставлен `defaultProviders.metrics: [prometheus]`, фильтры `telemetry.v2` выключены; тот же **`Telemetry`** `d8-main` дополняется `spec.metrics` (и при настроенной трассировке — `spec.tracing` через **`deckhouse-tracing`** из [`tracing.collector`](configuration.html#parameters-tracing-collector)). Формат журнала — в [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog). |
 
 ### Как включить режим Telemetry API
 
@@ -703,7 +703,7 @@ kubectl exec -n my-namespace "${istio_pod}" -c istio-proxy -- \
 
 ### Дополнительные политики `Telemetry` (по желанию)
 
-Дополнительные **`Telemetry`** удобно задавать **с явным workload‑селектором** или `targetRef`. Два объекта **`Telemetry`** в **одном** неймспейсе **без** селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в **`d8-istio`** единственный объект без селектора (**`main-access-log-format`**); второй там же без селектора не добавляйте без осознанной замены.
+Дополнительные **`Telemetry`** удобно задавать **с явным workload‑селектором** или `targetRef`. Два объекта **`Telemetry`** в **одном** неймспейсе **без** селектора провайдеру применять нельзя: Istio выдаёт [IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/). Модуль уже создаёт в **`d8-istio`** единственный объект без селектора (**`d8-main`**); второй там же без селектора не добавляйте без осознанной замены.
 
 Пример ограниченной политики в прикладном пространстве имён:
 
@@ -726,7 +726,7 @@ spec:
 [`tracing.collector`](configuration.html#parameters-tracing-collector) — единая точка настройки mesh-wide экспорта (Zipkin или OpenTelemetry).
 
 - При **`telemetryAPI.enabled: false`** и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — **только legacy**: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector). OTLP требует режима Telemetry API.
-- При **`telemetryAPI.enabled: true`** и **`tracing.enabled: true`** модуль создаёт **`deckhouse-tracing`**, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в **`Telemetry`** `main-access-log-format` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
+- При **`telemetryAPI.enabled: true`** и **`tracing.enabled: true`** модуль создаёт **`deckhouse-tracing`**, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в **`Telemetry`** `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
 
 Нестандартные провайдеры — через **`Telemetry` с `selector`** в неймспейсе приложения, не второй бесселекторный CR в **`d8-istio`** ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). См. [tracing telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
@@ -761,7 +761,7 @@ spec:
 
 {% alert level="info" %}Экспорт OpenTelemetry в модуле соответствует [распределённой трассировке с OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) на **Istio 1.25+**. На **Istio 1.21** используйте Zipkin/Jaeger через [`tracing.collector.zipkin`](configuration.html#parameters-tracing-collector) или обновите ревизию control plane.{% endalert %}
 
-Разверните Collector, доступный из mesh, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер **`deckhouse-tracing`** и `spec.tracing` в **`main-access-log-format`** — **не** дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
+Разверните Collector, доступный из mesh, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер **`deckhouse-tracing`** и `spec.tracing` в **`d8-main`** — **не** дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -804,8 +804,6 @@ spec:
     - name: jaeger-zipkin
     randomSamplingPercentage: 100.0
 ```
-
-Имя провайдера должно совпадать с записью в `meshConfig.extensionProviders`.
 
 #### Пример — отключить отправку спанов (например, у ingress)
 

@@ -253,27 +253,27 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			al := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
+			al := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
 			Expect(al.Exists()).To(BeTrue())
-			Expect(al.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("main-access-log-format"))
+			Expect(al.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("d8-main"))
 			Expect(al.Field("spec.metrics").Exists()).To(BeFalse())
 			Expect(al.Field("spec.tracing").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Telemetry", "d8-ingress-nginx", "ingress-nginx-disable-span-reporting").Exists()).To(BeFalse())
 		})
 
-		It("extends main-access-log-format Telemetry with metrics when Telemetry API mode is enabled", func() {
+		It("extends d8-main Telemetry with metrics when Telemetry API mode is enabled", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			mesh := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
 			Expect(mesh.Exists()).To(BeTrue())
-			Expect(mesh.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("main-access-log-format"))
+			Expect(mesh.Field("spec.accessLogging.0.providers.0.name").String()).To(Equal("d8-main"))
 			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
 			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
 		})
 
-		It("adds tracing to main-access-log-format Telemetry and Zipkin extension provider when tracing uses collector.zipkin", func() {
+		It("adds tracing to d8-main Telemetry and Zipkin extension provider when tracing uses collector.zipkin", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.ValuesSet("istio.tracing.enabled", true)
 			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc:9411")
@@ -282,7 +282,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			mesh := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
 			Expect(mesh.Exists()).To(BeTrue())
 			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
 			Expect(mesh.Field("spec.tracing.0.randomSamplingPercentage").Num).To(Equal(float64(1)))
@@ -311,7 +311,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(foundZipkinIOP).To(BeTrue())
 		})
 
-		It("adds OpenTelemetry tracing to main-access-log-format and deckhouse-tracing extension provider when collector.opentelemetry is set", func() {
+		It("adds OpenTelemetry tracing to d8-main and deckhouse-tracing extension provider when collector.opentelemetry is set", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.ValuesSet("istio.tracing.enabled", true)
 			f.ValuesSet("istio.tracing.collector.opentelemetry.service", "opentelemetry-collector.observability.svc.cluster.local")
@@ -321,7 +321,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			mesh := f.KubernetesResource("Telemetry", "d8-istio", "main-access-log-format")
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
 			Expect(mesh.Field("spec.tracing.0.providers.0.name").String()).To(Equal("deckhouse-tracing"))
 
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")

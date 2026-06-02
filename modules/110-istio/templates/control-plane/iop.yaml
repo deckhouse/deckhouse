@@ -94,7 +94,7 @@ spec:
             {{ $key }}: {{ $value | toJson }}
           {{- end }}
         {{- end }}
-      name: main-access-log-format
+      name: d8-main
     {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
     {{- include "istioTracingProvider" $ | nindent 4 }}
     {{- end }}
