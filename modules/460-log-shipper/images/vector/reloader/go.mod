@@ -1,6 +1,6 @@
 module vector
 
-go 1.25.8
+go 1.25.10
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0

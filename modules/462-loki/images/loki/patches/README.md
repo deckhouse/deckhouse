@@ -2,10 +2,10 @@
 
 ## 001-go-mod.patch
 
-    Fix CVEs in crypto/net packages and bump the `go` directive to `1.25.8`
+    Fix CVEs in crypto/net packages and bump the `go` directive to `1.25.10`
     (required by `go.opentelemetry.io/otel v1.43.0`, see `004-cve-grpc-jsonparser.patch`).
     ```sh
-    go mod edit -go=1.25.8
+    go mod edit -go=1.25.10
     go get golang.org/x/crypto v0.31.0
     go get golang.org/x/net v0.33.0
     go mod tidy
@@ -27,7 +27,7 @@ Bump dependencies to fix CVEs:
 - [CVE-2026-29181](https://github.com/advisories/GHSA-mh2q-q3fh-2475) — `go.opentelemetry.io/otel` (and `otel/metric`, `otel/sdk`, `otel/trace`) bumped from `v1.21.0` (upstream Loki v2.9.15) to `v1.43.0` (multi-value `baggage` header extraction causes excessive allocations).
 
 `go.opentelemetry.io/otel v1.43.0` requires `go >= 1.25.0` in its `go.mod`,
-so the `go` directive is bumped from `1.24.0` to `1.25.8` in `001-go-mod.patch`.
+so the `go` directive is bumped from `1.24.0` to `1.25.10` in `001-go-mod.patch`.
 
 The Loki upstream `replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ... v0.44.0`
 is left untouched because newer otelhttp releases drop API surface the pinned
@@ -37,7 +37,7 @@ this older otelhttp version.
 Generated with:
 
 ```sh
-# Apply 001-go-mod.patch (with go 1.25.8), 002-Allow-delete-logs.patch and
+# Apply 001-go-mod.patch (with go 1.25.10), 002-Allow-delete-logs.patch and
 # 003-Force-expiration.patch first, then:
 go get google.golang.org/grpc@v1.79.3
 go get github.com/buger/jsonparser@v1.1.2

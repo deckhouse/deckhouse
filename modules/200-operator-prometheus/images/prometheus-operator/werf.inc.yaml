@@ -23,7 +23,7 @@ shell:
     - rm -r .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
