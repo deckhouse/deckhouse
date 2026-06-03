@@ -227,6 +227,12 @@ HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxCon
 
 The IngressNginxController is deployed using DaemonSet. DaemonSet does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
 
+{% alert level="warning" %}
+HPA for `IngressNginxController` scales based on the actual CPU usage of the controller Pods, not on CPU pressure on the node itself.
+
+If CPU resources on frontend nodes are already heavily utilized by other workloads and the controller Pods cannot consistently consume CPU above the scaling threshold, HPA may not trigger a scale-up even under high request load.
+{% endalert %}
+
 `hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
 Notes:

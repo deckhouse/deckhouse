@@ -228,6 +228,12 @@ spec:
 
 IngressNginxController разворачивается с помощью DaemonSet. DaemonSet не предоставляет возможности горизонтального масштабирования, поэтому создается дополнительный deployment `hpa-scaler` и HPA resource, который следит за предварительно созданной метрикой `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. Если CPU utilization превысит 50%, HPA закажет новую реплику для `hpa-scaler` (с учетом minReplicas и maxReplicas).
 
+{% alert level="warning" %}
+HPA для `IngressNginxController` масштабирует контроллер по фактическому потреблению CPU Pod'ами контроллера, а не по самому факту CPU pressure на узле.
+
+Если CPU на frontend-узлах уже занят другой нагрузкой и Pod'ы контроллера не могут стабильно потреблять CPU выше порога масштабирования, HPA может не запустить scale-up даже при высокой входящей нагрузке.
+{% endalert %}
+
 Deployment `hpa-scaler` обладает HardPodAntiAffinity (запрет на размещение подов с одинаковыми лейблами на одном узле), поэтому он попытается выделить для себя новый узел (если это возможно
 в рамках своей группы узлов), куда автоматически будет размещен еще один instance Ingress-контроллера.
 
