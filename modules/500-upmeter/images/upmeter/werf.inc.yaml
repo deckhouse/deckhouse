@@ -35,7 +35,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - pm install gcc musl-devel libjq-devel liboniguruma-devel curl
+  - pm install gnu-gcc musl-devel musl-devel-static
   install:
   - cd /src/upmeter
   - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
