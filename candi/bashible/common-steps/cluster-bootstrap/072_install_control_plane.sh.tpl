@@ -181,6 +181,10 @@ __sec rbac_label_taint
 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
+# etcd and kube-apiserver both run with capabilities: drop: ALL (no CAP_DAC_OVERRIDE).
+# etcd owns the cert files (etcd:etcd); kube-apiserver (UID 0) needs to read ca.crt
+# on any restart via the "other" r bit. Keys stay 600 (private, only etcd reads them).
+chmod 644 /etc/kubernetes/pki/etcd/*.crt
 
 # Restrict permissions on admin kubeconfig files for security
 chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true
