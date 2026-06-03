@@ -1026,6 +1026,17 @@ func evaluateDiskStorageClassMigration(in diskSCMigrationEvalInput) (diskSCMigra
 		return diskSCStepWait, nil
 	}
 
+	if in.DesiredSC == "" {
+		if in.SpecSC == in.DesiredSC && in.StatusSC == in.DesiredSC {
+			return diskSCStepComplete, nil
+		}
+		// Legacy disks may have matching spec before status.StorageClassName is populated.
+		if in.SpecSC == in.DesiredSC && in.StatusSC == "" && !in.HasMigrationStarted {
+			return diskSCStepComplete, nil
+		}
+		return diskSCStepComplete, fmt.Errorf("desired storage class must not be empty")
+	}
+
 	if in.SpecSC == in.DesiredSC && in.StatusSC == in.DesiredSC {
 		return diskSCStepComplete, nil
 	}

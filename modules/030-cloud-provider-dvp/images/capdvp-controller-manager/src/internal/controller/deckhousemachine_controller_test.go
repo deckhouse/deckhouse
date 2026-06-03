@@ -187,6 +187,32 @@ func TestEvaluateDiskStorageClassMigration(t *testing.T) {
 			},
 			wantStep: diskSCStepComplete,
 		},
+		{
+			name: "returns error when desired storage class is empty and migration is needed",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "slow",
+				StatusSC:  "slow",
+				DesiredSC: "",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep:   diskSCStepComplete,
+			wantErr:    true,
+			wantErrSub: "must not be empty",
+		},
+		{
+			name: "returns complete when desired storage class is empty and disk already matches",
+			in: diskSCMigrationEvalInput{
+				Phase:     v1alpha2.DiskReady,
+				SpecSC:    "",
+				StatusSC:  "",
+				DesiredSC: "",
+				Now:       now,
+				Timeout:   timeout,
+			},
+			wantStep: diskSCStepComplete,
+		},
 	}
 
 	for _, tt := range tests {
