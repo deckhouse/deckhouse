@@ -53,6 +53,7 @@ d8 k get po -n d8-virtualization
 
 {% offtopic title="Пример вывода..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                         READY   STATUS    RESTARTS      AGE
 cdi-apiserver-858786896d-rsfjw               3/3     Running   0             10m
@@ -71,6 +72,8 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 

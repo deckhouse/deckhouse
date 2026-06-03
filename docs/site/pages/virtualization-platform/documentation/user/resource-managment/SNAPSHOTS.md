@@ -71,10 +71,13 @@ d8 k get vdsnapshot
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                       PHASE     CONSISTENT   AGE
 linux-vm-root-1728027905   Ready     true         3m2s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 The `CONSISTENT` field indicates whether the snapshot is consistent (`true`) or not (`false`). This value is determined automatically based on the snapshot creation conditions and cannot be changed.
 
@@ -587,11 +590,14 @@ d8 k get nodeusbdevice
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                 NODE           READY   ASSIGNED   NAMESPACE   AGE
 usb-flash-drive     node-1         True    False                  10m
 logitech-webcam     node-2         True    True      my-project   15m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 #### NodeUSBDevice Conditions
 
@@ -636,10 +642,13 @@ d8 k get usbdevice -n my-project
 
 Example output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME               NODE     MANUFACTURER   PRODUCT              SERIAL       ATTACHED   AGE
 logitech-webcam    node-2   Logitech       Webcam C920         ABC123456   False      10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 #### USBDevice Attributes
 

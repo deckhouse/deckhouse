@@ -39,11 +39,14 @@ Failed to pull image "registry.deckhouse.ru/deckhouse/ce/modules/console@sha256:
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    my-module-v3.7.4   Superseded                   5d23h
    my-module-v3.7.5   Deployed                     5d23h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Найдите в списке релиз модуля, развернутый в кластере (он должен иметь статус `Deployed`).
 
@@ -63,9 +66,12 @@ d8 k -n d8-<module-name> get pods
 
 Все поды модуля должны иметь статус `Running`. Пример:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                READY   STATUS    RESTARTS   AGE
 backend-567d6c6cdc-g5qgt            1/1     Running   0          2d2h
 frontend-7c8b567759-h8jdf           1/1     Running   0          2d2h
 observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->

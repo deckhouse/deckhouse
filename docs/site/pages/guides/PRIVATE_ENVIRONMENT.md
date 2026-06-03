@@ -608,6 +608,7 @@ docker ps
 
 {% offtopic title="Example command output..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 CONTAINER ID   IMAGE                                 COMMAND                  CREATED         STATUS                   PORTS                                                                                NAMES
 df1636bd1295   goharbor/nginx-photon:v2.14.1         "nginx -g 'daemon of…"   3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:80->8080/tcp, [::]:80->8080/tcp, 0.0.0.0:443->8443/tcp, [::]:443->8443/tcp   nginx
@@ -620,6 +621,8 @@ a78d9a1a5b0b   goharbor/harbor-db:v2.14.1            "/docker-entrypoint.…"   
 ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   3 minutes ago   Up 3 minutes (healthy)                                                                                        redis
 9330bcce48be   goharbor/harbor-log:v2.14.1           "/bin/sh -c /usr/loc…"   3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:1514->10514/tcp                                                            harbor-log
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 
@@ -779,6 +782,7 @@ Depending on your Internet connection, the process may take 30 to 40 minutes.
 
 Example log when all platform components are pulled:
 
+<!-- markdownlint-disable MD031 -->
 ```text
 Feb 26 17:49:04.520 INFO  ║║ [822 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:4e5c17098d2a884cc971676fa9a7980f0d784a787d21e113d28a72da96ea8b2b 
 Feb 26 17:49:05.099 INFO  ║║ [823 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:d229564f423a1ca7a59e0be28a71218e362cc8f07d979ce63a15bb505c6ccb40 
@@ -786,6 +790,8 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.io/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Example log when modules are packed:
 
@@ -1527,11 +1533,14 @@ sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 
 Starting the Ingress controller after DKP installation may take some time. Before you proceed, make sure the Ingress controller is running (run the following command on the master node):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Creating a user to access the cluster web-interface
 
