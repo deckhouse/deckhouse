@@ -106,9 +106,9 @@ spec:
         path: /readyz?exclude=non_learner
         port: 2381
         scheme: HTTP
-      initialDelaySeconds: 10
+      initialDelaySeconds: 3
       periodSeconds: 10
-      timeoutSeconds: 15
+      timeoutSeconds: 5
     volumeMounts:
     - mountPath: /var/lib/etcd
       name: etcd-data
