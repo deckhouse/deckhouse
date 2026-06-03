@@ -35,16 +35,16 @@ This policy implements the following rules:
 - Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).
 - Log all LIST operations in all namespaces.
 - Log create and delete operations for `ServiceAccount` resources.
-- Log create/update/delete/patch operations for `Role` and `ClusterRole` resources.
-- Log create/update/delete operations for `ClusterRoleBinding` resources.
+- Log create/update/delete/patch operations for Role and ClusterRole resources.
+- Log create/update/delete operations for ClusterRoleBinding resources.
 - Log attach and ephemeral container related pod subresource operations.
-- Log creation of `VirtualMachineOperation` resources with request/response payload.
+- Log creation of VirtualMachineOperation resources with request/response payload.
 - Log create/update/patch/delete operations for virtualization.deckhouse.io resources.
 - Log update/patch operations for internal virtualization subresources.
 - Log GET operations for subresources.virtualization.deckhouse.io API group.
 - Log create/update/patch/delete operations for `Pod` resources.
 - Log create/update/patch/delete operations in `d8-virtualization` namespace.
-- Log create/update/patch/delete operations for `ModuleConfig` resources.
+- Log create/update/patch/delete operations for ModuleConfig resources.
 - Do not log requests from authenticated users.
 - Log all remaining (unauthenticated) requests at Metadata level.
 

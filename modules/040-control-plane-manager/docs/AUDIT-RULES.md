@@ -89,16 +89,16 @@ Deckhouse Kubernetes Platform uses the following audit rules, which can be exten
 - [Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).](#rule-14)
 - [Log all LIST operations in all namespaces.](#rule-15)
 - [Log create and delete operations for `ServiceAccount` resources.](#rule-16)
-- [Log create/update/delete/patch operations for `Role` and `ClusterRole` resources.](#rule-17)
-- [Log create/update/delete operations for `ClusterRoleBinding` resources.](#rule-18)
+- [Log create/update/delete/patch operations for Role and ClusterRole resources.](#rule-17)
+- [Log create/update/delete operations for ClusterRoleBinding resources.](#rule-18)
 - [Log attach and ephemeral container related pod subresource operations.](#rule-19)
-- [Log creation of `VirtualMachineOperation` resources with request/response payload.](#rule-20)
+- [Log creation of VirtualMachineOperation resources with request/response payload.](#rule-20)
 - [Log create/update/patch/delete operations for virtualization.deckhouse.io resources.](#rule-21)
 - [Log update/patch operations for internal virtualization subresources.](#rule-22)
 - [Log GET operations for subresources.virtualization.deckhouse.io API group.](#rule-23)
 - [Log create/update/patch/delete operations for `Pod` resources.](#rule-24)
 - [Log create/update/patch/delete operations in `d8-virtualization` namespace.](#rule-25)
-- [Log create/update/patch/delete operations for `ModuleConfig` resources.](#rule-26)
+- [Log create/update/patch/delete operations for ModuleConfig resources.](#rule-26)
 - [Do not log requests from authenticated users.](#rule-27)
 - [Log all remaining (unauthenticated) requests at Metadata level.](#rule-28)
 
@@ -480,7 +480,7 @@ omitStages:
 ```
 
 <a id="rule-17"></a>
-17\. Log create/update/delete/patch operations for `Role` and `ClusterRole` resources.
+17\. Log create/update/delete/patch operations for Role and ClusterRole resources.
 
 ```yaml
 level: Request
@@ -499,7 +499,7 @@ omitStages:
 ```
 
 <a id="rule-18"></a>
-18\. Log create/update/delete operations for `ClusterRoleBinding` resources.
+18\. Log create/update/delete operations for ClusterRoleBinding resources.
 
 ```yaml
 level: Request
@@ -533,7 +533,7 @@ omitStages:
 ```
 
 <a id="rule-20"></a>
-20\. Log creation of `VirtualMachineOperation` resources with request/response payload.
+20\. Log creation of VirtualMachineOperation resources with request/response payload.
 
 ```yaml
 level: RequestResponse
@@ -614,7 +614,7 @@ namespaces:
 ```
 
 <a id="rule-26"></a>
-26\. Log create/update/patch/delete operations for `ModuleConfig` resources.
+26\. Log create/update/patch/delete operations for ModuleConfig resources.
 
 ```yaml
 level: Metadata
@@ -962,7 +962,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 17: Log create/update/delete/patch operations for `Role` and `ClusterRole` resources.
+  # 17: Log create/update/delete/patch operations for Role and ClusterRole resources.
   - level: Request
     verbs:
       - create
@@ -977,7 +977,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 18: Log create/update/delete operations for `ClusterRoleBinding` resources.
+  # 18: Log create/update/delete operations for ClusterRoleBinding resources.
   - level: Request
     verbs:
       - create
@@ -1003,7 +1003,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Log creation of `VirtualMachineOperation` resources with request/response payload.
+  # 20: Log creation of VirtualMachineOperation resources with request/response payload.
   - level: RequestResponse
     verbs:
       - create
@@ -1060,7 +1060,7 @@ rules:
     namespaces:
       - d8-virtualization
 
-  # 26: Log create/update/patch/delete operations for `ModuleConfig` resources.
+  # 26: Log create/update/patch/delete operations for ModuleConfig resources.
   - level: Metadata
     verbs:
       - create
