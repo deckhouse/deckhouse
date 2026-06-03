@@ -36,6 +36,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -639,11 +640,23 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		Controller: ptr.To(true),
 	}
 
-	// mpo not found - update the docs from the module release version
-	if err = utils.EnsureModuleDocumentation(ctx, r.client, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef); err != nil {
-		r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
+	// do not (re)create documentation for a module disabled by config
+	module := new(v1alpha1.Module)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
 
-		return res, fmt.Errorf("ensure module documentation: %w", err)
+			return res, fmt.Errorf("get module: %w", err)
+		}
+	}
+
+	// mpo not found - update the docs from the module release version
+	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+		if err = utils.EnsureModuleDocumentation(ctx, r.client, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef); err != nil {
+			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
+
+			return res, fmt.Errorf("ensure module documentation: %w", err)
+		}
 	}
 
 	r.log.Debug("delete outdated releases for module", slog.String("module", release.GetModuleName()))
