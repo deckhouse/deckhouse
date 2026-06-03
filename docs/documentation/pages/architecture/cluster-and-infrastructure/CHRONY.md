@@ -5,7 +5,7 @@ search: chrony, ntp, time sync
 description: Architecture of the chrony module in Deckhouse Kubernetes Platform.
 ---
 
-The [`chrony`](/modules/chrony/) module provides time synchronization on all nodes in the Deckhouse Kubernetes Platform (DKP) cluster using [chrony](https://chrony.tuxfamily.org/).
+The [`chrony`](/modules/chrony/) module provides time synchronization on all nodes in the Deckhouse Kubernetes Platform (DKP) cluster using [chrony](https://chrony-project.org/index.html) NTP server/client implementation.
 
 For more details, refer to the [module documentation](/modules/chrony/configuration/).
 
