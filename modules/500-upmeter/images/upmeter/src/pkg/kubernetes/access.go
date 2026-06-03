@@ -25,9 +25,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	kube "github.com/flant/kube-client/client"
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -47,6 +46,7 @@ type Access interface {
 	CloudControllerManagerNamespace() string
 
 	ClusterDomain() string
+	SmokeMiniServiceFQDN() string
 }
 
 type ProbeImageConfig struct {
@@ -83,7 +83,7 @@ type Config struct {
 	Context     string
 	Config      string
 	Server      string
-	ClientQps   float32
+	ClientQPS   float32
 	ClientBurst int
 
 	SchedulerProbeImage ProbeImageConfig
@@ -102,6 +102,7 @@ type Accessor struct {
 	schedulerProbeImage             *ProbeImage
 	schedulerProbeNode              string
 	cloudControllerManagerNamespace string
+	clusterDNSZone                  string
 	kubernetesDomain                string
 	tokenExpire                     int64
 	tokenRotationMu                 sync.Mutex
@@ -112,7 +113,7 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	a.client = kube.New()
 	a.client.WithContextName(config.Context)
 	a.client.WithConfigPath(config.Config)
-	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
+	a.client.WithRateLimiterSettings(config.ClientQPS, config.ClientBurst)
 	// TODO(nabokihms): add kubernetes client metrics
 	err := a.client.Init()
 	// first start
@@ -130,7 +131,8 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 
 	a.cloudControllerManagerNamespace = config.CloudControllerManagerNamespace
 
-	a.kubernetesDomain = "kubernetes.default.svc." + config.ClusterDomain + "." // Trailing dot to avoid domain search
+	a.clusterDNSZone = strings.TrimSuffix(config.ClusterDomain, ".")
+	a.kubernetesDomain = "kubernetes.default.svc." + a.clusterDNSZone + "."
 	a.userAgent = userAgent
 
 	return nil
@@ -210,6 +212,10 @@ func (a *Accessor) CloudControllerManagerNamespace() string {
 
 func (a *Accessor) ClusterDomain() string {
 	return a.kubernetesDomain
+}
+
+func (a *Accessor) SmokeMiniServiceFQDN() string {
+	return "smoke-mini.d8-upmeter.svc." + a.clusterDNSZone + "."
 }
 
 func FakeAccessor() *Accessor {
