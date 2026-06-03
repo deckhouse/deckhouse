@@ -16,8 +16,8 @@ git:
     setup:
     - '**/*'
 shell:
-  install:
-  - cd /src
+  setup:
+  - set -e
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: {{ index .Images "builder/scratch" }}

@@ -217,9 +217,9 @@ git:
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ $.SOURCE_REPO }}
+shell:
+  install:
+  - set -e
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
 from: {{ index $.Images "builder/golang" }}
