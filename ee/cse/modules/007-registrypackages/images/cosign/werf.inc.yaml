@@ -37,3 +37,5 @@ import:
 shell:
   install:
   - set -e
+  # usage after update to cosign 3 
+  # - pm install cosign
