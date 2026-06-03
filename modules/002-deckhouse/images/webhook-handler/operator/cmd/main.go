@@ -21,13 +21,13 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
-	sh_metrics "github.com/flant/shell-operator/pkg/metrics"
 	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -61,13 +61,14 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-// reloadHooks re-discovers hooks from disk and re-initialises the admission
-// and conversion webhook managers so that shell-operator picks up new or
-// removed webhook configurations without a process restart.
+// reloadHooks re-discovers hooks from disk so that shell-operator picks up
+// new or removed webhook configurations without a process restart.
 //
-// It mirrors the ReloadHooks logic planned for a future shell-operator
-// release. Once upstream provides ShellOperator.ReloadHooks(ctx), this
-// function should be replaced with a single call to that method.
+// Only HookManager.Init() is safe to call on reload — it replaces the hook
+// index atomically. AdmissionWebhookManager.Init() and
+// ConversionWebhookManager.Init() must NOT be called here because they
+// recreate HTTP servers and would either fail with "address already in use"
+// or silently orphan the old listeners.
 func reloadHooks(shOp *shell_operator.ShellOperator, logger *log.Logger) error {
 	logger.Info("reloading shell-operator hooks")
 
@@ -77,19 +78,50 @@ func reloadHooks(shOp *shell_operator.ShellOperator, logger *log.Logger) error {
 		}
 	}
 
-	if shOp.AdmissionWebhookManager != nil {
-		if err := shOp.AdmissionWebhookManager.Init(); err != nil {
-			return fmt.Errorf("re-init admission webhook manager: %w", err)
-		}
-	}
-
-	if shOp.ConversionWebhookManager != nil {
-		if err := shOp.ConversionWebhookManager.Init(); err != nil {
-			return fmt.Errorf("re-init conversion webhook manager: %w", err)
-		}
-	}
-
 	return nil
+}
+
+const (
+	// initRetryInterval is the pause between shell-operator initialisation
+	// attempts.  Hook files on disk may be temporarily broken (e.g. being
+	// written by entrypoint.sh or a reconciler) — the retry gives them time
+	// to settle.
+	initRetryInterval = 5 * time.Second
+
+	// initMaxRetries bounds how many times we retry NewShellOperator before
+	// giving up.  With a 5 s interval this allows ~2.5 min of retries.
+	initMaxRetries = 30
+)
+
+// initShellOperatorWithRetry wraps NewShellOperator in a retry loop so that
+// transient hook-config errors (e.g. a hook script that depends on a
+// runtime-only env variable and produces malformed YAML) do not kill the
+// process on first attempt. This mirrors the old subprocess model where
+// shell-operator was automatically respawned.
+func initShellOperatorWithRetry(ctx context.Context, cfg *sh_app.Config, logger *log.Logger) (*shell_operator.ShellOperator, error) {
+	var shOp *shell_operator.ShellOperator
+	var err error
+
+	for attempt := 1; attempt <= initMaxRetries; attempt++ {
+		shOp, err = shell_operator.NewShellOperator(ctx, cfg, shell_operator.WithLogger(logger.Named("shell-operator")))
+		if err == nil {
+			return shOp, nil
+		}
+
+		logger.Warn("shell-operator init failed, retrying",
+			log.Err(err),
+			slog.Int("attempt", attempt),
+			slog.Int("max_retries", initMaxRetries),
+			slog.String("retry_in", initRetryInterval.String()))
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("context cancelled while waiting for shell-operator init: %w", ctx.Err())
+		case <-time.After(initRetryInterval):
+		}
+	}
+
+	return nil, fmt.Errorf("shell-operator init failed after %d attempts: %w", initMaxRetries, err)
 }
 
 // nolint:gocyclo
@@ -254,7 +286,7 @@ func main() {
 	}
 
 	// hooks/ must exist before shell-operator discovers hooks.
-	if err := os.MkdirAll("hooks", 0777); err != nil {
+	if err := os.MkdirAll("hooks", 0755); err != nil {
 		setupLog.Error(err, "create hooks directory")
 		os.Exit(1)
 	}
@@ -279,13 +311,9 @@ func main() {
 		shCfg.App.HooksDir = hooksDir
 	}
 
-	// Reinitialise metric names with the configured prefix. InitMetrics is
-	// idempotent for the same prefix.
-	sh_metrics.InitMetrics(shCfg.App.PrometheusMetricsPrefix)
-
-	shOp, err := shell_operator.NewShellOperator(ctx, shCfg, shell_operator.WithLogger(logger.Named("shell-operator")))
+	shOp, err := initShellOperatorWithRetry(ctx, shCfg, logger)
 	if err != nil {
-		setupLog.Error(err, "unable to initialise shell-operator")
+		setupLog.Error(err, "unable to initialise shell-operator after retries")
 		os.Exit(1)
 	}
 
@@ -360,13 +388,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start shell-operator in the background.  It discovers hooks from disk,
-	// sets up informers and webhook HTTP servers, and handles hook execution.
-	go func() {
-		if startErr := shOp.Start(ctx); startErr != nil {
-			logger.Error("shell-operator start failed", log.Err(startErr))
-		}
-	}()
+	// Start shell-operator.  The method is non-blocking (it launches internal
+	// goroutines and returns) and idempotent.
+	if err := shOp.Start(ctx); err != nil {
+		setupLog.Error(err, "unable to start shell-operator")
+		os.Exit(1)
+	}
 
 	// Start the controller-runtime manager (blocks until ctx is cancelled).
 	setupLog.Info("starting manager")
