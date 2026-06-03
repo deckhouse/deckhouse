@@ -1239,10 +1239,6 @@ entries:
                 ru: Обзор
               url: /architecture/cluster-and-infrastructure/
             - title:
-                en: Chrony module
-                ru: Модуль chrony
-              url: /architecture/cluster-and-infrastructure/chrony.html
-            - title:
                 en: Node management
                 ru: Управление узлами
               folders:
@@ -1330,6 +1326,10 @@ entries:
                 en: Infrastructure components
                 ru: Инфраструктурные компоненты
               folders:
+                - title:
+                    en: Chrony module
+                    ru: Модуль chrony
+                  url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
                 - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager

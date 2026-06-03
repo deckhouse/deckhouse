@@ -1,6 +1,6 @@
 ---
 title: Модуль chrony
-permalink: ru/architecture/cluster-and-infrastructure/chrony.html
+permalink: ru/architecture/cluster-and-infrastructure/infrastructure/chrony.html
 lang: ru
 search: chrony, ntp, time sync
 description: Архитектура модуля chrony в Deckhouse Kubernetes Platform.
@@ -22,7 +22,7 @@ description: Архитектура модуля chrony в Deckhouse Kubernetes 
 Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура модуля chrony](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.png)
+![Архитектура модуля chrony](../../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.png)
 
 ## Компоненты модуля
 

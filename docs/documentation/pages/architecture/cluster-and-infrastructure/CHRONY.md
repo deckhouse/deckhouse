@@ -1,6 +1,6 @@
 ---
 title: Chrony module
-permalink: en/architecture/cluster-and-infrastructure/chrony.html
+permalink: en/architecture/cluster-and-infrastructure/infrastructure/chrony.html
 search: chrony, ntp, time sync
 description: Architecture of the chrony module in Deckhouse Kubernetes Platform.
 ---
@@ -21,7 +21,7 @@ The following simplifications are made in the diagram:
 The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other Deckhouse Kubernetes Platform (DKP) components are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Chrony module architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.png)
+![Chrony module architecture](../../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.png)
 
 ## Module components
 
