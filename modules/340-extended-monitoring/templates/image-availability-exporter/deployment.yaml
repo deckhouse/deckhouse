@@ -74,6 +74,7 @@ spec:
         {{- end }}
         - '--ignored-images={{ $ignoredImages | join "~" }}'
         - --namespace-label=extended-monitoring.deckhouse.io/enabled
+        - --capath=/etc/ssl/certs/ca-certificates.crt
         {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify }}
         - --skip-registry-cert-verification
         {{- end }}
