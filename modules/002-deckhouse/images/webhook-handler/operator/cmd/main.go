@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -79,49 +78,6 @@ func reloadHooks(shOp *shell_operator.ShellOperator, logger *log.Logger) error {
 	}
 
 	return nil
-}
-
-const (
-	// initRetryInterval is the pause between shell-operator initialisation
-	// attempts.  Hook files on disk may be temporarily broken (e.g. being
-	// written by entrypoint.sh or a reconciler) — the retry gives them time
-	// to settle.
-	initRetryInterval = 5 * time.Second
-
-	// initMaxRetries bounds how many times we retry NewShellOperator before
-	// giving up.  With a 5 s interval this allows ~2.5 min of retries.
-	initMaxRetries = 30
-)
-
-// initShellOperatorWithRetry wraps NewShellOperator in a retry loop so that
-// transient hook-config errors (e.g. a hook script that depends on a
-// runtime-only env variable and produces malformed YAML) do not kill the
-// process on first attempt. This mirrors the old subprocess model where
-// shell-operator was automatically respawned.
-func initShellOperatorWithRetry(ctx context.Context, cfg *sh_app.Config, logger *log.Logger) (*shell_operator.ShellOperator, error) {
-	var shOp *shell_operator.ShellOperator
-	var err error
-
-	for attempt := 1; attempt <= initMaxRetries; attempt++ {
-		shOp, err = shell_operator.NewShellOperator(ctx, cfg, shell_operator.WithLogger(logger.Named("shell-operator")))
-		if err == nil {
-			return shOp, nil
-		}
-
-		logger.Warn("shell-operator init failed, retrying",
-			log.Err(err),
-			slog.Int("attempt", attempt),
-			slog.Int("max_retries", initMaxRetries),
-			slog.String("retry_in", initRetryInterval.String()))
-
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("context cancelled while waiting for shell-operator init: %w", ctx.Err())
-		case <-time.After(initRetryInterval):
-		}
-	}
-
-	return nil, fmt.Errorf("shell-operator init failed after %d attempts: %w", initMaxRetries, err)
 }
 
 // nolint:gocyclo
@@ -311,9 +267,9 @@ func main() {
 		shCfg.App.HooksDir = hooksDir
 	}
 
-	shOp, err := initShellOperatorWithRetry(ctx, shCfg, logger)
+	shOp, err := shell_operator.NewShellOperator(ctx, shCfg, shell_operator.WithLogger(logger.Named("shell-operator")))
 	if err != nil {
-		setupLog.Error(err, "unable to initialise shell-operator after retries")
+		setupLog.Error(err, "unable to initialise shell-operator")
 		os.Exit(1)
 	}
 
