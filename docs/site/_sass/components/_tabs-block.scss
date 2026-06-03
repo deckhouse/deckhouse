@@ -18,10 +18,10 @@
             gap: 8px;
 
             > .tabs__item {
-                padding: 8px 25px;
+                padding: 8px 20px;
                 margin-bottom: 22px;
                 color: #222A5D;
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: 400;
                 cursor: pointer;
 
@@ -38,8 +38,16 @@
                     box-shadow: 0 2.881px 8.643px .96px rgba(59, 66, 109, .15);
                 }
 
-                @include breakpoints.max-w(xxl) {
-                    padding: 7px 20px;
+                @include breakpoints.max-w(xl) {
+                    padding: 7px 16px;
+                }
+
+                @include breakpoints.max-w(s) {
+                    font-size: 13px;
+                }
+
+                @include breakpoints.max-w(xs) {
+                    font-size: 12px;
                 }
             }
         }
