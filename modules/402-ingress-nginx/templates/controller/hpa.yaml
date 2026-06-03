@@ -11,7 +11,7 @@ spec:
     - name: prometheus-metrics-adapter.d8-ingress-nginx
       rules:
         - record: kube_adapter_metric_d8_ingress_nginx_ds_cpu_utilization
-          expr: avg by (controller_name) (sum by (pod, controller_name) (kube_controller_pod{controller_type="DaemonSet", namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) (rate(container_cpu_usage_seconds_total{namespace="d8-ingress-nginx", container!="POD"}[1m]) * 100)))
+          expr: avg by (controller_name) (sum by (pod, controller_name) (kube_controller_pod{controller_type="DaemonSet", namespace="d8-ingress-nginx"} * on (pod) group_right(controller_name) (rate(container_cpu_usage_seconds_total{namespace="d8-ingress-nginx", container!="POD"}[3m]) * 100)))
 {{- end }}
 
 {{- define "ingress-controller-lb-hpa" }}
