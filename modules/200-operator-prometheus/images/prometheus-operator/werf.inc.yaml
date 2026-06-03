@@ -39,6 +39,8 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  beforeInstall:
+    - pm install git
   install:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
