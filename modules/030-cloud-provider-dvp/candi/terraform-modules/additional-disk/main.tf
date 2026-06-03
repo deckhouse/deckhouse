@@ -108,17 +108,30 @@ resource "kubernetes_resource_ready_v1" "additional_disk_migration" {
     storage_class = coalesce(var.storage_class, "")
   }
 
-  wait_timeout                                 = var.timeouts.update
-  skip_check_on_create_with_resource_lifetime  = "0"
-  fail_conditions_appearance_duration          = "3s"
+  wait_timeout                                = var.timeouts.update
+  skip_check_on_create_with_resource_lifetime = "0"
+  fail_conditions_appearance_duration         = "3s"
 
-  fields = {
-    "metadata.name" = ".+"
-  }
+  # status.storageClassName reflects the actual SC in use; it only changes once
+  # DVP completes the live migration. For an explicit SC, this is the authoritative
+  # completion signal. For the default SC (null), we fall back to phase=Ready.
+  fields = merge(
+    {
+      "metadata.name" = ".+"
+      "status.phase"  = "^Ready$"
+    },
+    var.storage_class != null ? {
+      "status.storageClassName" = "^${replace(var.storage_class, ".", "\\.")}$"
+    } : {}
+  )
 
-  condition {
+  fail_condition {
     type   = "Ready"
-    status = "True"
+    status = "False"
+    reason = format("^(%s)$", join("|", concat(local.not_ready_fail_reasons, [
+      "StorageClassIsNotReady",
+      "StorageClassProvisionerMismatch",
+    ])))
   }
 
   depends_on = [kubernetes_resource_ready_v1.additional_disk]
