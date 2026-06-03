@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 17,
+  "version": 18,
   "statements": [
     {
       "vulnerability": {
@@ -475,8 +475,68 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Зависимость github.com/Azure/go-ntlmssp является транзитивной, поступающей в d8 через цепочку deckhouse-cli (stronghold/vault command) → vault-plugin-secrets-openldap → go-ldap/ldap/v3. Уязвимость связана с panic при парсинге специально сформированных NTLM Type 2 challenge-сообщений от вредоносного NTLM-сервера. Функционал NTLM-аутентификации против произвольных LDAP-серверов в d8 не используется — LDAP-операции выполняются только в контексте управления Stronghold/Vault администратором кластера через d8 stronghold, где NTLM bind не применяется. Уязвимый исполняемый путь недостижим в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
       "timestamp": "2026-05-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-45022"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке данных Git-репозитория. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в уязвимом исполняемом пути.",
+      "timestamp": "2026-06-03T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-41506"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в github.com/go-git/go-git/v5 v5.16.2 проявляется при обработке данных Git-репозитория. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в уязвимом исполняемом пути.",
+      "timestamp": "2026-06-03T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44973"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-billy/v5@v5.6.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в github.com/go-git/go-billy/v5 v5.6.2 (файловая абстракция для go-git) проявляется при обработке данных Git-репозитория. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в уязвимом исполняемом пути.",
+      "timestamp": "2026-06-03T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-44740"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-billy/v5@v5.6.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в github.com/go-git/go-billy/v5 v5.6.2 (файловая абстракция для go-git) проявляется при обработке данных Git-репозитория. В типовой модели эксплуатации deckhouse-tools web источники репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности управлять входными данными в уязвимом исполняемом пути.",
+      "timestamp": "2026-06-03T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-pmwq-pjrm-6p5r"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/in-toto/in-toto-golang@v0.9.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в github.com/in-toto/in-toto-golang v0.9.0 связана с верификацией supply-chain attestations (in-toto layout/link metadata) в составе цепочки cosign/sigstore. В рамках deckhouse-tools web недоверенные in-toto-аттестации не верифицируются — соответствующий исполняемый путь не вызывается, что исключает возможность эксплуатации.",
+      "timestamp": "2026-06-03T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-05-15T12:00:00Z"
+  "last_updated": "2026-06-03T12:00:00Z"
 }

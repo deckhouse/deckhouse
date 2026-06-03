@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 18,
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -330,8 +330,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.5 не эксплуатируема в бинарнике deckhouse-controller в составе образа deckhouse-oss: компонент не работает как веб-сервер, выводящий контент в браузер, XSS-уязвимости стандартной библиотеки не достигаются. Бамп Go toolchain будет выполнен в рамках планового апгрейда базовых образов.",
       "timestamp": "2026-06-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-6357"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pip@25.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал загрузки функциональности из недоверенных источников (CWE-829) pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator; установка пакетов выполняется только из доверенных источников на этапе сборки образа.",
+      "timestamp": "2026-06-03T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-06-01T12:00:00Z"
+  "last_updated": "2026-06-03T12:00:00Z"
 }
