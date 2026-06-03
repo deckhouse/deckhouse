@@ -192,13 +192,16 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 	}
 
 	// Reload shell-operator hooks to remove the webhook registration.
+	// Return the error so the reconciler retries: once the finalizer is removed
+	// the object is gone and no future reconcile can fix stale registrations.
 	if err := r.reloadFn(ctx); err != nil {
-		r.logger.Error("reload shell-operator hooks", log.Err(err))
+		return fmt.Errorf("reload shell-operator hooks for %s: %w", vh.Name, err)
 	}
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
-		r.logger.Debug("remove finalizer")
+		logger := r.logger.With(slog.String("webhook", vh.Name))
+		logger.Debug("remove finalizer")
 		controllerutil.RemoveFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vh); err != nil {

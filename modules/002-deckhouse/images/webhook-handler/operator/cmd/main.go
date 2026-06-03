@@ -291,11 +291,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Override hooks dir so shell-operator picks up hooks written by reconcilers.
-	if hooksDir := os.Getenv("HOOKS_DIR"); hooksDir != "" {
-		shCfg.App.HooksDir = hooksDir
-	}
-
 	shOp, err := shell_operator.NewShellOperator(ctx, shCfg, shell_operator.WithLogger(logger.Named("shell-operator")))
 	if err != nil {
 		setupLog.Error(err, "unable to initialise shell-operator")

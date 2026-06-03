@@ -62,8 +62,6 @@ func setupTestReconciler() (*ValidationWebhookReconciler, client.Client) {
 		return nil
 	}
 
-	_ = reloadCalled // available for tests that need to check reload was called
-
 	reconciler := NewValidationWebhookReconciler(
 		k8sClient,
 		sch,

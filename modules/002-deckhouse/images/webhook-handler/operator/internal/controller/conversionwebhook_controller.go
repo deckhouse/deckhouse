@@ -218,13 +218,16 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 	}
 
 	// Reload shell-operator hooks to remove the webhook registration.
+	// Return the error so the reconciler retries: once the finalizer is removed
+	// the object is gone and no future reconcile can fix stale registrations.
 	if err := r.reloadFn(ctx); err != nil {
-		r.logger.Error("reload shell-operator hooks", log.Err(err))
+		return fmt.Errorf("reload shell-operator hooks for %s: %w", cwh.Name, err)
 	}
 
 	// remove exist-on-fs finalizer.
 	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
-		r.logger.Debug("remove exist-on-fs finalizer")
+		logger := r.logger.With(slog.String("webhook", cwh.Name))
+		logger.Debug("remove exist-on-fs finalizer")
 		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
 		if err := r.client.Update(ctx, cwh); err != nil {

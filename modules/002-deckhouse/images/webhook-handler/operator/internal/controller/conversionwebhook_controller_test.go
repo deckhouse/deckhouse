@@ -59,8 +59,6 @@ func setupTestConversionReconciler() (*ConversionWebhookReconciler, client.Clien
 		return nil
 	}
 
-	_ = reloadCalled // available for tests that need to check reload was called
-
 	reconciler := NewConversionWebhookReconciler(
 		k8sClient,
 		sch,
