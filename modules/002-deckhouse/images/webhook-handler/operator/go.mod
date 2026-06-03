@@ -149,3 +149,8 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
+
+// Match the shell-operator replace: the vanilla validate v0.19.12 treats
+// zero-values (including empty string "") as null, which breaks validation
+// of apiGroups: [""] in kubernetesValidating webhook configs.
+replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
