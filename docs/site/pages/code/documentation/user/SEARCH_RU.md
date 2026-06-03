@@ -112,8 +112,7 @@ weight: 45
 
 ## Синтаксис
 
-Расширенный поиск использует [`simple_query_string`](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html),
-который поддерживает точные и нечёткие запросы.
+Расширенный поиск поддерживает расширенный синтаксис запросов: точные и нечёткие совпадения, логические операторы и фильтры.
 
 | Синтаксис | Описание | Пример |
 |-----------|----------|--------|
@@ -171,6 +170,29 @@ Maintainer проекта может перейти в «Настройки» �
 - **Переиндексировать вики** — полная переиндексация wiki (если wiki-репозиторий существует).
 
 Бейдж **Индекс актуален** показывает, завершена ли индексация для текущего состояния репозитория.
+
+#### API
+
+Maintainer может изменить regex через Projects API (`PUT /api/v4/projects/:id`):
+
+```shell
+curl --request PUT \
+  --header "PRIVATE-TOKEN: <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"fe_project_setting_attributes":{"opensearch_indexed_branches_regex":"(feature|hotfix)/.*"}}' \
+  "https://code.example.com/api/v4/projects/<project_id>"
+```
+
+Текущее значение возвращается в `fe_project_setting_attributes.opensearch_indexed_branches_regex` при `GET /projects/:id`.
+
+Условия:
+
+- на инстансе включён расширенный поиск (`advanced_search_enabled`);
+- режим **Разрешить регулярное выражение для веток на уровне проекта**;
+- regex в синтаксисе RE2, не более 255 символов;
+- пустая строка сбрасывает regex.
+
+При успешном изменении ставится полная переиндексация кода проекта.
 
 ### Настройки группы
 
