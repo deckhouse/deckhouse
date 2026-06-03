@@ -50,34 +50,13 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 * `Hybrid` — в данном режиме TCP-трафик обрабатывается в режиме `DSR`, а UDP — в режиме `SNAT`.
 
-## Использование CiliumClusterwideNetworkPolicies
+## Использование CiliumClusterwideNetworkPolicy
 
 {% alert level="danger" %}
-Использование CiliumClusterwideNetworkPolicies при отсутствии опции `policyAuditMode` в настройках модуля cni-cilium может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH.
+Применение CiliumClusterwideNetworkPolicy без включённого параметра [`policyAuditMode`](configuration.html#parameters-policyauditmode) может привести к некорректной работе control plane или потере SSH-доступа ко всем узлам кластера.
 {% endalert %}
 
-Для использования CiliumClusterwideNetworkPolicies выполните следующие шаги:
-
-1. Примените первичный набор объектов `CiliumClusterwideNetworkPolicy`. Для этого в настройки модуля cni-cilium добавьте конфигурационную опцию [`policyAuditMode`](configuration.html#parameters-policyauditmode) со значением `true`.
-Опция `policyAuditMode` может быть удалена после применения всех `CiliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
-
-1. Примените правило политики сетевой безопасности:
-
-   ```yaml
-   apiVersion: "cilium.io/v2"
-   kind: CiliumClusterwideNetworkPolicy
-   metadata:
-     name: "allow-control-plane-connectivity"
-   spec:
-     ingress:
-     - fromEntities:
-       - kube-apiserver
-     nodeSelector:
-       matchLabels:
-         node-role.kubernetes.io/control-plane: ""
-   ```
-
-В случае, если CiliumClusterwideNetworkPolicies не будут использованы, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет избежать проблемы.
+Безопасный порядок выкатки CCNP, включая обязательные правила для control plane и host firewall, описан в разделе документации [Сетевые политики](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html). Подробности по форматам политик Cilium — на странице [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
 
 ## Смена режима работы Cilium
 

@@ -17,8 +17,8 @@ The `network-policy-engine` module deploys a `d8-system` DaemonSet in the namesp
 
 The following policy description formats are supported:
 
-- *networking.k8s.io/NetworkPolicy API*
-- *network policy V1/GA semantics*
-- *network policy beta semantics*
+- `networking.k8s.io/NetworkPolicy API`;
+- network policy V1/GA semantics;
+- network policy beta semantics.
 
-Example recipes are available [here](https://github.com/ahmetb/kubernetes-network-policy-recipes).
+For the `NetworkPolicy` model and ready-to-use recipes, see the [Network policies](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html) section of the documentation. Additional [example recipes](https://github.com/ahmetb/kubernetes-network-policy-recipes) are available in an external repository.
