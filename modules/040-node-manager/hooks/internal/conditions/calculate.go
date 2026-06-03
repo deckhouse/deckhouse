@@ -200,7 +200,7 @@ func CalculateNodeGroupConditions(
 		curTime, _ = time.Parse(time.RFC3339, timeStr)
 	}
 
-	staicDesired := ng.Desired
+	staticDesired := ng.Desired
 
 	for _, node := range nodes {
 		if !node.Unschedulable {
@@ -216,7 +216,7 @@ func CalculateNodeGroupConditions(
 			if node.UnderCAPS {
 				continue
 			}
-			staicDesired++
+			staticDesired++
 		}
 
 		if node.Updating {
@@ -235,7 +235,7 @@ func CalculateNodeGroupConditions(
 	isReady := readySchedulableNodes >= minPerAllZone
 	if ng.Type == ngv1.NodeTypeStatic {
 		if ng.Desired > 0 {
-			isReady = readySchedulableNodes == int(staicDesired)
+			isReady = readySchedulableNodes == int(staticDesired)
 		} else {
 			isReady = readySchedulableNodes == len(nodes)
 		}
