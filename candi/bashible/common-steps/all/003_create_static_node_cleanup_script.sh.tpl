@@ -98,7 +98,8 @@ BLOCK
 }
 
 stop_services() {
-  log_info "systemctl stop $@"
+  log_info "systemctl disable + stop $@"
+  systemctl disable $@ 2>/dev/null || true
   systemctl stop $@ 2>/dev/null || true
 }
 
