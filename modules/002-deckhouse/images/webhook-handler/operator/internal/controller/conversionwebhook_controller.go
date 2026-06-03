@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sync/atomic"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -50,28 +49,28 @@ const (
 
 // ConversionWebhookReconciler reconciles a ConversionWebhook object
 type ConversionWebhookReconciler struct {
-	isReloadShellNeed *atomic.Bool
-	client            client.Client
-	scheme            *runtime.Scheme
-	logger            *log.Logger
-	pythonTemplate    string
+	reloadFn       func(ctx context.Context) error
+	client         client.Client
+	scheme         *runtime.Scheme
+	logger         *log.Logger
+	pythonTemplate string
 }
 
 // NewConversionWebhookReconciler creates a new ConversionWebhookReconciler.
-// The isReloadShellNeed flag is shared between reconcilers to signal shell-operator reload.
+// reloadFn is called when hooks change on disk to trigger shell-operator reload.
 func NewConversionWebhookReconciler(
 	k8sClient client.Client,
 	scheme *runtime.Scheme,
 	logger *log.Logger,
 	pythonTemplate string,
-	isReloadShellNeed *atomic.Bool,
+	reloadFn func(ctx context.Context) error,
 ) *ConversionWebhookReconciler {
 	return &ConversionWebhookReconciler{
-		isReloadShellNeed: isReloadShellNeed,
-		client:            k8sClient,
-		scheme:            scheme,
-		logger:            logger.Named("conversion-webhook"),
-		pythonTemplate:    pythonTemplate,
+		reloadFn:       reloadFn,
+		client:         k8sClient,
+		scheme:         scheme,
+		logger:         logger.Named("conversion-webhook"),
+		pythonTemplate: pythonTemplate,
 	}
 }
 
@@ -163,7 +162,12 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 		return fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
-	r.isReloadShellNeed.Store(true)
+	// Reload shell-operator hooks to pick up the new webhook file.
+	if err := r.reloadFn(ctx); err != nil {
+		logger.Error("reload shell-operator hooks", log.Err(err))
+		// Don't return the error — the file was written successfully;
+		// the reload will be retried on the next reconcile.
+	}
 
 	// add finalizers
 	needsUpdate := false
@@ -213,7 +217,10 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 		return fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
-	r.isReloadShellNeed.Store(true)
+	// Reload shell-operator hooks to remove the webhook registration.
+	if err := r.reloadFn(ctx); err != nil {
+		r.logger.Error("reload shell-operator hooks", log.Err(err))
+	}
 
 	// remove exist-on-fs finalizer.
 	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {

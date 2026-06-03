@@ -53,15 +53,20 @@ func setupTestConversionReconciler() (*ConversionWebhookReconciler, client.Clien
 		panic(err)
 	}
 
-	var isReloadShellNeed atomic.Bool
-	isReloadShellNeed.Store(false)
+	reloadCalled := &atomic.Bool{}
+	reloadFn := func(_ context.Context) error {
+		reloadCalled.Store(true)
+		return nil
+	}
+
+	_ = reloadCalled // available for tests that need to check reload was called
 
 	reconciler := NewConversionWebhookReconciler(
 		k8sClient,
 		sch,
 		log.NewLogger(log.WithLevel(slog.LevelDebug)),
 		string(tpl),
-		&isReloadShellNeed,
+		reloadFn,
 	)
 
 	return reconciler, k8sClient

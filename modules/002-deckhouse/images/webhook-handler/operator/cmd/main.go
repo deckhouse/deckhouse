@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2026.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,19 +19,16 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"flag"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"sync"
-	"sync/atomic"
-	"syscall"
 	"time"
 
+	sh_app "github.com/flant/shell-operator/pkg/app"
+	sh_metrics "github.com/flant/shell-operator/pkg/metrics"
+	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -51,149 +48,6 @@ import (
 	"deckhouse.io/webhook/internal/controller"
 )
 
-const (
-	// DefaultShellOperatorReloadInterval is the default interval for checking if shell-operator
-	// needs to be reloaded after new webhooks are registered.
-	// This value should be low enough to minimize the delay between webhook registration
-	// and shell-operator becoming aware of the new hook, but high enough to avoid
-	// unnecessary restarts when multiple webhooks are created in quick succession.
-	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL environment variable.
-	DefaultShellOperatorReloadInterval = 5 * time.Second
-
-	// shellOperatorMinBackoff is the initial delay before respawning a shell-operator
-	// process that exited quickly. The delay doubles on each consecutive fast exit up
-	// to shellOperatorMaxBackoff, preventing a tight respawn loop when shell-operator
-	// fails to start (e.g. due to a malformed hook file).
-	shellOperatorMinBackoff = 500 * time.Millisecond
-	shellOperatorMaxBackoff = 30 * time.Second
-
-	// shellOperatorStableRun is the minimum runtime after which a shell-operator exit
-	// is treated as "normal" and the backoff is reset.
-	shellOperatorStableRun = 5 * time.Second
-)
-
-// shellRunner supervises a single child shell-operator process. It owns the
-// *exec.Cmd reference and synchronises access so the reload goroutine can
-// safely signal the current child while the supervisor goroutine swaps it.
-type shellRunner struct {
-	logger *log.Logger
-
-	mu  sync.Mutex
-	cmd *exec.Cmd
-
-	// ready indicates that the shell-operator child process is running.
-	// It is set to true after a successful Start and cleared on process exit.
-	// Used by the readiness probe to avoid routing webhook traffic to a pod
-	// whose shell-operator is not yet (or no longer) serving.
-	ready atomic.Bool
-}
-
-func newShellRunner(logger *log.Logger) *shellRunner {
-	return &shellRunner{logger: logger}
-}
-
-// IsReady returns true when the shell-operator child process is running.
-func (r *shellRunner) IsReady() bool {
-	return r.ready.Load()
-}
-
-func (r *shellRunner) setCmd(c *exec.Cmd) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.cmd = c
-}
-
-func (r *shellRunner) currentCmd() *exec.Cmd {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.cmd
-}
-
-// SignalTerm sends SIGTERM to the current shell-operator child, if any.
-// It treats "process already finished" as success because the runner may have
-// observed an independent exit before the signal landed.
-func (r *shellRunner) SignalTerm() error {
-	c := r.currentCmd()
-	if c == nil || c.Process == nil {
-		return nil
-	}
-	err := c.Process.Signal(syscall.SIGTERM)
-	if err != nil && !errors.Is(err, os.ErrProcessDone) {
-		return err
-	}
-	return nil
-}
-
-// Run starts shell-operator and respawns it whenever it exits, with
-// exponential backoff for fast crashes. It returns when ctx is cancelled.
-func (r *shellRunner) Run(ctx context.Context) {
-	backoff := shellOperatorMinBackoff
-
-	for ctx.Err() == nil {
-		c := exec.Command("./shell-operator")
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-
-		if err := c.Start(); err != nil {
-			r.logger.Error("start shell-operator",
-				slog.String("error", err.Error()),
-				slog.Duration("backoff", backoff))
-			if !sleepCtx(ctx, backoff) {
-				return
-			}
-			backoff = min(backoff*2, shellOperatorMaxBackoff)
-			continue
-		}
-
-		r.setCmd(c)
-		r.ready.Store(true)
-		r.logger.Info("shell-operator started", slog.Int("pid", c.Process.Pid))
-
-		startedAt := time.Now()
-		waitErr := c.Wait()
-		ran := time.Since(startedAt)
-		r.ready.Store(false)
-		r.setCmd(nil)
-
-		if waitErr != nil {
-			r.logger.Info("shell-operator exited",
-				slog.String("error", waitErr.Error()),
-				slog.Duration("ran", ran))
-		} else {
-			r.logger.Info("shell-operator exited", slog.Duration("ran", ran))
-		}
-
-		if ctx.Err() != nil {
-			return
-		}
-
-		if ran < shellOperatorStableRun {
-			r.logger.Warn("shell-operator exited too quickly, backing off",
-				slog.Duration("backoff", backoff))
-			if !sleepCtx(ctx, backoff) {
-				return
-			}
-			backoff = min(backoff*2, shellOperatorMaxBackoff)
-			continue
-		}
-
-		backoff = shellOperatorMinBackoff
-	}
-}
-
-// sleepCtx blocks for d or until ctx is cancelled. It returns false if ctx
-// was cancelled before the timer fired.
-func sleepCtx(ctx context.Context, d time.Duration) bool {
-	t := time.NewTimer(d)
-	defer t.Stop()
-	select {
-	case <-ctx.Done():
-		return false
-	case <-t.C:
-		return true
-	}
-}
-
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -205,6 +59,37 @@ func init() {
 
 	utilruntime.Must(deckhouseiov1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+}
+
+// reloadHooks re-discovers hooks from disk and re-initialises the admission
+// and conversion webhook managers so that shell-operator picks up new or
+// removed webhook configurations without a process restart.
+//
+// It mirrors the ReloadHooks logic planned for a future shell-operator
+// release. Once upstream provides ShellOperator.ReloadHooks(ctx), this
+// function should be replaced with a single call to that method.
+func reloadHooks(shOp *shell_operator.ShellOperator, logger *log.Logger) error {
+	logger.Info("reloading shell-operator hooks")
+
+	if shOp.HookManager != nil {
+		if err := shOp.HookManager.Init(); err != nil {
+			return fmt.Errorf("re-init hook manager: %w", err)
+		}
+	}
+
+	if shOp.AdmissionWebhookManager != nil {
+		if err := shOp.AdmissionWebhookManager.Init(); err != nil {
+			return fmt.Errorf("re-init admission webhook manager: %w", err)
+		}
+	}
+
+	if shOp.ConversionWebhookManager != nil {
+		if err := shOp.ConversionWebhookManager.Init(); err != nil {
+			return fmt.Errorf("re-init conversion webhook manager: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // nolint:gocyclo
@@ -368,50 +253,55 @@ func main() {
 		os.Exit(1)
 	}
 
-	// hooks/
-	err = os.MkdirAll("hooks", 0777)
-	if err != nil {
-		log.Error("create dir: %w", err)
-		panic(err)
+	// hooks/ must exist before shell-operator discovers hooks.
+	if err := os.MkdirAll("hooks", 0777); err != nil {
+		setupLog.Error(err, "create hooks directory")
+		os.Exit(1)
 	}
 
 	logger := log.NewLogger(
 		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
 		log.WithHandlerType(log.TextHandlerType))
 
-	// non-blocking sync variable to know that we need to reload shell-operator
-	var isReloadShellNeed atomic.Bool
-	isReloadShellNeed.Store(false)
-
-	reloadInterval := DefaultShellOperatorReloadInterval
-	if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL"); envInterval != "" {
-		if parsedInterval, err := time.ParseDuration(envInterval); err == nil && parsedInterval > 0 {
-			reloadInterval = parsedInterval
-			logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
-		}
-	}
-
 	// One signal context for the whole process: cancelling it stops the manager
-	// and tells the shell-operator supervisor to drain.
+	// and tells shell-operator to drain.
 	ctx := ctrl.SetupSignalHandler()
 
-	runner := newShellRunner(logger)
+	// --- Initialise shell-operator as an in-process library ---
+	shCfg := sh_app.NewConfig()
+	if err := sh_app.ParseEnv(shCfg); err != nil {
+		setupLog.Error(err, "unable to parse shell-operator config from env")
+		os.Exit(1)
+	}
 
-	// Propagate pod termination to the shell-operator child so it can exit
-	// cleanly instead of being SIGKILL'ed when the parent returns.
-	go func() {
-		<-ctx.Done()
-		if err := runner.SignalTerm(); err != nil {
-			logger.Error("sigterm shell-operator on shutdown", slog.String("error", err.Error()))
-		}
-	}()
+	// Override hooks dir so shell-operator picks up hooks written by reconcilers.
+	if hooksDir := os.Getenv("HOOKS_DIR"); hooksDir != "" {
+		shCfg.App.HooksDir = hooksDir
+	}
+
+	// Reinitialise metric names with the configured prefix. InitMetrics is
+	// idempotent for the same prefix.
+	sh_metrics.InitMetrics(shCfg.App.PrometheusMetricsPrefix)
+
+	shOp, err := shell_operator.NewShellOperator(ctx, shCfg, shell_operator.WithLogger(logger.Named("shell-operator")))
+	if err != nil {
+		setupLog.Error(err, "unable to initialise shell-operator")
+		os.Exit(1)
+	}
+
+	// reloadFn is the callback that reconcilers invoke when hooks change on
+	// disk.  It re-discovers hooks and re-registers webhook configurations
+	// without restarting the shell-operator process.
+	reloadFn := func(_ context.Context) error {
+		return reloadHooks(shOp, logger.Named("shell-operator"))
+	}
 
 	validationReconciler := controller.NewValidationWebhookReconciler(
 		mgr.GetClient(),
 		mgr.GetScheme(),
 		logger,
 		string(validationTpl),
-		&isReloadShellNeed,
+		reloadFn,
 	)
 	if err := validationReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to setup controller", "controller", "ValidationWebhook")
@@ -423,63 +313,13 @@ func main() {
 		mgr.GetScheme(),
 		logger,
 		string(conversionTpl),
-		&isReloadShellNeed,
+		reloadFn,
 	)
 	if err := conversionReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to setup controller", "controller", "ConversionWebhook")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
-
-	// Pre-populate dynamic webhook hook files from existing CRs before
-	// starting shell-operator. This eliminates the race where the
-	// controller reconciles CRs and sets isReloadShellNeed while
-	// shell-operator is still in the middle of EnableKubernetesBindings,
-	// causing an unnecessary SIGTERM and restart.
-	//
-	// We use a direct API client (not the manager's cached client) because
-	// the manager hasn't started yet and its informer cache is not populated.
-	presyncClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
-	if err != nil {
-		setupLog.Error(err, "presync: failed to create API client")
-		os.Exit(1)
-	}
-
-	setupLog.Info("presync: writing webhook files before starting shell-operator")
-	if err := controller.PresyncWebhookFiles(ctx, presyncClient, string(conversionTpl), string(validationTpl), logger); err != nil {
-		// Log and continue — if presync fails (e.g. API unavailable),
-		// the reconcilers will write files and trigger a reload later.
-		// This is degraded but not fatal.
-		setupLog.Error(err, "presync: failed to pre-populate webhook files, shell-operator may need a reload")
-	}
-
-	// Supervisor: keeps shell-operator alive with bounded-backoff respawns.
-	setupLog.Info("starting shell-operator supervisor")
-	go runner.Run(ctx)
-
-	// Reload trigger: periodically check if controllers asked for a reload
-	// and signal the current shell-operator. The supervisor will respawn it.
-	go func() {
-		ticker := time.NewTicker(reloadInterval)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if !isReloadShellNeed.Load() {
-					continue
-				}
-				// Clear the flag first so a request that arrives between
-				// the SIGTERM and the next tick is not lost.
-				isReloadShellNeed.Store(false)
-				logger.Info("reloading shell-operator")
-				if err := runner.SignalTerm(); err != nil {
-					logger.Error("sigterm shell-operator", slog.String("error", err.Error()))
-				}
-			}
-		}
-	}()
 
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
@@ -520,17 +360,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start shell-operator in the background.  It discovers hooks from disk,
+	// sets up informers and webhook HTTP servers, and handles hook execution.
+	go func() {
+		if startErr := shOp.Start(ctx); startErr != nil {
+			logger.Error("shell-operator start failed", log.Err(startErr))
+		}
+	}()
+
+	// Start the controller-runtime manager (blocks until ctx is cancelled).
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
 
-func ReturnNotEmpty(defaultValue, newValue string) string {
-	if newValue == "" {
-		return defaultValue
+	// Gracefully shut down shell-operator.
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := shOp.Shutdown(shutdownCtx); err != nil {
+		logger.Error("shell-operator shutdown failed", log.Err(err))
 	}
-
-	return newValue
 }
