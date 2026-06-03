@@ -94,7 +94,14 @@ const (
 	dexProviderCheckStepSucceeded = "Succeeded"
 	dexProviderCheckStepFailed    = "Failed"
 	dexProviderCheckStepSkipped   = "Skipped"
+	dexProviderCheckStepWarning   = "Warning"
 )
+
+// dexProviderAcknowledgedWarningsAnnotation lets an operator silence specific
+// warning steps that reflect a deliberate choice (e.g. insecureSkipVerify). The
+// value is a comma-separated list of step names, or "*" to acknowledge all
+// warnings. Acknowledged warnings are downgraded to a successful step.
+const dexProviderAcknowledgedWarningsAnnotation = "dexprovider.deckhouse.io/acknowledged-warnings"
 
 type DexProviderForCheck struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -267,6 +274,7 @@ func executeDexProviderCheck(
 		return result.status(0)
 	}
 	result.succeed("providerExists", "DexProvider %q found", provider.Name)
+	result.acknowledgeAllWarnings, result.acknowledgedWarnings = parseAcknowledgedWarnings(provider.Annotations)
 
 	if provider.Spec.Enabled != nil && !*provider.Spec.Enabled {
 		result.fail("providerEnabled", "DexProvider %q is disabled", provider.Name)
@@ -281,7 +289,9 @@ func executeDexProviderCheck(
 }
 
 type dexProviderCheckResult struct {
-	checks []DexProviderCheckStepStatus
+	checks                 []DexProviderCheckStepStatus
+	acknowledgedWarnings   map[string]bool
+	acknowledgeAllWarnings bool
 }
 
 func (r *dexProviderCheckResult) succeed(name, format string, args ...any) {
@@ -290,6 +300,50 @@ func (r *dexProviderCheckResult) succeed(name, format string, args ...any) {
 		Status:  dexProviderCheckStepSucceeded,
 		Message: fmt.Sprintf(format, args...),
 	})
+}
+
+// warn records a non-blocking "needs attention" step (e.g. a deliberately
+// weakened TLS setting or a soon-to-expire certificate). It keeps the overall
+// phase Succeeded. If the operator acknowledged this step via the
+// dexProviderAcknowledgedWarningsAnnotation, the warning is downgraded to a
+// successful step so it stops drawing attention.
+func (r *dexProviderCheckResult) warn(name, format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
+	if r.acknowledgeAllWarnings || r.acknowledgedWarnings[name] {
+		r.checks = append(r.checks, DexProviderCheckStepStatus{
+			Name:    name,
+			Status:  dexProviderCheckStepSucceeded,
+			Message: message + " (acknowledged via annotation)",
+		})
+		return
+	}
+	r.checks = append(r.checks, DexProviderCheckStepStatus{
+		Name:    name,
+		Status:  dexProviderCheckStepWarning,
+		Message: message,
+	})
+}
+
+// parseAcknowledgedWarnings reads the acknowledged-warnings annotation into a
+// lookup set. A "*" entry acknowledges every warning.
+func parseAcknowledgedWarnings(annotations map[string]string) (bool, map[string]bool) {
+	raw, ok := annotations[dexProviderAcknowledgedWarningsAnnotation]
+	if !ok {
+		return false, nil
+	}
+	set := map[string]bool{}
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.TrimSpace(item)
+		switch item {
+		case "":
+			continue
+		case "*":
+			return true, nil
+		default:
+			set[item] = true
+		}
+	}
+	return false, set
 }
 
 func (r *dexProviderCheckResult) fail(name, format string, args ...any) {
@@ -585,7 +639,7 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 		result.succeed("oidcEndpoints", "authorization and token endpoints are advertised")
 	}
 
-	checkOIDCCredentials(ctx, client, result, provider.Spec.OIDC, discovery.TokenEndpoint)
+	checkOIDCCredentials(ctx, client, result, provider.Spec.OIDC, discovery)
 
 	statusCode, body, err = httpGet(ctx, client, discovery.JWKSURI, nil)
 	if err != nil {
@@ -616,9 +670,23 @@ func checkOIDCCredentials(
 	client d8http.Client,
 	result *dexProviderCheckResult,
 	cfg *DexProviderOIDCForCheck,
-	tokenEndpoint string,
+	discovery oidcDiscoveryDocument,
 ) {
-	if tokenEndpoint == "" {
+	if cfg.ClientID == "" || cfg.ClientSecret == "" {
+		result.skip("oidcCredentials", "clientID or clientSecret is empty")
+		return
+	}
+
+	// Prefer RFC 7662 token introspection when the provider advertises it: a
+	// correctly authenticated client gets a clean HTTP 200 {"active": false}
+	// for a bogus token, so a valid secret produces no scary OAuth error code.
+	// The token-endpoint probe is the robust fallback.
+	if discovery.IntrospectionEndpoint != "" &&
+		probeIntrospection(ctx, client, result, discovery.IntrospectionEndpoint, cfg.ClientID, cfg.ClientSecret) {
+		return
+	}
+
+	if discovery.TokenEndpoint == "" {
 		result.skip("oidcCredentials", "OIDC discovery does not advertise a token endpoint")
 		return
 	}
@@ -626,10 +694,55 @@ func checkOIDCCredentials(
 	reportOAuthClientSecret(ctx, client, result, oauthClientSecretCheck{
 		stepName:     "oidcCredentials",
 		providerName: "OIDC",
-		tokenURL:     tokenEndpoint,
+		tokenURL:     discovery.TokenEndpoint,
 		clientID:     cfg.ClientID,
 		clientSecret: cfg.ClientSecret,
 	})
+}
+
+// probeIntrospection verifies a confidential client secret against an RFC 7662
+// token introspection endpoint. The endpoint authenticates the client first, so
+// a bogus token simply comes back as HTTP 200 {"active": false} when the secret
+// is correct, and HTTP 401 / invalid_client when it is wrong. It returns true
+// when it recorded a conclusive result, and false when the outcome is ambiguous
+// (network error, or the client is not authorised to introspect) so the caller
+// can fall back to the token-endpoint probe.
+func probeIntrospection(
+	ctx context.Context,
+	client d8http.Client,
+	result *dexProviderCheckResult,
+	introspectionURL, clientID, clientSecret string,
+) bool {
+	form := url.Values{}
+	form.Set("token", "deckhouse-dex-provider-check")
+	form.Set("token_type_hint", "access_token")
+
+	statusCode, body, err := httpPostForm(ctx, client, introspectionURL, clientID, clientSecret, form)
+	if err != nil {
+		return false
+	}
+
+	if statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices {
+		result.succeed("oidcCredentials", "OIDC client credentials are valid (verified via token introspection)")
+		return true
+	}
+
+	var oauthErr struct {
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(body, &oauthErr)
+	if statusCode == http.StatusUnauthorized || oauthErr.Error == "invalid_client" {
+		detail := oauthErr.Error
+		if detail == "" {
+			detail = fmt.Sprintf("HTTP %d", statusCode)
+		}
+		result.fail("oidcCredentials", "OIDC rejected the client credentials (%s)", detail)
+		return true
+	}
+
+	// 403/400/etc.: the client may simply be disallowed from introspecting;
+	// let the token-endpoint probe make the call.
+	return false
 }
 
 func checkLDAP(
@@ -663,6 +776,8 @@ func checkLDAP(
 		result.skip("ldapCertificate", "TLS is disabled (insecureNoSSL)")
 	case err != nil:
 		result.skip("ldapCertificate", "skipped because the LDAP endpoint is not reachable")
+	case provider.Spec.LDAP.InsecureSkipVerify:
+		result.warn("ldapCertificate", "TLS certificate verification is disabled (insecureSkipVerify); the LDAP server certificate is not validated")
 	default:
 		if state, ok := conn.TLSConnectionState(); ok {
 			reportLeafExpiry(result, "ldapCertificate", state.PeerCertificates)
@@ -765,11 +880,16 @@ func checkHTTPReachability(
 		result.fail(stepName, "URL %q is not reachable: %v", rawURL, err)
 		return
 	}
-	if statusCode >= http.StatusInternalServerError {
+	switch {
+	case statusCode >= http.StatusInternalServerError:
 		result.fail(stepName, "URL %q returned HTTP %d", rawURL, statusCode)
-		return
+	case statusCode >= http.StatusBadRequest:
+		// 4xx still means the endpoint is up: this step only checks network
+		// connectivity, not a specific resource, so the status code is expected.
+		result.succeed(stepName, "URL %q is reachable; the endpoint is up (HTTP %d is expected for a connectivity probe)", rawURL, statusCode)
+	default:
+		result.succeed(stepName, "URL %q is reachable (HTTP %d)", rawURL, statusCode)
 	}
-	result.succeed(stepName, "URL %q is reachable with HTTP %d", rawURL, statusCode)
 }
 
 // checkPublicBrowserURL verifies that a browser-facing endpoint is not a
@@ -958,7 +1078,7 @@ func probeClientSecret(
 		return false, "", err
 	}
 	if statusCode >= http.StatusOK && statusCode < http.StatusMultipleChoices {
-		return true, "token endpoint accepted the client", nil
+		return true, "the provider authenticated the client and issued a token", nil
 	}
 
 	var oauthErr struct {
@@ -978,9 +1098,9 @@ func probeClientSecret(
 	}
 
 	if oauthErr.Error != "" {
-		return true, fmt.Sprintf("client authenticated; test code rejected (%s)", oauthErr.Error), nil
+		return true, fmt.Sprintf("the provider authenticated the client and rejected only the synthetic probe code, as expected (%s)", oauthErr.Error), nil
 	}
-	return true, fmt.Sprintf("token endpoint returned HTTP %d", statusCode), nil
+	return true, fmt.Sprintf("the provider authenticated the client (token endpoint returned HTTP %d)", statusCode), nil
 }
 
 type oidcDiscoveryDocument struct {
@@ -988,6 +1108,7 @@ type oidcDiscoveryDocument struct {
 	JWKSURI               string `json:"jwks_uri"`
 	AuthorizationEndpoint string `json:"authorization_endpoint"`
 	TokenEndpoint         string `json:"token_endpoint"`
+	IntrospectionEndpoint string `json:"introspection_endpoint"`
 }
 
 func (d oidcDiscoveryDocument) missingEndpoints() []string {
@@ -1074,7 +1195,19 @@ func checkTLSCertificate(result *dexProviderCheckResult, stepName, rawURL, rootC
 		return
 	}
 	defer conn.Close()
-	reportLeafExpiry(result, stepName, conn.ConnectionState().PeerCertificates)
+
+	certs := conn.ConnectionState().PeerCertificates
+	if insecureSkipVerify {
+		if len(certs) == 0 {
+			result.warn(stepName, "TLS certificate verification is disabled (insecureSkipVerify); the server certificate is not validated")
+			return
+		}
+		result.warn(stepName,
+			"TLS certificate verification is disabled (insecureSkipVerify); the server certificate (valid until %s) is not validated",
+			certs[0].NotAfter.UTC().Format(time.RFC3339))
+		return
+	}
+	reportLeafExpiry(result, stepName, certs)
 }
 
 func reportLeafExpiry(result *dexProviderCheckResult, stepName string, certs []*x509.Certificate) {
@@ -1092,7 +1225,7 @@ func reportExpiry(result *dexProviderCheckResult, stepName, subject string, notA
 	case remaining <= 0:
 		result.fail(stepName, "%s expired on %s", subject, expiry)
 	case remaining <= dexProviderCertExpiryWarnWindow:
-		result.succeed(stepName, "%s expires soon, on %s", subject, expiry)
+		result.warn(stepName, "%s expires soon, on %s", subject, expiry)
 	default:
 		result.succeed(stepName, "%s is valid until %s", subject, expiry)
 	}

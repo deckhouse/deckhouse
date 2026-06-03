@@ -141,7 +141,7 @@ func TestReportExpiry(t *testing.T) {
 		want     string
 	}{
 		{name: "expired", notAfter: time.Now().Add(-time.Hour), want: dexProviderCheckStepFailed},
-		{name: "expires soon", notAfter: time.Now().Add(24 * time.Hour), want: dexProviderCheckStepSucceeded},
+		{name: "expires soon", notAfter: time.Now().Add(24 * time.Hour), want: dexProviderCheckStepWarning},
 		{name: "valid", notAfter: time.Now().Add(365 * 24 * time.Hour), want: dexProviderCheckStepSucceeded},
 	}
 
@@ -160,11 +160,11 @@ func TestCheckTLSCertificate(t *testing.T) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	defer ts.Close()
 
-	t.Run("reachable https reports certificate validity", func(t *testing.T) {
+	t.Run("insecureSkipVerify reports a warning", func(t *testing.T) {
 		result := &dexProviderCheckResult{}
 		checkTLSCertificate(result, "tls", ts.URL, "", true)
-		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSucceeded {
-			t.Fatalf("expected success, got %#v", result.checks)
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepWarning {
+			t.Fatalf("expected warning, got %#v", result.checks)
 		}
 	})
 
@@ -248,6 +248,122 @@ func TestProbeClientSecret(t *testing.T) {
 			}
 			if accepted != tt.wantAccepted {
 				t.Fatalf("expected accepted=%v, got %v (detail: %s)", tt.wantAccepted, accepted, detail)
+			}
+		})
+	}
+}
+
+func TestParseAcknowledgedWarnings(t *testing.T) {
+	t.Run("absent annotation", func(t *testing.T) {
+		all, set := parseAcknowledgedWarnings(nil)
+		if all || len(set) != 0 {
+			t.Fatalf("expected no acknowledgements, got all=%v set=%#v", all, set)
+		}
+	})
+
+	t.Run("list of steps", func(t *testing.T) {
+		all, set := parseAcknowledgedWarnings(map[string]string{
+			dexProviderAcknowledgedWarningsAnnotation: "ldapCertificate, oidcCertificate",
+		})
+		if all {
+			t.Fatal("did not expect acknowledge-all")
+		}
+		if !set["ldapCertificate"] || !set["oidcCertificate"] {
+			t.Fatalf("expected both steps acknowledged, got %#v", set)
+		}
+	})
+
+	t.Run("wildcard", func(t *testing.T) {
+		all, _ := parseAcknowledgedWarnings(map[string]string{
+			dexProviderAcknowledgedWarningsAnnotation: "*",
+		})
+		if !all {
+			t.Fatal("expected acknowledge-all")
+		}
+	})
+}
+
+func TestWarnAcknowledgement(t *testing.T) {
+	t.Run("unacknowledged warning stays Warning", func(t *testing.T) {
+		result := &dexProviderCheckResult{}
+		result.warn("ldapCertificate", "verification disabled")
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepWarning {
+			t.Fatalf("expected warning, got %#v", result.checks)
+		}
+	})
+
+	t.Run("acknowledged step is downgraded to success", func(t *testing.T) {
+		result := &dexProviderCheckResult{acknowledgedWarnings: map[string]bool{"ldapCertificate": true}}
+		result.warn("ldapCertificate", "verification disabled")
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSucceeded {
+			t.Fatalf("expected success, got %#v", result.checks)
+		}
+	})
+
+	t.Run("acknowledge-all downgrades any warning", func(t *testing.T) {
+		result := &dexProviderCheckResult{acknowledgeAllWarnings: true}
+		result.warn("oidcCertificate", "expires soon")
+		if len(result.checks) != 1 || result.checks[0].Status != dexProviderCheckStepSucceeded {
+			t.Fatalf("expected success, got %#v", result.checks)
+		}
+	})
+}
+
+// TestProbeIntrospection exercises the RFC 7662 token-introspection fast path
+// used for OIDC client-secret validation. A correctly authenticated client
+// receives HTTP 200 for a bogus token; invalid credentials get HTTP 401; and an
+// ambiguous response (e.g. the client cannot introspect) leaves the decision to
+// the caller.
+func TestProbeIntrospection(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		clientID, _, _ := r.BasicAuth()
+		if clientID == "" {
+			clientID = r.PostFormValue("client_id")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch clientID {
+		case "good":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"active":false}`))
+		case "bad":
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"invalid_client"}`))
+		default:
+			w.WriteHeader(http.StatusForbidden)
+			_, _ = w.Write([]byte(`{"error":"access_denied"}`))
+		}
+	}))
+	defer srv.Close()
+
+	client := d8http.NewClient(d8http.WithInsecureSkipVerify(), d8http.WithTimeout(5*time.Second))
+
+	tests := []struct {
+		name           string
+		clientID       string
+		wantConclusive bool
+		wantStatus     string
+	}{
+		{name: "valid secret", clientID: "good", wantConclusive: true, wantStatus: dexProviderCheckStepSucceeded},
+		{name: "wrong secret", clientID: "bad", wantConclusive: true, wantStatus: dexProviderCheckStepFailed},
+		{name: "ambiguous response falls back", clientID: "no-introspect", wantConclusive: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &dexProviderCheckResult{}
+			conclusive := probeIntrospection(context.Background(), client, result, srv.URL, tt.clientID, "secret")
+			if conclusive != tt.wantConclusive {
+				t.Fatalf("expected conclusive=%v, got %v (checks: %#v)", tt.wantConclusive, conclusive, result.checks)
+			}
+			if !tt.wantConclusive {
+				if len(result.checks) != 0 {
+					t.Fatalf("expected no recorded step, got %#v", result.checks)
+				}
+				return
+			}
+			if len(result.checks) != 1 || result.checks[0].Status != tt.wantStatus {
+				t.Fatalf("expected status %q, got %#v", tt.wantStatus, result.checks)
 			}
 		})
 	}
