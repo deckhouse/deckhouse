@@ -24,7 +24,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
 git:
-- add: /{{ .ModulePath }}modules/007-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
   stageDependencies:
     install:
