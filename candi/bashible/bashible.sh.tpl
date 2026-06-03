@@ -191,7 +191,6 @@ bb-indent-text() {
 }
 
 function annotate_node() {
-  echo "Annotating node $(bb-d8-node-name) with ${@}"
   attempt=0
   until error=$(bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${@}" 2>&1); do
     attempt=$(( attempt + 1 ))
@@ -524,9 +523,7 @@ function main() {
     # parsed by dhctl-side measurement tooling to map where bashible time goes.
     local start_ts
     start_ts=$(date +%s.%N)
-    echo ===
-    echo === Step: $step
-    echo ===
+    echo "=== Step ${step_base} ==="
 
     span_ctx=$(bb-telemetry-start-span "$step_base" "${BB_TELEMETRY_PARENT_SPAN_ID:-}")
 
@@ -539,17 +536,15 @@ function main() {
         bb-event-error-create "$step"
         {{- end }}
         bb-bashible-ready-steps-failed "$step_base"
-        >&2 echo "ERROR: Failed to execute step $step, retry limit reached"
+        >&2 echo "ERROR: Failed to execute step ${step_base}, retry limit reached"
 
         bb-telemetry-end-span "$span_ctx" "$step_base"
 
         return 1
       fi
-      >&2 echo "Failed to execute step $step, retrying in 2 seconds"
+      >&2 echo "Failed to execute step ${step_base}, retrying in 2 seconds"
       sleep 2
-      echo ===
-      echo === Step: $step
-      echo ===
+      echo "=== Step ${step_base} retry ${attempt} ==="
       if [ "$attempt" -gt 2 ]; then
         sx=x
       fi
@@ -592,7 +587,7 @@ function main() {
         bb-run-step "$s" || exit 1
       done
     else
-      echo "=== bashible parallel-group '$group_name' start (${#steps[@]} steps) ==="
+      echo "=== Group ${group_name} start (${#steps[@]} steps) ==="
       local -a pids=()
       local s
       for s in "${steps[@]}"; do
@@ -607,10 +602,10 @@ function main() {
         fi
       done
       if [ "$failed" -gt 0 ]; then
-        >&2 echo "ERROR: parallel-group '$group_name': $failed of ${#steps[@]} steps failed"
+        >&2 echo "ERROR: Group ${group_name}: ${failed} of ${#steps[@]} steps failed"
         exit 1
       fi
-      echo "=== bashible parallel-group '$group_name' done ==="
+      echo "=== Group ${group_name} done ==="
     fi
   }
 
