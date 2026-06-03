@@ -43,7 +43,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc GRAFANA_VERSION={{ $grafanaVersion }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 GRAFANA_VERSION={{ $grafanaVersion }}
   - go install github.com/google/wire/cmd/wire@v0.7.0
   - cd /usr/src/app
   - /go/bin/wire gen -tags oss ./pkg/server
