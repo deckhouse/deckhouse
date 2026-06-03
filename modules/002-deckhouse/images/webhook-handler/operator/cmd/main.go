@@ -27,10 +27,15 @@ import (
 	"sync"
 	"time"
 
+	sh_pkg "github.com/flant/shell-operator/pkg"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	hook_types "github.com/flant/shell-operator/pkg/hook/types"
 	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
+	"github.com/flant/shell-operator/pkg/webhook/admission"
+	"github.com/flant/shell-operator/pkg/webhook/conversion"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -86,6 +91,34 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		return nil
 	}
 
+	oldValidatingResources := make(map[string]*admission.ValidatingWebhookResource)
+	oldMutatingResources := make(map[string]*admission.MutatingWebhookResource)
+	oldConversionClientConfigs := make(map[string]*conversion.CrdClientConfig)
+
+	if shOp.AdmissionWebhookManager != nil {
+		for confID, resource := range shOp.AdmissionWebhookManager.ValidatingResources {
+			oldValidatingResources[confID] = resource
+		}
+		for confID, resource := range shOp.AdmissionWebhookManager.MutatingResources {
+			oldMutatingResources[confID] = resource
+		}
+
+		// Rebuild runtime registration state from scratch to avoid stale webhook
+		// resources after hook removals.
+		shOp.AdmissionWebhookManager.ValidatingResources = make(map[string]*admission.ValidatingWebhookResource)
+		shOp.AdmissionWebhookManager.MutatingResources = make(map[string]*admission.MutatingWebhookResource)
+	}
+
+	if shOp.ConversionWebhookManager != nil {
+		for crdName, cfg := range shOp.ConversionWebhookManager.ClientConfigs {
+			oldConversionClientConfigs[crdName] = cfg
+		}
+
+		// Rebuild runtime conversion registrations from scratch to avoid stale
+		// CRD client configs after hook removals.
+		shOp.ConversionWebhookManager.ClientConfigs = make(map[string]*conversion.CrdClientConfig)
+	}
+
 	if err := shOp.HookManager.Init(); err != nil {
 		return fmt.Errorf("re-init hook manager: %w", err)
 	}
@@ -109,6 +142,115 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		if h != nil {
 			h.HookController.EnableConversionBindings()
 		}
+	}
+
+	if err := syncAdmissionWebhookConfigurations(ctx, shOp, oldValidatingResources, oldMutatingResources); err != nil {
+		return fmt.Errorf("sync admission webhook configurations: %w", err)
+	}
+
+	if err := syncConversionWebhookConfigurations(ctx, shOp, oldConversionClientConfigs); err != nil {
+		return fmt.Errorf("sync conversion webhook configurations: %w", err)
+	}
+
+	return nil
+}
+
+func syncAdmissionWebhookConfigurations(
+	ctx context.Context,
+	shOp *shell_operator.ShellOperator,
+	oldValidatingResources map[string]*admission.ValidatingWebhookResource,
+	oldMutatingResources map[string]*admission.MutatingWebhookResource,
+) error {
+	if shOp.AdmissionWebhookManager == nil {
+		return nil
+	}
+
+	for confID, resource := range shOp.AdmissionWebhookManager.ValidatingResources {
+		if err := resource.Register(ctx); err != nil {
+			return fmt.Errorf("register validating webhook configuration %q: %w", confID, err)
+		}
+	}
+
+	for confID, resource := range shOp.AdmissionWebhookManager.MutatingResources {
+		if err := resource.Register(ctx); err != nil {
+			return fmt.Errorf("register mutating webhook configuration %q: %w", confID, err)
+		}
+	}
+
+	for confID, resource := range oldValidatingResources {
+		if _, stillPresent := shOp.AdmissionWebhookManager.ValidatingResources[confID]; stillPresent {
+			continue
+		}
+
+		if err := resource.Unregister(); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete stale validating webhook configuration %q: %w", confID, err)
+		}
+	}
+
+	for confID, resource := range oldMutatingResources {
+		if _, stillPresent := shOp.AdmissionWebhookManager.MutatingResources[confID]; stillPresent {
+			continue
+		}
+
+		if err := resource.Unregister(); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete stale mutating webhook configuration %q: %w", confID, err)
+		}
+	}
+
+	return nil
+}
+
+func syncConversionWebhookConfigurations(
+	ctx context.Context,
+	shOp *shell_operator.ShellOperator,
+	oldConversionClientConfigs map[string]*conversion.CrdClientConfig,
+) error {
+	if shOp.ConversionWebhookManager == nil {
+		return nil
+	}
+
+	for crdName, cfg := range shOp.ConversionWebhookManager.ClientConfigs {
+		if err := cfg.Update(ctx); err != nil {
+			return fmt.Errorf("update conversion client config for crd %q: %w", crdName, err)
+		}
+	}
+
+	for crdName := range oldConversionClientConfigs {
+		if _, stillPresent := shOp.ConversionWebhookManager.ClientConfigs[crdName]; stillPresent {
+			continue
+		}
+
+		if err := resetCRDConversionToNone(ctx, shOp, crdName); err != nil {
+			return fmt.Errorf("cleanup stale conversion webhook config for crd %q: %w", crdName, err)
+		}
+	}
+
+	return nil
+}
+
+func resetCRDConversionToNone(ctx context.Context, shOp *shell_operator.ShellOperator, crdName string) error {
+	if shOp.KubeClient == nil {
+		return fmt.Errorf("kubernetes client is not initialized")
+	}
+
+	crd, err := shOp.KubeClient.ApiExt().CustomResourceDefinitions().Get(ctx, crdName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get CRD %q: %w", crdName, err)
+	}
+
+	if crd.Spec.Conversion == nil || crd.Spec.Conversion.Strategy != apiextensionsv1.WebhookConverter {
+		return nil
+	}
+
+	crd.Spec.Conversion = &apiextensionsv1.CustomResourceConversion{
+		Strategy: apiextensionsv1.NoneConverter,
+	}
+
+	if _, err := shOp.KubeClient.ApiExt().CustomResourceDefinitions().Update(ctx, crd, sh_pkg.DefaultUpdateOptions()); err != nil {
+		return fmt.Errorf("update CRD %q conversion strategy: %w", crdName, err)
 	}
 
 	return nil
