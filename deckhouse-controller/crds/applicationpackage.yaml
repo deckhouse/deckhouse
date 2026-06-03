@@ -21,8 +21,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ApplicationPackage represents information about available application
-          package.
+        description: ApplicationPackage represents information about available application package.
         properties:
           apiVersion:
             description: |-
@@ -45,8 +44,7 @@ spec:
             description: Status of an ApplicationPackage.
             properties:
               availableRepositories:
-                description: List of repository names where this application package
-                  is available.
+                description: List of repository names where this application package is available.
                 items:
                   type: string
                 type: array

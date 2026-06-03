@@ -95,11 +95,9 @@ spec:
             description: Status of an Application.
             properties:
               conditions:
-                description: Conditions represent the latest available observations
-                  of the application's state.
+                description: Conditions represent the latest available observations of the application's state.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition contains details for one aspect of the current state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -181,8 +179,7 @@ spec:
                   before the first status computation.
                 properties:
                   message:
-                    description: Message is a human-readable description of the current
-                      state.
+                    description: Message is a human-readable description of the current state.
                     type: string
                   state:
                     description: |-
