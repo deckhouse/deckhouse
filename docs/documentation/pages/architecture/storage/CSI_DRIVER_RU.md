@@ -1,5 +1,5 @@
 ---
-title: CSI-драйвер
+title: CSI-драйвер (типовой)
 permalink: ru/architecture/storage/csi-drivers/csi-driver.html
 lang: ru
 search: csi driver, csi-driver, csi-драйвер, container storage interface

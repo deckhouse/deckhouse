@@ -1,5 +1,5 @@
 ---
-title: CSI driver
+title: Standard CSI driver
 permalink: en/architecture/storage/csi-drivers/csi-driver.html
 search: csi driver, csi-driver, container storage interface
 description: Overview of the CSI driver architecture in Deckhouse Kubernetes Platform.
