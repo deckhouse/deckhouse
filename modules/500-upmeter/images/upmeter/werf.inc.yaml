@@ -38,9 +38,9 @@ shell:
   - pm install jq oniguruma-devel curl
   install:
   - cd /src/upmeter
-  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o /upmeter ./cmd/upmeter
   - cd /src/migrate
-  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc go build -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' -o /migrate ./cmd/migrate
+  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -linkmode external -extldflags '-static'" -tags 'sqlite3' -o /migrate ./cmd/migrate
   - chown 64535:64535 /migrate /upmeter
   - chmod 0700 /migrate /upmeter
 ---
