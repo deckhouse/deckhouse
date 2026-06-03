@@ -117,7 +117,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(cachemetrics.NewCollector(mgr.GetClient())); err != nil {
+	instrumentedClient := &cachemetrics.InstrumentedClient{
+		Client: mgr.GetClient(),
+	}
+
+	if err = mgr.Add(cachemetrics.NewCollector(instrumentedClient)); err != nil {
 		setupLog.Error(err, "unable to add cache metrics collector")
 		os.Exit(1)
 	}
@@ -135,7 +139,7 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}
