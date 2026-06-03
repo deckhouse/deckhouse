@@ -64,8 +64,8 @@ Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/u
 ExecStart=
 ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
 {{- if eq .runType "ClusterBootstrap" }}
-    --file-check-frequency="2s"
-    --sync-frequency="5s"
+    --file-check-frequency="2s" \\
+    --sync-frequency="5s" \\
   {{- if not (eq .nodeGroup.nodeType "Static") }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
   {{- else }}
