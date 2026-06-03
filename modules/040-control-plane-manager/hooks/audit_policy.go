@@ -407,8 +407,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 
 func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRuleWithDescription) {
 	{
-		descriptionEN := "Log creation of `VirtualMachineOperation` resources with request/response payload."
-		descriptionRU := "Логировать создание ресурсов `VirtualMachineOperation` с телом запроса/ответа."
+		descriptionEN := "Log creation of VirtualMachineOperation resources with request/response payload."
+		descriptionRU := "Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequestResponse,
 			Verbs: []string{"create"},
