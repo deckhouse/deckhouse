@@ -57,6 +57,19 @@ __sec wait_api_proxy
 
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
+
+# etcd runs as UID/GID 52 (etcd user) with capabilities: drop: ALL.
+# Without CAP_DAC_OVERRIDE the process cannot read root-owned 600 files.
+# Set ownership and modes before the etcd container starts:
+#   directory  root:etcd 750  — etcd (GID 52) gets r-x; kube-apiserver (UID 0 = owner) gets rwx
+#   *.key      etcd:etcd 600  — private keys readable only by etcd
+#   *.crt      etcd:etcd 644  — public certs; kube-apiserver reads ca.crt via "other" r bit
+chown root:etcd /etc/kubernetes/pki/etcd
+chmod 750 /etc/kubernetes/pki/etcd
+chown etcd:etcd /etc/kubernetes/pki/etcd/*.{crt,key}
+chmod 600 /etc/kubernetes/pki/etcd/*.key
+chmod 644 /etc/kubernetes/pki/etcd/*.crt
+
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd" || exit 1
 __sec wait_etcd
