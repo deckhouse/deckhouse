@@ -24,10 +24,15 @@ bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
 ${upstreams_json}
 EOF
 {{- else if eq .runType "ClusterBootstrap" }}
+node_endpoint="$(bb-d8-node-endpoint 6443)"
+if [[ -z "$node_endpoint" ]]; then
+  bb-log-error "bb-d8-node-endpoint returned empty value, cannot configure kubernetes-api-proxy upstreams.json"
+  exit 1
+fi
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
-{{- $list := list }}
-  {{- $list = append $list "$(bb-d8-node-ip):6443" }}
-{{ toJson $list }}
+[
+  "${node_endpoint}"
+]
 EOF
 {{- end }}
 

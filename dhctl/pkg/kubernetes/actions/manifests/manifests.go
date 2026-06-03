@@ -775,7 +775,22 @@ func CommanderUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 	}
 }
 
-func KubeDNSService(ipAddress string) *apiv1.Service {
+// KubeDNSService builds the kube-dns Service manifest.
+//
+// Invariant: ipAddress is always the IPv4 ClusterIP. When ipAddressIPv6 is non-empty,
+// the service becomes dual-stack with IPv4 as the primary family. Single-stack IPv6-only
+// clusters are not supported by this helper.
+func KubeDNSService(ipAddress, ipAddressIPv6 string) *apiv1.Service {
+	ipFamilies := []apiv1.IPFamily{apiv1.IPv4Protocol}
+	ipFamilyPolicy := apiv1.IPFamilyPolicySingleStack
+	clusterIPs := []string{ipAddress}
+
+	if ipAddressIPv6 != "" {
+		ipFamilies = []apiv1.IPFamily{apiv1.IPv4Protocol, apiv1.IPv6Protocol}
+		ipFamilyPolicy = apiv1.IPFamilyPolicyPreferDualStack
+		clusterIPs = []string{ipAddress, ipAddressIPv6}
+	}
+
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-dns",
@@ -785,7 +800,10 @@ func KubeDNSService(ipAddress string) *apiv1.Service {
 			},
 		},
 		Spec: apiv1.ServiceSpec{
-			ClusterIP: ipAddress,
+			ClusterIP:      ipAddress,
+			ClusterIPs:     clusterIPs,
+			IPFamilies:     ipFamilies,
+			IPFamilyPolicy: &ipFamilyPolicy,
 			Ports: []apiv1.ServicePort{
 				{
 					Name:       "dns",

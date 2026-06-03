@@ -86,8 +86,14 @@ failure_count=0
 failure_limit=3
 while [ "$patch_pending" = true ] ; do
   for server in {{ .clusterMasterKubeAPIEndpoints | join " " }} ; do
-    server_addr=$(echo $server | cut -f1 -d":")
-    until node_ip="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+    # Handle IPv6 endpoints like [fe80::1]:6443 or IPv4 like 10.0.0.1:6443
+    if [[ "$server" == \[*\]:* ]]; then
+      server_addr="${server#[}"
+      server_addr="${server_addr%%]:*}"
+    else
+      server_addr="${server%:*}"
+    fi
+    until node_ip="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9a-fA-F\.:]+)')"; do
       echo "The network is not ready for connecting to apiserver yet, waiting..."
       sleep 1
     done

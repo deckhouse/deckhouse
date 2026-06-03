@@ -175,7 +175,11 @@ spec:
     - --requestheader-extra-headers-prefix=X-Remote-Extra-
     - --requestheader-group-headers=X-Remote-Group
     - --requestheader-username-headers=X-Remote-User
+    {{- if .clusterConfiguration.serviceSubnetCIDRIPv6 }}
+    - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }},{{ .clusterConfiguration.serviceSubnetCIDRIPv6 }}
+    {{- else }}
     - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }}
+    {{- end }}
     {{- if hasKey . "nodeIP" }}
     - --advertise-address={{ .nodeIP }}
     {{- end }}

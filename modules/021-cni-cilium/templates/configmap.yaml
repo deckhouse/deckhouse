@@ -38,8 +38,28 @@ data:
   enable-l2-neigh-discovery: "false"
   {{- end }}
 
-  enable-ipv4: "true"
-  enable-ipv6: "false"
+  {{- /* Pick the first IPv4 and the first IPv6 CIDR from a comma-separated dual-stack value. */}}
+  {{- $podSubnets := splitList "," (.Values.global.discovery.podSubnet | default "" | toString) }}
+  {{- $ipv4PodCIDR := "" }}
+  {{- $ipv6PodCIDR := "" }}
+  {{- range $subnet := $podSubnets }}
+    {{- $subnet = trim $subnet }}
+    {{- if contains ":" $subnet }}
+      {{- if eq $ipv6PodCIDR "" }}
+        {{- $ipv6PodCIDR = $subnet }}
+      {{- end }}
+    {{- else if ne $subnet "" }}
+      {{- if eq $ipv4PodCIDR "" }}
+        {{- $ipv4PodCIDR = $subnet }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if and (eq $ipv4PodCIDR "") (eq $ipv6PodCIDR "") }}
+    {{- fail (printf "cni-cilium: global.discovery.podSubnet=%q contains no valid IPv4 or IPv6 CIDR" .Values.global.discovery.podSubnet) }}
+  {{- end }}
+
+  enable-ipv4: {{ if ne $ipv4PodCIDR "" }}"true"{{ else }}"false"{{ end }}
+  enable-ipv6: {{ if ne $ipv6PodCIDR "" }}"true"{{ else }}"false"{{ end }}
 
   enable-bpf-tproxy: "true"
 
@@ -71,7 +91,15 @@ data:
   endpoint-interface-host-mac: "f6:e1:74:94:b8:1b"
   endpoint-interface-mac: "f6:e1:74:94:b8:1a"
   dhcpd-enabled: "true"
-  dhcpd-cluster-dns: {{ .Values.global.discovery.clusterDNSAddress | quote }}
+  {{- /* DHCP option-6 is IPv4-only; pick the first IPv4 address from a potentially dual-stack value. */}}
+  {{- $dhcpDNS := "" }}
+  {{- range $addr := splitList "," (.Values.global.discovery.clusterDNSAddress | default "" | toString) }}
+    {{- $addr = trim $addr }}
+    {{- if and (eq $dhcpDNS "") (ne $addr "") (not (contains ":" $addr)) }}
+      {{- $dhcpDNS = $addr }}
+    {{- end }}
+  {{- end }}
+  dhcpd-cluster-dns: {{ $dhcpDNS | quote }}
   dhcpd-cluster-domain: {{ .Values.global.discovery.clusterDomain | quote }}
   {{- end }}
 
@@ -96,7 +124,12 @@ data:
 
   enable-local-redirect-policy: "true"
 
-  ipv4-native-routing-cidr: {{ .Values.global.discovery.podSubnet }}
+  {{- if $ipv4PodCIDR }}
+  ipv4-native-routing-cidr: {{ $ipv4PodCIDR }}
+  {{- end }}
+  {{- if $ipv6PodCIDR }}
+  ipv6-native-routing-cidr: {{ $ipv6PodCIDR }}
+  {{- end }}
 
   enable-host-firewall: "true"
 
