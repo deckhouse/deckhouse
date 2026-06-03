@@ -38,11 +38,14 @@ d8 k get clusterobservabilityalerts
 
 Output example:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
 SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
 OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 To view information about a specific alert, use the following command:
 
