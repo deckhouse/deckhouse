@@ -55,11 +55,14 @@ example     2       16s    Ready
 
 В случае ошибок синхронизации в столбце `MSG` будет указано общее описание ошибки. Пример:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Подробную информацию об ошибках можно получить в поле `pullError` в статусе ресурса ModuleSource.
 
@@ -97,12 +100,15 @@ d8 k get module
 
 Пример получения списка модулей:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module
 NAME       STAGE    SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
 module-two                   Available   False     False                      
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Чтобы получить дополнительную информацию о модуле, выполните следующую команду:
 
@@ -252,19 +258,25 @@ status:
 
 При возникновении каких либо ошибок, модуль перейдет в фазу ошибки (`Error`):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE  ENABLED  READY
 module-one           example  Error  True     Error
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Если у включенного модуля есть несколько доступных источников, и в его ModuleConfig явно не выбран источник модуля, модуль перейдет в фазу конфликта (`Conflict`):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module module-one
 NAME        STAGE    SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  False    False
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Чтобы разрешить конфликт, укажите источник модуля (имя ModuleSource) явно в ModuleConfig.
 
@@ -278,6 +290,7 @@ d8 k get mr
 
 Пример получения списка релизов модулей:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get mr
 NAME                       PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
@@ -289,6 +302,8 @@ module-two-v1.2.3          Deployed     deckhouse       48d
 module-two-v1.2.4          Superseded   deckhouse       44d              
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Если релиз модуля находится в статусе `Superseded`, это значит что релиз модуля устарел, и есть более новый релиз, который его заменил.
 
@@ -363,6 +378,7 @@ d8 k get modules
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get module
 NAME       STAGE    SOURCE   PHASE       ENABLED   READY
@@ -371,6 +387,8 @@ module-one                   Available   False     False
 module-two                   Available   False     False     
 ...
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Вывод показывает, что модуль `module-one` доступен для включения.
 
@@ -418,21 +436,27 @@ module-two                   Available   False     False
 
   Пример вывода информации об ошибке модуля `module-one`:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get moduleconfig module-one
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-one  true                7s    Ignored: unknown module name
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 - Посмотреть объект ModuleSource:
 
   Пример вывода если у источника модуля есть проблемы со скачиванием модуля:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ d8 k get ms
   NAME        COUNT   SYNC   MSG
   example     2       16s    Some errors occurred. Inspect status for details
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в хранилище образов.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
@@ -443,11 +467,14 @@ d8 k get mr
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ d8 k get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В примере вывода показан ModuleRelease, когда режим обновления (параметр [update.mode](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) ModuleUpdatePolicy установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на ModuleRelease аннотацию `modules.deckhouse.io/approved="true"`:
 

@@ -9,7 +9,7 @@ lang: ru
 Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
 
 {% alert level="warning" %}
-Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или неймспейсе, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
 {% endalert %}
 
 При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
@@ -80,53 +80,56 @@ lang: ru
 
 1. Проверьте текущий размер DVCR:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Пример вывода:
 
-    ```text
-    {"size":"58G","storageClass":"linstor-thick-data-r1"}
-    ```
+   ```json
+   {"size":"58G","storageClass":"linstor-thick-data-r1"}
+   ```
 
 1. Задайте размер:
 
-    ```shell
-    d8 k patch mc virtualization \
-      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
-    ```
+   ```shell
+   d8 k patch mc virtualization \
+     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
+   ```
 
    Пример вывода:
 
-    ```text
+   ```text
    moduleconfig.deckhouse.io/virtualization patched
-    ```
+   ```
 
 1. Проверьте изменение размера:
 
-    ```shell
-    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-    ```
+   ```shell
+   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
+   ```
 
    Пример вывода:
 
-    ```text
-    {"size":"59G","storageClass":"linstor-thick-data-r1"}
-    ```
+   ```json
+   {"size":"59G","storageClass":"linstor-thick-data-r1"}
+   ```
 
 1. Проверьте текущее состояние DVCR:
 
-    ```shell
-    d8 k get pvc dvcr -n d8-virtualization
-    ```
+   ```shell
+   d8 k get pvc dvcr -n d8-virtualization
+   ```
 
    Пример вывода:
 
-    ```text
-    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-    dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-    ```
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
+   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
+   ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 ## Создание golden image для Linux
 
@@ -138,16 +141,16 @@ Golden image — это предварительно настроенный об
 
    - Для RHEL/CentOS:
 
-   ```bash
-   yum install -y qemu-guest-agent
-   ```
+     ```bash
+     yum install -y qemu-guest-agent
+     ```
 
    - Для Debian/Ubuntu:
 
-   ```bash
-   apt-get update
-   apt-get install -y qemu-guest-agent
-   ```
+     ```bash
+     apt-get update
+     apt-get install -y qemu-guest-agent
+     ```
 
 1. Включите и запустите сервис:
 
@@ -169,16 +172,16 @@ Golden image — это предварительно настроенный об
 
    - Для RHEL:
 
-   ```bash
-   nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
-   rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
-   ```
+     ```bash
+     nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+     rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+     ```
 
    - Для Debian/Ubuntu:
 
-   ```bash
-   rm -f /etc/network/interfaces.d/*
-   ```
+     ```bash
+     rm -f /etc/network/interfaces.d/*
+     ```
 
 1. Очистите системные идентификаторы:
 
@@ -204,15 +207,15 @@ Golden image — это предварительно настроенный об
 
    - Для RHEL:
 
-   ```bash
-   yum clean all
-   ```
+     ```bash
+     yum clean all
+     ```
 
    - Для Debian/Ubuntu:
 
-   ```bash
-   apt-get clean
-   ```
+     ```bash
+     apt-get clean
+     ```
 
 1. Очистите временные файлы:
 
@@ -293,21 +296,21 @@ Golden image — это предварительно настроенный об
 
    Альтернативно, создайте `ClusterVirtualImage`, чтобы образ был доступен на уровне кластера для всех проектов:
 
-    ```bash
-    d8 k apply -f -<<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: <image-name>
-    spec:
-      dataSource:
-        type: ObjectRef
-        objectRef:
-          kind: VirtualDisk
-          name: <source-disk-name>
-          namespace: <namespace>
-    EOF
-    ```
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: <image-name>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualDisk
+         name: <source-disk-name>
+         namespace: <namespace>
+   EOF
+   ```
 
 1. Создайте диск ВМ из созданного образа:
 
@@ -335,39 +338,39 @@ Golden image — это предварительно настроенный об
 
 1. Чтобы создать ресурс ClusterVirtualImage, выполните следующую команду:
 
-    ```yaml
-    d8 k apply -f - <<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: ubuntu-24-04
-    spec:
-      # Источник для создания образа.
-      dataSource:
-        type: HTTP
-        http:
-          url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
-    EOF
-    ```
+   ```bash
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: ubuntu-24-04
+   spec:
+     # Источник для создания образа.
+     dataSource:
+       type: HTTP
+       http:
+         url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+   EOF
+   ```
 
 1. Проверьте результат создания ресурса ClusterVirtualImage, выполнив следующую команду:
 
-    ```shell
-    d8 k get clustervirtualimage ubuntu-24-04
+   ```shell
+   d8 k get clustervirtualimage ubuntu-24-04
    ```
 
-    Есть укороченный вариант команды:
+   Есть укороченный вариант команды:
 
-    ```shell
-    d8 k get cvi ubuntu-24-04
-    ```
+   ```shell
+   d8 k get cvi ubuntu-24-04
+   ```
 
-    В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
+   В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
 
-    ```console
-    NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-24-04   Ready   false   100%       23h
-    ```
+   ```console
+   NAME           PHASE   CDROM   PROGRESS   AGE
+   ubuntu-24-04   Ready   false   100%       23h
+   ```
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
 
@@ -423,46 +426,46 @@ d8 k describe cvi ubuntu-24-04
 
 1. Загрузите образ локально:
 
-    ```shell
-    curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-    ```
+   ```shell
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+   ```
 
 1. Создайте `Dockerfile` со следующим содержимым:
 
-    ```shell
-    FROM scratch
-    COPY ubuntu2204.img /disk/ubuntu2204.img
-    ```
+   ```shell
+   FROM scratch
+   COPY ubuntu2204.img /disk/ubuntu2204.img
+   ```
 
 1. Соберите образ и загрузите его в реестр контейнеров. В качестве реестра контейнеров в примере ниже использован `docker.io`. Для выполнения вам необходимо иметь учётную запись сервиса и настроенное окружение:
 
-    ```shell
-    docker build -t docker.io/<username>/ubuntu2204:latest
-    ```
+   ```shell
+   docker build -t docker.io/<username>/ubuntu2204:latest
+   ```
 
-    где `username` — имя пользователя, указанное при регистрации [в docker.io](https://www.docker.com/).
+   где `username` — имя пользователя, указанное при регистрации [в docker.io](https://www.docker.com/).
 
 1. Загрузите созданный образ в container registry:
 
-    ```shell
-    docker push docker.io/<username>/ubuntu2204:latest
-    ```
+   ```shell
+   docker push docker.io/<username>/ubuntu2204:latest
+   ```
 
 1. Чтобы использовать этот образ, создайте в качестве примера ресурс:
 
-    ```yaml
-    d8 k apply -f - <<EOF
-    apiVersion: virtualization.deckhouse.io/v1alpha2
-    kind: ClusterVirtualImage
-    metadata:
-      name: ubuntu-2204
-    spec:
-      dataSource:
-        type: ContainerImage
-        containerImage:
-          image: docker.io/<username>/ubuntu2204:latest
-    EOF
-    ```
+   ```bash
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: ClusterVirtualImage
+   metadata:
+     name: ubuntu-2204
+   spec:
+     dataSource:
+       type: ContainerImage
+       containerImage:
+         image: docker.io/<username>/ubuntu2204:latest
+   EOF
+   ```
 
 Как создать образ из реестра контейнеров в веб-интерфейсе:
 
@@ -477,7 +480,7 @@ d8 k describe cvi ubuntu-24-04
 
 Чтобы загрузить образ из командной строки, предварительно создайте ресурс, как показано на примере `ClusterVirtualImage`:
 
-```yaml
+```bash
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: ClusterVirtualImage
@@ -500,7 +503,7 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 
 Пример вывода:
 
-```text
+```json
 {
   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
   "inCluster":"http://10.222.165.239/upload"

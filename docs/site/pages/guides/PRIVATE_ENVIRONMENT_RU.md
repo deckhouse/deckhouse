@@ -601,6 +601,7 @@ docker ps
 
 {% offtopic title="Пример вывода команды..." %}
 
+<!-- markdownlint-disable MD031 -->
 ```console
 CONTAINER ID   IMAGE                                 COMMAND                  CREATED         STATUS                   PORTS                                                                                NAMES
 df1636bd1295   goharbor/nginx-photon:v2.14.1         "nginx -g 'daemon of…"   3 minutes ago   Up 3 minutes (healthy)   0.0.0.0:80->8080/tcp, [::]:80->8080/tcp, 0.0.0.0:443->8443/tcp, [::]:443->8443/tcp   nginx
@@ -613,6 +614,8 @@ a78d9a1a5b0b   goharbor/harbor-db:v2.14.1            "/docker-entrypoint.…"   
 ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   3 minutes ago   Up 3 minutes (healthy)                                                                                        redis
 9330bcce48be   goharbor/harbor-log:v2.14.1           "/bin/sh -c /usr/loc…"   3 minutes ago   Up 3 minutes (healthy)   127.0.0.1:1514->10514/tcp                                                            harbor-log
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 {% endofftopic %}
 
@@ -772,6 +775,7 @@ d8 mirror pull \
 
 Пример вывода успешной загрузки всех компонентов платформы:
 
+<!-- markdownlint-disable MD031 -->
 ```text
 Feb 26 17:49:04.520 INFO  ║║ [822 / 824] Pulling registry.deckhouse.ru/deckhouse/ee@sha256:4e5c17098d2a884cc971676fa9a7980f0d784a787d21e113d28a72da96ea8b2b 
 Feb 26 17:49:05.099 INFO  ║║ [823 / 824] Pulling registry.deckhouse.ru/deckhouse/ee@sha256:d229564f423a1ca7a59e0be28a71218e362cc8f07d979ce63a15bb505c6ccb40 
@@ -779,6 +783,8 @@ Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.ru/deckh
 Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
 
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Пример вывода успешной загрузки модулей:
 
@@ -1207,7 +1213,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
         clusterIssuerName: selfsigned
   ```
 
-  Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в пространстве имён `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
+  Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в неймспейсе `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
 
 * В ModuleConfig `user-authn` измените значение параметра [`dexCAMode`](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
 
@@ -1511,12 +1517,15 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Убедитесь, что все узлы кластера находятся в статусе `Ready`:
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
   d8cluster          Ready    control-plane,master   30m   v1.23.17
   d8cluster-worker   Ready    worker                 10m   v1.23.17
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
   Запуск всех компонентов DKP после завершения установки может занять некоторое время.
 
@@ -1567,11 +1576,14 @@ sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 
 Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
 
+<!-- markdownlint-disable MD031 -->
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Создание пользователя для доступа в веб-интерфейсы кластера
 

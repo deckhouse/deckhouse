@@ -109,10 +109,13 @@ To properly restore the cluster, follow these steps on the master node:
 
    Output example:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Restart the master node.
 
