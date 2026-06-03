@@ -59,7 +59,8 @@ func Bootstrap(ctx context.Context) error {
 
 	// resource.New always returns a non-nil *resource.Resource even when some
 	// detectors fail; the error indicates partial data we intentionally tolerate.
-	otelResource, err := resource.New(
+	// nolint: errcheck
+	otelResource, _ := resource.New(
 		ctx,
 		resource.WithSchemaURL(semconv.SchemaURL),
 
@@ -79,9 +80,6 @@ func Bootstrap(ctx context.Context) error {
 			semconv.ServiceName(traceApplicationName),
 		),
 	)
-	if err != nil {
-		log.WarnF("failed to initialize OTel resource completely: %v", err)
-	}
 
 	tracesShutdown := initTraces(tracesExporter, otelResource)
 
