@@ -473,8 +473,8 @@ func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRu
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionVirtualization, descriptionEN, descriptionRU, rule)
 	}
 	{
-		descriptionEN := "Log create/update/patch/delete operations for `ModuleConfig` resources."
-		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов `ModuleConfig`."
+		descriptionEN := "Log create/update/patch/delete operations for ModuleConfig resources."
+		descriptionRU := "Логировать операции create/update/patch/delete для ресурсов ModuleConfig."
 		rule := audit.PolicyRule{
 			Level: audit.LevelMetadata,
 			Verbs: []string{"create", "update", "patch", "delete"},
