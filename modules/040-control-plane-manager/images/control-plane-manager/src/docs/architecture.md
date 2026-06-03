@@ -2,13 +2,12 @@
 
 ## Overview
 
-`control-plane-manager` is a `controller-runtime` manager with 5 controllers:
+`control-plane-manager` is a `controller-runtime` manager with 4 controllers:
 
 - `control-plane-configuration-controller` (CPC)
 - `control-plane-node-controller` (CPN)
 - `control-plane-operation-controller` (CPO)
 - `operations-approver-controller`
-- `update-observer-controller`
 
 The manager registers all of them in `internal/manager.go`.
 
@@ -50,7 +49,6 @@ Observed state comes from:
 4. `control-plane-operation` executes approved CPO pipelines on the target node.
 5. Completed CPO results are folded back into `CPN.status`.
 6. New changes in secrets or labels re-run the same loop.
-7. `update-observer` runs independently: it watches node and pod states to track Kubernetes version upgrade/downgrade progress across control-plane nodes and reports the cluster update state.
 
 ## Execution and Safety Rules
 
