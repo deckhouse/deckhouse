@@ -187,6 +187,12 @@ spec:
               value: "false"
             - name: USE_NELM
               value: "true"
+            - name: DEDUP_CLIENT_ENABLED
+              value: "true"
+            - name: DEDUP_CLIENT_SNAPSHOT_STORE
+              value: "true"
+            - name: DEDUP_CLIENT_HELM_RESOURCES_CACHE
+              value: "true"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA

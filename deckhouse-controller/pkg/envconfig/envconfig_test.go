@@ -136,16 +136,27 @@ func TestLoad_AllFields(t *testing.T) {
 		"ADDON_OPERATOR_ADMISSION_SERVER_ENABLED":     "true",
 
 		// Kube.
-		"KUBE_CONTEXT":     "ctx",
-		"KUBE_CONFIG":      "/k/cfg",
-		"KUBE_SERVER":      "https://kube",
-		"KUBE_CLIENT_QPS":  "20",
+		"KUBE_CONTEXT":      "ctx",
+		"KUBE_CONFIG":       "/k/cfg",
+		"KUBE_SERVER":       "https://kube",
+		"KUBE_CLIENT_QPS":   "20",
 		"KUBE_CLIENT_BURST": "40",
 
 		// ObjectPatcher.
 		"OBJECT_PATCHER_KUBE_CLIENT_QPS":     "30",
 		"OBJECT_PATCHER_KUBE_CLIENT_BURST":   "60",
 		"OBJECT_PATCHER_KUBE_CLIENT_TIMEOUT": "15s",
+
+		// Deduplicated kubeclient cache (addon-operator v1.21.4+,
+		// github.com/ldmonster/kubeclient via shell-operator's
+		// pkg/kube/dedupclient). Unprefixed names match addon-operator's own
+		// DedupClientSettings (envPrefix DEDUP_CLIENT_).
+		"DEDUP_CLIENT_ENABLED":              "true",
+		"DEDUP_CLIENT_NAMESPACES":           "d8-system,kube-system",
+		"DEDUP_CLIENT_WATCH_GVKS":           "/v1/Pod,apps/v1/Deployment",
+		"DEDUP_CLIENT_RECONSTRUCT_LRU_SIZE": "1024",
+		"DEDUP_CLIENT_GC_INTERVAL":          "2m",
+		"DEDUP_CLIENT_SNAPSHOT_STORE":       "true",
 
 		// Debug.
 		"DEBUG_UNIX_SOCKET":      "/tmp/shell-operator-debug.socket",
@@ -208,6 +219,11 @@ func TestLoad_AllFields(t *testing.T) {
 		{"ObjectPatcher.KubeClientBurst", cfg.ObjectPatcher.KubeClientBurst, 60},
 		{"ObjectPatcher.KubeClientTimeout", cfg.ObjectPatcher.KubeClientTimeout, 15 * time.Second},
 
+		{"DedupClient.Enabled", cfg.DedupClient.Enabled, true},
+		{"DedupClient.ReconstructLRUSize", cfg.DedupClient.ReconstructLRUSize, 1024},
+		{"DedupClient.GCInterval", cfg.DedupClient.GCInterval, 2 * time.Minute},
+		{"DedupClient.SnapshotStore", cfg.DedupClient.SnapshotStore, true},
+
 		{"Debug.UnixSocket", cfg.Debug.UnixSocket, "/tmp/shell-operator-debug.socket"},
 		{"Debug.HTTPServerAddr", cfg.Debug.HTTPServerAddr, "127.0.0.1:9652"},
 		{"Debug.KeepTmpFiles", cfg.Debug.KeepTmpFiles, true},
@@ -224,6 +240,32 @@ func TestLoad_AllFields(t *testing.T) {
 			t.Errorf("%s: got %v (%T), want %v (%T)", c.name, c.got, c.got, c.want, c.want)
 		}
 	}
+
+	// Slice fields can't be compared with != in the table above; pin them
+	// explicitly so a regression in either the env-tag separator or the
+	// Apply assignment is caught here.
+	wantNamespaces := []string{"d8-system", "kube-system"}
+	if !equalStrings(cfg.DedupClient.Namespaces, wantNamespaces) {
+		t.Errorf("DedupClient.Namespaces: got %v, want %v",
+			cfg.DedupClient.Namespaces, wantNamespaces)
+	}
+	wantGVKs := []string{"/v1/Pod", "apps/v1/Deployment"}
+	if !equalStrings(cfg.DedupClient.WatchGVKs, wantGVKs) {
+		t.Errorf("DedupClient.WatchGVKs: got %v, want %v",
+			cfg.DedupClient.WatchGVKs, wantGVKs)
+	}
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // TestLoad_ShellOperatorEnvFallback pins the SHELL_OPERATOR_* App-side
