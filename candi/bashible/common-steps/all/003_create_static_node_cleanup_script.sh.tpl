@@ -227,6 +227,17 @@ if [ "$CLEANUP_FAILED" -ne 0 ]; then
   exit 2
 fi
 
+# Recreate mountpoint dirs for fstab entries we wiped above, so devices nested
+# under cleaned paths (e.g. a user-managed /var/lib/containerd/logs) can be
+# remounted on next boot.
+if [ -r /etc/fstab ]; then
+  while read -r src mp _; do
+    case "$src" in ''|\#*) continue ;; esac
+    case "$mp" in /*) ;; *) continue ;; esac
+    [ -d "$mp" ] || mkdir -p "$mp" 2>/dev/null || log_err "Failed to recreate mountpoint dir $mp"
+  done < /etc/fstab
+fi
+
 # Inform which cleaned paths are still present in /etc/fstab — their devices will be
 # remounted (empty, since we wiped them) on next boot. This is informational only.
 FSTAB_HITS=()
