@@ -19,6 +19,7 @@ package controller
 
 import (
 	"context"
+	"crypto/sha1" //nolint:gosec
 	"errors"
 	"fmt"
 	"strings"
@@ -566,7 +567,9 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 				if dvpMachine.Annotations == nil {
 					dvpMachine.Annotations = make(map[string]string)
 				}
-				dvpMachine.Annotations[OrphanedDiskAnnotationPrefix+disk] = time.Now().Format(time.RFC3339)
+				h := sha1.Sum([]byte(disk)) //nolint:gosec
+				key := fmt.Sprintf("%s%x", OrphanedDiskAnnotationPrefix, h[:4])
+				dvpMachine.Annotations[key] = disk
 				continue
 			}
 			merr = multierror.Append(merr, fmt.Errorf("delete VirtualDisk %s: %w", disk, err))
@@ -578,9 +581,9 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	}
 
 	var orphanedDisks []string
-	for k := range dvpMachine.Annotations {
+	for k, v := range dvpMachine.Annotations {
 		if strings.HasPrefix(k, OrphanedDiskAnnotationPrefix) {
-			orphanedDisks = append(orphanedDisks, strings.TrimPrefix(k, OrphanedDiskAnnotationPrefix))
+			orphanedDisks = append(orphanedDisks, v)
 		}
 	}
 	if len(orphanedDisks) > 0 {
