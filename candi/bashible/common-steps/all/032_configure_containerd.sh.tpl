@@ -153,7 +153,7 @@ oom_score = 0
             BinaryName = "/usr/bin/nvidia-container-runtime"
             SystemdCgroup = ${systemd_cgroup}
   {{ end }}
-        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc]
+        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.crun]
           runtime_type = 'io.containerd.runc.v2'
           runtime_path = ''
           pod_annotations = []
@@ -166,8 +166,8 @@ oom_score = 0
           sandboxer = 'podsandbox'
           io_type = ''
 
-          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
-            BinaryName = ''
+          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.crun.options]
+            BinaryName = 'crun'
             CriuImagePath = ''
             CriuWorkPath = ''
             IoGid = 0
