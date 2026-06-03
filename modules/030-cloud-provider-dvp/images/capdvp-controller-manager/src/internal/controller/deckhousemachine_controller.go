@@ -560,6 +560,10 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	for _, disk := range disksToDelete {
 		logger.Info("Removing VirtualDisk", "disk_name", disk)
 		if err = r.DVP.DiskService.RemoveDiskByName(ctx, disk); err != nil {
+			if errors.Is(err, dvpapi.ErrNotFound) {
+				logger.Info("VirtualDisk already gone, skipping", "disk_name", disk)
+				continue
+			}
 			if errors.Is(err, context.DeadlineExceeded) {
 				logger.Error(err, "VirtualDisk deletion timed out, marking as orphaned and continuing",
 					"disk_name", disk,
@@ -568,7 +572,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 					dvpMachine.Annotations = make(map[string]string)
 				}
 				h := sha1.Sum([]byte(disk)) //nolint:gosec
-				key := fmt.Sprintf("%s%x", OrphanedDiskAnnotationPrefix, h[:4])
+				key := fmt.Sprintf("%s%x", OrphanedDiskAnnotationPrefix, h[:8])
 				dvpMachine.Annotations[key] = disk
 				continue
 			}
