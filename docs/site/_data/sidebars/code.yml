@@ -24,8 +24,8 @@ entries:
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
       - title:
-          en: Advanced search (OpenSearch)
-          ru: Расширенный поиск (OpenSearch)
+          en: Advanced search
+          ru: Расширенный поиск
         url: /code/documentation/admin/configuration/advanced-search.html
       - title:
           en: Service account
