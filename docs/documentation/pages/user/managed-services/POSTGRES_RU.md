@@ -1,12 +1,11 @@
 ---
 title: "managed-postgres"
 permalink: ru/user/managed-services/postgres.html
-description: "Использование managed-postgres в Deckhouse Kubernetes Platform"
+description: "Использование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
+lang: ru
 ---
 
-## Обзор
-
-Для работы с managed PostgreSQL используется namespaced-ресурс Postgres. Он описывает желаемое состояние сервиса PostgreSQL, включая:
+Для работы с managed-сервисом PostgreSQL используется namespaced-ресурс Postgres. Он описывает желаемое состояние сервиса PostgreSQL, включая:
 
 - вычислительные ресурсы;
 - размер хранилища;
@@ -16,14 +15,14 @@ description: "Использование managed-postgres в Deckhouse Kubernete
 - логические базы данных;
 - источник данных для восстановления.
 
-Ресурс Postgres должен ссылаться на существующий PostgresClass через параметр `spec.postgresClassName`.
+Ресурс Postgres должен ссылаться на существующий [PostgresClass](../../../admin/configuration/managed-services/postgres.html) через параметр `spec.postgresClassName`. Настройка PostgresClass выполняется администратором кластера.
 
 ## Перед началом работы
 
 Убедитесь, что:
 
-- модуль `managed-postgres` включён;
-- в кластере существует подходящий ресурс PostgresClass;
+- [`managed-postgres`](/modules/managed-postgres/) включён;
+- в кластере существует подходящий ресурс [PostgresClass](../../../admin/configuration/managed-services/postgres.html);
 - у вас есть права на создание ресурсов в целевом неймспейсе.
 
 ## Создание сервиса PostgreSQL
@@ -71,11 +70,11 @@ d8 k apply -f managed-services_v1alpha1_postgres.yaml -n postgres
 d8 k get postgres test -n postgres -o wide -w
 ```
 
-Для проверки работоспособности модуля убедитесь, что все значения в `status.conditions` имеют статус `True`.
+Для проверки работоспособности сервиса убедитесь, что все значения в `status.conditions` имеют статус `True`.
 
 ## Обязательные параметры ресурса Postgres
 
-Из схемы CRD следует, что для ресурса Postgres обязательны как минимум следующие параметры:
+Для ресурса Postgres обязательны как минимум следующие параметры:
 
 - `spec.instance`;
 - `spec.instance.cpu.cores`;
@@ -132,7 +131,7 @@ spec:
     sharedBuffers: 128Mi
 ```
 
-Доступность переопределения этих параметров зависит от настроек связанного PostgresClass.
+Доступность переопределения этих параметров зависит от настроек связанного [PostgresClass](../../../admin/configuration/managed-services/postgres.html).
 
 ## Типы развёртывания
 
@@ -160,6 +159,16 @@ spec:
 - `Availability`;
 - `Consistency`;
 - `ConsistencyAndAvailability`.
+
+### Режимы репликации
+
+Каждому значению `spec.cluster.replication` соответствуют фиксированное число экземпляров и определённые настройки PostgreSQL.
+
+- `Availability`: два экземпляра, primary и асинхронная реплика. Режим рассчитан на быстрое восстановление после сбоя. Возможна потеря последних транзакций, если они не успели реплицироваться до отказа primary.
+- `Consistency`: два экземпляра, primary и синхронная реплика. Режим рассчитан на отсутствие потери подтверждённых транзакций, но запись останавливается, пока синхронная реплика недоступна.
+- `ConsistencyAndAvailability`: три экземпляра, primary, синхронная реплика и асинхронная реплика. Режим сочетает сохранность данных и доступность и рекомендуется для production-нагрузок.
+
+Единственная поддерживаемая версия PostgreSQL — `17.6`.
 
 ### Развёртывание в режиме Standalone
 
@@ -200,7 +209,7 @@ d8 k apply -f managed-services_v1alpha1_postgres.yaml -n postgres
 Проверьте состояние ресурса:
 
 ```shell
-d8 k get postgres test -n postgres -o wide -w
+d8 k get postgres standalone -n postgres -o wide -w
 ```
 
 Для подключения используйте Service `d8ms-pg-standalone-rw`:
@@ -218,6 +227,14 @@ psql -U test-rw -d testdb -h d8ms-pg-standalone-rw.postgres.svc -p 5432
 ```shell
 psql -U test-rw -d testdb -h d8ms-pg-test-rw.postgres.svc -p 5432
 ```
+
+Для подключения к базе данных доступны следующие Services:
+
+- `d8ms-pg-<name>-rw`: указывает на primary-экземпляр и позволяет выполнять операции чтения и записи;
+- `d8ms-pg-<name>-ro`: указывает на реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения;
+- `d8ms-pg-<name>-r`: указывает на primary-экземпляр или реплики (в режиме `Cluster`) и позволяет выполнять операции только для чтения со случайно выбранного экземпляра.
+
+Если для пользователя задано поле `storeCredsToSecret`, строка подключения сохраняется в указанном Secret в поле `<database-name>-dsn`.
 
 ## Настройка пользователей
 
@@ -278,6 +295,8 @@ spec:
 
 Для резервного копирования используйте namespaced-ресурс PostgresSnapshot.
 
+Перед созданием снимка убедитесь, что модуль [`snapshot-controller`](/modules/snapshot-controller/) включён, а выбранный `spec.instance.persistentVolumeClaim.storageClassName` поддерживает снимки.
+
 Ниже приведён пример:
 
 ```yaml
@@ -289,16 +308,13 @@ spec:
   postgresName: my-postgres
 ```
 
-Перед созданием снимка убедитесь, что используемый `storageClassName` поддерживает создание снимков.
-
 После создания снимка проверьте его статус:
 
 ```shell
 d8 k get postgressnapshot -n postgres my-first-snapshot -o yaml | yq .status
 ```
 
-Из схемы PostgresSnapshot следует,
-что в статусе доступны, в частности, следующие поля:
+В статусе PostgresSnapshot доступны, в частности, следующие поля:
 
 - `phase`;
 - `startedAt`;
@@ -385,5 +401,5 @@ d8 k -n <users-ns> get postgres <cluster_name> -o wide -w
 ## Обратите внимание
 
 {% alert level="danger" %}
-Удаление или переименование элементов в списках `users` и `databases` приводит к удалению соответствующих пользователей и логических баз данных в сервисе PostgreSQL. Это поведение описано в исходной пользовательской документации модуля.
+Удаление или переименование элементов в списках `users` и `databases` приводит к удалению соответствующих пользователей и логических баз данных в сервисе PostgreSQL.
 {% endalert %}

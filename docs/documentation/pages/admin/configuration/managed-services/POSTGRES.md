@@ -1,22 +1,22 @@
 ---
 title: "managed-postgres"
 permalink: en/admin/configuration/managed-services/postgres.html
-description: "Administering `managed-postgres` in Deckhouse Kubernetes Platform"
+description: "Administering the managed PostgreSQL service in Deckhouse Kubernetes Platform"
 ---
 
-The `managed-postgres` module manages PostgreSQL clusters in Deckhouse Kubernetes Platform. The module is currently in the `Preview` stage. Additional requirements apply to module installation. After you enable the module, DKP installs the module CRDs, but does not remove them when the module is disabled. If you no longer need the created CRDs, delete them manually. The main administrator cluster-wide resource is PostgresClass. It defines limits and default values for related Postgres resources.
+The managed PostgreSQL service provides PostgreSQL clusters in Deckhouse Kubernetes Platform. The service is in the [`Preview` stage](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle). Before you enable [`managed-postgres`](/modules/managed-postgres/), meet the [installation requirements](/modules/managed-postgres/configuration.html#requirements). The main administrator cluster-wide resource is PostgresClass. It defines limits and default values for related Postgres resources. For instructions on creating and using PostgreSQL services, see [Using managed PostgreSQL](../../../user/managed-services/postgres.html).
 
 ## Before you begin
 
 Make sure that:
 
-- The `managed-postgres` module is available in your installation.
-- The module installation requirements are met.
+- [`managed-postgres`](/modules/managed-postgres/) is available in your installation.
+- The [installation requirements](/modules/managed-postgres/configuration.html#requirements) are met.
 - You have permission to create cluster-wide resources.
 
-## Enable the module
+## Enable managed-postgres
 
-To enable the module, apply the ModuleConfig resource:
+To enable the managed PostgreSQL service, apply the ModuleConfig resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -28,7 +28,9 @@ spec:
   version: 1
 ```
 
-After the module is enabled, the `default` PostgresClass resource is created automatically. The controller is also deployed in the `d8-managed-postgres` system namespace. It reconciles the state of Postgres resources in all user namespaces.
+After `managed-postgres` is enabled, the `default` PostgresClass resource is created automatically.
+
+The controller is also deployed in the `d8-managed-postgres` system namespace. It reconciles the state of Postgres resources in all user namespaces.
 
 ## PostgresClass resource
 
@@ -68,7 +70,7 @@ spec:
 
 ## Configure sizing policies
 
-The `spec.sizingPolicies` parameter defines allowed CPU and memory ranges for related Postgres resources. The source documentation indicates that the `cores.min`–`cores.max` ranges must not overlap between policies.
+The `spec.sizingPolicies` parameter defines allowed CPU and memory ranges for related Postgres resources. The `cores.min`–`cores.max` ranges must not overlap between policies.
 
 Example:
 
@@ -151,7 +153,7 @@ spec:
     workMem: 100Mi
 ```
 
-The administrator guide specifies the following default values that the operator sets automatically:
+The operator sets the following default values:
 
 - `maxConnections`: `100`;
 - `sharedBuffers`: 25% of `memory.size`;
@@ -225,10 +227,10 @@ spec:
     - sharedBuffers
     - walKeepSize
   validations:
-    - message: "Max connections should not be more than 100"
+    - message: "Max connections should be more than 100"
       rule: "configuration.maxConnections > 100"
-    - message: "Shared buffers should be less that 40% of memory.size"
-      rule: "configuration.sharedBuffers _100 < instance.memory.size_ 40"
+    - message: "Shared buffers should be less than 40% of memory.size"
+      rule: "configuration.sharedBuffers * 100 < instance.memory.size * 40"
     - message: "walKeepSize can not be more than 1Gi"
       rule: "configuration.walKeepSize <= 1073741824"
   sizingPolicies:
@@ -259,9 +261,5 @@ spec:
 ## Important notes
 
 {% alert level="warning" %}
-Deckhouse Kubernetes Platform does not remove the module CRDs when the module is disabled. If you no longer need the module resources, delete the corresponding CRDs manually.
-{% endalert %}
-
-{% alert level="warning" %}
-The module is in the `Preview` stage. Before using it in a production environment, consider the installation requirements and limitations.
+Deckhouse Kubernetes Platform does not remove the related CRDs when [`managed-postgres`](/modules/managed-postgres/) is disabled. If you no longer need these resources, delete the corresponding CRDs manually.
 {% endalert %}

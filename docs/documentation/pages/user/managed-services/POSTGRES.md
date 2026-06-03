@@ -1,11 +1,10 @@
 ---
 title: "managed-postgres"
 permalink: en/user/managed-services/postgres.html
-description: "Using managed-postgres in Deckhouse Kubernetes Platform"
+description: "Using the managed PostgreSQL service in Deckhouse Kubernetes Platform"
 ---
-## Overview
 
-Use the namespaced resource Postgres to manage a PostgreSQL service. It describes the desired state of the PostgreSQL service, including the following:
+Use the namespaced resource Postgres to manage a PostgreSQL service. It describes the desired state of the managed PostgreSQL service, including the following:
 
 - compute resources;
 - storage size;
@@ -15,14 +14,14 @@ Use the namespaced resource Postgres to manage a PostgreSQL service. It describe
 - logical databases;
 - data source for recovery.
 
-The Postgres resource must reference an existing PostgresClass through the `spec.postgresClassName` parameter.
+The Postgres resource must reference an existing [PostgresClass](../../../admin/configuration/managed-services/postgres.html) through the `spec.postgresClassName` parameter. PostgresClass is configured by the cluster administrator.
 
 ## Before you begin
 
 Make sure that:
 
-- the `managed-postgres` module is enabled;
-- a suitable PostgresClass resource exists in the cluster;
+- [`managed-postgres`](/modules/managed-postgres/) is enabled;
+- a suitable [PostgresClass](../../../admin/configuration/managed-services/postgres.html) resource exists in the cluster;
 - you have permission to create resources in the target namespace.
 
 ## Create a PostgreSQL service
@@ -70,11 +69,11 @@ Check the resource status:
 d8 k get postgres test -n postgres -o wide -w
 ```
 
-To verify that the module works correctly, make sure all values in `status.conditions` have the `True` status.
+To verify that the service works correctly, make sure all values in `status.conditions` have the `True` status.
 
 ## Required parameters of the Postgres resource
 
-The CRD schema shows that the Postgres resource requires at least the following parameters:
+The Postgres resource requires at least the following parameters:
 
 - `spec.instance`;
 - `spec.instance.cpu.cores`;
@@ -130,7 +129,7 @@ spec:
     sharedBuffers: 128Mi
 ```
 
-Whether these parameters can be overridden depends on the settings of the related PostgresClass.
+Whether these parameters can be overridden depends on the settings of the related [PostgresClass](../../../admin/configuration/managed-services/postgres.html).
 
 ## Deployment types
 
@@ -157,6 +156,16 @@ The following `spec.cluster.replication` values are supported:
 - `Availability`;
 - `Consistency`;
 - `ConsistencyAndAvailability`.
+
+### Replication modes
+
+Each `spec.cluster.replication` value maps to a fixed number of instances and specific PostgreSQL settings.
+
+- `Availability`: two instances, a primary and an asynchronous replica. This mode prioritizes fast recovery after a failure. It can lose the last transactions if they were not replicated before the primary failed.
+- `Consistency`: two instances, a primary and a synchronous replica. This mode prioritizes zero loss of committed transactions, but writes stop while the synchronous replica is unavailable.
+- `ConsistencyAndAvailability`: three instances, a primary, a synchronous replica, and an asynchronous replica. This mode balances durability and availability and is recommended for production workloads.
+
+The only supported PostgreSQL version is `17.6`.
 
 ### Deploy in Standalone mode
 
@@ -197,7 +206,7 @@ d8 k apply -f managed-services_v1alpha1_postgres.yaml -n postgres
 Check the resource status:
 
 ```shell
-d8 k get postgres test -n postgres -o wide -w
+d8 k get postgres standalone -n postgres -o wide -w
 ```
 
 Use the `d8ms-pg-standalone-rw` Service to connect:
@@ -215,6 +224,14 @@ Example of connecting to the cluster from the basic scenario:
 ```shell
 psql -U test-rw -d testdb -h d8ms-pg-test-rw.postgres.svc -p 5432
 ```
+
+The following Services are available for database connections:
+
+- `d8ms-pg-<name>-rw`: points to the primary instance and allows read and write operations;
+- `d8ms-pg-<name>-ro`: points to replicas (in `Cluster` mode) and allows read-only operations;
+- `d8ms-pg-<name>-r`: points to the primary instance or replicas (in `Cluster` mode) and allows read-only operations against a randomly selected instance.
+
+If the user has the `storeCredsToSecret` field set, the connection string is stored in the specified Secret in the `<database-name>-dsn` field.
 
 ## Configure users
 
@@ -271,7 +288,11 @@ spec:
 
 ## Create a snapshot
 
-Use the namespaced resource PostgresSnapshot for backup. The following example shows a basic configuration:
+Use the namespaced resource PostgresSnapshot for backup.
+
+Before you create a snapshot, make sure the [`snapshot-controller`](/modules/snapshot-controller/) module is enabled and the selected `spec.instance.persistentVolumeClaim.storageClassName` supports snapshots.
+
+The following example shows a basic configuration:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -282,15 +303,13 @@ spec:
   postgresName: my-postgres
 ```
 
-Before you create a snapshot, make sure the `storageClassName` in use supports snapshots.
-
 After the snapshot is created, check its status:
 
 ```shell
 d8 k get postgressnapshot -n postgres my-first-snapshot -o yaml | yq .status
 ```
 
-The PostgresSnapshot schema shows that the status includes, among others, the following fields:
+The PostgresSnapshot status includes, among others, the following fields:
 
 - `phase`;
 - `startedAt`;
@@ -377,5 +396,5 @@ If the values in `status.conditions` have the `True` status, the corresponding s
 ## Important notes
 
 {% alert level="danger" %}
-Deleting or renaming items in the `users` and `databases` lists causes the corresponding users and logical databases to be deleted from the PostgreSQL service. This behavior is described in the original module user documentation.
+Deleting or renaming items in the `users` and `databases` lists causes the corresponding users and logical databases to be deleted from the PostgreSQL service.
 {% endalert %}
