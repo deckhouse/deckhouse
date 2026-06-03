@@ -211,10 +211,7 @@ rules:
 
 			hasKubectlLogsRule := false
 			for _, rule := range policy.Rules {
-				if rule.Level != audit.LevelRequest {
-					continue
-				}
-				if len(rule.Verbs) != 1 || rule.Verbs[0] != "get" {
+				if rule.Level != audit.LevelMetadata {
 					continue
 				}
 				for _, resource := range rule.Resources {
@@ -232,7 +229,7 @@ rules:
 					break
 				}
 			}
-			Expect(hasKubectlLogsRule).To(BeTrue(), "audit policy should contain request-level get rule for pods/log (kubectl get logs)")
+			Expect(hasKubectlLogsRule).To(BeTrue(), "audit policy should contain metadata-level rule for pods/log (kubectl logs)")
 		})
 
 		It("must contain explicit kubectl logs audit rule", func() {
