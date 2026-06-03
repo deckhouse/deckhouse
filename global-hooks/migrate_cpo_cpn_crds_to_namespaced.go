@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+// TODO: remove this hook in Deckhouse v1.77 — it is a one-time migration hook.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(migrateCPOCPNToNamespaced))
