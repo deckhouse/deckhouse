@@ -110,13 +110,23 @@ resource "kubernetes_resource_ready_v1" "kubernetes-data-disk-migration" {
   skip_check_on_create_with_resource_lifetime = "0"
   fail_conditions_appearance_duration         = "3s"
 
-  fields = {
-    "metadata.name" = ".+"
-  }
+  fields = merge(
+    {
+      "metadata.name" = ".+"
+      "status.phase"  = "^Ready$"
+    },
+    var.storage_class != null ? {
+      "status.storageClassName" = "^${replace(var.storage_class, ".", "\\.")}$"
+    } : {}
+  )
 
-  condition {
+  fail_condition {
     type   = "Ready"
-    status = "True"
+    status = "False"
+    reason = format("^(%s)$", join("|", concat(local.not_ready_fail_reasons, [
+      "StorageClassIsNotReady",
+      "StorageClassProvisionerMismatch",
+    ])))
   }
 
   depends_on = [kubernetes_resource_ready_v1.kubernetes-data-disk]
