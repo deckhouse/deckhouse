@@ -21,9 +21,7 @@ Advanced search powered by OpenSearch allows you to:
 
 ## Use advanced search
 
-Prerequisites:
-
-- An administrator must [enable advanced search (OpenSearch)](../admin/configuration/advanced-search.html).
+- An administrator must [connect advanced search (OpenSearch)](/modules/code/stable/advanced-search.html).
 
 To search:
 
@@ -69,10 +67,6 @@ When OpenSearch is enabled, the following scopes are available:
 | Users | ✓ | ✓ | ✓ |
 | Wiki | ✓ | ✓ | ✓ |
 
-{% alert level="info" %}
-The administrator can restrict access to global search or disable certain scopes to improve performance.
-{% endalert %}
-
 When OpenSearch is enabled, search for code, commits, wiki, and comments runs through OpenSearch and respects the **access matrix**.
 Users see only objects they have permission to read.
 Search for issues, merge requests, and other entities runs through the database.
@@ -115,8 +109,7 @@ Allows searching across all projects and groups within the instance.
 
 ## Syntax
 
-Advanced search uses [`simple_query_string`](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html),
-which supports both exact and fuzzy queries.
+Advanced search supports extended query syntax: exact and fuzzy matching, logical operators, and filters.
 
 | Syntax | Description | Example |
 |--------|-------------|---------|
@@ -151,17 +144,59 @@ The code search UI also provides a language filter.
 | `helper -extension:yml -extension:js` | Returns `helper` in all files except `.yml` and `.js` files. |
 | `helper path:lib/git` | Returns `helper` in files with a `lib/git*` path (for example, `spec/lib/gitlab`). |
 
-## Known limitations
+## Indexing settings
 
-- Only files up to 1024 KB (1 MB) are indexed.
-  An administrator can change this limit in the instance configuration.
-- By default, only the default branch is indexed.
-  An administrator can allow indexing of additional branches through a per-project regex.
-- Minimum query length is 2 characters.
-- Maximum query length is 64 words or 4096 characters.
-- After pushing changes to a repository, search results may update with a delay while background indexing completes.
-- When OpenSearch is unavailable, search for code, commits, wiki, and comments may return empty results or an error message.
+### Project settings
+
+A project maintainer can go to **Settings** → **Search**.
+
+#### Branch regex
+
+When **Allow per-project branch regex** is enabled at the instance level, the maintainer can specify a regex for additional branches.
+The default branch is always indexed.
+
+Example regex: `(feature|hotfix)/.*`
+
+{% alert level="warning" %}
+Changing the regex triggers a full project reindex.
+{% endalert %}
+
+#### Reindex code and wiki
+
+- **Reindex code** — full reindex of the repository code.
+- **Reindex wiki** — full reindex of the wiki (if a wiki repository exists).
+
+The **Index up to date** badge shows whether indexing is complete for the current repository state.
+
+#### API
+
+A maintainer can update the regex through the Projects API (`PUT /api/v4/projects/:id`):
+
+```shell
+curl --request PUT \
+  --header "PRIVATE-TOKEN: <token>" \
+  --header "Content-Type: application/json" \
+  --data '{"fe_project_setting_attributes":{"opensearch_indexed_branches_regex":"(feature|hotfix)/.*"}}' \
+  "https://code.example.com/api/v4/projects/<project_id>"
+```
+
+The current value is returned in `fe_project_setting_attributes.opensearch_indexed_branches_regex` on `GET /projects/:id`.
+
+Requirements:
+
+- advanced search is enabled on the instance (`advanced_search_enabled`);
+- **Allow per-project branch regex** mode is enabled;
+- regex uses RE2 syntax, maximum 255 characters;
+- an empty string clears the regex.
+
+A successful update enqueues a full code reindex for the project.
+
+### Group settings
+
+A group owner can go to **Settings** → **Search**.
+
+Group wiki reindexing is available: index status and the **Reindex wiki** button.
 
 ## Related topics
 
-- [Advanced search (OpenSearch) — administrator configuration](../admin/configuration/advanced-search.html)
+- [Advanced search — code module documentation](/modules/code/stable/advanced-search.html)

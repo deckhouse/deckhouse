@@ -8,105 +8,30 @@ lang: en
 weight: 55
 ---
 
-Advanced search in Deckhouse Code uses OpenSearch for full-text search.
-After enabling it, users get faster and more precise search with query syntax support.
+Administrator documentation for advanced search in Deckhouse Code: operating indexing after OpenSearch is connected.
+For connection and setup, see the [code module documentation](/modules/code/stable/advanced-search.html).
+For user instructions, see the [user guide](../../user/search.html).
 
-To enable advanced search, you must:
+## Operations
 
-1. [Deploy OpenSearch](#deploy-opensearch).
-1. [Configure Deckhouse Code](#configure-gitlabyml).
-1. [Enable search for users](#enable-search-for-users).
+Manage indexing, monitoring, and troubleshooting.
 
-{% alert level="info" %}
-Advanced search stores data from all projects in shared OpenSearch indices.
-Users see only objects they have permission to access in search results.
-{% endalert %}
+### Instance-level management
 
-## Enablement architecture
+Go to **Admin** → **Settings** → **Search**.
 
-Advanced search is controlled at two levels:
+This section is available after [OpenSearch is connected](/modules/code/stable/advanced-search.html).
 
-| Level | Configuration | Default | Effect |
-|-------|---------------|---------|--------|
-| Instance config | `gitlab.yml` → `fe.search.advanced_search_enabled` | `false` | Background indexing, admin UI, reindex API |
-| Runtime toggle | `fe_application_settings.use_advanced_search` | `false` | Search in UI and API |
-
-When `advanced_search_enabled` is on and `use_advanced_search` is off, indexing continues, but the UI and API do not use OpenSearch for search.
-
-## Deploy OpenSearch
-
-OpenSearch is not included with Deckhouse Code and must be deployed separately.
-Run OpenSearch on a dedicated server or in a separate namespace to avoid competing for resources with the application.
-
-Resource requirements depend on the volume of indexed data: number of projects, repository size, and comment count.
-Plan storage and memory capacity for production environments in advance.
-
-You also need the `gitlab-elasticsearch-indexer` binary — an external repository indexer.
-Set its path in `gitlab.yml` (`indexer_path`).
-
-## Configure gitlab.yml
-
-Add the `fe.search` section to the instance configuration:
-
-```yaml
-fe:
-  search:
-    advanced_search_enabled: true
-    repository_indexer_max_concurrency: 30
-    elasticsearch_indexed_file_size_limit_kb: 1024
-    indexer_path: /path/to/gitlab-elasticsearch-indexer
-    opensearch:
-      url: http://opensearch.example.com:9200
-      max_bulk_size_bytes: 10485760
-      max_bulk_concurrency: 10
-      username: admin
-      password: secret
-```
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `advanced_search_enabled` | `false` | Master switch for advanced search |
-| `repository_indexer_max_concurrency` | `30` | Maximum concurrency of the external indexer |
-| `elasticsearch_indexed_file_size_limit_kb` | `1024` | Maximum indexed file size (KB) |
-| `indexer_path` | — | Path to the `gitlab-elasticsearch-indexer` binary (required when search is enabled) |
-| `opensearch.url` | `http://localhost:9200/` | OpenSearch URL |
-| `opensearch.max_bulk_size_bytes` | `10485760` (10 MB) | Maximum bulk request size |
-| `opensearch.max_bulk_concurrency` | `10` | Bulk indexing concurrency |
-| `opensearch.username` / `password` | — | Basic auth (both must be set together) |
-
-Restart the application after changing the configuration.
-
-## Enable search for users
-
-1. Set `advanced_search_enabled: true` in `gitlab.yml` and restart the instance.
-1. Enable `use_advanced_search` through the API (this setting is read-only in the admin UI):
-
-   ```shell
-   curl --request PUT \
-     --header "PRIVATE-TOKEN: <admin_token>" \
-     --data "fe_application_settings_attributes[use_advanced_search]=true" \
-     "https://code.example.com/api/v4/application/settings"
-   ```
-
-Background indexing starts after step 1.
-Search in the UI becomes available after step 2.
-
-## Admin Area management
-
-Go to **Admin Area → Settings → Search** (`/admin/application_settings/search`).
-
-This section is available only when `advanced_search_enabled: true`.
-
-### Pause indexing
+#### Pause indexing
 
 Enable **Pause OpenSearch indexing** to pause background indexing and reindexing jobs.
 After removing the pause, Sidekiq pause control resumes jobs automatically within a few minutes.
 
-### Branch indexing mode
+#### Branch indexing mode
 
 | Mode | Description |
 |------|-------------|
-| **Default branch only** | Indexes code from the default branch only for all projects |
+| **Default branch only** | Only the default branch is indexed for all projects |
 | **Allow per-project branch regex** | Projects can configure a regex to index additional branches |
 
 {% alert level="warning" %}
@@ -114,7 +39,7 @@ After changing the branch indexing mode, manually enqueue a code reindex.
 Search results may be incomplete until indexing completes.
 {% endalert %}
 
-### OpenSearch index status
+#### OpenSearch index status
 
 The page displays a table with four indices:
 
@@ -131,48 +56,15 @@ For each index, the table shows the OpenSearch index name, presence, document co
 - **Reindex all indices** — reindex all indices.
 
 {% alert level="warning" %}
-Reindex operations remove existing documents.
+The **Reindex** operation removes existing documents.
 Search results may be incomplete until background indexing catches up.
 {% endalert %}
 
 The **Reindex all indices** operation automatically enqueues background reindexing for Code, Wiki, and Note indices.
-Reindex the Commit index separately using the **Reindex** button in the table.
 
-### Indexing progress
+### Admin API
 
-The **Indexing progress** widget shows the number of remaining forced reindex jobs in the Sidekiq queue.
-
-## Project settings
-
-A project maintainer can go to **Settings → Search** (`/-/namespace/project/-/settings/search`).
-
-### Branch regex
-
-When **Allow per-project branch regex** is enabled at the instance level, the maintainer can specify a regex for additional branches.
-The default branch is always indexed.
-
-Example regex: `(feature|hotfix)/.*`
-
-{% alert level="warning" %}
-Changing the regex triggers a full project reindex.
-{% endalert %}
-
-### Reindex code and wiki
-
-- **Reindex code** — full reindex of the repository code.
-- **Reindex wiki** — full reindex of the wiki (if a wiki repository exists).
-
-The **Index up to date** badge shows whether indexing is complete for the current repository state.
-
-## Group settings
-
-A group owner can go to **Settings → Search** (`/groups/:id/-/settings/search`).
-
-Group wiki reindexing is available: index status and the **Reindex wiki** button.
-
-## Admin API
-
-### Recreate indices
+#### Recreate indices
 
 ```shell
 curl --request POST \
@@ -181,9 +73,16 @@ curl --request POST \
   "https://code.example.com/api/v4/admin/opensearch/recreate_indices"
 ```
 
-The `schema_class` parameter is the fully qualified index schema class name or `recreate_all` for all indices.
+The `schema_class` parameter:
 
-### Indexing queue stats
+| Value | Description |
+|-------|-------------|
+| `Search::Opensearch::IndicesSchema::Code` | Code index |
+| `Search::Opensearch::IndicesSchema::Wiki` | Wiki index |
+| `Search::Opensearch::IndicesSchema::Note` | Comments index |
+| `recreate_all` | All indices |
+
+#### Indexing queue stats
 
 ```shell
 curl --header "PRIVATE-TOKEN: <admin_token>" \
@@ -192,46 +91,106 @@ curl --header "PRIVATE-TOKEN: <admin_token>" \
 
 The response contains the number of remaining jobs and the last update time.
 
-## Monitoring
+### Monitoring
 
-| Mechanism | Description |
-|-----------|-------------|
-| `elasticsearch_failed_request_count` metric | Counter for failed OpenSearch requests |
-| GraphQL `searchIndexingQueueStats` | Reindex job queue (used by the admin page widget) |
-| Sidekiq queue `global-search-indexing` | Background indexing job queue |
+#### Metrics
 
-Background jobs:
+OpenSearch requests are tracked in Prometheus separately for HTTP requests (search in the UI and API) and for Sidekiq background jobs (indexing).
+Metric names contain `elasticsearch` — a historical GitLab name; the metrics refer to OpenSearch.
 
-| Job | Schedule | Purpose |
-|-----|----------|---------|
-| `Search::NotesIndexerWorker` | Every minute | Comment indexing |
-| `Search::RepositoryIndexConsistencyCronWorker` | Daily at 03:00 | Repository index consistency check |
-| `PauseControl::ResumeWorker` | Every 5 minutes | Resume paused indexing |
+**HTTP requests** (user search):
 
-## Troubleshooting
+| Metric | Description |
+|--------|-------------|
+| `http_elasticsearch_requests_total` | Number of OpenSearch requests per HTTP request |
+| `http_elasticsearch_requests_duration_seconds` | Total OpenSearch request time per HTTP request |
+| `http_elasticsearch_requests_failed_total` | Failed OpenSearch requests per HTTP request (connection or authorization errors) — **added in Deckhouse Code** |
 
-### OpenSearch is unavailable
+**Sidekiq** (background indexing):
 
-- Check `opensearch.url` and credentials in `gitlab.yml`.
-- The **Admin → Settings → Search** page displays a connection failure message.
-- Search for code, commits, wiki, and comments returns empty results or an error.
+| Metric | Description |
+|--------|-------------|
+| `sidekiq_elasticsearch_requests_total` | Number of OpenSearch requests per Sidekiq job |
+| `sidekiq_elasticsearch_requests_duration_seconds` | Total OpenSearch request time per Sidekiq job |
+| `sidekiq_elasticsearch_requests_failed_total` | Failed OpenSearch requests per Sidekiq job (connection or authorization errors) — **added in Deckhouse Code** |
 
-### Incomplete search results
+**Repository indexer** (`Search::RepositoryIndexerWorker` — code, commits, wiki):
 
-- Wait for background indexing to complete (check **Indexing progress**).
-- Run **Reindex code** at the project level or **Reindex** for the required index in Admin Area.
-- Verify that `use_advanced_search` is enabled through the API.
+| Metric | Labels | Description |
+|--------|--------|-------------|
+| `search_repository_indexer_starts_total` | `indexer_class` | Indexing runs that started after the `advanced_search_enabled` check |
+| `search_repository_indexer_runs_total` | `outcome`, `indexer_class` | Completed runs after obtaining an exclusive lock (`outcome`: `success` or `error`) |
+| `search_repository_indexer_duration_seconds` | `outcome`, `indexer_class` | Duration of the indexing phase under exclusive lock |
+| `search_repository_indexer_lock_contention_total` | — | Times the lock was not obtained and the job was rescheduled |
 
-### Stuck indexing jobs
+The `indexer_class` label indicates the indexing type:
 
-When indexer leases or Sidekiq duplicate keys for the `global-search-indexing` queue are stuck, run the Redis cleanup script:
+| `indexer_class` | When used |
+|-----------------|-----------|
+| `Search::RepositoryIndexer::IncrementalIndexService` | Incremental indexing after repository changes |
+| `Search::RepositoryIndexer::FullIndexService` | Full reindex (`force: true`) |
+| `Search::RepositoryIndexer::MaintainsService` | Index update triggered by an event |
+| `Search::RepositoryIndexer::DeleteService` | Remove documents from the index (empty or deleted repository/wiki) |
 
-```shell
-bundle exec rails runner fe/scripts/clear_search_opensearch_worker_redis.rb
-```
+An increase in `search_repository_indexer_lock_contention_total` indicates lock contention between jobs for the same project.
+An increase in `search_repository_indexer_runs_total{outcome="error"}` indicates go-indexer or indexing service errors; see Sidekiq logs for details.
 
-The script clears the exclusive lease for `Search::RepositoryIndexerWorker`, concurrency limits, and dedup keys for the `global-search-indexing` queue.
+The `*_failed_total` metrics increase on OpenSearch connection or authorization errors.
+An increase in `*_failed_total` indicates OpenSearch is unavailable or credentials are invalid.
+An increase in `*_duration_seconds` with a stable `*_total` indicates slow OpenSearch responses.
+
+For repository indexing, use `search_repository_indexer_*`; for OpenSearch requests from Sidekiq, use `sidekiq_elasticsearch_*`.
+For user search, use `http_elasticsearch_*`.
+
+The indexing progress widget on **Admin** → **Settings** → **Search** shows the number of remaining full reindex jobs.
+The same data is available through the [Admin API](#indexing-queue-stats).
+
+#### Sidekiq queue
+
+OpenSearch indexing jobs run in the dedicated `global-search-indexing` queue, not in the shared `default` queue.
+Routing is configured with a Sidekiq rule: all workers with the `fe_global_search` category go to this queue.
+A separate queue isolates indexing load from other Deckhouse Code background jobs.
+
+#### Cron jobs
+
+| Schedule | Purpose |
+|----------|---------|
+| Every minute | Comment indexing — processes the accumulated notes change queue |
+| Daily at 03:00 | Enqueues project indexing |
+
+Cron jobs do not index directly: they start or resume the corresponding workers in the `global-search-indexing` queue.
+
+#### Logs
+
+OpenSearch indexing jobs are written to Sidekiq logs. Filter by queue name `global-search-indexing`.
+
+### Troubleshooting
+
+#### OpenSearch is unavailable
+
+- Check the connection settings — see the [code module documentation](/modules/code/stable/advanced-search.html).
+- The **Admin** → **Settings** → **Search** page displays a connection failure message.
+- Search returns an error.
+
+#### Incomplete search results
+
+- Wait for background indexing to complete (progress widget on **Admin** → **Settings** → **Search**).
+- Run reindexing at the project level or **Reindex** for the required index in **Admin** → **Settings** → **Search**.
+
+#### Indexing jobs are not appearing
+
+If new jobs are not enqueued to the `global-search-indexing` queue:
+
+1. Check whether **Pause OpenSearch indexing** is enabled in **Admin** → **Settings** → **Search**. Clear the flag and wait for jobs to resume (the cron job runs every 5 minutes).
+1. If the pause is cleared but jobs still do not appear, run Redis cleanup — stuck leases or Sidekiq duplicate keys are possible:
+
+   ```shell
+   bundle exec rails runner fe/scripts/clear_search_opensearch_worker_redis.rb
+   ```
+
+   The script clears the exclusive lease for `Search::RepositoryIndexerWorker`, concurrency limits, and dedup keys for the `global-search-indexing` queue.
 
 ## Related topics
 
 - [Advanced search — user guide](../../user/search.html)
+- [Advanced search — code module documentation](/modules/code/stable/advanced-search.html)
