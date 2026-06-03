@@ -27,6 +27,7 @@ import (
 	"time"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
+	hook_types "github.com/flant/shell-operator/pkg/hook/types"
 	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,17 +64,45 @@ func init() {
 // reloadHooks re-discovers hooks from disk so that shell-operator picks up
 // new or removed webhook configurations without a process restart.
 //
-// Only HookManager.Init() is safe to call on reload — it replaces the hook
-// index atomically. AdmissionWebhookManager.Init() and
-// ConversionWebhookManager.Init() must NOT be called here because they
-// recreate HTTP servers and would either fail with "address already in use"
-// or silently orphan the old listeners.
+// HookManager.Init() replaces the hook index atomically, but newly loaded
+// hooks have uninitialised AdmissionLinks/ConversionLinks maps. We must
+// call EnableAdmissionBindings / EnableConversionBindings on every hook that
+// carries validating/mutating/conversion configs so that
+// CanHandleAdmissionEvent / CanHandleConversionEvent can match incoming
+// requests to the right hook.
+//
+// AdmissionWebhookManager.Init() and ConversionWebhookManager.Init() must
+// NOT be called here because they recreate HTTP servers and would either
+// fail with "address already in use" or silently orphan the old listeners.
 func reloadHooks(shOp *shell_operator.ShellOperator, logger *log.Logger) error {
 	logger.Info("reloading shell-operator hooks")
 
-	if shOp.HookManager != nil {
-		if err := shOp.HookManager.Init(); err != nil {
-			return fmt.Errorf("re-init hook manager: %w", err)
+	if shOp.HookManager == nil {
+		return nil
+	}
+
+	if err := shOp.HookManager.Init(); err != nil {
+		return fmt.Errorf("re-init hook manager: %w", err)
+	}
+
+	// Enable admission bindings on every newly loaded hook so that
+	// AdmissionLinks are populated and CanHandleEvent works.
+	admissionHookNames, _ := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)
+	mutatingHookNames, _ := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesMutating)
+	for _, name := range append(admissionHookNames, mutatingHookNames...) {
+		h := shOp.HookManager.GetHook(name)
+		if h != nil {
+			h.HookController.EnableAdmissionBindings()
+		}
+	}
+
+	// Enable conversion bindings on every newly loaded hook so that
+	// CanHandleConversionEvent works.
+	conversionHookNames, _ := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesConversion)
+	for _, name := range conversionHookNames {
+		h := shOp.HookManager.GetHook(name)
+		if h != nil {
+			h.HookController.EnableConversionBindings()
 		}
 	}
 
