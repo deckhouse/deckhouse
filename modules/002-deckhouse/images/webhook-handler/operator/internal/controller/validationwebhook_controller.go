@@ -153,13 +153,20 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	webhookFile := r.webhookFilePath(vwh.Name)
 	isChanged := r.isWebhookFileChanged(webhookFile, buf.Bytes())
 	if !isChanged {
-		logger.Debug("webhook file not changed, skipping webhook file update")
-		return nil
-	}
-
-	if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
-		logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
-		return fmt.Errorf("write file %s: %w", webhookFile, err)
+		// File unchanged on disk. If the finalizer is already set, the
+		// resource was fully processed on a previous reconcile — skip.
+		// Otherwise the file was written by a prior reconcile that failed
+		// before/during reload, so we must retry reloadFn.
+		if controllerutil.ContainsFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
+			logger.Debug("webhook file not changed, skipping webhook file update")
+			return nil
+		}
+		logger.Debug("webhook file not changed but finalizer missing, retrying reload")
+	} else {
+		if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
+			logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
+			return fmt.Errorf("write file %s: %w", webhookFile, err)
+		}
 	}
 
 	// Reload shell-operator hooks to pick up the new webhook file.

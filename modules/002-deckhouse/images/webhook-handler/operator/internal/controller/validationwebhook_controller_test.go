@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
@@ -355,4 +356,61 @@ func TestReconcileReturnsErrorWhenReloadFails(t *testing.T) {
 	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, reloadErr)
+}
+
+func TestReloadRetriedAfterPreviousFailure(t *testing.T) {
+	// Simulate a sequence where:
+	//   1st reconcile: file written, reloadFn fails → file on disk but finalizer missing
+	//   2nd reconcile: file unchanged, finalizer missing → must retry reloadFn
+	t.Cleanup(func() { os.RemoveAll("hooks") })
+
+	var reloadCalls int
+	reloadFn := func(_ context.Context) error {
+		reloadCalls++
+		if reloadCalls == 1 {
+			return fmt.Errorf("simulated reload failure")
+		}
+		return nil
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	vh, err := getStructFromYamlFile("testdata/validating/reload-on-webhook-file-change.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	// First reconcile: file is written, reloadFn fails, finalizer NOT added.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "simulated reload failure")
+
+	// Second reconcile: file unchanged, finalizer missing — must retry reloadFn.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
+
+	assert.Equal(t, 2, reloadCalls, "reloadFn should be called twice (initial attempt + retry)")
+
+	// Verify finalizer was added on the successful retry.
+	err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)
+	assert.NoError(t, err)
+	assert.True(t, controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer))
 }
