@@ -32,7 +32,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	neighborHTTPTimeout     = 2 * time.Second
+	maxErrors               = 2
+	outboundClusterTimeout  = 30 * time.Second
+	serverReadHeaderTimeout = 10 * time.Second
+	serverReadTimeout       = 30 * time.Second
+	serverWriteTimeout      = 30 * time.Second
+	serverIdleTimeout       = 120 * time.Second
+)
+
 var (
+	insecureHTTPTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
 	listenHost = "0.0.0.0"
 	listenPort = "8080"
 
@@ -60,8 +74,12 @@ func init() {
 
 func main() {
 	s := &http.Server{
-		Handler: setupHandlers(),
-		Addr:    listenHost + ":" + listenPort,
+		Handler:           setupHandlers(),
+		Addr:              listenHost + ":" + listenPort,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
 	}
 
 	go func() {
@@ -132,15 +150,22 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func dnsHandler(w http.ResponseWriter, r *http.Request) {
-	timeout := 2 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	d := strings.TrimSuffix(strings.TrimSpace(os.Getenv("CLUSTER_DOMAIN")), ".")
+	if d == "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Error(r.RemoteAddr, r.RequestURI, " CLUSTER_DOMAIN is not set or empty")
+		return
+	}
+	host := "kubernetes.default.svc." + d + "."
+
+	ctx, cancel := context.WithTimeout(r.Context(), neighborHTTPTimeout)
 	defer cancel()
 	resolver := &net.Resolver{}
-	_, err := resolver.LookupIP(ctx, "ip", "kubernetes.default")
+	_, err := resolver.LookupIP(ctx, "ip", host)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Error(r.RemoteAddr, r.RequestURI, " Failed to resolve domain ", "kubernetes.default", err)
+		log.Error(r.RemoteAddr, r.RequestURI, " Failed to resolve domain ", host, err)
 		fmt.Fprintf(w, "Error: %v\n", err)
 		return
 	}
@@ -157,20 +182,24 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 			targetServices = append(targetServices[:i], targetServices[i+1:]...)
 		}
 	}
-	client := http.Client{
-		Timeout: 2 * time.Second,
-	}
+	client := &http.Client{Timeout: neighborHTTPTimeout}
 	errorCount := 0
 	for i := 0; i < len(targetServices); i++ {
-		if errorCount <= 2 {
-			resp, err := client.Get(singleTargetServiceURL(targetServices[i]))
+		if errorCount <= maxErrors {
+			req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, singleTargetServiceURL(targetServices[i]), nil)
+			if err != nil {
+				log.Error(err)
+				errorCount = maxErrors + 1
+				continue
+			}
+			resp, err := client.Do(req)
 			if err != nil {
 				log.Error(err)
 				errorCount++
 				continue
 			}
-			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			if err != nil || string(body) != "ok" {
 				log.Error(err)
 				errorCount++
@@ -189,22 +218,25 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 // service "cluster IP", i.e. via iptables rules. In worst case, the pod gets all responses from
 // itself.
 func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
-	maxErrors := 2
-
-	client := http.Client{Timeout: 2 * time.Second}
+	client := &http.Client{Timeout: neighborHTTPTimeout}
 
 	errorCount := 0
 	for i := 0; i < len(targetServices)-1; i++ {
 		if errorCount <= maxErrors {
-			resp, err := client.Get(clusterIPServiceURL)
+			req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, clusterIPServiceURL, nil)
+			if err != nil {
+				log.Error(err)
+				errorCount = maxErrors + 1
+				continue
+			}
+			resp, err := client.Do(req)
 			if err != nil {
 				log.Error(err)
 				errorCount++
 				continue
 			}
-			defer resp.Body.Close()
-
 			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
 			if err != nil || string(body) != "ok" {
 				log.Error(err)
 				errorCount++
@@ -240,15 +272,16 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bearer := fmt.Sprintf("Bearer %s", string(serviceaccountToken))
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest(http.MethodGet, apiserverEndpoint, nil)
+	ctx, cancel := context.WithTimeout(r.Context(), outboundClusterTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiserverEndpoint, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Error(err)
 		return
 	}
 	req.Header.Add("Authorization", bearer)
-	client := &http.Client{}
+	client := &http.Client{Transport: insecureHTTPTransport}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err)
@@ -311,15 +344,16 @@ func prometheusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bearer := fmt.Sprintf("Bearer %s", string(serviceaccountToken))
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest(http.MethodGet, prometheusEndpoint, nil)
+	ctx, cancel := context.WithTimeout(r.Context(), outboundClusterTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, prometheusEndpoint, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Error(err)
 		return
 	}
 	req.Header.Add("Authorization", bearer)
-	client := &http.Client{}
+	client := &http.Client{Transport: insecureHTTPTransport}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Error(err)
