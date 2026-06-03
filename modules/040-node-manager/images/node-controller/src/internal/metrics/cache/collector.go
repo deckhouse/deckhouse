@@ -20,31 +20,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 )
-
-var cacheObjectsGauge = prometheus.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Name: "node_controller_cache_objects",
-		Help: "Number of objects currently stored in informer cache",
-	},
-	[]string{"kind", "api_group"},
-)
-
-func init() {
-	ctrlmetrics.Registry.MustRegister(cacheObjectsGauge)
-}
 
 type Collector struct {
 	client client.Client
