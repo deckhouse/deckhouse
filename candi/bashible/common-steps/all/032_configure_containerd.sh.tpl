@@ -49,7 +49,7 @@ bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
     {{ $sandbox_image = "deckhouse.local/images:pause" }}
   {{- end }}
 
-  {{- $default_runtime := "crun" }}
+  {{- $default_runtime := "runc" }}
   {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
     {{ $default_runtime = "nvidia" }}
 sed -i "s/net.core.bpf_jit_harden = 2/net.core.bpf_jit_harden = 1/" /etc/sysctl.d/99-sysctl.conf # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
@@ -139,7 +139,7 @@ oom_score = 0
     drain_exec_sync_io_timeout = '0s'
     ignore_deprecation_warnings = []
     [plugins.'io.containerd.cri.v1.runtime'.containerd]
-      default_runtime_name = "crun"
+      default_runtime_name = {{ $default_runtime | quote }}
       ignore_blockio_not_enabled_errors = false
       ignore_rdt_not_enabled_errors = false
   {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
@@ -153,7 +153,7 @@ oom_score = 0
             BinaryName = "/usr/bin/nvidia-container-runtime"
             SystemdCgroup = ${systemd_cgroup}
   {{ end }}
-        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.crun]
+        [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc]
           runtime_type = 'io.containerd.runc.v2'
           runtime_path = ''
           pod_annotations = []
@@ -166,8 +166,8 @@ oom_score = 0
           sandboxer = 'podsandbox'
           io_type = ''
 
-          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.crun.options]
-            BinaryName = 'crun'
+          [plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runc.options]
+            BinaryName = ''
             CriuImagePath = ''
             CriuWorkPath = ''
             IoGid = 0
@@ -347,15 +347,14 @@ oom_score = 0
         privileged_without_host_devices = false
         base_runtime_spec = ""
       [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.crun]
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
           runtime_type = "io.containerd.runc.v2"
           runtime_engine = ""
           runtime_root = ""
           privileged_without_host_devices = false
           base_runtime_spec = ""
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.crun.options]
-            BinaryName = "/usr/local/bin/crun"
-            SystemdCgroup = true
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+            SystemdCgroup = ${systemd_cgroup}
   {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
         [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
           privileged_without_host_devices = false
@@ -426,7 +425,7 @@ oom_score = 0
     no_prometheus = false
   [plugins."io.containerd.runtime.v1.linux"]
     shim = "containerd-shim"
-    runtime = "crun"
+    runtime = "runc"
     runtime_root = ""
     no_shim = false
     shim_debug = false
