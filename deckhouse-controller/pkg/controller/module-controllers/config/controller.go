@@ -523,6 +523,12 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
+
+	// remove module documentation immediately on disable so docs-builder drops it
+	if err := utils.DeleteModuleDocumentation(ctx, r.client, module.Name); err != nil {
+		return fmt.Errorf("delete module documentation: %w", err)
+	}
+
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
 			return false

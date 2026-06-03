@@ -318,6 +318,21 @@ func EnsureModuleDocumentation(
 	return nil
 }
 
+// DeleteModuleDocumentation deletes module documentation, ignoring NotFound
+func DeleteModuleDocumentation(ctx context.Context, cli client.Client, moduleName string) error {
+	md := &v1alpha1.ModuleDocumentation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: moduleName,
+		},
+	}
+
+	if err := cli.Delete(ctx, md); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete the '%s' module documentation: %w", moduleName, err)
+	}
+
+	return nil
+}
+
 // GetNotificationConfig gets config from discovery secret
 func GetNotificationConfig(ctx context.Context, cli client.Client) (releaseUpdater.NotificationConfig, error) {
 	secret := new(corev1.Secret)
