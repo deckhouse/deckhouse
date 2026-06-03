@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync/atomic"
@@ -317,4 +318,41 @@ func TestReloadOnWebhookFileChange(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, true, reloadCalled.Load())
+}
+
+func TestReconcileReturnsErrorWhenReloadFails(t *testing.T) {
+	reloadErr := fmt.Errorf("simulated reload failure")
+	reloadFn := func(_ context.Context) error {
+		return reloadErr
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	vh, err := getStructFromYamlFile("testdata/validating/validationwebhook-sample.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	// First reconcile: file is new → reloadFn is called → must propagate error.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, reloadErr)
 }

@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	sh_app "github.com/flant/shell-operator/pkg/app"
@@ -74,7 +75,11 @@ func init() {
 // AdmissionWebhookManager.Init() and ConversionWebhookManager.Init() must
 // NOT be called here because they recreate HTTP servers and would either
 // fail with "address already in use" or silently orphan the old listeners.
-func reloadHooks(shOp *shell_operator.ShellOperator, logger *log.Logger) error {
+func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger *log.Logger) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context cancelled before reload: %w", err)
+	}
+
 	logger.Info("reloading shell-operator hooks")
 
 	if shOp.HookManager == nil {
@@ -300,8 +305,16 @@ func main() {
 	// reloadFn is the callback that reconcilers invoke when hooks change on
 	// disk.  It re-discovers hooks and re-registers webhook configurations
 	// without restarting the shell-operator process.
-	reloadFn := func(_ context.Context) error {
-		return reloadHooks(shOp, logger.Named("shell-operator"))
+	//
+	// A mutex serialises concurrent calls from the validation and conversion
+	// reconcilers.  Without it, overlapping HookManager.Init() +
+	// Enable*Bindings sequences can operate on stale/overwritten hook indices.
+	var reloadMu sync.Mutex
+	reloadFn := func(ctx context.Context) error {
+		reloadMu.Lock()
+		defer reloadMu.Unlock()
+
+		return reloadHooks(ctx, shOp, logger.Named("shell-operator"))
 	}
 
 	validationReconciler := controller.NewValidationWebhookReconciler(

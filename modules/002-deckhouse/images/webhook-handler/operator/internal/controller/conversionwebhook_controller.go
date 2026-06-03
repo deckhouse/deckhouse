@@ -163,10 +163,11 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 	}
 
 	// Reload shell-operator hooks to pick up the new webhook file.
+	// The error must be returned so the reconciler requeues: on the next
+	// reconcile isWebhookFileChanged returns false (file already written),
+	// so reloadFn would never be called again if we swallowed the error.
 	if err := r.reloadFn(ctx); err != nil {
-		logger.Error("reload shell-operator hooks", log.Err(err))
-		// Don't return the error — the file was written successfully;
-		// the reload will be retried on the next reconcile.
+		return fmt.Errorf("reload shell-operator hooks: %w", err)
 	}
 
 	// add finalizers

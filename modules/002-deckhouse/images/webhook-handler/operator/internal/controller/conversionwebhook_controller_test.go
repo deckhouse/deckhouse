@@ -17,13 +17,13 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync/atomic"
 	"testing"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/assert"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func setupTestConversionReconciler() (*ConversionWebhookReconciler, client.Client) {
@@ -275,4 +277,46 @@ func TestConversionTemplateEqual(t *testing.T) {
 	res, err := os.ReadFile("hooks/nodegroups.deckhouse.io/webhooks/conversion/nodegroups.deckhouse.io.py")
 	assert.NoError(t, err)
 	assert.Equal(t, string(ref), string(res))
+}
+
+func TestConversionReconcileReturnsErrorWhenReloadFails(t *testing.T) {
+	reloadErr := fmt.Errorf("simulated reload failure")
+	reloadFn := func(_ context.Context) error {
+		return reloadErr
+	}
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+
+	if err := apiextensionsv1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+
+	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
+
+	tpl, err := os.ReadFile("templates/conversionwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewConversionWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	cwh, err := getConversionStructFromYamlFile("testdata/conversion/example.deckhouse.io.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), cwh)
+	assert.NoError(t, err)
+
+	// First reconcile: file is new → reloadFn is called → must propagate error.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, reloadErr)
 }
