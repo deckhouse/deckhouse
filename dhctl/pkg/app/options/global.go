@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
@@ -31,6 +32,12 @@ const (
 	DefaultVersionMap             = DefaultCandiDir + "/version_map.yml"
 	DefaultModulesDir             = DefaultDeckhouseDir + "/modules"
 )
+
+var ConvergerPodsSpiCheckPaths = []string{
+	DefaultModulesDir,
+	DefaultGlobalHooksModule,
+	DefaultVersionMap,
+}
 
 // GlobalOptions holds settings shared by every dhctl command.
 type GlobalOptions struct {
@@ -71,6 +78,21 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 		otattribute.String("global.downloadCacheDir", o.DownloadCacheDir),
 		otattribute.StringSlice("global.configPaths", o.ConfigPaths),
 	}
+}
+
+func (o GlobalOptions) RecheckNeedDownload(skip ...string) GlobalOptions {
+	if len(skip) == 0 || !o.NeedDownload || !CheckDirs(skip...) {
+		return o
+	}
+
+	root, err := os.Getwd()
+	if err != nil {
+		root = "/"
+	}
+	cpy := o
+	cpy.NeedDownload = false
+	SetPaths(root, &cpy)
+	return cpy
 }
 
 // NewGlobalOptions returns GlobalOptions with defaults applied.
@@ -157,67 +179,70 @@ func readBuildFile(dst *string, filePath string) {
 	}
 }
 
-func CheckDirs() bool {
+func CheckDirs(skip ...string) bool {
 	// old global dirs to check
 	pwd, err := os.Getwd()
 	if err != nil {
 		return false
 	}
-	deckhouseDir := pwd + DefaultDeckhouseDir
-	candiDir := pwd + DefaultCandiDir
-	infrastructureVersions := pwd + DefaultInfrastructureVersions
-	globalHooksModule := pwd + DefaultGlobalHooksModule
-	versionMap := pwd + DefaultVersionMap
-	modulesDir := pwd + DefaultModulesDir
 
-	absDh, err := os.Stat("/deckhouse")
-	if err != nil {
-		return false
-	}
-	if !absDh.IsDir() {
-		return false
+	type pathToIsDir struct {
+		path  string
+		isDir bool
 	}
 
-	dh, err := os.Stat(deckhouseDir)
-	if err != nil {
-		return false
-	}
-	if !dh.IsDir() {
-		return false
-	}
-
-	candi, err := os.Stat(candiDir)
-	if err != nil {
-		return false
-	}
-	if !candi.IsDir() {
-		return false
-	}
-
-	_, err = os.Stat(infrastructureVersions)
-	if err != nil {
-		return false
-	}
-
-	globalHooks, err := os.Stat(globalHooksModule)
-	if err != nil {
-		return false
-	}
-	if !globalHooks.IsDir() {
-		return false
-	}
-
-	modules, err := os.Stat(modulesDir)
-	if err != nil {
-		return false
-	}
-	if !modules.IsDir() {
-		return false
+	// default path -> should dir
+	forCheckDefaults := []pathToIsDir{
+		{
+			path:  DefaultDeckhouseDir,
+			isDir: true,
+		},
+		{
+			path:  DefaultCandiDir,
+			isDir: true,
+		},
+		{
+			path:  DefaultInfrastructureVersions,
+			isDir: false,
+		},
+		{
+			path:  DefaultGlobalHooksModule,
+			isDir: true,
+		},
+		{
+			path:  DefaultVersionMap,
+			isDir: false,
+		},
+		{
+			path:  DefaultModulesDir,
+			isDir: true,
+		},
 	}
 
-	_, err = os.Stat(versionMap)
+	forCheck := make([]pathToIsDir, 0, len(forCheckDefaults))
 
-	return err == nil
+	for _, d := range forCheckDefaults {
+		if !slices.Contains(skip, d.path) {
+			withPwd := filepath.Join(pwd, d.path)
+			forCheck = append(forCheck, pathToIsDir{
+				path:  withPwd,
+				isDir: d.isDir,
+			})
+		}
+	}
+
+	for _, fd := range forCheck {
+		fileInfo, err := os.Stat(fd.path)
+		if err != nil {
+			return false
+		}
+
+		if fd.isDir && !fileInfo.IsDir() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func SetPaths(root string, o *GlobalOptions) {
@@ -229,8 +254,8 @@ func SetPaths(root string, o *GlobalOptions) {
 	if err != nil {
 		dhctlPath = "/"
 	}
-	o.CandiDir = filepath.Join(root, "deckhouse", "candi")
 	o.DeckhouseDir = filepath.Join(root, "deckhouse")
+	o.CandiDir = filepath.Join(o.DeckhouseDir, "candi")
 	o.DhctlPath = dhctlPath
 	o.InfrastructureVersions = filepath.Join(o.CandiDir, "terraform_versions.yml")
 	o.GlobalHooksModule = filepath.Join(o.DeckhouseDir, "global-hooks")
