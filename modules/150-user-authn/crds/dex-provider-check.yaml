@@ -82,11 +82,18 @@ spec:
                         description: Check step name.
                       status:
                         type: string
-                        description: Check step status.
+                        description: |
+                          Check step status. Possible values:
+
+                          * `Succeeded`: Step completed successfully.
+                          * `Failed`: Step failed.
+                          * `Skipped`: Step was not applicable and was skipped.
+                          * `Warning`: Step completed, but a setting needs attention (for example, disabled TLS verification or a soon-to-expire certificate). It does not fail the overall check.
                         enum:
                           - "Succeeded"
                           - "Failed"
                           - "Skipped"
+                          - "Warning"
                       message:
                         type: string
                         description: Optional check step message.
