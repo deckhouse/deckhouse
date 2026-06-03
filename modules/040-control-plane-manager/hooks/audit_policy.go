@@ -464,7 +464,7 @@ func appendVirtualizationPolicyRules(policy *audit.Policy, docs *[]AuditPolicyRu
 	}
 	{
 		descriptionEN := "Log create/update/patch/delete operations in `d8-virtualization` namespace."
-		descriptionRU := "Логировать операции create/update/patch/delete в пространстве имён `d8-virtualization`."
+		descriptionRU := "Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`."
 		rule := audit.PolicyRule{
 			Level:      audit.LevelMetadata,
 			Verbs:      []string{"create", "update", "patch", "delete"},
