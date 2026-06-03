@@ -439,6 +439,36 @@ update-base-images-versions:
 	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
 	$(MAKE) render-workflow
 
+BASE_LIMIT_KEYS := REGISTRY_PATH \
+                builder/distroless \
+                builder/golang-1.25 \
+                builder/golang-1.26 \
+                builder/golang \
+                minget-0.1 \
+                minget
+
+.PHONY: update-container-factory
+update-container-factory: ## Download container-factory digests and update candi/alt_base_images.yml
+	@set -e; \
+	test -n "$(version)" || (echo 'Err: version is required. Example: make update-container-factory version=v1.0.37' >&2; exit 1); \
+	ver="$(version)"; \
+	case "$$ver" in \
+	  v[0-9]*.[0-9]*.[0-9]*) ;; \
+	  [0-9]*.[0-9]*.[0-9]*) ver="v$$ver" ;; \
+	esac; \
+	cd candi; \
+	URL="https://fox.flant.com/api/v4/projects/deckhouse%2Fcontainer-base%2Fbase-images/packages/generic/base_images/$$ver/base_images.yml"; \
+	curl --fail -sSL "$$URL" -o .alt_base_images.full.yml; \
+	{ \
+	  echo "# version=$$ver"; \
+	  for key in $(BASE_LIMIT_KEYS); do \
+	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
+	    echo "$$line"; \
+	  done; \
+	} > alt_base_images.yml; \
+	rm -f .alt_base_images.full.yml; \
+	echo "Updated candi/alt_base_images.yml to version $$ver"
+
 ##@ Build
 .PHONY: build
 set-build-envs:
