@@ -22,5 +22,6 @@ if [[ -d /etc/containerd ]]; then
 fi
 
 if [[ -d /var/lib/etcd ]]; then
+    chown etcd:etcd /var/lib/etcd
     chmod 700 /var/lib/etcd
 fi
