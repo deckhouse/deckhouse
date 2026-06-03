@@ -1295,8 +1295,8 @@ spec:
 
                     Значение поля определяет, каким компонентом управляются узлы:
                     
-                    - `None` — узлы группы не управляются через MCM или CAPI;
-                    - `MCM` — узлы группы управляются через machine-controller-manager;
+                    - `None` — узлы группы не управляются через Machine Controller Manager или CAPI;
+                    - `MCM` — узлы группы управляются через Machine Controller Manager;
                     - `CAPI` — узлы группы управляются через Cluster API.
                 error:
                   description: |
