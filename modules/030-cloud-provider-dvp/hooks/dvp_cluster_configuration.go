@@ -329,7 +329,7 @@ func isNewResourcesComplete(input *go_hook.HookInput, pcc *v1.DvpProviderCluster
 	if err := mcSnaps[0].UnmarshalTo(&mc); err != nil {
 		return false
 	}
-	if mc.Version != 2 || !mc.Enabled || len(mc.Provider) == 0 {
+	if mc.Version < 2 || !mc.Enabled || len(mc.Provider) == 0 {
 		return false
 	}
 

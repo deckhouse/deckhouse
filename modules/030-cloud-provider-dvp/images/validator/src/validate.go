@@ -29,10 +29,7 @@ import (
 )
 
 func validate(ctx context.Context, input proto.PrepareInput) error {
-	if err := validateKubeconfig(ctx, input); err != nil {
-		return err
-	}
-	return validateCredentialsSecret(input)
+	return validateKubeconfig(ctx, input)
 }
 
 func prepare(_ context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
