@@ -47,7 +47,7 @@ import (
 
 const (
 	dexProviderCheckQueue           = "/modules/user-authn/dex_provider_check"
-	dexProviderCheckRetentionPeriod = 6 * time.Hour
+	dexProviderCheckRecheckInterval = time.Hour
 	dexProviderCheckTimeout         = 20 * time.Second
 	dexProviderCheckHTTPTimeout     = 5 * time.Second
 	dexProviderCheckLDAPTimeout     = 5 * time.Second
@@ -222,14 +222,29 @@ func getDexProviderChecks(ctx context.Context, input *go_hook.HookInput, dc depe
 			return fmt.Errorf("iterate DexProviderCheck snapshots: %w", err)
 		}
 
-		if dexProviderCheckCompleted(check) {
-			if time.Since(check.GetCreationTimestamp().Time) >= dexProviderCheckRetentionPeriod {
-				input.PatchCollector.Delete("deckhouse.io/v1", "DexProviderCheck", "", check.Name)
-			}
+		provider, ok := providers[check.Spec.ProviderName]
+		if !ok || provider.Name == "" {
+			// The DexProvider is gone: drop its orphaned check so results do not
+			// linger for resources that no longer exist.
+			input.PatchCollector.Delete("deckhouse.io/v1", "DexProviderCheck", "", check.Name)
 			continue
 		}
 
-		status := executeDexProviderCheck(ctx, input, dc, check, providers[check.Spec.ProviderName])
+		// Keep exactly one persistent check per provider, named after the
+		// provider. Any other check for the same provider (e.g. a leftover from
+		// an older randomly-named scheme) is removed.
+		if check.Name != canonicalDexProviderCheckName(provider.Name) {
+			input.PatchCollector.Delete("deckhouse.io/v1", "DexProviderCheck", "", check.Name)
+			continue
+		}
+
+		// A completed check is kept as the last result and is only re-run once it
+		// gets stale, so the status stays fresh without hammering the provider.
+		if dexProviderCheckCompleted(check) && !dexProviderCheckDueForRecheck(check) {
+			continue
+		}
+
+		status := executeDexProviderCheck(ctx, input, dc, check, provider)
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"status": status},
 			"deckhouse.io/v1",
@@ -241,6 +256,22 @@ func getDexProviderChecks(ctx context.Context, input *go_hook.HookInput, dc depe
 	}
 
 	return nil
+}
+
+// canonicalDexProviderCheckName is the deterministic name of the single
+// DexProviderCheck owned by a provider. The frontend creates checks under this
+// name so there is at most one per provider.
+func canonicalDexProviderCheckName(providerName string) string {
+	return providerName
+}
+
+// dexProviderCheckDueForRecheck reports whether a completed check is stale and
+// should be re-run on the next reconcile.
+func dexProviderCheckDueForRecheck(check DexProviderCheck) bool {
+	if check.Status.CompletedAt == nil {
+		return true
+	}
+	return time.Since(check.Status.CompletedAt.Time) >= dexProviderCheckRecheckInterval
 }
 
 func dexProvidersForCheck(input *go_hook.HookInput) (map[string]DexProviderForCheck, error) {

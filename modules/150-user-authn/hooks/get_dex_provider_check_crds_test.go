@@ -253,6 +253,35 @@ func TestProbeClientSecret(t *testing.T) {
 	}
 }
 
+func TestDexProviderCheckDueForRecheck(t *testing.T) {
+	t.Run("never completed is due", func(t *testing.T) {
+		if !dexProviderCheckDueForRecheck(DexProviderCheck{}) {
+			t.Fatal("expected a check without completedAt to be due")
+		}
+	})
+
+	t.Run("fresh result is not due", func(t *testing.T) {
+		check := DexProviderCheck{Status: DexProviderCheckStatus{CompletedAt: ptr.To(metav1.NewTime(time.Now()))}}
+		if dexProviderCheckDueForRecheck(check) {
+			t.Fatal("expected a freshly completed check not to be due")
+		}
+	})
+
+	t.Run("stale result is due", func(t *testing.T) {
+		stale := metav1.NewTime(time.Now().Add(-2 * dexProviderCheckRecheckInterval))
+		check := DexProviderCheck{Status: DexProviderCheckStatus{CompletedAt: ptr.To(stale)}}
+		if !dexProviderCheckDueForRecheck(check) {
+			t.Fatal("expected a stale check to be due for recheck")
+		}
+	})
+}
+
+func TestCanonicalDexProviderCheckName(t *testing.T) {
+	if got := canonicalDexProviderCheckName("my-oidc"); got != "my-oidc" {
+		t.Fatalf("expected canonical name to equal provider name, got %q", got)
+	}
+}
+
 func TestParseAcknowledgedWarnings(t *testing.T) {
 	t.Run("absent annotation", func(t *testing.T) {
 		all, set := parseAcknowledgedWarnings(nil)
