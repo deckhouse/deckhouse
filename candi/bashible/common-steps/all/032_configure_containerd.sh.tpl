@@ -139,7 +139,7 @@ oom_score = 0
     drain_exec_sync_io_timeout = '0s'
     ignore_deprecation_warnings = []
     [plugins.'io.containerd.cri.v1.runtime'.containerd]
-      default_runtime_name = crun
+      default_runtime_name = "crun"
       ignore_blockio_not_enabled_errors = false
       ignore_rdt_not_enabled_errors = false
   {{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}

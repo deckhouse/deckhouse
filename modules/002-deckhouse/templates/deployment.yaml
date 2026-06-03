@@ -318,8 +318,6 @@ spec:
             name: dev-dir
           - mountPath: /tmp
             name: tmp
-          - mountPath: /run
-            name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot
             name: chroot
