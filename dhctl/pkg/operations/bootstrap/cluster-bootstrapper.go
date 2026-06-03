@@ -586,9 +586,8 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 		var static struct {
 			NodeIP string `json:"nodeIP"`
 		}
-		if err := json.Unmarshal(bctx.metaConfig.ClusterConfig["static"], &static); err != nil { //nolint:staticcheck
-			// TODO: comment why we need to ignore this error
-			// Or add Log statement for this
+		if err := json.Unmarshal(bctx.metaConfig.ClusterConfig["static"], &static); err != nil {
+			log.DebugF("Static config missed: %s\n", err.Error())
 		}
 		bctx.nodeIP = static.NodeIP
 
