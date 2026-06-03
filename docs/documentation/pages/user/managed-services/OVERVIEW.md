@@ -14,4 +14,6 @@ Use this section to:
 - perform basic maintenance operations;
 - check the resource status and configuration result.
 
+For PostgreSQL service usage, see [managed PostgreSQL](postgres.html).
+
 Details about infrastructure preparation, service class configuration, and other administrative settings are provided in the [Administration](../../admin/configuration/managed-services/) section.

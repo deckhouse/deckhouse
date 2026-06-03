@@ -1,23 +1,23 @@
 ---
 title: "managed-postgres"
 permalink: ru/admin/configuration/managed-services/postgres.html
-description: "Администрирование managed-postgres в Deckhouse Kubernetes Platform"
+description: "Администрирование managed-сервиса PostgreSQL в Deckhouse Kubernetes Platform"
 lang: ru
 ---
 
-Модуль `managed-postgres` управляет кластерами PostgreSQL в Deckhouse Kubernetes Platform. Модуль находится в стадии `Preview`. Для установки модуля есть дополнительные требования. После включения модуля DKP устанавливает CRD модуля, но не удаляет их при отключении. Если созданные CRD больше не нужны, удалите их вручную. Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет ограничения и значения по умолчанию для связанных ресурсов Postgres.
+Managed-сервис PostgreSQL предоставляет кластеры PostgreSQL в Deckhouse Kubernetes Platform. Сервис находится на [стадии `Preview`](/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля). Перед включением [`managed-postgres`](/modules/managed-postgres/) выполните [требования для установки](/modules/managed-postgres/configuration.html#требования). Основной cluster-wide-ресурс администратора — PostgresClass. Он определяет ограничения и значения по умолчанию для связанных ресурсов Postgres. Инструкции по созданию и использованию сервисов PostgreSQL — в разделе [«Использование managed PostgreSQL»](../../../user/managed-services/postgres.html).
 
 ## Перед началом работы
 
 Убедитесь, что:
 
-- модуль `managed-postgres` доступен в используемой инсталляции;
-- выполнены требования для установки модуля;
+- [`managed-postgres`](/modules/managed-postgres/) доступен в используемой инсталляции;
+- выполнены [требования для установки](/modules/managed-postgres/configuration.html#требования);
 - у вас есть права на создание cluster-wide-ресурсов.
 
-## Включение модуля
+## Включение managed-postgres
 
-Чтобы включить модуль, примените ресурс ModuleConfig:
+Чтобы включить managed-сервис PostgreSQL, примените ресурс ModuleConfig:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -29,7 +29,7 @@ spec:
   version: 1
 ```
 
-После включения модуля автоматически создаётся ресурс PostgresClass с именем `default`.
+После включения `managed-postgres` автоматически создаётся ресурс PostgresClass с именем `default`.
 
 Также в системном неймспейсе `d8-managed-postgres` разворачивается контроллер, который согласовывает состояние ресурсов Postgres во всех пользовательских неймспейсах.
 
@@ -71,11 +71,11 @@ spec:
       - zone-3
 ```
 
-## Настройка sizing policies
+## Настройка политик определения размера
 
 Параметр `spec.sizingPolicies` определяет допустимые диапазоны CPU и памяти для связанных ресурсов Postgres.
 
-Из исходной документации следует, что диапазоны `cores.min`–`cores.max` для разных политик не должны пересекаться.
+Диапазоны `cores.min`–`cores.max` для разных политик не должны пересекаться.
 
 Пример:
 
@@ -164,8 +164,7 @@ spec:
     workMem: 100Mi
 ```
 
-В административном руководстве указаны следующие значения,
-которые задаёт оператор по умолчанию:
+Оператор задаёт следующие значения по умолчанию:
 
 - `maxConnections`: `100`;
 - `sharedBuffers`: 25% от `memory.size`;
@@ -215,7 +214,7 @@ spec:
 
 ## Пример PostgresClass
 
-Ниже приведён полный пример ресурса PostgresClass, который задаёт топологию, значения конфигурации, переопределяемые параметры, правила валидации и sizing policies:
+Ниже приведён полный пример ресурса PostgresClass, который задаёт топологию, значения конфигурации, переопределяемые параметры, правила валидации и политики определения размера:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -239,9 +238,9 @@ spec:
     - sharedBuffers
     - walKeepSize
   validations:
-    - message: "Max connections should not be more than 100"
+    - message: "Max connections should be more than 100"
       rule: "configuration.maxConnections > 100"
-    - message: "Shared buffers should be less that 40% of memory.size"
+    - message: "Shared buffers should be less than 40% of memory.size"
       rule: "configuration.sharedBuffers * 100 < instance.memory.size * 40"
     - message: "walKeepSize can not be more than 1Gi"
       rule: "configuration.walKeepSize <= 1073741824"
@@ -273,9 +272,5 @@ spec:
 ## Обратите внимание
 
 {% alert level="warning" %}
-Deckhouse Kubernetes Platform не удаляет CRD модуля при его отключении. Если ресурсы модуля больше не нужны, удалите соответствующие CRD вручную.
-{% endalert %}
-
-{% alert level="warning" %}
-Модуль находится в стадии `Preview`. Перед использованием в production-окружении учитывайте ограничения и требования установки.
+Deckhouse Kubernetes Platform не удаляет связанные CRD при отключении [`managed-postgres`](/modules/managed-postgres/). Если эти ресурсы больше не нужны, удалите соответствующие CRD вручную.
 {% endalert %}
