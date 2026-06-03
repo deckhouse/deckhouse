@@ -201,7 +201,7 @@ spec:
         - 169.254.169.254/32
 ```
 
-## См. также
+## Дополнительная документация
 
 - [Стандартный NetworkPolicy Kubernetes](kubernetes_networkpolicy.html)
 - [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html)

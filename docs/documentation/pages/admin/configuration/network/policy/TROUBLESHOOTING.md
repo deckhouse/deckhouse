@@ -61,26 +61,56 @@ Once export is on, `cilium-agent` writes events to `/var/log/cilium/hubble/flow.
 Updating `HubbleMonitoringConfig` restarts every Cilium agent in the cluster.
 {% endalert %}
 
+## Diagnosing FQDN rules
+
+If a `toFQDNs` rule does not allow traffic, inspect the DNS-name to IP cache maintained by `cilium-agent`:
+
+```bash
+d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg fqdn cache list
+```
+
+The output shows entries with the source, DNS name, resolved IPs, and TTL. If there is no entry for the expected name, the pod either did not make a DNS request, or the DNS request is not allowed by a policy with DNS inspection (`rules.dns`). The cache mechanics are described in [DNS Policy and IP Discovery](cilium_networkpolicy.html#dns-policy-and-ip-discovery).
+
+Also check policy verdicts for DNS traffic:
+
+```bash
+hubble observe --type policy-verdict --port 53
+```
+
 ## Common mistakes
 
-- **DNS broken after default-deny egress.** A default-deny egress policy also blocks DNS. Add an egress rule to the kube-dns service in the `kube-system` namespace (UDP/53 and TCP/53). See [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html#default-policies-for-a-namespace).
-- **AND vs OR mixed up.** Two selectors in one `from`/`to` array item is AND; two separate items is OR. See [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html#and-vs-or-in-selectors).
-- **Policy does not apply to `hostNetwork` pods.** Most engines, including Cilium and kube-router, treat such pods as node traffic. Use a host firewall — see [Host firewall on nodes](host_firewall.html).
-- **FQDN rule does not allow traffic.** Cilium must observe DNS to keep the resolved IP set up to date. In any policy with `toFQDNs`, also allow egress to kube-dns and enable DNS inspection via `rules.dns`. See the example in [CiliumNetworkPolicy](cilium_networkpolicy.html#fqdn-rules).
-- **Connection drops after a policy change.** Behavior for in-flight connections is not defined by the standard — some engines tear them down. Change policies during a maintenance window.
+### DNS broken after default-deny egress
+
+A default-deny egress policy also blocks DNS. Add an egress rule to the kube-dns service in the `kube-system` namespace (UDP/53 and TCP/53). For details, refer to [Default policies for a namespace](kubernetes_networkpolicy.html#default-policies-for-a-namespace).
+
+### AND vs OR mixed up
+
+Two selectors in one `from`/`to` array item is AND; two separate items is OR. Refer to [AND vs OR in selectors](kubernetes_networkpolicy.html#and-vs-or-in-selectors) for the correct structure.
+
+### Policy does not apply to `hostNetwork` pods
+
+Most engines, including Cilium and kube-router, treat such pods as node traffic. Use the [host firewall on nodes](host_firewall.html) to filter such traffic.
+
+### FQDN rule does not allow traffic
+
+Cilium must observe DNS to keep the resolved IP set up to date. In any policy with `toFQDNs`, also allow egress to kube-dns and enable DNS inspection via `rules.dns`. For an example, refer to [FQDN rules](cilium_networkpolicy.html#fqdn-rules).
+
+### Connection drops after a policy change
+
+Behavior for in-flight connections is not defined by the standard — some engines tear them down. Change policies during a maintenance window.
 
 ## "Policy not applied" checklist
 
 If a policy is created but traffic does not behave as expected, walk through these checks:
 
-1. **Which engine is enabled.** The standard `NetworkPolicy` is supported by both engines; CNP, CCNP, L7, and FQDN require `cni-cilium`. See [Network policies](configuration.html#what-is-available-in-each-engine).
-2. **The selector matches the pods.** `d8 k get pods -n <namespace> -l <key>=<value>` should return the expected list.
-3. **`policyTypes` is correct.** With `Ingress` only, egress stays unrestricted; with `Egress` only, ingress stays unrestricted.
-4. **AND vs OR in selectors.** Re-check the array structure — a common cause of overly broad or overly narrow rules.
-5. **Audit mode.** When [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) is on, policies do not block traffic. `cilium-dbg endpoint list` shows this as `Disabled (Audit)`.
-6. **Eventual consistency.** Cilium and kube-router apply policies asynchronously. Wait a few seconds and re-test.
-7. **Policy status (CNP and CCNP only).** `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
-8. **Conflict with a deny rule.** Cilium deny rules override any allow rules. Look for policies with `ingressDeny` or `egressDeny` selecting the same endpoint.
+1. Which engine is enabled. The standard `NetworkPolicy` is supported by both engines; CNP, CCNP, L7, and FQDN require `cni-cilium`. The engine capabilities are listed in [What is available in each engine](configuration.html#what-is-available-in-each-engine).
+1. The selector matches the pods: `d8 k get pods -n <namespace> -l <key>=<value>` should return the expected list.
+1. `policyTypes` is correct. With `Ingress` only, egress stays unrestricted; with `Egress` only, ingress stays unrestricted.
+1. AND vs OR in selectors. Re-check the array structure — a common cause of overly broad or overly narrow rules.
+1. Audit mode. When [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) is on, policies do not block traffic. `cilium-dbg endpoint list` shows this as `Disabled (Audit)`.
+1. Eventual consistency. Cilium and kube-router apply policies asynchronously. Wait a few seconds and re-test.
+1. Policy status (CNP and CCNP only). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` shows parse and apply errors in `status`.
+1. Conflict with a deny rule. Cilium deny rules override any allow rules. Look for policies with `ingressDeny` or `egressDeny` selecting the same endpoint.
 
 ## See also
 

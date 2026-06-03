@@ -7,7 +7,7 @@ description: |
 
 This page collects common scenarios for network policies. Standard `NetworkPolicy` examples work in any cluster that supports network policies; `CiliumNetworkPolicy` (CNP) and `CiliumClusterwideNetworkPolicy` (CCNP) examples require the [`cni-cilium`](/modules/cni-cilium/) module.
 
-For the resource shape itself, see [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) and [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html).
+The resource shape itself is documented in [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html) and [CiliumNetworkPolicy and CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html).
 
 ## Deny all external ingress to a namespace, allow internal traffic
 

@@ -5,7 +5,7 @@ description: |
   Kubernetes NetworkPolicy model, selectors, default policies, and API limitations in Deckhouse Kubernetes Platform.
 ---
 
-The standard [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DKP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use (see [Network policies](configuration.html#network-policy-implementation-in-dkp)).
+The standard [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/) resource (`networking.k8s.io/v1`) defines L3/L4 traffic rules for pods (TCP, UDP, optionally SCTP). In DKP, these policies are enforced by the [`cni-cilium`](/modules/cni-cilium/) module or the [`network-policy-engine`](/modules/network-policy-engine/) module, depending on the CNI in use; the mapping between CNI and engine is described in [Network policy implementation in DKP](configuration.html#network-policy-implementation-in-dkp).
 
 ## Isolation model
 
@@ -178,7 +178,7 @@ A default deny-egress policy blocks DNS too. If the pods use DNS, add a separate
 
 ### `hostNetwork` pods
 
-`NetworkPolicy` behavior for pods with `hostNetwork: true` is not defined by the API. Most engines, including Cilium and kube-router, treat such traffic as node traffic; `podSelector` and `namespaceSelector` do not match these pods. To filter such traffic, use `ipBlock` with the node IP or a host firewall (see [Host firewall on nodes](host_firewall.html)).
+`NetworkPolicy` behavior for pods with `hostNetwork: true` is not defined by the API. Most engines, including Cilium and kube-router, treat such traffic as node traffic; `podSelector` and `namespaceSelector` do not match these pods. To filter such traffic, use `ipBlock` with the node IP or the [host firewall on nodes](host_firewall.html).
 
 ### Pod lifecycle
 

@@ -24,7 +24,10 @@ Compared to the standard `NetworkPolicy`:
 - FQDN rules in egress — filtering by DNS names;
 - deny rules — explicit denial of traffic;
 - entities — built-in groups of sources and destinations such as `kube-apiserver`, `host`, `remote-node`, `world`;
-- `nodeSelector` (CCNP only) — applies a rule to nodes themselves, which enables a host firewall (see [Host firewall on nodes](host_firewall.html));
+- references to Kubernetes services by name or labels (`toServices`) — egress rules without specifying a CIDR;
+- ICMP and ICMPv6 filtering by packet type;
+- TLS filtering by Server Name Indication (SNI);
+- `nodeSelector` (CCNP only) — applies a rule to nodes themselves and is the basis for the [host firewall on nodes](host_firewall.html);
 - audit mode via [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) — log policy verdicts without enforcing them.
 
 ## Resource structure
@@ -57,6 +60,34 @@ Key fields:
 - `nodeSelector` — selects nodes (CCNP only). Not used together with `endpointSelector` in the same policy.
 - `ingress` and `egress` — rule arrays. Each rule has a peer field (`fromEndpoints`, `fromEntities`, `fromCIDR`, `fromCIDRSet`, `toEndpoints`, `toEntities`, `toCIDR`, `toCIDRSet`, `toFQDNs`, `toServices`) and an optional `toPorts` filter for protocols and ports.
 - `ingressDeny` and `egressDeny` — deny rules. They are evaluated before allow rules.
+
+Two special labels are useful in selectors. Cilium attaches them to every pod endpoint automatically:
+
+- `io.kubernetes.pod.namespace` — the namespace where the pod runs. Use it in `fromEndpoints` and `toEndpoints` to reference pods in a specific namespace.
+- `k8s-app`, `app`, and other regular pod labels — available without a prefix.
+
+### Egress to a Kubernetes service
+
+The `toServices` field describes egress to a Kubernetes service without knowing its CIDR. Match the service by name and namespace (`k8sService`) or by labels (`k8sServiceSelector`):
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-egress-to-redis
+  namespace: my-app
+spec:
+  endpointSelector:
+    matchLabels:
+      app: client
+  egress:
+    - toServices:
+        - k8sService:
+            serviceName: redis
+            namespace: data
+```
+
+Unlike `toEndpoints`, the policy automatically tracks changes to the service's endpoint list.
 
 ## Entities
 
@@ -93,6 +124,64 @@ spec:
               protocol: TCP
 ```
 
+## L4 rules: ICMP and SNI
+
+In addition to ports and protocols, `toPorts` supports more L4 filters.
+
+### ICMP and ICMPv6
+
+The `icmps` field allows or denies ICMP messages by packet type:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-icmp-echo
+  namespace: my-app
+spec:
+  endpointSelector:
+    matchLabels:
+      app: probe
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: monitoring
+      icmps:
+        - fields:
+            - type: EchoRequest
+              family: IPv4
+```
+
+Without an explicit `icmps` rule, ICMP traffic is blocked together with TCP and UDP once L4 filtering is active.
+
+### TLS Server Name Indication (SNI)
+
+Egress can be restricted by SNI — the name a client sends in the TLS ClientHello. This filters access to external HTTPS services without a MITM:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-egress-tls-sni
+  namespace: my-app
+spec:
+  endpointSelector:
+    matchLabels:
+      app: client
+  egress:
+    - toFQDNs:
+        - matchPattern: "*.example.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+          serverNames:
+            - "api.example.com"
+            - "static.example.com"
+```
+
+When `serverNames` is set, only TLS connections with the listed names are allowed; connections with any other SNI are blocked at the TLS handshake.
+
 ## L7 rules
 
 CNP and CCNP can describe allowed application-level operations. L7 rules go inside `toPorts[].rules`:
@@ -123,7 +212,45 @@ spec:
 
 Clients labeled `app: client` may only call `GET /api/v1/...` on pods labeled `app: api`, port 8080.
 
-Supported protocols: HTTP, gRPC, Kafka, DNS. For details and limitations, see [Layer 7 Examples in the Cilium docs](https://docs.cilium.io/en/v1.17/security/policy/#layer-7-examples).
+Supported protocols: HTTP, gRPC, Kafka, DNS. Details and limitations are described in [Layer 7 Examples in the Cilium docs](https://docs.cilium.io/en/v1.17/security/policy/#layer-7-examples).
+
+### Kafka
+
+For Kafka, L7 rules allow specific operations (`apiKey`) and topics:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kafka-produce
+  namespace: my-app
+spec:
+  endpointSelector:
+    matchLabels:
+      app: kafka
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: producer
+      toPorts:
+        - ports:
+            - port: "9092"
+              protocol: TCP
+          rules:
+            kafka:
+              - role: produce
+                topic: orders
+```
+
+Pods labeled `app: producer` may only publish (`role: produce`) to the `orders` topic. Any other operations, including `consume` and `metadata`, are denied at the Kafka protocol level.
+
+### DNS Policy and IP Discovery
+
+When `toFQDNs` is in use, Cilium intercepts DNS responses allowed by `rules.dns` and updates an internal cache that maps DNS names to IP addresses. This cache is what `toFQDNs` rules check when allowing traffic. Therefore:
+
+- DNS egress must be in the same policy as the FQDN rule, or in any other policy selecting the same pods;
+- if a pod is not allowed to make DNS requests, its FQDN rules will not work;
+- the TTL and lifetime of cache entries are determined by the Cilium agent based on DNS responses.
 
 ## FQDN rules
 
@@ -207,10 +334,10 @@ In audit mode, **no** network policy blocks traffic. Do not keep audit mode on p
 Recommended order:
 
 1. Set `policyAuditMode: true` in the [`cni-cilium` module configuration](/modules/cni-cilium/configuration.html#parameters-policyauditmode).
-2. Apply the policy set. Do not apply host policies until you have verified them (see [Host firewall on nodes](host_firewall.html)).
-3. Inspect verdicts in Hubble UI and via `hubble observe --type policy-verdict`. Look for `verdict=AUDITED` entries — these connections would be blocked outside audit mode.
-4. Adjust policies until the log only contains expected `verdict=ALLOWED` and `verdict=AUDITED` entries.
-5. Turn audit mode off (`policyAuditMode: false`).
+1. Apply the policy set. Roll out host policies separately, following the procedure in [Host firewall on nodes](host_firewall.html).
+1. Inspect verdicts in Hubble UI and via `hubble observe --type policy-verdict`. Look for `verdict=AUDITED` entries — these connections would be blocked outside audit mode.
+1. Adjust policies until the log only contains expected `verdict=ALLOWED` and `verdict=AUDITED` entries.
+1. Turn audit mode off (`policyAuditMode: false`).
 
 Once audit mode is off, policies start blocking traffic that is not allowed by any rule.
 

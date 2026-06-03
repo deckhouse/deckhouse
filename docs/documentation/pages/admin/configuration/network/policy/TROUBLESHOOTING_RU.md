@@ -62,28 +62,58 @@ hubble observe --from-pod my-app/client --to-pod my-app/api
 Изменение `HubbleMonitoringConfig` приводит к перезапуску всех агентов Cilium в кластере.
 {% endalert %}
 
+## Диагностика FQDN-правил
+
+Если правило с `toFQDNs` не пропускает трафик, проверьте кеш сопоставлений DNS-имя → IP-адрес, который ведёт `cilium-agent`:
+
+```bash
+d8 k -n d8-cni-cilium exec ds/agent -- cilium-dbg fqdn cache list
+```
+
+В выводе видны записи с источником, DNS-именем, разрешёнными IP-адресами и TTL. Если для нужного имени записи нет, под либо не делал DNS-запрос, либо DNS-запрос не разрешён политикой и не попал в инспекцию (`rules.dns`). Механика обновления кеша описана в разделе [DNS Policy и IP Discovery](cilium_networkpolicy.html#dns-policy-и-ip-discovery).
+
+Дополнительно посмотрите вердикты политик для DNS-запросов:
+
+```bash
+hubble observe --type policy-verdict --port 53
+```
+
 ## Типовые ошибки
 
-- **DNS не работает после default-deny egress.** Default-политика deny-egress блокирует и DNS-запросы. Добавьте правило egress на сервис kube-dns в namespace `kube-system` (порты UDP/53 и TCP/53). Подробности — в [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html#default-политики-namespace).
-- **Перепутан AND и OR в селекторах.** В одном элементе массива `from`/`to` два селектора — это пересечение, в двух отдельных элементах — объединение. Проверьте структуру в [Kubernetes NetworkPolicy](kubernetes_networkpolicy.html#различие-между-объединением-и-пересечением-селекторов).
-- **Политика не действует на поды `hostNetwork`.** Большинство движков, включая Cilium и kube-router, не различают такие поды и трафик узла. Используйте host firewall — см. [Host firewall на узлах](host_firewall.html).
-- **FQDN-правило не пропускает трафик.** Cilium должен видеть DNS-запросы, чтобы поддерживать актуальный список IP-адресов. В одной политике с `toFQDNs` обязательно разрешите egress на kube-dns и включите DNS-инспекцию через `rules.dns`. См. пример в [CiliumNetworkPolicy](cilium_networkpolicy.html#fqdn-правила).
-- **Соединение разрывается после изменения политики.** Поведение для уже установленных соединений не определено стандартом — некоторые движки разрывают такие соединения. Меняйте политики в окне обслуживания.
+### DNS не работает после default-deny egress
+
+Default-политика deny-egress блокирует и DNS-запросы. Добавьте правило egress на сервис kube-dns в namespace `kube-system` (порты UDP/53 и TCP/53). Подробности — в разделе [Default-политики namespace](kubernetes_networkpolicy.html#default-политики-namespace).
+
+### Перепутан AND и OR в селекторах
+
+В одном элементе массива `from`/`to` два селектора — это пересечение, в двух отдельных элементах — объединение. Проверьте структуру в разделе [Различие между объединением и пересечением селекторов](kubernetes_networkpolicy.html#различие-между-объединением-и-пересечением-селекторов).
+
+### Политика не действует на поды `hostNetwork`
+
+Большинство движков, включая Cilium и kube-router, не различают такие поды и трафик узла. Для фильтрации используйте [host firewall на узлах](host_firewall.html).
+
+### FQDN-правило не пропускает трафик
+
+Cilium должен видеть DNS-запросы, чтобы поддерживать актуальный список IP-адресов. В одной политике с `toFQDNs` обязательно разрешите egress на kube-dns и включите DNS-инспекцию через `rules.dns`. Пример — в разделе [FQDN-правила](cilium_networkpolicy.html#fqdn-правила).
+
+### Соединение разрывается после изменения политики
+
+Поведение для уже установленных соединений не определено стандартом — некоторые движки разрывают такие соединения. Меняйте политики в окне обслуживания.
 
 ## Чек-лист «политика не применяется»
 
 Если ресурс создан, но трафик не ведёт себя ожидаемо, последовательно проверьте:
 
-1. **Какой движок включён.** Стандартный `NetworkPolicy` поддерживается обоими движками; CNP, CCNP, L7 и FQDN — только в кластерах с `cni-cilium`. См. [Сетевые политики](configuration.html#что-доступно-в-зависимости-от-движка).
-2. **Selector действительно выбирает поды.** `d8 k get pods -n <namespace> -l <key>=<value>` должен вернуть ожидаемый список.
-3. **`policyTypes` указан корректно.** Если перечислен только `Ingress`, egress не ограничен; если только `Egress`, ingress не ограничен.
-4. **AND vs OR в селекторах.** Проверьте структуру массива — частая причина «слишком широкого» или «слишком узкого» правила.
-5. **Режим аудита.** Если включён [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode), политики не блокируют трафик. В `cilium-dbg endpoint list` это видно как `Disabled (Audit)`.
-6. **Eventual consistency.** После создания политики Cilium и kube-router применяют её асинхронно. Подождите несколько секунд и повторите проверку.
-7. **Статус политики (только для CNP и CCNP).** `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
-8. **Конфликт с deny-правилом.** Deny-правила Cilium имеют приоритет над любыми allow-правилами. Найдите политики с `ingressDeny` и `egressDeny`, выбирающие тот же эндпоинт.
+1. Какой движок включён. Стандартный `NetworkPolicy` поддерживается обоими движками; CNP, CCNP, L7 и FQDN — только в кластерах с `cni-cilium`. Возможности движков перечислены в разделе [Что доступно в зависимости от движка](configuration.html#что-доступно-в-зависимости-от-движка).
+1. Selector действительно выбирает поды: `d8 k get pods -n <namespace> -l <key>=<value>` должен вернуть ожидаемый список.
+1. `policyTypes` указан корректно. Если перечислен только `Ingress`, egress не ограничен; если только `Egress`, ingress не ограничен.
+1. AND vs OR в селекторах. Проверьте структуру массива — частая причина «слишком широкого» или «слишком узкого» правила.
+1. Режим аудита. Если включён [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode), политики не блокируют трафик. В `cilium-dbg endpoint list` это видно как `Disabled (Audit)`.
+1. Eventual consistency. После создания политики Cilium и kube-router применяют её асинхронно. Подождите несколько секунд и повторите проверку.
+1. Статус политики (только для CNP и CCNP). `d8 k get ciliumnetworkpolicy <name> -n <namespace> -o yaml` покажет в `status` ошибки парсинга или применения.
+1. Конфликт с deny-правилом. Deny-правила Cilium имеют приоритет над любыми allow-правилами. Найдите политики с `ingressDeny` и `egressDeny`, выбирающие тот же эндпоинт.
 
-## См. также
+## Дополнительная документация
 
 - [HubbleMonitoringConfig — модуль cni-cilium](/modules/cni-cilium/cr.html#hubblemonitoringconfig)
 - [Troubleshooting Policy — документация Cilium](https://docs.cilium.io/en/v1.17/security/policy/#troubleshooting)

@@ -22,10 +22,10 @@ Host policies do not replace infrastructure-level protection (physical firewalls
 Roll out a host firewall in stages, using audit mode:
 
 1. Set [`policyAuditMode: true`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) in the `cni-cilium` module configuration. In audit mode, policies do not block traffic; they only log verdicts.
-2. Apply the host policy set. At a minimum: a control plane policy (see below) and worker-node policies that allow SSH and required service ports.
-3. Inspect verdicts in Hubble UI and via `hubble observe --type policy-verdict`. Expected traffic must be `verdict=ALLOWED`; anything in `verdict=AUDITED` would be blocked once audit mode is off.
-4. Tune the policies until no unexpected `AUDITED` entries remain. Pay close attention to kubelet, etcd, kube-apiserver, ingress controllers, monitoring, and DNS.
-5. Turn audit mode off (`policyAuditMode: false`).
+1. Apply the host policy set. At a minimum: a control plane policy (an example is provided below) and worker-node policies that allow SSH and required service ports.
+1. Inspect verdicts in Hubble UI and via `hubble observe --type policy-verdict`. Expected traffic must be `verdict=ALLOWED`; anything in `verdict=AUDITED` would be blocked once audit mode is off.
+1. Tune the policies until no unexpected `AUDITED` entries remain. Pay close attention to kubelet, etcd, kube-apiserver, ingress controllers, monitoring, and DNS.
+1. Turn audit mode off (`policyAuditMode: false`).
 
 If something breaks after enforcement, the fastest recovery path is to re-enable audit mode or delete the CCNP. Detailed recovery steps are in [Cilium Emergency Recovery](https://docs.cilium.io/en/v1.17/security/host-firewall/#emergency-recovery).
 
@@ -37,7 +37,7 @@ A host policy set must include at least:
 - inter-node access on etcd ports (2379, 2380), only between control plane nodes;
 - access from worker nodes to the API server;
 - BGP and service ports if MetalLB or a third-party load balancer is in use;
-- platform component ports in the 4200–4299 range (see [platform component network interaction list](../../../../reference/network_interaction.html));
+- platform component ports in the 4200–4299 range, listed in the [platform component network interaction list](../../../../reference/network_interaction.html);
 - SSH from trusted administrative addresses;
 - ICMP echo (optional, useful for diagnostics);
 - DNS egress to kube-dns or an external resolver;
