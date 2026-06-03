@@ -99,8 +99,8 @@ spec:
 
                     The field value indicates which component manages the nodes:
                     
-                    - `None` — nodes in the group are not managed by MCM or CAPI.
-                    - `MCM` — nodes in the group are managed by machine-controller-manager.
+                    - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
+                    - `MCM` — nodes in the group are managed by Machine Controller Manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.
                 ready:
                   type: integer
