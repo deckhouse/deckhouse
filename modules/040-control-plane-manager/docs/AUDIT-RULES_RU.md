@@ -7,7 +7,7 @@ title: "Встроенные правила аудита"
 
 ## Что такое Audit Policy
 
-Audit Policy - это YAML файл, который определяет, какие события должен записывать API-сервер.  
+Audit Policy — это YAML-файл, который определяет, какие события должен записывать API-сервер.  
 Когда происходит запрос, Kubernetes проверяет его на соответствие правилам в файле.  
 **Первое сработавшее правило** определяет уровень логирования.
 
@@ -89,16 +89,16 @@ rules:                       # Набор правил для аудита
 - [Логировать операции create/update/patch/delete в системных пространствах имён (`kube-system`, `d8-*`).](#rule-14)
 - [Логировать все LIST-запросы во всех пространствах имён.](#rule-15)
 - [Логировать операции create/delete для ресурсов `ServiceAccount`.](#rule-16)
-- [Логировать операции create/update/delete/patch для ресурсов `Role` и `ClusterRole`.](#rule-17)
-- [Логировать операции create/update/delete для ресурсов `ClusterRoleBinding`.](#rule-18)
+- [Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.](#rule-17)
+- [Логировать операции create/update/delete для ресурсов ClusterRoleBinding.](#rule-18)
 - [Логировать операции с pod subresource для attach и ephemeral-контейнеров.](#rule-19)
-- [Логировать создание ресурсов `VirtualMachineOperation` с телом запроса/ответа.](#rule-20)
+- [Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.](#rule-20)
 - [Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.](#rule-21)
 - [Логировать операции update/patch для внутренних virtualization subresources.](#rule-22)
 - [Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.](#rule-23)
 - [Логировать операции create/update/patch/delete для ресурсов `Pod`.](#rule-24)
-- [Логировать операции create/update/patch/delete в пространстве имён `d8-virtualization`.](#rule-25)
-- [Логировать операции create/update/patch/delete для ресурсов `ModuleConfig`.](#rule-26)
+- [Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.](#rule-25)
+- [Логировать операции create/update/patch/delete для ресурсов ModuleConfig.](#rule-26)
 - [Не логировать запросы аутентифицированных пользователей.](#rule-27)
 - [Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.](#rule-28)
 
@@ -480,7 +480,7 @@ omitStages:
 ```
 
 <a id="rule-17"></a>
-17\. Логировать операции create/update/delete/patch для ресурсов `Role` и `ClusterRole`.
+17\. Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
 
 ```yaml
 level: Request
@@ -499,7 +499,7 @@ omitStages:
 ```
 
 <a id="rule-18"></a>
-18\. Логировать операции create/update/delete для ресурсов `ClusterRoleBinding`.
+18\. Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
 
 ```yaml
 level: Request
@@ -533,7 +533,7 @@ omitStages:
 ```
 
 <a id="rule-20"></a>
-20\. Логировать создание ресурсов `VirtualMachineOperation` с телом запроса/ответа.
+20\. Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
 
 ```yaml
 level: RequestResponse
@@ -600,7 +600,7 @@ resources:
 ```
 
 <a id="rule-25"></a>
-25\. Логировать операции create/update/patch/delete в пространстве имён `d8-virtualization`.
+25\. Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
 
 ```yaml
 level: Metadata
@@ -614,7 +614,7 @@ namespaces:
 ```
 
 <a id="rule-26"></a>
-26\. Логировать операции create/update/patch/delete для ресурсов `ModuleConfig`.
+26\. Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
 
 ```yaml
 level: Metadata
@@ -962,7 +962,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 17: Логировать операции create/update/delete/patch для ресурсов `Role` и `ClusterRole`.
+  # 17: Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
   - level: Request
     verbs:
       - create
@@ -977,7 +977,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 18: Логировать операции create/update/delete для ресурсов `ClusterRoleBinding`.
+  # 18: Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
   - level: Request
     verbs:
       - create
@@ -1003,7 +1003,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Логировать создание ресурсов `VirtualMachineOperation` с телом запроса/ответа.
+  # 20: Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
   - level: RequestResponse
     verbs:
       - create
@@ -1050,7 +1050,7 @@ rules:
       - resources:
           - pods
 
-  # 25: Логировать операции create/update/patch/delete в пространстве имён `d8-virtualization`.
+  # 25: Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
   - level: Metadata
     verbs:
       - create
@@ -1060,7 +1060,7 @@ rules:
     namespaces:
       - d8-virtualization
 
-  # 26: Логировать операции create/update/patch/delete для ресурсов `ModuleConfig`.
+  # 26: Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
   - level: Metadata
     verbs:
       - create
