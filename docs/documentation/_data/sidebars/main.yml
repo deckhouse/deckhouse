@@ -1475,8 +1475,8 @@ entries:
                 ru: CSI-драйверы
               folders:
                 - title:
-                    en: CSI driver
-                    ru: CSI-драйвер
+                    en: Standard CSI driver
+                    ru: CSI-драйвер (типовой)
                   url: /architecture/storage/csi-drivers/csi-driver.html
                 - title:
                     en: Ceph RBD CSI driver
