@@ -63,6 +63,7 @@
  - **[control-plane-manager]** Extend d8:control-plane-manager:admin-kubeconfig-supplement with granular permissions for standard Kubernetes resources not covered by user-authz:cluster-admin. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
  - **[control-plane-manager]** Updated RBAC model for admin kubeconfig when `user-authz` is enabled. [#18996](https://github.com/deckhouse/deckhouse/pull/18996)
  - **[control-plane-manager]** Added information to `d8-cluster-kubernetes` about the supported, available, and current `Automatic` versions of Kubernetes. [#18718](https://github.com/deckhouse/deckhouse/pull/18718)
+ - **[deckhouse]** Enhance package requirements. [#20322](https://github.com/deckhouse/deckhouse/pull/20322)
  - **[deckhouse]** Add marketplace features. [#20178](https://github.com/deckhouse/deckhouse/pull/20178)
  - **[deckhouse]** Webhook-handler will reload exited shell-operator now. [#19592](https://github.com/deckhouse/deckhouse/pull/19592)
  - **[deckhouse]** Granted RBAC permissions for applications to Deckhouse. [#19385](https://github.com/deckhouse/deckhouse/pull/19385)
@@ -138,6 +139,7 @@
  - **[cloud-provider-aws]** Added a new Bashible step to install `linux-modules-extra` on Ubuntu nodes. [#19415](https://github.com/deckhouse/deckhouse/pull/19415)
  - **[cloud-provider-aws]** Fixed detection of regional limitations versus IAM issues. [#19054](https://github.com/deckhouse/deckhouse/pull/19054)
  - **[cloud-provider-azure]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
+ - **[cloud-provider-dvp]** add labels to cloudinit secrets in the terraform [#20321](https://github.com/deckhouse/deckhouse/pull/20321)
  - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19696](https://github.com/deckhouse/deckhouse/pull/19696)
  - **[cloud-provider-dvp]** fix LoadBalancer stuck in pending state — retry on conflict when updating ServiceWithHealthchecks and propagate IP to child cluster service status [#19609](https://github.com/deckhouse/deckhouse/pull/19609)
  - **[cloud-provider-dvp]** Fixed CVEs. [#19362](https://github.com/deckhouse/deckhouse/pull/19362)
@@ -175,6 +177,7 @@
  - **[deckhouse]** Fixed a race condition in ModuleConfig processing during startup. [#18280](https://github.com/deckhouse/deckhouse/pull/18280)
  - **[deckhouse]** Fixed global configuration generation. [#18161](https://github.com/deckhouse/deckhouse/pull/18161)
  - **[deckhouse-controller]** Fixed error logging for MPO validation. [#18698](https://github.com/deckhouse/deckhouse/pull/18698)
+ - **[dhctl]** fixed the `killall kubectl` command for the `d8 k` alias [#20423](https://github.com/deckhouse/deckhouse/pull/20423)
  - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19793](https://github.com/deckhouse/deckhouse/pull/19793)
  - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19560](https://github.com/deckhouse/deckhouse/pull/19560)
  - **[dhctl]** Fix CVEs in `dhctl`. [#19344](https://github.com/deckhouse/deckhouse/pull/19344)
@@ -218,6 +221,9 @@
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities (CVE-2026-*) [#19933](https://github.com/deckhouse/deckhouse/pull/19933)
  - **[network-policy-engine]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20294](https://github.com/deckhouse/deckhouse/pull/20294)
  - **[node-local-dns]** Fix name of registry secret in safe-updater deployment [#18673](https://github.com/deckhouse/deckhouse/pull/18673)
+ - **[node-manager]** hook to restore apiVersion on CAPI resources. [#20330](https://github.com/deckhouse/deckhouse/pull/20330)
+ - **[node-manager]** Include system labels in CAPI MachineDeployment capacity annotation for correct scale-from-zero behavior [#20174](https://github.com/deckhouse/deckhouse/pull/20174)
+    On CAPI-based clusters (DVP, VCD, zVirt, Dynamix, HuaweiCloud), scale-from-zero now correctly handles pods with nodeSelector targeting system labels (node.deckhouse.io/group, node.deckhouse.io/type, node-role.kubernetes.io/<ng-name>). Previously such pods remained Pending indefinitely when NodeGroup had minPerZone=0. No user action required — the fix is applied automatically on upgrade.
  - **[node-manager]** fix webook validation in node-controller on cri changes in nodegroup. [#20050](https://github.com/deckhouse/deckhouse/pull/20050)
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
  - **[node-manager]** Improve fencing-agent health monitor logging — warn on fallback feeding, error on watchdog starvation, add diagnostic context to all feeding log messages. [#19400](https://github.com/deckhouse/deckhouse/pull/19400)
@@ -231,6 +237,7 @@
  - **[node-manager]** Fix cluster-autoscaler deadlock when machine creation fails with a non-ResourceExhausted error, preventing scale-up to alternative node groups. [#18154](https://github.com/deckhouse/deckhouse/pull/18154)
  - **[node-manager]** Fix capacity parsing logic for DVPInstanceClass and add test case for DVPSpecWorker [#17935](https://github.com/deckhouse/deckhouse/pull/17935)
     Capacity values (CPU/memory) for DVPInstanceClass are now correctly extracted according to spec shape. Nested `virtualMachine` fields are used and memory quantities like `Gi` are properly parsed.
+ - **[operator-prometheus]** op_ functions support [#20254](https://github.com/deckhouse/deckhouse/pull/20254)
  - **[prometheus]** Fix externalLabels handling in conjunction with the PrometheusRemoteWrites [#18608](https://github.com/deckhouse/deckhouse/pull/18608)
  - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18234](https://github.com/deckhouse/deckhouse/pull/18234)
     Registry pods will be restarted.
