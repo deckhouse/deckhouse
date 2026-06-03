@@ -372,8 +372,8 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		descriptionEN := "Log create/update/delete operations for `ClusterRoleBinding` resources."
-		descriptionRU := "Логировать операции create/update/delete для ресурсов `ClusterRoleBinding`."
+		descriptionEN := "Log create/update/delete operations for ClusterRoleBinding resources."
+		descriptionRU := "Логировать операции create/update/delete для ресурсов ClusterRoleBinding."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{{
