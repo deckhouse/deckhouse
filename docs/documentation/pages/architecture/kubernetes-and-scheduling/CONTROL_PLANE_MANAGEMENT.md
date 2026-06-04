@@ -10,9 +10,13 @@ description: Architecture and functions of the control-plane-manager module in D
 Cluster control plane components are managed by the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes labeled with `node-role.kubernetes.io/control-plane: ""`).
 
 The module operates with the following custom resources:
-- [ControlPlaneNode](/modules/control-plane-manager/cr.html#controlplanenode): Describes the parameters and state of control plane nodes (master nodes) in the cluster. Its used for managing the lifecycle and configuration of each control plane node.
-- [ControlPlaneOperation](/modules/control-plane-manager/cr.html#controlplaneoperation): Defines operations on control plane components (such as upgrade, downgrade, addition, or removal of nodes), and allows tracking and managing the execution of these operations at the cluster level.
+- [ControlPlaneNode](/modules/control-plane-manager/cr.html#controlplanenode): Describes the parameters and state of control plane nodes (master nodes) in the cluster. Its used for managing the lifecycle and configuration of each control plane component.
+- [ControlPlaneOperation](/modules/control-plane-manager/cr.html#controlplaneoperation): Defines operations on control plane components (upgrade, downgrade, addition, or removal of components), and allows tracking and managing the execution of these operations at the cluster level.
 - [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration): Describes the parameters and logic for connecting external webhooks to the `kube-scheduler` component to extend its functionality.
+
+{% alert level="warning" %}
+The ControlPlaneNode and ControlPlaneOperation custom resources are available to users in read-only mode. Full lifecycle management of these resources is performed exclusively by the `control-plane-manager` module.
+{% endalert %}
 
 Control plane management functions:
 
@@ -26,10 +30,6 @@ Control plane management functions:
   * Placing data-intensive application pods closer to their data.
   * Prioritizing nodes based on their state (network load, storage subsystem health, etc.).
   * Dividing nodes into zones, etc.
-
-The module operates with the following custom resources:
-- [**ControlPlaneNode**](/modules/control-plane-manager/cr.html#controlplanenode): Describes the parameters and state of control plane nodes (master nodes) in the cluster. Its used for managing the lifecycle and configuration of each control plane node.
-- [**ControlPlaneOperation**](/modules/control-plane-manager/cr.html#controlplaneoperation): Defines operations on control plane components (such as upgrade, downgrade, addition, or removal of nodes), and allows tracking and managing the execution of these operations at the cluster level.
 
 For detailed configuration options and usage examples, refer to the [`control-plane-manager` module documentation](/modules/control-plane-manager/).
 
@@ -131,7 +131,7 @@ Control-plane-proxy interacts with the following components:
 
 1. **kube-apiserver**: Authorizes requests for metrics.
 
-2. Control plane components: **control-plane-proxy** forwards authorized metric requests to:
+2. Control plane components: **control-plane-proxy** forwards authorized metric requests to the following components:
 
    * **kube-controller-manager**
    * **kube-scheduler**
