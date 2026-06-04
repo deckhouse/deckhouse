@@ -239,6 +239,11 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 	@bin/werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
 
+.PHONY: lint-changed
+lint-changed:
+	#CI plug
+	@bash set -e
+
 ##@ Generate
 
 ## Run all generate-* jobs in bulk.
