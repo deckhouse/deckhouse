@@ -88,7 +88,7 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 	logger.Info("reloading shell-operator hooks")
 
 	if shOp.HookManager == nil {
-		return nil
+		return fmt.Errorf("hook manager is not initialized")
 	}
 
 	oldValidatingResources := make(map[string]*admission.ValidatingWebhookResource)
@@ -125,8 +125,14 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 
 	// Enable admission bindings on every newly loaded hook so that
 	// AdmissionLinks are populated and CanHandleEvent works.
-	admissionHookNames, _ := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)
-	mutatingHookNames, _ := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesMutating)
+	admissionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesValidating)
+	if err != nil {
+		return fmt.Errorf("get validating hooks: %w", err)
+	}
+	mutatingHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesMutating)
+	if err != nil {
+		return fmt.Errorf("get mutating hooks: %w", err)
+	}
 	for _, name := range append(admissionHookNames, mutatingHookNames...) {
 		h := shOp.HookManager.GetHook(name)
 		if h != nil {
@@ -136,7 +142,10 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 
 	// Enable conversion bindings on every newly loaded hook so that
 	// CanHandleConversionEvent works.
-	conversionHookNames, _ := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesConversion)
+	conversionHookNames, err := shOp.HookManager.GetHooksInOrder(hook_types.KubernetesConversion)
+	if err != nil {
+		return fmt.Errorf("get conversion hooks: %w", err)
+	}
 	for _, name := range conversionHookNames {
 		h := shOp.HookManager.GetHook(name)
 		if h != nil {
