@@ -1578,6 +1578,7 @@ VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
 VirtualMachines
+VirtualMachineOperation
 VirtualService
 Vitastor
 vk
@@ -2148,6 +2149,7 @@ ZvirtInstanceClass
 неймспейсом
 неймспейсу
 неймспейсы
+неймспейсов
 некоммитнутые
 некоммитнутыми
 неконсистентному
