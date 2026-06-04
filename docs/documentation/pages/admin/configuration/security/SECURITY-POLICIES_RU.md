@@ -202,6 +202,40 @@ spec:
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
 
+## Запрет запуска уязвимых образов
+
+Для запрета запуска подов с уязвимыми образами используется Trivy-провайдер модуля `admission-policy-engine`.
+
+Важные условия:
+
+- Проверка применяется только к namespace, где установлен лейбл `security.deckhouse.io/trivy-provider: ""`.
+- Параметр `settings.denyVulnerableImages.enabled` включает Trivy-провайдер, но не подменяет выбор namespace через лейбл.
+- Параметр `settings.denyVulnerableImages.allowedSeverityLevels` задает уровни уязвимостей, которые допускаются к запуску.
+  Если параметр пустой или не задан, разрешенных уровней нет, и запуск будет запрещен при наличии уязвимостей любого уровня.
+
+Для сценариев, соответствующих требованиям ФСТЭК по блокировке критических и высоких уязвимостей, укажите:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: admission-policy-engine
+spec:
+  version: 1
+  settings:
+    denyVulnerableImages:
+      enabled: true
+      allowedSeverityLevels:
+        - HIGH
+        - CRITICAL
+```
+
+И добавьте лейбл в namespace, где должна применяться проверка:
+
+```shell
+d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
+```
+
 ## Политики безопасности
 
 Используя [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy),

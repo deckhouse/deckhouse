@@ -198,6 +198,42 @@ To assign this operational policy, add the `operation-policy.deckhouse.io/enable
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
 
+## Blocking vulnerable images
+
+To block Pods with vulnerable images, use the Trivy provider of the `admission-policy-engine` module.
+
+Important conditions:
+
+- Validation is applied only to namespaces labeled `security.deckhouse.io/trivy-provider: ""`.
+- The `settings.denyVulnerableImages.enabled` parameter enables the Trivy provider, but it does not replace namespace selection via label.
+- The `settings.denyVulnerableImages.allowedSeverityLevels` parameter defines vulnerability levels that are allowed to run.
+  If this parameter is empty or not set, there are no allowed levels, and workloads with vulnerabilities of any severity are blocked.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: admission-policy-engine
+spec:
+  version: 1
+  settings:
+    denyVulnerableImages:
+      enabled: true
+      # Allow only UNKNOWN/LOW/MEDIUM; HIGH and CRITICAL are blocked.
+      allowedSeverityLevels:
+        - UNKNOWN
+        - LOW
+        - MEDIUM
+```
+
+Then add the label to each namespace where this check must be enforced:
+
+```shell
+d8 k label ns <NAMESPACE> security.deckhouse.io/trivy-provider=
+```
+
 ## Security policies
 
 Using [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy),
