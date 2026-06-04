@@ -94,7 +94,7 @@ description: Архитектура ядра модуля virtualization в Deck
    - **virt-operator** — основной контейнер;
    - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API. Подробно описан выше.
 
-1. **Virt-launcher-[имя VMI]** — под, в котором запускается ВМ (точнее VirtualMachineInstance).
+1. **Virt-launcher-\<имя VMI\>** — под, в котором запускается ВМ (точнее VirtualMachineInstance).
 
    Состоит из одного контейнера:
 

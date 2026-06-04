@@ -95,7 +95,7 @@ The module core consists of the following components:
    - **virt-operator**: Main container.
    - **proxy** (aka **kube-api-rewriter**): Sidecar container that performs modification of API requests passing through it (described above).
 
-1. **Virt-launcher-[VMI name]**: The pod where the VM is running (more exactly VirtualMachineInstance).
+1. **Virt-launcher-\<VMI name\>**: The pod where the VM is running (more exactly VirtualMachineInstance).
 
    It consists of one container:
 
