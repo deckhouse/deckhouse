@@ -8,7 +8,7 @@ metadata:
     heritage: deckhouse
     module: node-manager
     cluster.x-k8s.io/provider: infrastructure-deckhouse
-    cluster.x-k8s.io/v1beta1: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1alpha1
   name: deckhousecontrolplanes.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -55,6 +55,14 @@ spec:
                 ready:
                   description: Ready is true when the control plane is ready.
                   type: boolean
+                initialization:
+                  description: Initialization provides observations of the control plane initialization process.
+                  properties:
+                    controlPlaneInitialized:
+                      description: ControlPlaneInitialized is true when the control plane
+                        is functional enough to accept requests.
+                      type: boolean
+                  type: object
               type: object
           type: object
       served: true

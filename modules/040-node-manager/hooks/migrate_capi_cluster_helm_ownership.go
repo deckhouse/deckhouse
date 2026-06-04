@@ -22,6 +22,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -68,20 +69,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// Same queue as create_capi_cluster_resources — both touch the same CRs and
 	// the migration is a prerequisite for the create logic to be safe on upgrade.
 	Queue: "/modules/node-manager/create-capi-cluster-resources",
+	// Run before helm, after the conversion-webhook caBundle injection (Order 10)
+	// and before create_capi_cluster_resources (Order 20).
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 15},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "capi_cluster",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
-			Kind:       "Cluster",
+			// Synchronization disabled so the hook doesn't run early on OperatorStartup.
+			Name:                         "capi_cluster",
+			ApiVersion:                   "cluster.x-k8s.io/v1beta2",
+			Kind:                         "Cluster",
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
 			},
 			FilterFunc: filterCapiResourceMeta,
 		},
 		{
-			Name:       "capi_machine_health_check",
-			ApiVersion: "cluster.x-k8s.io/v1beta1",
-			Kind:       "MachineHealthCheck",
+			Name:                         "capi_machine_health_check",
+			ApiVersion:                   "cluster.x-k8s.io/v1beta2",
+			Kind:                         "MachineHealthCheck",
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{capiNamespace}},
 			},
