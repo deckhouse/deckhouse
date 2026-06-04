@@ -1,5 +1,5 @@
 ---
-title: Hybrid Clusters
+title: Hybrid clusters
 permalink: en/admin/integrations/hybrid/overview.html
 lang: en
 search: hybrid, hybrid cluster, hybrid integration
