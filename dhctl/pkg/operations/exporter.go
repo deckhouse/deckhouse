@@ -99,10 +99,8 @@ type ExporterParams struct {
 	Address       string
 	Path          string
 	Interval      time.Duration
-	TmpDir        string
-	GlogalOptions *options.GlobalOptions
+	GlobalOptions *options.GlobalOptions
 	Logger        log.Logger
-	IsDebug       bool
 
 	// KubeCl is the in-cluster API client. The caller builds it via
 	// providerinitializer.GetProviders / kubeProvider.Client(ctx) just like
@@ -116,7 +114,9 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		logger = log.GetDefaultLogger()
 	}
 
-	infraContext := infrastructure.NewContext(logger).WithDebug(params.IsDebug)
+	isDebug := params.GlobalOptions.IsDebug
+
+	infraContext := infrastructure.NewContext(logger).WithDebug(isDebug)
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
@@ -127,10 +127,10 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		OneGaugeMetrics:       make(map[string]prometheus.Gauge),
 		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
 		CounterMetrics:        make(map[string]*prometheus.CounterVec),
-		tmpDir:                params.TmpDir,
-		globalOptions:         params.GlogalOptions,
+		tmpDir:                params.GlobalOptions.TmpDir,
+		globalOptions:         params.GlobalOptions,
 		logger:                logger,
-		isDebug:               params.IsDebug,
+		isDebug:               isDebug,
 	}
 }
 
@@ -277,7 +277,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(c.logger),
 		),
-		nil,
+		c.globalOptions,
 	)
 	if err != nil {
 		log.ErrorLn(err)

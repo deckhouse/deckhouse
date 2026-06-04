@@ -291,7 +291,7 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 
 	// Persist whatever was read successfully before surfacing the error
 	// the partial state is still visible in the operation status.
-	if len(observedState.CertificatesExpirationDate) > 0 {
+	if len(observedState.CertificatesExpirationTime) > 0 {
 		env.State.SetObservedState(&observedState)
 	}
 
@@ -299,11 +299,11 @@ func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.L
 		return StepResult{}, fmt.Errorf("read certificate expirations: %w", err)
 	}
 
-	if len(observedState.CertificatesExpirationDate) == 0 {
+	if len(observedState.CertificatesExpirationTime) == 0 {
 		logger.Info("observed certificate expiration", slog.Int("certificates", 0))
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
-	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationDate)))
+	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationTime)))
 	return StepResult{Outcome: OutcomeCompleted}, nil
 }

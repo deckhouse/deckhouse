@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider — Dynamix: provider configuration"
-description: Settings of the Deckhouse cloud provider for Dynamix.
+title: "Cloud provider — Basis Dynamix: provider configuration"
+description: Settings of the Deckhouse cloud provider for Basis Dynamix.
 ---
 
 {% alert level="info" %}

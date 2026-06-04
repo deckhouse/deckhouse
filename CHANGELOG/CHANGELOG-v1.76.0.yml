@@ -53,6 +53,8 @@ ci:
     - summary: Added the ability to use a .trivyignore file when checking DKP components.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17793
   fixes:
+    - summary: Optimizing work with av reports without using duplication docker cp
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20304
     - summary: Fixed registry path resolution for release semver tags.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20293
     - summary: Updated EKS e2e logic to always use registry-stage
@@ -156,6 +158,8 @@ cloud-provider-dvp:
     - summary: Added hybrid cluster support to `cloud-provider-dvp`.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17861
   fixes:
+    - summary: add labels to cloudinit secrets in the terraform
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20321
     - summary: >-
         Add skip storage class annotation handling to skip discovery of some storage classes from
         parent clusters, e.g., local disks.
@@ -354,6 +358,8 @@ control-plane-manager:
       pull_request: https://github.com/deckhouse/deckhouse/pull/19160
 deckhouse:
   features:
+    - summary: Enhance package requirements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20322
     - summary: Add marketplace features.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20178
     - summary: Webhook-handler will reload exited shell-operator now.
@@ -442,6 +448,8 @@ deckhouse-controller:
         cluster.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16499
   fixes:
+    - summary: stop closing report channel passed to nelm
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20368
     - summary: Fix ContainerdV2 cluster default validation
       pull_request: https://github.com/deckhouse/deckhouse/pull/20002
     - summary: Fixed error logging for MPO validation.
@@ -499,6 +507,8 @@ dhctl:
     - summary: Added ModuleConfig conversions.
       pull_request: https://github.com/deckhouse/deckhouse/pull/17917
   fixes:
+    - summary: fixed the `killall kubectl` command for the `d8 k` alias
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20423
     - summary: fix wrong usage of KubeClientProviderWithCtx instead of KubeClientProvider from main
       pull_request: https://github.com/deckhouse/deckhouse/pull/19824
     - summary: Wait for stronghold cluster sync before node deletion
@@ -562,6 +572,10 @@ docs:
     - summary: Add section for Ldap manual synchronization
       pull_request: https://github.com/deckhouse/deckhouse/pull/18160
   fixes:
+    - summary: Updated the etcd restore documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20130
+    - summary: Do not wrap codeblocks with tables by default in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20020
     - summary: Add a general description of container registers DKP
       pull_request: https://github.com/deckhouse/deckhouse/pull/19976
     - summary: Improvements to the processing of OSS info pages in the PDF version of the documentation.
@@ -791,6 +805,18 @@ node-manager:
         the API server may occur. This change exposes a new hostPort `6480` for health checks and
         upstreams statistics.
   fixes:
+    - summary: hook to restore apiVersion on CAPI resources.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20330
+    - summary: >-
+        Include system labels in CAPI MachineDeployment capacity annotation for correct
+        scale-from-zero behavior
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20174
+      impact: >-
+        On CAPI-based clusters (DVP, VCD, zVirt, Dynamix, HuaweiCloud), scale-from-zero now
+        correctly handles pods with nodeSelector targeting system labels (node.deckhouse.io/group,
+        node.deckhouse.io/type, node-role.kubernetes.io/<ng-name>). Previously such pods remained
+        Pending indefinitely when NodeGroup had minPerZone=0. No user action required — the fix is
+        applied automatically on upgrade.
     - summary: fix webook validation in node-controller on cri changes in nodegroup.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20050
     - summary: Added cleanup for oversized MCM MachineSet revision history annotation
@@ -836,6 +862,10 @@ openvpn:
   features:
     - summary: Added optional Gateway API HTTPRoute/ListenerSet publishing.
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
+operator-prometheus:
+  fixes:
+    - summary: op_ functions support
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20254
 prometheus:
   features:
     - summary: custom op- prometheus functions added
@@ -887,6 +917,9 @@ terraform-manager:
         providers are not affected. If you encounter unexpected converge plans or cluster bootstrap
         issues when using OpenTofu-based providers (such as DVP, DynamiX, zVirt, or Yandex), report
         them to Deckhouse Technical Support.
+  fixes:
+    - summary: Add candi/terraform_versions.yml file to common/candi image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20398
 tools:
   features:
     - summary: add pkg registry fake client
@@ -929,6 +962,10 @@ user-authn:
       pull_request: https://github.com/deckhouse/deckhouse/pull/16812
       impact: All dex-authenticator pods will be restarted
   fixes:
+    - summary: >-
+        Fix user-api self-service password reset in closed-loop clusters and restrict it to local
+        Dex users.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20371
     - summary: Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior.
       pull_request: https://github.com/deckhouse/deckhouse/pull/20089
     - summary: fixed openapi test in cse

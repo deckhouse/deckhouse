@@ -27,6 +27,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -594,6 +595,10 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	commanderUUID, err := uuid.NewUUID()
 	require.NoError(t, err, p.testName)
 
+	opts := options.New()
+	opts.Global.NeedDownload = false
+	options.SetPaths("/", &opts.Global)
+
 	return &testCheckClusterConfig{
 		testCheckClusterConfigBase: p.testCheckClusterConfigBase,
 		commanderMetaConfig:        commanderMetaConfig,
@@ -605,6 +610,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 			CommanderMode: true,
 			IsDebug:       false,
 			CommanderUUID: commanderUUID,
+			Options: opts,
 		}),
 	}
 }
