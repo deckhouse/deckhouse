@@ -62,6 +62,11 @@ kind: Module
 metadata:
   name: parca
 status:
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+    - type: EnabledByModuleManager
+      status: "True"
   phase: Ready
 ---
 apiVersion: deckhouse.io/v1alpha1

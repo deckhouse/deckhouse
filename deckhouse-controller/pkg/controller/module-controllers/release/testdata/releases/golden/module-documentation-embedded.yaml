@@ -70,6 +70,14 @@ properties:
   source: Embedded
 status:
   conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: EnabledByModuleManager
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
