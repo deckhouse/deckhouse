@@ -57,7 +57,7 @@ if [ -f /etc/kubernetes/kubelet.conf ] ; then
   if node="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2> /dev/null)" ; then
     echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
   else
-    bb-log-error "Cannot discover node IP from Node object: API server is unreachable"
+    bb-log-error "Cannot discover node IP from Node object: Kubernetes API server is unreachable"
     exit 1
   fi
 fi
