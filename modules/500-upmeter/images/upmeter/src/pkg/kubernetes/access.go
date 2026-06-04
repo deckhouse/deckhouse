@@ -83,7 +83,7 @@ type Config struct {
 	Context     string
 	Config      string
 	Server      string
-	ClientQPS   float32
+	ClientQps   float32
 	ClientBurst int
 
 	SchedulerProbeImage ProbeImageConfig
@@ -113,7 +113,7 @@ func (a *Accessor) Init(config *Config, userAgent string) error {
 	a.client = kube.New()
 	a.client.WithContextName(config.Context)
 	a.client.WithConfigPath(config.Config)
-	a.client.WithRateLimiterSettings(config.ClientQPS, config.ClientBurst)
+	a.client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
 	// TODO(nabokihms): add kubernetes client metrics
 	err := a.client.Init()
 	// first start
