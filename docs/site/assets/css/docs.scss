@@ -1310,7 +1310,9 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
+  &:not(.tabs__item) {
     padding-bottom: 0;
+  }
 }
 
 .docs .resources ul li .resources__prop_description + p,
@@ -1429,6 +1431,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h6 {
     margin-bottom: 30px;
     margin-top: 30px;
+    padding-right: 21px;
 
     @include breakpoints.max-w(l) {
         margin-bottom: 20px;
@@ -1509,7 +1512,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h3 {
-  width: max-content;
+  position: relative;
   max-width: 100%;
   font-size: 21px;
   font-weight: 600;
@@ -1807,6 +1810,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         .table__small {
           box-shadow: none;
         }
+
+        img {
+          max-width: max-content;
+        }
     }
 }
 
@@ -2017,16 +2024,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs a.anchorjs-link {
+    position: absolute;
+    bottom: 4px;
     font-family: anchorjs-icons;
     font-style: normal;
     font-variant: normal;
     font-weight: normal;
     line-height: 1;
     padding-left: 0.375em;
-
-    &::after {
-      display: inline-block;
-    }
 }
 
 .docs .btn {

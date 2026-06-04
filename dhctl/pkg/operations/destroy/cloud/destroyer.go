@@ -104,7 +104,7 @@ func (d *Destroyer) AfterResourcesDelete(ctx context.Context) error {
 	return err
 }
 
-func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
+func (d *Destroyer) CleanupBeforeDestroy(ctx context.Context) error {
 	// why only unwatch lock without request unlock
 	// user may not delete resources and converge still working in cluster
 	// all node groups removing may still in long time run and
@@ -112,7 +112,7 @@ func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
 	d.unlockConverge(false)
 
 	// stop ssh because master nodes will delete and we lost connection
-	d.params.KubeProvider.Cleanup(true)
+	d.params.KubeProvider.Cleanup(ctx, true)
 
 	return nil
 }

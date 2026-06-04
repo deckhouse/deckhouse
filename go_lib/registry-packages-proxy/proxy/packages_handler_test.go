@@ -39,10 +39,12 @@ const (
 	testPackageRepositoryName = "packages-repo"
 	testPackageName           = "my-package"
 	// testImagePath mirrors what handleGetIcon passes to the registry client:
-	// the package name verbatim (no synthetic "packages/" prefix is added).
-	// The PackageRepository CR's spec.registry.repo is what carries any
-	// "packages/" sub-path in real clusters.
-	testImagePath   = "my-package"
+	// the package name followed by the "/version" segment, since version
+	// images (which carry docs/icon.svg) live at <package>/version:<tag>.
+	// No synthetic "packages/" prefix is added; the PackageRepository CR's
+	// spec.registry.repo is what carries any "packages/" sub-path in real
+	// clusters.
+	testImagePath   = testPackageName + "/version"
 	testIconPath    = "docs/icon.svg"
 	testIconContent = "<svg>icon</svg>"
 )

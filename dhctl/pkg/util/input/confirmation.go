@@ -52,11 +52,13 @@ func (c *Confirmation) Ask() bool {
 
 	pb := progressbar.GetDefaultPb()
 	if pb != nil {
-		confirmWriter := pb.MultiPrinter.NewWriter()
+		confirmWriter := pb.LogBox.ShiftDown()
+
 		oldWriter := pb.MultiPrinter.Writer
 		pterm.SetDefaultOutput(confirmWriter)
 		result, _ := pterm.DefaultInteractiveConfirm.Show(c.message)
 		pterm.SetDefaultOutput(oldWriter)
+		pb.LogBox.ShiftUp(confirmWriter)
 
 		return result
 	} else {

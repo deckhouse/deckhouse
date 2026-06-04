@@ -143,7 +143,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	logger.Info("Reconcile started for ControlPlaneNode")
 
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
-	if err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, cpn); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Name: nodeName, Namespace: constants.KubeSystemNamespace}, cpn); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.metrics.deleteMaintenanceModeMetrics(nodeName)
 			logger.Info("ControlPlaneNode not found, skipping")
@@ -154,9 +154,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	defer r.metrics.syncMaintenanceModeMetrics(cpn)
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, ops, client.MatchingLabels{
-		constants.ControlPlaneNodeNameLabelKey: nodeName,
-	}); err != nil {
+	if err := r.client.List(ctx, ops,
+		client.InNamespace(constants.KubeSystemNamespace),
+		client.MatchingLabels{
+			constants.ControlPlaneNodeNameLabelKey: nodeName,
+		},
+	); err != nil {
 		return reconcile.Result{}, fmt.Errorf("list operations for node %s: %w", nodeName, err)
 	}
 	// Use only operations owned by the current CPN object (UID) for prevents status reconstruction from stale operations after CPN recreation.
@@ -378,7 +381,7 @@ func (r *Reconciler) rotateComponentOperations(
 	for i := 0; i < excess; i++ {
 		op := terminalOps[i]
 		if err := r.client.Delete(ctx, &controlplanev1alpha1.ControlPlaneOperation{
-			ObjectMeta: metav1.ObjectMeta{Name: op.Name},
+			ObjectMeta: metav1.ObjectMeta{Name: op.Name, Namespace: constants.KubeSystemNamespace},
 		}); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -511,6 +514,7 @@ func operationBase(
 	return &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", strings.ToLower(string(component))),
+			Namespace:    constants.KubeSystemNamespace,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
 				constants.ControlPlaneComponentLabelKey: component.LabelValue(),
@@ -817,8 +821,8 @@ func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, comp
 	if compStatus == nil {
 		return
 	}
-	if len(observed.CertificatesExpirationDate) > 0 {
-		compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
+	if len(observed.CertificatesExpirationTime) > 0 {
+		compStatus.CertificatesExpirationTime = observed.CertificatesExpirationTime
 	}
 	if compStatus.LastCertObserveTime.IsZero() || observedAt.Time.After(compStatus.LastCertObserveTime.Time) {
 		compStatus.LastCertObserveTime = observedAt
@@ -920,7 +924,7 @@ func certDatesForComponent(cpn *controlplanev1alpha1.ControlPlaneNode, component
 	if compStatus == nil {
 		return nil
 	}
-	return compStatus.CertificatesExpirationDate
+	return compStatus.CertificatesExpirationTime
 }
 
 // minExpirationDate returns the earliest expiration time from the given dates map.

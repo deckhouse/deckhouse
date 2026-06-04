@@ -6,7 +6,7 @@ lang: ru
 
 ## Введение
 
-Данное руководство предназначено для пользователей Deckhouse Virtualization Platform (DVP) и описывает порядок создания и изменения ресурсов, которые доступны для создания в проектах и пространствах имён кластера.
+Данное руководство предназначено для пользователей Deckhouse Virtualization Platform (DVP) и описывает порядок создания и изменения ресурсов, которые доступны для создания в проектах и неймспейсах кластера.
 
 ## Быстрый старт по созданию ВМ
 
@@ -176,6 +176,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
@@ -186,6 +187,8 @@ lang: ru
    NAME                                                 PHASE     NODE           IPADDRESS     AGE
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Подключитесь с помощью консоли к виртуальной машине (для выхода из консоли необходимо нажать `Ctrl+]`):
 
@@ -302,10 +305,13 @@ d8 k get vm linux-vm
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     NODE           IPADDRESS     AGE
 linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 После создания виртуальная машина автоматически получит IP-адрес из диапазона, указанного в настройках модуля (блок `virtualMachineCIDRs`).
 
@@ -373,7 +379,7 @@ linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
   - Возможные проблемы:
     - Нет подходящего узла для запуска.
     - На подходящих узлах недостаточно CPU или памяти.
-    - Превышены квоты пространства имён или проекта.
+    - Превышены квоты неймспейса или проекта.
   - Диагностика:
 
     - Если запуск затягивается, проверьте `.status.conditions`, условие `type: Running`
@@ -420,7 +426,7 @@ linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
     - Несовместимость процессорных инструкций (при использовании типов процессоров host или host-passthrough).
     - Различие в версиях ядер на узлах гипервизоров.
     - На подходящих узлах недостаточно CPU или памяти.
-    - Превышены квоты пространства имён или проекта.
+    - Превышены квоты неймспейса или проекта.
   - Диагностика:
     - Проверьте `.status.conditions` условие `type: Migrating`, а также блок `.status.migrationState`
 
@@ -840,10 +846,13 @@ spec:
 
   Пример вывода (колонка `AGENT`):
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 Как установить QEMU Guest Agent:
 
@@ -1110,10 +1119,13 @@ d8 k get vm linux-vm -o wide
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 linux-vm    Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В колонке `NEED RESTART` мы видим значение `True`, а это значит что для применения изменений требуется перезагрузка.
 
@@ -1495,10 +1507,13 @@ d8 k get vmbda attach-blank-disk
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                PHASE      VIRTUAL MACHINE NAME   AGE
 attach-blank-disk   Attached   linux-vm              3m7s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Подключитесь к виртуальной машине и удостоверитесь, что диск подключен:
 
@@ -1508,6 +1523,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
@@ -1517,6 +1533,8 @@ sda       8:0    0   10G  0 disk <--- статично подключенный 
 sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
 
@@ -1646,7 +1664,7 @@ MAC-адреса остаются неизменными, но имена инт
 
 Все эти подходы объединяет способность скрывать сложность инфраструктуры за простыми интерфейсами: клиенты работают с конкретным адресом, а система сама решает, как направить запрос к нужной ВМ, даже если их количество или состояние меняется.
 
-Имя сервиса формируется как `<service-name>.<namespace or project name>.svc.<clustername>`, или более коротко: `<service-name>.<namespace or project name>.svc`. Например, если имя вашего сервиса — `http`, а пространство имен — `default`, то полное DNS-имя будет `http.default.svc.cluster.local`.
+Имя сервиса формируется как `<service-name>.<namespace or project name>.svc.<clustername>`, или более коротко: `<service-name>.<namespace or project name>.svc`. Например, если имя вашего сервиса — `http`, а неймспейс — `default`, то полное DNS-имя будет `http.default.svc.cluster.local`.
 
 Принадлежность ВМ к сервису определяется набором лейблов. Чтобы установить лейблы на ВМ в контексте управления инфраструктурой, используйте следующую команду:
 
@@ -1908,10 +1926,13 @@ d8 k get vm
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                   PHASE     NODE           IPADDRESS     AGE
 linux-vm                               Running   virtlab-pt-1   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Мы видим что на данный момент она запущена на узле `virtlab-pt-1`.
 
@@ -1951,6 +1972,7 @@ d8 k get vm -w
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                  PHASE       NODE           IPADDRESS     AGE
 linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -1958,6 +1980,8 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Прервать любую живую миграцию, пока она находится в фазе `Pending` или `InProgress`, можно, удалив соответствующий ресурс VirtualMachineOperations.
 
@@ -2107,10 +2131,13 @@ spec:
 
 Пример вывода ресурса
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                         PHASE       TYPE    VIRTUALMACHINE      AGE
 nodeplacement-update-dabk4   Completed   Evict   linux-vm            1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Сбор отладочной информации
 
@@ -2170,10 +2197,13 @@ d8 k get vmipl
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Ресурс [VirtualMachineIPAddres](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`): проектный/неймспейсный ресурс, который отвечает за резервирование арендованных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по явному запросу.
 
@@ -2191,10 +2221,13 @@ d8 k get vmip
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             ADDRESS       STATUS     VM         AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
 
@@ -2203,7 +2236,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 - Для этого `vmip` создается ресурс аренды `vmipl`, который выбирает случайный IP-адрес из общего пула.
 - Как только ресурс `vmip` создан, виртуальная машина получает назначенный IP-адрес.
 
-IP-адрес виртуальной машине назначается автоматически из подсетей, определенных в модуле, и остается закрепленным за машиной до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом или пространством имён и может быть повторно запрошен явно.
+IP-адрес виртуальной машине назначается автоматически из подсетей, определенных в модуле, и остается закрепленным за машиной до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом или неймспейсом и может быть повторно запрошен явно.
 
 С полным описанием параметров конфигурации ресурсов `vmip` и `vmipl` машин можно ознакомиться по ссылкам:
 
@@ -2266,7 +2299,7 @@ spec:
   virtualMachineIPAddressName: linux-vm-7prpx
 ```
 
-Даже если ресурс `vmip` будет удален, IP-адрес остаётся арендованным для текущего проекта/пространства имён еще 10 минут. Поэтому существует возможность вновь его занять по запросу:
+Даже если ресурс `vmip` будет удален, IP-адрес остаётся арендованным для текущего проекта/неймспейса еще 10 минут. Поэтому существует возможность вновь его занять по запросу:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -2395,12 +2428,15 @@ d8 k get vmmacl
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    VIRTUALMACHINEMACADDRESS                      STATUS   AGE
 mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Ресурс `VirtualMachineMACAddress` (`vmmac`): проектный ресурс, который отвечает за резервирование арендованных MAC-адресов и их привязку к виртуальным машинам.
 
@@ -2414,12 +2450,15 @@ d8 k get vmmac
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          ADDRESS             STATUS     VM      AGE
 vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
 vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 При удалении сети из конфигурации ВМ:
 

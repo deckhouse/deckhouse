@@ -1,6 +1,7 @@
 {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
 {{- $version := $.Values.istio.internal.globalVersion }}
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+{{- $fullVersion := get $versionInfo "fullVersion" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 ---
 apiVersion: v1
@@ -21,17 +22,12 @@ rules:
       - ""
     resources:
       - namespaces
+      - nodes
       - pods
     verbs:
       - get
       - list
       - watch
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - delete
   - apiGroups:
       - authentication.k8s.io
     resources:
@@ -44,6 +40,20 @@ rules:
       - subjectaccessreviews
     verbs:
       - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:istio:cni
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "istio-cni-node")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:istio:cni
+subjects:
+  - kind: ServiceAccount
+    name: cni
+    namespace: d8-{{ .Chart.Name }}
 ---
 {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
@@ -84,16 +94,54 @@ roleRef:
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:istio:cni-repair
+  {{- include "helm_lib_module_labels" (list $ (dict "app"  "istio-cni-node")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - watch
+      - get
+      - list
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+  {{- /*
+  needed for REPAIR_LABEL_PODS, which we don't use for now
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - patch
+      - update
+  */}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:istio:cni
+  name: d8:istio:cni-repair
   {{- include "helm_lib_module_labels" (list $ (dict "app"  "istio-cni-node")) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: d8:istio:cni
 subjects:
   - kind: ServiceAccount
     name: cni
     namespace: d8-{{ .Chart.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:istio:cni-repair
 {{- end }}

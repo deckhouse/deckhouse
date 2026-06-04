@@ -75,8 +75,7 @@ func TestProgressTracker(t *testing.T) {
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.RegistryPackagesProxyPhase, "", "", opts))
-	require.NoError(t, progressTracker.Progress(phases.ExecuteBashibleBundlePhase, "", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.InstallKubernetesPhase, "", "", opts))
 	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseConnect, opts))
 	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseInstall, opts))
 	require.NoError(t, progressTracker.Progress("", "", phases.InstallDeckhouseSubPhaseWait, opts))
@@ -101,81 +100,66 @@ func TestProgressTracker(t *testing.T) {
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         bootstrapPhases,
-			Progress:       0.125,
-			CompletedPhase: bootstrapPhases[0].Phase,
-			CurrentPhase:   bootstrapPhases[1].Phase,
-			NextPhase:      bootstrapPhases[2].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.25,
+			Progress:       0.2222222222222222,
 			CompletedPhase: bootstrapPhases[1].Phase,
 			CurrentPhase:   bootstrapPhases[2].Phase,
 			NextPhase:      bootstrapPhases[3].Phase,
 		},
 		{
-			Operation:         phases.OperationBootstrap,
-			Phases:            bootstrapPhases,
-			Progress:          0.375,
-			CompletedPhase:    bootstrapPhases[2].Phase,
-			CurrentPhase:      bootstrapPhases[3].Phase,
-			NextPhase:         bootstrapPhases[4].Phase,
-			CompletedSubPhase: "",
-			CurrentSubPhase:   bootstrapPhases[3].SubPhases[0],
-			NextSubPhase:      bootstrapPhases[3].SubPhases[1],
+			Operation:       phases.OperationBootstrap,
+			Phases:          bootstrapPhases,
+			Progress:        0.4444444444444444,
+			CompletedPhase:  bootstrapPhases[3].Phase,
+			CurrentPhase:    bootstrapPhases[4].Phase,
+			NextPhase:       bootstrapPhases[5].Phase,
+			CurrentSubPhase: bootstrapPhases[4].SubPhases[0],
+			NextSubPhase:    bootstrapPhases[4].SubPhases[1],
 		},
 		{
 			Operation:         phases.OperationBootstrap,
 			Phases:            bootstrapPhases,
-			Progress:          0.4166666666666667,
-			CompletedPhase:    bootstrapPhases[2].Phase,
-			CurrentPhase:      bootstrapPhases[3].Phase,
-			NextPhase:         bootstrapPhases[4].Phase,
-			CompletedSubPhase: bootstrapPhases[3].SubPhases[0],
-			CurrentSubPhase:   bootstrapPhases[3].SubPhases[1],
-			NextSubPhase:      bootstrapPhases[3].SubPhases[2],
+			Progress:          0.48148148148148145,
+			CompletedPhase:    bootstrapPhases[3].Phase,
+			CurrentPhase:      bootstrapPhases[4].Phase,
+			NextPhase:         bootstrapPhases[5].Phase,
+			CompletedSubPhase: bootstrapPhases[4].SubPhases[0],
+			CurrentSubPhase:   bootstrapPhases[4].SubPhases[1],
+			NextSubPhase:      bootstrapPhases[4].SubPhases[2],
 		},
 		{
 			Operation:         phases.OperationBootstrap,
 			Phases:            bootstrapPhases,
-			Progress:          0.45833333333333337,
-			CompletedPhase:    bootstrapPhases[2].Phase,
-			CurrentPhase:      bootstrapPhases[3].Phase,
-			NextPhase:         bootstrapPhases[4].Phase,
-			CompletedSubPhase: bootstrapPhases[3].SubPhases[1],
-			CurrentSubPhase:   bootstrapPhases[3].SubPhases[2],
+			Progress:          0.5185185185185185,
+			CompletedPhase:    bootstrapPhases[3].Phase,
+			CurrentPhase:      bootstrapPhases[4].Phase,
+			NextPhase:         bootstrapPhases[5].Phase,
+			CompletedSubPhase: bootstrapPhases[4].SubPhases[1],
+			CurrentSubPhase:   bootstrapPhases[4].SubPhases[2],
 			NextSubPhase:      "",
 		},
 		{
 			Operation:         phases.OperationBootstrap,
 			Phases:            bootstrapPhases,
-			Progress:          0.5,
-			CompletedPhase:    bootstrapPhases[2].Phase,
-			CurrentPhase:      bootstrapPhases[3].Phase,
-			NextPhase:         bootstrapPhases[4].Phase,
-			CompletedSubPhase: bootstrapPhases[3].SubPhases[2],
+			Progress:          0.5555555555555556,
+			CompletedPhase:    bootstrapPhases[3].Phase,
+			CurrentPhase:      bootstrapPhases[4].Phase,
+			NextPhase:         bootstrapPhases[5].Phase,
+			CompletedSubPhase: bootstrapPhases[4].SubPhases[2],
+		},
+		{
+			Operation:       phases.OperationBootstrap,
+			Phases:          bootstrapPhases,
+			Progress:        0.5555555555555556,
+			CompletedPhase:  bootstrapPhases[4].Phase,
+			CurrentPhase:    bootstrapPhases[5].Phase,
+			NextPhase:       bootstrapPhases[6].Phase,
+			CurrentSubPhase: bootstrapPhases[5].SubPhases[0],
+			NextSubPhase:    bootstrapPhases[5].SubPhases[1],
 		},
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         bootstrapPhases,
-			Progress:       0.5,
-			CompletedPhase: bootstrapPhases[3].Phase,
-			CurrentPhase:   bootstrapPhases[4].Phase,
-			NextPhase:      bootstrapPhases[5].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.625,
-			CompletedPhase: bootstrapPhases[4].Phase,
-			CurrentPhase:   bootstrapPhases[5].Phase,
-			NextPhase:      bootstrapPhases[6].Phase,
-		},
-		{
-			Operation:      phases.OperationBootstrap,
-			Phases:         bootstrapPhases,
-			Progress:       0.75,
+			Progress:       0.6666666666666666,
 			CompletedPhase: bootstrapPhases[5].Phase,
 			CurrentPhase:   bootstrapPhases[6].Phase,
 			NextPhase:      bootstrapPhases[7].Phase,
@@ -183,15 +167,23 @@ func TestProgressTracker(t *testing.T) {
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         bootstrapPhases,
-			Progress:       0.875,
+			Progress:       0.7777777777777778,
 			CompletedPhase: bootstrapPhases[6].Phase,
 			CurrentPhase:   bootstrapPhases[7].Phase,
+			NextPhase:      bootstrapPhases[8].Phase,
+		},
+		{
+			Operation:      phases.OperationBootstrap,
+			Phases:         bootstrapPhases,
+			Progress:       0.8888888888888888,
+			CompletedPhase: bootstrapPhases[7].Phase,
+			CurrentPhase:   bootstrapPhases[8].Phase,
 		},
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         bootstrapPhases,
 			Progress:       1,
-			CompletedPhase: bootstrapPhases[7].Phase,
+			CompletedPhase: bootstrapPhases[8].Phase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
@@ -217,11 +209,11 @@ func TestProgressTracker_Complete(t *testing.T) {
 
 	require.NoError(t, progressTracker.Progress("", "", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", "", opts))
-	require.NoError(t, progressTracker.Complete(phases.RegistryPackagesProxyPhase))
+	require.NoError(t, progressTracker.Complete(phases.BaseInfraPhase))
 
 	lastPhases := phases.BootstrapPhases()
 	for i := range lastPhases {
-		// everything except BaseInfraPhase and RegistryPackagesProxyPhase should be skipped
+		// only PreInfraPreflights and BaseInfra are completed; everything after is skipped
 		if i <= 1 {
 			continue
 		}
@@ -240,16 +232,16 @@ func TestProgressTracker_Complete(t *testing.T) {
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         bootstrapPhases,
-			Progress:       0.125,
-			CompletedPhase: bootstrapPhases[0].Phase,
-			CurrentPhase:   bootstrapPhases[1].Phase,
-			NextPhase:      bootstrapPhases[2].Phase,
+			Progress:       float64(2) / float64(len(bootstrapPhases)),
+			CompletedPhase: bootstrapPhases[1].Phase,
+			CurrentPhase:   bootstrapPhases[2].Phase,
+			NextPhase:      bootstrapPhases[3].Phase,
 		},
 		{
 			Operation:      phases.OperationBootstrap,
 			Phases:         lastPhases,
 			Progress:       1,
-			CompletedPhase: lastPhases[7].Phase,
+			CompletedPhase: lastPhases[len(lastPhases)-1].Phase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
@@ -402,9 +394,6 @@ func TestProgressTracker_Progress_ExcludesPhase(t *testing.T) {
 
 	assert.NotContains(t, phaseNames, string(phases.BaseInfraPhase),
 		"BaseInfraPhase must not appear in progress for Bootstrap Static",
-	)
-	assert.Equal(t, string(phases.RegistryPackagesProxyPhase), string(result[0].CurrentPhase),
-		"first phase for Bootstrap Static should be RegistryPackagesProxy",
 	)
 }
 

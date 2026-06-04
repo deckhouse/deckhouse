@@ -1551,6 +1551,31 @@ alerts:
         The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"
       markupFormat: markdown
+    - name: D8HuaweiCloudMachineStuckInDeleting
+      sourceFile: ee/modules/030-cloud-provider-huaweicloud/monitoring/prometheus-rules/caphc-controller-manager.tpl
+      moduleUrl: 030-cloud-provider-huaweicloud
+      module: cloud-provider-huaweicloud
+      edition: ee
+      description: |
+        The HuaweiCloudMachine `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has been stuck in Deleting state for more than 24 hours.
+
+        This usually means the deletion job in HuaweiCloud is failing or the API is unavailable.
+
+        To inspect the machine status, run:
+
+        ```shell
+        d8 k get huaweicloudmachine -n {{ $labels.namespace }} {{ $labels.name }} -o yaml
+        ```
+
+        Check the controller logs for errors:
+
+        ```shell
+        d8 k logs -n d8-cloud-provider-huaweicloud -l app=caphc-controller-manager
+        ```
+      summary: |
+        HuaweiCloudMachine {{ $labels.name }} is stuck in Deleting for more than 24h.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -3867,6 +3892,24 @@ alerts:
       summary: |
         Too many UpmeterHookProbe objects in the cluster.
       severity: "9"
+      markupFormat: markdown
+    - name: D8UserAuthzPermissionBrowserUnavailable
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Deckhouse has detected unavailable replicas in the `permission-browser-apiserver` deployment in the `d8-user-authz` namespace.
+        Permission Browser requests can fail while this alert is active.
+
+        Check deployment and pod states:
+        ```bash
+        d8 k -n d8-user-authz get deploy permission-browser-apiserver
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
+        ```
+      summary: |
+        Permission Browser API server has unavailable replicas.
+      severity: "6"
       markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -7281,6 +7324,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
@@ -7308,3 +7352,4 @@ modules-having-alerts:
     - terraform-manager
     - upmeter
     - user-authn
+    - user-authz

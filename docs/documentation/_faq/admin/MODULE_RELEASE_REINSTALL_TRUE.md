@@ -39,11 +39,14 @@ To download the image and reinstall the module that caused the problem:
 
    Output example:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
    my-module-v3.7.4   Superseded                   5d23h
    my-module-v3.7.5   Deployed                     5d23h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Find the module release deployed in the cluster in the list (it should have the status `Deployed`).
 
@@ -63,9 +66,12 @@ d8 k -n d8-<module-name> get pods
 
 All pods in the module must have the status `Running`. Example:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                READY   STATUS    RESTARTS   AGE
 backend-567d6c6cdc-g5qgt            1/1     Running   0          2d2h
 frontend-7c8b567759-h8jdf           1/1     Running   0          2d2h
 observability-gw-86cf75f5d6-7xljh   1/1     Running   0          2d2h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
