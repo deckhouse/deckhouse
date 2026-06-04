@@ -32,8 +32,8 @@ var (
 
 	cacheRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "node_controller_cache_requests_total",
-			Help: "Number of cache requests",
+			Name: "node_controller_client_requests_total",
+			Help: "Total number of controller-runtime client Get/List requests",
 		},
 		[]string{"operation"},
 	)

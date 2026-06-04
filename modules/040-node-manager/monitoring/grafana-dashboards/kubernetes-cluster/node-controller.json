@@ -26,6 +26,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Сколько запросов node-controller отправляет в Kubernetes API server в секунду",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -87,7 +88,7 @@
           "refId": "A"
         }
       ],
-      "title": "rest_client_requests_total",
+      "title": "Rest_client_requests_total",
       "type": "stat"
     },
     {
@@ -95,6 +96,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Сколько памяти сейчас занято Go heap",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -150,17 +152,18 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "go_memstats_heap_alloc_bytes{\n\npod=~\"node-controller.*\"\n\n} /1024/1024",
+          "exemplar": false,
+          "expr": "sum(\ngo_memstats_heap_alloc_bytes{\nnamespace=\"d8-cloud-instance-manager\",\npod=~\"node-controller.*\"\n}\n)/1024/1024",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
-          "instant": false,
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A",
           "useBackend": false
         }
       ],
-      "title": "go_memstats_heap_alloc_bytes",
+      "title": "Go_memstats_heap_alloc_bytes",
       "type": "stat"
     },
     {
@@ -168,6 +171,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Сколько reconcile-циклов выполняется в секунду",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -229,7 +233,7 @@
           "refId": "A"
         }
       ],
-      "title": "reconcile per second",
+      "title": "Reconcile per second",
       "type": "stat"
     },
     {
@@ -237,6 +241,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Сколько объектов ждёт обработки в очереди",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -298,7 +303,7 @@
           "refId": "A"
         }
       ],
-      "title": "workqueue depth",
+      "title": "Workqueue depth",
       "type": "stat"
     },
     {
@@ -306,6 +311,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Насколько долго выполняются самые медленные reconcile",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -367,7 +373,7 @@
           "refId": "A"
         }
       ],
-      "title": "reconcile duration p99",
+      "title": "Reconcile duration p99",
       "type": "stat"
     },
     {
@@ -375,6 +381,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Сколько объектов всего лежит в informer cache",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -436,7 +443,7 @@
           "refId": "A"
         }
       ],
-      "title": "cache size",
+      "title": "Cache size",
       "type": "stat"
     },
     {
@@ -444,6 +451,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Количество объектов в Go heap",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -504,7 +512,7 @@
           "refId": "A"
         }
       ],
-      "title": "go_memstats_heap_objects",
+      "title": "Go_memstats_heap_objects",
       "type": "stat"
     },
     {
@@ -512,6 +520,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Количество goroutine",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -580,7 +589,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "",
+      "description": "Реальная память процесса в RAM",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -642,7 +651,7 @@
           "refId": "A"
         }
       ],
-      "title": "process_resident_memory_bytes",
+      "title": "Process_resident_memory_bytes",
       "type": "stat"
     },
     {
@@ -650,6 +659,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Количество ошибок reconcile",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -711,7 +721,7 @@
           "refId": "A"
         }
       ],
-      "title": "erros coint",
+      "title": "Erros count",
       "type": "stat"
     },
     {
@@ -719,6 +729,105 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Сколько раз код controller-а обращается к cache через Get/List",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.19",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (operation) (\n  rate(node_controller_cache_requests_total{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\"\n  }[$__rate_interval])\n)",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Node_controller_client_requests_total",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${ds_prometheus}"
+      },
+      "description": "Размер cache по типам объектов",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -781,7 +890,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 20
       },
       "id": 1,
       "options": {
@@ -816,7 +925,7 @@
           "refId": "A"
         }
       ],
-      "title": "cache size",
+      "title": "Сache size",
       "type": "timeseries"
     },
     {
@@ -824,6 +933,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Длительность запросов kube-apiserver к webhook node-controller",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -883,7 +993,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 19
+        "y": 27
       },
       "id": 17,
       "options": {
@@ -912,7 +1022,7 @@
           "refId": "A"
         }
       ],
-      "title": "rest_client_request_duration_seconds_bucket",
+      "title": "Node controller webhook request duration p95",
       "type": "timeseries"
     },
     {
@@ -920,6 +1030,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Длительность GC-пауз",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -979,7 +1090,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 19
+        "y": 27
       },
       "id": 15,
       "options": {
@@ -1008,7 +1119,7 @@
           "refId": "A"
         }
       ],
-      "title": "go_gc_duration_seconds p75",
+      "title": "Go_gc_duration_seconds p75",
       "type": "timeseries"
     },
     {
@@ -1016,6 +1127,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Какие контроллеры выполняются дольше всего",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1075,7 +1187,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "id": 2,
       "options": {
@@ -1115,6 +1227,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "У каких контроллеров чаще ошибки",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1173,7 +1286,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 35
       },
       "id": 3,
       "options": {
@@ -1210,6 +1323,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "Какие контроллеры чаще всего запускаются",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1269,7 +1383,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "id": 5,
       "options": {
@@ -1309,6 +1423,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
+      "description": "У каких очередей накапливается backlog",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1367,7 +1482,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 43
       },
       "id": 4,
       "options": {
@@ -1432,6 +1547,6 @@
   "timezone": "browser",
   "title": "Node controller metrics",
   "uid": "dfnfm56h7k7wgf",
-  "version": 12,
+  "version": 18,
   "weekStart": ""
 }
