@@ -7,13 +7,15 @@ function openTabAndSaveStatus(evt, linksClass, contentClass, contentId, storeKey
 
 function openTab(evt, linksClass, contentClass, contentId) {
   var i, tabcontent, tablinks;
+  var trigger = evt.currentTarget || evt;
+  var scope = trigger.closest ? (trigger.closest(".tabs-block") || document) : document;
 
-  tabcontent = document.getElementsByClassName(contentClass);
+  tabcontent = scope.getElementsByClassName(contentClass);
   for (i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = "none";
   }
 
-  tablinks = document.getElementsByClassName(linksClass);
+  tablinks = scope.getElementsByClassName(linksClass);
   for (i = 0; i < tablinks.length; i++) {
     tablinks[i].className = tablinks[i].className.replace(" active", "");
   }
@@ -35,12 +37,13 @@ function activateTabBtn(btn) {
   contentClass = match[2];
   var blockId = match[3];
 
-  var tabcontent = document.getElementsByClassName(contentClass);
+  var scope = btn.closest ? (btn.closest(".tabs-block") || document) : document;
+  var tabcontent = scope.getElementsByClassName(contentClass);
   for (var i = 0; i < tabcontent.length; i++) {
     tabcontent[i].style.display = "none";
   }
 
-  var tablinks = document.getElementsByClassName(linksClass);
+  var tablinks = scope.getElementsByClassName(linksClass);
   for (var i = 0; i < tablinks.length; i++) {
     tablinks[i].className = tablinks[i].className.replace(" active", "");
   }
@@ -53,7 +56,7 @@ function activateTabBtn(btn) {
 document.addEventListener("DOMContentLoaded", function () {
   // 1. Restore tab state from sessionStorage.
   // Process in DOM order so outer tabs restore before inner tabs.
-  var buttons = document.querySelectorAll("a[data-store-key]");
+  var buttons = document.querySelectorAll("[data-store-key]");
   buttons.forEach(function (btn) {
     var key = btn.dataset.storeKey;
     var val = btn.dataset.storeVal;
@@ -82,7 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
         panels.forEach(function (panel) {
           var panelId = panel.id;
           if (!panelId) return;
-          var btn = document.querySelector("a[onclick*=\"'" + panelId + "'\"]");
+          var btn = document.querySelector("a[onclick*=\"'" + panelId + "'\"], li[onclick*=\"'" + panelId + "'\"]");
           if (btn) activateTabBtn(btn);
         });
 

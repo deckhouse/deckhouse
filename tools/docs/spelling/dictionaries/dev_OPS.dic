@@ -1,4 +1,4 @@
-2613
+2619
 1GB
 2GB
 5XX
@@ -123,6 +123,7 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
+Basis Dynamix
 baz
 bcrypt
 BDU
@@ -601,7 +602,6 @@ Habr
 hardcoded
 HardPodAntiAffinity
 HashiCorp
-HashiCorp
 hasn
 hdd
 healthcheck
@@ -1020,6 +1020,7 @@ NotManaged
 Noto
 NotReady
 NotRegex
+nowrap
 npm
 NSX
 NTP
@@ -1032,6 +1033,7 @@ objectmeta
 OCI
 offline
 OFFLINE
+OfflineSessions
 offtopic
 OICD
 OIDC
@@ -1222,6 +1224,7 @@ redis
 Redis
 Redoc
 redos
+RefreshToken
 regex
 Regex
 regexes
@@ -1394,6 +1397,7 @@ StaticInstanceSpec
 StaticMachine
 status
 stderr
+stdin
 stdout
 storageclass
 storageClass
@@ -1435,7 +1439,6 @@ syscalls
 sysctl
 sysctls
 syslog
-syslog
 Syslog
 SysLog
 Sysprep
@@ -1468,7 +1471,6 @@ Thymeleaf
 TiB
 timeframe
 timelines
-timelines
 TimeSlicing
 timeslot
 timestamp
@@ -1480,11 +1482,13 @@ TODO
 TolerationSeconds
 toolchain
 Tooltip
+TOTP
 Tproger
 trdl
 trivy
 Trivy
 TrustDomain
+tuf
 tunnelMode
 txt
 Ubuntu
@@ -1497,6 +1501,7 @@ UIs
 un
 uncordoned
 uninstall
+uninstalled
 uninstalling
 Unlabel
 UNPACKEDSIZE
@@ -1707,6 +1712,7 @@ ZvirtInstanceClass
 аттрибутов
 Аудиофайлы
 аутентификатора
+аутентификаторе
 аутентификаторов
 аутентификаторы
 аутентификациии
@@ -1806,6 +1812,7 @@ ZvirtInstanceClass
 внутрикластерной
 внутрикластерным
 воркеров
+выгрузок
 выдаватель
 высокогранулярной
 высокодоступном
@@ -1815,9 +1822,7 @@ ZvirtInstanceClass
 высокоуровневой
 высокоуровневыми
 высокоуровневых
-выполнений
 г
-гайде
 гайде
 Гб
 Гбит
@@ -1892,6 +1897,8 @@ ZvirtInstanceClass
 запустившемся
 запушить
 засчет
+захеширован
+захешированном
 иcпользовать
 ИБ
 иммутабельный
@@ -2038,7 +2045,6 @@ ZvirtInstanceClass
 масштабируемость
 масштабируется
 Мб
-Мб
 МБ
 медиафайлов
 медиафайлы
@@ -2102,13 +2108,9 @@ ZvirtInstanceClass
 неизменяем
 неинтерактивном
 неймспейс
-неймспейса
 неймспейсах
 неймспейсе
-неймспейсов
-неймспейсу
 неймспейсы
-неймспейсам
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2129,7 +2131,6 @@ ZvirtInstanceClass
 непринадлежности
 непубличного
 непубличный
-неразмеченным
 неразмеченным
 нерелевантного
 нереляционные
@@ -2321,6 +2322,7 @@ ZvirtInstanceClass
 псевдоселектор
 пуллинга
 Р
+разблокировка
 раннера
 рантайма
 рантайме
@@ -2467,7 +2469,6 @@ ZvirtInstanceClass
 сокеты
 соотвествущая
 соответствующий
-соответствующий
 Сохраняеем
 спецзаголовки
 спринты
@@ -2556,7 +2557,6 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
-хеш
 Хеш
 хеша
 хешам
@@ -2569,7 +2569,6 @@ ZvirtInstanceClass
 хеширования
 хешированные
 хешированный
-хешированных
 хешированных
 хешировано
 хост

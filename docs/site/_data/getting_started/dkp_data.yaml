@@ -547,11 +547,11 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      ru: "Deckhouse Kubernetes Platform в Базис.DynamiX"
+      ru: "Deckhouse Kubernetes Platform в Basis Dynamix"
     type: cloud
     name:
-      en: "Базис.DynamiX"
-      ru: "Базис.DynamiX"
+      en: "Basis Dynamix"
+      ru: "Basis Dynamix"
     steps:
       step2:
         name:
