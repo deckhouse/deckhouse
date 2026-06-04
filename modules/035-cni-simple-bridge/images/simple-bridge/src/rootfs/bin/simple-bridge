@@ -11,6 +11,14 @@ function ensure_pod_network_route() {
   fi
 }
 
+function patch_netplan() {
+  local pod_cidr=$1
+
+  if ! ip rule show | grep -q "10000:.*to $pod_cidr"; then
+    ip rule add to "$pod_cidr" table 254 priority 10000
+  fi
+}
+
 while true; do
   node_object="$(curl --max-time 5 -s -S -f --resolve "kubernetes.default:443:$KUBERNETES_SERVICE_HOST" -s "https://kubernetes.default/api/v1/nodes/$NODE_NAME" --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)")"
 
@@ -87,6 +95,10 @@ while true; do
   ]
 }
 END
+    if command -v netplan >/dev/null 2>&1 && [ $(find /sys/class/net/ -type l ! -lname '*/devices/virtual/*' | wc -l) -ge 2 ]; then
+      echo "patching netplan"
+      patch_netplan "$podcidr"
+    fi
 
     if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
       SECONDS=0
@@ -95,12 +107,12 @@ END
         ensure_pod_network_route "$POD_SUBNET" "$gw"
         sleep 30
 
-        if (( SECONDS >= 3600 )); then
+        if (( SECONDS >= 60 )); then
           break
         fi
       done
     else
-      sleep 3600
+      sleep 60
     fi
   else
     echo "Waiting for .spec.podCIDR to be assigned to $NODE_NAME"
