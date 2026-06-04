@@ -633,14 +633,12 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	// do not (re)create documentation for a module disabled by config
 	module := new(v1alpha1.Module)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
+		r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
 
-			return res, fmt.Errorf("get module: %w", err)
-		}
+		return res, fmt.Errorf("get module: %w", err)
 	}
 
-	// mpo not found - update the docs from the module release version
+	// ensure documentation only for a module enabled by config
 	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 		if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
 			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
