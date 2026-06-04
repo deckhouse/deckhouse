@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 44952b3..0ea0cac 100644
+index 44952b3..1483398 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
  module github.com/ratify-project/ratify
  
 -go 1.23.3
-+go 1.25.0
++go 1.25.5
  
  // Accidentally published prior to 1.0.0 release
  retract (
