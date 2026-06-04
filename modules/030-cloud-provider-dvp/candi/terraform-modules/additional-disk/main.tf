@@ -128,10 +128,7 @@ resource "kubernetes_resource_ready_v1" "additional_disk_migration" {
   fail_condition {
     type   = "Ready"
     status = "False"
-    reason = format("^(%s)$", join("|", concat(local.not_ready_fail_reasons, [
-      "StorageClassIsNotReady",
-      "StorageClassProvisionerMismatch",
-    ])))
+    reason = format("^(%s)$", join("|", local.not_ready_fail_reasons))
   }
 
   depends_on = [kubernetes_resource_ready_v1.additional_disk]
