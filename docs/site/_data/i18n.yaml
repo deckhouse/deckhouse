@@ -337,15 +337,30 @@ comparison:
     ru: "Кроме следующих параметров:<br />"
 
 feedback:
-  thanks:
-    en: Thanks for the review!
-    ru: Спасибо за&nbsp;оценку!
   useful:
     en: Was the page useful?
     ru: Была&nbsp;ли страница полезна?
+  yes:
+    en: Yes
+    ru: Да
+  no:
+    en: No
+    ru: Нет
+  thanks:
+    en: Thanks for your rating! Could you share any improvements or&nbsp;additions?
+    ru: Спасибо за&nbsp;оценку! Поделитесь, что можно улучшить или дополнить?
+    share_the_details:
+      en: We would be glad to receive your additions or just comments.
+      ru: Будем рады вашим дополнениям или просто комментариям
+    answer:
+      en: Thank you for your detailed review!
+      ru: Спасибо за&nbsp;подробный отзыв!
+    answer_descr:
+      en: The documentation team has already received it&nbsp;and will definitely study it&nbsp;to&nbsp;improve the content.
+      ru: Команда документации уже получила его и&nbsp;обязательно изучит, чтобы улучшить контент
   response_processed:
-    en: Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.
-    ru: Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут
+    en: You can change your choice in&nbsp;5&nbsp;minutes.
+    ru: Изменить выбор можно будет через 5&nbsp;минут
   error_happened:
     en: An error has occurred
     ru: Произошла ошибка
@@ -353,8 +368,8 @@ feedback:
     en: Please try again later
     ru: Пожалуйста, попробуйте позже
   tell_us_what_you_didnt_like:
-    en: Tell&nbsp;us what you didn&rsquo;t like.
-    ru: Расскажите, что не&nbsp;понравилось
+    en: Thanks for your feedback! What should we&nbsp;pay attention&nbsp;to?
+    ru: Спасибо за&nbsp;оценку! На&nbsp;что нам обратить внимание?
   not_useful:
     en: Little useful
     ru: Мало полезного
@@ -371,8 +386,8 @@ feedback:
     en: Other
     ru: Другое
   share_the_details:
-    en: Share the details
-    ru: Поделитесь деталями
+    en: Please indicate the section, step, or&nbsp;command you have questions about.
+    ru: Укажите раздел, шаг или команду, по&nbsp;которым возникли вопросы
   send:
     en: Send
     ru: Отправить
