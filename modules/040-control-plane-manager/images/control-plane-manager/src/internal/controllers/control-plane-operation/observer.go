@@ -76,7 +76,7 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 
 	state := controlplanev1alpha1.ObservedComponentState{}
 	if len(certExpiry) > 0 {
-		state.CertificatesExpirationDate = certExpiry
+		state.CertificatesExpirationTime = certExpiry
 	}
 	return state, true, errors.Join(readErrs...)
 }
