@@ -319,6 +319,12 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+
+		// restore documentation for the re-enabled module from its deployed release
+		if err := r.ensureModuleDocumentation(ctx, module); err != nil {
+			r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
 	}
 
 	if module.IsExperimental() {
@@ -566,4 +572,22 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 
 		return true
 	})
+}
+
+func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1alpha1.Module) error {
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := r.client.List(ctx, releases, client.MatchingLabels{
+		v1alpha1.ModuleReleaseLabelModule: module.Name,
+		v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+	}); err != nil {
+		return fmt.Errorf("list module releases: %w", err)
+	}
+
+	for i := range releases.Items {
+		if err := utils.EnsureModuleDocumentationForRelease(ctx, r.client, &releases.Items[i]); err != nil {
+			return fmt.Errorf("ensure module documentation: %w", err)
+		}
+	}
+
+	return nil
 }

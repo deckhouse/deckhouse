@@ -16,7 +16,6 @@ package release
 
 import (
 	"context"
-	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -623,15 +622,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
-	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/<module>)
-	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
-	moduleVersion := "v" + release.GetVersion().String()
-
-	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
-	if moduleChecksum == "" {
-		moduleChecksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
-	}
-
 	ownerRef := metav1.OwnerReference{
 		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
 		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
@@ -652,7 +642,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	// mpo not found - update the docs from the module release version
 	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
-		if err = utils.EnsureModuleDocumentation(ctx, r.client, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef); err != nil {
+		if err = utils.EnsureModuleDocumentationForRelease(ctx, r.client, release); err != nil {
 			r.log.Error("failed to ensure module documentation", slog.String("module", release.GetModuleName()), log.Err(err))
 
 			return res, fmt.Errorf("ensure module documentation: %w", err)
