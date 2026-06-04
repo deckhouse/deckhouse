@@ -73,7 +73,7 @@ metadata:
   name: test-package
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
-    controller: true
+    controller: false
     kind: PackageRepository
     name: deckhouse
     uid: ""
