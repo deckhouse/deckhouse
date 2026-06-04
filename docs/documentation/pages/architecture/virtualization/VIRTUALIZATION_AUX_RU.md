@@ -1,6 +1,7 @@
 ---
 title: Вспомогательные компоненты
-permalink: en/architecture/virtualization/auxiliary.html
+permalink: ru/architecture/virtualization/auxiliary.html
+lang: ru
 search: virtualization-audit, virtualization-dra, dra
 description: Архитектура вспомогательных компонентов модуля virtualization в Deckhouse Kubernetes Platform.
 ---
