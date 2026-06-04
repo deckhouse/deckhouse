@@ -32,10 +32,6 @@ entries:
           ru: События аудита безопасности
         url: /code/documentation/admin/audit-events.html
       - title:
-          en: External status checks
-          ru: Внешние проверки статуса
-        url: /code/documentation/admin/external-status-checks.html
-      - title:
           en: Security сredentials
           ru: Ключи доступа
         url: /code/documentation/admin/security-credentials.html
@@ -96,6 +92,10 @@ entries:
           ru: Интеграция с внешним Vault
         url: /code/documentation/user/external-vault.html
       - title:
+          en: External status checks
+          ru: Внешние проверки статуса
+        url: /code/documentation/user/external-status-checks.html
+      - title:
           en: OmniAuth & LDAP
           ru: OmniAuth и LDAP
         url: /code/documentation/user/oauth-and-ldap.html
@@ -115,7 +115,3 @@ entries:
           en: Push rules
           ru: Правила отправки изменений
         url: /code/documentation/user/push-rules.html
-      - title:
-          en: External status checks
-          ru: Внешние проверки статуса
-        url: /code/documentation/user/external-status-checks.html
