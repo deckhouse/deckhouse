@@ -26,7 +26,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Сколько запросов node-controller отправляет в Kubernetes API server в секунду",
+      "description": "Number of requests sent by node-controller to the Kubernetes API server per second",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -96,7 +96,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Сколько памяти сейчас занято Go heap",
+      "description": "Current Go heap memory usage",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -171,7 +171,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Сколько reconcile-циклов выполняется в секунду",
+      "description": "Number of reconcile loops executed per second",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -241,7 +241,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Сколько объектов ждёт обработки в очереди",
+      "description": "Number of objects waiting in the workqueue",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -311,7 +311,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Насколько долго выполняются самые медленные reconcile",
+      "description": "Duration of the slowest reconcile loops",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -381,7 +381,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Сколько объектов всего лежит в informer cache",
+      "description": "Total number of objects in the informer cache",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -451,7 +451,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Количество объектов в Go heap",
+      "description": "Number of objects in Go heap",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -520,7 +520,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Количество goroutine",
+      "description": "Number of goroutines",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -589,7 +589,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Реальная память процесса в RAM",
+      "description": "Actual process memory usage in RAM",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -659,7 +659,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Количество ошибок reconcile",
+      "description": "Number of reconcile errors",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -729,7 +729,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Сколько раз код controller-а обращается к cache через Get/List",
+      "description": "Number of controller-runtime client Get/List operations",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -827,7 +827,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Размер cache по типам объектов",
+      "description": "Cache size by object type",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -934,7 +934,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Длительность запросов kube-apiserver к webhook node-controller",
+      "description": "Duration of kube-apiserver requests to the node-controller webhook",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1031,7 +1031,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Длительность GC-пауз",
+      "description": "GC pause duration",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1128,7 +1128,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Какие контроллеры выполняются дольше всего",
+      "description": "Controllers with the longest reconcile duration",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1228,7 +1228,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "У каких контроллеров чаще ошибки",
+      "description": "Controllers with the highest error rate",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1324,7 +1324,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Какие контроллеры чаще всего запускаются",
+      "description": "Controllers with the highest reconcile rate",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1424,7 +1424,7 @@
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "У каких очередей накапливается backlog",
+      "description": "Workqueues with accumulated backlog",
       "fieldConfig": {
         "defaults": {
           "color": {
