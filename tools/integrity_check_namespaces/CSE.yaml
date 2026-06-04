@@ -9,6 +9,7 @@ additionalNamespaces:
   - d8-csi-scsi-generic
   - d8-csi-yadro-tatlin-unified
   - d8-observability
+  - d8-pod-reloader
   - d8-runtime-audit-engine
   - d8-sds-local-volume
   - d8-sds-node-configurator
