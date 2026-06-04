@@ -29,7 +29,8 @@ fi
 if [[ -d /etc/kubernetes/pki/etcd ]]; then
     chown root:etcd /etc/kubernetes/pki/etcd
     chmod 750 /etc/kubernetes/pki/etcd
-    chown etcd:etcd /etc/kubernetes/pki/etcd/*.{crt,key} 2>/dev/null || true
-    chmod 600 /etc/kubernetes/pki/etcd/*.key 2>/dev/null || true
+    chown root:etcd /etc/kubernetes/pki/etcd/*.key 2>/dev/null || true
+    chmod 640 /etc/kubernetes/pki/etcd/*.key 2>/dev/null || true
+    chown root:etcd /etc/kubernetes/pki/etcd/*.crt 2>/dev/null || true
     chmod 644 /etc/kubernetes/pki/etcd/*.crt 2>/dev/null || true
 fi

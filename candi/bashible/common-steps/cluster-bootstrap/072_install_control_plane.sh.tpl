@@ -60,13 +60,15 @@ cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super
 
 # etcd runs as UID/GID 52 with capabilities: drop: ALL (no CAP_DAC_OVERRIDE).
 # Pre-create data dir and set PKI ownership before the static pod starts.
+# Keys: root:etcd 640 — CPM (root/owner) can read/write; etcd pod (GID 52/group) can read.
+# Certs: root:etcd 644 — world-readable for kube-apiserver peer TLS.
 mkdir -p /var/lib/etcd
 chown etcd:etcd /var/lib/etcd
 chmod 700 /var/lib/etcd
 chown root:etcd /etc/kubernetes/pki/etcd
 chmod 750 /etc/kubernetes/pki/etcd
-chown etcd:etcd /etc/kubernetes/pki/etcd/*.{crt,key}
-chmod 600 /etc/kubernetes/pki/etcd/*.key
+chown root:etcd /etc/kubernetes/pki/etcd/*.{crt,key}
+chmod 640 /etc/kubernetes/pki/etcd/*.key
 chmod 644 /etc/kubernetes/pki/etcd/*.crt
 
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
@@ -179,10 +181,10 @@ bb-curl-kube "/api/v1/nodes/${node_name}" \
 __sec rbac_label_taint
 
 # CIS benchmark purposes
-chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
-# etcd and kube-apiserver both run with capabilities: drop: ALL (no CAP_DAC_OVERRIDE).
-# etcd owns the cert files (etcd:etcd); kube-apiserver (UID 0) needs to read ca.crt
-# on any restart via the "other" r bit. Keys stay 600 (private, only etcd reads them).
+chmod 600 /etc/kubernetes/pki/*.{crt,key}
+# etcd keys: root:etcd 640 (CPM as owner-root reads; etcd pod as group reads).
+# etcd certs: 644 (world-readable for kube-apiserver peer TLS).
+chmod 640 /etc/kubernetes/pki/etcd/*.key
 chmod 644 /etc/kubernetes/pki/etcd/*.crt
 
 # Restrict permissions on admin kubeconfig files for security
