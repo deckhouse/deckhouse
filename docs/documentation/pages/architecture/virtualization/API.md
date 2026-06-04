@@ -16,7 +16,7 @@ The Virtualization API component of [`virtualization`](/modules/virtualization/)
 
    The full list of the main API group resources is given [in the module documentation](/modules/virtualization/cr.html).
 
-   Virtualization-сontroller manages the resources of the main group.
+   Virtualization-controller manages the resources of the main group.
 
 2. `subresources.virtualization.deckhouse.io`: Subresources group. Subresources are additional operations or actions that can be performed on core resources (for example, VirtualMachine) via the Kubernetes API. They provide interfaces for managing specific aspects of resources without affecting the entire object. Instead of the declarative resource familiar to Kubernetes, they are endpoints for imperative operations. The group includes the following subresources:
 
