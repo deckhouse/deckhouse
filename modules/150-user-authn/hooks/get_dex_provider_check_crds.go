@@ -55,6 +55,10 @@ const (
 
 	userAuthnNamespace = "d8-user-authn"
 	dexDiscoveryURL    = "https://dex.d8-user-authn/.well-known/openid-configuration"
+
+	dexProviderAPIVersion = "deckhouse.io/v1"
+	dexProviderKind       = "DexProvider"
+	dexProviderCheckKind  = "DexProviderCheck"
 )
 
 type DexProviderCheck struct {
@@ -180,15 +184,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                "dexproviderchecks",
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "DexProviderCheck",
+			ApiVersion:          dexProviderAPIVersion,
+			Kind:                dexProviderCheckKind,
 			FilterFunc:          applyDexProviderCheckFilter,
 			ExecuteHookOnEvents: ptr.To(true),
 		},
 		{
 			Name:                "dexproviders_for_check",
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "DexProvider",
+			ApiVersion:          dexProviderAPIVersion,
+			Kind:                dexProviderKind,
 			FilterFunc:          applyDexProviderForCheckFilter,
 			ExecuteHookOnEvents: ptr.To(false),
 		},
@@ -223,32 +227,26 @@ func getDexProviderChecks(ctx context.Context, input *go_hook.HookInput, dc depe
 		}
 
 		provider, ok := providers[check.Spec.ProviderName]
-		if !ok || provider.Name == "" {
-			// The DexProvider is gone: drop its orphaned check so results do not
-			// linger for resources that no longer exist.
-			input.PatchCollector.Delete("deckhouse.io/v1", "DexProviderCheck", "", check.Name)
+
+		// Drop checks that must not exist: orphans (the DexProvider is gone) and
+		// duplicates (any name other than the canonical one-per-provider name,
+		// e.g. a leftover from an older randomly-named scheme).
+		if !ok || provider.Name == "" || check.Name != canonicalDexProviderCheckName(provider.Name) {
+			input.PatchCollector.Delete(dexProviderAPIVersion, dexProviderCheckKind, "", check.Name)
 			continue
 		}
 
-		// Keep exactly one persistent check per provider, named after the
-		// provider. Any other check for the same provider (e.g. a leftover from
-		// an older randomly-named scheme) is removed.
-		if check.Name != canonicalDexProviderCheckName(provider.Name) {
-			input.PatchCollector.Delete("deckhouse.io/v1", "DexProviderCheck", "", check.Name)
-			continue
-		}
-
-		// A completed check is kept as the last result and is only re-run once it
-		// gets stale, so the status stays fresh without hammering the provider.
-		if dexProviderCheckCompleted(check) && !dexProviderCheckDueForRecheck(check) {
+		// Keep a completed result as-is while it still matches the provider's
+		// current configuration and stays fresh; otherwise (re-)run the check.
+		if dexProviderCheckCompleted(check) && dexProviderCheckUpToDate(check, provider) {
 			continue
 		}
 
 		status := executeDexProviderCheck(ctx, input, dc, check, provider)
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"status": status},
-			"deckhouse.io/v1",
-			"DexProviderCheck",
+			dexProviderAPIVersion,
+			dexProviderCheckKind,
 			"",
 			check.Name,
 			object_patch.WithSubresource("status"),
@@ -265,13 +263,17 @@ func canonicalDexProviderCheckName(providerName string) string {
 	return providerName
 }
 
-// dexProviderCheckDueForRecheck reports whether a completed check is stale and
-// should be re-run on the next reconcile.
-func dexProviderCheckDueForRecheck(check DexProviderCheck) bool {
+// dexProviderCheckUpToDate reports whether a completed check can be kept without
+// re-running: it must reflect the provider's current generation (no spec change
+// since) and be more recent than the recheck interval.
+func dexProviderCheckUpToDate(check DexProviderCheck, provider DexProviderForCheck) bool {
 	if check.Status.CompletedAt == nil {
-		return true
+		return false
 	}
-	return time.Since(check.Status.CompletedAt.Time) >= dexProviderCheckRecheckInterval
+	if check.Status.ObservedDexProviderGeneration != provider.Generation {
+		return false
+	}
+	return time.Since(check.Status.CompletedAt.Time) < dexProviderCheckRecheckInterval
 }
 
 func dexProvidersForCheck(input *go_hook.HookInput) (map[string]DexProviderForCheck, error) {
@@ -415,7 +417,7 @@ func (r *dexProviderCheckResult) status(observedGeneration int64) DexProviderChe
 
 func checkDexReachability(ctx context.Context, dc dependency.Container, result *dexProviderCheckResult) {
 	client := dc.GetHTTPClient(d8http.WithTimeout(dexProviderCheckHTTPTimeout), d8http.WithInsecureSkipVerify())
-	statusCode, body, err := httpGet(ctx, client, dexDiscoveryURL, nil)
+	statusCode, body, err := httpGet(ctx, client, dexDiscoveryURL, "", "")
 	if err != nil {
 		result.fail("dexReady", "Dex discovery is not reachable: %v", err)
 		return
@@ -507,11 +509,7 @@ func checkGithubCredentials(ctx context.Context, dc dependency.Container, result
 		return
 	}
 
-	var githubErr struct {
-		Error string `json:"error"`
-	}
-	_ = json.Unmarshal(body, &githubErr)
-	if githubErr.Error == "incorrect_client_credentials" {
+	if oauthErrorCode(body) == "incorrect_client_credentials" {
 		result.fail("githubCredentials", "GitHub rejected the client credentials")
 		return
 	}
@@ -598,17 +596,8 @@ func checkCrowd(ctx context.Context, dc dependency.Container, result *dexProvide
 	}
 
 	endpoint := strings.TrimRight(provider.Spec.Crowd.BaseURL, "/") + "/rest/usermanagement/1/config/cookie"
-	headers := map[string]string{}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		result.fail("crowdAPI", "Crowd URL is invalid: %v", err)
-		return
-	}
-	req.SetBasicAuth(provider.Spec.Crowd.ClientID, provider.Spec.Crowd.ClientSecret)
-	headers["Authorization"] = req.Header.Get("Authorization")
-
 	client := dc.GetHTTPClient(d8http.WithTimeout(dexProviderCheckHTTPTimeout))
-	statusCode, _, err := httpGet(ctx, client, endpoint, headers)
+	statusCode, _, err := httpGet(ctx, client, endpoint, provider.Spec.Crowd.ClientID, provider.Spec.Crowd.ClientSecret)
 	if err != nil {
 		result.fail("crowdAPI", "Crowd API is not reachable: %v", err)
 		return
@@ -637,7 +626,7 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 
 	client := dc.GetHTTPClient(httpOptions(provider.Spec.OIDC.RootCAData, provider.Spec.OIDC.InsecureSkipVerify)...)
 	discoveryURL := issuer + "/.well-known/openid-configuration"
-	statusCode, body, err := httpGet(ctx, client, discoveryURL, nil)
+	statusCode, body, err := httpGet(ctx, client, discoveryURL, "", "")
 	if err != nil {
 		result.fail("oidcDiscovery", "OIDC discovery is not reachable: %v", err)
 		return
@@ -672,7 +661,7 @@ func checkOIDC(ctx context.Context, dc dependency.Container, result *dexProvider
 
 	checkOIDCCredentials(ctx, client, result, provider.Spec.OIDC, discovery)
 
-	statusCode, body, err = httpGet(ctx, client, discovery.JWKSURI, nil)
+	statusCode, body, err = httpGet(ctx, client, discovery.JWKSURI, "", "")
 	if err != nil {
 		result.fail("oidcJWKS", "OIDC JWKS is not reachable: %v", err)
 		return
@@ -758,12 +747,9 @@ func probeIntrospection(
 		return true
 	}
 
-	var oauthErr struct {
-		Error string `json:"error"`
-	}
-	_ = json.Unmarshal(body, &oauthErr)
-	if statusCode == http.StatusUnauthorized || oauthErr.Error == "invalid_client" {
-		detail := oauthErr.Error
+	errCode := oauthErrorCode(body)
+	if statusCode == http.StatusUnauthorized || errCode == "invalid_client" {
+		detail := errCode
 		if detail == "" {
 			detail = fmt.Sprintf("HTTP %d", statusCode)
 		}
@@ -906,7 +892,7 @@ func checkHTTPReachability(
 	}
 
 	client := dc.GetHTTPClient(httpOptions(rootCAData, false)...)
-	statusCode, _, err := httpGet(ctx, client, rawURL, nil)
+	statusCode, _, err := httpGet(ctx, client, rawURL, "", "")
 	if err != nil {
 		result.fail(stepName, "URL %q is not reachable: %v", rawURL, err)
 		return
@@ -989,13 +975,13 @@ func httpOptions(rootCAData string, insecureSkipVerify bool) []d8http.Option {
 	return options
 }
 
-func httpGet(ctx context.Context, client d8http.Client, rawURL string, headers map[string]string) (int, []byte, error) {
+func httpGet(ctx context.Context, client d8http.Client, rawURL, basicUser, basicPass string) (int, []byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return 0, nil, fmt.Errorf("build request: %w", err)
 	}
-	for name, value := range headers {
-		req.Header.Set(name, value)
+	if basicUser != "" {
+		req.SetBasicAuth(basicUser, basicPass)
 	}
 
 	resp, err := client.Do(req)
@@ -1038,6 +1024,16 @@ func httpPostForm(
 		return resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
 	}
 	return resp.StatusCode, body, nil
+}
+
+// oauthErrorCode extracts the RFC 6749 "error" code from a token or
+// introspection error response body, or "" when it is absent or unparseable.
+func oauthErrorCode(body []byte) string {
+	var parsed struct {
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(body, &parsed)
+	return parsed.Error
 }
 
 // oauthClientSecretCheck describes a single OAuth 2.0 / OIDC client-secret
@@ -1112,24 +1108,19 @@ func probeClientSecret(
 		return true, "the provider authenticated the client and issued a token", nil
 	}
 
-	var oauthErr struct {
-		Error            string `json:"error"`
-		ErrorDescription string `json:"error_description"`
-	}
-	_ = json.Unmarshal(body, &oauthErr)
-
+	errCode := oauthErrorCode(body)
 	clientAuthFailed := statusCode == http.StatusUnauthorized ||
-		oauthErr.Error == "invalid_client" ||
-		oauthErr.Error == "unauthorized_client"
+		errCode == "invalid_client" ||
+		errCode == "unauthorized_client"
 	if clientAuthFailed {
-		if oauthErr.Error != "" {
-			return false, fmt.Sprintf("client authentication failed (%s)", oauthErr.Error), nil
+		if errCode != "" {
+			return false, fmt.Sprintf("client authentication failed (%s)", errCode), nil
 		}
 		return false, "client authentication failed (HTTP 401)", nil
 	}
 
-	if oauthErr.Error != "" {
-		return true, fmt.Sprintf("the provider authenticated the client and rejected only the synthetic probe code, as expected (%s)", oauthErr.Error), nil
+	if errCode != "" {
+		return true, fmt.Sprintf("the provider authenticated the client and rejected only the synthetic probe code, as expected (%s)", errCode), nil
 	}
 	return true, fmt.Sprintf("the provider authenticated the client (token endpoint returned HTTP %d)", statusCode), nil
 }

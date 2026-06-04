@@ -253,25 +253,37 @@ func TestProbeClientSecret(t *testing.T) {
 	}
 }
 
-func TestDexProviderCheckDueForRecheck(t *testing.T) {
-	t.Run("never completed is due", func(t *testing.T) {
-		if !dexProviderCheckDueForRecheck(DexProviderCheck{}) {
-			t.Fatal("expected a check without completedAt to be due")
+func TestDexProviderCheckUpToDate(t *testing.T) {
+	provider := DexProviderForCheck{ObjectMeta: metav1.ObjectMeta{Generation: 3}}
+	freshFor := func(generation int64, completedAt metav1.Time) DexProviderCheck {
+		return DexProviderCheck{Status: DexProviderCheckStatus{
+			ObservedDexProviderGeneration: generation,
+			CompletedAt:                   ptr.To(completedAt),
+		}}
+	}
+
+	t.Run("never completed is not up to date", func(t *testing.T) {
+		if dexProviderCheckUpToDate(DexProviderCheck{}, provider) {
+			t.Fatal("expected a check without completedAt not to be up to date")
 		}
 	})
 
-	t.Run("fresh result is not due", func(t *testing.T) {
-		check := DexProviderCheck{Status: DexProviderCheckStatus{CompletedAt: ptr.To(metav1.NewTime(time.Now()))}}
-		if dexProviderCheckDueForRecheck(check) {
-			t.Fatal("expected a freshly completed check not to be due")
+	t.Run("fresh result matching generation is up to date", func(t *testing.T) {
+		if !dexProviderCheckUpToDate(freshFor(provider.Generation, metav1.Now()), provider) {
+			t.Fatal("expected a fresh check for the current generation to be up to date")
 		}
 	})
 
-	t.Run("stale result is due", func(t *testing.T) {
+	t.Run("stale result is not up to date", func(t *testing.T) {
 		stale := metav1.NewTime(time.Now().Add(-2 * dexProviderCheckRecheckInterval))
-		check := DexProviderCheck{Status: DexProviderCheckStatus{CompletedAt: ptr.To(stale)}}
-		if !dexProviderCheckDueForRecheck(check) {
-			t.Fatal("expected a stale check to be due for recheck")
+		if dexProviderCheckUpToDate(freshFor(provider.Generation, stale), provider) {
+			t.Fatal("expected a stale check not to be up to date")
+		}
+	})
+
+	t.Run("generation mismatch is not up to date", func(t *testing.T) {
+		if dexProviderCheckUpToDate(freshFor(provider.Generation-1, metav1.Now()), provider) {
+			t.Fatal("expected a check from a previous generation not to be up to date")
 		}
 	})
 }
