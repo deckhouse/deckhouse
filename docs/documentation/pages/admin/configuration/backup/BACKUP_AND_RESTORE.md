@@ -496,7 +496,6 @@ If you prefer to manually make changes during cluster recovery after the master 
    - Check the `/var/lib/kubelet/pki/` directory.
    - Ensure the new certificate is present and valid.
 
-
 Once these steps are completed, the cluster will be successfully restored and fully functional with the new master node IP address.
 
 ## Creating backups with Deckhouse CLI
