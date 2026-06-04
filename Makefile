@@ -211,7 +211,8 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 .PHONY: lint-changed
 lint-changed:
-	@bash echo "CI plug"
+	#CI plug
+	@bash exit 0 
 
 ##@ Generate
 
