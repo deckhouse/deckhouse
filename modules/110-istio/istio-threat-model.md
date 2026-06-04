@@ -460,5 +460,3 @@
 | Code review | Deckhouse templates, RBAC, webhook configs, CNI/ztunnel securityContext, EE API proxy/exporters, local patches, werf build scripts. |
 | Configuration review | Module values, namespace labels, Istio CRD ownership, `outboundTrafficPolicyMode`, NetworkPolicy, Kiali exposure, tracing/logging, `insecureSkipVerify`. |
 | Supply-chain review | SBOM/VEX completeness, dependency pinning, SOURCE_REPO/GOPROXY/CARGO_PROXY trust, Bazel cache/deps, image signing/provenance and patch integrity. |
-
-при моделировании угроз использовался ИИ агент GPT-5.5
