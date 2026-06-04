@@ -2,7 +2,7 @@
 
 ### 999-fix-cve.patch
 
-Fixes:
+Fix CVEs:
+- CVE-2026-33811
+- CVE-2026-27145
 
-
-Empty file (stub)
