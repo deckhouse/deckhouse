@@ -467,7 +467,8 @@ function main() {
 
     local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
     bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
-
+    echo "Configuration is in sync, nothing to do."
+    
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
