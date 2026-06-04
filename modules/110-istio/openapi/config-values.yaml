@@ -769,8 +769,12 @@ properties:
         type: object
         description: |
           ztunnel specific settings.
-        default: {}
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
         x-experimental: true
+        default: {}
         properties:
           resourcesManagement:
             description: |
@@ -943,10 +947,14 @@ properties:
                           Configuring memory limits.
   ambient:
     type: object
-    default: {"enabled": false}
     description: |
       Ambient mesh related settings.
+    x-doc-d8Editions:
+    - ee
+    - cse-pro
+    x-doc-skip: true
     x-experimental: true
+    default: {"enabled": false}
     properties:
       enabled:
         type: boolean
@@ -957,12 +965,14 @@ properties:
         x-examples: [true]
       waypointController:
         type: object
-        default: {}
-        x-doc-d8Editions:
-          - ee
-          - cse-pro
         description: |
           Settings for CPU and memory requests and limits by waypoint-controller pods.
+        x-doc-d8Editions:
+        - ee
+        - cse-pro
+        x-doc-skip: true
+        x-experimental: true
+        default: {}
         properties:
           resourcesManagement:
             description: |

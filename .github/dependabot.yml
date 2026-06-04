@@ -205,6 +205,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/waypoint-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/610-service-with-healthchecks/images/artifact"
   labels:
   - "type/dependencies"
@@ -719,15 +728,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-webhook/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/110-istio/images/waypoint-controller/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
