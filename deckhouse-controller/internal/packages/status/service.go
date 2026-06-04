@@ -76,6 +76,11 @@ type Service struct {
 	mu       sync.Mutex
 	statuses map[string]*Status // keyed by "namespace.name"
 
+	// pendingHealth buffers a health event that arrived before its package
+	// was registered via ClearStatus. The next ClearStatus for the same
+	// name drains the entry, so a startup-race event is not lost.
+	pendingHealth map[string]health.Event
+
 	ch chan string // notification channel for status changes
 }
 
@@ -103,8 +108,9 @@ type Condition struct {
 
 func NewService() *Service {
 	return &Service{
-		ch:       make(chan string, 10000),
-		statuses: make(map[string]*Status),
+		ch:            make(chan string, 10000),
+		statuses:      make(map[string]*Status),
+		pendingHealth: make(map[string]health.Event),
 	}
 }
 
@@ -143,6 +149,7 @@ func (s *Service) DeleteStatus(name string) {
 	defer s.mu.Unlock()
 
 	delete(s.statuses, name)
+	delete(s.pendingHealth, name)
 }
 
 // SetConditionTrue marks a condition as successful and notifies listeners if changed
@@ -261,16 +268,29 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 //	StateReconciling, StateDegraded      → False,   Reason=State, Message=workload detail
 //	StateUnknown                         → Unknown, Reason="" (no workloads to observe)
 //
-// If the package is not tracked by the service, the update is silently ignored.
+// If the package is not yet tracked by the service, the event is buffered
+// and applied by the next ClearStatus call for the same name. This closes
+// the startup race in which the health monitor observes workloads before
+// the package is registered.
 func (s *Service) UpdateHealth(name string, event health.Event) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	status, ok := s.statuses[name]
 	if !ok {
+		s.pendingHealth[name] = event
 		return
 	}
 
+	if applyHealthEventLocked(status, event) {
+		s.ch <- name
+	}
+}
+
+// applyHealthEventLocked translates a health event into a ConditionScaled
+// update on the given status and reports whether the condition changed.
+// The caller must hold s.mu.
+func applyHealthEventLocked(status *Status, event health.Event) bool {
 	cond := Condition{Type: ConditionScaled}
 	switch event.Health.State {
 	case health.StateScaled:
@@ -283,10 +303,7 @@ func (s *Service) UpdateHealth(name string, event health.Event) {
 		cond.Reason = ConditionReason(event.Health.State)
 		cond.Message = event.Health.Message
 	}
-
-	if status.setCondition(cond) {
-		s.ch <- name
-	}
+	return status.setCondition(cond)
 }
 
 // HandleError processes an error and extracts status conditions from it
@@ -365,7 +382,9 @@ func (s *Status) IsConditionTrue(condType ConditionType) bool {
 	return false
 }
 
-// ClearStatus creates a new status or resets conditions
+// ClearStatus creates a new status or resets conditions. If a health event
+// was buffered by UpdateHealth before this name was registered, it is
+// applied here and the buffer entry is dropped.
 func (s *Service) ClearStatus(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -381,5 +400,15 @@ func (s *Service) ClearStatus(name string) {
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 		},
+	}
+
+	event, ok := s.pendingHealth[name]
+	if !ok {
+		return
+	}
+	delete(s.pendingHealth, name)
+
+	if applyHealthEventLocked(s.statuses[name], event) {
+		s.ch <- name
 	}
 }
