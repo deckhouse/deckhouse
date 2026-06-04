@@ -233,4 +233,29 @@ var _ = Describe("Cert Manager hooks :: discover cainjector usage ::", func() {
 			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeFalse())
 		})
 	})
+
+	Context("Kubernetes events for watched resources", func() {
+		BeforeEach(func() {
+			// Initial run with empty cluster state.
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeFalse())
+
+			// Emulate add event for a watched object with injection annotation.
+			f.BindingContexts.Set(f.KubeStateSet(validatingWebhookWithInjectAnnotation))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeTrue())
+
+			// Emulate delete event for the same object.
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should recalculate cainjector value on add/delete events", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(cainjectorEnabledValuesPath).Bool()).To(BeFalse())
+		})
+	})
 })
