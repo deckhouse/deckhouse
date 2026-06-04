@@ -105,6 +105,7 @@
     display: flex;
     justify-content: start;
     min-width: 297px;
+    min-height: 25px;
     margin-right: 64px;
     padding-top: 20px;
     padding-bottom: 25px;
@@ -1428,6 +1429,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h4,
 .docs:not(.docs--modules) h5,
 .docs:not(.docs--modules) h6 {
+    position: relative;
     margin-bottom: 30px;
     margin-top: 30px;
 
@@ -1439,6 +1441,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       margin-bottom: 15px;
       margin-top: 15px;
+    }
+
+    a.anchorjs-link {
+      position: absolute;
+      bottom: 7px;
     }
 }
 
@@ -1510,7 +1517,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h3 {
-  width: max-content;
   max-width: 100%;
   font-size: 21px;
   font-weight: 600;
