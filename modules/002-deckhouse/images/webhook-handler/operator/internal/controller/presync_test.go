@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"sync/atomic"
 	"testing"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
@@ -119,14 +118,21 @@ func TestPresyncPreventsReloadOnFirstReconcile(t *testing.T) {
 	err = PresyncWebhookFiles(context.TODO(), k8sClient, string(conversionTpl), string(validationTpl), logger)
 	require.NoError(t, err)
 
-	// Step 2: now create a reconciler and reconcile the same CR
-	var isReloadShellNeed atomic.Bool
+	// Record the file's ModTime before reconcile — presync already wrote it.
+	webhookFile := "hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py"
+	infoBefore, err := os.Stat(webhookFile)
+	require.NoError(t, err)
+
+	// Step 2: now create a reconciler and reconcile the same CR.
+	// reloadFn will be called because the finalizer is not yet set (presync
+	// doesn't add it), but the file must NOT be rewritten.
+	reloadFn := func(_ context.Context) error { return nil }
 	reconciler := NewValidationWebhookReconciler(
 		k8sClient,
 		sch,
 		logger,
 		string(validationTpl),
-		&isReloadShellNeed,
+		reloadFn,
 	)
 
 	_, err = reconciler.Reconcile(context.TODO(), reconcile.Request{
@@ -134,10 +140,12 @@ func TestPresyncPreventsReloadOnFirstReconcile(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// The reconciler should NOT request a reload because presync already
-	// wrote the identical file.
-	assert.False(t, isReloadShellNeed.Load(),
-		"isReloadShellNeed should be false: presync wrote the file, so reconciler should detect no change")
+	// The file should not be rewritten because presync already wrote the
+	// identical content.
+	infoAfter, err := os.Stat(webhookFile)
+	require.NoError(t, err)
+	assert.Equal(t, infoBefore.ModTime(), infoAfter.ModTime(),
+		"reconciler should not rewrite the file that presync already wrote")
 }
 
 func TestPresyncIsIdempotent(t *testing.T) {
