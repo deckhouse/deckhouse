@@ -46,12 +46,19 @@ const (
 	capiNamespace = "d8-cloud-instance-manager"
 )
 
-// capiClusterInfo carries the cloud-provider registration data the hook needs.
-// It mirrors the relevant subset of d8-node-manager-cloud-provider Secret keys.
 type capiClusterInfo struct {
 	ClusterName       string
 	ClusterKind       string
 	ClusterAPIVersion string
+}
+
+type capiClusterCRDConversion struct {
+	Strategy string
+}
+
+func filterCapiClusterCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	strategy, _, _ := unstructured.NestedString(obj.Object, "spec", "conversion", "strategy")
+	return capiClusterCRDConversion{Strategy: strategy}, nil
 }
 
 func filterCapiClusterSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -78,9 +85,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/create-capi-cluster-resources",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			// Trigger when the cloud-provider registration secret appears or
-			// changes — that's also the moment `nodeManager.internal.cloudProvider`
-			// becomes meaningful for downstream hooks.
 			Name:       "cloud_provider_secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
@@ -90,10 +94,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{MatchNames: []string{"d8-node-manager-cloud-provider"}},
 			FilterFunc:   filterCapiClusterSecret,
 		},
+		{
+			Name:       "cluster_crd",
+			ApiVersion: "apiextensions.k8s.io/v1",
+			Kind:       "CustomResourceDefinition",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"clusters.cluster.x-k8s.io"},
+			},
+			FilterFunc: filterCapiClusterCRD,
+		},
 	},
 }, createCapiClusterResources)
 
 func createCapiClusterResources(_ context.Context, input *go_hook.HookInput) error {
+	crdSnaps := input.Snapshots.Get("cluster_crd")
+	if len(crdSnaps) == 0 {
+		return fmt.Errorf("CRD clusters.cluster.x-k8s.io not found yet, will retry")
+	}
+	var crdConv capiClusterCRDConversion
+	if err := crdSnaps[0].UnmarshalTo(&crdConv); err != nil {
+		return fmt.Errorf("unmarshal cluster_crd snapshot: %w", err)
+	}
+	if crdConv.Strategy != "Webhook" {
+		return fmt.Errorf("CRD clusters.cluster.x-k8s.io conversion webhook not ready (strategy=%q), will retry", crdConv.Strategy)
+	}
+
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[capiClusterInfo](input.Snapshots, "cloud_provider_secret")
 	if err != nil {
 		return fmt.Errorf("unmarshal cloud_provider_secret snapshot: %w", err)
