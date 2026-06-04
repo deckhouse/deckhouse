@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"flag"
@@ -26,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -37,7 +39,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -57,7 +59,140 @@ const (
 	// unnecessary restarts when multiple webhooks are created in quick succession.
 	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL environment variable.
 	DefaultShellOperatorReloadInterval = 5 * time.Second
+
+	// shellOperatorMinBackoff is the initial delay before respawning a shell-operator
+	// process that exited quickly. The delay doubles on each consecutive fast exit up
+	// to shellOperatorMaxBackoff, preventing a tight respawn loop when shell-operator
+	// fails to start (e.g. due to a malformed hook file).
+	shellOperatorMinBackoff = 500 * time.Millisecond
+	shellOperatorMaxBackoff = 30 * time.Second
+
+	// shellOperatorStableRun is the minimum runtime after which a shell-operator exit
+	// is treated as "normal" and the backoff is reset.
+	shellOperatorStableRun = 5 * time.Second
 )
+
+// shellRunner supervises a single child shell-operator process. It owns the
+// *exec.Cmd reference and synchronises access so the reload goroutine can
+// safely signal the current child while the supervisor goroutine swaps it.
+type shellRunner struct {
+	logger *log.Logger
+
+	mu  sync.Mutex
+	cmd *exec.Cmd
+
+	// ready indicates that the shell-operator child process is running.
+	// It is set to true after a successful Start and cleared on process exit.
+	// Used by the readiness probe to avoid routing webhook traffic to a pod
+	// whose shell-operator is not yet (or no longer) serving.
+	ready atomic.Bool
+}
+
+func newShellRunner(logger *log.Logger) *shellRunner {
+	return &shellRunner{logger: logger}
+}
+
+// IsReady returns true when the shell-operator child process is running.
+func (r *shellRunner) IsReady() bool {
+	return r.ready.Load()
+}
+
+func (r *shellRunner) setCmd(c *exec.Cmd) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.cmd = c
+}
+
+func (r *shellRunner) currentCmd() *exec.Cmd {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.cmd
+}
+
+// SignalTerm sends SIGTERM to the current shell-operator child, if any.
+// It treats "process already finished" as success because the runner may have
+// observed an independent exit before the signal landed.
+func (r *shellRunner) SignalTerm() error {
+	c := r.currentCmd()
+	if c == nil || c.Process == nil {
+		return nil
+	}
+	err := c.Process.Signal(syscall.SIGTERM)
+	if err != nil && !errors.Is(err, os.ErrProcessDone) {
+		return err
+	}
+	return nil
+}
+
+// Run starts shell-operator and respawns it whenever it exits, with
+// exponential backoff for fast crashes. It returns when ctx is cancelled.
+func (r *shellRunner) Run(ctx context.Context) {
+	backoff := shellOperatorMinBackoff
+
+	for ctx.Err() == nil {
+		c := exec.Command("./shell-operator")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+
+		if err := c.Start(); err != nil {
+			r.logger.Error("start shell-operator",
+				slog.String("error", err.Error()),
+				slog.Duration("backoff", backoff))
+			if !sleepCtx(ctx, backoff) {
+				return
+			}
+			backoff = min(backoff*2, shellOperatorMaxBackoff)
+			continue
+		}
+
+		r.setCmd(c)
+		r.ready.Store(true)
+		r.logger.Info("shell-operator started", slog.Int("pid", c.Process.Pid))
+
+		startedAt := time.Now()
+		waitErr := c.Wait()
+		ran := time.Since(startedAt)
+		r.ready.Store(false)
+		r.setCmd(nil)
+
+		if waitErr != nil {
+			r.logger.Info("shell-operator exited",
+				slog.String("error", waitErr.Error()),
+				slog.Duration("ran", ran))
+		} else {
+			r.logger.Info("shell-operator exited", slog.Duration("ran", ran))
+		}
+
+		if ctx.Err() != nil {
+			return
+		}
+
+		if ran < shellOperatorStableRun {
+			r.logger.Warn("shell-operator exited too quickly, backing off",
+				slog.Duration("backoff", backoff))
+			if !sleepCtx(ctx, backoff) {
+				return
+			}
+			backoff = min(backoff*2, shellOperatorMaxBackoff)
+			continue
+		}
+
+		backoff = shellOperatorMinBackoff
+	}
+}
+
+// sleepCtx blocks for d or until ctx is cancelled. It returns false if ctx
+// was cancelled before the timer fired.
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-t.C:
+		return true
+	}
+}
 
 var (
 	scheme   = runtime.NewScheme()
@@ -256,46 +391,18 @@ func main() {
 		}
 	}
 
-	var cmd *exec.Cmd
-	processExited := make(chan struct{})
+	// One signal context for the whole process: cancelling it stops the manager
+	// and tells the shell-operator supervisor to drain.
+	ctx := ctrl.SetupSignalHandler()
 
-	// go-routine that runs shell-operator and signals when it exited
+	runner := newShellRunner(logger)
+
+	// Propagate pod termination to the shell-operator child so it can exit
+	// cleanly instead of being SIGKILL'ed when the parent returns.
 	go func() {
-		for {
-			logger.Debug("running shell-operator")
-			cmd = exec.Command("./shell-operator")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-
-			err := cmd.Run()
-			if err != nil {
-				logger.Info("shell-operator exited", slog.String("error", err.Error()))
-			}
-
-			// if exited not by signal
-			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-				isReloadShellNeed.Store(true)
-			}
-
-			processExited <- struct{}{}
-		}
-	}()
-
-	// go-routine that reloads shell-operator periodically when new hooks are registered
-	go func() {
-		for range time.Tick(reloadInterval) {
-			if isReloadShellNeed.Load() {
-				logger.Info("restarting shell-operator")
-
-				// TODO: what if SIGTERM don't killed shell-operator?
-				err := cmd.Process.Signal(syscall.SIGTERM)
-				if err != nil && !errors.Is(err, os.ErrProcessDone) {
-					logger.Error("sigterm shell-operator", slog.String("error", err.Error()), slog.Int("pid", cmd.Process.Pid))
-				}
-
-				<-processExited // wait for shell-operator to exit
-				isReloadShellNeed.Store(false)
-			}
+		<-ctx.Done()
+		if err := runner.SignalTerm(); err != nil {
+			logger.Error("sigterm shell-operator on shutdown", slog.String("error", err.Error()))
 		}
 	}()
 
@@ -324,6 +431,56 @@ func main() {
 	}
 	// +kubebuilder:scaffold:builder
 
+	// Pre-populate dynamic webhook hook files from existing CRs before
+	// starting shell-operator. This eliminates the race where the
+	// controller reconciles CRs and sets isReloadShellNeed while
+	// shell-operator is still in the middle of EnableKubernetesBindings,
+	// causing an unnecessary SIGTERM and restart.
+	//
+	// We use a direct API client (not the manager's cached client) because
+	// the manager hasn't started yet and its informer cache is not populated.
+	presyncClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "presync: failed to create API client")
+		os.Exit(1)
+	}
+
+	setupLog.Info("presync: writing webhook files before starting shell-operator")
+	if err := controller.PresyncWebhookFiles(ctx, presyncClient, string(conversionTpl), string(validationTpl), logger); err != nil {
+		// Log and continue — if presync fails (e.g. API unavailable),
+		// the reconcilers will write files and trigger a reload later.
+		// This is degraded but not fatal.
+		setupLog.Error(err, "presync: failed to pre-populate webhook files, shell-operator may need a reload")
+	}
+
+	// Supervisor: keeps shell-operator alive with bounded-backoff respawns.
+	setupLog.Info("starting shell-operator supervisor")
+	go runner.Run(ctx)
+
+	// Reload trigger: periodically check if controllers asked for a reload
+	// and signal the current shell-operator. The supervisor will respawn it.
+	go func() {
+		ticker := time.NewTicker(reloadInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if !isReloadShellNeed.Load() {
+					continue
+				}
+				// Clear the flag first so a request that arrives between
+				// the SIGTERM and the next tick is not lost.
+				isReloadShellNeed.Store(false)
+				logger.Info("reloading shell-operator")
+				if err := runner.SignalTerm(); err != nil {
+					logger.Error("sigterm shell-operator", slog.String("error", err.Error()))
+				}
+			}
+		}
+	}()
+
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
 		if err := mgr.Add(metricsCertWatcher); err != nil {
@@ -349,14 +506,22 @@ func main() {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	// TODO: wait for preflight checks
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// The readyz check gates on the shell-operator child being alive.
+	// Without this, kube-proxy adds the pod to Service endpoints before
+	// shell-operator's webhook servers are listening, causing 30s timeouts
+	// on conversion webhook calls from the API server.
+	if err := mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
+		if !runner.IsReady() {
+			return fmt.Errorf("shell-operator is not ready")
+		}
+		return nil
+	}); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

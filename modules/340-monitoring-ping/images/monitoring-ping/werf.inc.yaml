@@ -4,15 +4,14 @@ from: {{ index $.Images "base/distroless" }}
 final: true
 fromCacheVersion: "2025-05-26"
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-    add: /src/monitoring-ping
-    to: /monitoring-ping
-    before: setup
-  - from: {{ index $.Images "tools/libcap" }}
-    add: /usr/sbin/setcap
-    to: /tools/setcap
-    before: setup
-git:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+  add: /src/monitoring-ping
+  to: /monitoring-ping
+  before: setup
+- from: {{ index $.Images "tools/libcap" }}
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: setup
 {{- include "image mount points" . }}
 shell:
   setup:

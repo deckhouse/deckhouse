@@ -39,7 +39,7 @@ migrate() {
 
 bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
 
-  {{- $max_concurrent_downloads := 3 }}
+  {{- $max_concurrent_downloads := 8 }}
   {{- if hasKey .nodeGroup.cri "containerd" }}
     {{- $max_concurrent_downloads = .nodeGroup.cri.containerd.maxConcurrentDownloads | default $max_concurrent_downloads }}
   {{- end }}

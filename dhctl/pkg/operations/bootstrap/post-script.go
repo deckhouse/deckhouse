@@ -86,7 +86,7 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	cmd.Sudo(ctx)
 
 	if err := cmd.Run(ctx); err != nil {
-		return "", fmt.Errorf("Cannot create output file for script: %v", err)
+		return "", fmt.Errorf("Cannot create output file for script: %w", err)
 	}
 
 	defer func() {
@@ -120,12 +120,12 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 }
 
 func ValidateScriptFile(ctx context.Context, path string) error {
-	_, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript")
+	ctx, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript") //nolint:ineffassign,staticcheck // ctx reassigned for span propagation to future calls
 	defer span.End()
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("Cannot get stats for path %s: %v", path, err)
+		return fmt.Errorf("Cannot get stats for path %s: %w", path, err)
 	}
 
 	mode := info.Mode()

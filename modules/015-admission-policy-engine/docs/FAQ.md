@@ -6,14 +6,157 @@ description: "Answers to frequently asked questions about the admission-policy-e
 ## How do I configure alternative security policy management solutions?
 
 For DKP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
+
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
 
+## How do I configure policy selectors?
+
+In `OperationPolicy` and `SecurityPolicy`, the `spec.match` field determines which specific objects (pods) in the cluster the policy will apply to. It must be present in the configuration. Filtering is performed by combining two main criteria: a pod selector (`labelSelector`) and a namespace selector (`namespaceSelector`).
+
+If both selectors are specified, the policy is applied only to those pods that **simultaneously**:
+
+- satisfy the pod selection conditions.
+- located in namespaces that passed the filtering.
+
+If either selector is omitted, the corresponding check is not performed (all pods or namespaces will be used).
+
+### `spec.match.labelSelector` – pod selection
+
+The `labelSelector` is used to set criteria for selecting pods by their labels. Two mutually exclusive methods are supported:
+
+* **`matchLabels`** – a simple check for an exact label match (key-value). The pod must have all the specified labels.
+* **`matchExpressions`** – flexible expressions with operators. Each expression is defined by an object with the following fields:
+  * `key` (string, required) – the label name.
+  * `operator` (string, required) – one of the values: `In`, `NotIn`, `Exists`, `DoesNotExist`.
+  * `values` (array of strings) – a list of values for the `In` / `NotIn` operators; not specified for `Exists` / `DoesNotExist`.
+
+All elements in the `matchExpressions` list are combined with a logical **AND** – the pod must satisfy every expression.
+
+Examples:
+
+```yaml
+spec:
+  match:
+    labelSelector:
+      matchLabels:
+        app: nginx
+        role: frontend
+```
+
+```yaml
+spec:
+  match:
+    labelSelector:
+      matchExpressions:
+        - key: tier
+          operator: In
+          values:
+            - production
+            - staging
+        - key: monitoring
+          operator: Exists
+```
+
+### `spec.match.namespaceSelector` – namespace selection
+
+Allows limiting the namespaces in which the policy is active. You can use a combination of three filters:
+
+* **`matchNames`** – an explicit list of allowed namespaces. If specified, the policy only applies to the listed namespaces.
+* **`excludeNames`** – a list of excluded namespaces. The policy will apply to all namespaces **except** those specified.
+* **`labelSelector`** – a selector based on the labels of the Namespace object itself. The syntax is identical to the pod selector (`matchLabels` / `matchExpressions`). It filters the namespace metadata.
+
+All specified conditions within `namespaceSelector` are also combined with a logical **AND**. It is recommended not to mix `matchNames` and `excludeNames` without a clear need – if both are specified, the resulting set is calculated as (`matchNames` ∩ all) \ `excludeNames` (allowed ones are taken first, then excluded ones are subtracted from them).
+
+Examples:
+
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      matchNames:
+        - production
+        - staging
+```
+
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      excludeNames:
+        - kube-system
+        - gatekeeper-system
+```
+
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          team: backend
+          environment: production
+```
+
+```yaml
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchExpressions:
+          - key: compliance
+            operator: In
+            values:
+              - pci
+              - sox
+```
+
+### Using selectors together
+
+The most typical scenario is limiting both by pods and by namespaces simultaneously:
+
+```yaml
+spec:
+  match:
+    labelSelector:
+      matchLabels:
+        app: payments
+        version: v2
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          env: prod
+      excludeNames:
+        - legacy-prod
+```
+
+This policy will trigger for pods with labels `app=payments` and `version=v2` that are located in namespaces having the label `env=prod`, except for the `legacy-prod` namespace.
+
+```yaml
+spec:
+  match:
+    labelSelector:
+      matchExpressions:
+        - key: security
+          operator: NotIn
+          values:
+            - low
+    namespaceSelector:
+      matchNames:
+        - frontend
+        - backend
+```
+
+Here, the policy covers pods where the `security` label value is not equal to `low`, in the `frontend` and `backend` namespaces.
+
 ## How do I extend Pod Security Standards policies?
 
-> Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
+{% alert level="info" %}
+Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
+{% endalert %}
 
 To extend the Pod Security Standards policy by adding your checks to existing checks, you need to:
+
 - Create a constraint template for the check (`ConstraintTemplate`).
 - Bind it to the `restricted` or `baseline` policy.
 

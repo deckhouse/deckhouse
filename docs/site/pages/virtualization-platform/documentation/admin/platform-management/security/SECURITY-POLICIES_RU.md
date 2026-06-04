@@ -73,7 +73,7 @@ Deckhouse Virtualization Platform (DVP) позволяет управлять б
 
 Чтобы расширить политику, выполните следующее:
 
-1. Создайте шаблон проверки с помощью ConstraintTemplate.
+1. Создайте шаблон проверки с помощью `ConstraintTemplate`.
 1. Примените созданный шаблон к политике `baseline` или `restricted`.
 
 Пример шаблона для проверки адреса репозитория с образом контейнера:
@@ -490,7 +490,7 @@ DVP поддерживает проверку подписей образов к
        namespaceSelector:
          labelSelector:
            matchLabels:
-             kubernetes.io/metadata.name: test-namespace
+             example-security-policy/enabled: true
      policies:
        allowHostIPC: true
        allowHostNetwork: true
@@ -507,6 +507,10 @@ DVP поддерживает проверку подписей образов к
            reference: registry.private.ru/labs/application/*
    ```
 
+    Название лейбла указанного в `match.namespaceSelector.labelSelector.matchLabels` может быть любым. Требуется лишь совпадение лейбла в селекторе политик и соответствующего неймспейса.
+
+    Более подробную информацию о использовании селекторов вы можете прочитать в [документации](/modules/admission-policy-engine/docs/faq.html#как-настроить-селекторы-политик).
+
 1. Создайте [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy), ограничивающий запуск подов со сторонних registry:
 
    ```yaml
@@ -520,16 +524,26 @@ DVP поддерживает проверку подписей образов к
       namespaceSelector:
         labelSelector:
           matchLabels:
-            operation-policy.deckhouse.io/enabled: "true"
+            example-operation-policy/enabled: "true"
    policies:
      allowedRepos:
      - registry.private.ru
    ```
 
+    Название лейбла указанного в `match.namespaceSelector.labelSelector.matchLabels` может быть любым. Требуется лишь совпадение лейбла в селекторе политик и соответствующего неймспейса.
+
+    Более подробную информацию о использовании селекторов вы можете прочитать в [документации](/modules/admission-policy-engine/docs/faq.html#как-настроить-селекторы-политик).
+
 1. Добавьте метку на неймспейс, где необходимо включить проверку подписи командой (укажите нужный неймспейс):
 
    ```shell
-   d8 k label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+   d8 k label ns <NAMESPACE> example-security-policy/enabled=true
+   ```
+
+1. Добавьте метку на неймспейс, где необходимо ограничить запуск подов со сторонних registry (укажите нужный неймспейс):
+
+   ```shell
+   d8 k label ns <NAMESPACE> example-operation-policy/enabled=true
    ```
 
 1. Для проверки работы механизма подписи образов разверните поды в неймспейсе, с подписанным и неподписанным образами (укажите нужный неймспейс):

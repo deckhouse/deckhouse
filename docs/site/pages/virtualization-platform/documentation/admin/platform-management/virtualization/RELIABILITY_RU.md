@@ -34,10 +34,13 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                   PHASE     NODE           IPADDRESS     AGE
    linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
    Мы видим, что на данный момент ВМ запущена на узле `virtlab-pt-1`.
 
@@ -65,6 +68,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                   PHASE       NODE           IPADDRESS     AGE
    linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -72,6 +76,8 @@ lang: ru
    linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
    linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Если необходимо прервать миграцию, удалите соответствующий ресурс `vmop`, пока он находится в фазе `Pending` или `InProgress`.
 

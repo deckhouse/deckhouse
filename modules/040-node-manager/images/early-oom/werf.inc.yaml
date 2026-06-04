@@ -6,6 +6,12 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-node-manager/images/early-oom/src
   to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}

@@ -345,12 +345,16 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	}
 
 	logPath := i.params.debugLogFilePath
+	p := logPath
 
 	if logPath == "" {
 		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 		logPath = path.Join(tmpDir, logFile)
+		p = tmpDir
 	}
+
+	log.SetLoggerOpts(p, commandName)
 
 	outFile, err := os.Create(logPath)
 	if err != nil {
@@ -411,9 +415,18 @@ func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
 			if err != nil {
 				log.WarnF("failed to stop progress bar printer: %v", err)
 			}
+
+			if err := pb.LogBox.Stop(); err != nil {
+				log.WarnF("failed to stop logbox: %v", err)
+			}
+
 			_, err = pb.MultiPrinter.Stop()
 			if err != nil {
 				log.WarnF("failed to stop multi printer: %v", err)
+			}
+
+			if pb.WriterFabric != nil {
+				pb.WriterFabric.Cleanup()
 			}
 		}
 	}

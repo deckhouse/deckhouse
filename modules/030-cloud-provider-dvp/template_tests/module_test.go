@@ -67,9 +67,6 @@ const globalValues = `
 
 const moduleValuesA = `
 internal:
-  discoveryData:
-    loadBalancer:
-      enabled: false
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     kind: DVPClusterConfiguration
@@ -185,6 +182,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			Expect(ccmDeployment.Field(`spec.template.spec.containers.0.args`).String()).
+				To(ContainSubstring(`--controllers=cloud-node,cloud-node-lifecycle,service-lb-controller`))
 
 			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
 			Expect(ccmVPA.Exists()).To(BeTrue())
@@ -286,5 +285,6 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 		})
+
 	})
 })

@@ -46,7 +46,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.69.0"
+  WERF_VERSION: "v2.70.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -79,7 +79,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -156,7 +156,7 @@ jobs:
   # <template: check_label_job>
   check_label:
     name: Check label
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     outputs:
       should_run: ${{ steps.check_label.outputs.should_run }}
       labels: ${{ steps.check_label.outputs.labels }}

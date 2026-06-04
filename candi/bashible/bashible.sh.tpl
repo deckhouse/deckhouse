@@ -30,6 +30,7 @@ set -Eeo pipefail
 {{ template "bb-discover-node-name" $ }}
 {{ template "bb-minget" $ }}
 {{ template "bb-status" $ }}
+{{ template "bb-telemetry" $ }}
 ` $lib) $ctx }}
 
 bb-curl-kube-healthz() {
@@ -44,11 +45,17 @@ bb-curl-kube() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local -a auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem)
 
-  # If auth type is overridden (admin-cert for cluster-bootstrap), use those creds.
-  if [[ "${BB_KUBE_AUTH_TYPE:-}" == "admin-cert" ]]; then
-    auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
-    kubeconfig="/etc/kubernetes/admin.conf"
-  fi
+  # If auth type is overridden for cluster-bootstrap flows, use those creds.
+  case "${BB_KUBE_AUTH_TYPE:-}" in
+    admin-cert)
+      auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
+      kubeconfig="/etc/kubernetes/admin.conf"
+      ;;
+    super-admin-cert)
+      auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-super-admin-cert.pem" --key "${TMPDIR}/bb-kube-super-admin-key.pem")
+      kubeconfig="/etc/kubernetes/super-admin.conf"
+      ;;
+  esac
 
   if [[ -z "${BB_KUBE_APISERVER_URL:-}" ]]; then
     local kube_server
@@ -361,6 +368,10 @@ function main() {
 {{ end }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
+  if [ -f "/var/lib/bashible/telemetry.env" ]; then
+    source "/var/lib/bashible/telemetry.env"
+  fi
+
   if [ -z "${is_local-}" ]; then
 {{- if ne .runType "Normal" }}
     bb-minget-install
@@ -510,9 +521,16 @@ function main() {
     local per_step_log="${step_log_dir}/step.${step_base}.log"
     local attempt=0
     local sx=""
+    # ms-precision timing emitted as `[bashible-timing] step=NAME dur=X.YYYs` —
+    # parsed by dhctl-side measurement tooling to map where bashible time goes.
+    local start_ts
+    start_ts=$(date +%s.%N)
     echo ===
     echo === Step: $step
     echo ===
+
+    span_ctx=$(bb-telemetry-start-span "$step_base" "${BB_TELEMETRY_PARENT_SPAN_ID:-}")
+
     until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee "$per_step_log" >&2)
     do
       attempt=$(( attempt + 1 ))
@@ -523,6 +541,9 @@ function main() {
         {{- end }}
         bb-bashible-ready-steps-failed "$step_base"
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
+
+        bb-telemetry-end-span "$span_ctx" "$step_base"
+
         return 1
       fi
       >&2 echo -e "Failed to execute step "$step" ... retry in 10 seconds.\n"
@@ -539,6 +560,13 @@ function main() {
       bb-bashible-ready-steps-failed "$step_base"
     done
     cp -f "$per_step_log" "$step_log" 2>/dev/null || true
+
+    bb-telemetry-end-span "$span_ctx" "$step_base"
+
+    local dur
+    dur=$(awk -v s="$start_ts" -v e="$(date +%s.%N)" 'BEGIN{printf "%.3f", e-s}')
+    echo "[bashible-timing] step=$step_base dur=${dur}s"
+
     return 0
   }
 

@@ -16,12 +16,10 @@ package template
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
@@ -33,7 +31,7 @@ func PrepareBootstrap(
 	templateController *Controller,
 	nodeIP string,
 	metaConfig *config.MetaConfig,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBootstrap")
 	defer span.End()
@@ -43,14 +41,7 @@ func PrepareBootstrap(
 		return err
 	}
 
-	_, err = os.Stat(candiDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get downloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(candiDir, "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	saveInfo := []saveFromTo{
 		{
@@ -62,7 +53,7 @@ func PrepareBootstrap(
 			},
 		},
 		{
-			from: filepath.Join(candiDir, "cloud-providers", metaConfig.ProviderName, "bashible", "common-steps"),
+			from: filepath.Join(globalOptions.CandiDir, "cloud-providers", metaConfig.ProviderName, "bashible", "common-steps"),
 			to:   bootstrapDir,
 			data: bashibleData,
 		},

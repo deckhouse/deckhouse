@@ -220,7 +220,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.statuses[name].setCondition(Condition{
 		Type:   ConditionManifestsApplied,
 		Status: metav1.ConditionFalse,
-		Reason: ConditionReasonApplyingManifests})
+		Reason: ConditionReasonApplyingManifests,
+	})
 
 	for i := len(report.StageReports) - 1; i >= 0; i-- {
 		r := report.StageReports[i]
@@ -369,6 +370,16 @@ func (s *Status) setCondition(condition Condition) bool {
 	}
 
 	return notify
+}
+
+// IsConditionTrue returns true if the condition status is True
+func (s *Status) IsConditionTrue(condType ConditionType) bool {
+	for _, cond := range s.Conditions {
+		if cond.Type == condType && cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 // ClearStatus creates a new status or resets conditions. If a health event

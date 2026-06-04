@@ -242,7 +242,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("keep up-to-date rendered documentation", func() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "modules", "testmodule", "openapi", "config-values.yaml"), []byte("{}"), 0666)
-		dependency.TestDC.GetClock().(clockwork.FakeClock).Advance(1 * time.Hour)
+		dependency.TestDC.GetClock().(*clockwork.FakeClock).Advance(1 * time.Hour)
 
 		suite.setupController(string(suite.fetchTestFileData("keep-actual.yaml")))
 

@@ -48,7 +48,6 @@ import:
   add: /src/check-wg-kernel-compat
   to: /check-wg-kernel-compat
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

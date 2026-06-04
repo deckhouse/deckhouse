@@ -1,9 +1,9 @@
 ---
-title: "Cloud provider — Базис.DynamiX: настройки"
+title: "Cloud provider — Basis Dynamix: настройки"
 force_searchable: true
 ---
 
-Модуль автоматически включается для всех облачных кластеров, развернутых в Базис.DynamiX.
+Модуль автоматически включается для всех облачных кластеров, развернутых в Basis Dynamix.
 
 {% include module-alerts.liquid %}
 

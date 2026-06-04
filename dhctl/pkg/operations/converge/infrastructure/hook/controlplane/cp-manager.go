@@ -63,7 +63,11 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	return retry.NewLoop("Control-plane readiness", 50, 10*time.Second).RunContext(ctx, func() error {
+	// Poll every 1s instead of 10s: cpm typically flips conditions one by one
+	// (Etcd → APIServer → KCM → Scheduler → CertificatesHealthy) within a few
+	// seconds of each other, and the previous 10s granularity smeared 10-40s of
+	// false-wait on the critical path. Total budget unchanged (500 attempts × 1s = ~8 min).
+	return retry.NewLoop("Control-plane readiness", 500, 1*time.Second).RunContext(ctx, func() error {
 		msg, err := checkControlPlaneNodesReady(ctx, kubeClient)
 
 		// all ControlPlaneNodes are ready
@@ -162,7 +166,7 @@ func getControlPlaneNodeConditions(ctx context.Context, kubeClient client.KubeCl
 		Group:    "control-plane.deckhouse.io",
 		Version:  "v1alpha1",
 		Resource: "controlplanenodes",
-	}).Get(ctx, nodeName, metav1.GetOptions{})
+	}).Namespace("kube-system").Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get ControlPlaneNode %s: %w", nodeName, err)
 	}

@@ -50,26 +50,25 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /src/scripts
-    to: /
-    includePaths:
-    - install
-    - uninstall
-    before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /src/tmp
-    to: /tmp
-    before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /registry
-    to: /registry
-    before: setup
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: setup
-git:
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  add: /src/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  before: setup
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  add: /src/tmp
+  to: /tmp
+  before: setup
+- image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  add: /registry
+  to: /registry
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:

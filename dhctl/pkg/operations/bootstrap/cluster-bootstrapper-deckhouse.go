@@ -48,7 +48,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
-		b.DirectoryConfig,
+		&b.Options.Global,
 	)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Install Deckhouse", labelChan, phasesChan)
+		pbParam := progressbar.NewPbParams(100, "Install Deckhouse", labelChan, phasesChan, intLogger.GetLogChan())
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err
@@ -75,7 +75,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
-	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
+	installConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
 	if err != nil {
 		return err
 	}

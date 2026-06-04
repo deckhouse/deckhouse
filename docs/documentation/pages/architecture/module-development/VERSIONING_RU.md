@@ -48,8 +48,8 @@ description: Семантическое версионирование, кана
 
 В зависимости от стадии жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общую стабильность можно определить по следующей таблице:
 
-<table class="versioning-table">
-  <thead>
+<table class="supported_versions table__small" style="width: 100%; max-width: 100%; table-layout: auto;">
+<thead class="versioning-table">
     <tr class="header-row">
       <th rowspan="2">Стадия жизненного цикла</th>
       <th colspan="5">Каналы обновлений</th>

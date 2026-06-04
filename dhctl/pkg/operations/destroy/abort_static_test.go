@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -129,12 +128,7 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
-
-	dc := &directoryconfig.DirectoryConfig{
-		DownloadDir:      "/tmp",
-		DownloadCacheDir: "/tmp/cache",
-	}
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), dc)
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider(), nil)
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 

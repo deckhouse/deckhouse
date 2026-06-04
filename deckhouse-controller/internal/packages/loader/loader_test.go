@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -75,6 +76,85 @@ func (s *LoaderTestSuite) TestLoadAppConfCompletePackage() {
 	s.NotNil(cfg.ValuesSchema)
 	s.Contains(string(cfg.ConfigSchema), "type: object")
 	s.Contains(string(cfg.ValuesSchema), "type: object")
+}
+
+// TestLoadAppConfModulesRequirements tests that mandatory, conditional, anyOf,
+// and noneOf module dependencies in an application's package.yaml are parsed
+// into the respective shapes, that constraint strings are honored, that
+// mandatory entries may omit the constraint (parsed as a nil *semver.Constraints
+// meaning "any version"), and that group buckets carry their Name plus
+// per-member constraints with the right empty-constraint semantics per bucket.
+func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
+	packageDir := filepath.Join(s.testdataDir, "apps", "default.complete-app")
+
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+
+	mandatory := cfg.Definition.Requirements.Modules.Mandatory
+	conditional := cfg.Definition.Requirements.Modules.Conditional
+	anyOf := cfg.Definition.Requirements.Modules.AnyOf
+	noneOf := cfg.Definition.Requirements.Modules.NoneOf
+
+	require.Len(s.T(), mandatory, 2)
+	require.Len(s.T(), conditional, 1)
+	require.Len(s.T(), anyOf, 1)
+	require.Len(s.T(), noneOf, 1)
+
+	// Mandatory with constraint: constraint accepts >=1.14, rejects 1.13.
+	cniConstraint, ok := mandatory["cni-cilium"]
+	require.True(s.T(), ok, "cni-cilium must be in mandatory map")
+	require.NotNil(s.T(), cniConstraint)
+	s.True(cniConstraint.Check(semver.MustParse("1.14.0")))
+	s.False(cniConstraint.Check(semver.MustParse("1.13.0")))
+
+	// Mandatory without constraint: present in map with nil constraint (any version).
+	regConstraint, ok := mandatory["registry-packages-proxy"]
+	require.True(s.T(), ok, "registry-packages-proxy must be in mandatory map")
+	s.Nil(regConstraint)
+
+	// Conditional with constraint: accepts >=2.40, rejects 2.39.
+	promConstraint, ok := conditional["prometheus"]
+	require.True(s.T(), ok, "prometheus must be in conditional map")
+	require.NotNil(s.T(), promConstraint)
+	s.True(promConstraint.Check(semver.MustParse("2.40.0")))
+	s.False(promConstraint.Check(semver.MustParse("2.39.0")))
+
+	// AnyOf group: name carried through; both members present with the parsed
+	// constraints. Group is checker-only at the scheduler layer, but at the
+	// loader boundary we just verify the parse fidelity.
+	group := anyOf[0]
+	s.Equal("cloud-provider", group.Name)
+	require.Len(s.T(), group.Members, 2)
+
+	gcpConstraint, ok := group.Members["cloud-provider-gcp"]
+	require.True(s.T(), ok, "cloud-provider-gcp must be in anyOf group members")
+	require.NotNil(s.T(), gcpConstraint)
+	s.True(gcpConstraint.Check(semver.MustParse("1.5.0")))
+	s.False(gcpConstraint.Check(semver.MustParse("1.4.0")))
+
+	awsConstraint, ok := group.Members["cloud-provider-aws"]
+	require.True(s.T(), ok, "cloud-provider-aws must be in anyOf group members")
+	require.NotNil(s.T(), awsConstraint)
+	s.True(awsConstraint.Check(semver.MustParse("2.0.0")))
+	s.False(awsConstraint.Check(semver.MustParse("1.9.0")))
+
+	// NoneOf group: forbidden modules. nginx-ingress-legacy carries a non-nil
+	// constraint scoping the forbidden range to <2.0.0 (so 2.0.0+ is fine).
+	// haproxy-legacy has a nil constraint meaning "forbidden at any version".
+	noneOfGroup := noneOf[0]
+	s.Equal("legacy-ingress", noneOfGroup.Name)
+	require.Len(s.T(), noneOfGroup.Members, 2)
+
+	nginxConstraint, ok := noneOfGroup.Members["nginx-ingress-legacy"]
+	require.True(s.T(), ok, "nginx-ingress-legacy must be in noneOf group members")
+	require.NotNil(s.T(), nginxConstraint)
+	s.True(nginxConstraint.Check(semver.MustParse("1.9.0")), "1.9.0 is in the forbidden range")
+	s.False(nginxConstraint.Check(semver.MustParse("2.0.0")), "2.0.0 is outside the forbidden range")
+
+	haproxyConstraint, ok := noneOfGroup.Members["haproxy-legacy"]
+	require.True(s.T(), ok, "haproxy-legacy must be in noneOf group members")
+	s.Nil(haproxyConstraint, "nil constraint means forbidden at any installed version")
 }
 
 // TestLoadAppConfMinimalPackage tests loading an application with only required files.
@@ -172,6 +252,85 @@ func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 	// Verify OpenAPI schema loaded
 	s.NotNil(cfg.ConfigSchema)
 	s.Contains(string(cfg.ConfigSchema), "type: object")
+}
+
+// TestLoadModuleConfModulesRequirements tests that mandatory, conditional, anyOf,
+// and noneOf module dependencies in a module's package.yaml are parsed into the
+// respective shapes, that constraint strings are honored, that mandatory entries
+// may omit the constraint (parsed as a nil *semver.Constraints meaning "any
+// version"), and that group buckets carry their Name plus per-member constraints
+// with the right empty-constraint semantics per bucket.
+func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
+	packageDir := filepath.Join(s.testdataDir, "modules", "complete-module")
+
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+
+	mandatory := cfg.Definition.Requirements.Modules.Mandatory
+	conditional := cfg.Definition.Requirements.Modules.Conditional
+	anyOf := cfg.Definition.Requirements.Modules.AnyOf
+	noneOf := cfg.Definition.Requirements.Modules.NoneOf
+
+	require.Len(s.T(), mandatory, 2)
+	require.Len(s.T(), conditional, 1)
+	require.Len(s.T(), anyOf, 1)
+	require.Len(s.T(), noneOf, 1)
+
+	// Mandatory with constraint: constraint accepts >=1.14, rejects 1.13.
+	cniConstraint, ok := mandatory["cni-cilium"]
+	require.True(s.T(), ok, "cni-cilium must be in mandatory map")
+	require.NotNil(s.T(), cniConstraint)
+	s.True(cniConstraint.Check(semver.MustParse("1.14.0")))
+	s.False(cniConstraint.Check(semver.MustParse("1.13.0")))
+
+	// Mandatory without constraint: present in map with nil constraint (any version).
+	regConstraint, ok := mandatory["registry-packages-proxy"]
+	require.True(s.T(), ok, "registry-packages-proxy must be in mandatory map")
+	s.Nil(regConstraint)
+
+	// Conditional with constraint: accepts >=2.40, rejects 2.39.
+	promConstraint, ok := conditional["prometheus"]
+	require.True(s.T(), ok, "prometheus must be in conditional map")
+	require.NotNil(s.T(), promConstraint)
+	s.True(promConstraint.Check(semver.MustParse("2.40.0")))
+	s.False(promConstraint.Check(semver.MustParse("2.39.0")))
+
+	// AnyOf group: name carried through; both members present with the parsed
+	// constraints. Group is checker-only at the scheduler layer, but at the
+	// loader boundary we just verify the parse fidelity.
+	group := anyOf[0]
+	s.Equal("cloud-provider", group.Name)
+	require.Len(s.T(), group.Members, 2)
+
+	gcpConstraint, ok := group.Members["cloud-provider-gcp"]
+	require.True(s.T(), ok, "cloud-provider-gcp must be in anyOf group members")
+	require.NotNil(s.T(), gcpConstraint)
+	s.True(gcpConstraint.Check(semver.MustParse("1.5.0")))
+	s.False(gcpConstraint.Check(semver.MustParse("1.4.0")))
+
+	awsConstraint, ok := group.Members["cloud-provider-aws"]
+	require.True(s.T(), ok, "cloud-provider-aws must be in anyOf group members")
+	require.NotNil(s.T(), awsConstraint)
+	s.True(awsConstraint.Check(semver.MustParse("2.0.0")))
+	s.False(awsConstraint.Check(semver.MustParse("1.9.0")))
+
+	// NoneOf group: forbidden modules. nginx-ingress-legacy carries a non-nil
+	// constraint scoping the forbidden range to <2.0.0 (so 2.0.0+ is fine).
+	// haproxy-legacy has a nil constraint meaning "forbidden at any version".
+	noneOfGroup := noneOf[0]
+	s.Equal("legacy-ingress", noneOfGroup.Name)
+	require.Len(s.T(), noneOfGroup.Members, 2)
+
+	nginxConstraint, ok := noneOfGroup.Members["nginx-ingress-legacy"]
+	require.True(s.T(), ok, "nginx-ingress-legacy must be in noneOf group members")
+	require.NotNil(s.T(), nginxConstraint)
+	s.True(nginxConstraint.Check(semver.MustParse("1.9.0")), "1.9.0 is in the forbidden range")
+	s.False(nginxConstraint.Check(semver.MustParse("2.0.0")), "2.0.0 is outside the forbidden range")
+
+	haproxyConstraint, ok := noneOfGroup.Members["haproxy-legacy"]
+	require.True(s.T(), ok, "haproxy-legacy must be in noneOf group members")
+	s.Nil(haproxyConstraint, "nil constraint means forbidden at any installed version")
 }
 
 // TestLoadModuleConfMinimalPackage tests loading a module with only required files.
