@@ -588,6 +588,18 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 }
 
 func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
+	// Reset2FA is a local-user operation: it matches Dex sessions by username.
+	// An external target (LDAP/Crowd) has no local 2FA to reset, and an empty
+	// user would make invalidateLocalUserSessions match sessions/tokens with
+	// empty claims. The CRD's CEL rule already forbids target on Reset2FA; this
+	// guard is the safety net for hand-crafted objects that bypass it.
+	if operation.Spec.User == "" {
+		return errors.New("Reset2FA requires spec.user; it is only supported for local users")
+	}
+	if operation.Spec.Target != nil {
+		return errors.New("Reset2FA does not support an external target; it is only supported for local users")
+	}
+
 	anyDeleted, err := invalidateLocalUserSessions(input, operation.Spec.User, "Resetting user 2FA")
 	if err != nil {
 		return err

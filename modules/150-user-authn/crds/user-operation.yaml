@@ -42,6 +42,11 @@ spec:
                   x-doc-examples: ['jane.doe']
                 type:
                   type: string
+                  enum:
+                    - "ResetPassword"
+                    - "Reset2FA"
+                    - "Lock"
+                    - "Unlock"
                   description: |
                     Type of the user operation. Possible values:
                     
@@ -142,6 +147,12 @@ spec:
               oneOf:
                 - required: [user]
                 - required: [target]
+              x-kubernetes-validations:
+                # target identifies an external (LDAP/Crowd/...) account and is
+                # only meaningful for Lock/Unlock against OfflineSessions.
+                # ResetPassword and Reset2FA operate on a local user (spec.user).
+                - rule: 'self.type in ["Lock", "Unlock"] || !has(self.target)'
+                  message: 'spec.target is only supported for Lock and Unlock operations; ResetPassword and Reset2FA apply to local users (spec.user) only.'
               properties:
                 user:
                   type: string
@@ -182,6 +193,11 @@ spec:
                       x-doc-examples: ['jane.doe@example.org']
                 type:
                   type: string
+                  enum:
+                    - "ResetPassword"
+                    - "Reset2FA"
+                    - "Lock"
+                    - "Unlock"
                   description: |
                     Type of the user operation. Possible values:
                     

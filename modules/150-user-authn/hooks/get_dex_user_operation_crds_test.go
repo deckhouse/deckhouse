@@ -181,6 +181,20 @@ spec:
   type: Reset2FA
   user: admin
 `
+		userOperationReset2FAExternalTarget = `
+---
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  creationTimestamp: "%s"
+  name: user-operation-01
+spec:
+  initiatorType: Admin
+  type: Reset2FA
+  target:
+    connectorID: my-ldap
+    email: jane.doe@example.org
+`
 		refreshTokensForAdmin = `
 ---
 apiVersion: dex.coreos.com/v1
@@ -584,6 +598,34 @@ status:
 			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
 			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
 			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Reset2FA against an external target fails (local-only operation)", func() {
+			// CRD CEL forbids target on Reset2FA; this asserts the hook-side
+			// safety net so a target (and the resulting empty spec.user) can
+			// never reach invalidateLocalUserSessions and match foreign sessions.
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(userOperationReset2FAExternalTarget, nowStr) +
+					fmt.Sprintf(offlineSessions, nowStr, nowStr) +
+					refreshTokensForAdmin,
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+
+			// Nothing must be deleted: the guard returns before any session is touched.
+			for _, name := range []string{"offsess-1", "offsess-2"} {
+				offsess := f.KubernetesResource("OfflineSessions", "d8-user-authn", name)
+				Expect(offsess.Exists()).To(BeTrue(), "OfflineSessions %s must be untouched", name)
+			}
+			for _, name := range []string{"rt-1", "rt-2"} {
+				rt := f.KubernetesResource("RefreshToken", "d8-user-authn", name)
+				Expect(rt.Exists()).To(BeTrue(), "RefreshToken %s must be untouched", name)
+			}
 		})
 
 	})
