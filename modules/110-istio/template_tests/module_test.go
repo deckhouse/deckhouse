@@ -371,6 +371,9 @@ neighbour-0:
   clusterUUID: r-e-m-o-t-e
   rootCA: ---ROOT CA---
 `)
+			f.ValuesSetFromYaml("istio.alliance.ingressGateway.daemonSetAnnotations", `
+test.deckhouse.io/annotation: test-value
+`)
 			f.HelmRender()
 		})
 
@@ -403,7 +406,9 @@ neighbour-0:
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
 
-			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
+			ingressgatewayDaemonSet := f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway")
+			Expect(ingressgatewayDaemonSet.Exists()).To(BeTrue())
+			Expect(ingressgatewayDaemonSet.Field("spec.template.metadata.annotations.test\\.deckhouse\\.io/annotation").String()).To(Equal("test-value"))
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
