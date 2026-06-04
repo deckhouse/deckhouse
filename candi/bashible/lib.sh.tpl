@@ -557,6 +557,6 @@ bb-telemetry-end-span() {
   command -v d8-curl &>/dev/null && curl_cmd=d8-curl
   local endpoint="${BB_TELEMETRY_ENDPOINT:-${OTEL_RELAY_ADDRESS:-http://127.0.0.1:4318}/v1/traces}"
   local payload="{\"resourceSpans\":[{\"resource\":{\"attributes\":[{\"key\":\"service.name\",\"value\":{\"stringValue\":\"bashible\"}}]},\"scopeSpans\":[{\"scope\":{\"name\":\"bashbooster\"},\"spans\":[{\"traceId\":\"${trace_id}\",\"spanId\":\"${span_id}\",\"name\":\"${2}\",\"kind\":1,\"startTimeUnixNano\":\"${start_time}\",\"endTimeUnixNano\":\"${end_time}\"}]}]}]}"
-  $curl_cmd -s -S -X POST -H "Content-Type: application/json" -d "$payload" "$endpoint"
+  $curl_cmd -s -S -X POST -H "Content-Type: application/json" -d "$payload" "$endpoint" 2>/dev/null || true
 }
 {{- end }}
