@@ -120,7 +120,6 @@ resource "kubernetes_resource_ready_v1" "root-disk-migration" {
   fields = merge(
     {
       "metadata.name" = ".+"
-      "status.phase"  = "^Ready$"
     },
     var.storage_class != null ? {
       "status.storageClassName" = "^${replace(var.storage_class, ".", "\\.")}$"
