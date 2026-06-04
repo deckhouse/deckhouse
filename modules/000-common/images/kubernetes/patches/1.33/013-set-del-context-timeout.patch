@@ -1,0 +1,24 @@
+* Unmerged path pkg/kubelet/kubelet_pods.go
+diff --git a/pkg/kubelet/pod/mirror_client.go b/pkg/kubelet/pod/mirror_client.go
+index 22ea62b1a31..2d32f6c2fea 100644
+--- a/pkg/kubelet/pod/mirror_client.go
++++ b/pkg/kubelet/pod/mirror_client.go
+@@ -19,6 +19,7 @@ package pod
+ import (
+ 	"context"
+ 	"fmt"
++	"time"
+ 
+ 	v1 "k8s.io/api/core/v1"
+ 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+@@ -130,7 +131,9 @@ func (mc *basicMirrorClient) DeleteMirrorPod(podFullName string, uid *types.UID)
+ 	klog.V(2).InfoS("Deleting a mirror pod", "pod", klog.KRef(namespace, name), "podUID", uidValue)
+ 
+ 	var GracePeriodSeconds int64
+-	if err := mc.apiserverClient.CoreV1().Pods(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{GracePeriodSeconds: &GracePeriodSeconds, Preconditions: &metav1.Preconditions{UID: uid}}); err != nil {
++	deleteCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancel()
++	if err := mc.apiserverClient.CoreV1().Pods(namespace).Delete(deleteCtx, name, metav1.DeleteOptions{GracePeriodSeconds: &GracePeriodSeconds, Preconditions: &metav1.Preconditions{UID: uid}}); err != nil {
+ 		// Unfortunately, there's no generic error for failing a precondition
+ 		if !(apierrors.IsNotFound(err) || apierrors.IsConflict(err)) {
+ 			// We should return the error here, but historically this routine does
