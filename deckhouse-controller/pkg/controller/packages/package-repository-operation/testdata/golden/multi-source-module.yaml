@@ -6,17 +6,17 @@ metadata:
   labels:
     packages.deckhouse.io/operation-trigger: manual
     packages.deckhouse.io/operation-type: Update
-    packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-scan-1571326380
+    packages.deckhouse.io/repository: deckhouse-clone
+  name: deckhouse-clone-scan-1571326380
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
     kind: PackageRepository
-    name: deckhouse
+    name: deckhouse-clone
     uid: ""
   resourceVersion: "6"
 spec:
-  packageRepositoryName: deckhouse
+  packageRepositoryName: deckhouse-clone
   type: Update
   update:
     fullScan: true
@@ -30,11 +30,9 @@ status:
     status: "True"
     type: Completed
   packages:
-    newVersionsOverall: 1
     processed:
     - foundVersions: 1
       name: test-package
-      newVersions: 1
       type: Module
     processedOverall: 1
     total: 1
@@ -47,7 +45,29 @@ metadata:
   labels:
     heritage: deckhouse
     packages.deckhouse.io/draft: "true"
-    packages.deckhouse.io/legacy: "true"
+    packages.deckhouse.io/package: test-package
+    packages.deckhouse.io/repository: deckhouse-clone
+  name: deckhouse-clone-test-package-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse-clone
+    uid: ""
+  resourceVersion: "1"
+spec:
+  packageName: test-package
+  packageRepositoryName: deckhouse-clone
+  packageVersion: v1.0.0
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    packages.deckhouse.io/draft: "true"
     packages.deckhouse.io/package: test-package
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-package-v1.0.0
@@ -57,7 +77,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test-package
   packageRepositoryName: deckhouse
@@ -77,16 +97,34 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "2"
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: false
+    kind: PackageRepository
+    name: deckhouse-clone
+    uid: ""
+  resourceVersion: "3"
 status:
   availableRepositories:
-  - deckhouse
+  - deckhouse-clone
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    repo: registry.example.com/test
+status:
+  partialScanAvailable: false
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: deckhouse-clone
   resourceVersion: "3"
 spec:
   registry:
@@ -98,12 +136,10 @@ status:
     reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
-  lastChangeTime: "2025-10-31T12:00:00Z"
-  lastNewVersions: 1
-  lastScanTime: "2025-10-31T12:00:00Z"
   packages:
   - name: test-package
     type: Module
   packagesCount: 1
   partialScanAvailable: false
   phase: Active
+  syncTime: "2025-10-31T12:00:00Z"

@@ -533,6 +533,32 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("multi-source module package", func() {
+		// A ModulePackage already exists owned (Controller=false) by the "deckhouse" repo.
+		// A scan operation now runs for a second repo ("deckhouse-clone") that contributes
+		// the same package. The existing ModulePackage must end up with both repositories
+		// as non-controller owners; the new ModulePackageVersion is created with a
+		// Controller=true ownerRef on "deckhouse-clone" (single-source).
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", moduleVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("multi-source-module.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-clone-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("failed versions from registry", func() {
 		// Root: "test-package", Versions: v1.0.0, v1.1.0, v1.2.0 (Application type).
 		// k8s-level Create errors injected for v1.1.0 and v1.2.0.
