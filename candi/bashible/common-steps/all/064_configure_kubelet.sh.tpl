@@ -383,11 +383,7 @@ resolvConf: ${resolvConfPath}
 rotateCertificates: true
 runtimeRequestTimeout: 4m0s
 serializeImagePulls: false
-{{- if eq .runType "ClusterBootstrap" }}
-syncFrequency: 5s
-{{- else }}
 syncFrequency: 1m0s
-{{- end }}
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:
   cpu: 70m
