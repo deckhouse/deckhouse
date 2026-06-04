@@ -265,7 +265,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 1. Create a file with [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) manifests. For example, `yandex-instanceclass-nodegroup.yaml`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1
    kind: YandexInstanceClass
    metadata:
      name: yc-worker
@@ -392,6 +392,7 @@ Before you begin, make sure that the following conditions are met:
      name: yc-manual
    spec:
      nodeType: CloudStatic
+   EOF
    ```
 
 1. Make sure that the NodeGroup has been created and synchronized:

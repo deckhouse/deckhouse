@@ -266,7 +266,7 @@ description: Подготовка к гибридной интеграции с 
 1. Создайте файл с манифестами [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup). Например, `yandex-instanceclass-nodegroup.yaml`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1
    kind: YandexInstanceClass
    metadata:
      name: yc-worker
@@ -393,6 +393,7 @@ description: Подготовка к гибридной интеграции с 
      name: yc-manual
    spec:
      nodeType: CloudStatic
+   EOF
    ```
 
 1. Убедитесь, что NodeGroup создана и синхронизирована:
