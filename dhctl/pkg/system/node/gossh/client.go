@@ -580,7 +580,7 @@ func (s *Client) stopKubeproxy() {
 	// after a single SIGINT/SIGTERM — it required two signals due to
 	// incorrect signal handling.
 	// Fixed in https://github.com/deckhouse/deckhouse-cli/releases/tag/v0.30.8
-	cmd = NewSSHCommand(s, "pkill -9 -f 'd8 k proxy'")
+	cmd = NewSSHCommand(s, `pkill -9 -f "d8 k proxy"`)
 	cmd.Sudo(context.Background())
 	_ = cmd.Run(context.Background())
 }
