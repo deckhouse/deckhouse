@@ -1,4 +1,4 @@
-{{- $localPathProvisionerVersion := "0.0.34"}}
+{{- $localPathProvisionerVersion := "0.0.36"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -36,7 +36,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
