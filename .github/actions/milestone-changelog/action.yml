@@ -4,8 +4,11 @@ inputs:
   milestone:
     description: Milestone object containing number and title
     required: true
-  token:
+  changelog-access-token:
     description: Github token
+    required: true
+  ssdlc-tools-pull-token:
+    description: Changelog generator pull token
     required: true
 runs:
   using: "composite"
@@ -17,45 +20,35 @@ runs:
         echo "milestone_title=${{ fromJSON(inputs.milestone).title }}" >> $GITHUB_OUTPUT
         echo "milestone_number=${{ fromJSON(inputs.milestone).number }}" >> $GITHUB_OUTPUT
 
-    - name: Find possible sections in project structure
-      id: sections
-      uses: actions/github-script@v6.4.1
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        result-encoding: string
-        script: |
-          const { find } = require('./.github/scripts/js/changelog-find-sections.js')
-          const rootDirs = [
-            ".",
-            "modules",
-            "ee/modules",
-            "ee/be/modules",
-            "ee/se/modules",
-            "ee/fe/modules",
-            "ee/se-plus/modules"
-          ]
-          const excludePatterns = [
-            "^\\.",
-            "CHANGELOG",
-            "^ee$",
-            "^modules$"
-          ]
-          const sections = find(rootDirs, excludePatterns)
-          return sections.join("\n")
+        python-version: "3.12"
+
+    - name: Install changelog generator
+      shell: bash
+      env:
+        CHANGELOG_GENERATOR_VERSION: "0.0.0+a0347187"
+      run: |
+        pip install --upgrade pip
+        pip install "deckhouse-changelog-generator==${CHANGELOG_GENERATOR_VERSION}" \
+          --index-url "https://token:${SSDLC_TOOLS_PULL_TOKEN}@fox.flant.com/api/v4/projects/5387/packages/pypi/simple"
 
     - name: Collect Changelog
       id: changelog
-      uses: deckhouse/changelog-action@v3.1.0
-      with:
-        token: ${{ inputs.token }}
-        repo: ${{ github.repository }}
-        milestone: ${{ steps.args.outputs.milestone_title }}
-        # section:forced_impact_level
-        allowed_sections: |
-          ${{ steps.sections.outputs.result }}
-          ci:low
-          dependabot:low
-          testing:low
-          tools:low
+      shell: bash
+      run: |
+        SECTIONS_FILE="${RUNNER_TEMP}/allowed-sections.txt"
+        deckhouse-write-changelog-sections \
+          --repo-root "${GITHUB_WORKSPACE}" \
+          --output "${SECTIONS_FILE}"
+
+        deckhouse-collect-changelog \
+          --repo-path "${GITHUB_WORKSPACE}" \
+          --milestone "${{ steps.args.outputs.milestone_title }}" \
+          --github-repo "${{ github.repository }}" \
+          --github-token "${{ inputs.changelog-access-token }}" \
+          --allowed-sections-file "${SECTIONS_FILE}"
 
     # Patch-version YAML changelog
     - name: Write Changelog YAML
@@ -114,5 +107,5 @@ runs:
 
           For more information, see the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) and minor version [release changes](https://github.com/deckhouse/deckhouse/releases/tag/${{ steps.changelog.outputs.minor_version }}.0).
         labels: changelog, auto, status/backport
-        token: ${{ inputs.token }}
+        token: ${{ inputs.changelog-access-token }}
         delete-branch: true
