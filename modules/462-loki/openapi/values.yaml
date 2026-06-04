@@ -23,13 +23,13 @@ properties:
         properties:
           cert:
             type: string
-            default: ""
+            default: "-"
           key:
             type: string
-            default: ""
+            default: "-"
           ca: 
             type: string
-            default: ""
+            default: "-"
       pvcSize:
         type: integer
         format: int64
