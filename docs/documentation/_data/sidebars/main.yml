@@ -1579,6 +1579,10 @@ entries:
                 ru: Обзор
               url: /architecture/virtualization/
             - title:
+                en: Virtualization API
+                ru: Virtualization API
+              url: /architecture/virtualization/api.html
+            - title:
                 en: Module core
                 ru: Ядро модуля
               url: /architecture/virtualization/core.html              
