@@ -16,30 +16,25 @@ Adds support for clusters where containerd forces `readOnlyRootFilesystem` for e
 
 The patch touches `provisioner.go`.
 
-### 003-cve-2026-44543-helperpod-validation.patch
+### 003-allow-root-helperpod.patch
 
-Backports the HelperPod template validation introduced in upstream `v0.0.36`
-(CVE-2026-44543, [GHSA-7fxv-8wr2-mfc4](https://github.com/rancher/local-path-provisioner/security/advisories/GHSA-7fxv-8wr2-mfc4),
-CVSS 8.7 High) to `v0.0.34`. The provisioner now rejects unsafe security-sensitive
-fields in `helperPod.yaml` loaded from the `local-path-config` ConfigMap, so an
-attacker with edit permission on that ConfigMap cannot inject a privileged
-HelperPod with the host root filesystem mounted.
+Deckhouse-specific deviation on top of the upstream HelperPod template
+validation that landed in `v0.0.36` (CVE-2026-44543,
+[GHSA-7fxv-8wr2-mfc4](https://github.com/rancher/local-path-provisioner/security/advisories/GHSA-7fxv-8wr2-mfc4),
+CVSS 8.7 High). Upstream rejects pods that set `spec.securityContext.runAsUser`
+or `spec.securityContext.runAsGroup` to `0` unless the operator-level flag
+`--allow-unsafe-helper-pod-template` is passed, which disables **all**
+validation and would re-introduce the CVE.
 
-The following fields are forbidden:
+This patch removes only those two specific checks so that all other
+security-sensitive fields stay forbidden (`initContainers`,
+`ephemeralContainers`, extra containers, custom `volumes`/`volumeMounts`,
+host namespaces, `nodeName`/`serviceAccountName`, `envFrom`/`env.valueFrom`,
+container lifecycle/probes, `sysctls`, `privileged: true`, `capabilities.add`,
+`allowPrivilegeEscalation: true`).
 
-* `initContainers` / `ephemeralContainers`;
-* extra containers (only one container is allowed);
-* custom `volumes` / `volumeMounts` (the provisioner injects the host-path volume itself);
-* `hostNetwork` / `hostPID` / `hostIPC`;
-* `spec.nodeName` / `spec.serviceAccountName`;
-* `envFrom`, `env.valueFrom`;
-* `lifecycle`, `livenessProbe`, `readinessProbe`, `startupProbe`;
-* `spec.securityContext.sysctls`;
-* `securityContext.privileged: true`, `capabilities.add`, `allowPrivilegeEscalation: true`.
-
-Deckhouse-specific deviation from upstream: `runAsUser=0` / `runAsGroup=0` are
-intentionally still allowed, because the helper container manages directories on
-the host-path volume that were originally created by root and therefore must run
-as root itself.
+`runAsUser=0` / `runAsGroup=0` must remain allowed because the helper container
+manages host-path directories that were originally created by root and
+therefore must run as root itself.
 
 The patch touches `util.go`.
