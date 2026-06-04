@@ -85,7 +85,7 @@ Virtualization API consists of the following components:
 Virtualization-api interacts with the following components:
 
 1. **Kube-apiserver**: Lists VirtualMachine custom resources, which are needed to process requests to subresources.
-1. **Virt-api**: Sends requests to the KubeVirt subresources. Requests pass through a similar **proxy** sidecar container that renames metadata from the `subresources.virtualization.deckhouse.io` API group to the `subresources.kubevirt.io` API group and proxies them to the virt-api endpoint (Kubernetes Extension API Server KubeVirt).
+1. **Virt-api**: Sends requests to the KubeVirt subresources. Requests pass through a similar proxy sidecar container that renames metadata from the `subresources.virtualization.deckhouse.io` API group to the `subresources.kubevirt.io` API group and proxies them to the virt-api endpoint (Kubernetes Extension API Server KubeVirt).
 
 Virtualization-controller interacts with the following components:
 
@@ -101,4 +101,4 @@ The following external components interact with the Virtualization API component
    - Forwards requests to `subresources.virtualization.deckhouse.io` API group resources.
    - Sends `virtualization.deckhouse.io` API group resource validating requests.
 
-1. **Prometheus-main** — Collects Virtualization API components metrics.
+1. **Prometheus-main**: Collects Virtualization API components metrics.
