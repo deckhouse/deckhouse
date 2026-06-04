@@ -249,6 +249,7 @@ ClusterLoggingConfig
 ClusterName
 ClusterPodLoggingConfig
 ClusterRole
+ClusterRoleBinding
 clusterType
 ClusterVirtualImage
 cmctl
@@ -1557,6 +1558,7 @@ VirtualMachine
 VirtualMachineClass
 VirtualMachineIPAddress
 VirtualMachines
+VirtualMachineOperation
 VirtualService
 Vitastor
 vk
@@ -2111,6 +2113,7 @@ ZvirtInstanceClass
 неймспейсах
 неймспейсе
 неймспейсы
+неймспейсов
 некоммитнутые
 некоммитнутыми
 неконсистентному
