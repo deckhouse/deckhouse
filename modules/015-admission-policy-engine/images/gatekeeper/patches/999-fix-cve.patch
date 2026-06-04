@@ -1,15 +1,13 @@
 diff --git a/go.mod b/go.mod
-index 15840ed..26ba220 100644
+index 892517f..20c7b28 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,8 +1,8 @@
- module github.com/open-policy-agent/gatekeeper/v3
+@@ -2,6 +2,8 @@ module github.com/open-policy-agent/gatekeeper/v3
  
--go 1.24.0
-+go 1.25.0
+ go 1.25.0
  
--toolchain go1.24.2
 +toolchain go1.25.11
- 
++
  require (
  	cloud.google.com/go/trace v1.10.11
+ 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.44.0
