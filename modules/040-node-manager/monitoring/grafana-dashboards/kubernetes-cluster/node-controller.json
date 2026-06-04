@@ -926,7 +926,7 @@
           "refId": "A"
         }
       ],
-      "title": "Сache size",
+      "title": "Cache size",
       "type": "timeseries"
     },
     {
