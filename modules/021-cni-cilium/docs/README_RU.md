@@ -56,7 +56,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 Применение CiliumClusterwideNetworkPolicy без включённого параметра [`policyAuditMode`](configuration.html#parameters-policyauditmode) может привести к некорректной работе control plane или потере SSH-доступа ко всем узлам кластера.
 {% endalert %}
 
-Безопасный порядок выкатки CCNP, включая обязательные правила для control plane и host firewall, описан в разделе документации [Сетевые политики](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html). Подробности по форматам политик Cilium — на странице [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
+Безопасный порядок внедрения CCNP, включая обязательные правила для control plane и host firewall, описан в разделе документации [Сетевые политики](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/configuration.html). Подробности по форматам политик Cilium — на странице [CiliumNetworkPolicy и CiliumClusterwideNetworkPolicy](/products/kubernetes-platform/documentation/v1/admin/configuration/network/policy/cilium_networkpolicy.html).
 
 ## Смена режима работы Cilium
 
