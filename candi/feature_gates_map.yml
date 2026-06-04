@@ -116,7 +116,6 @@
     - ConcurrentWatchObjectDecode
     - ContainerStopSignals
     - ImageVolume
-    - KubeletEnsureSecretPulledImages
     - KubeletPodResourcesGet
     - KubeletPSI
     - MemoryQoS
@@ -176,7 +175,6 @@
     - EnvFiles
     - HostnameOverride
     - ImageVolume
-    - KubeletEnsureSecretPulledImages
     - MemoryQoS
     - MutatingAdmissionPolicy
     - PodLogsQuerySplitStreams
