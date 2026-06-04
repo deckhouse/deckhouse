@@ -94,7 +94,7 @@ The module interacts with the following components:
 
    * Manages cluster control plane components.
    * Reconciles ControlPlaneNode and ControlPlaneOperation custom resources.
-   * Watches Secret resources `d8-control-plane-manager-config` and `d8-pki`.
+   * Watches `d8-control-plane-manager-config` and `d8-pki` Secrets.
    * Proxies and load-balances requests to **kube-apiserver** sent to `localhost`.
 
 2. **etcd**:
