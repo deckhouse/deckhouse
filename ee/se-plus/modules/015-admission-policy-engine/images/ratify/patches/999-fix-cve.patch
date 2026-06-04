@@ -6,7 +6,7 @@ index 44952b3..0ea0cac 100644
  module github.com/ratify-project/ratify
  
 -go 1.23.3
-+go 1.25.11
++go 1.25.0
  
  // Accidentally published prior to 1.0.0 release
  retract (
