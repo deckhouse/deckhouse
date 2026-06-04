@@ -29,29 +29,31 @@
 
 {% if page.platform_code == 'bm-private' or page.platform_code == 'bm' or page.platform_code == 'red' or page.platform_code == 'spacevm' %}
 
-<div class="tabs">
-  <a id='tab_variant_worker_{{ revision }}'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant_{{ revision }} active"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant_{{ revision }}','tabs__content_variant_{{ revision }}','block_variant_worker_{{ revision }}','dhctl-variant','worker');">
-     {% if page.lang == 'ru' %}Кластер из нескольких узлов{% else %}Master + worker{% endif %}
-  </a>
-  <a id='tab_variant_single_{{ revision }}'
-     href="javascript:void(0)"
-     class="tabs__btn tabs__btn_variant_{{ revision }}"
-     onclick="openTabAndSaveStatus(event,'tabs__btn_variant_{{ revision }}','tabs__content_variant_{{ revision }}','block_variant_single_{{ revision }}','dhctl-variant','single');">
-     {% if page.lang == 'ru' %}Кластер из единственного узла{% endif %}
-  </a>
-</div>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_variant_worker_{{ revision }}'
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title active"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_variant_worker_{{ revision }}','dhctl-variant','worker');">
+      {% if page.lang == 'ru' %}Кластер из нескольких узлов{% else %}Master + worker{% endif %}
+    </li>
+    <li id='tab_variant_single_{{ revision }}'
+      href="javascript:void(0)"
+      class="tabs__item tabs__item--title"
+      onclick="openTabAndSaveStatus(event,'tabs__item--title','tabs__container--descr','block_variant_single_{{ revision }}','dhctl-variant','single');">
+      {% if page.lang == 'ru' %}Кластер из единственного узла{% endif %}
+    </li>
+  </ul>
 
-<div id='block_variant_worker_{{ revision }}' class="tabs__content tabs__content_variant_{{ revision }} active" markdown="1">
+<div id='block_variant_worker_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
   {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
   {% include_file "{{ includePath }}" syntax="yaml" %}
 </div>
 
-<div id='block_variant_single_{{ revision }}' class="tabs__content tabs__content_variant_{{ revision }}" markdown="1">
+<div id='block_variant_single_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
   {% capture includePathSingle %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.single.inc{% endcapture %}
   {% include_file "{{ includePathSingle }}" syntax="yaml" %}
+</div>
 </div>
 
 {% else %}

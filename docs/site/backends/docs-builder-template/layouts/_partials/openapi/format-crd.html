@@ -17,13 +17,14 @@
 {{- if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
   {{- if gt ( $data.spec.versions | len ) 1 }}
     <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
-    <div class="tabs">
+    <div class="tabs-block">
+    <ul class="tabs__container tabs__container--title">
     {{- $status := " active" }}
     {{- range $versionsSorted }}
-      <a href='javascript:void(0)' class='tabs__btn tabs__btn__{{ $kindDowncase }}{{ $status }}' onclick="openTab(event, 'tabs__btn__{{ $kindDowncase }}', 'tabs__content__{{ $kindDowncase }}', '{{ $kindDowncase }}_{{ . | lower }}')">{{ . | lower }}</a>
+      <a href='javascript:void(0)' class='tabs__item tabs__item--title tabs__title__{{ $kindDowncase }}{{ $status }}' onclick="openTab(event, 'tabs__title__{{ $kindDowncase }}', 'tabs__descr__{{ $kindDowncase }}', '{{ $kindDowncase }}_{{ . | lower }}')">{{ . | lower }}</a>
       {{- $status = "" }}
     {{- end }}
-    </div>
+    </ul>
   {{- end }}
 
   {{- $status := " active" }}
@@ -37,7 +38,7 @@
     {{- end }}
 
     {{- if gt ( $data.spec.versions | len ) 1 }}
-      <div id='{{ $kindDowncase }}_{{ $versionName | lower }}' class='tabs__content tabs__content__{{ $kindDowncase }}{{ $status }}'>
+      <div id='{{ $kindDowncase }}_{{ $versionName | lower }}' class='tabs__container tabs__container--descr tabs__descr__{{ $kindDowncase }}{{ $status }}'>
       {{- $status = "" }}
     {{- end }}
 
@@ -78,4 +79,5 @@
     {{- if gt ( $data.spec.versions | len ) 1 }}</div>{{ end }}
 
   {{- end }}{{/* range $data.spec.versions */}}
+  {{- if gt ( $data.spec.versions | len ) 1 }}</div>{{- end }}{{/* close .tabs-block */}}
 {{- end }}

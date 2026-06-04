@@ -2,18 +2,20 @@
 {{- $tabs_name := .Get "name" | default (printf "%s-%d" (.Page.RelPermalink) (.Page.Scratch.Get "tabset-counter") ) | anchorize -}}
 {{- $tabs := .Scratch.Get "tabs" -}}
 {{- if .Inner -}}{{- /* We don't use the inner content, but Hugo will complain if we don't reference it. */ -}}{{- end -}}
-<div class="tabs">
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
   {{- range $i, $e := $tabs -}}
     {{- $id := printf "%s_%d" $tabs_name $i -}}
-    <a id="tab_{{ $id }}" href="javascript:void(0)" class="tabs__btn tabs__btn_{{ $tabs_name }}{{ if (eq $i 0) }} active{{ end }}"
-       onclick="openTabAndSaveStatus(event, 'tabs__btn_{{ $tabs_name }}', 'tabs__content_{{ $tabs_name }}', 'block_{{ $id }}');" >
+    <li id="tab_{{ $id }}" href="javascript:void(0)" class="tabs__item tabs__item--title{{ if (eq $i 0) }} active{{ end }}"
+       onclick="openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__container--descr', 'block_{{ $id }}');" >
       {{- trim .name " " -}}
-    </a>
+    </li>
   {{- end -}}
-</div>
+  </ul>
 {{- range $i, $e := $tabs -}}
 {{- $id := printf "%s_%d" $tabs_name $i -}}
-<div id='block_{{ $id }}' class="tabs__content tabs__content_{{ $tabs_name }}{{ if (eq $i 0) }} active{{ end }}">
+<div id='block_{{ $id }}' class="tabs__container tabs__container--descr{{ if (eq $i 0) }} active{{ end }}">
   {{ .content | $.Page.RenderString | safeHTML }}
 </div>
 {{- end -}}
+</div>

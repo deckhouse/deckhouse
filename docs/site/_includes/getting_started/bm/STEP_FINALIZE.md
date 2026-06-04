@@ -72,20 +72,21 @@ sudo -i d8 k patch mc global --type merge \
   <li>
     <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
     
-<div class="tabs">
-        <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
-                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');">
-        CAPS
-        </a>
-        <a id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');
-                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');">
-        Bootstrap script
-        </a>
-</div>
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+    <li id='tab_block_caps' href="javascript:void(0)" class="tabs__item tabs__item--title active"
+    onclick="openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__caps', 'block_bootstrap');
+              openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__bootstrap', 'block_caps');">
+    CAPS
+    </li>
+    <li id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__item tabs__item--title"
+    onclick="openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__bootstrap', 'block_caps');
+              openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__caps', 'block_bootstrap');">
+    Bootstrap script
+    </li>
+  </ul>
 
-  <div id="block_bootstrap" class="tabs__bootstrap" style="display: none;">
+  <div id="block_bootstrap" class="tabs__container tabs__container--descr tabs__bootstrap" style="display: none;">
   <ul>
   <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -119,7 +120,7 @@ echo <Base64-CODE> | base64 -d | bash
   </li>
   </ul>
   </div>
-  <div id="block_caps" class="tabs__caps">
+  <div id="block_caps" class="tabs__container tabs__container--descr tabs__caps">
   <ul>
 <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -230,6 +231,7 @@ EOF
 </div>
   </li>
   </ul>
+  </div>
   </div>
   </li>
   <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
