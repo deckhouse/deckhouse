@@ -21,8 +21,8 @@ Before you begin, make sure that the following requirements are met:
 
 - The cluster is created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
 - Network connectivity is configured between the network of the static DKP cluster nodes and the network of virtual machines in DVP. For details, see [Network requirements](./overview#general-network-requirements).
-- Worker nodes created in DVP have access to the Kubernetes API of the target DKP cluster, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and ["Configuring network policies"](../../configuration/network/policy/configuration.html) sections.
-- The requirements from the ["Preparing the environment"](/modules/cloud-provider-dvp/environment.html) section are met:
+- Worker nodes created in DVP have access to the Kubernetes API of the target DKP cluster, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Configuring network policies](../../configuration/network/policy/configuration.html) sections.
+- The requirements from the [Preparing the environment](/modules/cloud-provider-dvp/environment.html) section are met:
   - a [ServiceAccount](/modules/cloud-provider-dvp/environment.html#creating-a-user) has been created to access the DVP API;
   - a kubeconfig has been generated to connect to the DVP API;
   - a namespace has been prepared where virtual machines and disks will be created.
