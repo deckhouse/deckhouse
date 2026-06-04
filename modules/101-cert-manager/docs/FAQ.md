@@ -1,5 +1,6 @@
 ---
 title: "The cert-manager module: FAQ"
+description: "Answers to frequently asked questions about the cert-manager module."
 ---
 
 ## What types of certificates are supported?
@@ -105,12 +106,26 @@ As an example, let's consider using the `Yandex Cloud DNS` service.
 
 You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
 
-After configuring PKI and enabling Kubernetes [authorization](../../modules/user-authz/), you have to:
-- Create a service account and copy its secret reference:
+After configuring PKI and enabling Kubernetes [authorization](/modules/user-authz/), follow these steps:
+
+- Create a `ServiceAccount`:
 
   ```shell
   d8 k create serviceaccount issuer
-  ISSUER_SECRET_REF=$(d8 k get serviceaccount issuer -o json | jq -r ".secrets[].name")
+  ```
+
+- Create a `Secret` with a token for this service account. In recent Kubernetes versions, the secret for a `ServiceAccount` is not created automatically:
+
+  ```shell
+  d8 k apply -f - <<EOF
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: issuer
+    annotations:
+      kubernetes.io/service-account.name: issuer
+  type: kubernetes.io/service-account-token
+  EOF
   ```
 
 - Create an Issuer:
@@ -132,7 +147,7 @@ After configuring PKI and enabling Kubernetes [authorization](../../modules/user
           mountPath: /v1/auth/kubernetes
           role: issuer
           secretRef:
-            name: $ISSUER_SECRET_REF
+            name: issuer
             key: token
   EOF
   ```
@@ -289,10 +304,14 @@ For example, you can create your own `ClusterIssuer` for a [route53](https://aws
 ## Does the legacy tls-acme annotation work?
 
 Yes, it works! The dedicated component (`cert-manager-ingress-shim`) automatically creates `Certificate` resources based on these annotations (in the same namespaces as those of Ingress resources with annotations).
-HashiCorp
-> **Caution!** The Certificate for a particular annotation is linked to the existing Ingress resource. The additional records are put into the existing Ingress resource instead of creating a separate one. Thus, the process will fail if authentication or whitelist is set for the primary Ingress. In this case, you shouldn't use the annotation; use the Certificate instead.
->
-> **Caution!** If you switched to the Certificate instead of annotation, then you need to delete the annotation-based Certificate. Otherwise, the same Secret will be updated for both Certificates (this may lead to exceeding the Let's Encrypt limits).
+
+{% alert level="info" %}
+The Certificate for a particular annotation is linked to the existing Ingress resource. The additional records are put into the existing Ingress resource instead of creating a separate one. Thus, the process will fail if authentication or whitelist is set for the primary Ingress. In this case, you shouldn't use the annotation; use the Certificate instead.
+{% endalert %}
+
+{% alert level="warning" %}
+If you switched to the Certificate instead of annotation, delete the annotation-based Certificate. Otherwise, the same Secret will be updated for both Certificates, and this may lead to exceeding the Let's Encrypt limits.
+{% endalert %}
 
 ```yaml
 apiVersion: networking.k8s.io/v1
