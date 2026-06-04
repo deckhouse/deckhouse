@@ -179,7 +179,7 @@ const userOperationRetentionPeriod = 24 * time.Hour
 const userOperationAnnotationInitiator = "deckhouse.io/initiator"
 
 // userOperationForeverTime is the lockedUntil value the hook writes for a
-// permanent lock (UserOperationLockSpec.Permanent == true). Year 9999 keeps
+// permanent lock (lock.for == userOperationLockForever). Year 9999 keeps
 // the value inside time.Time's safe range and RFC3339 grammar while sitting
 // far beyond any realistic clock skew or planned expiry. Both Dex's
 // Password.lockedUntil and OfflineSessions.lockedUntil are compared with
@@ -187,7 +187,11 @@ const userOperationAnnotationInitiator = "deckhouse.io/initiator"
 var userOperationForeverTime = time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/user-authn",
+	// Dedicated sub-queue so admin-triggered UserOperation processing (which is
+	// event-driven on a user-facing CR and fans out into cascading Password /
+	// OfflineSessions / RefreshToken patches and deletes) cannot delay the core
+	// user-authn reconciliation hooks that share "/modules/user-authn".
+	Queue: "/modules/user-authn/user-operation",
 	Schedule: []go_hook.ScheduleConfig{
 		{Name: "cron", Crontab: "*/5 * * * *"},
 	},
@@ -305,7 +309,7 @@ func applyUserOperationFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	var userOperation = &UserOperation{}
 	err := sdk.FromUnstructured(obj, userOperation)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+		return nil, fmt.Errorf("cannot convert kubernetes object: %w", err)
 	}
 
 	return userOperation, nil
@@ -346,11 +350,10 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 	operationsToCleanUp := make([]UserOperation, 0)
 	for userOperation, err := range sdkobjectpatch.SnapshotIter[UserOperation](input.Snapshots.Get("useroperations")) {
 		if err != nil {
-			return fmt.Errorf("cannot map userOperation: cannot iterate over 'useroperations' snapshot: %v", err)
+			return fmt.Errorf("iterate over 'useroperations' snapshot: %w", err)
 		}
 
 		if userOperation.Status.Phase == "" {
-			input.Logger.Info("Discovered pending UserOperation", userOperationLogFields(userOperation)...)
 			operationsToExecute = append(operationsToExecute, userOperation)
 			continue
 		}
@@ -360,8 +363,12 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	input.Logger.Info("Operations to execute", "count", len(operationsToExecute))
-	input.Logger.Info("Operations to clean up", "count", len(operationsToCleanUp))
+	if len(operationsToExecute) > 0 {
+		input.Logger.Info("Processing pending UserOperations", "count", len(operationsToExecute))
+	}
+	if len(operationsToCleanUp) > 0 {
+		input.Logger.Info("Cleaning up expired UserOperations", "count", len(operationsToCleanUp))
+	}
 
 	for _, operation := range operationsToExecute {
 		logFields := userOperationLogFields(operation)
@@ -378,9 +385,10 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 		}
 		operation.Status.CompletedAt = ptr.To(metav1.Now())
 
+		// UserOperation is cluster-scoped; namespace is always empty.
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"status": operation.Status},
-			"deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name,
+			"deckhouse.io/v1", "UserOperation", "", operation.Name,
 			object_patch.WithSubresource("status"),
 		)
 
@@ -394,16 +402,31 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 		if operation.Spec.Type == UserOperationTypeResetPass && operation.Spec.ResetPassword != nil {
 			input.PatchCollector.PatchWithMerge(
 				map[string]any{"spec": map[string]any{"resetPassword": nil}},
-				"deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name,
+				"deckhouse.io/v1", "UserOperation", "", operation.Name,
 			)
 		}
 	}
 
 	for _, operation := range operationsToCleanUp {
 		input.Logger.Info("Deleting old UserOperation", userOperationLogFields(operation)...)
-		input.PatchCollector.Delete("deckhouse.io/v1", "UserOperation", operation.Namespace, operation.Name)
+		input.PatchCollector.Delete("deckhouse.io/v1", "UserOperation", "", operation.Name)
 	}
 	return nil
+}
+
+// findLocalPassword returns the Dex Password object for a local username from
+// the "passwords" snapshot, or an error if none matches. Lock, Unlock and
+// ResetPassword all need the same lookup.
+func findLocalPassword(input *go_hook.HookInput, username string) (*Password, error) {
+	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
+		if err != nil {
+			return nil, fmt.Errorf("iterate over passwords snapshot: %w", err)
+		}
+		if password.Username == username {
+			return &password, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find password for user: %s", username)
 }
 
 func executeUserOperation(input *go_hook.HookInput, operation UserOperation) error {
@@ -438,18 +461,9 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		return lockOfflineSession(input, operation, lockedUntil)
 	}
 
-	var userPassword *Password
-	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-		if err != nil {
-			return fmt.Errorf("cannot iter over password: %v", err)
-		}
-		if password.Username == operation.Spec.User {
-			userPassword = &password
-			break
-		}
-	}
-	if userPassword == nil {
-		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
+	userPassword, err := findLocalPassword(input, operation.Spec.User)
+	if err != nil {
+		return err
 	}
 
 	input.Logger.Info("Locking local user password",
@@ -496,18 +510,9 @@ func executeUnlock(input *go_hook.HookInput, operation UserOperation) error {
 		return unlockOfflineSession(input, operation)
 	}
 
-	var userPassword *Password
-	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-		if err != nil {
-			return fmt.Errorf("cannot iter over password: %v", err)
-		}
-		if password.Username == operation.Spec.User {
-			userPassword = &password
-			break
-		}
-	}
-	if userPassword == nil {
-		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
+	userPassword, err := findLocalPassword(input, operation.Spec.User)
+	if err != nil {
+		return err
 	}
 
 	input.Logger.Info("Unlocking local user password",
@@ -552,18 +557,9 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 		return fmt.Errorf("resetPassword.newPasswordHash must be a valid bcrypt hash: %v", err)
 	}
 
-	var userPassword *Password
-	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-		if err != nil {
-			return fmt.Errorf("cannot iter over password: %v", err)
-		}
-		if password.Username == operation.Spec.User {
-			userPassword = &password
-			break
-		}
-	}
-	if userPassword == nil {
-		return fmt.Errorf("cannot find password for user: %v", operation.Spec.User)
+	userPassword, err := findLocalPassword(input, operation.Spec.User)
+	if err != nil {
+		return err
 	}
 
 	input.Logger.Info("Resetting local user password",
@@ -622,7 +618,7 @@ func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix s
 	refreshTokensByID := make(map[string]RefreshTokenSnapshot, len(input.Snapshots.Get("refreshtokens")))
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return false, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return false, fmt.Errorf("iterate over refreshtokens snapshot: %w", err)
 		}
 		refreshTokensByID[rt.Name] = rt
 	}
@@ -631,7 +627,7 @@ func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix s
 
 	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
-			return anyDeleted, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+			return anyDeleted, fmt.Errorf("iterate over offlinesessions snapshot: %w", err)
 		}
 
 		matchesUser := false
@@ -661,7 +657,7 @@ func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix s
 
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return anyDeleted, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return anyDeleted, fmt.Errorf("iterate over refreshtokens snapshot: %w", err)
 		}
 		if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
 			input.Logger.Info(logPrefix+": deleting RefreshToken", "user", username, "refreshtoken", rt.Name)
@@ -688,7 +684,7 @@ func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationT
 	wantEmail := strings.ToLower(target.Email)
 	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
-			return nil, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+			return nil, fmt.Errorf("iterate over offlinesessions snapshot: %w", err)
 		}
 		if sess.ConnID != target.ConnectorID {
 			continue
