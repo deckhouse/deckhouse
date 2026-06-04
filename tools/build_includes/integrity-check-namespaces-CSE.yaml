@@ -27,7 +27,6 @@ namespaces_for_integrity:
     - d8-operator-argo
     - d8-operator-prometheus
     - d8-operator-trivy
-    - d8-payload-registry
     - d8-pod-reloader
     - d8-runtime-audit-engine
     - d8-sdn
