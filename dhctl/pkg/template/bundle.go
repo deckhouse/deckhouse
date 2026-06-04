@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,30 +15,27 @@
 package template
 
 import (
+	"context"
 	"fmt"
-	"os"
+	"net"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-)
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 
-var (
-	candiDir         = "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 const (
 	bashibleDir = "/var/lib/bashible"
 	stepsDir    = bashibleDir + "/bundle_steps"
-)
-
-const (
-	kubeadmV1Beta4 = "v1beta4"
 )
 
 type saveFromTo struct {
@@ -66,17 +63,15 @@ func logTemplatesData(name string, data map[string]interface{}) {
 }
 
 func PrepareBundle(
+	ctx context.Context,
 	templateController *Controller,
 	nodeIP string,
 	devicePath string,
 	metaConfig *config.MetaConfig,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
-	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
-	if err != nil {
-		return err
-	}
-	logTemplatesData("kubeadm", kubeadmData)
+	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
+	defer span.End()
 
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
@@ -84,21 +79,14 @@ func PrepareBundle(
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
+	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, globalOptions); err != nil {
 		return err
 	}
 
-	if err := PrepareKubeadmConfig(templateController, kubeadmData, dc); err != nil {
+	if err := prepareNodeGroupConfigurationSteps(ctx, templateController, metaConfig.ResourcesYAML, bashibleData); err != nil {
 		return err
 	}
-
-	_, err = os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
@@ -107,20 +95,14 @@ func PrepareBundle(
 
 //nolint:prealloc
 func PrepareBashibleBundle(
+	ctx context.Context,
 	templateController *Controller,
 	templateData map[string]interface{},
 	provider string,
 	devicePath string,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) error {
-	_, err := os.Stat(candiBashibleDir)
-	if err != nil {
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
-	}
+	candiBashibleDir := filepath.Join(globalOptions.CandiDir, "bashible")
 	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
@@ -141,7 +123,7 @@ func PrepareBashibleBundle(
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
+			from: filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
 			to:   stepsDir,
 			data: templateData,
 		})
@@ -166,55 +148,95 @@ func PrepareBashibleBundle(
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
 
-func GetKubeadmVersion(kubernetesVersion string) (string, error) {
-	return kubeadmV1Beta4, nil
+// PreparePKI generates the control-plane PKI bundle and kubeconfig files
+// inside templateController.TmpDir.
+//
+// controlPlaneEndpoint is the address that will be added to the apiserver
+// certificate SAN list and used in kubeconfigs as the API server URL.
+func PreparePKI(templateController *Controller, nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig) error {
+	if templateController == nil {
+		return fmt.Errorf("templateController is nil")
+	}
+	artifactsDir := filepath.Join(templateController.TmpDir+bashibleDir, "control-plane")
+	return generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint, cfg, artifactsDir)
 }
 
-func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}, dc *directoryconfig.DirectoryConfig) error {
-	_, err := os.Stat(candiDir)
-	if err != nil {
-		// fallback to alternative
-		if dc == nil {
-			return fmt.Errorf("could not get value of dc.DownloadDir")
-		}
-		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
-		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
+// generatePKIArtifacts writes PKI and kubeconfigs for the local
+// control-plane node into artifactsDir. The function is decoupled from the
+// template Controller for testability.
+func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *config.ControlPlaneTemplateConfig, artifactsDir string) error {
+	if nodeName == "" {
+		return fmt.Errorf("nodeName is empty")
 	}
-	cc := templateData["clusterConfiguration"].(map[string]interface{})
-	k8sVer := cc["kubernetesVersion"].(string)
-	kubeadmVersion, err := GetKubeadmVersion(k8sVer)
-	if err != nil {
-		return err
+	if controlPlaneEndpoint == "" {
+		return fmt.Errorf("controlPlaneEndpoint is empty")
+	}
+	if artifactsDir == "" {
+		return fmt.Errorf("artifactsDir is empty")
 	}
 
-	saveInfo := []saveFromTo{
-		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion),
-			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion),
-			data: templateData,
-		},
-		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion, "patches"),
-			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion, "patches"),
-			data: templateData,
-		},
+	ip := net.ParseIP(nodeIP)
+	if ip == nil {
+		return fmt.Errorf("invalid node IP %q", nodeIP)
 	}
-	for _, info := range saveInfo {
-		log.InfoF("From %q to %q\n", info.from, info.to)
-		if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, nil); err != nil {
-			return err
-		}
+
+	// TODO: read from cfg.Settings once serviceSubnetCIDR is migrated to ModuleConfig.
+	serviceSubnetCIDR, _ := cfg.ClusterConfiguration["serviceSubnetCIDR"].(string)
+	if serviceSubnetCIDR == "" {
+		return fmt.Errorf("serviceSubnetCIDR is missing or empty in clusterConfiguration")
 	}
+	// TODO: read from cfg.Settings once clusterDomain is migrated to ModuleConfig.
+	clusterDomain, _ := cfg.ClusterConfiguration["clusterDomain"].(string)
+	if clusterDomain == "" {
+		return fmt.Errorf("clusterDomain is missing or empty in clusterConfiguration")
+	}
+
+	encryptionAlgorithm, _ := cfg.Settings["encryptionAlgorithm"].(string)
+	if encryptionAlgorithm == "" {
+		// TODO: remove fallback once encryptionAlgorithm is fully migrated to ModuleConfig.
+		encryptionAlgorithm, _ = cfg.ClusterConfiguration["encryptionAlgorithm"].(string)
+	}
+
+	pkiDir := filepath.Join(artifactsDir, "pki")
+
+	if _, err := pki.CreatePKIBundle(nodeName, clusterDomain, ip, serviceSubnetCIDR,
+		pki.WithControlPlaneEndpoint(controlPlaneEndpoint),
+		pki.WithPKIDir(pkiDir),
+		pki.WithEncryptionAlgorithmType(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
+	); err != nil {
+		return fmt.Errorf("create PKI bundle: %w", err)
+	}
+
+	kubeconfigFiles := []kubeconfig.File{
+		kubeconfig.Kubelet,
+		kubeconfig.Admin,
+		kubeconfig.ControllerManager,
+		kubeconfig.Scheduler,
+		kubeconfig.SuperAdmin,
+	}
+
+	if _, err := kubeconfig.CreateKubeconfigFiles(kubeconfigFiles,
+		kubeconfig.WithLocalAPIEndpoint(nodeIP),
+		kubeconfig.WithNodeName(nodeName),
+		kubeconfig.WithOutDir(filepath.Join(artifactsDir, "kubeconfig")),
+		kubeconfig.WithCertificatesDir(pkiDir),
+		kubeconfig.WithEncryptionAlgorithm(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
+	); err != nil {
+		return fmt.Errorf("create kubeconfig files: %w", err)
+	}
+
 	return nil
 }
 
-func InitGlobalVars(pwd string) {
-	candiDir = pwd + "/deckhouse/candi"
-	candiBashibleDir = candiDir + "/bashible"
-	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
-	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
-	checkDeckhouseUserScriptPath = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
-	preflightScriptDirPath = candiBashibleDir + "/preflight/"
-	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
-	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
+func PrepareControlPlaneManifests(templateController *Controller, cfg *config.ControlPlaneTemplateConfig, globalOptions *options.GlobalOptions) error {
+	saveInfo := saveFromTo{
+		from: filepath.Join(globalOptions.CandiDir, "control-plane"),
+		to:   filepath.Join(bashibleDir, "control-plane"),
+		data: cfg.ToMap(),
+	}
+	log.InfoF("From %q to %q\n", saveInfo.from, saveInfo.to)
+	if err := templateController.RenderAndSaveTemplates(saveInfo.from, saveInfo.to, saveInfo.data, nil); err != nil {
+		return err
+	}
+	return nil
 }

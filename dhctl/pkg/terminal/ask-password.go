@@ -21,34 +21,23 @@ import (
 
 	terminal "golang.org/x/term"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func AskBecomePassword() error {
-	if !app.AskBecomePass {
+// AskBecomePassword reads a sudo/become password from stdin and stores it in o.BecomePass
+// when o.AskBecomePass is set. No-op otherwise.
+func AskBecomePassword(o *options.BecomeOptions) error {
+	if o == nil || !o.AskBecomePass {
 		return nil
 	}
 
-	fd := int(os.Stdin.Fd())
-
-	var data []byte
-	var err error
-
-	if !terminal.IsTerminal(fd) {
-		data, err = io.ReadAll(os.Stdin)
-	} else {
-		log.InfoF("[sudo] Password: ")
-		data, err = terminal.ReadPassword(fd)
-	}
-
-	log.InfoLn()
-
+	data, err := readPassword("[sudo] Password: ")
 	if err != nil {
-		return fmt.Errorf("read password: %v", err)
+		return err
 	}
 
-	app.BecomePass = string(data)
+	o.BecomePass = string(data)
 	return nil
 }
 
@@ -70,11 +59,26 @@ func AskPassword(prompt string) ([]byte, error) {
 	return data, nil
 }
 
-func AskBastionPassword() error {
-	if !app.AskBastionPass || app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
+// AskBastionPassword reads a bastion password from stdin and stores it in o.BastionPass.
+//
+// The prompt is skipped when AskBastionPass is unset, when legacy mode is forced,
+// or when private keys are configured and modern mode is not forced (matching the
+// previous package-global behavior).
+func AskBastionPassword(o *options.SSHOptions) error {
+	if o == nil || !o.AskBastionPass || o.LegacyMode || (len(o.PrivateKeys) > 0 && !o.ModernMode) {
 		return nil
 	}
 
+	data, err := readPassword("[bastion] Password: ")
+	if err != nil {
+		return err
+	}
+
+	o.BastionPass = string(data)
+	return nil
+}
+
+func readPassword(prompt string) ([]byte, error) {
 	fd := int(os.Stdin.Fd())
 
 	var data []byte
@@ -83,16 +87,14 @@ func AskBastionPassword() error {
 	if !terminal.IsTerminal(fd) {
 		data, err = io.ReadAll(os.Stdin)
 	} else {
-		log.InfoF("[bastion] Password: ")
+		log.InfoF(prompt)
 		data, err = terminal.ReadPassword(fd)
 	}
 
 	log.InfoLn()
 
 	if err != nil {
-		return fmt.Errorf("read password: %v", err)
+		return nil, fmt.Errorf("read password: %v", err)
 	}
-
-	app.SSHBastionPass = string(data)
-	return nil
+	return data, nil
 }

@@ -21,11 +21,12 @@
 package dhctl
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -766,23 +767,26 @@ func file_abort_proto_rawDescGZIP() []byte {
 	return file_abort_proto_rawDescData
 }
 
-var file_abort_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_abort_proto_goTypes = []interface{}{
-	(*AbortRequest)(nil),        // 0: dhctl.AbortRequest
-	(*AbortResponse)(nil),       // 1: dhctl.AbortResponse
-	(*AbortStart)(nil),          // 2: dhctl.AbortStart
-	(*AbortPhaseEnd)(nil),       // 3: dhctl.AbortPhaseEnd
-	(*AbortContinue)(nil),       // 4: dhctl.AbortContinue
-	(*AbortCancel)(nil),         // 5: dhctl.AbortCancel
-	(*AbortStartOptions)(nil),   // 6: dhctl.AbortStartOptions
-	(*AbortResult)(nil),         // 7: dhctl.AbortResult
-	nil,                         // 8: dhctl.AbortPhaseEnd.CompletedPhaseStateEntry
-	(*Logs)(nil),                // 9: dhctl.Logs
-	(*Progress)(nil),            // 10: dhctl.Progress
-	(Continue)(0),               // 11: dhctl.Continue
-	(*durationpb.Duration)(nil), // 12: google.protobuf.Duration
-	(*OperationOptions)(nil),    // 13: dhctl.OperationOptions
-}
+var (
+	file_abort_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+	file_abort_proto_goTypes  = []interface{}{
+		(*AbortRequest)(nil),        // 0: dhctl.AbortRequest
+		(*AbortResponse)(nil),       // 1: dhctl.AbortResponse
+		(*AbortStart)(nil),          // 2: dhctl.AbortStart
+		(*AbortPhaseEnd)(nil),       // 3: dhctl.AbortPhaseEnd
+		(*AbortContinue)(nil),       // 4: dhctl.AbortContinue
+		(*AbortCancel)(nil),         // 5: dhctl.AbortCancel
+		(*AbortStartOptions)(nil),   // 6: dhctl.AbortStartOptions
+		(*AbortResult)(nil),         // 7: dhctl.AbortResult
+		nil,                         // 8: dhctl.AbortPhaseEnd.CompletedPhaseStateEntry
+		(*Logs)(nil),                // 9: dhctl.Logs
+		(*Progress)(nil),            // 10: dhctl.Progress
+		(Continue)(0),               // 11: dhctl.Continue
+		(*durationpb.Duration)(nil), // 12: google.protobuf.Duration
+		(*OperationOptions)(nil),    // 13: dhctl.OperationOptions
+	}
+)
+
 var file_abort_proto_depIdxs = []int32{
 	2,  // 0: dhctl.AbortRequest.start:type_name -> dhctl.AbortStart
 	4,  // 1: dhctl.AbortRequest.continue:type_name -> dhctl.AbortContinue

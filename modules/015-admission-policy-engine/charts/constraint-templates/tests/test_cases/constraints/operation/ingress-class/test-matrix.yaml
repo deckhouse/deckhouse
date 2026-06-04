@@ -1,0 +1,66 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: ingress-class
+spec:
+  suiteName: d8ingressclass
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8ingressclass
+      gatorBlock: d8ingressclass
+      defaultObjectBase: ""
+      template: ../../templates/operation/ingress-class.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.ingressClassName
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                ingressClassName: foo
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: 'Ingress <disallowed> has invalid ingress class: bar'
+          fields:
+            - path: spec.ingressClassName
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                ingressClassName: bar

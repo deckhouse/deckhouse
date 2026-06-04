@@ -130,3 +130,26 @@ bb-log-callstack() {
     done
     bb-log-debug "$MSG"
 }
+
+# bb-log-stream-dhctl - stdout stream wrapper for dhctl
+#
+# Purpose:
+# Used during cluster bootstrap phase to mark bashible script output.
+# Adds a structured prefix to each stdout line, which is then matched
+# and parsed by the dhctl handler for real-time user feedback.
+#
+# Examples:
+#   $ echo "hello" | bb-log-stream-dhctl
+#   === Step output: hello
+#
+#   $ command | bb-log-stream-dhctl
+#   === Step output: stdout line 1
+#   === Step output: stdout line 2
+bb-log-stream-dhctl() {
+    local PREFIX="=== Step output: "
+    local line
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf "%s%s\n" "$PREFIX" "$line"
+    done
+}

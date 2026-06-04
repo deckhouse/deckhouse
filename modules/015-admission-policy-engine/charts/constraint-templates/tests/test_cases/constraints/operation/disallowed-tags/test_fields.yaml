@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: disallowed-tags
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].image
+      level: container
+      description: Container image must include a tag and that tag must not be in disallowed list.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

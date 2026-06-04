@@ -23,20 +23,6 @@ clusterDomain: "cluster.local"
 # [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
 defaultCRI: "ContainerdV2"
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  # [<en>] Address of the Docker registry where the Deckhouse images are located
-  # [<ru>] Адрес Docker registry с образами Deckhouse
-  imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
-  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token)
-  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
-  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
----
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
@@ -52,6 +38,13 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
+    # [<en>] Settings for accessing the container registry with Deckhouse images.
+    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
+        license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
@@ -62,7 +55,7 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
@@ -74,6 +67,11 @@ spec:
       # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
+      https:
+        certManager:
+          # [<en>] Use self-signed certificates for Deckhouse modules.
+          # [<ru>] Использовать самоподписанные сертификаты для модулей Deckhouse.
+          clusterIssuerName: selfsigned
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/modules/user-authn/configuration.html
@@ -88,7 +86,7 @@ spec:
   enabled: true
   settings:
     controlPlaneConfigurator:
-      dexCAMode: DoNotNeed
+      dexCAMode: FromIngressSecret
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
     # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.

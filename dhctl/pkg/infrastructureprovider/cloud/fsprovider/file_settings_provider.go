@@ -104,7 +104,7 @@ func (p *SettingsProvider) GetSettings(_ context.Context, provider string, _ clo
 	return set, nil
 }
 
-func simpleFromMap(s any, terraformVersion string, openTofuVersion string) (*settings.Simple, error) {
+func simpleFromMap(s any, terraformVersion, openTofuVersion string) (*settings.Simple, error) {
 	sJSON, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 
 	res := make(settingsStore)
 
-	var noneProviderKeys = map[string]struct{}{
+	noneProviderKeys := map[string]struct{}{
 		opentofuKey:  {},
 		terraformKey: {},
 	}

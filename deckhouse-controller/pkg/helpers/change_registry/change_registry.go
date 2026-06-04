@@ -190,7 +190,7 @@ func newTransport(ctx context.Context, repo name.Repository, authConfig authn.Au
 
 func newKubeClient() (*kclient.KubernetesClient, error) {
 	kubeCl := kclient.NewKubernetesClient()
-	if err := kubeCl.Init(kclient.AppKubernetesInitParams()); err != nil {
+	if err := kubeCl.Init(kclient.AppKubernetesInitParams(nil)); err != nil {
 		return nil, fmt.Errorf("init: %w", err)
 	}
 	return kubeCl, nil

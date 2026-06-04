@@ -13,6 +13,13 @@ copy_content:
 soon:
   en: "soon..."
   ru: "скоро..."
+getting_started_nav:
+  gui_installer:
+    en: Using the graphical installer
+    ru: С помощью графического установщика
+  manual_cli:
+    en: Manually from the command line
+    ru: Вручную из командной строки
 ce: Community Edition
 be: Basic Edition
 se: Standard Edition
@@ -186,6 +193,9 @@ common:
   search_placeholder_text_filter:
     en: Enter a&nbsp;name
     ru: Введите название
+  search_placeholder_text_404:
+    en: Enter a&nbsp;name
+    ru: Поиск по каталогу
   search_context_dkpdocs_and_modules:
     en: The search is performed throughout DKP documentation and modules.
     ru: Поиск выполняется по всей документации DKP и модулям.

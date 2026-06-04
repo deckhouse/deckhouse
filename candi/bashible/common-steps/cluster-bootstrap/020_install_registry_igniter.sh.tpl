@@ -73,7 +73,10 @@ pod_kill_and_wait() {
   exit 1
 }
 
-bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "module-registry-distribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
+bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" \
+                   "module-registry-distribution:{{ .images.registry.dockerDistribution }}" \
+                   "module-registry-syncer:{{ .images.registry.syncer }}" \
+                   "cfssl:{{ .images.registrypackages.cfssl165 }}"
 
 # Prepare proxy envs
 bb-set-proxy

@@ -25,8 +25,7 @@ env:
   WERF_DRY_RUN: "false"
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
-  WERF_VERSION: "v2.63.1"
+  WERF_VERSION: "v2.70.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -57,7 +56,7 @@ permissions:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -69,7 +68,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     needs:
     - skip_tests_repos
     outputs:
@@ -300,6 +299,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -333,9 +333,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -708,6 +708,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -751,9 +752,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -895,6 +896,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -911,6 +913,7 @@ jobs:
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -929,6 +932,7 @@ jobs:
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e WERF_ENV=${WERF_ENV} \
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
@@ -1025,6 +1029,7 @@ jobs:
           -e LAYOUT=${LAYOUT} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
+          -e WERF_ENV=${WERF_ENV} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
@@ -1239,6 +1244,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1272,9 +1278,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -1656,6 +1662,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -1689,9 +1696,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -2067,6 +2074,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2100,9 +2108,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -2480,6 +2488,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2513,9 +2522,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -2887,6 +2896,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -2920,9 +2930,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -3305,6 +3315,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3338,9 +3349,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -3734,6 +3745,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -3767,9 +3779,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -4147,6 +4159,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -4180,9 +4193,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -4554,6 +4567,7 @@ jobs:
           INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
           MANUAL_RUN: "false"
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           # Calculate unique prefix for e2e test.
           # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -4587,9 +4601,9 @@ jobs:
           fi
 
           # Use rw-registry for Git tags.
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
 
-          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$CI_COMMIT_REF_SLUG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Use stage-registry for release branches.
             BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           else
@@ -4813,25 +4827,50 @@ jobs:
     needs: ["skip_tests_repos","git_info","run_aws_containerd_automatic","run_eks_containerd_automatic","run_azure_containerd_automatic","run_gcp_containerd_automatic","run_yandex_cloud_containerd_automatic","run_openstack_containerd_automatic","run_vsphere_containerd_automatic","run_vcd_containerd_automatic","run_static_containerd_automatic","run_dvp_containerd_automatic","run_zvirt_containerd_automatic"]
     if: ${{ failure() && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
     steps:
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: |
+        if [ $REPO == "deckhouse/deckhouse" ]; then
+          echo "name=deckhouse" >> $GITHUB_OUTPUT
+        else
+          echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+        fi
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop token | LOOP_CVE_REPORTS_SEND_TOKEN ;
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop channel_id | LOOP_E2E_REPORT_CHANNEL_ID ;
+
+    # </template: import_secrets>
     # <template: send_alert_loop_template>
     - name: Check loop alerting credentials
       id: check_loop_alerting
       if: always()
       env:
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
+        LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
       run: |
         if [[ -n $LOOP_TOKEN ]]; then echo "has_credentials=true" >> $GITHUB_OUTPUT; fi
     - name: Send loop alert on fail
       if: ${{ steps.check_loop_alerting.outputs.has_credentials == 'true' }}
       env:
-        LOOP_TOKEN: ${{secrets.LOOP_CVE_REPORTS_SEND_TOKEN}}
-        LOOP_CHANEL_ID: ${{secrets.LOOP_E2E_REPORT_CHANEL_ID}}
+        LOOP_TOKEN: ${{ steps.secrets.outputs.LOOP_CVE_REPORTS_SEND_TOKEN }}
+        LOOP_CHANNEL_ID: ${{ steps.secrets.outputs.LOOP_E2E_REPORT_CHANNEL_ID }}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
 
         alertData=$(cat <<EOF
         {
-        "channel_id": "${LOOP_CHANEL_ID}",
+        "channel_id": "${LOOP_CHANNEL_ID}",
         "message": "🛑Daily e2e test failure🛑\n[URL](${WORKFLOW_URL})"
         }
         EOF

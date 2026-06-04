@@ -1,12 +1,12 @@
 ---
-title: Хранилище и балансировка нагрузки в Dynamix
+title: Хранилище и балансировка нагрузки в Basis Dynamix
 permalink: ru/admin/integrations/private/dynamix/storage.html
 lang: ru
 ---
 
 ## Хранилище
 
-Хранение данных в облаке Dynamix осуществляется с использованием:
+Хранение данных в облаке Basis Dynamix осуществляется с использованием:
 
 - [`storageEndpoint`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-storageendpoint) — имя хранилища, предоставленное провайдером;
 - [`pool`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-pool) — имя пула хранения внутри указанного хранилища;
@@ -31,7 +31,7 @@ masterNodeGroup:
 
 ## Балансировка нагрузки
 
-Платформа Dynamix не предоставляет встроенного балансировщика нагрузки. Для организации входящего трафика в кластер Deckhouse Kubernetes Platform рекомендуются следующие подходы:
+Платформа Basis Dynamix не предоставляет встроенного балансировщика нагрузки. Для организации входящего трафика в кластер Deckhouse Kubernetes Platform рекомендуются следующие подходы:
 
 1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на frontend-узлы кластера.
 
@@ -45,5 +45,5 @@ masterNodeGroup:
 - В конфигурации VirtualMachine Template оставьте сетевые интерфейсы пустыми — Deckhouse создаст их автоматически.
 
 {% alert level="info" %}
-Поддержка BGP-режима зависит от сетевой инфраструктуры и не гарантируется в Dynamix.
+Поддержка BGP-режима зависит от сетевой инфраструктуры и не гарантируется в Basis Dynamix.
 {% endalert %}

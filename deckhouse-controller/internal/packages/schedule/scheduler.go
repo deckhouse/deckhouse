@@ -130,9 +130,16 @@ func (s *Scheduler) Resume() {
 	s.schedule()
 }
 
-// CheckConstraints evaluates the given constraints against the current cluster state
-// and returns an error describing the first unsatisfied constraint, or nil if all are met.
-func (s *Scheduler) CheckConstraints(constraints Constraints) error {
+// CheckConstraints evaluates the given constraints against the current cluster
+// state and the current dependency graph. Returns an error describing the
+// first unsatisfied constraint (version, dependency) or a *CycleError if
+// adding a node named `name` with these dependencies would create a
+// topological cycle. Returns nil only when every check passes and the
+// proposed addition would leave the dep graph acyclic.
+//
+// `name` is the scheduler-side identifier of the package that would be added.
+// It is used by the cycle-simulation step to identify the proposed graph vertex.
+func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -151,9 +158,9 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
-		deps := make(map[string]dependency.Dependency)
-		for name, dep := range constraints.Dependencies {
-			deps[name] = dependency.Dependency{
+		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
+		for depName, dep := range constraints.Dependencies {
+			deps[depName] = dependency.Dependency{
 				Constraint: dep.Constraint,
 				Optional:   dep.Optional,
 			}
@@ -162,41 +169,80 @@ func (s *Scheduler) CheckConstraints(constraints Constraints) error {
 		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
+	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	}
+
+	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
 	if res := checker.Check(checkers...); !res.Enabled {
 		return errors.New(res.Message)
+	}
+
+	return s.simulateCycle(name, constraints)
+}
+
+// simulateCycle returns a *CycleError if adding (or replacing) a node named
+// `name` with the given constraints would create a topological cycle in the
+// current graph. Used by both CheckConstraints (admission-time pre-check) and
+// AddNode (the authoritative gate before any mutation).
+//
+// Must be called with s.mu held in some mode.
+func (s *Scheduler) simulateCycle(name string, constraints Constraints) error {
+	snapshot := make(map[string]*node, len(s.nodes)+1)
+	for nodeName, n := range s.nodes {
+		if nodeName == name {
+			continue
+		}
+
+		snapshot[nodeName] = n
+	}
+
+	snapshot[name] = &node{
+		name:         name,
+		order:        constraints.Order,
+		dependencies: constraints.Dependencies,
+	}
+
+	if _, err := topoSort(snapshot); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// AddNode registers a single package, wires its dependency edges into the
-// existing graph, and triggers a full scheduling pass. Newly-eligible
-// dependents are advanced automatically.
-func (s *Scheduler) AddNode(pkg Package) {
+// AddNode registers a single package, wires it into the existing graph, and
+// triggers a full scheduling pass. Newly-eligible dependents are advanced
+// automatically.
+//
+// Returns a *CycleError (without mutating any state) if adding the package
+// would close a dependency cycle. Callers are expected to handle the error —
+// typically by surfacing a status condition on the corresponding CR — and to
+// retry once the manifest is fixed.
+func (s *Scheduler) AddNode(pkg Package) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if err := s.simulateCycle(pkg.GetName(), pkg.GetConstraints()); err != nil {
+		return err
+	}
 
 	s.addNode(pkg)
 
 	s.schedule()
+
+	return nil
 }
 
-// RemoveNode removes a package from the graph, cleans up all dependency
-// edges that reference it, and triggers a full reschedule.
+// RemoveNode removes a package from the graph and triggers a full reschedule.
 func (s *Scheduler) RemoveNode(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	n, ok := s.nodes[name]
-	if !ok {
+	if _, ok := s.nodes[name]; !ok {
 		return
-	}
-
-	// Remove this node from the followers set of every node it depends on.
-	for dep := range n.followees {
-		if parent, ok := s.nodes[dep]; ok {
-			delete(parent.followers, name)
-		}
 	}
 
 	delete(s.nodes, name)
@@ -228,38 +274,6 @@ func (s *Scheduler) Complete(completed string) {
 	}
 
 	s.schedule()
-}
-
-// Trigger resets a node's direct followers to idle, then runs a full
-// scheduling pass so they are re-evaluated and potentially rescheduled.
-func (s *Scheduler) Trigger(name string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.trigger(name)
-	s.schedule()
-}
-
-// trigger resets a node's direct followers to idle.
-func (s *Scheduler) trigger(name string) {
-	n, ok := s.nodes[name]
-	if !ok {
-		return
-	}
-
-	for follower := range n.followers {
-		if fn, ok := s.nodes[follower]; ok {
-			fn.state = nodeStateIdle
-		}
-	}
-}
-
-// reconverge resets all nodes to idle
-// forcing the entire graph to re-converge from scratch.
-func (s *Scheduler) reconverge() {
-	for _, n := range s.nodes {
-		n.state = nodeStateIdle
-	}
 }
 
 // Reschedule reverts the named package to idle and runs a full scheduling
@@ -306,32 +320,40 @@ func (s *Scheduler) schedule() {
 }
 
 // compute recomputes the enabled status for all nodes in topological order,
-// guaranteeing that dependencies are resolved before dependents. Nodes that
-// lose eligibility emit an [EventDisable]. If any status changed, reconverge
-// is called to reset the graph for a fresh scheduling pass.
+// guaranteeing that dependencies are resolved before dependents. Nodes whose
+// Enabled status flipped are individually reset to idle so they re-enter the
+// scheduling path on the next pass; nodes that lose eligibility emit an
+// [EventDisable]. No global reconverge happens — canSchedule no longer gates
+// on per-dep state, so one node's status change cannot invalidate another
+// node's schedulability beyond the live order-tier check.
 func (s *Scheduler) compute() []*node {
-	var changed bool
-	sorted := topoSort(s.nodes)
+	// AddNode is the authoritative cycle gate, so topoSort should never
+	// return an error here. The disabled-mark-active loop below walks `sorted`
+	// and relies on that invariant; a cycle slipping through (gate bug) would
+	// leave its members frozen at nodeStateIdle, surfaced quickly by stalled
+	// higher-tier nodes via canSchedule's order-tier gate.
+	sorted, _ := topoSort(s.nodes)
 	for _, n := range sorted {
 		current := n.status.Enabled
 		n.status = checker.Check(n.checkers...)
-		if current != n.status.Enabled {
-			changed = true
+		if current == n.status.Enabled {
+			continue
+		}
 
-			if !n.status.Enabled {
-				s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
-			}
+		// Status flipped — reset this node so the next schedule pass can
+		// either re-schedule it (now enabled) or mark it active via the
+		// disabled-mark-active loop below (now disabled).
+		n.state = nodeStateIdle
+
+		if !n.status.Enabled {
+			s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
 		}
 	}
 
-	if changed {
-		s.reconverge()
-	}
-
-	// Disabled nodes have nothing to wait for — mark them active so they
-	// do not block higher-order or dependent nodes. If a node later becomes
-	// enabled, the status change above triggers reconverge (resetting all
-	// states to idle), so it will go through normal scheduling.
+	// Disabled nodes have nothing to wait for — mark them active so they do
+	// not block higher-order nodes via canSchedule's order-tier gate. Nodes
+	// that later flip back to enabled are reset to idle by the loop above and
+	// go through normal scheduling from there.
 	for _, n := range sorted {
 		if n.state == nodeStateIdle && !n.status.Enabled {
 			n.state = nodeStateActive
@@ -341,22 +363,17 @@ func (s *Scheduler) compute() []*node {
 	return sorted
 }
 
-// canSchedule returns true if a node is eligible to transition from idle to scheduled.
-// Three conditions must hold:
-//  1. The node must be enabled (all dependency checks passed).
-//  2. All direct dependencies (followees) must be active.
-//  3. All nodes with a strictly lower Order must be active.
+// canSchedule returns true if a node is eligible to transition from idle to
+// scheduled. Two conditions must hold:
+//  1. The node must be enabled (all checkers passed).
+//  2. All nodes with a strictly lower Order must be active.
+//
+// Dependency-level ordering between same-tier nodes is encoded in the checker
+// chain (the dependency.Getter contract returns versions only for nodes that
+// have reached nodeStateActive).
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.status.Enabled {
 		return false
-	}
-
-	for dep := range n.followees {
-		if existing, ok := s.nodes[dep]; ok {
-			if existing.state != nodeStateActive {
-				return false
-			}
-		}
 	}
 
 	for _, other := range s.nodes {

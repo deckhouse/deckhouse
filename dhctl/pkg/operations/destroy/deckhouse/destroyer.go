@@ -62,7 +62,7 @@ func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 		return nil
 	}
 
-	uuidInCache, err := d.State.CommanderUUID()
+	uuidInCache, err := d.State.CommanderUUID(ctx)
 	if err != nil {
 		return err
 	}
@@ -88,8 +88,8 @@ func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 		return fmt.Errorf("UUID consistency check failed: %w", err)
 	}
 
-	return d.PhasedActionProvider().Run(phases.CommanderUUIDWasChecked, false, func() (phases.DefaultContextType, error) {
-		return nil, d.State.SetCommanderUUID(passedUUID)
+	return d.PhasedActionProvider().Run(ctx, phases.CommanderUUIDWasChecked, false, func() (phases.DefaultContextType, error) {
+		return nil, d.State.SetCommanderUUID(ctx, passedUUID)
 	})
 }
 
@@ -100,17 +100,17 @@ func (d *Destroyer) CheckAndDeleteResources(ctx context.Context) error {
 		return nil
 	}
 
-	return d.PhasedActionProvider().Run(phases.DeleteResourcesPhase, false, func() (phases.DefaultContextType, error) {
+	return d.PhasedActionProvider().Run(ctx, phases.DeleteResourcesPhase, false, func() (phases.DefaultContextType, error) {
 		return nil, d.deleteResources(ctx, logger)
 	})
 }
 
-func (d *Destroyer) Finalize(context.Context) error {
+func (d *Destroyer) Finalize(ctx context.Context) error {
 	if d.isSkipResources("Finalize") {
 		return nil
 	}
 
-	alreadyDestroyed, err := d.State.IsResourcesDestroyed()
+	alreadyDestroyed, err := d.State.IsResourcesDestroyed(ctx)
 	if err != nil {
 		return err
 	}
@@ -122,8 +122,8 @@ func (d *Destroyer) Finalize(context.Context) error {
 		return nil
 	}
 
-	err = d.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
-		return nil, d.State.SetResourcesDestroyed()
+	err = d.PhasedActionProvider().Run(ctx, phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
+		return nil, d.State.SetResourcesDestroyed(ctx)
 	})
 
 	if err != nil {
@@ -135,7 +135,7 @@ func (d *Destroyer) Finalize(context.Context) error {
 }
 
 func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) error {
-	resourcesDestroyed, err := d.State.IsResourcesDestroyed()
+	resourcesDestroyed, err := d.State.IsResourcesDestroyed(ctx)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) erro
 		return err
 	}
 
-	return logger.LogProcess("common", "Delete resources from the Kubernetes cluster", func() error {
+	return logger.LogProcessCtx(ctx, "common", "Delete resources from the Kubernetes cluster", func(ctx context.Context) error {
 		return d.deleteEntities(ctx, kubeCl)
 	})
 }

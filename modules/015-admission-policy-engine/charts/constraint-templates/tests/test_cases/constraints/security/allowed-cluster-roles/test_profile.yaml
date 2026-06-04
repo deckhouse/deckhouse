@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-cluster-roles
+spec:
+  testDirectory: allowed-cluster-roles
+  suite:
+    expectedTestBlockNames:
+      - policy_1

@@ -80,6 +80,7 @@
  - **[dhctl]** Added a wait for converger user creation on all master nodes. [#16734](https://github.com/deckhouse/deckhouse/pull/16734)
  - **[dhctl]** Added bootstrap support with the registry module for Direct and Unmanaged modes. [#16103](https://github.com/deckhouse/deckhouse/pull/16103)
  - **[extended-monitoring]** Added new options for customizing IAE . [#16902](https://github.com/deckhouse/deckhouse/pull/16902)
+ - **[istio]** Allow custom ports in metadataEndpoint URLs for IstioFederation and IstioMulticluster CRDs. [#19247](https://github.com/deckhouse/deckhouse/pull/19247)
  - **[istio]** Removing depricated version of Istio 1.19.7 [#17916](https://github.com/deckhouse/deckhouse/pull/17916)
     Istio version 1.19.7 has been removed because it is considered outdated. In this regard, errors may occur when updating the Deckhouse version. It is recommended to upgrade Istio from version 1.19.7 to version 1.21.6 before upgrading Deckhouse release.
  - **[istio]** Changed name and type of istio-cni ConfigMap. [#17297](https://github.com/deckhouse/deckhouse/pull/17297)
@@ -123,6 +124,7 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Fixed enforcementAction for D8ReplicaLimits, added more template tests. [#19521](https://github.com/deckhouse/deckhouse/pull/19521)
  - **[admission-policy-engine]** Fix high resource consumption for constraint d8denyexecheritage [#19070](https://github.com/deckhouse/deckhouse/pull/19070)
  - **[admission-policy-engine]** Fix SecurityPolicyException handling for hostPorts-only exceptions [#18535](https://github.com/deckhouse/deckhouse/pull/18535)
  - **[admission-policy-engine]** Prevent unintended Gatekeeper constraints from being rendered for SecurityPolicy when boolean fields are omitted. [#18007](https://github.com/deckhouse/deckhouse/pull/18007)
@@ -131,6 +133,8 @@
  - **[admission-policy-engine]** Fixed multiple CVEs in admission-policy-engine module images (ratify, gatekeeper) by updating. dependencies. [#17667](https://github.com/deckhouse/deckhouse/pull/17667)
  - **[admission-policy-engine]** Fixed tri-state semantics for empty arrays and avoided empty objects in OperationPolicy/SecurityPolicy values. [#17343](https://github.com/deckhouse/deckhouse/pull/17343)
  - **[admission-policy-engine]** Added and extend unit tests to cover tri-state behavior (omitted / empty / non-empty) and nested empty-array cases for both hooks. [#17308](https://github.com/deckhouse/deckhouse/pull/17308)
+ - **[admission-policy-engine]** Refactor main documentation page. [#20048](https://github.com/deckhouse/deckhouse/pull/20048)
+ - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#19448](https://github.com/deckhouse/deckhouse/pull/19448)
  - **[candi]** Server bootstrap logs are no longer transmitted via nc; Python is used instead. [#17451](https://github.com/deckhouse/deckhouse/pull/17451)
  - **[candi]** Improved static node cleanup script. [#17418](https://github.com/deckhouse/deckhouse/pull/17418)
  - **[candi]** Disabled kernel.panic parameter check in kubelet. [#17296](https://github.com/deckhouse/deckhouse/pull/17296)
@@ -157,6 +161,7 @@
  - **[cloud-provider-openstack]** fix CVE in cloud-provider-openstack module [#18253](https://github.com/deckhouse/deckhouse/pull/18253)
  - **[cloud-provider-vcd]** fix vCD CCM TCP health monitors removal [#19089](https://github.com/deckhouse/deckhouse/pull/19089)
  - **[cloud-provider-vcd]** Fixed a queue hang caused by the module components failing to start. [#16796](https://github.com/deckhouse/deckhouse/pull/16796)
+ - **[cloud-provider-vsphere]** normalizes new paths and makes bashible resolve existing paths case-insensitively [#19748](https://github.com/deckhouse/deckhouse/pull/19748)
  - **[cloud-provider-yandex]** fix CVEs in cloud-provider-yandex [#18291](https://github.com/deckhouse/deckhouse/pull/18291)
  - **[cloud-provider-yandex]** Added fallback to `nat_instance_internal_address_calculated`. [#17341](https://github.com/deckhouse/deckhouse/pull/17341)
  - **[cloud-provider-zvirt]** fix CVEs in cloud-provider-zvirt [#18257](https://github.com/deckhouse/deckhouse/pull/18257)
@@ -185,6 +190,11 @@
     etcd will restart.
  - **[control-plane-manager]** Switched kube-apiserver to structured authorization config with fail-closed webhook. [#17183](https://github.com/deckhouse/deckhouse/pull/17183)
     Authorization webhook now works in fail-closed mode. If the webhook is unavailable, authorization requests are denied instead of falling back to RBAC.
+ - **[csi-vsphere]** Fixed the Deckhouse queue getting stuck [#20092](https://github.com/deckhouse/deckhouse/pull/20092)
+ - **[deckhouse]** Fixed global configuration generation. [#19689](https://github.com/deckhouse/deckhouse/pull/19689)
+ - **[deckhouse]** Fix exp modules auto enabling. [#19670](https://github.com/deckhouse/deckhouse/pull/19670)
+ - **[deckhouse]** Overwrite currentReleaseImageName on mismatch. [#19412](https://github.com/deckhouse/deckhouse/pull/19412)
+ - **[deckhouse]** Allow updating scanInterval on the deckhouse ModuleSource. [#19277](https://github.com/deckhouse/deckhouse/pull/19277)
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19169](https://github.com/deckhouse/deckhouse/pull/19169)
  - **[deckhouse]** Ensure heritage label on d8-system namespace via hook. [#19134](https://github.com/deckhouse/deckhouse/pull/19134)
  - **[deckhouse]** Bump nelm version with deadlock fix. [#18586](https://github.com/deckhouse/deckhouse/pull/18586)
@@ -207,6 +217,8 @@
  - **[descheduler]** Removed implicit default thresholds from Descheduler CRD and align behavior with upstream. [#17488](https://github.com/deckhouse/deckhouse/pull/17488)
     Thresholds and targetThresholds are no longer implicitly defaulted.
     If a resource is not specified in the Descheduler CR, it is treated as 100% and does not participate in eviction logic.
+ - **[dhctl]** Wait for stronghold cluster sync before node deletion [#19797](https://github.com/deckhouse/deckhouse/pull/19797)
+ - **[dhctl]** fix SSH preflight check for StaticInstances with password-only auth. [#19555](https://github.com/deckhouse/deckhouse/pull/19555)
  - **[dhctl]** Use internal node ip if bastion ip was passed in converge. [#18979](https://github.com/deckhouse/deckhouse/pull/18979)
  - **[dhctl]** Skip tmp lock for exporter and auto-converger. [#18736](https://github.com/deckhouse/deckhouse/pull/18736)
  - **[dhctl]** mitigate CVE-2026-33186 [#18625](https://github.com/deckhouse/deckhouse/pull/18625)
@@ -236,9 +248,14 @@
  - **[dhctl]** Added many fixes in destroy command and restart destroy command. [#16904](https://github.com/deckhouse/deckhouse/pull/16904)
  - **[dhctl]** Fixed dhctl bootstrap-phase abort running after dhctl bootstrap-phasebase-infra. [#16829](https://github.com/deckhouse/deckhouse/pull/16829)
  - **[dhctl]** Fixed kube token handling. [#16735](https://github.com/deckhouse/deckhouse/pull/16735)
+ - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19437](https://github.com/deckhouse/deckhouse/pull/19437)
  - **[docs]** Added docs about how NGC execution works. [#17870](https://github.com/deckhouse/deckhouse/pull/17870)
  - **[docs]** Fixed registry-modules-watcher deleting all documentation when registry returns an error. [#16771](https://github.com/deckhouse/deckhouse/pull/16771)
  - **[extended-monitoring]** fix typo in image-availability-exporter template [#18595](https://github.com/deckhouse/deckhouse/pull/18595)
+ - **[ingress-nginx]** Nginx was updated to 1.30.2. [#20171](https://github.com/deckhouse/deckhouse/pull/20171)
+    All Ingress-nginx controller pods will be restarted.
+ - **[ingress-nginx]** Nginx is updated up to 1.30.1. [#19862](https://github.com/deckhouse/deckhouse/pull/19862)
+    All Ingress-nginx controller pods will be restarted.
  - **[ingress-nginx]** CVE-2025-15566 is fixed in 1.10 and 1.12 controllers. [#19205](https://github.com/deckhouse/deckhouse/pull/19205)
     All pods of Ingress-NGINX controller of 1.10 and 1.12 versions will be restarted.
  - **[ingress-nginx]** Added fix for CVE-2026-4342. [#18923](https://github.com/deckhouse/deckhouse/pull/18923)
@@ -265,6 +282,8 @@
     restart controllers
  - **[ingress-nginx]** Added architecture-bashed node affinity settings. [#16939](https://github.com/deckhouse/deckhouse/pull/16939)
  - **[ingress-nginx]** Fixed the display of IP addresses in the status of Ingress resources with the LoadBalancer type. [#15892](https://github.com/deckhouse/deckhouse/pull/15892)
+ - **[istio]** fixed CVEs in module images [#19364](https://github.com/deckhouse/deckhouse/pull/19364)
+    module pods will be restarted
  - **[istio]** fixed CVE-2026-34986 [#18972](https://github.com/deckhouse/deckhouse/pull/18972)
     istio module pods will be restarted
  - **[istio]** added iptables wrapper in cni-v1x21x6 [#18925](https://github.com/deckhouse/deckhouse/pull/18925)
@@ -276,6 +295,7 @@
     This update triggers a rolling update of the kube-proxy pods.
  - **[log-shipper]** Fixed source-specific log label enrichment and simplified transform processing. [#16989](https://github.com/deckhouse/deckhouse/pull/16989)
     Changing the order of transformations only affects the operation of the log-shipper.
+ - **[monitoring-deckhouse]** Fix module-release alerts (`ModuleReleaseIsWaitingManualApproval`, `ModuleReleaseIsOutdated`, `ModuleReleaseIsBlockedByRequirements`, `ModuleIsInMaintenanceMode`, `D8ModuleOutdatedByMajorVersion`) that never fired on 1.75.x clusters due to a `moduleName`→`module` label mismatch introduced when addon-operator was bumped to v1.19.7 in v1.75.1. [#20112](https://github.com/deckhouse/deckhouse/pull/20112)
  - **[monitoring-kubernetes]** Added unsupported ValidatingAdmissionPolicy API versions on Kubernetes 1.34. [#17007](https://github.com/deckhouse/deckhouse/pull/17007)
  - **[multitenancy-manager]** Fixed multiple CVEs in multitenancy-manager module images by updating dependencies. [#17534](https://github.com/deckhouse/deckhouse/pull/17534)
  - **[network-gateway]** Updated python image source and mitigated pip CVE-2026-1703 [#19114](https://github.com/deckhouse/deckhouse/pull/19114)
@@ -284,6 +304,8 @@
  - **[network-policy-engine]** Fixed a bug that led to CrashLoopBackOff kube-router's pods. [#17737](https://github.com/deckhouse/deckhouse/pull/17737)
  - **[node-local-dns]** Fix werf manifest [#18738](https://github.com/deckhouse/deckhouse/pull/18738)
  - **[node-local-dns]** Adapt node-local-dns for air-gapped environments. [#18643](https://github.com/deckhouse/deckhouse/pull/18643)
+ - **[node-manager]** CAPI crd served version fix [#19665](https://github.com/deckhouse/deckhouse/pull/19665)
+ - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19652](https://github.com/deckhouse/deckhouse/pull/19652)
  - **[node-manager]** rollback inject capi conversion hook in crds as on-before-helm [#19137](https://github.com/deckhouse/deckhouse/pull/19137)
  - **[node-manager]** optimize node-controller cache resources usage. [#19097](https://github.com/deckhouse/deckhouse/pull/19097)
  - **[node-manager]** deploy capi controller and webhooks before basic resources to prevent race condition during upgrades. [#18754](https://github.com/deckhouse/deckhouse/pull/18754)
@@ -312,7 +334,9 @@
  - **[registrypackages]** Added vex with CVE-2026-33186. [#18680](https://github.com/deckhouse/deckhouse/pull/18680)
  - **[registrypackages]** Upgraded containerd to 1.7.30 and 2.1.6. [#17510](https://github.com/deckhouse/deckhouse/pull/17510)
     Containerd will restart.
+ - **[terraform-manager]** Fix opentofu patches build after pull request 19080. [#19453](https://github.com/deckhouse/deckhouse/pull/19453)
  - **[terraform-manager]** Fixed terraform CVE. [#17862](https://github.com/deckhouse/deckhouse/pull/17862)
+ - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20076](https://github.com/deckhouse/deckhouse/pull/20076)
  - **[user-authn]** Restore ContinueOnConnectorFailure flag handling in Dex configuration [#18219](https://github.com/deckhouse/deckhouse/pull/18219)
  - **[user-authn]** Fixed LDAP authentication failure when filter field contains trailing newline from YAML literal block scalar. [#17950](https://github.com/deckhouse/deckhouse/pull/17950)
  - **[user-authn]** Ships Dex Kubernetes storage CRDs with the module to prevent missing-CRD bootstrap failures. [#17885](https://github.com/deckhouse/deckhouse/pull/17885)
@@ -412,6 +436,9 @@
  - **[ingress-nginx]** Fixed code in failover-cleaner, protobuf-exporter, proxy-failover-iptables and proxy-failover images with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
  - **[ingress-nginx]** Restarted ingress-nginx controllers. [#17532](https://github.com/deckhouse/deckhouse/pull/17532)
  - **[ingress-nginx]** Added the ability to customize ports for the load balancer Service. [#17433](https://github.com/deckhouse/deckhouse/pull/17433)
+ - **[istio]** added excludes for DMT lint [#19325](https://github.com/deckhouse/deckhouse/pull/19325)
+ - **[istio]** version 1.25 set as default for globalVersion [#19324](https://github.com/deckhouse/deckhouse/pull/19324)
+ - **[istio]** version 1.25 set as default globalVersion value in ModuleConfig [#19012](https://github.com/deckhouse/deckhouse/pull/19012)
  - **[istio]** Changed GO target version to 1.25. [#17981](https://github.com/deckhouse/deckhouse/pull/17981)
  - **[istio]** Fixed code in api-proxy and metadata-exporter images with linter recommendations. [#17763](https://github.com/deckhouse/deckhouse/pull/17763)
  - **[kube-dns]** Changed GO target version to 1.25. [#17981](https://github.com/deckhouse/deckhouse/pull/17981)

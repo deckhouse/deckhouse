@@ -73,6 +73,11 @@ func ConfigBuilder(opts ...any) Config {
 			},
 		}
 
+	case constant.ModeLocal:
+		userSettings = module_config.DeckhouseSettings{
+			Mode: constant.ModeLocal,
+		}
+
 	default:
 		userSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
@@ -153,6 +158,12 @@ func WithModeProxy() updateMode {
 	}
 }
 
+func WithModeLocal() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeLocal
+	}
+}
+
 func WithLegacyMode() updateLegacyMode {
 	return func() bool {
 		return true
@@ -200,7 +211,7 @@ func TestConfig_UseDefault(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var config Config
 
-			err := config.UseDefault(tt.input.criSupported)
+			err := config.useDefault(tt.input.criSupported)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.output.mode, config.Settings.Mode)
@@ -241,7 +252,7 @@ func TestConfig_UseInitConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var config Config
 
-			err := config.UseInitConfig(tt.input.initConfig)
+			err := config.useInitConfig(tt.input.initConfig)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.output.mode, config.Settings.Mode)
@@ -297,13 +308,21 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "local -> not legacy && no errors",
+			input: input{
+				deckhouse: module_config.DeckhouseSettings{
+					Mode: constant.ModeLocal,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var config Config
 
-			err := config.UseDeckhouseSettings(tt.input.deckhouse)
+			err := config.useDeckhouseSettings(tt.input.deckhouse)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)
@@ -339,6 +358,13 @@ func TestConfig_DeepCopy(t *testing.T) {
 					return &c
 				}(),
 			},
+			{
+				name: "Local mode",
+				config: func() *Config {
+					c := ConfigBuilder(WithModeLocal())
+					return &c
+				}(),
+			},
 		}
 
 		for _, tt := range tests {
@@ -358,4 +384,354 @@ func TestConfig_DeepCopy(t *testing.T) {
 		copied := nilConfig.DeepCopy()
 		require.Nil(t, copied)
 	})
+}
+
+func TestConfigProvider_IsLocal(t *testing.T) {
+	directSettings := module_config.DeckhouseSettings{
+		Mode: constant.ModeDirect,
+		Direct: &module_config.RegistrySettings{
+			ImagesRepo: "registry.example.com",
+			Scheme:     constant.SchemeHTTPS,
+		},
+	}
+	localSettings := module_config.DeckhouseSettings{
+		Mode: constant.ModeLocal,
+	}
+	initCfg := init_config.Config{
+		ImagesRepo:     "registry.example.com",
+		RegistryScheme: "HTTPS",
+	}
+
+	type input struct {
+		initConfig        *init_config.Config
+		deckhouseSettings *module_config.DeckhouseSettings
+	}
+
+	type output struct {
+		isLocal bool
+		err     bool
+		errMsg  string
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "both configs -> error",
+			input: input{
+				initConfig:        &initCfg,
+				deckhouseSettings: &directSettings,
+			},
+			output: output{
+				err:    true,
+				errMsg: "duplicate registry configuration detected",
+			},
+		},
+		{
+			name: "deckhouseSettings Local mode -> true",
+			input: input{
+				deckhouseSettings: &localSettings,
+			},
+			output: output{
+				isLocal: true,
+			},
+		},
+		{
+			name: "deckhouseSettings Direct mode -> false",
+			input: input{
+				deckhouseSettings: &directSettings,
+			},
+			output: output{
+				isLocal: false,
+			},
+		},
+		{
+			name: "initConfig only -> false",
+			input: input{
+				initConfig: &initCfg,
+			},
+			output: output{
+				isLocal: false,
+			},
+		},
+		{
+			name:  "no config -> false",
+			input: input{},
+			output: output{
+				isLocal: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isLocal, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings).IsLocal()
+
+			if tt.output.err {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.output.errMsg)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.output.isLocal, isLocal)
+		})
+	}
+}
+
+func TestConfigProvider_RemoteData(t *testing.T) {
+	directSettings := module_config.DeckhouseSettings{
+		Mode: constant.ModeDirect,
+		Direct: &module_config.RegistrySettings{
+			ImagesRepo: "registry.example.com",
+			Scheme:     constant.SchemeHTTPS,
+		},
+	}
+	initCfg := init_config.Config{
+		ImagesRepo:     "registry.example.com",
+		RegistryScheme: "HTTPS",
+	}
+
+	type input struct {
+		initConfig        *init_config.Config
+		deckhouseSettings *module_config.DeckhouseSettings
+	}
+
+	type output struct {
+		imagesRepo string
+		err        bool
+		errMsg     string
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "both configs -> error",
+			input: input{
+				initConfig:        &initCfg,
+				deckhouseSettings: &directSettings,
+			},
+			output: output{
+				err:    true,
+				errMsg: "duplicate registry configuration detected",
+			},
+		},
+		{
+			name: "deckhouseSettings -> remote data from settings",
+			input: input{
+				deckhouseSettings: &directSettings,
+			},
+			output: output{
+				imagesRepo: "registry.example.com",
+			},
+		},
+		{
+			name: "initConfig -> remote data from initConfig",
+			input: input{
+				initConfig: &initCfg,
+			},
+			output: output{
+				imagesRepo: "registry.example.com",
+			},
+		},
+		{
+			name:  "no config -> default remote data",
+			input: input{},
+			output: output{
+				imagesRepo: constant.DefaultImagesRepo,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings).RemoteData()
+
+			if tt.output.err {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.output.errMsg)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.output.imagesRepo, data.ImagesRepo)
+		})
+	}
+}
+
+func TestConfigProvider_Config(t *testing.T) {
+	directSettings := module_config.DeckhouseSettings{
+		Mode: constant.ModeDirect,
+		Direct: &module_config.RegistrySettings{
+			ImagesRepo: "registry.example.com",
+			Scheme:     constant.SchemeHTTPS,
+		},
+	}
+	proxySettings := module_config.DeckhouseSettings{
+		Mode: constant.ModeProxy,
+		Proxy: &module_config.ProxySettings{
+			RegistrySettings: module_config.RegistrySettings{
+				ImagesRepo: "registry.example.com",
+				Scheme:     constant.SchemeHTTPS,
+			},
+		},
+	}
+	localSettings := module_config.DeckhouseSettings{
+		Mode: constant.ModeLocal,
+	}
+	initCfg := init_config.Config{
+		ImagesRepo:     "registry.example.com",
+		RegistryScheme: "HTTPS",
+	}
+
+	type input struct {
+		initConfig        *init_config.Config
+		deckhouseSettings *module_config.DeckhouseSettings
+		defaultCRI        constant.CRIType
+		isStatic          bool
+	}
+
+	type output struct {
+		mode       constant.ModeType
+		legacyMode bool
+		err        bool
+		errMsg     string
+	}
+
+	tests := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "both configs -> error",
+			input: input{
+				initConfig:        &initCfg,
+				deckhouseSettings: &directSettings,
+				defaultCRI:        constant.CRIContainerdV1,
+				isStatic:          true,
+			},
+			output: output{
+				err:    true,
+				errMsg: "duplicate registry configuration detected",
+			},
+		},
+		{
+			name: "deckhouseSettings + supported CRI -> direct mode",
+			input: input{
+				deckhouseSettings: &directSettings,
+				defaultCRI:        constant.CRIContainerdV1,
+				isStatic:          true,
+			},
+			output: output{
+				mode:       constant.ModeDirect,
+				legacyMode: false,
+			},
+		},
+		{
+			name: "deckhouseSettings + unsupported CRI -> error",
+			input: input{
+				deckhouseSettings: &directSettings,
+				defaultCRI:        "Docker",
+			},
+			output: output{
+				err:    true,
+				errMsg: "registry module cannot be started with defaultCRI",
+			},
+		},
+		{
+			name: "deckhouseSettings proxy + non-static -> error",
+			input: input{
+				deckhouseSettings: &proxySettings,
+				defaultCRI:        constant.CRIContainerdV1,
+				isStatic:          false,
+			},
+			output: output{
+				err:    true,
+				errMsg: "bootstrap with registry mode",
+			},
+		},
+		{
+			name: "deckhouseSettings local + static -> local mode",
+			input: input{
+				deckhouseSettings: &localSettings,
+				defaultCRI:        constant.CRIContainerdV1,
+				isStatic:          true,
+			},
+			output: output{
+				mode:       constant.ModeLocal,
+				legacyMode: false,
+			},
+		},
+		{
+			name: "deckhouseSettings local + non-static -> error",
+			input: input{
+				deckhouseSettings: &localSettings,
+				defaultCRI:        constant.CRIContainerdV1,
+				isStatic:          false,
+			},
+			output: output{
+				err:    true,
+				errMsg: "bootstrap with registry mode",
+			},
+		},
+		{
+			name: "initConfig -> unmanaged legacy mode",
+			input: input{
+				initConfig: &initCfg,
+				defaultCRI: constant.CRIContainerdV1,
+			},
+			output: output{
+				mode:       constant.ModeUnmanaged,
+				legacyMode: true,
+			},
+		},
+		{
+			name: "no config + supported CRI -> direct mode",
+			input: input{
+				defaultCRI: constant.CRIContainerdV1,
+			},
+			output: output{
+				mode:       constant.ModeDirect,
+				legacyMode: false,
+			},
+		},
+		{
+			name: "no config + unsupported CRI -> unmanaged legacy mode",
+			input: input{
+				defaultCRI: "Docker",
+			},
+			output: output{
+				mode:       constant.ModeUnmanaged,
+				legacyMode: true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config, err := NewConfigProvider(
+				tt.input.initConfig,
+				tt.input.deckhouseSettings,
+			).Config(
+				tt.input.defaultCRI,
+				tt.input.isStatic,
+			)
+
+			if tt.output.err {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.output.errMsg)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.output.mode, config.Settings.Mode)
+			require.Equal(t, tt.output.legacyMode, config.LegacyMode)
+		})
+	}
 }

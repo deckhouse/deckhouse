@@ -19,11 +19,26 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"regexp"
 
 	nelmlog "github.com/werf/nelm/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// ansiEscapeRegexp matches CSI (Control Sequence Introducer) ANSI escape
+// sequences — the ESC [ <params> <final> form that nelm uses to colourise
+// progress tables (e.g. \x1b[36m, \x1b[0m). The deckhouse logger eventually
+// serialises messages as JSON, where raw ESC bytes are invalid; even with
+// escaping they only add unreadable noise. Strip at the adapter boundary so
+// nelm output stays readable in JSON and text sinks alike.
+var ansiEscapeRegexp = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// sprintfClean formats with fmt.Sprintf and strips any ANSI escape sequences
+// nelm may have embedded in the resulting message.
+func sprintfClean(format string, a ...interface{}) string {
+	return ansiEscapeRegexp.ReplaceAllString(fmt.Sprintf(format, a...), "")
+}
 
 // Ensure nelmLogger implements the nelmlog.Logger interface
 var _ nelmlog.Logger = (*nelmLogger)(nil)
@@ -43,17 +58,17 @@ type nelmLogger struct {
 
 // Trace logs a trace-level message (mapped to debug with trace flag)
 func (n *nelmLogger) Trace(ctx context.Context, format string, a ...interface{}) {
-	n.logger.With(slog.Bool("trace", true)).Log(ctx, log.LevelDebug.Level(), fmt.Sprintf(format, a...))
+	n.logger.With(slog.Bool("trace", true)).Log(ctx, log.LevelDebug.Level(), sprintfClean(format, a...))
 }
 
 // TraceStruct logs a trace-level message with a structured object
 func (n *nelmLogger) TraceStruct(ctx context.Context, obj interface{}, format string, a ...interface{}) {
-	n.logger.With(slog.Bool("trace", true)).Log(ctx, log.LevelDebug.Level(), fmt.Sprintf(format, a...), slog.Any("obj", obj))
+	n.logger.With(slog.Bool("trace", true)).Log(ctx, log.LevelDebug.Level(), sprintfClean(format, a...), slog.Any("obj", obj))
 }
 
 // TracePush starts a new trace-level log context (nelm uses this for indentation)
 func (n *nelmLogger) TracePush(ctx context.Context, _, format string, a ...interface{}) {
-	n.logger.With(slog.Bool("trace", true)).Log(ctx, log.LevelDebug.Level(), fmt.Sprintf(format, a...))
+	n.logger.With(slog.Bool("trace", true)).Log(ctx, log.LevelDebug.Level(), sprintfClean(format, a...))
 }
 
 // TracePop ends a trace-level log context (no-op in this implementation)
@@ -63,12 +78,12 @@ func (n *nelmLogger) TracePop(_ context.Context, _ string) {
 
 // Debug logs a debug-level message
 func (n *nelmLogger) Debug(ctx context.Context, format string, a ...interface{}) {
-	n.logger.DebugContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.DebugContext(ctx, sprintfClean(format, a...))
 }
 
 // DebugPush starts a new debug-level log context
 func (n *nelmLogger) DebugPush(ctx context.Context, _, format string, a ...interface{}) {
-	n.logger.DebugContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.DebugContext(ctx, sprintfClean(format, a...))
 }
 
 // DebugPop ends a debug-level log context (no-op)
@@ -77,12 +92,12 @@ func (n *nelmLogger) DebugPop(_ context.Context, _ string) {
 
 // Info logs an info-level message
 func (n *nelmLogger) Info(ctx context.Context, format string, a ...interface{}) {
-	n.logger.InfoContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.InfoContext(ctx, sprintfClean(format, a...))
 }
 
 // InfoPush starts a new info-level log context
 func (n *nelmLogger) InfoPush(ctx context.Context, _, format string, a ...interface{}) {
-	n.logger.InfoContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.InfoContext(ctx, sprintfClean(format, a...))
 }
 
 // InfoPop ends an info-level log context (no-op)
@@ -91,12 +106,12 @@ func (n *nelmLogger) InfoPop(_ context.Context, _ string) {
 
 // Warn logs a warning-level message
 func (n *nelmLogger) Warn(ctx context.Context, format string, a ...interface{}) {
-	n.logger.WarnContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.WarnContext(ctx, sprintfClean(format, a...))
 }
 
 // WarnPush starts a new warning-level log context
 func (n *nelmLogger) WarnPush(ctx context.Context, _, format string, a ...interface{}) {
-	n.logger.WarnContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.WarnContext(ctx, sprintfClean(format, a...))
 }
 
 // WarnPop ends a warning-level log context (no-op)
@@ -105,12 +120,12 @@ func (n *nelmLogger) WarnPop(_ context.Context, _ string) {
 
 // Error logs an error-level message
 func (n *nelmLogger) Error(ctx context.Context, format string, a ...interface{}) {
-	n.logger.ErrorContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.ErrorContext(ctx, sprintfClean(format, a...))
 }
 
 // ErrorPush starts a new error-level log context
 func (n *nelmLogger) ErrorPush(ctx context.Context, _, format string, a ...interface{}) {
-	n.logger.ErrorContext(ctx, fmt.Sprintf(format, a...))
+	n.logger.ErrorContext(ctx, sprintfClean(format, a...))
 }
 
 // ErrorPop ends an error-level log context (no-op)
@@ -120,14 +135,14 @@ func (n *nelmLogger) ErrorPop(_ context.Context, _ string) {
 // InfoBlock logs a block title and executes a function within that context
 // Nelm uses this for grouping related log messages
 func (n *nelmLogger) InfoBlock(ctx context.Context, opts nelmlog.BlockOptions, fn func()) {
-	n.logger.InfoContext(ctx, opts.BlockTitle)
+	n.logger.InfoContext(ctx, ansiEscapeRegexp.ReplaceAllString(opts.BlockTitle, ""))
 
 	fn()
 }
 
 // InfoBlockErr logs a block title and executes a function that may return an error
 func (n *nelmLogger) InfoBlockErr(ctx context.Context, opts nelmlog.BlockOptions, fn func() error) error {
-	n.logger.InfoContext(ctx, opts.BlockTitle)
+	n.logger.InfoContext(ctx, ansiEscapeRegexp.ReplaceAllString(opts.BlockTitle, ""))
 
 	return fmt.Errorf("inner func err: %w", fn())
 }

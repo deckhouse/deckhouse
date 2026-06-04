@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func RestartAutoConverger(ctx context.Context, kubeClProvider kubernetes.KubeClientProvider) error {
+func RestartAutoConverger(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx) error {
 	return log.Process("default", "Restart auto converger", func() error {
 		return checkAndRestartDeployment(ctx, kubeClProvider, "terraform-auto-converger")
 	})

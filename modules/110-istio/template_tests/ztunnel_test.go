@@ -32,7 +32,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
-			f.ValuesSet("istio.internal.enableAmbientMode", true)
+			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
 
@@ -63,7 +63,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.21.6")
-			f.ValuesSet("istio.internal.enableAmbientMode", true)
+			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
 
@@ -83,7 +83,7 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
-			f.ValuesSet("istio.internal.enableAmbientMode", false)
+			f.ValuesSet("istio.ambient.enabled", false)
 			f.HelmRender()
 		})
 

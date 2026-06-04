@@ -7,6 +7,12 @@ lang: ru
 
 Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
+{% alert level="info" %}
+В 2025 году Ingress NGINX был [переведён](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) в режим сопровождения без планов активного развития новых возможностей. Дальнейшее развитие средств балансировки входящего трафика в Kubernetes ориентировано на [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
+
+На поддержку модуля в составе Deckhouse Kubernetes Platform это не распространяется: модуль сопровождается командой Deckhouse, включая обновления безопасности. Подробнее см. раздел [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
+{% endalert %}
+
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
 
 Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
@@ -318,10 +324,13 @@ d8 k -n d8-ingress-nginx get svc
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
 main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Пример разделения доступа между публичной и административной зонами
 
@@ -471,3 +480,7 @@ spec:
     httpsPort: 8443
     behindL7Proxy: true
 ```
+
+## Поддержка и безопасность модуля
+
+Модуль `ingress-nginx` входит в сопровождение Deckhouse Kubernetes Platform на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда Deckhouse отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы. Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.

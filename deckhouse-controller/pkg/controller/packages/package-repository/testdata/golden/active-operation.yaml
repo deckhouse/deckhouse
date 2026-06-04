@@ -5,16 +5,20 @@ metadata:
   annotations:
     packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
   creationTimestamp: null
+  finalizers:
+  - packages.deckhouse.io/package-version-exists
   name: deckhouse
-  resourceVersion: "2"
+  resourceVersion: "4"
 spec:
   registry:
     ca: test-ca
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
+  scanInterval: 6h0m0s
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -31,4 +35,9 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Processing
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: Processing
+    status: "False"
+    type: Completed

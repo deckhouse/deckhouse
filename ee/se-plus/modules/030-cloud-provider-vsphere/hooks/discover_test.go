@@ -178,6 +178,54 @@ data:
   "discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(discoveryData)))
 
+	storageClassesState := `---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: deckhouse-gold
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vsphere
+provisioner: csi.vsphere.vmware.com
+allowedTopologies:
+- matchLabelExpressions:
+  - key: failure-domain.beta.kubernetes.io/zone
+    values:
+    - zone-b
+    - zone-a
+    - zone-b
+parameters:
+  DatastoreURL: ds:///vmfs/volumes/gold/
+  StoragePolicyName: Gold Policy
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: deckhouse-default
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vsphere
+provisioner: csi.vsphere.vmware.com
+allowedTopologies:
+- matchLabelExpressions:
+  - key: failure-domain.beta.kubernetes.io/zone
+    values:
+    - zone-c
+parameters:
+  DatastoreURL: ds:///vmfs/volumes/default/
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: manual
+  labels:
+    heritage: deckhouse
+    module: other-module
+provisioner: csi.vsphere.vmware.com
+parameters:
+  DatastoreURL: ds:///vmfs/volumes/manual/
+`
+
 	f := HookExecutionConfigInit(initValuesStringA, `{}`)
 
 	Context("Empty cluster", func() {
@@ -349,6 +397,54 @@ data:
 		It("Should result empty storageClasses list", func() {
 			Expect(e).To(ExecuteSuccessfully())
 			Expect(e.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	g := HookExecutionConfigInit(initValuesStringA, `{}`)
+
+	Context("Cluster without discovery data secret, but with deckhouse storage classes", func() {
+		BeforeEach(func() {
+			g.BindingContexts.Set(g.KubeStateSet(storageClassesState))
+			g.BindingContexts.Set(g.GenerateBeforeHelmContext())
+			g.RunHook()
+		})
+
+		It("Should restore storageClasses from storage class snapshots", func() {
+			Expect(g).To(ExecuteSuccessfully())
+			Expect(g.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "deckhouse-default",
+    "path": "",
+    "zones": ["zone-c"],
+    "datastoreType": "",
+    "datastoreURL": "ds:///vmfs/volumes/default/",
+    "storagePolicyName": ""
+  },
+  {
+    "name": "deckhouse-gold",
+    "path": "",
+    "zones": ["zone-a", "zone-b"],
+    "datastoreType": "",
+    "datastoreURL": "ds:///vmfs/volumes/gold/",
+    "storagePolicyName": "Gold Policy"
+  }
+]
+`))
+		})
+	})
+
+	h := HookExecutionConfigInit(initValuesStringA, `{}`)
+
+	Context("Cluster without discovery data secret and without deckhouse storage classes", func() {
+		BeforeEach(func() {
+			h.BindingContexts.Set(h.GenerateBeforeHelmContext())
+			h.RunHook()
+		})
+
+		It("Should not fail and should keep storageClasses empty", func() {
+			Expect(h).To(ExecuteSuccessfully())
+			Expect(h.ValuesGet("cloudProviderVsphere.internal.storageClasses").String()).To(BeEmpty())
 		})
 	})
 })

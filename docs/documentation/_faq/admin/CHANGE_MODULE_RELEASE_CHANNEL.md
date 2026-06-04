@@ -40,10 +40,13 @@ To change the release channel for a module from a source, follow these steps:
 
    Output example:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               RELEASE CHANNEL   UPDATE MODE
    my-module-policy   Alpha             AutoPatch
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Link the update policy to the module.
 

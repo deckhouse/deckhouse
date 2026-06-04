@@ -254,6 +254,7 @@ spec:
                     - EarlyAccess
                     - Stable
                     - RockSolid
+                    - Lts
                 update:
                   type: object
                   description: Update settings for target modules.

@@ -24,7 +24,7 @@ on:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -43,11 +43,44 @@ jobs:
     # </template: checkout_step>
 
     # <template: werf_install_step>
-    - name: Install werf CLI
-      uses: werf/actions/install@v2
-      with:
-        version: ${{env.WERF_VERSION}}
+    - name: Install werf-dk CLI
+      run: |
+        WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}-dk"
+        echo "$WERF_PATH" >> "$GITHUB_PATH"
+        CACHED_VERSION=$($WERF_PATH/werf version | tr -d '\n')
+        if [[ "${WERF_VERSION}-dk" != "$CACHED_VERSION" ]]; then
+          echo "Current werf is $CACHED_VERSION, downloading ${WERF_VERSION}-dk";
+          mkdir -p "$WERF_PATH"
+          curl -Lsfo "$WERF_PATH/werf" https://github.com/deckhouse/delivery-kit/releases/download/${WERF_VERSION}-dk/werf
+          chmod +x "$WERF_PATH/werf"
+        else
+          echo "Current werf is $CACHED_VERSION, skipping download"
+        fi
     # </template: werf_install_step>
+    # <template: import_secrets>
+    - name: Split repository name
+      id: split
+      env:
+        REPO: ${{ github.repository }}
+      run: |
+        if [ $REPO == "deckhouse/deckhouse" ]; then
+          echo "name=deckhouse" >> $GITHUB_OUTPUT
+        else
+          echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+        fi
+    - name: Import secrets
+      id: secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: https://seguro.flant.com
+        path: github
+        role: "${{ steps.split.outputs.name }}"
+        method: jwt
+        jwtGithubAudience: github-access-aud
+        secrets: |
+          projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+    # </template: import_secrets>
     - uses: actions/setup-go@v5.4.0
       with:
         go-version: '1.23.7'
@@ -108,20 +141,20 @@ jobs:
         branch: chore/k8s-autoupdate
         token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
         base: main
-        labels: e2e/run/yandex-cloud,${{ steps.update.outputs.k8sVersions }}security/cve
+        labels: e2e/run/yandex-cloud,${{ steps.update.outputs.k8sVersions }}
         milestone: ${{ steps.get_milestone.outputs.milestone }}
         delete-branch: true
     - name: Send success report
       if: ${{ steps.create-pull-request.outputs.pull-request-operation == 'created' && github.repository == 'deckhouse/deckhouse' }}
       env:
-        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
         bash ./.github/scripts/send-report.sh --webhook "k8s_update" "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
       if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
       env:
-        LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+        LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
         bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"

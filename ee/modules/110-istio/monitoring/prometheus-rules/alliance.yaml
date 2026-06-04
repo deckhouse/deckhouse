@@ -1,0 +1,24 @@
+- name: d8.istio.alliance
+  rules:
+    - alert: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
+      expr: sum by (alliance_kind, remote_uuid, name, requested_to_hostname) (rate(d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain[5m])) > 0
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_alliance_metadata_exporter_endpoint_discovery_external_issues: D8IstioAllianceMetadataExporterEndpointDiscoveryExternalIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_alliance_metadata_exporter_endpoint_discovery_external_issues: D8IstioAllianceMetadataExporterEndpointDiscoveryExternalIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: A peer cluster requests private metadata using a deprecated subdomain.
+        description: |
+          Remote {{$labels.alliance_kind}} `{{$labels.name}}`, (UUID: `{{$labels.remote_uuid}}`) requests private metadata from hostname `{{$labels.requested_to_hostname}}`, that hostname uses the deprecated `istio` subdomain.
+          
+          Update the remote cluster {{$labels.alliance_kind}} resource: set `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+
+          Migration steps on the remote cluster:
+          
+          1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
+          2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
+          3. Verify remote metadata fetch and alliance health after the change.

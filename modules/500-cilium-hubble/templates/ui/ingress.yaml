@@ -14,6 +14,7 @@ metadata:
     nginx.ingress.kubernetes.io/affinity-mode: persistent
     nginx.ingress.kubernetes.io/session-cookie-name: d8-hubble-affinity
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ciliumHubble.auth.externalAuthentication }}
+    nginx.ingress.kubernetes.io/auth-response-headers: Authorization
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.ciliumHubble.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.ciliumHubble.auth.externalAuthentication.authURL | quote }}
     {{- else }}

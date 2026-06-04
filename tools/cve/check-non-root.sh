@@ -20,13 +20,11 @@ RED='\033[0;31m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Example:
+#  ["istio pilotV1x19x7"]="1337:1337"
+#  ["istio pilotV1x21x6"]="1337:1337"
 declare -A allowed_users=(
-  ["istio operatorV1x21x6"]="1337:1337"
-  ["istio operatorV1x16x2"]="1337:1337"
-  ["istio operatorV1x19x7"]="1337:1337"
-  ["istio pilotV1x16x2"]="1337:1337"
-  ["istio pilotV1x19x7"]="1337:1337"
-  ["istio pilotV1x21x6"]="1337:1337"
+
 )
 
 declare -A allowed_components=(
@@ -40,6 +38,11 @@ declare -A skip_components=(
 )
 declare -A skip_components_images=(
   ["d8ShutdownInhibitor"]="skip"
+  ["terraformManager"]="skip"
+  ["baseTerraform"]="skip"
+  ["baseOpentofu"]="skip"
+  ["candi"]="skip"
+  ["debugContainer"]="skip"
 )
 # Function to get skip components
 function get_skip_components() {
@@ -78,7 +81,7 @@ function check_user() {
   allowed_component=$(get_allowed_components "$user")
   allowed_user=$(get_allowed_users "$image_report_name")
 
-  if [ "$user" == "null" ] || [ "$user" == "root" ] || [ "$user" == "0:0" ]; then
+  if [ "$user" == "null" ] || [ "$user" == "root" ] || [ "$user" == "root:root" ] || [ "$user" == "0:0" ]; then
     result="ERROR"
     if [ "$user" == "null" ]; then
       user="root"

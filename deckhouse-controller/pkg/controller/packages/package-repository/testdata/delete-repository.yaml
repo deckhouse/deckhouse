@@ -22,7 +22,12 @@ spec:
     fullScan: true
     timeout: 5m
 status:
-  phase: Completed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ScanSucceeded
+    status: "True"
+    type: Completed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
@@ -37,4 +42,9 @@ spec:
     fullScan: false
     timeout: 5m
 status:
-  phase: Failed
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ScanFailed
+    status: "True"
+    type: Completed

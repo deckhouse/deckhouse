@@ -1,0 +1,12 @@
+{{ if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled -}}
+  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" -}}
+    {{- if eq .Values.global.modules.https.mode "CustomCertificate" }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "kube-system" "kubernetes-tls") -}}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if $moduleGateway }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "kube-system" "kubernetes-httproute-tls") -}}
+{{- end }}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

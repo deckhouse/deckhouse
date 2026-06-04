@@ -62,6 +62,11 @@ properties:
       Включить CAInjector. Он необходим только для инъекции CA-сертификатов в `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` и `APIService`.
       Deckhouse не использует CAInjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
 
+  enableListenerSet:
+    description: |
+      Включить поддержку ListenerSet в cert-manager через feature gate `ListenerSets`.
+
+      Также включает интеграцию ListenerSet для Gateway API, если включена интеграция Gateway API.
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]

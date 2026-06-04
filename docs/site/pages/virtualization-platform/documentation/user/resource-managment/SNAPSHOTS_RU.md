@@ -70,10 +70,13 @@ d8 k get vdsnapshot
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   PHASE     CONSISTENT   AGE
 linux-vm-root-snapshot Ready     true         3m2s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Поле `CONSISTENT` показывает, является ли снимок консистентным (`true`) или нет (`false`). Значение определяется автоматически на основе условий создания снимка и не может быть изменено.
 
@@ -511,6 +514,12 @@ spec:
 
 DVP поддерживает проброс USB-устройств в виртуальные машины с использованием DRA (Dynamic Resource Allocation). В этом разделе описано, как использовать USB-устройства с виртуальными машинами.
 
+Для проброса USB требуются:
+
+- `containerd v2` — подробные требования к узлам кластера описаны в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri);
+- [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) версии не ниже 1.34;
+- [Deckhouse Kubernetes Platform (DKP)](https://releases.deckhouse.ru/) версии не ниже 1.75.
+
 ### Обзор
 
 DVP предоставляет два пользовательских ресурса для управления USB-устройствами:
@@ -587,11 +596,14 @@ d8 k get nodeusbdevice
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                 NODE           READY   ASSIGNED   NAMESPACE   AGE
 usb-flash-drive     node-1         True    False                  10m
 logitech-webcam     node-2         True    True      my-project   15m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 #### Условия NodeUSBDevice
 
@@ -636,10 +648,13 @@ d8 k get usbdevice -n my-project
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME               NODE     MANUFACTURER   PRODUCT              SERIAL       ATTACHED   AGE
 logitech-webcam    node-2   Logitech       Webcam C920         ABC123456   False      10m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 #### Атрибуты USBDevice
 

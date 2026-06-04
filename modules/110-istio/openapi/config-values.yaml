@@ -5,14 +5,14 @@ properties:
     type: string
     pattern: '^[0-9]+\.[0-9]+$'
     description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
-    examples: ["1.21"]
-    default: "1.21"
+    examples: ["1.25"]
+    default: "1.25"
   additionalVersions:
     type: array
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-    - ["1.21"]
+    - ["1.25"]
     default: []
     items:
       type: string
@@ -849,7 +849,7 @@ properties:
                       max:
                         description: |
                           The maximum value that the VPA can set for the CPU requests.
-                        default: 2
+                        default: 1
                         oneOf:
                         - type: string
                           pattern: "^[0-9]+m?$"
@@ -857,7 +857,7 @@ properties:
                       min:
                         description: |
                           The minimum value that the VPA can set for the CPU requests.
-                        default: '50m'
+                        default: '25m'
                         oneOf:
                         - type: string
                           pattern: "^[0-9]+m?$"
@@ -888,7 +888,7 @@ properties:
                       min:
                         description: |
                           The minimum memory requests the VPA can set.
-                        default: '256Mi'
+                        default: '64Mi'
                         oneOf:
                         - type: string
                           pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
@@ -941,6 +941,20 @@ properties:
                         - type: number
                         description: |
                           Configuring memory limits.
+  ambient:
+    type: object
+    default: {"enabled": false}
+    description: |
+      Ambient mesh related settings.
+    x-experimental: true
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enable ambient mesh.
+        x-experimental: true
+        x-examples: [true]
   nodeSelector:
     type: object
     additionalProperties:
@@ -1087,3 +1101,30 @@ properties:
           Enables single authentication.
 
           If used together with the whitelistSourceRanges parameter, it authorizes all the users from above networks (no need to enter a username and password).
+allOf:
+- oneOf:
+  # ambient.enabled is NOT true (or ambient is absent)
+  - not:
+      required: ["ambient"]
+      properties:
+        ambient:
+          type: object
+          required: ["enabled"]
+          properties:
+            enabled:
+              enum: [true]
+  # ambient.enabled=true requires dataPlane.trafficRedirectionSetupMode=CNIPlugin
+  - required: ["ambient", "dataPlane"]
+    properties:
+      ambient:
+        type: object
+        required: ["enabled"]
+        properties:
+          enabled:
+            enum: [true]
+      dataPlane:
+        type: object
+        required: ["trafficRedirectionSetupMode"]
+        properties:
+          trafficRedirectionSetupMode:
+            enum: ["CNIPlugin"]

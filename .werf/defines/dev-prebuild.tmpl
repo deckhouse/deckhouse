@@ -4,7 +4,6 @@
 - global-hooks
 - shell_lib.sh
 - shell_lib
-- deckhouse-controller/entrypoint.sh
 - deckhouse-controller/crds/*.yaml
 - jq_lib
 - helm_lib
@@ -71,12 +70,6 @@ EOD
 cat <<"EOD" > /deckhouse/edition
 {{ $context.Env | default "unknown"}}
 EOD
-# Override deckhouse entrypoint to use tini as supervisor
-cat <<"EOD" > /deckhouse/deckhouse
-#!/bin/bash
-exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
-EOD
-chmod +x /deckhouse/deckhouse
 # Create symlink to grant entrypoint.sh write permission
 ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
 # Run deckhouse from dedicated user
@@ -104,6 +97,10 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+- from: {{ index $.Images "minget" }}
+  add: /usr/bin/minget
+  to: /deckhouse/candi/bashible/bootstrap/minget
+  after: setup
 git:
 - add: /tools/mounts/mountdir
   to: /.kube
@@ -126,6 +123,9 @@ git:
   stageDependencies:
     install:
     - "**/*"
+shell:
+  install:
+  - set -e
 {{- end }}
 
 #  render create ln part of setup script

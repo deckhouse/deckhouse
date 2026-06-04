@@ -3,6 +3,7 @@ type: object
 properties:
   publishAPI:
     type: object
+    x-doc-deprecated: true
     default: {}
     description: 'Settings for exposing the API server using Ingress.'
     properties:
@@ -149,6 +150,72 @@ properties:
             pattern: "^(?:(?:[1-9]|[1-9][0-9]+)d)?(?:(?:[1-9]|[1-9][0-9]+)h)?(?:(?:[1-9]|[1-9][0-9]+)m)?(?:(?:[1-9]|[1-9][0-9]+)s)?$"
             description: |
               Temporary lockout duration. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `3d`.
+          applyToConnectors:
+            type: array
+            description: |
+              External (non-local) connector types the lockout additionally applies to.
+
+              The built-in `Local` connector is always covered by the lockout policy when this section is configured.
+              Its state is stored in the Password resource and does not need to be opted in here.
+
+              For the listed external connectors, the failed-attempt counter and the lock state are tracked in the
+              OfflineSessions resource of the corresponding user (one object per `(user, connector)` pair).
+
+              Manually unlocking a user is supported for every type via the UserOperation resource.
+            uniqueItems: true
+            items:
+              type: string
+              enum: ["LDAP", "Crowd"]
+  rateLimit:
+    type: object
+    default: {}
+    description: |
+      Brute-force protection for the password endpoints of Dex.
+
+      When enabled, a per-IP token-bucket rate limiter is installed in front of the `POST /token`
+      and `POST /auth/{connector}/login` endpoints. The client IP address is taken from the `X-Real-IP` header set by the platform Ingress controller.
+
+      The limit applies to **failed authentication attempts only**: tokens reserved before
+      the request reaches the Dex handler are returned to the bucket on a successful response
+      (HTTP `2xx`/`3xx`). Therefore, successful logins and refresh-token exchanges do not consume the
+      per-IP budget.
+
+      Limits are tracked in memory in each Dex replica.
+      In HA setups, the effective per-IP
+      rate is multiplied by the number of replicas, which is fine as a brute-force backstop
+      and is complemented by the account-level lockout.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Enable per-IP rate limiting on Dex password endpoints.
+      perIP:
+        type: object
+        default: {}
+        description: |
+          Per-source-IP token-bucket configuration.
+          
+          Both `requestsPerMinute` and `burst`
+          parameters count failed authentication attempts only.
+        properties:
+          requestsPerMinute:
+            type: integer
+            default: 10
+            minimum: 1
+            description: |
+              Maximum rate of failed authentication attempts tolerated
+              per IP address (in attempts per minute).
+              
+              Successful logins and refresh-token exchanges
+              do not consume the budget.
+          burst:
+            type: integer
+            default: 10
+            minimum: 1
+            description: |
+              Maximum bucket size defining the allowed number of failed authentication attempts from a single IP address
+              before the throttling activates.
   staticUsers2FA:
     type: object
     default: {}

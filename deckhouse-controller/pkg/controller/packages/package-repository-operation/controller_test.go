@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"testing"
 
@@ -293,7 +294,8 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	// Normalize timestamps for consistent golden files
 	resultStr := result.String()
 	resultStr = regexp.MustCompile(`startTime: "[^"]*"`).ReplaceAllString(resultStr, `startTime: "2025-10-31T12:00:00Z"`)
-	resultStr = regexp.MustCompile(`syncTime: "[^"]*"`).ReplaceAllString(resultStr, `syncTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastScanTime: "[^"]*"`).ReplaceAllString(resultStr, `lastScanTime: "2025-10-31T12:00:00Z"`)
+	resultStr = regexp.MustCompile(`lastChangeTime: "[^"]*"`).ReplaceAllString(resultStr, `lastChangeTime: "2025-10-31T12:00:00Z"`)
 	resultStr = regexp.MustCompile(`completionTime: "[^"]*"`).ReplaceAllString(resultStr, `completionTime: "2025-10-31T12:00:00Z"`)
 
 	return []byte(resultStr)
@@ -365,12 +367,22 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				var apv v1alpha1.ApplicationPackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &apv)
 				require.NoError(t, err)
+				savedStatus := apv.Status
 				require.NoError(t, kubeClient.Create(context.TODO(), &apv))
+				if !reflect.DeepEqual(savedStatus, v1alpha1.ApplicationPackageVersionStatus{}) {
+					apv.Status = savedStatus
+					require.NoError(t, kubeClient.Status().Update(context.TODO(), &apv))
+				}
 			case "PackageRepository":
 				var repo v1alpha1.PackageRepository
 				err := yaml.Unmarshal([]byte(manifest), &repo)
 				require.NoError(t, err)
+				savedStatus := repo.Status
 				require.NoError(t, kubeClient.Create(context.TODO(), &repo))
+				if !reflect.DeepEqual(savedStatus, v1alpha1.PackageRepositoryStatus{}) {
+					repo.Status = savedStatus
+					require.NoError(t, kubeClient.Status().Update(context.TODO(), &repo))
+				}
 			case "ModulePackageVersion":
 				var mpv v1alpha1.ModulePackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &mpv)
@@ -521,6 +533,32 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("multi-source module package", func() {
+		// A ModulePackage already exists owned (Controller=false) by the "deckhouse" repo.
+		// A scan operation now runs for a second repo ("deckhouse-clone") that contributes
+		// the same package. The existing ModulePackage must end up with both repositories
+		// as non-controller owners; the new ModulePackageVersion is created with a
+		// Controller=true ownerRef on "deckhouse-clone" (single-source).
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", moduleVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("multi-source-module.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-clone-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("failed versions from registry", func() {
 		// Root: "test-package", Versions: v1.0.0, v1.1.0, v1.2.0 (Application type).
 		// k8s-level Create errors injected for v1.1.0 and v1.2.0.
@@ -618,6 +656,33 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("incremental scan with no new versions keeps package in repository status", func() {
+		// Regression: pre-existing ApplicationPackageVersion v1.0.0 already processed
+		// (Status.PackageMetadata set). Registry still has only v1.0.0, so the incremental
+		// scan finds no new tags and goes through the empty-foundTags branch in
+		// ProcessPackageVersions. Without inferPackageTypeFromExisting, the package would
+		// be appended to op.Status.Packages.Processed with Type="" and dropped by
+		// UpdateRepositoryStatus, silently truncating PackageRepository.status.packages.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", applicationVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("incremental-no-new-versions.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("version image without metadata", func() {
 		// Version image has no labels and no package.yaml → errTooOldImage, skip.
 		reg := fakeRegistry.NewRegistry(registryHost)
@@ -652,6 +717,59 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createFakePSM(ic)
 
 		suite.setupController("legacy-module-old-registry.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags with legacy /release", func() {
+		// /version path exists but has only non-semver tags (no semver tags to process).
+		// On a full scan this must behave identically to NAME_UNKNOWN: fall back to /release.
+		// /release has semver tags + channel names -> legacy v1alpha1 module processed.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		// Non-semver tags in /version: path reachable, but extractOnlySemverTags returns [].
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "stable", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "early-access", fakeRegistry.NewImageBuilder().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-legacy-release.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("empty /version tags and no /release", func() {
+		// /version exists with only non-semver tags, /release does not exist at all.
+		// Must emit the same error as the NAME_UNKNOWN+no-/release path:
+		// "package %q has neither /version nor /release path".
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "latest", fakeRegistry.NewImageBuilder().MustBuild())
+		// Intentionally NOT adding any test-package/release image.
+		// Note: the fake registry returns an empty tag list for a missing repo (not NAME_UNKNOWN),
+		// so this exercises the "empty /release tags" branch -> "no semver release tags found".
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("empty-version-tags-no-release.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

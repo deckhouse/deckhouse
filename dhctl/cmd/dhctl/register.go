@@ -20,15 +20,19 @@ import (
 	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 var allowedCommands []string
 
+type defineFunc func(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause
+
 type Command struct {
 	Name       string
 	Help       string
-	DefineFunc func(cmd *kingpin.CmdClause) *kingpin.CmdClause
-	Parrent    string
+	DefineFunc defineFunc
+	Parent     string
 	cmd        *kingpin.CmdClause
 }
 
@@ -74,7 +78,7 @@ func getNestingDepth(cmd Command, commands []Command) (Command, int) {
 	for {
 		found := false
 		for _, c := range commands {
-			if c.Name == cmd.Parrent && !visited[c.Name] {
+			if c.Name == cmd.Parent && !visited[c.Name] {
 				visited[c.Name] = true
 				cmd = c
 				depth++
@@ -84,7 +88,7 @@ func getNestingDepth(cmd Command, commands []Command) (Command, int) {
 			}
 		}
 
-		if !found || cmd.Parrent == "" {
+		if !found || cmd.Parent == "" {
 			break
 		}
 	}
@@ -104,11 +108,11 @@ func initParent(parrentCmdIndex int, kpApp *kingpin.Application) *kingpin.CmdCla
 	return pcmd
 }
 
-func registerCommands(kpApp *kingpin.Application) error {
+func registerCommands(kpApp *kingpin.Application, opts *options.Options) error {
 	// First, validate that all commands with parents have existing parents
 	for _, command := range commandList {
-		if command.Parrent != "" {
-			_, err := getParentIndex(commandList, command.Parrent)
+		if command.Parent != "" {
+			_, err := getParentIndex(commandList, command.Parent)
 			if err != nil {
 				return err
 			}
@@ -124,11 +128,11 @@ func registerCommands(kpApp *kingpin.Application) error {
 				commandList[i].cmd = cmd
 
 				if command.DefineFunc != nil {
-					command.DefineFunc(cmd)
+					command.DefineFunc(cmd, opts)
 				}
 			}
 		} else {
-			parrentCmdIndex, err := getParentIndex(commandList, command.Parrent)
+			parentCmdIndex, err := getParentIndex(commandList, command.Parent)
 			if err != nil {
 				return err
 			}
@@ -136,13 +140,13 @@ func registerCommands(kpApp *kingpin.Application) error {
 			allowed, subcommands := checkCommand(firstNode.Name, allowedCommands)
 
 			if allowed && checkSubcommand(command.Name, subcommands) {
-				pcmd := initParent(parrentCmdIndex, kpApp)
+				parentCmd := initParent(parentCmdIndex, kpApp)
 
-				cmd := pcmd.Command(command.Name, command.Help)
+				cmd := parentCmd.Command(command.Name, command.Help)
 				commandList[i].cmd = cmd
 
 				if command.DefineFunc != nil {
-					command.DefineFunc(cmd)
+					command.DefineFunc(cmd, opts)
 				}
 			}
 		}

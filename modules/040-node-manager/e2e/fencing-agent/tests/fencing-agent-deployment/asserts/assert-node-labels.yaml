@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Node
+metadata:
+  labels:
+    node.deckhouse.io/group: worker
+    node-manager.deckhouse.io/fencing-enabled: ""
+    node-manager.deckhouse.io/fencing-mode: Watchdog

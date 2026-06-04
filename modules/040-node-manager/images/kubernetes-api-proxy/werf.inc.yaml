@@ -5,9 +5,15 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-node-manager/images/kubernetes-api-proxy/src
   to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,6 +42,7 @@ import:
   add: /src/kubernetes-api-proxy
   to: /kubernetes-api-proxy
   before: setup
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/kubernetes-api-proxy"]

@@ -1,4 +1,4 @@
-{{- $version := "1.4.1"}}
+{{- $version := include "get_oss_version_by_id_and_condition" (list "csi-vcd" (dict "mode" "legacy") $) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -48,7 +48,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/golang" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src

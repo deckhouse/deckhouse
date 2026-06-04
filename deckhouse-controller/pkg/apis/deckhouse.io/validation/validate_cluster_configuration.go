@@ -31,7 +31,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -44,6 +46,7 @@ import (
 const (
 	containerdV2UnsupportedLabel        = "node.deckhouse.io/containerd-v2-unsupported"
 	customContainerdConfigLabelSelector = "node.deckhouse.io/containerd-config=custom"
+	nodeGroupNameLabel                  = "node.deckhouse.io/group"
 )
 
 type clusterConfig struct {
@@ -84,6 +87,43 @@ func validateKubernetesVersion(version string, mm moduleManager) (*kwhvalidating
 	return allowResult(nil)
 }
 
+// listNodeGroupCRITypes returns a map of NodeGroup name -> spec.cri.type.
+func listNodeGroupCRITypes(ctx context.Context, cli client.Client) (map[string]string, error) {
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1",
+		Kind:    "NodeGroupList",
+	})
+	if err := cli.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list NodeGroups: %w", err)
+	}
+	out := make(map[string]string, len(list.Items))
+	for i := range list.Items {
+		t, _, _ := unstructured.NestedString(list.Items[i].Object, "spec", "cri", "type")
+		out[list.Items[i].GetName()] = t
+	}
+	return out, nil
+}
+
+// nodeEffectivelyContainerdV2 reports whether the nodes effective CRI is (or will become) ContainerdV2.
+// Returns true if the node has no NodeGroup label or the NodeGroup is not in the snapshot(just in case).
+func nodeEffectivelyContainerdV2(node *v1.Node, ngCRIType map[string]string) bool {
+	ng := node.Labels[nodeGroupNameLabel]
+	if ng == "" {
+		return true
+	}
+	t, ok := ngCRIType[ng]
+	if !ok {
+		return true
+	}
+	return t == "" || t == "ContainerdV2"
+}
+
+func formatNodeWithNG(node *v1.Node) string {
+	return fmt.Sprintf("%s (NodeGroup=%s)", node.Name, node.Labels[nodeGroupNameLabel])
+}
+
 func checkCntrdV2Support(ctx context.Context, cli client.Client) (*kwhvalidating.ValidatorResult, error) {
 	unsupportedSelector, err := labels.Parse(containerdV2UnsupportedLabel)
 	if err != nil {
@@ -93,10 +133,6 @@ func checkCntrdV2Support(ctx context.Context, cli client.Client) (*kwhvalidating
 	unsupportedNodes := &v1.NodeList{}
 	if err := cli.List(ctx, unsupportedNodes, &client.ListOptions{LabelSelector: unsupportedSelector}); err != nil {
 		return nil, fmt.Errorf("failed to list nodes with label %q: %w", containerdV2UnsupportedLabel, err)
-	}
-
-	if len(unsupportedNodes.Items) > 0 {
-		return rejectResult("Cluster has nodes that don't support ContainerdV2")
 	}
 
 	customConfigSelector, err := labels.Parse(customContainerdConfigLabelSelector)
@@ -109,8 +145,41 @@ func checkCntrdV2Support(ctx context.Context, cli client.Client) (*kwhvalidating
 		return nil, fmt.Errorf("failed to list nodes with label %q: %w", customContainerdConfigLabelSelector, err)
 	}
 
-	if len(customConfigNodes.Items) > 0 {
-		return rejectResult("Cluster has nodes with a custom containerd config, which is incompatible with ContainerdV2")
+	// Nothing flagged any node - early exit before listing NodeGroups
+	if len(unsupportedNodes.Items) == 0 && len(customConfigNodes.Items) == 0 {
+		return allowResult(nil)
+	}
+
+	ngCRI, err := listNodeGroupCRITypes(ctx, cli)
+	if err != nil {
+		return nil, err
+	}
+
+	var blockedNodes []string
+	for _, node := range unsupportedNodes.Items {
+		if nodeEffectivelyContainerdV2(&node, ngCRI) {
+			blockedNodes = append(blockedNodes, formatNodeWithNG(&node))
+		}
+	}
+	if len(blockedNodes) > 0 {
+		return rejectResult(fmt.Sprintf(
+			"Cluster has nodes that don't support ContainerdV2 and would inherit cluster default: %s. "+
+				"Pin their NodeGroups by setting spec.cri.type=Containerd, or resolve the incompatibility with ContainerdV2.",
+			strings.Join(blockedNodes, ", ")))
+	}
+
+	blockedNodes = blockedNodes[:0]
+	for _, node := range customConfigNodes.Items {
+		if nodeEffectivelyContainerdV2(&node, ngCRI) {
+			blockedNodes = append(blockedNodes, formatNodeWithNG(&node))
+		}
+	}
+	if len(blockedNodes) > 0 {
+		return rejectResult(fmt.Sprintf(
+			"Cluster has nodes with a custom containerd config, which is incompatible with ContainerdV2 "+
+				"that would inherit cluster default: %s. Pin their NodeGroups by setting "+
+				"spec.cri.type=Containerd, or remove/migrate the custom config to ContainerdV2.",
+			strings.Join(blockedNodes, ", ")))
 	}
 
 	return allowResult(nil)
@@ -255,16 +324,6 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse old version: %w", err)
 		}
-
-		if maxUsedVersionSemver != nil {
-			// extra validation: if the cluster was on a higher version already,
-			// we cannot downgrade more, than 1 minor from a higher version,
-			// so set oldVersion to maxUsedVersion
-			if maxUsedVersionSemver.GreaterThan(oldVersionSemver) {
-				nameForOldVersion = "maxUsedControlPlaneKubernetesVersion"
-				oldVersionSemver = maxUsedVersionSemver
-			}
-		}
 	}
 
 	// Resolve newVersion: if it's "Automatic", get actual version from secret
@@ -294,6 +353,16 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 		newVersionSemver, err = parseVersion(newVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse new version: %w", err)
+		}
+
+		// Switching to an explicit version: guard against downgrading more than
+		// 1 minor below the highest version the cluster ever ran. This baseline only
+		// makes sense for an explicit target — a switch to "Automatic" is compared
+		// against the actual current version, so a no-op like "1.33" -> Automatic(=1.33)
+		// stays allowed.
+		if maxUsedVersionSemver != nil && maxUsedVersionSemver.GreaterThan(oldVersionSemver) {
+			nameForOldVersion = "maxUsedControlPlaneKubernetesVersion"
+			oldVersionSemver = maxUsedVersionSemver
 		}
 	}
 

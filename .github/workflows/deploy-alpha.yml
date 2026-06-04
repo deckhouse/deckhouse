@@ -41,8 +41,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
-  WERF_VERSION: "v2.63.1"
+  WERF_VERSION: "v2.70.0"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
@@ -71,7 +70,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -145,7 +144,7 @@ jobs:
 
   # </template: git_info_job>
   check_branch:
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - name: Check if triggered by a tag
         run: |
@@ -156,7 +155,7 @@ jobs:
           fi
   detect_editions:
     name: Detect editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     needs: check_branch
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
@@ -197,7 +196,7 @@ jobs:
     name: Enable CE
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - run: ": Enable CE"
 
@@ -206,7 +205,7 @@ jobs:
     name: Enable EE
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - run: ": Enable EE"
 
@@ -215,7 +214,7 @@ jobs:
     name: Enable FE
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - run: ": Enable FE"
 
@@ -224,7 +223,7 @@ jobs:
     name: Enable BE
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - run: ": Enable BE"
 
@@ -233,7 +232,7 @@ jobs:
     name: Enable SE
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - run: ": Enable SE"
 
@@ -242,7 +241,7 @@ jobs:
     name: Enable SE-plus
     needs:
       - detect_editions
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
       - run: ": Enable SE-plus"
 
@@ -286,6 +285,30 @@ jobs:
             return await ci.updateCommentOnStart({github, context, core, name})
 
       # </template: update_comment_on_start>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
 
       # <template: login_readonly_registry_step>
       - name: Check readonly registry credentials
@@ -1183,7 +1206,7 @@ jobs:
       - name: Send failure report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
           bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Deploy to channel alpha failed!🛑\n[URL]($WORKFLOW_URL)"
@@ -1232,7 +1255,34 @@ jobs:
       DEPLOY_KUBECONFIG_BASE64_DEV: ${{ steps.post-deploy-preparation.outputs.DEPLOY_KUBECONFIG_BASE64_DEV }}
     needs:
       - run_deploy
+    permissions:
+      contents: read
+      id-token: write
     steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1286,7 +1336,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
@@ -1299,9 +1349,36 @@ jobs:
     if: ${{ needs.post_deploy_preparation.outputs.DEPLOY_KUBECONFIG_BASE64_PROD_25 == 'true' }}
     name: "Deploy channels to production"
     runs-on: [self-hosted, regular]
+    permissions:
+      contents: read
+      id-token: write
     needs:
       - post_deploy_preparation
     steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1329,7 +1406,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
@@ -1342,9 +1419,36 @@ jobs:
     if: ${{ needs.post_deploy_preparation.outputs.DEPLOY_KUBECONFIG_BASE64_DEV == 'true' }}
     name: "Deploy channels to staging"
     runs-on: [self-hosted, regular]
+    permissions:
+      contents: read
+      id-token: write
     needs:
       - post_deploy_preparation
     steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1372,7 +1476,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
@@ -1388,8 +1492,33 @@ jobs:
     needs: post_deploy_preparation
     permissions:
       contents: write
+      id-token: write
 
     steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop webhook_url | LOOP_SERVICE_NOTIFICATIONS ;
+
+      # </template: import_secrets>
       - name: Make latest stable release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1424,7 +1553,7 @@ jobs:
       - name: Send fail report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ steps.secrets.outputs.LOOP_SERVICE_NOTIFICATIONS }}
           JOB_NAME: ${{ github.job }}
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/

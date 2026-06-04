@@ -26,21 +26,19 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type KubeClientSwitcher struct {
@@ -53,6 +51,7 @@ type KubeClientSwitcher struct {
 
 type KubeClientSwitcherParams struct {
 	TmpDir        string
+	GlobalOptions *options.GlobalOptions
 	IsDebug       bool
 	Logger        log.Logger
 	DisableSwitch bool
@@ -81,7 +80,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.createNodeUser(ctx)
 		if err != nil {
 			return err
@@ -100,7 +99,8 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	// todo(ctx): does it's real need to use s.ctx.Ctx() instead of param context?
+	return s.logger.LogProcessCtx(s.ctx.Ctx(), "default", action, func(ctx context.Context) error {
 		err := s.ctx.deleteConvergeState()
 		if err != nil {
 			return err
@@ -121,7 +121,7 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -163,7 +163,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -206,14 +206,14 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	_, sshClient, err := s.extractClients(ctx)
+	sshClient, err := s.extractSSHClient(ctx)
 	if err != nil {
 		return err
 	}
 
 	s.debug("SwitchClientsToAnotherNodeIfNeed sshClient: %v", sshClient)
-	currentHost := sshClient.Session().CurrentHost()
-	if currentHost.IsEmpty() {
+	currentHost := session.CurrentHost(sshClient.Session())
+	if currentHost.Host == "" {
 		return fmt.Errorf("Got empty current host")
 	}
 
@@ -222,7 +222,7 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -251,12 +251,6 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error {
 	const action = "Switch clients when decrease control-plane nodes"
 
-	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
-		return err
-	} else if skip {
-		return nil
-	}
-
 	logSkip := func(f string, args ...any) {
 		s.debug(fmt.Sprintf("Skip %s: ", action)+f, args...)
 	}
@@ -271,14 +265,20 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	_, sshClient, err := s.extractClients(ctx)
+	if skip, err := s.isSkipOrLogStart(action, true); err != nil {
+		return err
+	} else if skip {
+		return nil
+	}
+
+	sshClient, err := s.extractSSHClient(ctx)
 	if err != nil {
 		return err
 	}
 
 	s.debug("SwitchWhenDecreaseMastersIfNeed sshClient: %v", sshClient)
-	currentHost := sshClient.Session().CurrentHost()
-	if currentHost.IsEmpty() {
+	currentHost := session.CurrentHost(sshClient.Session())
+	if currentHost.Host == "" {
 		return fmt.Errorf("Got empty current host")
 	}
 
@@ -298,7 +298,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -339,7 +339,12 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		return fmt.Errorf("Internal error. Empty converge state for replace client")
 	}
 
-	kubeCl, sshCl, err := s.extractClients(ctx)
+	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
+	if err != nil {
+		return err
+	}
+
+	sshCl, err := sshProvider.Client(ctx)
 	if err != nil {
 		return err
 	}
@@ -359,7 +364,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 			state:    stateBytes,
 			settings: settings,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -384,13 +388,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	// also because we will use kube provider
 	// setting kube client not needed
 
-	kubeCl.KubeProxy.StopAll()
-
-	if sshclient.IsModernMode() {
-		s.debug("Stop old SSH Client: %-v\n", sshCl)
-		sshCl.Stop()
-	}
-
 	s.debug("Create new ssh client for replacing kube client")
 
 	sess := session.NewSession(session.Input{
@@ -404,23 +401,16 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		BecomePass:     params.convergeState.NodeUserCredentials.Password,
 	})
 
-	var pkeys []session.AgentPrivateKey
-
+	pkeys := make([]session.AgentPrivateKey, 0)
 	appendPKey := params.appendPKey
 
 	if appendPKey != nil {
-		if sshclient.IsLegacyMode() {
-			pkeys = append(pkeys, *appendPKey)
-		} else {
-			pkeys = append(sshCl.PrivateKeys(), *appendPKey)
-		}
+		pkeys = append(pkeys, *appendPKey)
 	} else {
 		pkeys = sshCl.PrivateKeys()
 	}
 
-	newSSHClient := sshclient.NewClient(ctx, sess, pkeys)
-
-	err = newSSHClient.Start()
+	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
@@ -432,15 +422,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	}
 
 	s.debug("Private keys refreshed for replacing kube client")
-
-	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
-	if err != nil {
-		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
-	}
-
-	s.debug("connected to kube API for replacing kube client")
-
-	s.ctx.setKubeClient(newKubeClient)
 
 	if s.lockRunner != nil {
 		s.debugStartOperation("reset lock after replacing kube client")
@@ -474,7 +455,25 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	if convergeState.NodeUserCredentials != nil {
-		return convergeState, nil
+		exists, err := entity.NodeUserExists(s.ctx.Ctx(), s.ctx, convergeState.NodeUserCredentials.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		if exists {
+			return convergeState, nil
+		}
+
+		s.warn(
+			"NodeUser %q is missing while converge state exists; recreating NodeUser",
+			convergeState.NodeUserCredentials.Name,
+		)
+
+		convergeState.NodeUserCredentials = nil
+
+		if err := s.ctx.SetConvergeState(convergeState); err != nil {
+			return nil, fmt.Errorf("Failed to reset stale node user credentials: %w", err)
+		}
 	}
 
 	s.debugStartOperation("create node user")
@@ -491,7 +490,7 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	// check ssh client
-	_, _, err = s.extractClients(ctx)
+	_, err = s.extractSSHClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -546,12 +545,7 @@ type NodeState struct {
 func (s *KubeClientSwitcher) extractStatesFromCluster(ctx context.Context) (*NodeState, []*NodeState, error) {
 	const firstMasterSuffix = "-0"
 
-	kubeCl, _, err := s.extractClients(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, kubeCl)
+	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, s.ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Cannot extract control-plane node states: %w", err)
 	}
@@ -620,18 +614,18 @@ func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool,
 	return false, nil
 }
 
-func (s *KubeClientSwitcher) extractClients(ctx context.Context) (*kclient.KubernetesClient, node.SSHClient, error) {
-	kubeCl, err := s.ctx.KubeClientCtx(ctx)
+func (s *KubeClientSwitcher) extractSSHClient(ctx context.Context) (libcon.SSHClient, error) {
+	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Cannot get kube client: %w", err)
+		return nil, err
 	}
 
-	sshCl := kubeCl.NodeInterfaceAsSSHClient()
-	if govalue.IsNil(sshCl) {
-		return nil, nil, fmt.Errorf("Node interface is not ssh")
+	sshCl, err := sshProvider.Client(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return kubeCl, sshCl, nil
+	return sshCl, nil
 }
 
 func (s *KubeClientSwitcher) debug(f string, args ...any) {
@@ -738,6 +732,7 @@ func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractor
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           e.tmpDir,
+		GlobalOptions:    e.switcher.params.GlobalOptions,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           logger,
 		IsDebug:          e.switcher.params.IsDebug,
@@ -770,4 +765,8 @@ func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, err
 	}
 
 	return statePath, nil
+}
+
+func (s *KubeClientSwitcher) GetGlobalOptions() *options.GlobalOptions {
+	return s.params.GlobalOptions
 }

@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-cluster-roles
+spec:
+  objectKind: RoleBinding
+  objectFields:
+    - path: roleRef.kind
+      level: pod
+      description: RoleRef kind determines if ClusterRole binding is checked
+      requiredScenarios: [positive, negative, absent]
+    - path: roleRef.name
+      level: pod
+      description: ClusterRole name must be in allowed list
+      requiredScenarios: [positive, negative, absent]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

@@ -12,22 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
+{{ $manifestsDir := "/var/lib/bashible/control-plane" }}
+{{ $pkiDir := "/var/lib/bashible/control-plane/pki" }}
+
 
 {{- if eq .runType "ClusterBootstrap" }}
-# Read previously discovered IP
+# Read previously discovered IP and hostname
 export MY_IP="$(</var/lib/bashible/discovered-node-ip)"
+export MY_NODENAME="$(</var/lib/bashible/discovered-node-name)"
 
 function subst_config() {
-    tmpfile=$(mktemp /opt/deckhouse/tmp/kubeadm-config.XXXXXX)
+    tmpfile=$(mktemp /opt/deckhouse/tmp/controlplane-config.XXXXXX)
     envsubst < "$1" > "$tmpfile"
     mv "$tmpfile" "$1"
 }
 
-subst_config {{ $kubeadmDir }}/config.yaml
-for file in $(find {{ $kubeadmDir }}/patches/*.yaml); do
+for file in $(find {{ $manifestsDir }}/*.yaml); do
   subst_config "$file"
 done
 {{- end }}
 
-kubeadm init phase certs ca --config {{ $kubeadmDir }}/config.yaml
+cp -r {{ $pkiDir }}/* /etc/kubernetes/pki/

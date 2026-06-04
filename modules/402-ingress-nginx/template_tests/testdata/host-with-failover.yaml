@@ -1,15 +1,15 @@
 # HostWithFailover inlet with custom resources and filter IP with acceptRequestsFrom
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: solid
 spec:
   ingressClass: solid
-  controllerVersion: "1.10"
+  controllerVersion: "1.15"
   inlet: "HostWithFailover"
   acceptRequestsFrom:
     - 67.34.56.23/32
-  resourcesRequests:
+  resourcesManagement:
     mode: VPA
     static: {}
     vpa:

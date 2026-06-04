@@ -30,7 +30,11 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so*
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test
+{{- include "image mount points" . }}
 git:
 - add: /{{ .ModulePath }}
   to: /available_hooks
@@ -64,7 +68,9 @@ git:
   stageDependencies:
     install:
       - '**/*'
-{{- include "image mount points" . }}
+shell:
+  install:
+  - set -e
 imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}
@@ -85,6 +91,9 @@ git:
     - '**/*.go'
     - '**/go.mod'
     - '**/go.sum'
+shell:
+  install:
+  - set -e
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 final: false
@@ -108,7 +117,7 @@ shell:
     - chmod 755 /label-converter
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-from: {{ index $.Images "base/python" }}
+from: {{ index $.Images "base/python-3.12" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
@@ -133,7 +142,8 @@ from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
-    add: /operator
+    add: /src
+    to: /operator
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -154,10 +164,10 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - cd /operator
+  - set -e
 git:
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator
-  to: /operator
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/operator
+  to: /src
   includePaths:
   - '**/*.go'
   - '**/*.mod'

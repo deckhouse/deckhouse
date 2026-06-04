@@ -20,20 +20,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в etcd в рамках Deckhouse: etcd не использует path-based авторизационные интерцепторы (grpc/authz или аналоги) с deny-правилами и fallback allow. Авторизация в etcd реализована через собственный встроенный механизм на основе mTLS и username/password, который не подвержен данной уязвимости.",
-      "timestamp": "2026-03-24T10:09:40.852754Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-39883"
       },
       "products": [

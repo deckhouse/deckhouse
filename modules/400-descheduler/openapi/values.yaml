@@ -6,6 +6,12 @@ properties:
     type: object
     default: {}
     properties:
+      isMetricsServerEnabled:
+        type: boolean
+        default: false
+        description: |
+          Set automatically when an APIService for the `metrics.k8s.io` API group exists
+          (metrics-server or compatible implementation). Enables `metricsProviders` in the Descheduler policy.
       deschedulers:
         type: array
         default: []

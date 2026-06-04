@@ -38,7 +38,7 @@ module Jekyll
 
         site = context.registers[:site]
         @converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
-        rendered_content = @converter.convert(content).gsub(/\n/, '')
+        rendered_content = collapse_inter_block_newlines(@converter.convert(content))
 
         %Q(<div markdown="0" class="details"><p class="details__lnk"><a href="javascript:void(0)" class="details__summary">#{@config[:title]}</a></p><div class="details__content"><div class="expand">#{rendered_content}</div></div></div>)
       end

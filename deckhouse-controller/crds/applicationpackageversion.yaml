@@ -183,14 +183,149 @@ spec:
                     properties:
                       deckhouse:
                         description: Required Deckhouse version.
-                        type: string
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
                       kubernetes:
                         description: Required Kubernetes version.
-                        type: string
+                        properties:
+                          constraint:
+                            description: Semver constraint expression.
+                            type: string
+                        type: object
                       modules:
-                        additionalProperties:
-                          type: string
-                        description: Required versions of other modules.
+                        description: Required modules, partitioned into mandatory,
+                          conditional, and anyOf dependencies.
+                        properties:
+                          anyOf:
+                            description: |-
+                              AnyOf groups of alternative dependencies — at least one member of each group
+                              must be installed (and satisfy its constraint, if any) for the package to
+                              start. Groups are checker-only and add no edges to the dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's
+                                    purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in
+                                    this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
+                          conditional:
+                            description: |-
+                              Conditional dependencies — not required to be present, but if installed must
+                              satisfy the constraint for the package to function correctly. Replaces the
+                              legacy "!optional" suffix from the v1 requirements format.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          mandatory:
+                            description: |-
+                              Mandatory dependencies — must be present (and satisfy the constraint, if any)
+                              for the package to start.
+                            items:
+                              description: |-
+                                PackageModuleDependency is a single named module dependency with an optional
+                                semver constraint. An empty constraint means "any version".
+                              properties:
+                                constraint:
+                                  description: Semver constraint expression.
+                                  type: string
+                                name:
+                                  description: Module name.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          noneOf:
+                            description: |-
+                              NoneOf groups of forbidden dependencies — no member of any group may be
+                              installed for the package to start. A member with no constraint is forbidden
+                              at any version; a member with a constraint is forbidden only at versions
+                              matching that constraint. Groups are checker-only and add no edges to the
+                              dependency graph.
+                            items:
+                              description: |-
+                                PackageModuleGroup is a group of alternative module dependencies. At least one
+                                member must be installed (and satisfy its constraint, if any) for the package
+                                to start. The Name is required and surfaces in scheduler diagnostics; the
+                                Description is optional human-facing documentation.
+                              properties:
+                                description:
+                                  description: Human-readable description of the group's
+                                    purpose.
+                                  type: string
+                                modules:
+                                  description: Alternative module dependencies in
+                                    this group.
+                                  items:
+                                    description: |-
+                                      PackageModuleDependency is a single named module dependency with an optional
+                                      semver constraint. An empty constraint means "any version".
+                                    properties:
+                                      constraint:
+                                        description: Semver constraint expression.
+                                        type: string
+                                      name:
+                                        description: Module name.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                name:
+                                  description: Stable identifier used by the scheduler
+                                    in diagnostics.
+                                  type: string
+                              required:
+                              - modules
+                              - name
+                              type: object
+                            type: array
                         type: object
                     type: object
                   stage:

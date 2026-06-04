@@ -1,0 +1,44 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: webhook-handler
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  podMetricsEndpoints:
+  - port: metrics
+    path: "/metrics"
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_container_port_number]
+      regex: "9115"
+      action: keep
+    - regex: endpoint|container
+      action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: scrape_source
+      replacement: self
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'webhook_handler_hook_run_seconds_bucket|webhook_handler_kube_jq_filter_duration_seconds_bucket|webhook_handler_kube_event_duration_seconds_bucket|webhook_handler_hook_run_user_cpu_seconds_bucket|webhook_handler_hook_run_sys_cpu_seconds_bucket|webhook_handler_tasks_queue_action_duration_seconds_bucket'
+      action: drop
+  - port: metrics
+    path: "/metrics/hooks"
+    honorLabels: true
+    relabelings:
+    - regex: endpoint|container
+      action: labeldrop
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: scrape_source
+      replacement: hooks
+  selector:
+    matchLabels:
+      app: webhook-handler
+  namespaceSelector:
+    matchNames:
+    - d8-system
+{{- end }}

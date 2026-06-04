@@ -27,7 +27,7 @@ const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
 var ingressControllerNoFinalizer = `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: main
@@ -36,7 +36,7 @@ spec: {}
 
 var ingressControllerWithFinalizer = `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: main
@@ -47,7 +47,7 @@ spec: {}
 
 var ingressControllerWithFakeFinalizers = `
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: main
@@ -310,7 +310,7 @@ webhooks:
 
 var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", false)
 	f.RegisterCRD("apps.kruise.io", "v1alpha1", "DaemonSet", true)
 
 	Context("An empty cluster", func() {

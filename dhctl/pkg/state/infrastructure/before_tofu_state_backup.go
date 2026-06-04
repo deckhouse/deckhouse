@@ -66,12 +66,12 @@ type TofuBackupCommanderMode struct {
 }
 
 type TofuMigrationStateBackuper struct {
-	kubeProvider  kubernetes.KubeClientProvider
+	kubeProvider  kubernetes.KubeClientProviderWithCtx
 	logger        log.Logger
 	commanderMode *TofuBackupCommanderMode
 }
 
-func NewTofuMigrationStateBackuper(kubeCl kubernetes.KubeClientProvider, logger log.Logger) *TofuMigrationStateBackuper {
+func NewTofuMigrationStateBackuper(kubeCl kubernetes.KubeClientProviderWithCtx, logger log.Logger) *TofuMigrationStateBackuper {
 	return &TofuMigrationStateBackuper{
 		kubeProvider: kubeCl,
 		logger:       logger,
@@ -103,7 +103,12 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 		t.logger.LogInfoF("Backup secret %s for base infrastructure state exists. Skip backup.\n", baseInfraBackupSecretName)
 	}
 
-	secrets, err := GetNodesStateSecretsFromCluster(ctx, t.kubeProvider.KubeClient(), "all nodes")
+	kubeClient, err := t.kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeClient, "all nodes")
 	if err != nil {
 		return err
 	}
@@ -140,19 +145,24 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 }
 
 func (t *TofuMigrationStateBackuper) BackupStates(ctx context.Context) error {
-	return t.logger.LogProcess("default", "Backup infrastructure states before migrate to opentofu", func() error {
+	return t.logger.LogProcessCtx(ctx, "default", "Backup infrastructure states before migrate to opentofu", func(ctx context.Context) error {
 		return t.doBackupStates(ctx)
 	})
 }
 
 func (t *TofuMigrationStateBackuper) getBaseInfraSecret(ctx context.Context) (*apiv1.Secret, error) {
 	var secret *apiv1.Secret
-	err := retry.NewLoop("Get base infrastructure state", 15, 5*time.Second).
+	kubeClient, err := t.kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = retry.NewLoop("Get base infrastructure state", 15, 5*time.Second).
 		WithLogger(t.logger).
 		BreakIf(k8serrors.IsNotFound).
 		RunContext(ctx, func() error {
 			var err error
-			secret, err = t.kubeProvider.KubeClient().CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, manifests.InfrastructureClusterStateName, metav1.GetOptions{})
+			secret, err = kubeClient.CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, manifests.InfrastructureClusterStateName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -169,9 +179,13 @@ func (t *TofuMigrationStateBackuper) getBaseInfraSecret(ctx context.Context) (*a
 
 func (t *TofuMigrationStateBackuper) isBackupSecretExist(ctx context.Context, name string) (bool, error) {
 	var backupSecretExists bool
-	err := retry.NewLoop(fmt.Sprintf("Check %s infrastructure backup state exists", name), 15, 5*time.Second).WithLogger(t.logger).
+	kubeClient, err := t.kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+	err = retry.NewLoop(fmt.Sprintf("Check %s infrastructure backup state exists", name), 15, 5*time.Second).WithLogger(t.logger).
 		RunContext(ctx, func() error {
-			_, err := t.kubeProvider.KubeClient().CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, name, metav1.GetOptions{})
+			_, err := kubeClient.CoreV1().Secrets(global.D8SystemNamespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				if k8serrors.IsNotFound(err) {
 					backupSecretExists = false
@@ -203,11 +217,16 @@ func prepareBackupSecret(secret *apiv1.Secret, newName string) *apiv1.Secret {
 func (t *TofuMigrationStateBackuper) saveBackupSecret(ctx context.Context, processPrefix string, secret *apiv1.Secret, newName string) error {
 	bkpSecret := prepareBackupSecret(secret, newName)
 
+	kubeClient, err := t.kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	return retry.NewLoop(fmt.Sprintf("Save %s infrastructure backup state", processPrefix), 15, 5*time.Second).
 		WithLogger(t.logger).
 		RunContext(ctx, func() error {
 			var err error
-			_, err = t.kubeProvider.KubeClient().CoreV1().Secrets(global.D8SystemNamespace).Create(ctx, bkpSecret, metav1.CreateOptions{})
+			_, err = kubeClient.CoreV1().Secrets(global.D8SystemNamespace).Create(ctx, bkpSecret, metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -222,7 +241,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 		return nil
 	}
 
-	base, ngs, err := getNodesFromCache(t.commanderMode.MetaConfig, t.commanderMode.Cache)
+	base, ngs, err := getNodesFromCache(ctx, t.commanderMode.MetaConfig, t.commanderMode.Cache)
 	if err != nil {
 		return err
 	}
@@ -232,7 +251,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 		RunContext(ctx, func() error {
 			name := baseInfraBackupSecretName + ".terraform.backup"
 
-			ok, err := t.commanderMode.Cache.InCache(name)
+			ok, err := t.commanderMode.Cache.InCache(ctx, name)
 			if err != nil {
 				return err
 			}
@@ -241,7 +260,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 				return nil
 			}
 
-			return t.commanderMode.Cache.Save(name, base)
+			return t.commanderMode.Cache.Save(ctx, name, base)
 		})
 
 	if err != nil {
@@ -249,14 +268,14 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 	}
 
 	for ngName, ng := range ngs {
-		err = t.logger.LogProcess("default", fmt.Sprintf("Save infrastructure backup nodes states for commander for node group %s", ngName), func() error {
+		err = t.logger.LogProcessCtx(ctx, "default", fmt.Sprintf("Save infrastructure backup nodes states for commander for node group %s", ngName), func(ctx context.Context) error {
 			for node, st := range ng.State {
 				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s states for commander", node), 1, 5*time.Second).
 					WithLogger(t.logger).
 					RunContext(ctx, func() error {
 						name := "tf-" + node + ".terraform.backup"
 
-						ok, err := t.commanderMode.Cache.InCache(name)
+						ok, err := t.commanderMode.Cache.InCache(ctx, name)
 						if err != nil {
 							return err
 						}
@@ -265,7 +284,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 							return nil
 						}
 
-						return t.commanderMode.Cache.Save(name, st)
+						return t.commanderMode.Cache.Save(ctx, name, st)
 					})
 
 				if err != nil {

@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: replica-limits
+spec:
+  testDirectory: replica-limits
+  suite:
+    expectedTestBlockNames:
+      - d8replicalimits

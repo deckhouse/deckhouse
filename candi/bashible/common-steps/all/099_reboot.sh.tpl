@@ -24,13 +24,21 @@ if ! bb-flag? reboot; then
 fi
 
 bb-deckhouse-get-disruptive-update-approval
-bb-log-info "Rebooting machine after bootstrap process completed"
+bb-log-info "Rebooting machine"
 bb-flag-unset reboot
 
-# If it is first run bashible on bootstrap simple reboot node
+# Skip the reboot on the very first bashible run to save ~30-40s of provisioning
+# wall-clock (reboot itself plus SSH reconnect plus kubelet/etcd warm-up after).
+# All sysctl/kernel-module changes that flagged reboot were applied at runtime in
+# their respective steps (sysctl -p, modprobe, etc.) — the reboot was a safety
+# blanket for VM-image-baked tuning that no longer applies on cloud-init images.
+# Watch the first bashible cycle for iptables/kube-proxy/coredns regressions; if
+# anything misbehaves, fall back to the historical `shutdown -r -t 5` path.
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+  bb-log-info "Skipping reboot on first bashible run (perf optimization)."
   bb-flag-unset disruption
-  shutdown -r -t 5
+  bb-label-node-bashible-first-run-finished
+  touch $BASHIBLE_INITIALIZED_FILE
   exit 0
 fi
 
@@ -72,17 +80,15 @@ while true; do
 
   bb-log-info "Setting node status to NotReady..."
 
-  url="https://127.0.0.1:6445/api/v1/nodes/$(bb-d8-node-name)"
   ready_condition_key=""
-  if ! ready_condition_key="$(d8-curl --connect-timeout 10 -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt \
-       --cert /var/lib/kubelet/pki/kubelet-client-current.pem |
+  if ! ready_condition_key="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" |
        jq -r '.status.conditions | to_entries[] | select(.value.type == "Ready") | .key')"; then
     bb-log-warning "failed to get ready condition from node"
     sleep 2
     continue
   fi
 
-  patch="$(jq -ns --arg ready_condition_key "${ready_condition_key}" --arg current_time "`date -u +'%Y-%m-%dT%H:%M:%SZ'`" '
+  patch="$(jq -ns --arg ready_condition_key "${ready_condition_key}" --arg current_time "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" '
   [
     {
       "op": "replace",
@@ -98,9 +104,10 @@ while true; do
     }
   ]')"
 
-  if d8-curl --connect-timeout 10 -s -f -X PATCH "$url/status" --cacert /etc/kubernetes/pki/ca.crt \
-     --cert /var/lib/kubelet/pki/kubelet-client-current.pem --data "${patch}" \
-     --header "Content-Type: application/json-patch+json" >/dev/null; then
+  if bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)/status" \
+       -X PATCH \
+       -H "Content-Type: application/json-patch+json" \
+       --data "${patch}" >/dev/null; then
     break
   fi
 

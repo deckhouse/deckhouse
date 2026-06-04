@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-apparmor-profiles
+spec:
+  testDirectory: allowed-apparmor-profiles
+  suite:
+    expectedTestBlockNames:
+      - pss-baseline
+      - pss-baseline-with-exception
+      - pss-baseline-spe-container
+      - pss-baseline-restrictive-with-exception

@@ -63,6 +63,17 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 			RemoteData: remote,
 		}, nil
 
+	case settings.Mode == constant.ModeLocal:
+		remote := Data{
+			ImagesRepo: constant.BundleImagesRepo,
+			Scheme:     constant.BundleScheme,
+		}
+
+		return ModeSettings{
+			Mode:       constant.ModeLocal,
+			RemoteData: remote,
+		}, nil
+
 	default:
 		return ModeSettings{}, ErrUnknownMode
 	}
@@ -75,6 +86,9 @@ func (s ModeSettings) ToModel() ModeModel {
 
 	case constant.ModeProxy:
 		return s.toProxyModel()
+
+	case constant.ModeLocal:
+		return s.toLocalModel()
 
 	case constant.ModeUnmanaged:
 		return s.toUnmanagedModel()
@@ -100,6 +114,15 @@ func (s ModeSettings) toProxyModel() ModeModel {
 		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
 		RemoteData:          s.RemoteData,
 		TTL:                 s.TTL,
+	}
+}
+
+func (s ModeSettings) toLocalModel() ModeModel {
+	return ModeModel{
+		Mode:                constant.ModeLocal,
+		InClusterImagesRepo: constant.HostWithPath,
+		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
+		RemoteData:          s.RemoteData,
 	}
 }
 
@@ -139,8 +162,8 @@ func (m ModeModel) InClusterData(pki PKI) (Data, error) {
 	case constant.ModeDirect:
 		return m.toDirectInClusterData(pki), nil
 
-	case constant.ModeProxy:
-		return m.toProxyInClusterData(pki), nil
+	case constant.ModeProxy, constant.ModeLocal:
+		return m.toProxyLocalInClusterData(pki), nil
 
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
@@ -163,7 +186,7 @@ func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
 	case constant.ModeUnmanaged:
 		mirrors = m.toUnmanagedBashibleHosts()
 
-	case constant.ModeProxy:
+	case constant.ModeProxy, constant.ModeLocal:
 		mirrors = m.toProxyLocalBashibleHosts(pki)
 		endpoints = m.toProxyLocalEndpoints()
 
@@ -197,7 +220,7 @@ func (m ModeModel) toDirectInClusterData(pki PKI) Data {
 	}
 }
 
-func (m ModeModel) toProxyInClusterData(pki PKI) Data {
+func (m ModeModel) toProxyLocalInClusterData(pki PKI) Data {
 	return Data{
 		ImagesRepo: constant.HostWithPath,
 		Scheme:     constant.SchemeHTTPS,
@@ -262,12 +285,16 @@ func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 }
 
 func (m ModeModel) toProxyLocalBashibleHosts(pki PKI) map[string]bashible.ConfigHosts {
+	endpoints := m.toProxyLocalEndpoints()
+
+	hosts := make([]string, 0, 1+len(endpoints))
+
 	// ProxyHost is the main endpoint for accessing the registry-proxy service.
-	hosts := []string{constant.ProxyHost}
+	hosts = append(hosts, constant.ProxyHost)
 
 	// Append endpoints for direct access.
 	// These are used when the registry-proxy is not yet running (during bootstrap).
-	hosts = append(hosts, m.toProxyLocalEndpoints()...)
+	hosts = append(hosts, endpoints...)
 
 	scheme := strings.ToLower(string(constant.SchemeHTTPS))
 	mirrors := make([]bashible.ConfigMirrorHost, 0, len(hosts))

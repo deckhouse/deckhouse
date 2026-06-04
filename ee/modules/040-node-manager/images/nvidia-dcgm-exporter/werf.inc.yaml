@@ -1,4 +1,5 @@
 {{ $version := "4.2.3-4.1.3" }}
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -127,3 +128,4 @@ import:
   add: /usr/bin/bash
   to: /usr/bin/bash
   before: setup
+{{- end }}

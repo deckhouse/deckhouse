@@ -176,6 +176,7 @@ description: Пошаговый пример создания модуля Deckh
 
 1. Посмотрите список доступных модулей:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    $ d8 k get module
    NAME       STAGE    SOURCE   PHASE       ENABLED   READY
@@ -183,6 +184,8 @@ description: Пошаговый пример создания модуля Deckh
    helloworld                   Available   False     False     
    ...
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Создайте ресурс [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
 
@@ -229,11 +232,14 @@ description: Пошаговый пример создания модуля Deckh
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    $ d8 k get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
    helloworld-v0.0.1                   Deployed     helloworld-policy    22m            
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. В случае успешной установки релизов дождитесь перезапуска пода Deckhouse Kubernetes Platform.
 

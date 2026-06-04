@@ -15,24 +15,21 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 
-	"github.com/name212/govalue"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 const (
@@ -41,48 +38,57 @@ const (
 	userName    = "local"
 )
 
-func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
-	app.DefineBecomeFlags(cmd)
+func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
-		if err := terminal.AskBecomePassword(); err != nil {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
+
+		params, err := app.DefaultProviderParams(&opts.Global)
+		if err != nil {
 			return err
 		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
 		if err != nil {
 			return err
 		}
 
-		if govalue.IsNil(sshClient) {
+		if sshProviderInitializer == nil {
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
 
-		kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-		apiServerPort, err := kubeCl.StartKubernetesProxy(ctx)
-		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
-		}
-		apiServerURL := fmt.Sprintf("http://localhost:%s", apiServerPort)
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
 
-		err = localKubeConfig(apiServerURL)
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
+			return err
+		}
+		sshCl, err := sshProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		apiServerPort, err := sshCl.KubeProxy().Start(-1)
+		if err != nil {
+			return fmt.Errorf("open kubernetes connection: %w", err)
+		}
+
+		apiServerURL := fmt.Sprintf("http://localhost:%s", apiServerPort)
+		if err := localKubeConfig(apiServerURL); err != nil {
 			return fmt.Errorf("error save kubeconfig: %v", err)
 		}
+
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		sig := <-sigChan
+
+		// todo(log): why do not use logger?
 		fmt.Println("Received signal:", sig)
 		fmt.Println("Exiting SSH tunnel...")
 
 		return nil
 	})
-	return cmd
 }
 
 func localKubeConfig(apiServerURL string) error {
@@ -92,7 +98,7 @@ func localKubeConfig(apiServerURL string) error {
 	}
 
 	kubeconfigPath := filepath.Join(kubeconfigDir, ".kube", "config")
-	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create .kube directory: %w", err)
 	}
 
@@ -108,10 +114,12 @@ func localKubeConfig(apiServerURL string) error {
 	}
 	kubeConfig.CurrentContext = contextName
 
-	err = clientcmd.WriteToFile(*kubeConfig, kubeconfigPath)
-	if err != nil {
+	if err := clientcmd.WriteToFile(*kubeConfig, kubeconfigPath); err != nil {
 		return fmt.Errorf("failed to write kubeconfig: %w", err)
 	}
+
+	// todo(log): why do not use logger?
 	fmt.Printf("Kubeconfig successfully saved at: %s\n", kubeconfigPath)
+
 	return nil
 }

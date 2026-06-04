@@ -97,7 +97,7 @@ spec:
 			})
 		})
 
-		Context("when image in present values", func() {
+		Context("when values and Deployment images differ — values are overwritten", func() {
 			BeforeEach(func() {
 				f.ValuesSet("deckhouse.internal.currentReleaseImageName", "registry.deckhouse.io/deckhouse/ce/initial:test")
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
@@ -116,7 +116,7 @@ spec:
     spec:
       containers:
       - name: deckhouse
-        image: registry.deckhouse.io/deckhouse/ce/different:test
+        image: registry.deckhouse.io/deckhouse/ce/different:newtag
 `, 1))
 				f.RunHook()
 			})
@@ -125,7 +125,7 @@ spec:
 				Expect(f).To(ExecuteSuccessfully())
 				deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 				Expect(deployment.Exists()).To(BeTrue())
-				Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/ce/initial:test"))
+				Expect(f.ValuesGet("deckhouse.internal.currentReleaseImageName").String()).To(Equal("registry.deckhouse.io/deckhouse/fe:newtag"))
 			})
 		})
 	})

@@ -185,7 +185,7 @@
         content: '';
         position: absolute;
         top: 11px;
-        height: var(--table-height, 100%);
+        height: calc(100% - 10px);
         left: 0;
         right: 0;
         opacity: 0;

@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -71,17 +72,11 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 		dc:       dc,
 	}
 
-	applicationPackageVersionController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
-
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.ApplicationPackageVersion{}).
-		Complete(applicationPackageVersionController)
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		Complete(r)
 }
 
 // Reconcile handles a single ApplicationPackageVersion event. Draft resources
@@ -314,11 +309,7 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 			Ru: meta.definition.Descriptions.Ru,
 			En: meta.definition.Descriptions.En,
 		},
-		Requirements: &v1alpha1.PackageRequirements{
-			Deckhouse:  meta.definition.Requirements.Deckhouse,
-			Kubernetes: meta.definition.Requirements.Kubernetes,
-			Modules:    meta.definition.Requirements.Modules,
-		},
+		Requirements: requirementsToCR(meta.definition.Requirements),
 		Changelog: &v1alpha1.PackageChangelog{
 			Features: meta.changelog.Features,
 			Fixes:    meta.changelog.Fixes,
@@ -376,4 +367,90 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 	}
 
 	return nil
+}
+
+// requirementsToCR projects parsed package requirements onto the v1alpha1
+// PackageRequirements CR shape. Returns nil when no requirements are configured
+// so the status field omits cleanly via omitempty.
+func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
+	kubernetes := versionConstraintToCR(r.Kubernetes.Constraint)
+	deckhouse := versionConstraintToCR(r.Deckhouse.Constraint)
+	modulesCR := modulesRequirementsToCR(r.Modules)
+
+	if kubernetes == nil && deckhouse == nil && modulesCR == nil {
+		return nil
+	}
+
+	return &v1alpha1.PackageRequirements{
+		Kubernetes: kubernetes,
+		Deckhouse:  deckhouse,
+		Modules:    modulesCR,
+	}
+}
+
+// versionConstraintToCR wraps a raw semver constraint string into the v1alpha1
+// VersionConstraint CR shape, returning nil when the string is empty.
+func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.VersionConstraint{Constraint: raw}
+}
+
+// modulesRequirementsToCR projects dto.ModulesRequirements onto the v1alpha1
+// PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
+// anyOf, and noneOf are all empty.
+func modulesRequirementsToCR(mr dto.ModulesRequirements) *v1alpha1.PackageModulesRequirements {
+	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 && len(mr.NoneOf) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.PackageModulesRequirements{
+		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
+		Conditional: moduleDependenciesToCR(mr.Conditional),
+		AnyOf:       moduleGroupsToCR(mr.AnyOf),
+		NoneOf:      moduleGroupsToCR(mr.NoneOf),
+	}
+}
+
+// moduleDependenciesToCR projects a slice of dto.ModuleDependency onto the
+// v1alpha1 PackageModuleDependency CR slice. Returns nil for empty input so
+// the parent CR omitempty fields render cleanly.
+func moduleDependenciesToCR(deps []dto.ModuleDependency) []v1alpha1.PackageModuleDependency {
+	if len(deps) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleDependency, 0, len(deps))
+	for _, dep := range deps {
+		out = append(out, v1alpha1.PackageModuleDependency{
+			Name:       dep.Name,
+			Constraint: dep.Constraint,
+		})
+	}
+
+	return out
+}
+
+// moduleGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
+// PackageModuleGroup CR slice. Used for both anyOf and noneOf — the shape is
+// identical at the CR layer; the bucket semantics live on the field they're
+// attached to. Returns nil for empty input so the parent CR omitempty field
+// renders cleanly.
+func moduleGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleGroup, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, v1alpha1.PackageModuleGroup{
+			Name:        g.Name,
+			Description: g.Description,
+			Modules:     moduleDependenciesToCR(g.Modules),
+		})
+	}
+
+	return out
 }

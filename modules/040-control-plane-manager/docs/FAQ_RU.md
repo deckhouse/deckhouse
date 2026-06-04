@@ -8,8 +8,8 @@ title: "Управление control plane: FAQ"
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
-В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
-Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -44,22 +44,21 @@ spec:
 ```
 
 {% alert level="info" %}
-При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
+При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
 
-При бутстрапе кластера в конфигурации указывается первый master-узел, на который происходит установка.
-Если после бутстрапа нужно сделать мультимастер и добавить master-узлы с помощь CAPS, в параметре `spec.staticInstances.count` NodeGroup `master` необходимо указать количество узлов на один меньше желаемого.
+При первоначальной установке кластера в конфигурации указывается первый master-узел, на который происходит установка.
+Если после первоначальной установки кластера нужно развернуть несколько master-узлов и добавить их с помощью CAPS, в параметре `spec.staticInstances.count` NodeGroup `master` необходимо указать количество узлов на один меньше желаемого.
 
-Например, если нужно сделать мультимастер с тремя master-узлами в `spec.staticInstances.count` NodeGroup `master` укажите значение `2` и создайте два `staticInstances` для добавляемых узлов. После их добавления в кластер количество master-узлов будет равно трём: master-узел, на который происходила установка и два master-узла, добавленные с помощью CAPS.
+Например, если нужен кластер из трёх master-узлов, в `spec.staticInstances.count` NodeGroup `master` укажите значение `2` и создайте два `staticInstances` для добавляемых узлов. После их добавления в кластер количество master-узлов будет равно трём: master-узел, на который происходила установка и два master-узла, добавленные с помощью CAPS.
 {% endalert %}
 
-В остальном добавление master-узла в статический или гибридный кластер аналогично добавлению обычного узла.
-Воспользуйтесь для этого соответствующими [примерами](../node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
+В остальном добавление master-узла в статический или гибридный кластер аналогично добавлению обычного узла. Для этого воспользуйтесь соответствующими [примерами](/modules/node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новых master-узлах выполняются автоматически. Дождитесь появления master-узлов в статусе `Ready`.
 
 <div id='как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master'></div>
 
 ## Как добавить master-узлы в облачном кластере?
 
-Далее описана конвертация кластера с одним master-узлом в мультимастерный кластер.
+Далее описана конвертация кластера с одним master-узлом в кластер с несколькими master-узлами.
 
 > Перед добавлением узлов убедитесь в наличии необходимых квот.
 >
@@ -71,7 +70,7 @@ spec:
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -130,7 +129,7 @@ spec:
 
 ## Как уменьшить число master-узлов в облачном кластере?
 
-Далее описана конвертация мультимастерного кластера в кластер с одним master-узлом.
+Далее описана конвертация кластера с несколькими master-узлами в кластер с одним master-узлом.
 
 {% alert level="warning" %}
 Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (master-0). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы master-0 и master-1, оставив master-2.
@@ -180,7 +179,7 @@ spec:
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   > Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
    >
    > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
    >
@@ -196,7 +195,7 @@ spec:
 
 1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -241,11 +240,11 @@ spec:
 
 <div id='как-изменить-образ-ос-в-multi-master-кластере'></div>
 
-## Как изменить образ ОС в мультимастерном кластере?
+## Как изменить образ ОС в кластере с несколькими master-узлами?
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -322,11 +321,9 @@ spec:
 
 ## Как изменить образ ОС в кластере с одним master-узлом?
 
-1. Преобразуйте кластер с одним master-узлом в мультимастерный в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
+1. Преобразуйте кластер с одним master-узлом в кластер с несколькими master-узлами в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
 1. Обновите master-узлы в соответствии с [инструкцией](#как-изменить-образ-ос-в-multi-master-кластере).
-1. Преобразуйте мультимастерный кластер в кластер с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере)
-
-<div id='как-посмотреть-список-memberов-в-etcd'></div>
+1. Преобразуйте кластер с несколькими master-узлами в кластер с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере).
 
 ## Как настроить режим HA c двумя master-узлами и arbiter-узлом?
 
@@ -384,7 +381,7 @@ spec:
    Измените настройки облачного провайдера:
 
    * В параметре `masterNodeGroup.replicas` укажите `2`.
-   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node.deckhouse.io/etcd-arbiter: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
 
      ```yaml
      nodeGroups:
@@ -436,7 +433,7 @@ spec:
 
 Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в статическом кластере, выполните следующие действия:
 
-1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node.deckhouse.io/etcd-arbiter: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -506,7 +503,7 @@ done
 
 Если кластер etcd не функционирует и не удается восстановить его из резервной копии, вы можете попытаться восстановить его с нуля, следуя шагам ниже.
 
-1. Сначала на всех узлах, которые являются частью вашего кластера etcd, кроме одного, удалите манифест `etcd.yaml`, который находится в директории `/etc/kubernetes/manifests/`. После этого только один узел останется активным, и с него будет происходить восстановление состояния мультимастерного кластера.
+1. Сначала на всех узлах, которые являются частью вашего кластера etcd, кроме одного, удалите манифест `etcd.yaml`, который находится в директории `/etc/kubernetes/manifests/`. После этого только один узел останется активным, и с него будет происходить восстановление состояния кластера с несколькими master-узлами.
 1. На оставшемся узле откройте файл манифеста `etcd.yaml` и укажите параметр `--force-new-cluster` в `spec.containers.command`.
 1. После успешного восстановления кластера, удалите параметр `--force-new-cluster`.
 
@@ -521,8 +518,9 @@ done
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
 1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
@@ -586,13 +584,15 @@ done
 
 1. Измените параметр [maxDbSize](configuration.html#parameters-etcd-maxdbsize) в настройках `control-plane-manager` на тот, который был задан в манифесте.
 
-## Как выполнить дефрагментацию etcd
+<div id='как-выполнить-дефрагментацию-etcd'></div>
+
+## Как сжать базу данных etcd
 
 {% alert level="warning" %}
-Перед дефрагментацией [создайте резервную копию etcd](#как-сделать-резервную-копию-etcd-вручную).
+Перед операцией сжатия базы данных etcd [создайте резервную копию etcd](#как-сделать-бэкап-etcd-вручную).
 {% endalert %}
 
-Для просмотра размера БД etcd на определенном узле перед дефрагментацией и после ее выполнения используйте команду (здесь `NODE_NAME` — имя master-узла):
+Для просмотра размера БД etcd на определенном узле до операции и после неё используйте команду (здесь `NODE_NAME` — имя master-узла):
 
 ```bash
 d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
@@ -616,14 +616,16 @@ d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
 +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
 ```
 
-### Как выполнить дефрагментацию etcd узла в кластере с одним master-узлом
+<div id='как-выполнить-дефрагментацию-etcd-узла-в-кластере-с-одним-master-узлом'></div>
+
+### Как сжать базу данных etcd на узле в кластере с одним master-узлом
 
 {% alert level="warning" %}
-Дефрагментация etcd — ресурсоемкая операция, которая на время полностью блокирует работу etcd на данном узле.
+Сжатие базы данных etcd — операция с высокой нагрузкой на ресурсы узла, которая на время полностью блокирует работу etcd на данном узле.
 Учитывайте это при выборе времени для проведения операции в кластере с одним master-узлом.
 {% endalert %}
 
-Чтобы выполнить дефрагментацию etcd в кластере с одним master-узлом, используйте следующую команду (здесь `NODE_NAME` — имя master-узла):
+Чтобы выполнить сжатие базы данных etcd в кластере с одним master-узлом, используйте следующую команду (здесь `NODE_NAME` — имя master-узла):
 
 ```bash
 d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
@@ -639,11 +641,13 @@ d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
 Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 ```
 
-> При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока дефрагментация не выполнится успешно.
+> При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока операция не завершится успешно.
 
-### Как выполнить дефрагментацию etcd в кластере с несколькими master-узлами
+<div id='как-выполнить-дефрагментацию-etcd-в-кластере-с-несколькими-master-узлами'></div>
 
-Чтобы выполнить дефрагментацию etcd в кластере с несколькими master-узлами:
+### Как сжать базу данных etcd в кластере с несколькими master-узлами
+
+Чтобы выполнить сжатие базы данных etcd в кластере с несколькими master-узлами:
 
 1. Получите список подов etcd. Для этого используйте следующую команду:
 
@@ -684,11 +688,11 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
    ```
 
-1. Поочередно выполните дефрагментацию etcd узлов — участников etcd кластера. Для дефрагментации используйте команду (здесь `NODE_NAME` — имя master-узла):
+1. Поочередно выполните сжатие базы данных etcd на узлах — участниках кластера etcd. Используйте команду (здесь `NODE_NAME` — имя master-узла):
 
-   > Важно: дефрагментацию лидера необходимо выполнять в последнюю очередь.
+   > Важно: операцию на узле-лидере выполняйте в последнюю очередь.
    >
-   > Восстановление etcd на узле после дефрагментации может занять некоторое время. Рекомендуется подождать не менее минуты прежде чем переходить к дефрагментации etcd следующего узла.
+   > Восстановление etcd на узле после операции может занять некоторое время. Рекомендуется подождать не менее минуты прежде чем переходить к следующему узлу.
 
    ```bash
    d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
@@ -704,7 +708,74 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    ```
 
-   > При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока дефрагментация не выполнится успешно.
+   > При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока операция не завершится успешно.
+
+## Модель административного доступа к кластеру
+
+Модуль control-plane-manager поддерживает несколько файлов kubeconfig на master-узлах. Понимание их назначения важно для безопасного администрирования кластера.
+
+### Файлы kubeconfig на master-узлах
+
+| Файл | Идентификация | Назначение |
+| --- | --- | --- |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для операций control-plane-manager (обновление kubeconfig, администрирование кластера). При включённом модуле [user-authz](/modules/user-authz/) RBAC использует `user-authz:cluster-admin` и дополнительную ClusterRole; при выключенном `user-authz` группа привязана к встроенной роли `cluster-admin`. |
+| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Ограничьте доступ к файлу сценариями восстановления. |
+| `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager. |
+| `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler. |
+
+### Административный доступ на основе RBAC
+
+`admin.conf` генерируется с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления объектов привязки RBAC для `kubeadm:cluster-admins` (или нескольких таких записей).
+
+Если модуль [user-authz](/modules/user-authz/) **выключен**, Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в стандартном кластере Kubernetes без дополнительной настройки RBAC).
+
+Если модуль **user-authz** **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая привязка RBAC добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+
+### Рекомендуемый административный доступ
+
+Когда модуль [user-authn](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через kubeconfig-генератор. Это обеспечивает индивидуальную ответственность и журнал аудита.
+
+Когда `user-authn` отключён, администраторы могут явно использовать admin kubeconfig на master-узле:
+
+```bash
+d8 k --kubeconfig=/etc/kubernetes/admin.conf <команда>
+```
+
+### Символическая ссылка root kubeconfig
+
+По умолчанию модуль CPM создаёт символическую ссылку `/root/.kube/config` -> `/etc/kubernetes/admin.conf` на master-узлах, что позволяет root-пользователю запускать `d8 k` без указания `--kubeconfig`.
+
+Когда модуль **user-authz** включён, это поведение можно отключить, задав `rootKubeconfigSymlink: false` в конфигурации модуля **control-plane-manager**:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    rootKubeconfigSymlink: false
+```
+
+Если модуль **user-authz** выключен, CPM этот параметр не использует и сохраняет поведение по умолчанию (символическая ссылка создаётся).
+
+При отключении символической ссылки (при включённом **user-authz**) ссылка удаляется, если она указывала на `admin.conf`. Используйте персонализированные учётные данные или явно указывайте `--kubeconfig`.
+
+### Усиление безопасности
+
+Модуль CPM автоматически ограничивает права доступа к файлам `admin.conf` и `super-admin.conf` до `0600` (чтение/запись только для владельца) при каждом цикле согласования. Это предотвращает несанкционированный доступ к этим конфиденциальным учётным данным.
+
+### Аварийный доступ (break-glass)
+
+В экстренных ситуациях (ошибки конфигурации RBAC, отказ webhook'ов) используйте `super-admin.conf`:
+
+```bash
+d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
+```
+
+Эти учётные данные обходят все проверки RBAC. Используйте их только в крайнем случае и ограничьте круг лиц с доступом к файлу.
 
 ## Как настроить дополнительные политики аудита?
 
@@ -716,7 +787,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 3
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -762,7 +833,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -781,7 +852,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -791,7 +862,7 @@ spec:
 
 ### Как работать с журналом аудита?
 
-Предполагается, что на master-узлах установлен «скрейпер логов»: [log-shipper](../log-shipper/cr.html#clusterloggingconfig), `promtail`, `filebeat`,  который будет мониторить файл с логами:
+Предполагается, что на master-узлах установлен «скрейпер логов»: [log-shipper](/modules/log-shipper/cr.html#clusterloggingconfig), `promtail`, `filebeat`,  который будет мониторить файл с логами:
 
 ```bash
 /var/log/kube-audit/audit.log
@@ -841,7 +912,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 3
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
@@ -915,8 +986,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl` с помощью команды:
@@ -952,13 +1024,17 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
+1. Скопируйте или перенесите файл резервной копии etcd [`etcd-backup.snapshot`](#как-сделать-резервную-копию-etcd-вручную) в домашнюю директорию текущего пользователя (root):
+
+   ```shell
+   cp /путь/до/резервной/копии/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
 1. Очистите директорию etcd.
 
    ```shell
    rm -rf /var/lib/etcd
    ```
-
-1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
 
 1. Восстановите базу данных etcd.
 
@@ -970,7 +1046,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-      ```
+   ```
 
    Чтобы убедиться, что etcd запущена, воспользуйтесь командой:
 
@@ -989,9 +1065,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 <div id='восстановление-кластера-multi-master'></div>
 
-#### Восстановление мультимастерного кластера
+#### Восстановление кластера с несколькими master-узлами
 
-Для корректного восстановления мультимастерного кластера выполните следующие шаги:
+Для корректного восстановления кластера с несколькими master-узлами выполните следующие шаги:
 
 1. Активируйте режим High Availability (HA). Это необходимо, чтобы сохранить хотя бы одну реплику Prometheus и его PVC, поскольку в кластере с одним master-узлом HA по умолчанию отключён.
 
@@ -1020,9 +1096,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    d8 system queue main
    ```
 
-1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master). Для статических кластеров используйте [инструкцию](#как-добавить-master-узел-в-статическом-или-гибридном-кластере).
+1. Переведите кластер обратно в режим с несколькими master-узлами. Для облачных кластеров используйте [инструкцию](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master). Для статических кластеров используйте [инструкцию](#как-добавить-master-узел-в-статическом-или-гибридном-кластере).
 
-После этих шагов кластер будет успешно восстановлен в мультимастерной конфигурации.
+После этих шагов кластер будет успешно восстановлен в конфигурации с несколькими master-узлами.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
@@ -1272,7 +1348,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
 
 ### Время жизни сертификатов
 
-По умолчанию время жизни сертификатов равно 1 году (8760 часов). При необходимости это значение можно изменить с помощью аргумента `--cluster-signing-duration` в манифесте `/etc/kubernetes/manifests/kube-controller-manager.yaml`. Но чтобы kubelet успел установить сертификат до его истечения, рекомендуем устанавливать время жизни сертификатов более, чем 1 час.
+По умолчанию время жизни сертификатов равно 1 году (8760 часов).
 
 {% alert level="warning" %}
 Если истекло время жизни клиентского сертификата, то kubelet не сможет делать запросы к kube-apiserver и не сможет обновить сертификаты. В данном случае узел (Node) будет помечен как `NotReady` и пересоздан.
@@ -1294,19 +1370,196 @@ Kubelet использует клиентский TLS-сертификат (`/va
 
 ## Как вручную обновить сертификаты компонентов управляющего слоя?
 
-Может возникнуть ситуация, когда master-узлы кластера находятся в выключенном состоянии долгое время. За это время может истечь срок действия сертификатов компонентов управляющего слоя. После включения узлов сертификаты не обновятся автоматически, поэтому это необходимо сделать вручную.
+Может возникнуть ситуация, когда master-узлы кластера находятся в выключенном состоянии долгое время. За это время может истечь срок действия сертификатов компонентов управляющего слоя.
 
-Обновление сертификатов компонентов управляющего слоя происходит с помощью утилиты `kubeadm`.
-Чтобы обновить сертификаты, выполните следующие действия на каждом master-узле:
+**Автоматическое обновление (штатная работа)**: `control-plane-manager` отслеживает срок действия сертификатов и автоматически обновляет сертификаты компонентов управляющего слоя, когда до их истечения остаётся менее 30 дней. При работающем кластере ручное вмешательство не требуется.
 
-1. Найдите утилиту `kubeadm` на master-узле и создайте символьную ссылку c помощью следующей команды:
+**Когда узлы возвращаются в онлайн после длительного простоя**: как только master-узлы запустятся и Kubernetes API станет доступен, `control-plane-manager` обнаруживает истёкшие или скоро истекающие сертификаты и автоматически создаёт операции по их обновлению. Чтобы убедиться, что обновление завершено, проверьте, что операции `ControlPlaneOperation` по обновлению сертификатов перешли в фазу `OperationCompleted`:
 
-   ```shell
-   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
+```shell
+d8 k get cpo -o wide
+```
+
+Также можно проверить поле `CERTIFICATES` объекта `ControlPlaneNode` — оно должно показывать `True` (условие `CertificatesHealthy`):
+
+```shell
+d8 k get cpn
+```
+
+## Как защитить чувствительные поля кастомных ресурсов?
+
+Для защиты чувствительных полей (паролей, токенов или ключей) в схемах ресурсов от несанкционированного доступа через API,
+хранения в etcd в незашифрованном виде и попадания в журнал аудита используйте feature gate `CRDSensitiveData`
+совместно с маркером схемы `x-kubernetes-sensitive-data`.
+
+Чтобы включить защиту полей, выполните следующие действия:
+
+1. Включите шифрование etcd с помощью [параметра `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в настройках модуля. Feature gate `CRDSensitiveData` включается по умолчанию — его не следует указывать вручную.
+
+   {% alert level="warning" %}
+   Включение параметра `apiserver.encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.
+   {% endalert %}
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 3
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
    ```
 
-2. Обновите сертификаты:
+1. Отметьте чувствительные поля в схеме ресурсов маркером `x-kubernetes-sensitive-data: true`.
 
-   ```shell
-   kubeadm certs renew all
-   ```
+   Маркер должен находиться на поле типа `string`, `integer`, `number`, `boolean`, `object` или `array` (маркер на `object` или `array` делает чувствительным всё поддерево); также поддерживаются поля с `x-kubernetes-int-or-string: true`.
+
+   Маркер нельзя указывать на корне схемы (узел `openAPIV3Schema`) и внутри веток `anyOf`, `oneOf`, `allOf`, `not`.
+
+1. Для пользователей и ServiceAccount, которым нужен доступ к полным данным, добавьте в правила RBAC
+   разрешение на вложенный ресурс API `<resource>/sensitive`.
+
+### Применяемые меры защиты
+
+| Защита | Описание |
+| ------ | -------- |
+| Шифрование в etcd | Весь ресурс шифруется при хранении с помощью провайдера шифрования AES-CBC (аналогично Kubernetes Secrets). |
+| Фильтрация полей в API | Чувствительные поля удаляются из ответов на запросы `get`, `list` и `watch`, если у вызывающей стороны нет прав на вложенный ресурс API `<resource>/sensitive`. |
+| Маскировка в журнале аудита | Значения чувствительных полей заменяются на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита. |
+
+Полный пример конфигурации и результатов доступен в разделе [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями).
+
+## Как проверить функционал контроля целостности данных, хранимых в etcd?
+
+{% alert level="warning" %}
+Функционал контроля целостности данных, хранимых в etcd доступен только для CSE-lite и CSE-pro редакций.
+{% endalert %}
+
+### Проверка формата хранимых данных
+
+Для проверки типа данных, хранящихся в etcd, необходимо создать объект, а затем запросить его содержимое через etcdctl. Приведённые команды следует выполнять с узла control-plane кластера.
+
+Создание тестового объекта:
+
+```bash
+kubectl create secret generic test-secret --from-literal=foo=bar
+```
+
+Запрос содержимого через etcdctl:
+
+```bash
+ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
+```
+
+Примеры вывода команды:
+1. Режим работы контроля целостности `Enforce` или `Migrate`:
+
+```bash
+/registry/secrets/default/test-secret
+{"payload":"azhzOmVuYzphZXNjYmM6djE6c2VjcmV0Ym94OqHAgDzDhDdBMka6BvyJr1gAZpwVb-5UAwDKW5mo7f_dMo6hCuMKwhjfTc0msO5Gychp2weuE8FBEOG8XAdAyKiN5Xds_fVzTjJ7XJEMJRHSs2yWYHMEA4wsymn3Q_XvWkB03p6MrjGhSaqn8P0Di5PiB13rTxdYLTR9ZJq8b5CD502yloZT7BRbfPpHgp3vJ-AHcBErzlhwBKsSCjvFO4AL5zvGErPhDtxr4MGUS9p8ukk33TkmrrB7c3zha6ASLb_VS6-l4PteVUJLY4DTr0qfqIFlE2R0xnFRE1CkfIrrdIFMszSosFN4TtF688kiS9rQS1FvFmo2RXyT7LmdIGA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMTAtMDEgMTQ6MjIifQ","signature":"UHPegDEVGq7vRcaAKygNbvqSt0sGA1wHy69JGVGA082bKbhrv_PW7NEVbRDbHq_0uWZ6nX-CLEjffHvKebn7AA"}
+```
+
+1. Режим работы контроля целостности `Rollback`:
+
+```bash
+/registry/secrets/default/test-secret
+k8s
+v1Secret
+test-secretdefault"*$3100d1db-ead5-4d8a-bdbb-8d2d76bb8d032
+kubectl-createUpdatevFieldsV1:,
+*{"f:data":{".":{},"f:foo":{}},"f:type":{}}B
+foobarOpaque"
+```
+
+1. Включено шифрование секретов (`apiserver.encryptionEnabled`), режим работы контроля целостности `Rollback`:
+
+```bash
+/registry/secrets/default/test-secret
+k8s:enc:aescbc:v1:secretbox: <binary data>
+```
+
+### Проверка запрета обработки данных, не прошедших проверку подписи
+
+Приведённые команды следует выполнять с узла control-plane кластера.
+
+Создание тестового объекта:
+
+```bash
+kubectl create secret generic test-secret --from-literal=foo=bar
+```
+
+Запрос содержимого через etcdctl:
+
+```bash
+ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl | head -1)
+$ETCDCTL_PATH get /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/
+```
+
+Намеренное изменение поля `signature` в секрете:
+
+```bash
+etcdctl put /registry/secrets/default/test-secret --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ '{"payload":"azhzAAoMCgJ2MRIGU2VjcmV0Ep8BCpQBCgt0ZXN0LXNlY3JldBIAGgdkZWZhdWx0IgAqJDk2OTRiNWE0LWVlMzEtNGE4Yi1iMTNhLThlMDMzMzQ5NDE4NDIAOABCCAiN1bXGBhAAigFDCg5rdWJlY3RsLWNyZWF0ZRIGVXBkYXRlGgJ2MSIICI3VtcYGEAAyCEZpZWxkc1YxOg8KDXsiZjp0eXBlIjp7fX1CABoGT3BhcXVlGgAiAA","protected":"eyJhbGciOiJFZERTQSIsImtpZCI6IjIwMjUtMDktMTkifQ","signature":"_WRONG_DATA_}'
+```
+
+Запрос содержимого через kubectl:
+
+```bash
+kubectl get secret test-secret 
+```
+
+Пример вывода (только в режиме работы контроля целостности `Enforce`):
+
+```bash
+Error from server (InternalError): Internal error occurred: bad signature, record rejected
+```
+
+Просмотр аудит-лога запроса (в любом режиме работы контроля целостности):
+
+```bash
+jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+```
+
+Пример вывода:
+
+```bash
+{
+  "kind": "Event",
+  "apiVersion": "audit.k8s.io/v1",
+  "level": "Metadata",
+  "auditID": "57e0ed6c-6ed4-40cd-81a9-13c656220d83",
+  "stage": "ResponseComplete",
+  "requestURI": "/api/v1/namespaces/default/secrets?limit=500",
+  "verb": "list",
+  "user": {
+    "username": "kubernetes-admin",
+    "groups": [
+      "kubeadm:cluster-admins",
+      "system:authenticated"
+    ]
+  },
+  "sourceIPs": [
+    "10.112.0.10"
+  ],
+  "userAgent": "kubectl/v1.31.13 (linux/amd64) kubernetes/0000000",
+  "objectRef": {
+    "resource": "secrets",
+    "namespace": "default",
+    "apiVersion": "v1"
+  },
+  "responseStatus": {
+    "metadata": {},
+    "code": 200
+  },
+  "requestReceivedTimestamp": "2025-10-02T16:21:35.325764Z",
+  "stageTimestamp": "2025-10-02T16:21:35.328644Z",
+  "annotations": {
+    "authorization.k8s.io/decision": "allow",
+    "authorization.k8s.io/reason": "RBAC: allowed by ClusterRoleBinding \"kubeadm:cluster-admins\" of ClusterRole \"cluster-admin\" to Group \"kubeadm:cluster-admins\"",
+    "deckhouse.io/signature": "Absent signature"
+  }
+}
+```

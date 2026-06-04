@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-prep
 
 # https://docs.cilium.io/en/v1.12/operations/system_requirements/#linux-distribution-compatibility-matrix
 # Systemd 245 and above (systemctl --version) overrides rp_filter setting of Cilium network interfaces.

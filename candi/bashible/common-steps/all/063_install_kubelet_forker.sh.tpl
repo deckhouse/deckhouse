@@ -18,7 +18,10 @@ set -e
 
 # Start sysctl-tuner to set appropriate values to system variables before kubelet start
 if [ -x /opt/deckhouse/bin/sysctl-tuner ]; then
-  /opt/deckhouse/bin/sysctl-tuner
+  if ! /opt/deckhouse/bin/sysctl-tuner; then
+    >&2 echo "d8-kubelet-forker [ERROR] sysctl-tuner crashed (abnormal termination) with exit code $? ."
+    exit 1
+  fi
 fi
 
 $@ &

@@ -128,7 +128,7 @@ func TestCheckPythonAndItsModules(t *testing.T) {
 			mockNode := &mocks.MockNodeInterface{}
 			tt.setupMock(mockNode)
 
-			check := PythonCheck{Node: mockNode}
+			check := PythonCheck{NodeInterface: mockNode}
 			err := check.Run(context.Background())
 
 			if tt.expectedError != "" {

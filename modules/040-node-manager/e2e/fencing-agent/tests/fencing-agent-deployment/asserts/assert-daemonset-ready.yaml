@@ -1,0 +1,8 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fencing-agent-worker
+  namespace: d8-cloud-instance-manager
+status:
+  (numberReady > `0`): true
+  (numberReady == desiredNumberScheduled): true

@@ -1,0 +1,99 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: required-probes
+spec:
+  suiteName: d8-required-probes
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: operation-policy
+      gatorBlock: operation-policy
+      defaultObjectBase: ""
+      template: ../../templates/operation/required-probes.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: my.repo/app:latest
+                    readinessProbe:
+                      tcpSocket:
+                        port: 8080
+                      initialDelaySeconds: 5
+                      periodSeconds: 10
+                    livenessProbe:
+                      tcpSocket:
+                        port: 8080
+                      initialDelaySeconds: 15
+                      periodSeconds: 20
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: gcr.io/app:latest
+                    livenessProbe:
+                      tcpSocket:
+                        port: 8080
+                      initialDelaySeconds: 15
+                      periodSeconds: 20
+        - name: example-disallowed-2
+          violations: "yes"
+          assertionMessage: ""
+          fields: []
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                containers:
+                  - name: foo
+                    image: gcr.io/app:latest
+                    readinessProbe:
+                      tcpSocket:
+                        port: 8080
+                      initialDelaySeconds: 5
+                      periodSeconds: 10

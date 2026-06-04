@@ -12,7 +12,6 @@ import:
   add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -73,7 +72,7 @@ shell:
     -X main.applicationGoVersion=$(shell go version | awk '{print $$3}') \
     -X main.applicationGoArch=${GOARCH}
     -extldflags '-static' -w -s"
-  - go mod tidy
+  - go mod download
   - go mod vendor
   - |
     {{- $buildContext := deepCopy $ -}}

@@ -25,12 +25,13 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/progressbar"
 )
 
 type (
@@ -56,12 +57,13 @@ type actionIniter struct {
 	logFileMutex sync.Mutex
 	logFile      string
 
+	opts               *options.Options
 	params             *actionIniterParams
 	registerOnShutdown registerOnShutdownFunc
 }
 
-func newActionIniter() *actionIniter {
-	return &actionIniter{}
+func newActionIniter(opts *options.Options) *actionIniter {
+	return &actionIniter{opts: opts}
 }
 
 func (i *actionIniter) setParams(params actionIniterParams) *actionIniter {
@@ -147,6 +149,8 @@ func (i *actionIniter) init(c *kingpin.ParseContext) error {
 		infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLoggerProvider())
 	})
 
+	i.registerOnShutdown("Cleanup progressbar", i.cleanupProgressbar())
+
 	return nil
 }
 
@@ -160,7 +164,7 @@ func (i *actionIniter) prepareStateCacheDirPath(stateCacheDir string, c *kingpin
 		return fmt.Errorf("State cache dir '%s' cannot be a root directory", stateCacheDir)
 	}
 
-	if app.GetDefaultCacheDir() == absPath {
+	if options.DefaultTmpDir() == absPath {
 		absPath = tmpDir
 	}
 
@@ -170,7 +174,7 @@ func (i *actionIniter) prepareStateCacheDirPath(stateCacheDir string, c *kingpin
 		}
 	}
 
-	app.SetCacheDir(absPath)
+	i.opts.Cache.Dir = absPath
 	return nil
 }
 
@@ -220,7 +224,7 @@ func (i *actionIniter) prepareTmpDirPath(tmpDir string) (string, error) {
 		}
 	}
 
-	app.SetTmpDir(absPath)
+	i.opts.Global.TmpDir = absPath
 	return absPath, nil
 }
 
@@ -280,10 +284,11 @@ func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir st
 
 func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string) onShutdownFunc {
 	clearTmpParams := cache.ClearTmpParams{
-		IsDebug:        i.params.isDebug,
-		DefaultTmpDir:  app.GetDefaultTmpDir(),
-		TmpDir:         tmpDir,
-		LoggerProvider: log.GetDefaultLoggerProvider(),
+		IsDebug:          i.params.isDebug,
+		DefaultTmpDir:    options.DefaultTmpDir(),
+		DownloadCacheDir: i.opts.Global.DownloadCacheDir,
+		TmpDir:           tmpDir,
+		LoggerProvider:   log.GetDefaultLoggerProvider(),
 	}
 
 	// _server is special command for running action eg bootstrap as standalone process
@@ -322,7 +327,13 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
-	log.InitLogger(i.params.loggerType)
+	log.SetDebugEnabled(i.params.isDebug)
+	interactive := input.IsTerminal() && !i.opts.Global.ShowProgress
+
+	err := log.InitLogger(i.params.loggerType, interactive)
+	if err != nil {
+		return nil, err
+	}
 	if i.params.doNotWriteDebugFile {
 		return doNothingOnShutdownFunc, nil
 	}
@@ -334,12 +345,16 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 	}
 
 	logPath := i.params.debugLogFilePath
+	p := logPath
 
 	if logPath == "" {
 		cmdStr := strings.Join(strings.Fields(commandName), "")
 		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
 		logPath = path.Join(tmpDir, logFile)
+		p = tmpDir
 	}
+
+	log.SetLoggerOpts(p, commandName)
 
 	outFile, err := os.Create(logPath)
 	if err != nil {
@@ -351,7 +366,7 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 		return nil, err
 	}
 
-	log.InfoF("Debug log file: %s\n", logPath)
+	log.InteractiveInfoF("Debug log file: %s\n", logPath)
 
 	i.logFileMutex.Lock()
 	defer i.logFileMutex.Unlock()
@@ -390,4 +405,29 @@ func disableCleanupOnInterrupted(s os.Signal) {
 	}
 	// disable tmp cleaning if user pass ctrl + c
 	cache.GetGlobalTmpCleaner().DisableCleanup("Interrupted by signal " + s.String())
+}
+
+func (i *actionIniter) cleanupProgressbar() onShutdownFunc {
+	return func() {
+		pb := progressbar.GetDefaultPb()
+		if pb != nil {
+			_, err := pb.ProgressBarPrinter.Stop()
+			if err != nil {
+				log.WarnF("failed to stop progress bar printer: %v", err)
+			}
+
+			if err := pb.LogBox.Stop(); err != nil {
+				log.WarnF("failed to stop logbox: %v", err)
+			}
+
+			_, err = pb.MultiPrinter.Stop()
+			if err != nil {
+				log.WarnF("failed to stop multi printer: %v", err)
+			}
+
+			if pb.WriterFabric != nil {
+				pb.WriterFabric.Cleanup()
+			}
+		}
+	}
 }

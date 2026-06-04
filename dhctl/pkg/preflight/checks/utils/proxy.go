@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -22,19 +23,23 @@ import (
 	"net/url"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 var ErrBadProxyConfig = errors.New("bad proxy config")
 
 const ProxyTunnelPort = "22323"
 
-func SetupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tunnel, error) {
-	port := proxyUrl.Port()
+// SetupSSHTunnelToProxyAddr opens a port-forward to proxyUrl. legacyMode
+// must reflect the SSH backend the supplied client uses (legacy clissh
+// vs modern gossh) — they need different forwarding-direction syntax.
+// Pass sshclient.Config.IsLegacyMode() at the call site.
+func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyURL *url.URL, legacyMode bool) (libcon.Tunnel, error) {
+	port := proxyURL.Port()
 	if port == "" {
-		switch proxyUrl.Scheme {
+		switch proxyURL.Scheme {
 		case "http":
 			port = "80"
 		case "https":
@@ -43,21 +48,21 @@ func SetupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tu
 	}
 
 	var tunnel string
-	if sshclient.IsLegacyMode() {
-		tunnel = strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
+	if legacyMode {
+		tunnel = strings.Join([]string{ProxyTunnelPort, proxyURL.Hostname(), port}, ":")
 	} else {
-		tunnel = strings.Join([]string{proxyUrl.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")
+		tunnel = strings.Join([]string{proxyURL.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")
 	}
 
 	tun := sshCl.Tunnel(tunnel)
-	if err := tun.Up(); err != nil {
+	if err := tun.Up(ctx); err != nil {
 		return nil, err
 	}
 	return tun, nil
 }
 
-func BuildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
-	localhostProxy := proxyUrl
+func BuildHTTPClientWithLocalhostProxy(proxyURL *url.URL) *http.Client {
+	localhostProxy := proxyURL
 	localhostProxy.Host = net.JoinHostPort("localhost", ProxyTunnelPort)
 	return &http.Client{
 		Transport: &http.Transport{
@@ -100,12 +105,12 @@ func GetProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, 
 		return nil, nil, fmt.Errorf(`%w: malformed proxy address: "%v"`, ErrBadProxyConfig, proxyAddr)
 	}
 
-	proxyUrl, err := url.Parse(proxyAddr)
+	proxyURL, err := url.Parse(proxyAddr)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`%s: %w`, ErrBadProxyConfig, err)
 	}
 
-	return proxyUrl, noProxyAddresses, nil
+	return proxyURL, noProxyAddresses, nil
 }
 
 func ShouldSkipProxyCheck(serviceAddress string, noProxyAddresses []string) bool {

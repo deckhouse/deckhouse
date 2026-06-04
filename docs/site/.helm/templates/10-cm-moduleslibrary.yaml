@@ -29,7 +29,7 @@ data:
       uwsgi_temp_path       /tmp/uwsgi_temp;
       scgi_temp_path        /tmp/scgi_temp;
 
-      proxy_cache_path /tmp/cache keys_zone=dcache:10m max_size=200m inactive=30d;
+      proxy_cache_path /tmp/cache keys_zone=dcache:10m max_size=200m inactive=30m;
 
       access_log off;
 
@@ -127,20 +127,32 @@ data:
             }
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
+
             proxy_cache             dcache;
+            proxy_cache_valid       200 30m;
+            proxy_cache_valid       304 1m;
+            proxy_cache_revalidate         on;
+            proxy_cache_background_update  on;
+            proxy_cache_use_stale updating error timeout;
+            proxy_cache_lock        on;
             proxy_cache_key         $uri;
+
             proxy_intercept_errors  on;
             proxy_buffering         on;
             proxy_buffer_size       16k;
+            proxy_busy_buffers_size 32k;
             proxy_buffers           4 16k;
             proxy_ignore_headers    Set-Cookie;
-            proxy_ignore_headers    Cache-Control;
 
             proxy_set_header Host   {{ .Values.global.doc_s3_bucket_public_url }};
+            proxy_set_header If-Modified-Since $upstream_http_last_modified;
+            proxy_set_header If-None-Match $upstream_http_etag;
 
             proxy_connect_timeout   30s;
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
+
+            add_header X-Cache-Status $upstream_cache_status always;
 
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
@@ -184,20 +196,32 @@ data:
             }
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
+
             proxy_cache             dcache;
+            proxy_cache_valid       200 30m;
+            proxy_cache_valid       304 1m;
+            proxy_cache_revalidate         on;
+            proxy_cache_background_update  on;
+            proxy_cache_use_stale updating error timeout;
+            proxy_cache_lock        on;
             proxy_cache_key         $uri;
+
             proxy_intercept_errors  on;
             proxy_buffering         on;
             proxy_buffer_size       16k;
+            proxy_busy_buffers_size 32k;
             proxy_buffers           4 16k;
             proxy_ignore_headers    Set-Cookie;
-            proxy_ignore_headers    Cache-Control;
 
             proxy_set_header Host   {{ .Values.global.doc_s3_bucket_public_url }};
+            proxy_set_header If-Modified-Since $upstream_http_last_modified;
+            proxy_set_header If-None-Match $upstream_http_etag;
 
             proxy_connect_timeout   30s;
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
+
+            add_header X-Cache-Status $upstream_cache_status always;
 
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
@@ -216,20 +240,32 @@ data:
             rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /deckhouse-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
+
             proxy_cache             dcache;
+            proxy_cache_valid       200 30m;
+            proxy_cache_valid       304 1m;
+            proxy_cache_revalidate         on;
+            proxy_cache_background_update  on;
+            proxy_cache_use_stale updating error timeout;
+            proxy_cache_lock        on;
             proxy_cache_key         $uri;
+
             proxy_intercept_errors  on;
             proxy_buffering         on;
             proxy_buffer_size       16k;
+            proxy_busy_buffers_size 32k;
             proxy_buffers           4 16k;
             proxy_ignore_headers    Set-Cookie;
-            proxy_ignore_headers    Cache-Control;
 
             proxy_set_header Host   {{ .Values.global.doc_s3_bucket_public_url }};
+            proxy_set_header If-Modified-Since $upstream_http_last_modified;
+            proxy_set_header If-None-Match $upstream_http_etag;
 
             proxy_connect_timeout   30s;
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
+
+            add_header X-Cache-Status $upstream_cache_status always;
 
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }

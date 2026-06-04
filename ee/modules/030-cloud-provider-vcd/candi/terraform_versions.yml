@@ -1,10 +1,11 @@
 terraform: 0.14.8
-
 vcd:
   namespace: vmware
   cloudName: VCD
   type: vcd
-  versions: ["3.10.0", "3.14.1"]
+  versions:
+    - "3.10.0"
+    - "3.14.1"
   artifact: terraform-provider-vcd-artifact
   artifactBinary: terraform-provider-vcd
   destinationBinary: terraform-provider-vcd

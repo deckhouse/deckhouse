@@ -464,13 +464,26 @@ module JSONSchemaRenderer
         result
     end
 
+    # CSS classes on root <li> for CRD spec/status (aligned with Hugo openapi partials).
+    def crd_root_property_li_class(property_name)
+        case property_name
+        when 'spec'
+            'top-level-toggleable'
+        when 'status'
+            'closed top-level-toggleable'
+        else
+            ''
+        end
+    end
+
     # params:
     # 1 - parameter name to render (string)
     # 2 - parameter attributes (hash)
     # 3 - parent item data (hash)
     # 4 - object with primary language data
     # 5 - object with language data which use if there is no data in primary language
-    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '')
+    # 10 - optional li class for root CRD rows (spec/status collapse)
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '', li_class = '')
         # Checking for x-doc-skip
         if attributes.is_a?(Hash) and attributes.has_key?('x-doc-skip') and attributes['x-doc-skip'] == true
             # Parameter marked with x-doc-skip: true - skip rendering entirely
@@ -537,7 +550,11 @@ module JSONSchemaRenderer
 
         if parameterTitle != ''
             parameterTextContent = ''
-            result.push('<li>')
+            if li_class.to_s != ''
+                result.push(%Q(<li class="#{li_class}">))
+            else
+                result.push('<li>')
+            end
             result.push('<div class="resources__prop_wrap">')
             attributesType = ''
             if attributes.is_a?(Hash)
@@ -903,7 +920,7 @@ module JSONSchemaRenderer
                     if   input['i18n'][fallbackLanguageName] then
                         _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
                     end
-                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
+                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName, crd_root_property_li_class(key)))
                     end
                     result.push('</ul>')
                 end
@@ -927,10 +944,11 @@ module JSONSchemaRenderer
 
                  if  input["spec"]["versions"].length > 1 then
                      result.push('<p><font size="-1">Scope: ' + input["spec"]["scope"] + '</font></p>')
-                     result.push('<div class="tabs">')
+                     result.push('<div class="tabs-block">')
+                     result.push('<ul class="tabs__container tabs__container--title">')
                      activeStatus=" active"
                      input["spec"]["versions"].sort{ |a, b| compareAPIVersion(a['name'],b['name']) }.reverse.each do |item|
-                         result.push("<a href='javascript:void(0)' class='tabs__btn tabs__btn__%s%s' onclick=\"openTab(event, 'tabs__btn__%s', 'tabs__content__%s', '%s_%s')\">%s</a>" %
+                         result.push("<li href='javascript:void(0)' class='tabs__item tabs__item--title tabs__title__%s%s' onclick=\"openTab(event, 'tabs__title__%s', 'tabs__descr__%s', '%s_%s')\">%s</li>" %
                            [ input["spec"]["names"]["kind"].downcase, activeStatus,
                              input["spec"]["names"]["kind"].downcase,
                              input["spec"]["names"]["kind"].downcase,
@@ -938,7 +956,7 @@ module JSONSchemaRenderer
                              item['name'].downcase ])
                          activeStatus = ""
                      end
-                     result.push('</div>')
+                     result.push('</ul>')
                  end
 
                  activeStatus=" active"
@@ -956,7 +974,7 @@ module JSONSchemaRenderer
                     end
 
                     if input["spec"]["versions"].length > 1 then
-                        result.push("<div id='%s_%s' class='tabs__content tabs__content__%s%s'>" %
+                        result.push("<div id='%s_%s' class='tabs__container tabs__container--descr tabs__descr__%s%s'>" %
                             [ input["spec"]["names"]["kind"].downcase, item['name'].downcase,
                             input["spec"]["names"]["kind"].downcase, activeStatus ])
                         activeStatus = ""
@@ -1016,8 +1034,6 @@ module JSONSchemaRenderer
                         item['schema']['openAPIV3Schema']['properties'].each do |key, value|
                         _primaryLanguage = nil
                         _fallbackLanguage = nil
-                        # skip status object
-                        next if key == 'status'
 
                         # Checking for x-doc-skip for TOP-level properties
                         if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
@@ -1049,7 +1065,7 @@ module JSONSchemaRenderer
                         linkAnchor = sprintf(%q(%s-%s), input["spec"]["names"]["kind"].downcase, item['name'].downcase)
                         resourceName = input["spec"]["names"]["kind"]
 
-                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName, crd_root_property_li_class(key)))
                         end
                         if header == '' then
                             result.push('</ul>')
@@ -1060,6 +1076,9 @@ module JSONSchemaRenderer
                         result.push("</div>")
                     end
 
+                 end
+                 if input["spec"]["versions"].length > 1 then
+                     result.push('</div>')
                  end
             end
         end

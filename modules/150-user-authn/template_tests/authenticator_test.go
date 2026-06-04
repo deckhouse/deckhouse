@@ -74,6 +74,13 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     - key: foo
       operator: Equal
       value: bar
+    podMetadata:
+      labels:
+        custom-label: custom-value
+        app: overridden
+      annotations:
+        sidecar.istio.io/inject: "false"
+        checksum/config: overridden
 - name: test-2
   encodedName: justForTest2
   namespace: d8-test
@@ -209,6 +216,11 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
   operator: Equal
   value: "bar"
 `))
+			Expect(deploymentTest.Field("spec.template.metadata.labels.custom-label").String()).To(Equal("custom-value"))
+			Expect(deploymentTest.Field("spec.template.metadata.labels.app").String()).To(Equal("dex-authenticator"))
+			Expect(deploymentTest.Field("spec.template.metadata.annotations.sidecar\\.istio\\.io/inject").String()).To(Equal("false"))
+			Expect(deploymentTest.Field("spec.template.metadata.annotations.checksum/config").Exists()).To(BeTrue())
+			Expect(deploymentTest.Field("spec.template.metadata.annotations.checksum/config").String()).ToNot(Equal("overridden"))
 
 			var oauth2proxyArgTest []string
 			for _, result := range deploymentTest.Field("spec.template.spec.containers.0.args").Array() {

@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: vulnerable-images
+spec:
+  testDirectory: vulnerable-images
+  suite:
+    expectedTestBlockNames:
+      - security-policy

@@ -19,6 +19,7 @@ package dvp
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"time"
@@ -28,8 +29,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	cloudprovider "k8s.io/cloud-provider"
@@ -45,6 +49,7 @@ const (
 type Cloud struct {
 	dvpService *api.DVPCloudAPI
 	config     config.CloudConfig
+	kubeClient kubernetes.Interface
 }
 
 func init() {
@@ -79,6 +84,7 @@ func (c *Cloud) Initialize(
 	stop <-chan struct{},
 ) {
 	clientSet := clientBuilder.ClientOrDie("cloud-controller-manager")
+	c.kubeClient = clientSet
 
 	informerFactory := informers.NewSharedInformerFactory(clientSet, time.Second*30)
 	serviceInformer := informerFactory.Core().V1().Services()
@@ -199,7 +205,33 @@ func (c *Cloud) onEndpointSliceEvent(
 	klog.V(3).InfoS("onEndpointSliceEvent: triggering ensureLB",
 		"namespace", svc.Namespace, "service", svc.Name, "slice", es.Name)
 
-	if _, err = c.ensureLB(context.Background(), svc, nodes); err != nil {
+	lbStatus, err := c.ensureLB(context.Background(), svc, nodes)
+	if err != nil {
 		klog.ErrorS(err, "ensureLB failed", "namespace", svc.Namespace, "service", svc.Name)
+		return
 	}
+	if lbStatus != nil && len(lbStatus.Ingress) > 0 {
+		if err := c.patchServiceStatus(context.Background(), svc, lbStatus); err != nil {
+			klog.ErrorS(err, "failed to patch service status", "namespace", svc.Namespace, "service", svc.Name)
+		}
+	}
+}
+
+func (c *Cloud) patchServiceStatus(
+	ctx context.Context,
+	svc *corev1.Service,
+	status *corev1.LoadBalancerStatus,
+) error {
+	if len(status.Ingress) == 0 {
+		return nil
+	}
+
+	patch := fmt.Sprintf(
+		`{"status":{"loadBalancer":{"ingress":[{"ip":%q}]}}}`,
+		status.Ingress[0].IP,
+	)
+
+	_, err := c.kubeClient.CoreV1().Services(svc.Namespace).
+		Patch(ctx, svc.Name, types.MergePatchType, []byte(patch), metav1.PatchOptions{}, "status")
+	return err
 }

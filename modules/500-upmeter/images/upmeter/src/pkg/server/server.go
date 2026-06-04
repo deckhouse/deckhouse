@@ -139,12 +139,18 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) Stop() error {
-	err := s.server.Shutdown(context.Background())
-	if err != nil && err != http.ErrServerClosed {
-		return err
+	if s.server != nil {
+		err := s.server.Shutdown(context.Background())
+		if err != nil && err != http.ErrServerClosed {
+			return err
+		}
 	}
-	s.remoteWriteController.Stop()
-	s.downtimeMonitor.Stop()
+	if s.remoteWriteController != nil {
+		s.remoteWriteController.Stop()
+	}
+	if s.downtimeMonitor != nil {
+		s.downtimeMonitor.Stop()
+	}
 
 	return nil
 }

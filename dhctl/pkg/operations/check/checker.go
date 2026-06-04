@@ -23,20 +23,19 @@ import (
 	"github.com/name212/govalue"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type externalPhasedContext interface {
@@ -44,7 +43,7 @@ type externalPhasedContext interface {
 }
 
 type Params struct {
-	SSHClient      node.SSHClient
+	KubeProvider   libcon.KubeProvider
 	StateCache     dhctlstate.Cache
 	OnPhaseFunc    phases.DefaultOnPhaseFunc
 	OnProgressFunc phases.OnProgressFunc
@@ -58,11 +57,14 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	KubeClient *client.KubernetesClient // optional
-
 	TmpDir  string
 	Logger  log.Logger
 	IsDebug bool
+
+	// Options carries the per-operation parsed configuration. RPC handlers
+	// must populate this with a fresh *options.Options to avoid sharing global
+	// state between concurrent requests.
+	Options *options.Options
 }
 
 type Cleaner func() error
@@ -81,8 +83,8 @@ func NewChecker(params *Params) *Checker {
 		logger = log.GetDefaultLogger()
 	}
 
-	if app.ProgressFilePath != "" {
-		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
 	}
 
 	if !params.CommanderMode {
@@ -123,23 +125,26 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	}
 
 	if !c.Embedded {
-		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
+		if err = c.PhasedExecutionContext.InitPipeline(ctx, c.StateCache); err != nil {
 			return nil, cleaner, err
 		}
 		defer func() {
-			_ = c.PhasedExecutionContext.Finalize(c.StateCache)
+			_ = c.PhasedExecutionContext.Finalize(ctx, c.StateCache)
 		}()
 	}
 
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
+			GlobalOptions:    &c.Options.Global,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           c.logger,
 			IsDebug:          c.IsDebug,
 		})
 
-		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger)
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger).
+			WithUseTfCache(c.Options.Cache.UseTfCache).
+			WithDebug(c.IsDebug)
 	}
 
 	provider, err := c.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
@@ -168,7 +173,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	hasTerraformState := false
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
+		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext, &c.Options.Global)
 		if err != nil {
 			return nil, cleaner, fmt.Errorf("unable to check infra state: %w", err)
 		}
@@ -207,7 +212,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		inClusterSource = "in-cluster"
 	)
 
-	defer c.switchPhase(phases.CheckConfiguration)()
+	defer c.switchPhase(ctx, phases.CheckConfiguration)()
 
 	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
@@ -220,7 +225,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, nil)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, &c.Options.Global)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
@@ -261,8 +266,8 @@ type InfraResult struct {
 	MigrationOpentofuStatus CheckStatus
 }
 
-func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
-	defer c.switchPhase(phases.CheckInfra)()
+func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context, globalOptions *options.GlobalOptions) (*InfraResult, error) {
+	defer c.switchPhase(ctx, phases.CheckInfra)()
 
 	stat, hasTerraformState, err := CheckState(
 		ctx, kubeCl, metaConfig, infrastructureContext,
@@ -271,6 +276,7 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 			StateCache:    c.StateCache,
 		},
 		false,
+		globalOptions,
 	)
 	if err != nil {
 		return nil, err
@@ -337,20 +343,16 @@ func resolveStatisticsStatus(status string) CheckStatus {
 }
 
 func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
-	if c.KubeClient != nil {
-		return c.KubeClient, nil
-	}
-
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
+	kubeCl, err := c.KubeProvider.Client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
+		return nil, err
 	}
-	return kubeCl, nil
+	return &client.KubernetesClient{KubeClient: kubeCl}, nil
 }
 
-func (c *Checker) switchPhase(s phases.OperationPhase) func() {
+func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func() {
 	if !c.Embedded {
-		_, _ = c.PhasedExecutionContext.SwitchPhase(s, false, c.StateCache, nil)
+		_, _ = c.PhasedExecutionContext.SwitchPhase(ctx, s, false, c.StateCache, nil)
 		return func() {}
 	}
 

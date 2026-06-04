@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-sysctls
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.securityContext.sysctls[].name
+      level: pod
+      description: Sysctl name must be in allowed list
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.securityContext.sysctls.allowedValues
+      level: pod
+      description: SPE override for allowed sysctls
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: false

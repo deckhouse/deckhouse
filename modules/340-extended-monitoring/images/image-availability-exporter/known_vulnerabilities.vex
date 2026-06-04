@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-image-availability-exporter-cve-2025-15558",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/cli"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI local privilege escalation on Windows - Уязвимость касается только Docker CLI под Windows (повышение привилегий через путь поиска плагинов в C:\\ProgramData\\Docker\\cli-plugins). Deckhouse нигде не использует Windows, все компоненты работают под Linux; уязвимый код не выполняется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
+      "timestamp": "2026-03-11T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-03-11T00:00:00Z"
+}

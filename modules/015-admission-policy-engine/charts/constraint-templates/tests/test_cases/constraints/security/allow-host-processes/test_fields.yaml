@@ -1,0 +1,30 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allow-host-processes
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.hostPID
+      level: pod
+
+      description: Controls whether the pod can share the host PID namespace.
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.hostIPC
+      level: pod
+
+      description: Controls whether the pod can share the host IPC namespace.
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.network.hostPID.allowedValue
+      level: pod
+      description: SPE override for allowing host PID namespace usage.
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+    - path: spec.network.hostIPC.allowedValue
+      level: pod
+      description: SPE override for allowing host IPC namespace usage.
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: false

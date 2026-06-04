@@ -18,8 +18,3 @@ extractedLinksMax: 0
 * [`cert-manager`](/modules/cert-manager/) — управляет TLS-сертификатами в кластере;
 * [`secrets-store-integration`](/modules/secrets-store-integration/) — реализует доставку секретов в приложения Kubernetes-кластера путем подключения секретов, ключей и сертификатов из внешних хранилищ;
 * [`secret-copier`](/modules/secret-copier/) — автоматически копирует секреты в неймспейсы кластера.
-
-В подразделе на данный момент описаны следующие компоненты подсистемы Security:
-
-* [контроль целостности](integrity-control.html);
-* [аудит событий безопасности](runtime-audit.html).

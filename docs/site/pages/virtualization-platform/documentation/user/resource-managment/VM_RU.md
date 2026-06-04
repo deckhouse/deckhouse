@@ -6,7 +6,7 @@ lang: ru
 
 ## Введение
 
-Данное руководство предназначено для пользователей Deckhouse Virtualization Platform (DVP) и описывает порядок создания и изменения ресурсов, которые доступны для создания в проектах и пространствах имён кластера.
+Данное руководство предназначено для пользователей Deckhouse Virtualization Platform (DVP) и описывает порядок создания и изменения ресурсов, которые доступны для создания в проектах и неймспейсах кластера.
 
 ## Быстрый старт по созданию ВМ
 
@@ -176,6 +176,7 @@ lang: ru
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME                                                 PHASE   CDROM   PROGRESS   AGE
    virtualimage.virtualization.deckhouse.io/ubuntu      Ready   false   100%
@@ -186,6 +187,8 @@ lang: ru
    NAME                                                 PHASE     NODE           IPADDRESS     AGE
    virtualmachine.virtualization.deckhouse.io/linux-vm  Running   virtlab-pt-2   10.66.10.2    7h46m
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Подключитесь с помощью консоли к виртуальной машине (для выхода из консоли необходимо нажать `Ctrl+]`):
 
@@ -302,10 +305,13 @@ d8 k get vm linux-vm
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     NODE           IPADDRESS     AGE
 linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 После создания виртуальная машина автоматически получит IP-адрес из диапазона, указанного в настройках модуля (блок `virtualMachineCIDRs`).
 
@@ -373,7 +379,7 @@ linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
   - Возможные проблемы:
     - Нет подходящего узла для запуска.
     - На подходящих узлах недостаточно CPU или памяти.
-    - Превышены квоты пространства имён или проекта.
+    - Превышены квоты неймспейса или проекта.
   - Диагностика:
 
     - Если запуск затягивается, проверьте `.status.conditions`, условие `type: Running`
@@ -420,7 +426,7 @@ linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
     - Несовместимость процессорных инструкций (при использовании типов процессоров host или host-passthrough).
     - Различие в версиях ядер на узлах гипервизоров.
     - На подходящих узлах недостаточно CPU или памяти.
-    - Превышены квоты пространства имён или проекта.
+    - Превышены квоты неймспейса или проекта.
   - Диагностика:
     - Проверьте `.status.conditions` условие `type: Migrating`, а также блок `.status.migrationState`
 
@@ -572,6 +578,32 @@ spec:
 Шаг изменения указывает, на сколько можно увеличивать или уменьшать общее количество ядер, чтобы они равномерно распределялись по сокетам.
 
 Максимально возможное количество ядер - 248.
+
+Сводная таблица по диапазону `spec.cpu.cores`:
+
+| Диапазон ядер      | Число сокетов | Кратность | Минимум ядер в сокете | Максимум ядер в сокете |
+|--------------------|---------------|-----------|-----------------------|------------------------|
+| `1 ≤ cores ≤ 16`   | 1             | 1         | 1                     | 16                     |
+| `16 < cores ≤ 32`  | 2             | 2         | 9                     | 16                     |
+| `32 < cores ≤ 64`  | 4             | 4         | 9                     | 16                     |
+| `64 < cores ≤ 248` | 8             | 8         | 9                     | 16                     |
+
+Overhead памяти не зависит от максимально возможной топологии по числу vCPU и вычисляется по фактически активным ядрам: (число сокетов × ядер на сокет × число потоков на ядро) × 8 MiB на каждое логическое ядро.
+
+Пример: при `spec.cpu.cores: 20` в статусе отображается топология из двух сокетов по 10 ядер:
+
+```yaml
+spec:
+  cpu:
+    cores: 20
+# ...
+status:
+  resources:
+    cpu:
+      topology:
+        coresPerSocket: 10
+        sockets: 2
+```
 
 Текущая топология ВМ (количество сокетов и ядер в каждом сокете) отображается в статусе ВМ в следующем формате:
 
@@ -814,10 +846,13 @@ spec:
 
   Пример вывода (колонка `AGENT`):
 
+  <!-- markdownlint-disable MD031 -->
   ```console
   NAME     PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS    AGE
   fedora   Running   6       5%             8000Mi   False          True    True         virtlab-pt-1   10.66.10.1   5d21h
   ```
+  {: .nowrap-default }
+  <!-- markdownlint-enable MD031 -->
 
 Как установить QEMU Guest Agent:
 
@@ -995,16 +1030,17 @@ d8 k edit vm linux-vm
 
 Если виртуальная машина работает (`.status.phase: Running`), то способ применения изменений зависит от их типа:
 
-| Блок конфигурации                       | Как применяется                              |
-| --------------------------------------- | -------------------------------------------- |
-| `.metadata.labels`                      | Сразу                                        |
-| `.metadata.annotations`                 | Сразу                                        |
-| `.spec.liveMigrationPolicy`             | Сразу                                        |
-| `.spec.runPolicy`                       | Сразу                                        |
-| `.spec.disruptions.restartApprovalMode` | Сразу                                        |
-| `.spec.affinity`                        | EE, SE+ : Сразу, CE: Требуется перезапуск ВМ |
-| `.spec.nodeSelector`                    | EE, SE+ : Сразу, CE: Требуется перезапуск ВМ |
-| `.spec.*`                               | Требуется перезапуск ВМ                      |
+| Блок конфигурации                       | Как применяется                                                                                                                                           |
+|-----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `.metadata.labels`                      | Сразу и распространяется на под ВМ                                                                                                                        |
+| `.metadata.annotations`                 | Сразу и распространяется на под ВМ                                                                                                                        |
+| `.spec.liveMigrationPolicy`             | Сразу                                                                                                                                                     |
+| `.spec.runPolicy`                       | Сразу                                                                                                                                                     |
+| `.spec.disruptions.restartApprovalMode` | Сразу                                                                                                                                                     |
+| `.spec.affinity`                        | EE, SE+ : Сразу, CE: Требуется перезапуск ВМ                                                                                                              |
+| `.spec.nodeSelector`                    | EE, SE+ : Сразу, CE: Требуется перезапуск ВМ                                                                                                              |
+| `.spec.cpu.cores`                       | Может применяться сразу при включённом hotplug (EE, SE+), см. [раздел «Горячее подключение CPU»](#горячее-подключение-cpu); иначе требуется перезапуск ВМ |
+| `.spec.*`                               | Требуется перезапуск ВМ                                                                                                                                   |
 
 Как изменить конфигурацию ВМ в веб-интерфейсе:
 
@@ -1083,10 +1119,13 @@ d8 k get vm linux-vm -o wide
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 linux-vm    Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 В колонке `NEED RESTART` мы видим значение `True`, а это значит что для применения изменений требуется перезагрузка.
 
@@ -1126,6 +1165,49 @@ spec:
 - На вкладке «Конфигурация» прокрутите страницу вниз до раздела «Дополнительные параметры».
 - Включите переключатель «Автоприменение изменений».
 - Нажмите на появившуюся кнопку «Сохранить».
+
+### Горячее подключение CPU
+
+Горячее подключение CPU позволяет изменять количество ядер (`spec.cpu.cores`) у работающей ВМ без перезагрузки, если изменение можно применить через живую миграцию. В пределах текущей топологии CPU можно как увеличивать, так и уменьшать число ядер.
+
+По умолчанию эта функциональность отключена. Чтобы включить, добавьте `HotplugCPUWithLiveMigration` в массив `.spec.settings.featureGates` в ModuleConfig/virtualization:
+
+```yaml
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  settings:
+    featureGates:
+    - HotplugCPUWithLiveMigration
+```
+
+Если новое значение `spec.cpu.cores` попадает в диапазон горячего подключения для текущей топологии и ВМ допускает миграцию, изменение применяется через живую миграцию. Если новому значению требуется другая топология CPU или ВМ не может быть мигрирована, потребуется перезагрузка ВМ. Необходимость перезагрузки отражается в условии `AwaitingRestartToApplyConfiguration`.
+
+Правила расчёта топологии и допустимые шаги изменения `spec.cpu.cores` описаны в разделе [Топологии CPU](#топологии-cpu).
+
+Особенности гостевых ОС:
+
+- После живой миграции новые vCPU могут потребовать явной активации в гостевой ОС.
+- В Linux добавленные CPU можно включить через sysfs:
+
+  ```bash
+  echo 1 > /sys/devices/system/cpu/cpu1/online
+  ```
+
+- Чтобы в Linux автоматически включать новые CPU, настройте правило `udev`. После этого добавленные CPU отображаются в выводе `cat /proc/cpuinfo` и в `top`:
+
+  ```bash
+  cat <<'EOF' > /etc/udev/rules.d/99-hotplug-cpu.rules
+  SUBSYSTEM=="cpu",ACTION=="add",RUN+="/bin/sh -c '[ ! -e /sys$devpath/online ] || echo 1 > /sys$devpath/online'"
+  EOF
+  ```
+
+Ограничения:
+
+- Изменение `spec.cpu.cores` без перезагрузки возможно только в пределах диапазона горячего подключения текущей топологии CPU.
+- Если изменение требует смены топологии CPU, необходима перезагрузка ВМ.
+- При уменьшении количества CPU в пределах текущей топологии распределение ядер по сокетам может стать неравномерным.
 
 ### Размещение ВМ по узлам
 
@@ -1425,10 +1507,13 @@ d8 k get vmbda attach-blank-disk
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                PHASE      VIRTUAL MACHINE NAME   AGE
 attach-blank-disk   Attached   linux-vm              3m7s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Подключитесь к виртуальной машине и удостоверитесь, что диск подключен:
 
@@ -1438,6 +1523,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
@@ -1447,6 +1533,8 @@ sda       8:0    0   10G  0 disk <--- статично подключенный 
 sdb       8:16   0    1M  0 disk <--- cloudinit
 sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
 
@@ -1576,7 +1664,7 @@ MAC-адреса остаются неизменными, но имена инт
 
 Все эти подходы объединяет способность скрывать сложность инфраструктуры за простыми интерфейсами: клиенты работают с конкретным адресом, а система сама решает, как направить запрос к нужной ВМ, даже если их количество или состояние меняется.
 
-Имя сервиса формируется как `<service-name>.<namespace or project name>.svc.<clustername>`, или более коротко: `<service-name>.<namespace or project name>.svc`. Например, если имя вашего сервиса — `http`, а пространство имен — `default`, то полное DNS-имя будет `http.default.svc.cluster.local`.
+Имя сервиса формируется как `<service-name>.<namespace or project name>.svc.<clustername>`, или более коротко: `<service-name>.<namespace or project name>.svc`. Например, если имя вашего сервиса — `http`, а неймспейс — `default`, то полное DNS-имя будет `http.default.svc.cluster.local`.
 
 Принадлежность ВМ к сервису определяется набором лейблов. Чтобы установить лейблы на ВМ в контексте управления инфраструктурой, используйте следующую команду:
 
@@ -1838,10 +1926,13 @@ d8 k get vm
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                   PHASE     NODE           IPADDRESS     AGE
 linux-vm                               Running   virtlab-pt-1   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Мы видим что на данный момент она запущена на узле `virtlab-pt-1`.
 
@@ -1881,6 +1972,7 @@ d8 k get vm -w
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                                  PHASE       NODE           IPADDRESS     AGE
 linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
@@ -1888,6 +1980,8 @@ linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   7
 linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
 linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Прервать любую живую миграцию, пока она находится в фазе `Pending` или `InProgress`, можно, удалив соответствующий ресурс VirtualMachineOperations.
 
@@ -2037,10 +2131,13 @@ spec:
 
 Пример вывода ресурса
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                         PHASE       TYPE    VIRTUALMACHINE      AGE
 nodeplacement-update-dabk4   Completed   Evict   linux-vm            1m
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Сбор отладочной информации
 
@@ -2100,10 +2197,13 @@ d8 k get vmipl
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Ресурс [VirtualMachineIPAddres](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`): проектный/неймспейсный ресурс, который отвечает за резервирование арендованных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по явному запросу.
 
@@ -2121,10 +2221,13 @@ d8 k get vmip
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME             ADDRESS       STATUS     VM         AGE
 linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
 
@@ -2133,7 +2236,7 @@ linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 - Для этого `vmip` создается ресурс аренды `vmipl`, который выбирает случайный IP-адрес из общего пула.
 - Как только ресурс `vmip` создан, виртуальная машина получает назначенный IP-адрес.
 
-IP-адрес виртуальной машине назначается автоматически из подсетей, определенных в модуле, и остается закрепленным за машиной до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом или пространством имён и может быть повторно запрошен явно.
+IP-адрес виртуальной машине назначается автоматически из подсетей, определенных в модуле, и остается закрепленным за машиной до её удаления. После удаления виртуальной машины ресурс `vmip` также удаляется, но IP-адрес временно остается закрепленным за проектом или неймспейсом и может быть повторно запрошен явно.
 
 С полным описанием параметров конфигурации ресурсов `vmip` и `vmipl` машин можно ознакомиться по ссылкам:
 
@@ -2196,7 +2299,7 @@ spec:
   virtualMachineIPAddressName: linux-vm-7prpx
 ```
 
-Даже если ресурс `vmip` будет удален, IP-адрес остаётся арендованным для текущего проекта/пространства имён еще 10 минут. Поэтому существует возможность вновь его занять по запросу:
+Даже если ресурс `vmip` будет удален, IP-адрес остаётся арендованным для текущего проекта/неймспейса еще 10 минут. Поэтому существует возможность вновь его занять по запросу:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -2236,6 +2339,29 @@ EOF
 
 {% alert level="info" %}
 При настройке сетевых интерфейсов в гостевой ОС используйте стабильные идентификаторы (предсказуемые имена `enpXsY` или привязку по MAC-адресу) вместо имён `ethX`. Подробнее см. раздел [Именование сетевых интерфейсов в гостевой ОС](#именование-сетевых-интерфейсов-в-гостевой-ос).
+{% endalert %}
+
+{% alert level="info" %}
+На гостевой системе Linux с несколькими интерфейсами в одной подсети может возникать проблема ARP Flux, при которой ядро отвечает на ARP-запросы через произвольный интерфейс, а не через тот, на который пришёл запрос, что приводит к нестабильному соединению и потере пакетов из-за некорректного MAC-адреса в кеше маршрутизаторов.
+
+Чтобы это исправить, установите параметры, которые заставляют систему отвечать на запросы строго через интерфейс с целевым IP и использовать корректный исходный адрес:
+
+```bash
+sysctl -w net.ipv4.conf.all.arp_ignore=1
+sysctl -w net.ipv4.conf.all.arp_announce=2
+```
+
+Пример для cloud-init:
+
+```yaml
+write_files:
+  - path: /etc/sysctl.d/90-arp-strict.conf
+    content: |
+      net.ipv4.conf.all.arp_ignore=1
+      net.ipv4.conf.all.arp_announce=2
+```
+
+Подробнее см. документацию [IP sysctl](https://docs.kernel.org/networking/ip-sysctl.html).
 {% endalert %}
 
 Пример подключения ВМ к основной сети кластера и проектной сети `user-net`:
@@ -2302,12 +2428,15 @@ d8 k get vmmacl
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    VIRTUALMACHINEMACADDRESS                      STATUS   AGE
 mac-5e-e6-19-22-0f-d8   {"name":"vm-01-fz9cr","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-29-89-cf   {"name":"vm-01-99qj6","namespace":"pr-sdn"}   Bound    45s
 mac-5e-e6-19-54-f9-be   {"name":"vm-01-5jqxg","namespace":"pr-sdn"}   Bound    45s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Ресурс `VirtualMachineMACAddress` (`vmmac`): проектный ресурс, который отвечает за резервирование арендованных MAC-адресов и их привязку к виртуальным машинам.
 
@@ -2321,12 +2450,15 @@ d8 k get vmmac
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME          ADDRESS             STATUS     VM      AGE
 vm-01-5jqxg   5e:e6:19:54:f9:be   Attached   vm-01   5m42s
 vm-01-99qj6   5e:e6:19:29:89:cf   Attached   vm-01   5m42s
 vm-01-fz9cr   5e:e6:19:22:0f:d8   Attached   vm-01   5m42s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 При удалении сети из конфигурации ВМ:
 

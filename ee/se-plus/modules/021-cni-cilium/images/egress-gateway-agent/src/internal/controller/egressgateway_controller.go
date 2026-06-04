@@ -53,7 +53,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	// Resource is deleted need to clean up finalizer
 	if !egressGatewayInstance.DeletionTimestamp.IsZero() {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers", "name", egressGatewayInstance.Name)
-		err := r.cleanupAnouncerWithFinalizer(ctx, logger, &egressGatewayInstance)
+		err := r.cleanupAnnouncerWithFinalizer(ctx, logger, &egressGatewayInstance)
 		if err != nil {
 			logger.Error(err, "unable to cleanup egress gateway instance", "name", egressGatewayInstance.Name)
 			return ctrl.Result{}, err
@@ -117,24 +117,44 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		logger.Info("deleted virtual IP", "ip", ip)
 	}
 
+	message := "Egress Gateway is announced"
+	if egressGatewayInstance.Spec.SourceIP.Mode == eeCommon.VirtualIPAddress {
+		message = fmt.Sprintf("Virtual IP %s is announced", egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP)
+	}
+
 	condition := eeCommon.ExtendedCondition{
 		Condition: metav1.Condition{
 			Type:    "Ready",
 			Status:  metav1.ConditionTrue,
 			Reason:  "AnnouncingSucceed",
-			Message: fmt.Sprintf("Announcing %d Virtual IPs", len(r.VirtualIPAnnounces.GetIPSMap())),
+			Message: message,
 		},
 	}
+
 	if len(r.VirtualIPAnnounces.GetIPSMap()) == 0 {
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = "AnnouncingFailed"
-		condition.Status = "Announcing Virtual IPs failed"
+		condition.Message = "Announcing Virtual IPs failed"
 	}
-	egressGatewayInstance.Status.ObservedGeneration = egressGatewayInstance.Generation
-	setStatusCondition(&egressGatewayInstance.Status.Conditions, condition)
 
-	if err := r.Client.Status().Update(ctx, &egressGatewayInstance); err != nil {
-		logger.Error(err, "failed to update egress gateway instance status", "name", egressGatewayInstance.Name)
+	var changed bool
+	// Check if the Spec has changed since the last reconciliation.
+	if egressGatewayInstance.Status.ObservedGeneration != egressGatewayInstance.Generation {
+		egressGatewayInstance.Status.ObservedGeneration = egressGatewayInstance.Generation
+		changed = true
+	}
+
+	// setStatusCondition returns true only if Type, Status, Reason or Message has changed.
+	// We deliberately ignore Heartbeat updates to avoid an infinite reconciliation loop.
+	if setStatusCondition(&egressGatewayInstance.Status.Conditions, condition) {
+		changed = true
+	}
+
+	// Only update Kubernetes object if there is a meaningful change in status.
+	if changed {
+		if err := r.Client.Status().Update(ctx, &egressGatewayInstance); err != nil {
+			logger.Error(err, "failed to update egress gateway instance status", "name", egressGatewayInstance.Name)
+		}
 	}
 	return ctrl.Result{}, nil
 }
@@ -149,7 +169,11 @@ func (r *EgressGatewayInstanceReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx context.Context, logger logr.Logger, egressGatewayInstance *eeInternalCrd.SDNInternalEgressGatewayInstance) error {
+func (r *EgressGatewayInstanceReconciler) cleanupAnnouncerWithFinalizer(
+	ctx context.Context,
+	logger logr.Logger,
+	egressGatewayInstance *eeInternalCrd.SDNInternalEgressGatewayInstance,
+) error {
 	if controllerutil.ContainsFinalizer(egressGatewayInstance, finalizerKey) {
 		if egressGatewayInstance.Spec.SourceIP.Mode == eeCommon.VirtualIPAddress {
 			r.VirtualIPAnnounces.DeleteBalancer(egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP)

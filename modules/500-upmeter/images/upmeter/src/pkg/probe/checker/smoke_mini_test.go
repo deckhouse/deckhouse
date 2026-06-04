@@ -222,3 +222,7 @@ func (a *FakeAccess) CloudControllerManagerNamespace() string {
 func (a *FakeAccess) ClusterDomain() string {
 	return ""
 }
+
+func (a *FakeAccess) SmokeMiniServiceFQDN() string {
+	return "smoke-mini.d8-upmeter.svc.cluster.local."
+}

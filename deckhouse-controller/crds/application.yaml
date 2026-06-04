@@ -27,13 +27,18 @@ spec:
       name: Repository
       priority: 1
       type: string
+    - jsonPath: .status.summary.state
+      name: State
+      type: string
     - jsonPath: .status.conditions[?(@.type=='Installed')].status
       name: Installed
+      priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
+      priority: 1
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+    - jsonPath: .status.summary.message
       name: Message
       type: string
     - jsonPath: .metadata.creationTimestamp
@@ -158,6 +163,36 @@ spec:
                     type: string
                   version:
                     description: Semantic version of the installed application.
+                    type: string
+                type: object
+              lastAppliedConfiguration:
+                description: |-
+                  LastAppliedConfiguration is the effective settings (user configuration merged
+                  with config-schema defaults) that drove the most recent successful apply.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              summary:
+                description: |-
+                  Summary aggregates the high-level user-facing state, message and
+                  resolution hint for the application. The controller always populates it
+                  on reconcile — every application maps to exactly one lifecycle state — so
+                  it is the single source of truth for the UI; clients should not re-derive
+                  these values from the conditions. The pointer leaves it absent only
+                  before the first status computation.
+                properties:
+                  message:
+                    description: Message is a human-readable description of the current
+                      state.
+                    type: string
+                  state:
+                    description: |-
+                      State is the high-level lifecycle state observed for the application.
+                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                    type: string
+                  tip:
+                    description: |-
+                      Tip is a human-readable instruction on how to resolve the current
+                      state. Empty when no action is required.
                     type: string
                 type: object
               tracking:

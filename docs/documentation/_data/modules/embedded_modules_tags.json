@@ -1,226 +1,291 @@
 {
   "admission-policy-engine": [
     "security",
-    "policy"
+    "policy",
+    "ssdlc"
   ],
   "basic-auth": [
-    "security"
+    "security",
+    "ssdlc"
   ],
   "cert-manager": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "chrony": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "cilium-hubble": [
     "network",
     "observability",
-    "web ui"
+    "web ui",
+    "ssdlc"
   ],
   "cloud-provider-aws": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-azure": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-dvp": [
     "virtualization",
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-dynamix": [
     "bare metal",
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-gcp": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-huaweicloud": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-openstack": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-vcd": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-vsphere": [
     "cloud",
-    "bare metal"
+    "bare metal",
+    "ssdlc"
   ],
   "cloud-provider-yandex": [
-    "cloud"
+    "cloud",
+    "ssdlc"
   ],
   "cloud-provider-zvirt": [
     "cloud",
-    "bare metal"
+    "bare metal",
+    "ssdlc"
   ],
   "cni-cilium": [
     "network",
-    "security"
+    "security",
+    "ssdlc"
   ],
   "cni-flannel": [
-    "network"
+    "network",
+    "ssdlc"
   ],
   "cni-simple-bridge": [
-    "network"
+    "network",
+    "ssdlc"
   ],
   "control-plane-manager": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "csi-vsphere": [
-    "storage"
+    "storage",
+    "ssdlc"
   ],
   "dashboard": [
     "observability",
-    "web ui"
+    "web ui",
+    "ssdlc"
   ],
   "deckhouse": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "deckhouse-tools": [
     "web ui",
-    "tools"
+    "tools",
+    "ssdlc"
   ],
   "descheduler": [
-    "scheduling"
+    "scheduling",
+    "ssdlc"
   ],
   "documentation": [
-    "web ui"
+    "web ui",
+    "ssdlc"
   ],
   "extended-monitoring": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "ingress-nginx": [
     "network",
-    "balancing"
+    "balancing",
+    "ssdlc"
   ],
   "istio": [
     "network",
     "security",
-    "balancing"
+    "balancing",
+    "ssdlc"
   ],
   "keepalived": [
     "network",
     "balancing",
-    "bare metal"
+    "bare metal",
+    "ssdlc"
   ],
   "kube-dns": [
-    "network"
+    "network",
+    "ssdlc"
   ],
   "kube-proxy": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "local-path-provisioner": [
-    "storage"
+    "storage",
+    "ssdlc"
   ],
   "log-shipper": [
     "observability",
-    "logging"
+    "logging",
+    "ssdlc"
   ],
   "loki": [
     "observability",
-    "logging"
+    "logging",
+    "ssdlc"
   ],
   "metallb": [
     "network",
     "balancing",
-    "bare metal"
+    "bare metal",
+    "ssdlc"
   ],
   "monitoring-applications": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "monitoring-custom": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "monitoring-deckhouse": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "monitoring-kubernetes": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "monitoring-kubernetes-control-plane": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "monitoring-ping": [
     "observability",
-    "network"
+    "network",
+    "ssdlc"
   ],
   "multitenancy-manager": [
     "multitenancy",
-    "security"
+    "security",
+    "ssdlc"
   ],
   "namespace-configurator": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "network-gateway": [
-    "network"
+    "network",
+    "ssdlc"
   ],
   "network-policy-engine": [
     "network",
-    "security"
+    "security",
+    "ssdlc"
   ],
   "node-local-dns": [
-    "network"
+    "network",
+    "ssdlc"
   ],
   "node-manager": [
     "core",
-    "scaling"
+    "scaling",
+    "ssdlc"
   ],
   "okmeter": [
     "observability",
-    "proprietary"
+    "proprietary",
+    "ssdlc"
   ],
   "openvpn": [
     "network",
-    "security"
+    "security",
+    "ssdlc"
   ],
   "operator-prometheus": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "pod-reloader": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "prometheus": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "prometheus-metrics-adapter": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "prometheus-pushgateway": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "registry": [
     "core",
-    "registry"
+    "registry",
+    "ssdlc"
   ],
   "registry-packages-proxy": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "runtime-audit-engine": [
-    "security"
+    "security",
+    "ssdlc"
   ],
   "secret-copier": [
-    "core"
+    "core",
+    "ssdlc"
   ],
   "service-with-healthchecks": [
     "network",
-    "balancing"
+    "balancing",
+    "ssdlc"
   ],
   "terraform-manager": [
     "core",
     "cloud",
-    "scaling"
+    "scaling",
+    "ssdlc"
   ],
   "upmeter": [
-    "observability"
+    "observability",
+    "ssdlc"
   ],
   "user-authn": [
-    "security"
+    "security",
+    "ssdlc"
   ],
   "user-authz": [
-    "security"
+    "security",
+    "ssdlc"
   ],
   "vertical-pod-autoscaler": [
-    "scaling"
+    "scaling",
+    "ssdlc"
   ]
 }

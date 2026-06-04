@@ -61,11 +61,15 @@ func initLoggerOptions[T any](ctx context.Context, params *initLoggerOptionsPara
 func initDhctlLogger(ctx context.Context, action actionForInitLogger) log.Logger {
 	logOptions := action.loggerOptions(ctx)
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   logOptions.DefaultWriter,
-		Width:       logOptions.Width,
-		DebugStream: logOptions.DebugWriter,
-	})
+	log.InitLoggerWithOptions(
+		"pretty",
+		log.LoggerOptions{
+			OutStream:   logOptions.DefaultWriter,
+			Width:       logOptions.Width,
+			DebugStream: logOptions.DebugWriter,
+		},
+		false,
+	)
 
 	return log.GetDefaultLogger()
 }

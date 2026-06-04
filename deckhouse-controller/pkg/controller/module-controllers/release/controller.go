@@ -119,22 +119,18 @@ func RegisterController(
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
-	releaseController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		MaxConcurrentReconciles: maxConcurrentReconciles,
-		CacheSyncTimeout:        cacheSyncTimeout,
-		NeedLeaderElection:      ptr.To(false),
-		Reconciler:              r,
-	})
-	if err != nil {
-		return fmt.Errorf("create controller: %w", err)
-	}
-
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&v1alpha1.ModuleRelease{}).
 		// for reconcile documentation if accidentally removed
 		Owns(&v1alpha1.ModuleDocumentation{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(releaseController); err != nil {
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: maxConcurrentReconciles,
+			CacheSyncTimeout:        cacheSyncTimeout,
+			NeedLeaderElection:      ptr.To(false),
+		}).
+		Complete(r); err != nil {
 		return fmt.Errorf("complete: %w", err)
 	}
 	return nil

@@ -13,7 +13,7 @@ memory: 10Mi
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
 
-{{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
+{{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
 {{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
@@ -30,6 +30,9 @@ memory: 10Mi
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
+{{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
+{{- $validationIsolationSupported := or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15") }}
+{{- $validationIsolationEnabled := and $validationIsolationSupported (not (eq $validationIsolationMode "NoIsolation")) }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -40,33 +43,14 @@ metadata:
   namespace: d8-ingress-nginx
 {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
-  targetRef:
-    apiVersion: "apps.kruise.io/v1alpha1"
-    kind: DaemonSet
-    name: controller-{{ $name }}
-    {{- if eq ($resourcesRequests.mode | default "") "VPA" }}
-      {{- $resourcesRequestsVPA := $resourcesRequests.vpa | default dict }}
-      {{- $resourcesRequestsVPA_CPU := $resourcesRequestsVPA.cpu | default dict }}
-      {{- $resourcesRequestsVPA_Memory := $resourcesRequestsVPA.memory | default dict }}
-  updatePolicy:
-    updateMode: {{ $resourcesRequestsVPA.mode | default "Initial" | quote }}
-  resourcePolicy:
-    containerPolicies:
-    - containerName: controller
-      minAllowed:
-        cpu: {{ $resourcesRequestsVPA_CPU.min | default "10m" | quote }}
-        memory: {{ $resourcesRequestsVPA_Memory.min | default "50Mi" | quote }}
-      maxAllowed:
-        cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
-        memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
-      {{- if $crd.spec.enableIstioSidecar }}
+  {{- include "helm_lib_resources_management_vpa_spec"  (list "apps.kruise.io/v1alpha1" "DaemonSet" (printf "controller-%s" $name | quote) "controller" $resourcesManagement ) | nindent 2}}
+  {{- if (eq $resourcesManagement.mode "VPA") }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- if $crd.spec.enableIstioSidecar }}
     - containerName: istio-proxy
       mode: "Off"
-      {{- end }}
-    {{- else }}
-  updatePolicy:
-    updateMode: "Off"
-    {{- end }}
+  {{- end }}
+  {{- end }}
 {{- end }}
 ---
 apiVersion: policy/v1
@@ -140,9 +124,6 @@ spec:
         name: {{ $name }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
-{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        container.apparmor.security.beta.kubernetes.io/controller: unconfined
-{{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
@@ -186,10 +167,14 @@ spec:
           runAsGroup: 64535
           fsGroup: 64535
         volumeMounts:
-        - mountPath: /chroot/etc/ingress-controller
+        - mountPath: /etc/ingress-controller
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
+        {{- if $validationIsolationEnabled }}
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
+        {{- end }}
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
@@ -199,13 +184,16 @@ spec:
         - -ec
         - |
           mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
-            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
-            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
-            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
-            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi \
+            /etc/ingress-controller/ssl /etc/ingress-controller/lua /etc/ingress-controller/nginx \
+            /etc/ingress-controller/resolv /etc/ingress-controller/geoip \
+            /etc/ingress-controller/auth /etc/ingress-controller/telemetry \
+        {{- if $validationIsolationEnabled }}
+            /validation-chroot/tmp/nginx \
+        {{- end }}
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
-          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /etc/ingress-controller/nginx/nginx.conf
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -215,25 +203,6 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
-        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        securityContext:
-          seccompProfile:
-            type: Unconfined
-          runAsNonRoot: false
-          runAsUser: 0
-          runAsGroup: 0
-          capabilities:
-            add:
-            - SETGID
-            - SETUID
-            - CHOWN
-            - DAC_OVERRIDE
-            - SYS_ADMIN
-            - SYS_CHROOT
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-        {{- else }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
           seccompProfile:
             type: Unconfined
@@ -243,7 +212,6 @@ spec:
             - NET_BIND_SERVICE
             drop:
             - ALL
-        {{- end }}
           readOnlyRootFilesystem: true
         env:
         - name: POD_NAME
@@ -256,12 +224,12 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
+        {{- if $validationIsolationEnabled }}
+        - name: VALIDATION_ISOLATION_MODE
+          value: {{ $validationIsolationMode | quote }}
+        {{- end }}
         {{- if $geoIP2 }}
         - name: LUA_USE_GEOIP2
-          value: "true"
-        {{- end }}
-        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        - name: NGINX_PROFILING_ENABLED
           value: "true"
         {{- end }}
         livenessProbe:
@@ -290,9 +258,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
-        {{- if or (eq $controllerVersion "1.12") (eq $controllerVersion "1.14") }}
         - --enable-metrics=true
-        {{- end }}
         {{- if $loadBalancer }}
         - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
         {{- end }}
@@ -341,13 +307,21 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
-  {{- if and $loadBalancer (not $resourcesRequests) }}
+  {{- if and $loadBalancer (not $resourcesManagement) }}
             cpu: "350m"
             memory: "500Mi"
-  {{- else if eq ($resourcesRequests.mode | default "") "Static" }}
-    {{- $resourcesRequestsStatic := $resourcesRequests.static | default dict }}
-            cpu: {{ $resourcesRequestsStatic.cpu | default "350m" | quote }}
-            memory: {{ $resourcesRequestsStatic.memory | default "500Mi" | quote }}
+  {{- else if eq ($resourcesManagement.mode | default "") "Static" }}
+    {{- $resourcesManagementStatic := $resourcesManagement.static | default dict }}
+    {{- $requests := $resourcesManagementStatic.requests | default dict }}
+            cpu: {{ $requests.cpu | default "350m" | quote }}
+            memory: {{ $requests.memory | default "500Mi" | quote }}
+    {{- $limits := $resourcesManagementStatic.limits | default dict }}
+    {{- if $limits }}
+          limits:
+    {{- range $resource, $limit := $limits }}
+            {{ $resource }}: {{ $limit | quote }}
+    {{- end }}
+    {{- end }}
   {{- end }}
         ports:
         - containerPort: 80
@@ -405,22 +379,33 @@ spec:
     {{- end }}
   {{- end }}
         volumeMounts:
+        {{- if $validationIsolationEnabled }}
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
+        - mountPath: /validation-chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /validation-chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        {{- end }}
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/tmp
+          name: tmp
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-        - mountPath: /chroot/etc/nginx/ssl/
-          name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp
-          name: tmp
-        - mountPath: /chroot/etc/ingress-controller
-          name: etc-ingress-controller
-{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        - name: valgrind
-          mountPath: /chroot/var/log/valgrind
-        - name: proc
-          mountPath: /chroot/proc
-{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
@@ -492,6 +477,10 @@ spec:
       volumes:
       - name: tmp
         emptyDir: {}
+      {{- if $validationIsolationEnabled }}
+      - name: validation-tmp
+        emptyDir: {}
+      {{- end }}
       - name: etc-ingress-controller
         emptyDir: {}
       - name: var-lib-nginx
@@ -504,14 +493,6 @@ spec:
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config
-{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-      - name: valgrind
-        hostPath:
-          path: /var/log/valgrind
-          type: DirectoryOrCreate
-      - name: proc
-        emptyDir: {}
-{{- end }}
 {{- end }}
 
 {{- $context := . }}

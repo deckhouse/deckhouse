@@ -646,7 +646,8 @@ When attempting to switch the CRI, the changes may not take effect. The most com
 
 The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at least one of the following conditions is true:
 
-- Kernel version lower than 5.8;
+- Kernel version lower than 5.8
+- Linux kernel version is in the range 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS)
 - systemd version lower than 244
 - cgroup v2 is disabled
 - EROFS file system is unavailable.
@@ -1486,6 +1487,45 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
 
+## How the fencing mechanism handles different node types?
+
+The fencing mechanism is triggered when a node loses connectivity with the cluster and protects it from "zombie" nodes in an undefined state. To prevent short-time failures from causing cascading actions, the mechanism operates in two stages: first, it marks the node as suspicious (at the `memberlist/Lifeguard` gossip protocol level), and then isolates it — shuts the node down and, if necessary, deletes the associated Node object.
+
+For more details on how the fencing-agent and fencing-controller work, refer to the description of the [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode) parameter of the NodeGroup resource.
+
+The behavior depends on the node type (the `node.deckhouse.io/type` label).
+
+### Cloud nodes (CloudEphemeral, CloudPermanent)
+
+When fencing is triggered in `Watchdog` mode:
+
+1. The fencing-agent stops resetting the watchdog timer (the `softdog` kernel module). When the timeout expires, a kernel panic occurs — this guarantees that no workloads remain running on the node.
+2. The fencing-controller deletes the Node object from the cluster.
+3. The cloud-provider-controller (MCM/CAPI) picks up the Node deletion, removes the corresponding virtual machine, and provisions a new one if needed. As a result, the failed node is recreated automatically.
+
+Theoretically, a scenario is possible where kubelet on a "stuck" VM recovers before the cloud-provider deletes the machine and attempts to re-register the node in the cluster. The probability of this is minimal due to the following protecting mechanisms:
+
+- A kernel panic leaves the node in a non-operational state. Manual VM restart is required for recovery.
+- Automatic node reboot after a kernel panic is disabled at the OS level for all nodes with `fencing` enabled.
+- There are safety delays between the kernel panic and the moment the cloud-provider processes the machine.
+
+### Static nodes (Static, CloudStatic)
+
+For static nodes, the Node object is **not deleted**, since the underlying machine cannot be automatically recreated. In this case:
+
+1. The fencing-agent shuts the node down via a kernel panic to prevent undefined behavior.
+2. The fencing-controller only deletes pods from node.
+3. The Node object remains in the cluster, and the node waits until it is manually restored by an operator.
+
+### Disabling automatic reboot after kernel panic
+
+In all cases, when `fencing` is enabled, automatic node reboot after a kernel panic is disabled at the OS level (via kernel settings). This prevents a node from rejoining the cluster in an undefined state:
+
+- **For cloud nodes**: Until the cloud-provider deletes or recreates the virtual machine.
+- **For static nodes**: Until the operator restores the node manually.
+
+If you observe a scenario where a node with `fencing` enabled returns to the cluster in a way that differs from the behavior described above, contact the [support](https://deckhouse.io/tech-support/). This will help clarify the sequence of checks and protecting mechanisms.
+
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
@@ -1778,6 +1818,12 @@ To add a GPU node to the cluster, perform the following steps:
    nvidia-smi
    ```
 
+   {% alert level="warning" %}
+   If the GPU node was prepared in advance, shipped with preinstalled NVIDIA drivers, or runs an OS with a graphical environment, make sure that the GPU is not being used by third-party processes.
+
+   In the `nvidia-smi` output, the `Processes` section must not contain third-party processes using the GPU. On nodes with a graphical environment, these may include, for example, graphical session or display manager processes: `Xorg`, `gnome-shell`, `gdm`, `sddm`, `lightdm`, and others. Such processes can consume GPU memory and interfere with correct workload operation as well as MIG configuration.
+   {% endalert %}
+
    Expected proper output (example):
 
    ```console
@@ -2020,8 +2066,15 @@ A separate `custom-<ng>-<hash>` configuration is created for each group of nodes
 
 ## MIG profile does not activate — what to check?
 
-1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).
-1. **NodeGroup configuration:**
+1. Check the GPU model. MIG is supported in the H100/A100/A30 models and **not** supported in V100/T4. To verify the support in a model, refer to [profile tables](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/latest/supported-mig-profiles.html) in the NVIDIA MIG guide.
+
+1. Ensure the GPU is not being used by OS processes or user applications. If a graphical environment, display manager, or other GPU-consuming processes are running on the node, applying the MIG configuration may fail or may not take effect until the GPU is released. Check this with the following command:
+
+   ```shell
+   nvidia-smi
+   ```
+
+1. Check the [NodeGroup](cr.html#nodegroup-v1-spec-gpu) configuration:
 
    ```yaml
    gpu:

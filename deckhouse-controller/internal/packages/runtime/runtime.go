@@ -19,13 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	addonapp "github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
-	shapp "github.com/flant/shell-operator/pkg/app"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
@@ -38,14 +38,16 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
-	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
+	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
+	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
@@ -55,6 +57,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -63,7 +66,7 @@ import (
 const (
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
 	kubernetesVersionValue  = "kubernetesVersion"
-	deckhouseVersionValue   = "version"
+	deckhouseVersionValue   = "deckhouseVersion"
 
 	runtimeTracer = "package-runtime"
 )
@@ -83,7 +86,9 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
-	installer        installerI         // Downloads and mounts package images
+	healthService    *health.Service    // Resources health monitor
+	appDeployer      deployerI          // Deploys and undeploys application package images
+	moduleDeployer   deployerI          // Deploys and undeploys module package images
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -103,11 +108,11 @@ type Runtime struct {
 	logger *log.Logger
 }
 
-// installerI abstracts package image operations (download, mount, unmount).
-type installerI interface {
-	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
-	Install(ctx context.Context, downloaded, deployed, name, version string) error
-	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
+// deployerI abstracts package image deployment to and removal from the filesystem.
+type deployerI interface {
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Undeploy(ctx context.Context, deployedName string, keep bool) error
+	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
 
 // moduleManagerI provides access to global values for version getters and bootstrap checks.
@@ -133,14 +138,20 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.status = status.NewService()
 
 	reg := registry.NewService(dc, logger)
+	downloadedDir := d8env.GetDownloadedModulesDir()
+
+	appsDir := filepath.Join(downloadedDir, "apps")
+	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.installer = symlinkinstaller.NewInstaller(reg, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.installer = erofsinstaller.NewInstaller(reg, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
@@ -149,6 +160,11 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build Health service with its own client
+	if err := r.buildHealthService(); err != nil {
+		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations
@@ -166,7 +182,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 		ScheduleManager:   r.scheduleManager,
 		TaskBuilder:       r,
 		QueueService:      r.queueService,
-	}, r.logger).Start()
+	}, r.logger)
 
 	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
 		return nil, fmt.Errorf("register debug server: %w", err)
@@ -276,10 +292,11 @@ func (r *Runtime) registerDebugServer(socketPath string) error {
 // Also sets a custom timeout for patch operations to prevent hanging on slow API calls.
 func (r *Runtime) buildObjectPatcher() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("object-patcher-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.ObjectPatcherKubeClientQps, shapp.ObjectPatcherKubeClientBurst)
-	client.WithTimeout(shapp.ObjectPatcherKubeClientTimeout)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.ObjectPatcherKubeClientQPS, addonapp.ObjectPatcherKubeClientBurst)
+	client.WithTimeout(addonapp.ObjectPatcherKubeClientTimeout)
+	client.WithMetricPrefix("packages_object_patcher_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize object patcher client: %w", err)
@@ -300,9 +317,10 @@ func (r *Runtime) buildObjectPatcher() error {
 //   - Converting Kubernetes events into binding contexts for hook execution
 func (r *Runtime) buildKubeEventsManager() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("kube-events-manager-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
-	client.WithRateLimiterSettings(shapp.KubeClientQps, shapp.KubeClientBurst)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithMetricPrefix("packages_kube_events_manager_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize kube events manager client: %w", err)
@@ -339,9 +357,10 @@ func (r *Runtime) buildKubeEventsManager() error {
 // Rate limits are specific to monitoring workloads (different from patch or watch clients).
 func (r *Runtime) buildNelmService() error {
 	client := klient.New(klient.WithLogger(r.logger.Named("nelm-monitor-client")))
-	client.WithContextName(shapp.KubeContext)
-	client.WithConfigPath(shapp.KubeConfig)
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
 	client.WithRateLimiterSettings(addonapp.HelmMonitorKubeClientQps, addonapp.HelmMonitorKubeClientBurst)
+	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
@@ -371,6 +390,36 @@ func (r *Runtime) buildNelmService() error {
 	return nil
 }
 
+// buildHealthService creates the workload-health service that drives ConditionScaled.
+//
+// The service watches workloads tagged with the health.LabelKey package label and
+// reduces their per-workload statuses into a single State per package — Scaled,
+// Reconciling, Degraded, or Unknown. Transitions are pushed back into the status
+// service via r.status.UpdateHealth, which encodes them on ConditionScaled.
+//
+// Construction is I/O-free apart from client.Init; informers and the reconcile
+// goroutine start later via r.healthService.Start, paired with Stop on shutdown.
+func (r *Runtime) buildHealthService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("health-monitor-client")))
+	client.WithContextName(addonapp.KubeContext)
+	client.WithConfigPath(addonapp.KubeConfig)
+	client.WithRateLimiterSettings(addonapp.KubeClientQPS, addonapp.KubeClientBurst)
+	client.WithMetricPrefix("packages_health_monitor_")
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize health service client: %w", err)
+	}
+
+	healthService, err := health.NewService(client, r.status.UpdateHealth, r.logger)
+	if err != nil {
+		return fmt.Errorf("create health service failed: %w", err)
+	}
+
+	r.healthService = healthService
+
+	return nil
+}
+
 // buildScheduler creates the package scheduler with version checks and lifecycle callbacks.
 //
 // The scheduler controls package enable/disable based on:
@@ -387,12 +436,7 @@ func (r *Runtime) buildNelmService() error {
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
-		if len(discovery) == 0 {
-			return nil, fmt.Errorf("discovery section not found in global values")
-		}
-
-		value, ok := discovery[deckhouseVersionValue]
+		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -400,6 +444,10 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		version, ok := value.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid deckhouse version")
+		}
+
+		if version == "dev" {
+			version = "v2.0.0"
 		}
 
 		return semver.NewVersion(version)
@@ -478,6 +526,9 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 // schedule and disable events from the scheduler and dispatches them to the
 // appropriate handler, driving the enable/disable lifecycle for all packages.
 func (r *Runtime) Run() {
+	r.hookEventHandler.Start()
+	r.healthService.Start()
+
 	go func() {
 		for event := range r.scheduler.Ch() {
 			switch event.Kind {
@@ -492,9 +543,9 @@ func (r *Runtime) Run() {
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
-// ApplySettings → Startup → Run tasks for the named package.
+// Configure → Startup → Run tasks for the named package.
 //
-// ApplySettings reads the latest pending settings from the Store and validates/applies
+// Configure reads the latest pending settings from the Store and validates/applies
 // them to the loaded package instance. This is the single point where settings reach
 // the runtime — both initial load and settings-only changes flow through here.
 //
@@ -521,13 +572,13 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
@@ -550,11 +601,11 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
 	}
 }
 
@@ -575,6 +626,9 @@ func (r *Runtime) Stop() {
 	// Clean up resource monitors
 	r.nelmService.StopMonitors()
 
+	// Stop health monitoring
+	r.healthService.Stop()
+
 	// Stop generating new events
 	r.scheduleManager.Stop()
 	r.kubeEventsManager.Stop()
@@ -587,17 +641,62 @@ func (r *Runtime) Stop() {
 	r.scheduler.Stop()
 }
 
+// PreservePackage identifies one installed Package instance to preserve during Cleanup.
+type PreservePackage struct {
+	PackageName string
+	Repository  string
+	Version     string
+
+	ReleaseName      string
+	ReleaseNamespace string
+}
+
+// Cleanup removes downloaded application packages on disk and orphan nelm
+// releases in the cluster that are not in preserves. Runs once during preflight.
+func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	fsPreserve := make([]deployer.PreservePackage, 0, len(preserves))
+	keepReleases := make(map[string]struct{}, len(preserves))
+	for _, preserve := range preserves {
+		fsPreserve = append(fsPreserve, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
+
+		keepReleases[preserve.ReleaseNamespace+"/"+preserve.ReleaseName] = struct{}{}
+	}
+
+	if err := r.appDeployer.Cleanup(ctx, fsPreserve); err != nil {
+		r.logger.Warn("cleanup apps failed", log.Err(err))
+		return
+	}
+
+	// do not cleanup modules namespace
+	r.nelmService.Cleanup(ctx, keepReleases, "d8-system")
+}
+
 // Status returns package status service for external access
 func (r *Runtime) Status() *status.Service {
 	return r.status
 }
 
-// Scheduler returns package scheduler for external access
-func (r *Runtime) Scheduler() *schedule.Scheduler {
-	return r.scheduler
+// PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.
+func (r *Runtime) PauseScheduler() {
+	r.scheduler.Pause()
 }
 
-// CheckConstraints checks constraints in scheduler
-func (r *Runtime) CheckConstraints(constraints schedule.Constraints) error {
-	return r.scheduler.CheckConstraints(constraints)
+// ResumeScheduler resumes the scheduler after a previous pause.
+func (r *Runtime) ResumeScheduler() {
+	r.scheduler.Resume()
+}
+
+// CheckConstraints validates the proposed package constraints against the
+// current cluster state and dependency graph. The `name` is the scheduler-side
+// identifier (apps.BuildName for applications, module name for modules) and is
+// used by the cycle simulation step to identify the proposed graph vertex.
+func (r *Runtime) CheckConstraints(name string, constraints schedule.Constraints) error {
+	return r.scheduler.CheckConstraints(name, constraints)
 }

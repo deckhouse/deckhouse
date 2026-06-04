@@ -16,6 +16,7 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"regexp"
@@ -147,7 +148,14 @@ func (l *InMemoryLogger) FlushAndClose() error {
 	return nil
 }
 
-func (l *InMemoryLogger) LogProcess(p string, t string, action func() error) error {
+func (l *InMemoryLogger) LogProcessCtx(ctx context.Context, p, t string, action func(ctx context.Context) error) error {
+	l.writeEntityFormatted("Start process: %s/%s", p, t)
+	err := l.parent.LogProcessCtx(ctx, p, t, action)
+	l.writeEntityFormatted("End process: %s/%s", p, t)
+	return err
+}
+
+func (l *InMemoryLogger) LogProcess(p, t string, action func() error) error {
 	l.writeEntityFormatted("Start process: %s/%s", p, t)
 	err := l.parent.LogProcess(p, t, action)
 	l.writeEntityFormatted("End process: %s/%s", p, t)
@@ -158,6 +166,7 @@ func (l *InMemoryLogger) LogInfoF(format string, a ...interface{}) {
 	l.writeEntityFormatted(format, a...)
 	l.parent.LogInfoF(format, a...)
 }
+
 func (l *InMemoryLogger) LogInfoLn(a ...interface{}) {
 	l.writeEntityFormatted("%v\n", a)
 	l.parent.LogInfoLn(a...)
@@ -167,6 +176,7 @@ func (l *InMemoryLogger) LogErrorF(format string, a ...interface{}) {
 	l.writeEntityWithPrefix(l.errorPrefix, format, a...)
 	l.parent.LogErrorF(format, a...)
 }
+
 func (l *InMemoryLogger) LogErrorLn(a ...interface{}) {
 	l.writeEntityWithPrefix(l.errorPrefix, "%v\n", a)
 	l.parent.LogErrorLn(a...)

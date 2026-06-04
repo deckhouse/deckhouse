@@ -369,3 +369,26 @@ shutdown -P now
 - If the load balancer was enabled after the DKP cluster was successfully created, the components will automatically pick up the changes within an hour (no additional actions are required).
 - For each open port, a **Pool + Virtual Service** pair is created.
 - If a firewall is in place, you must create an allow rule for the load balancer’s external IP address and the corresponding ports.
+
+To assign a predefined external IP address to a VCD load balancer, add the `vcd.cpi.flant.com/load-balancer-ip` annotation to the Service.
+
+If both `vcd.cpi.flant.com/load-balancer-ip` annotation and `.spec.loadBalancerIP` filed are set, the annotation takes precedence. The `spec.loadBalancerIP` field remains supported as a deprecated fallback for compatibility.
+
+Example:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: example
+  annotations:
+    vcd.cpi.flant.com/load-balancer-ip: "192.0.2.10"
+spec:
+  type: LoadBalancer
+  selector:
+    app: example
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
+```

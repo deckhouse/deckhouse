@@ -18,37 +18,13 @@ webIfaces:
 
 Istio solves the tasks for applications:
 
-- [Compatibility table for supported versions](#compatibility-table-for-supported-versions)
-- [What issues does Istio help to resolve?](#what-issues-does-istio-help-to-resolve)
-- [Mutual TLS](#mutual-tls)
-- [Authorization](#authorization)
-- [Request routing](#request-routing)
-- [Managing request balancing between service Endpoints](#managing-request-balancing-between-service-endpoints)
-- [Observability](#observability)
-  - [Tracing](#tracing)
-  - [Grafana](#grafana)
-  - [Kiali](#kiali)
-- [Architecture of the cluster with Istio enabled](#architecture-of-the-cluster-with-istio-enabled)
-- [Application service architecture with Istio enabled](#application-service-architecture-with-istio-enabled)
-  - [Details](#details)
-  - [User request lifecycle](#user-request-lifecycle)
-    - [Application with Istio turned off](#application-with-istio-turned-off)
-    - [Application with Istio turned on](#application-with-istio-turned-on)
-- [Activating Istio to work with the application](#activating-istio-to-work-with-the-application)
-- [Federation and multicluster](#federation-and-multicluster)
-  - [Federation](#federation)
-    - [Requirements for clusters](#requirements-for-clusters)
-    - [General principles of federation](#general-principles-of-federation)
-    - [Enabling the federation](#enabling-the-federation)
-    - [Managing the federation](#managing-the-federation)
-  - [Multicluster](#multicluster)
-    - [Requirements for clusters](#requirements-for-clusters-1)
-    - [General principles](#general-principles)
-    - [Enabling the multicluster](#enabling-the-multicluster)
-    - [Managing the multicluster](#managing-the-multicluster)
-- [Estimating overhead](#estimating-overhead)
-  - [control-plane](#control-plane)
-  - [data-plane](#data-plane)
+- [Using Mutual TLS](#mutual-tls).
+- [Access authorization between services](#authorization).
+- [Request routing](#request-routing).
+- [Managing request balancing between service Endpoints](#managing-request-balancing-between-service-endpoints).
+- [Improving Observability](#observability).
+- [Organizing a multi-datacenter cluster by joining clusters into a single Service Mesh (multicluster)](#multicluster).
+- [Grouping isolated clusters into a federation with the ability to provide native (in the Service Mesh sense) access to selected services](#federation).
 
 ## Mutual TLS
 
@@ -206,10 +182,14 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
 
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
-**Note!** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
+{% alert level="warning" %}
+Istio-proxy, running as a sidecar container, consumes resources and adds overhead.
+{% endalert %}
 
-- Each request is DNAT'ed to Envoy that processes it and creates another one. The same thing happens on the receiving side.
-- Each Envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory Envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
+Overhead added by Istio-proxy:
+
+- Any incoming DNAT request is forcibly intercepted by the Envoy proxy. Envoy analyzes the request and forwards it by establishing a new connection. On the receiver side, the process is identical: traffic first reaches the "receiving" Envoy and only then is passed to the application itself.
+- Each Envoy instance stores information about all services in the cluster; therefore, scaling the cluster leads to a linear increase in Envoy's RAM consumption due to storing the full service map. Using the [Sidecar](istio-cr.html#sidecar) CustomResource, the configuration is filtered, and only the necessary minimum of data is delivered to Envoy.
 
 {% alert level="warning" %}
 The EnvoyFilter interface can be controlled by Lua plugins, but it is an internal control mechanism for implementing the Istio functionality. It must not be used in a user configuration, as doing so would compromise the integrity of the system.
@@ -255,15 +235,15 @@ Below are their fundamental differences:
   > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
 * There are no requirements for unique subnets of modules and services in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) when clusters are operating in a [federation](#federation).
 
-  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+   - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+   - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
   >
   > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 
 #### General principles of federation
 
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
-- You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
+- You also need to share information about government services to use the federation. You can do that using ServiceEntry resource. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
 <div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
@@ -301,8 +281,8 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 - Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
 - Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be unique for each multicluster member.
 
-  > - When analyzing HTTP and HTTPS traffic *(in istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic *(in istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+   - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
+   - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
   >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
   > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).

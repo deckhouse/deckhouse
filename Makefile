@@ -52,6 +52,13 @@ else ifeq ($(PLATFORM_NAME), arm64)
 	GH_ARCH = arm64
 endif
 
+# Set proxy for github
+ifeq ($(DISTRO_PACKAGES_PROXY),)
+	GITHUB_URL = https://github.com
+else
+	GITHUB_URL = http://$(DISTRO_PACKAGES_PROXY)/repository/github-com
+endif
+
 # Set testing path for tests-modules
 ifeq ($(FOCUS),)
 	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/... ./ee/se-plus/modules/...
@@ -112,13 +119,14 @@ help:
 
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
-GATOR_VERSION = 3.9.0
+GATOR_VERSION = 3.22.0
+OPA_VERSION = 1.15.1
 GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/opa bin/werf bin/gh ## Install dev dependencies.
 
 ##@ Security
 bin:
@@ -128,7 +136,7 @@ bin:
 
 bin/promtool-${PROMTOOL_VERSION}/promtool:
 	mkdir -p bin/promtool-${PROMTOOL_VERSION}
-	curl -sSfL https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
+	curl -sSfL $(GITHUB_URL)/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/promtool-${PROMTOOL_VERSION} --strip=1 prometheus-${PROMTOOL_VERSION}.${GOHOSTOS}-${GOHOSTARCH}/promtool
 
 .PHONY: bin/promtool
 bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
@@ -137,21 +145,31 @@ bin/promtool: bin/promtool-${PROMTOOL_VERSION}/promtool
 
 bin/gator-${GATOR_VERSION}/gator:
 	mkdir -p bin/gator-${GATOR_VERSION}
-	curl -sSfL https://github.com/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/gator-${GATOR_VERSION} gator
+	curl -sSfL $(GITHUB_URL)/open-policy-agent/gatekeeper/releases/download/v${GATOR_VERSION}/gator-v${GATOR_VERSION}-${GOHOSTOS}-${GOHOSTARCH}.tar.gz -o - | tar zxf - -C bin/gator-${GATOR_VERSION} gator
 
 .PHONY: bin/gator
 bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
+bin/opa-${OPA_VERSION}/opa:
+	mkdir -p bin/opa-${OPA_VERSION}
+	curl -sSfL https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_${GOHOSTOS}_${GOHOSTARCH}_static -o bin/opa-${OPA_VERSION}/opa
+	chmod +x bin/opa-${OPA_VERSION}/opa
+
+.PHONY: bin/opa
+bin/opa: bin/opa-${OPA_VERSION}/opa
+	rm -f bin/opa
+	ln -s /deckhouse/bin/opa-${OPA_VERSION}/opa bin/opa
+
 .PHONY: bin/yq
 bin/yq: bin ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
+	curl -sSfL $(GITHUB_URL)/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
-tests-modules: ## Run unit tests for modules hooks and templates.
+tests-modules: bin/gator bin/opa gotestsum ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
@@ -162,19 +180,19 @@ dmt-lint:
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
-tests-controller: ## Run deckhouse-controller unit tests.
-	go test -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
+tests-controller: gotestsum ## Run deckhouse-controller unit tests.
+	$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
 
 .PHONY: test-all
-test-all: go-check
-	$(call iterateAllGoModules,Running go test with race and cover in,go test -cover -race -timeout=${TESTS_TIMEOUT} ./...)
+test-all: go-check gotestsum
+	$(call iterateAllGoModules,Running go test with race and cover in,$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} ./...)
 
 .PHONY: test-draft-all
-test-draft-all: go-check
-	$(call iterateAllGoModules,Running go test in,go test ./...)
+test-draft-all: go-check gotestsum
+	$(call iterateAllGoModules,Running go test in,$(GOTESTSUM) -- ./...)
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -207,12 +225,22 @@ define iterateAllGoModules
 endef
 
 .PHONY: lint-all
-lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+lint-all: golangci-lint check-dhctl-cmd-drift ## Run golangci-lint run in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: lint-changed
+lint-changed: check-dhctl-cmd-drift ## Lint only Go modules touched by diff against DIFF_BASE (default: HEAD~1).
+  ##~ Uses the golangci-lint already on PATH (the CI tests image ships one);
+  ##~ run `make golangci-lint` first if you don't have it locally.
+	@bash tools/lint-changed.sh
 
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: check-dhctl-cmd-drift
+check-dhctl-cmd-drift: ## Verify dhctl ↔ deckhouse-controller CLI command-builder duplicates are in sync.
+	@bash tools/check-dhctl-cmd-drift.sh
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -246,7 +274,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 generate: generate-kubernetes generate-tools generate-docs generate-werf
 
 .PHONY: generate-tools
-generate-tools:
+generate-tools: yq
 	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
@@ -279,6 +307,7 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 MODULE_PATH ?=
 CHANNEL ?= alpha
 MODULE_VERSION ?= v0.1.0
+DOC_VERSION ?=
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
@@ -287,6 +316,15 @@ docs: bin/werf ## Run containers with the documentation.
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+
+.PHONY: docs-generate-pdf
+docs-generate-pdf: ## Generate PDF documentation.
+  ##~ Options: DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
+  ##~ Options: BUILD_LANG=ru|en - build a single language only. If not set, both languages are built.
+  ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
+	DOC_VERSION="$(strip $(DOC_VERSION))" \
+	BUILD_LANG="$(strip $(BUILD_LANG))" \
+	bash tools/docs/pdf/generate-pdf.sh
 
 .PHONY: docs-external-module
 docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.
@@ -349,7 +387,7 @@ docs-spellcheck-get-typos-list: ## Print out a list of all the terms in all page
 
 bin/jq-$(JQ_VERSION)/jq:
 	mkdir -p bin/jq-$(JQ_VERSION)
-	curl -sSfL https://github.com/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
+	curl -sSfL $(GITHUB_URL)/stedolan/jq/releases/download/jq-$(JQ_VERSION)/jq-$(JQ_PLATFORM) -o $(PWD)/bin/jq-$(JQ_VERSION)/jq && chmod +x $(PWD)/bin/jq-$(JQ_VERSION)/jq
 
 .PHONY: bin/jq
 bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
@@ -357,7 +395,7 @@ bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion s
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
 bin/crane: bin ## Install crane deps for update-patchversion script.
-	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
+	curl -sSfL $(GITHUB_URL)/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
 	@if ! command -v bin/trdl >/dev/null 2>&1; then \
@@ -376,11 +414,11 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 
 bin/gh: bin ## Install gh cli.
 ifeq ($(OS_NAME), Darwin)
-	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	curl -sSfL $(GITHUB_URL)/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
 	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
 	rm bin/gh.zip
 else
-	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
+	curl -sSfL $(GITHUB_URL)/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
 	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
 	rm bin/gh.tar.gz
 endif
@@ -400,6 +438,36 @@ update-base-images-versions:
 	##~ Options: version=vMAJOR.MINOR.PATCH
 	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
 	$(MAKE) render-workflow
+
+BASE_LIMIT_KEYS := REGISTRY_PATH \
+                builder/distroless \
+                builder/golang-1.25 \
+                builder/golang-1.26 \
+                builder/golang \
+                minget-0.1 \
+                minget
+
+.PHONY: update-container-factory
+update-container-factory: ## Download container-factory digests and update candi/alt_base_images.yml
+	@set -e; \
+	test -n "$(version)" || (echo 'Err: version is required. Example: make update-container-factory version=v1.0.37' >&2; exit 1); \
+	ver="$(version)"; \
+	case "$$ver" in \
+	  v[0-9]*.[0-9]*.[0-9]*) ;; \
+	  [0-9]*.[0-9]*.[0-9]*) ver="v$$ver" ;; \
+	esac; \
+	cd candi; \
+	URL="https://fox.flant.com/api/v4/projects/deckhouse%2Fcontainer-base%2Fbase-images/packages/generic/base_images/$$ver/base_images.yml"; \
+	curl --fail -sSL "$$URL" -o .alt_base_images.full.yml; \
+	{ \
+	  echo "# version=$$ver"; \
+	  for key in $(BASE_LIMIT_KEYS); do \
+	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
+	    echo "$$line"; \
+	  done; \
+	} > alt_base_images.yml; \
+	rm -f .alt_base_images.full.yml; \
+	echo "Updated candi/alt_base_images.yml to version $$ver"
 
 ##@ Build
 .PHONY: build
@@ -422,23 +490,28 @@ set-build-envs:
   ifeq ($(GOPROXY),)
  		export GOPROXY=https://proxy.golang.org/
   endif
+  # NB: := (simple expansion), not = (recursive). These vars are `export`ed,
+  # so a recursive definition makes `make` re-run the `$(shell git ...)` while
+  # building the environment for *every* $(shell) call in the Makefile —
+  # thousands of `git` invocations per `make` run, ~9 min on a full-history
+  # repo. Simple expansion runs each git command exactly once at parse time.
   ifeq ($(CI_COMMIT_TAG),)
- 		export CI_COMMIT_TAG=$(shell git describe --abbrev=0 2>/dev/null)
+ 		export CI_COMMIT_TAG := $(shell git describe --abbrev=0 2>/dev/null)
   endif
   ifeq ($(CI_COMMIT_BRANCH),)
- 		export CI_COMMIT_BRANCH=$(shell git branch --show-current)
+ 		export CI_COMMIT_BRANCH := $(shell git branch --show-current)
   endif
   ifeq ($(CI_COMMIT_REF_NAME),)
- 		export CI_COMMIT_REF_NAME=$(shell git rev-parse --abbrev-ref HEAD)
+ 		export CI_COMMIT_REF_NAME := $(shell git rev-parse --abbrev-ref HEAD)
  	else
 		ifeq ($(CI_COMMIT_TAG),)
-			export CI_COMMIT_REF_NAME=$(CI_COMMIT_BRANCH)
+			export CI_COMMIT_REF_NAME := $(CI_COMMIT_BRANCH)
 		else
-			export CI_COMMIT_REF_NAME=$(CI_COMMIT_TAG)
+			export CI_COMMIT_REF_NAME := $(CI_COMMIT_TAG)
 		endif
  	endif
   ifeq ($(CI_COMMIT_REF_SLUG),)
- 		export CI_COMMIT_REF_SLUG=$(shell bin/gh pr view $$CI_COMMIT_BRANCH --json number -q .number 2>/dev/null)
+ 		export CI_COMMIT_REF_SLUG := $(shell bin/gh pr view $$CI_COMMIT_BRANCH --json number -q .number 2>/dev/null)
  	endif
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
@@ -447,9 +520,9 @@ set-build-envs:
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
   endif
 
-	export WERF_REPO=$(DEV_REGISTRY_PATH)
-	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
-	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
+	export WERF_REPO := $(DEV_REGISTRY_PATH)
+	export REGISTRY_SUFFIX := $(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
+	export SECONDARY_REPO := --secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
 build: bin/werf set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
@@ -493,6 +566,7 @@ build: bin/werf set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: bin/werf set-build-envs ## render werf.yaml for build Deckhouse images.
+	echo "Cur dir $$(pwd)"
 	bin/werf config render --dev
 
 GO=$(shell which go)
@@ -527,14 +601,16 @@ CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
+GOTESTSUM = $(LOCALBIN)/gotestsum
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.29.29
+DECKHOUSE_CLI_VERSION ?= v0.30.12
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.33.8
 YQ_VERSION ?= v4.47.2
+GOTESTSUM_VERSION ?= v1.13.0
 
 ## Generate werf
 .PHONY: generate-werf
@@ -625,14 +701,14 @@ deckhouse-cli:
 		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
 		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
 			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
-			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
 		else \
 			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+			exit 0; \
 		fi; \
 	else \
 		echo "d8 not found, downloading..."; \
-		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
-	fi
+	fi; \
+	curl -sSfL "$(GITHUB_URL)/deckhouse/deckhouse-cli/releases/download/$(DECKHOUSE_CLI_VERSION)/d8-$(DECKHOUSE_CLI_VERSION)-$(YQ_PLATFORM)-$(YQ_ARCH).tar.gz" | tar -xz -C $(LOCALBIN) --strip-components=2 $(YQ_PLATFORM)-$(YQ_ARCH)/bin/d8
 
 ## Download client-gen locally if necessary.
 .PHONY: client-gen
@@ -662,6 +738,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 yq: $(YQ) ## Download yq locally if necessary.
 $(YQ): $(LOCALBIN)
 	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
+
+.PHONY: gotestsum
+gotestsum: $(GOTESTSUM) ## Download gotestsum locally if necessary.
+$(GOTESTSUM): $(LOCALBIN)
+	$(call go-install-tool,$(GOTESTSUM),gotest.tools/gotestsum,$(GOTESTSUM_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

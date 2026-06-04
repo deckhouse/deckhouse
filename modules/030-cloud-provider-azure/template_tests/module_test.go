@@ -61,7 +61,7 @@ const globalValues = `
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
-  enabledModules: ["vertical-pod-autoscaler"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]
   modules:
     placement: {}
   discovery:
@@ -194,6 +194,28 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
+			Expect(userAuthzUser.Exists()).To(BeTrue())
+			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzUser.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - azureinstanceclasses
+  verbs:
+  - get
+  - list
+  - watch`))
+			Expect(userAuthzClusterAdmin.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - azureinstanceclasses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update`))
 
 			// user story #1
 
@@ -333,7 +355,7 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]`)
 			f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
 			f.HelmRender()
 		})

@@ -105,6 +105,7 @@
     display: flex;
     justify-content: start;
     min-width: 297px;
+    min-height: 25px;
     margin-right: 64px;
     padding-top: 20px;
     padding-bottom: 25px;
@@ -1309,7 +1310,9 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
+  &:not(.tabs__item) {
     padding-bottom: 0;
+  }
 }
 
 .docs .resources ul li .resources__prop_description + p,
@@ -1416,14 +1419,20 @@ a.comparison-table__module-proprietaryOkmeter::after {
     color: #00122C;
 }
 
+.docs .resources__prop_description code {
+    overflow-wrap: break-word;
+}
+
 .docs:not(.docs--modules) h1,
 .docs:not(.docs--modules) h2,
 .docs:not(.docs--modules) h3,
 .docs:not(.docs--modules) h4,
 .docs:not(.docs--modules) h5,
 .docs:not(.docs--modules) h6 {
+    position: relative;
     margin-bottom: 30px;
     margin-top: 30px;
+    padding-right: 21px;
 
     @include breakpoints.max-w(l) {
         margin-bottom: 20px;
@@ -1433,6 +1442,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       margin-bottom: 15px;
       margin-top: 15px;
+    }
+
+    a.anchorjs-link {
+      position: absolute;
+      bottom: 7px;
     }
 }
 
@@ -1504,7 +1518,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs h3 {
-  width: max-content;
   max-width: 100%;
   font-size: 21px;
   font-weight: 600;
@@ -1762,11 +1775,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     transform: rotate(0deg);
 }
 
-.docs .details .details__content {
+.docs .details > .details__content {
     display: none;
 }
 
-.docs .details.active .details__content {
+.docs .details.active > .details__content {
     display: block;
 }
 
@@ -1792,6 +1805,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     .table-wrapper {
         position: relative;
         overflow: auto;
+        margin-bottom: 30px;
 
         &.table-wrapper__small,
         &.table-wrapper__versions {
@@ -1800,6 +1814,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
         .table__small {
           box-shadow: none;
+        }
+
+        img {
+          max-width: max-content;
         }
     }
 }
@@ -2630,6 +2648,14 @@ select#contact-select {
 
     svg {
       transform: rotate(180deg);
+    }
+  }
+
+  &[data-placement^='bottom'] .tippy-svg-arrow {
+    top: -12px;
+
+    svg {
+      transform: rotate(-90deg);
     }
   }
 }

@@ -31,6 +31,65 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2025-30153 связана с обработкой сжатых multipart/form-data запросов в компоненте ZipFileBodyDecoder библиотеки kin-openapi. terraform-provider-kubernetes использует kin-openapi только локально для чтения и валидации OpenAPI-схем, при этом прием multipart/form-data не реализован, уязвимый код не используется в провайдере",
       "timestamp": "2025-10-10T07:23:24.420648Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Для эксплуатации уязвимости CVE-2026-39882 в opentofu должен быть запущен и настроен экспортер трассировки OpenTelemetry. В поставке Deckhouse по умолчанию не заданы необходимые для этого переменные окружения, а также нет настроек, позволяющих включить данную функциональность, что исключает выполнение уязвимого кода.",
+      "timestamp": "2026-04-13T14:56:27.526756Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-xmrv-pmrh-hhx2"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream"
+        },
+        {
+          "@id": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/s3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GHSA-xmrv-pmrh-hhx2 находится в декодере AWS EventStream. В OpenTofu пакет S3 из AWS SDK используется для backend удаленного состояния и выполняет только обычные операции с объектами и списками: HeadObject, GetObject, PutObject, DeleteObject и ListObjectsV2. EventStream API, включая S3 SelectObjectContent, в этом сценарии не вызываются. Поэтому уязвимый декодер попадает в зависимости транзитивно, но в рабочем пути OpenTofu не выполняется.",
+      "timestamp": "2026-04-22T10:48:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-4660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/hashicorp/go-getter"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-4660 требует, чтобы go-getter получил специально сформированный Git URL от атакующего. В данной поставке OpenTofu не принимает произвольные module source-адреса от внешних пользователей: конфигурация, с которой запускается tofu init, поставляется и контролируется продуктом. Поэтому атакующий не может передать в go-getter malicious Git URL, необходимый для эксплуатации.",
+      "timestamp": "2026-04-22T10:48:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-53859"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cli/go-gh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В OpenTofu github.com/cli/go-gh не используется в рабочем коде продукта, зависимость присутствует только как вспомогательная часть build/tooling и не вызывается при выполнении tofu. В поставке Deckhouse этот код не обрабатывает пользовательские GitHub-хосты и не работает с GitHub-токенами во время выполнения OpenTofu, поэтому условие утечки токена отсутствует.",
+      "timestamp": "2026-04-22T11:06:38Z"
     }
   ],
   "timestamp": "2025-10-10T07:23:24Z"

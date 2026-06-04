@@ -11,17 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# bashible: parallel-group=light-checks
 
 {{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
+
 function get_data_device_secret() {
-  secret="d8-masters-kubernetes-data-device-path"
+  local secret="d8-masters-kubernetes-data-device-path"
 
   if [ -f /var/lib/bashible/bootstrap-token ]; then
     while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if d8-curl -s -f --connect-timeout 10 -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
+        if d8-curl -sS -f -x "" --connect-timeout 10 -X GET \
+          "https://$server/api/v1/namespaces/d8-system/secrets/$secret" \
+          --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
+          --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else

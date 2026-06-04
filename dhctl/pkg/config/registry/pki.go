@@ -37,7 +37,6 @@ func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
 		CoreV1().
 		Secrets(secretsNamespace).
 		Get(ctx, initSecretName, metav1.GetOptions{})
-
 	if err != nil {
 		return PKI{}, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, initSecretName, err)
 	}

@@ -26,6 +26,7 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
 status:
+  lastAppliedConfiguration: null
   tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -73,8 +74,10 @@ status:
       en: example — test
       ru: example — test
     requirements:
-      deckhouse: '>=1.0.0'
-      kubernetes: '>=1.26'
+      deckhouse:
+        constraint: '>=1.0.0'
+      kubernetes:
+        constraint: '>=1.26'
     stage: Preview
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -104,8 +107,10 @@ status:
       en: example — test
       ru: example — test
     requirements:
-      deckhouse: '>=1.0.0'
-      kubernetes: '>=1.26'
+      deckhouse:
+        constraint: '>=1.0.0'
+      kubernetes:
+        constraint: '>=1.26'
     stage: Preview
   usedBy:
   - name: test-app
@@ -125,4 +130,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false

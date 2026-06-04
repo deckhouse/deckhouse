@@ -21,13 +21,18 @@ import (
 	"os/exec"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type PortsCheck struct {
-	Node node.Interface
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	globalOptions          *options.GlobalOptions
 }
 
 const PortsCheckName preflight.CheckName = "ports-availability"
@@ -45,14 +50,15 @@ func (PortsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c PortsCheck) Run(ctx context.Context) error {
-	if c.Node == nil {
-		return fmt.Errorf("ports check: node interface is nil")
+	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
 	}
-	return checkAvailabilityPorts(ctx, c.Node)
+	return checkAvailabilityPorts(ctx, nodeInterface, c.globalOptions)
 }
 
-func checkAvailabilityPorts(ctx context.Context, nodeInterface node.Interface) error {
-	file, err := template.RenderAndSavePreflightCheckPortsScript(nil)
+func checkAvailabilityPorts(ctx context.Context, nodeInterface libcon.Interface, globalOptions *options.GlobalOptions) error {
+	file, err := template.RenderAndSavePreflightCheckPortsScript(globalOptions)
 	if err != nil {
 		return err
 	}
@@ -75,8 +81,8 @@ func checkAvailabilityPorts(ctx context.Context, nodeInterface node.Interface) e
 	return nil
 }
 
-func Ports(nodeInterface node.Interface) preflight.Check {
-	check := PortsCheck{Node: nodeInterface}
+func Ports(sshProviderInitializer *providerinitializer.SSHProviderInitializer, globalOptions *options.GlobalOptions) preflight.Check {
+	check := PortsCheck{SSHProviderInitializer: sshProviderInitializer, globalOptions: globalOptions}
 	return preflight.Check{
 		Name:        PortsCheckName,
 		Description: check.Description(),

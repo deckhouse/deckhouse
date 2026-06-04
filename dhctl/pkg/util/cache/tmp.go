@@ -26,7 +26,6 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -37,8 +36,9 @@ type ClearTmpParams struct {
 	IsDebug         bool
 	RemoveTombStone bool
 
-	TmpDir        string
-	DefaultTmpDir string
+	TmpDir           string
+	DefaultTmpDir    string
+	DownloadCacheDir string
 
 	LoggerProvider log.LoggerProvider
 }
@@ -90,6 +90,7 @@ func NewTmpCleaner(params ClearTmpParams) TmpCleaner {
 
 	suffixesForSkip := []string{
 		".log",
+		".jsonl", // OpenTelemetry trace files written by pkg/telemetry/exporters.go
 	}
 
 	if !params.RemoveTombStone {
@@ -169,7 +170,7 @@ func (r *regularTmpCleaner) Cleanup() {
 	skipDirs := []string{
 		tmpDir,
 		r.params.DefaultTmpDir,
-		app.DownloadCacheDirName,
+		r.params.DownloadCacheDir,
 	}
 
 	err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
@@ -211,7 +212,7 @@ func (r *regularTmpCleaner) Cleanup() {
 		}
 
 		// keep download layers cache
-		if strings.Contains(fullPath, app.DownloadCacheDirName) {
+		if r.params.DownloadCacheDir != "" && strings.Contains(fullPath, r.params.DownloadCacheDir) {
 			keepFiles = append(keepFiles, fullPath)
 			return nil
 		}

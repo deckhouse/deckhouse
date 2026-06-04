@@ -165,5 +165,5 @@
       summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
       description: |
         Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support containerd v2.
-        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.

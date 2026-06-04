@@ -297,13 +297,9 @@
 
     - alert: D8UpmeterProbeGarbagePodsFromDeployments
       expr: |
-        (
-          count (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter",
-                                                         label_upmeter_probe="controller-manager"})
-          /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
-        ) >= 1
-      for: 10m
+        ((time() - max by (namespace, pod) (kube_pod_created{namespace="d8-upmeter"})) > 300)
+        * on (namespace, pod)
+        max by (namespace, pod) (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter", label_upmeter_probe="controller-manager"})
       labels:
         severity_level: "9"
         tier: cluster
@@ -317,11 +313,9 @@
         plk_labels_as_annotations: "pod"
         summary: Garbage Pods from the controller-manager probe are not being cleaned up.
         description: |
-          The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
+          A Pod from the `control-plane/controller-manager` probe was created more than 5 minutes ago.
 
-          `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe,
-          and `kube-controller-manager` should remove the associated Pods.
-          There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and the Pods should be deleted within seconds.
+          `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe, and `kube-controller-manager` should remove the associated Pods within seconds.
 
           This may indicate:
 

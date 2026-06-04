@@ -72,17 +72,12 @@ discovery:
 			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring", "ca":" plainstring"}`)
 			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
 			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-			f.ValuesSet("userAuthn.publishAPI.enabled", true)
-			f.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 			f.HelmRender()
 		})
 
 		It("Everything must render properly for default cluster", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			createdSecret := f.KubernetesResource("Secret", "d8-user-authn", "ingress-tls-customcertificate")
-			Expect(createdSecret.Exists()).To(BeTrue())
-			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
-			createdSecret = f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 		})

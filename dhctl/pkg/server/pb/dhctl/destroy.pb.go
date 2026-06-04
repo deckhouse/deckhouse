@@ -21,11 +21,12 @@
 package dhctl
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -748,23 +749,26 @@ func file_destroy_proto_rawDescGZIP() []byte {
 	return file_destroy_proto_rawDescData
 }
 
-var file_destroy_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_destroy_proto_goTypes = []interface{}{
-	(*DestroyRequest)(nil),      // 0: dhctl.DestroyRequest
-	(*DestroyResponse)(nil),     // 1: dhctl.DestroyResponse
-	(*DestroyStart)(nil),        // 2: dhctl.DestroyStart
-	(*DestroyPhaseEnd)(nil),     // 3: dhctl.DestroyPhaseEnd
-	(*DestroyContinue)(nil),     // 4: dhctl.DestroyContinue
-	(*DestroyCancel)(nil),       // 5: dhctl.DestroyCancel
-	(*DestroyStartOptions)(nil), // 6: dhctl.DestroyStartOptions
-	(*DestroyResult)(nil),       // 7: dhctl.DestroyResult
-	nil,                         // 8: dhctl.DestroyPhaseEnd.CompletedPhaseStateEntry
-	(*Logs)(nil),                // 9: dhctl.Logs
-	(*Progress)(nil),            // 10: dhctl.Progress
-	(Continue)(0),               // 11: dhctl.Continue
-	(*durationpb.Duration)(nil), // 12: google.protobuf.Duration
-	(*OperationOptions)(nil),    // 13: dhctl.OperationOptions
-}
+var (
+	file_destroy_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+	file_destroy_proto_goTypes  = []interface{}{
+		(*DestroyRequest)(nil),      // 0: dhctl.DestroyRequest
+		(*DestroyResponse)(nil),     // 1: dhctl.DestroyResponse
+		(*DestroyStart)(nil),        // 2: dhctl.DestroyStart
+		(*DestroyPhaseEnd)(nil),     // 3: dhctl.DestroyPhaseEnd
+		(*DestroyContinue)(nil),     // 4: dhctl.DestroyContinue
+		(*DestroyCancel)(nil),       // 5: dhctl.DestroyCancel
+		(*DestroyStartOptions)(nil), // 6: dhctl.DestroyStartOptions
+		(*DestroyResult)(nil),       // 7: dhctl.DestroyResult
+		nil,                         // 8: dhctl.DestroyPhaseEnd.CompletedPhaseStateEntry
+		(*Logs)(nil),                // 9: dhctl.Logs
+		(*Progress)(nil),            // 10: dhctl.Progress
+		(Continue)(0),               // 11: dhctl.Continue
+		(*durationpb.Duration)(nil), // 12: google.protobuf.Duration
+		(*OperationOptions)(nil),    // 13: dhctl.OperationOptions
+	}
+)
+
 var file_destroy_proto_depIdxs = []int32{
 	2,  // 0: dhctl.DestroyRequest.start:type_name -> dhctl.DestroyStart
 	4,  // 1: dhctl.DestroyRequest.continue:type_name -> dhctl.DestroyContinue

@@ -63,6 +63,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/039-registry-packages-proxy/hooks
+  to: /deckhouse/modules/039-registry-packages-proxy/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/040-control-plane-manager/hooks
   to: /deckhouse/modules/040-control-plane-manager/hooks
   excludePaths:
@@ -370,6 +378,16 @@
         - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/gpu_enabled.go
+  to: /deckhouse/modules/040-node-manager/hooks/gpu_enabled.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/mig_custom_config_name.go
+  to: /deckhouse/modules/040-node-manager/hooks/mig_custom_config_name.go
   stageDependencies:
     install:
         - '**/*'

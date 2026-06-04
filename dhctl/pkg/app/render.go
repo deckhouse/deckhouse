@@ -14,37 +14,35 @@
 
 package app
 
-import "gopkg.in/alecthomas/kingpin.v2"
+import (
+	"gopkg.in/alecthomas/kingpin.v2"
 
-var (
-	RenderBashibleBundleDir = ""
-
-	ParseInputFile = ""
-	ParseOutput    = "json"
-
-	Editor = ""
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-func DefineRenderConfigFlags(cmd *kingpin.CmdClause) {
+// DefineRenderConfigFlags registers --bundle-dir.
+func DefineRenderConfigFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
 	cmd.Flag("bundle-dir", "Directory to render bashible bundle.").
 		Envar(configEnvName("BUNDLE_DIR")).
-		StringVar(&RenderBashibleBundleDir)
+		StringVar(&o.BashibleBundleDir)
 }
 
-func DefineEditorConfigFlags(cmd *kingpin.CmdClause) {
+// DefineEditorConfigFlags registers --editor.
+func DefineEditorConfigFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
 	cmd.Flag("editor", "Your favourite editor.").
 		Envar(configEnvName("EDITOR")).
-		StringVar(&Editor)
+		StringVar(&o.Editor)
 }
 
-func DefineInputOutputRenderFlags(cmd *kingpin.CmdClause) {
+// DefineInputOutputRenderFlags registers --file and --output.
+func DefineInputOutputRenderFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
 	cmd.Flag("file", "Input file name with YAML-documents.").
 		Short('f').
 		Envar(configEnvName("FILE")).
-		StringVar(&ParseInputFile)
+		StringVar(&o.ParseInputFile)
 
 	cmd.Flag("output", "Output format (JSON or YAML).").
 		Short('o').
 		Envar(configEnvName("OUTPUT")).
-		EnumVar(&ParseOutput, "yaml", "json")
+		EnumVar(&o.ParseOutput, "yaml", "json")
 }

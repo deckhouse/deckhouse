@@ -31,6 +31,7 @@ type RunExecutorParams struct {
 	TofuBinPath string
 	RootDir     string
 	ExecutorID  string
+	IsDebug     bool
 }
 
 func (p *RunExecutorParams) validateRunParams() error {
@@ -88,7 +89,7 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 
 	envs = append(
 		envs,
-		fmt.Sprintf("TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER=kubernetes"),
+		"TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER=kubernetes",
 		fmt.Sprintf(
 			"TF_SKIP_DEPS_FOR_DATA_SOURCES=%s",
 			strings.Join(skipDataDeps, ";"),
@@ -103,6 +104,16 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
 		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
 	)
+
+	// If dhctl has a persistent provider daemon running, tell every tofu
+	// invocation to reuse it via go-plugin reattach. This trades 5-6 cold
+	// plugin spawns per pipeline (~500ms each) for one warm gRPC connection.
+	// EnsureProviderDaemon respawns the daemon on each call if the previous
+	// instance died, so transient crashes don't cascade through the rest of
+	// the bootstrap.
+	if reattach := EnsureProviderDaemon(); reattach != "" {
+		cmd.Env = append(cmd.Env, "TF_REATTACH_PROVIDERS="+reattach)
+	}
 
 	log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
 

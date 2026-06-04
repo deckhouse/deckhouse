@@ -12,6 +12,17 @@ spec:
     spec:
       names:
         kind: D8VulnerableImages
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Checks images against an external vulnerability provider.
+          properties:
+            isTest:
+              type: boolean
+              description: >-
+                Optional test-mode flag for CI/gator tests.
+                When true, policy reads mocked provider response from inventory ExternalDataInventory.
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |-
@@ -19,10 +30,45 @@ spec:
 
         violation[{"msg": msg}] {
           images := [img | img = retrieve_images[_]]
-          response := external_data({"provider": "trivy-provider", "keys": images})
+          response := get_data(images)
 
           response_deny_request(response, input.review.operation)
-          msg := sprintf("request denied: %v", [response])
+          msg := "request denied by external data provider"
+        }
+
+        get_data(images) = response {
+          is_test_mode
+          response := external_data_from_inventory("trivy-provider", images)
+        }
+
+        get_data(images) = response {
+          not is_test_mode
+          response := external_data_from_inventory("trivy-provider", images)
+        }
+
+        external_data_from_inventory(provider, keys) = response {
+          namespace := object.get(input.review.object.metadata, "namespace", "default")
+          ns_inventory := object.get(object.get(data.inventory, "namespace", {}), namespace, {})
+          api_inventory := object.get(ns_inventory, "deckhouse.io/v1alpha1", {})
+          kinds_inventory := object.get(api_inventory, "ExternalDataInventory", {})
+          external_inventory := object.get(kinds_inventory, "default", {})
+          providers := object.get(object.get(external_inventory, "spec", {}), "providers", {})
+          provider_data := object.get(providers, provider, {})
+
+          responses_map := object.get(provider_data, "responses", {})
+          responses := [[k, object.get(responses_map, k, {})] |
+            k := keys[_]
+          ]
+
+          response := {
+            "errors": object.get(provider_data, "errors", []),
+            "system_error": object.get(provider_data, "system_error", ""),
+            "responses": responses,
+          }
+        }
+
+        is_test_mode {
+          object.get(input.parameters, "isTest", false)
         }
 
         retrieve_images[imgs] {

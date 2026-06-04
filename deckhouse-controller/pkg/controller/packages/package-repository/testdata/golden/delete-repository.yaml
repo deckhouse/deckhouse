@@ -12,4 +12,48 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
-  syncTime: null
+  lastNewVersions: 0
+  partialScanAvailable: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1234567890
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ScanSucceeded
+    status: "True"
+    type: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1234567891
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    timeout: 5m
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ScanFailed
+    status: "True"
+    type: Completed

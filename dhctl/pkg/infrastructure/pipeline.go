@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,9 +26,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 const (
@@ -78,7 +80,6 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			StatePath: statePath,
 			OutFields: []string{k},
 		})
-
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -109,33 +110,45 @@ func ApplyPipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
-	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
+	globalOptions *options.GlobalOptions,
+	extractFn func(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error),
 ) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
-	pipelineFunc := func() error {
-		err := r.Init(ctx)
-		if err != nil {
+
+	pipelineFunc := func(ctx context.Context) (err error) {
+		ctx, span := telemetry.StartSpan(ctx, fmt.Sprintf("Infrastructure - ApplyPipeline %s for %s", r.GetStep(), name))
+		defer span.End()
+
+		if err := r.Init(ctx); err != nil {
 			return err
 		}
+		span.AddEvent("Runner inited")
 
-		err = r.Plan(ctx, false, false)
-		if err != nil {
+		if err := r.Plan(ctx, false, false); err != nil {
 			return err
 		}
+		span.AddEvent("Plan done")
 
-		defer func() { extractedData, err = extractFn(ctx, r) }()
+		defer func() {
+			if err == nil {
+				extractedData, err = extractFn(ctx, r, globalOptions)
+			}
+		}()
 
-		err = r.Apply(ctx)
-		if err != nil {
+		if err := r.Apply(ctx); err != nil {
 			return err
 		}
+		span.AddEvent("Apply done")
 
-		extractedData, err = extractFn(ctx, r)
+		extractedData, err = extractFn(ctx, r, globalOptions)
+		span.AddEvent("Extracted data")
+
 		return err
 	}
 
 	logger := r.GetLogger()
-	err := logger.LogProcess("infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+	err := logger.LogProcessCtx(ctx, "infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+
 	return extractedData, err
 }
 
@@ -150,7 +163,7 @@ func CheckPipeline(
 	var destructiveChanges *plan.DestructiveChanges
 	var infrastructurePlan map[string]any
 
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -179,7 +192,13 @@ func CheckPipeline(
 
 		return nil
 	}
-	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+
+	err := log.ProcessCtx(
+		ctx,
+		"infrastructure",
+		fmt.Sprintf("Check state %s for %s", r.GetStep(), name),
+		pipelineFunc,
+	)
 
 	logDebugPlanIfNeed(ctx, r, name, destroy)
 
@@ -196,6 +215,7 @@ func CheckBaseInfrastructurePipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
+	globalOptions *options.GlobalOptions,
 ) (int, plan.Plan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := plan.HasNoChanges
 
@@ -208,7 +228,7 @@ func CheckBaseInfrastructurePipeline(
 	}
 	var pl map[string]any
 
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -227,7 +247,7 @@ func CheckBaseInfrastructurePipeline(
 			return nil
 		}
 
-		info, err := GetBaseInfraResult(ctx, r)
+		info, err := GetBaseInfraResult(ctx, r, globalOptions)
 		if err != nil {
 			isChange = plan.HasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
@@ -281,7 +301,7 @@ func CheckBaseInfrastructurePipeline(
 
 		return nil
 	}
-	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+	err := log.ProcessCtx(ctx, "infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
 
 	logDebugPlanIfNeed(ctx, r, name, false)
 
@@ -289,7 +309,7 @@ func CheckBaseInfrastructurePipeline(
 }
 
 func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error {
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -300,22 +320,24 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 			return nil
 		}
 
-		err = r.Destroy(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
+		return r.Destroy(ctx)
 	}
-	return log.Process("infrastructure", fmt.Sprintf("Destroy %s for %s", r.GetStep(), name), pipelineFunc)
+
+	return log.ProcessCtx(
+		ctx,
+		"infrastructure",
+		fmt.Sprintf("Destroy %s for %s", r.GetStep(), name),
+		pipelineFunc,
+	)
 }
 
-func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetBaseInfraResult(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetInfrastructureOutput(ctx, "cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
 
-	schemaStore := config.NewSchemaStore(nil)
+	schemaStore := config.NewSchemaStore(globalOptions)
 	_, err = schemaStore.Validate(&cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)
@@ -336,7 +358,7 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutput
 	}, nil
 }
 
-func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func GetMasterNodeResult(ctx context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
 	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, masterSSHIPOutputKey)
 	if err != nil {
 		return nil, err
@@ -404,7 +426,7 @@ func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*Pipel
 	return res, nil
 }
 
-func OnlyState(_ context.Context, r RunnerInterface) (*PipelineOutputs, error) {
+func OnlyState(_ context.Context, r RunnerInterface, _ *options.GlobalOptions) (*PipelineOutputs, error) {
 	tfState, err := r.GetState()
 	if err != nil {
 		return nil, err
@@ -524,7 +546,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	resultsErrs := make(map[string]error, len(targets))
 
 	// always return nil
-	_ = log.Process("infrastructure", "Getting debug plans", func() error {
+	_ = log.ProcessCtx(ctx, "infrastructure", "Getting debug plans", func(ctx context.Context) error {
 		for _, target := range targets {
 			res, err := r.DebugPlanTarget(ctx, destroy, debugPlanStep, target)
 			if err != nil {
@@ -552,7 +574,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	}
 }
 
-func extractChangesStrings(target string, planOutput string) (string, string) {
+func extractChangesStrings(target, planOutput string) (string, string) {
 	var mapOut map[string]any
 	err := json.Unmarshal([]byte(planOutput), &mapOut)
 	if err != nil {

@@ -21,9 +21,10 @@
 package dhctl
 
 import (
+	reflect "reflect"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
 )
 
 const (
@@ -166,6 +167,7 @@ var file_services_proto_goTypes = []interface{}{
 	(*ParseConnectionConfigResponse)(nil),                 // 28: dhctl.ParseConnectionConfigResponse
 	(*GetStatusResponse)(nil),                             // 29: dhctl.GetStatusResponse
 }
+
 var file_services_proto_depIdxs = []int32{
 	0,  // 0: dhctl.DHCTL.Check:input_type -> dhctl.CheckRequest
 	1,  // 1: dhctl.DHCTL.Bootstrap:input_type -> dhctl.BootstrapRequest

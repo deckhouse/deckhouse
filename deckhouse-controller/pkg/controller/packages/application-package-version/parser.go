@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"io"
 
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -36,7 +36,11 @@ const (
 	valuesSchemaFile = "openapi/values.yaml"
 
 	// settingsSchemaFile is the OpenAPI schema validating user-supplied Application.spec.settings.
-	settingsSchemaFile = "openapi/config-values.yaml"
+	settingsSchemaFile = "openapi/settings.yaml"
+
+	// legacySettingsSchemaFile is the previous name of settingsSchemaFile, retained
+	// for backward compatibility with packages built before the rename.
+	legacySettingsSchemaFile = "openapi/config-values.yaml"
 
 	// maxMetadataFileSize limits the size of individual metadata files extracted from tar archives.
 	// This guards against OOM from malicious or corrupted images containing oversized entries.
@@ -54,8 +58,8 @@ type packageMetadata struct {
 
 // packageChangelog represents user-facing release notes for a package version.
 type packageChangelog struct {
-	Features []string `yaml:"features,omitempty"`
-	Fixes    []string `yaml:"fixes,omitempty"`
+	Features []string `yaml:"features,omitempty" json:"features,omitempty"`
+	Fixes    []string `yaml:"fixes,omitempty" json:"fixes,omitempty"`
 }
 
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
@@ -99,13 +103,13 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 	}
 
 	if mr.definitionReader.Len() > 0 {
-		if err := yaml.NewDecoder(mr.definitionReader).Decode(&meta.definition); err != nil {
+		if err := yaml.Unmarshal(mr.definitionReader.Bytes(), &meta.definition); err != nil {
 			return nil, fmt.Errorf("unmarshal package definition: %w", err)
 		}
 	}
 
 	if mr.changelogReader.Len() > 0 {
-		if err := yaml.NewDecoder(mr.changelogReader).Decode(&meta.changelog); err != nil {
+		if err := yaml.Unmarshal(mr.changelogReader.Bytes(), &meta.changelog); err != nil {
 			r.logger.Warn("unmarshal package changelog", log.Err(err))
 		}
 	}
@@ -144,7 +148,7 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			if _, err = io.Copy(r.valuesSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
-		case settingsSchemaFile:
+		case settingsSchemaFile, legacySettingsSchemaFile:
 			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}

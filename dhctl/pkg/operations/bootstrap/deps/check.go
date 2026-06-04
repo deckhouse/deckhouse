@@ -31,11 +31,12 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/local"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
-	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
 type LoopsParams struct {
@@ -45,7 +46,7 @@ type LoopsParams struct {
 
 type DependenciesChecker struct {
 	loggerProvider log.LoggerProvider
-	nodeInterface  node.Interface
+	nodeInterface  libcon.Interface
 	loopsParams    LoopsParams
 }
 
@@ -61,11 +62,10 @@ var (
 		"join", "cat", "ps", "kill",
 	}
 
-	checkDepsDefaultOpts  = retry.AttemptsWithWaitOpts(10, 5*time.Second)
-	checkShellDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
+	checkDepsDefaultOpts = retry.AttemptsWithWaitOpts(10, 5*time.Second)
 )
 
-func NewDependenciesChecker(nodeInterface node.Interface, loggerProvider log.LoggerProvider) *DependenciesChecker {
+func NewDependenciesChecker(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *DependenciesChecker {
 	return &DependenciesChecker{
 		nodeInterface:  nodeInterface,
 		loggerProvider: loggerProvider,
@@ -79,6 +79,9 @@ func (c *DependenciesChecker) WithLoopsParams(p LoopsParams) *DependenciesChecke
 }
 
 func (c *DependenciesChecker) Check(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "DependenciesChecker.Check")
+	defer span.End()
+
 	if govalue.IsNil(c.nodeInterface) {
 		return fmt.Errorf("Internal error: node is nil for dependencies checker")
 	}

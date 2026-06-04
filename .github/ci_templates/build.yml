@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: "ubuntu-latest"
+  runs-on: "ubuntu-slim"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
@@ -27,8 +27,9 @@ check_changelog:
 {!{ define "build_template" }!}
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
+{!{- $werfEnv := index . 2 -}!}
 # <template: build_template>
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+{!{- if eq $buildType "release" }!}
 runs-on: [self-hosted, stage]
 {!{- else }!}
 runs-on: [self-hosted, large]
@@ -53,52 +54,56 @@ steps:
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_SSH_KEY" "SOURCE_REPO_SSH_KEY" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_PRIVATE_KEY" "SVACE_ANALYZE_SSH_PRIVATE_KEY" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_HOST" "SVACE_ANALYZE_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop" "webhook_url" "LOOP_SERVICE_NOTIFICATIONS" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
-  {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+  {!{- if coll.Has $ctx "printGitContext" }!}
+  - name: Print git context
+    run: |
+      # Diagnostic: which commit werf will actually build from.
+      # GITHUB_SHA is the workflow run's commit (immutable, runner-injected);
+      # git HEAD is what actions/checkout left in the work tree (may differ
+      # for runs that override `ref`, e.g. reproducibility-check.yml).
+      echo "==== git context ===="
+      echo "GITHUB_SHA env:        ${GITHUB_SHA}"
+      echo "GITHUB_REF env:        ${GITHUB_REF}"
+      echo "git HEAD (full):       $(git rev-parse HEAD)"
+      echo "git HEAD (short):      $(git rev-parse --short HEAD)"
+      git log -1 --pretty='format:  commit:  %H%n  author:  %an <%ae>%n  date:    %ad%n  subject: %s'
+      echo
+      echo "====================="
+  {!{- end }!}
+  {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
-  {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+  {!{- if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
-  {!{ if eq $buildType "release" }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
-  - name: Set up Go 1.25
-    uses: actions/setup-go@v5
-    with:
-      go-version: '1.25'
-      cache: false
-
-  - name: Run go generate
-    run: |
-      (make generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-  - name: Check generated code
-    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
+  {!{/* `make generate` + drift check live in the dedicated `go_generate`
+       job. werf builds committed content, so the generated-code guard does
+       not need to run inside every build_* job. */}!}
   - name: Build and push deckhouse images
     id: build
     env:
-      WERF_PARALLEL_TASKS_LIMIT: 3
+      WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-      DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-{!{- end }!}
-{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+{!{- end }!}
+{!{- if eq $buildType "release" }!}
+      DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
 {!{- end }!}
 {!{- if eq $buildType "release" }!}
       GHCR_IO_REGISTRY_USER: ${{ github.actor }}
@@ -121,7 +126,7 @@ steps:
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
-{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
       COSIGN_VAULT_KEY: "dh-2025-aug-dev"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
       COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -134,6 +139,8 @@ steps:
       REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
       REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
       REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -176,10 +183,11 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-    {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+    {!{- if eq $buildType "release" }!}
+      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-      export WERF_REPO="${STAGE_REGISTRY_PATH}"
+      export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+      export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
@@ -187,17 +195,15 @@ steps:
     {!{- end }!}
     {!{ if eq $buildType "release" }!}
       # Registry path to publish images for Git tags.
-      if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-      SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+      if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+      SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
       else
       SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
       fi
-      # Release tag build, set deckhouse registry as final
-      export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
-      IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+      IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
       export WERF_DISABLE_META_TAGS=true
     {!{- else if eq $buildType "pre-release" }!}
       # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -217,8 +223,8 @@ steps:
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
     {!{- end }!}
 
-      type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
-      d8-build dk build \
+      type werf && source $(werf ci-env github --verbose --as-file)
+      werf build \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --build-report-path images_tags_werf.json
@@ -229,7 +235,9 @@ steps:
         publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
         publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
         publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+        {!{- if ne $werfEnv "CSE" }!}
         publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+        {!{- end }!}
 
         # For release branches, also push release-channel to dev
         if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
@@ -237,6 +245,7 @@ steps:
           publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
           publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
           publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+          publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "v${BASH_REMATCH[1]}.0"
         fi
       else
         echo "Branch unset, skipping branch publish."
@@ -249,6 +258,7 @@ steps:
         publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
         publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
         publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+        publish_image 'e2e-opentofu-eks' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/e2e-opentofu-eks" "${IMAGE_TAG}"
       else
         echo "Not a release tag, skipping tag publish."
       fi
@@ -264,34 +274,6 @@ steps:
       egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
       mv images_tags_werf_filtered.json images_tags_werf.json
 
-  - name: Check DKP images manifests in public registry
-    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-    id: check_images
-    env:
-      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-      DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-    run: |
-      EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-  {!{ if eq $buildType "release" }!}
-  - uses: {!{ index (ds "actions") "actions/setup-python" }!}
-    with:
-      python-version: '3.12.3'
-
-  - name: Copy attestations
-    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-    env:
-      DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-    run: |
-      export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-      export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
-      export IMAGES_TAGS_PATH=./images_tags_werf.json
-      python .github/scripts/python/copy_attestations.py
-  {!{- end }!}
-
   - name: Save build report
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
     uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
@@ -301,7 +283,130 @@ steps:
 
   - name: Cleanup workdir
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-    run: rm images_tags_werf.json
-
+    run: rm images_tags_werf.json || true
+{!{ if not (eq $buildType "dev") -}!}
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 2 -}!}
+{!{ end }!}
 # </template: build_template>
+{!{ end }!}
+
+{!{/* build_tests_template
+     A focused werf build of just the `tests` image (FE env), used by the
+     unit-test / dhctl-tests / openapi / validators jobs so they no longer
+     wait on the full build_fe job (which builds dev, dev/install,
+     e2e-opentofu-eks, etc., none of which the tests jobs need).
+     werf's incremental cache means stages also built later by build_fe
+     are reused via the shared dev-registry repo. */}!}
+{!{ define "build_tests_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $buildType := index . 1 -}!}
+# <template: build_tests_template>
+runs-on: [self-hosted, large]
+outputs:
+  tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
+
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_SSH_KEY" "SOURCE_REPO_SSH_KEY" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
+
+  {!{/* `make generate` + drift check live in the dedicated `go_generate`
+       job; werf builds committed content. */}!}
+  - name: Build tests image
+    id: build
+    env:
+      WERF_ENV: FE
+      WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
+      WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+      DECKHOUSE_DEV_REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+      SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+      CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+      OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
+      DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      # werf.yaml renders templates that read these via `env`.
+      CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+      CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+      CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+{!{- if eq $buildType "dev" }!}
+      CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+{!{- else }!}
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+{!{- end }!}
+    run: |
+      # Same dev-registry path computation as build_template (build.yml).
+      REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+      if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+        REPO_SUFFIX=
+      fi
+      REGISTRY_SUFFIX=fe
+      DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+      export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+      type werf && source $(werf ci-env github --verbose --as-file)
+      # Build only the `tests` image (and its transitive werf deps);
+      # cache is shared with build_fe via WERF_REPO. The build report is
+      # consumed inline just to read the tests image name — it is not kept
+      # as an artifact (minimal value for a tests-only build).
+      werf build tests \
+        --parallel=true --parallel-tasks-limit=10 \
+        --save-build-report=true \
+        --final-images-only=true \
+        --build-report-path images_tags_werf.json
+
+      TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+      rm -f images_tags_werf.json
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+      echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+# </template: build_tests_template>
+{!{ end }!}
+
+{!{/* go_generate_template
+     Dedicated job for the generated-code drift check. Runs `make generate`
+     (k8s deepcopy/clients, tools, docs, werf) and fails if the result
+     differs from committed sources. Extracted from build_template so it
+     runs once, in parallel with the build, instead of being repeated in
+     every build_* job. */}!}
+{!{ define "go_generate_template" }!}
+{!{- $ctx := index . 0 -}!}
+# <template: go_generate_template>
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"  $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  - name: Set up Go 1.25
+    uses: {!{ index (ds "actions") "actions/setup-go" }!}
+    with:
+      go-version: '1.25'
+      cache: false
+{!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+
+  {!{/* `make generate`'s generate-tools step shells out to `werf config
+       render` (tools/images_tags) to enumerate module images. */}!}
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+# </template: go_generate_template>
 {!{ end }!}

@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,49 +25,44 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-
-	"caps-controller-manager/internal/scope"
-	genssh "caps-controller-manager/internal/ssh"
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
-type SSH struct{}
+type SSH struct {
+	address     string
+	credentials deckhousev1.SSHCredentialsSpec
+}
 
-func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
-	return &SSH{}, nil
+func CreateSSHClient(address string, credentials deckhousev1.SSHCredentialsSpec) *SSH {
+	return &SSH{
+		address:     address,
+		credentials: credentials,
+	}
 }
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
-	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
+func (s *SSH) ExecSSHCommand(command string, stdout io.Writer, stderr io.Writer) error {
+	privateSSHKey, err := base64.StdEncoding.DecodeString(s.credentials.PrivateSSHKey)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode private ssh key")
+		return fmt.Errorf("failed to decode private ssh key: %w", err)
 	}
 
 	privateSSHKey = append(bytes.TrimSpace(privateSSHKey), '\n')
 
 	sshKey, err := os.CreateTemp("", "ssh-key-")
 	if err != nil {
-		return errors.Wrap(err, "failed to create a temporary file for private ssh key")
+		return fmt.Errorf("failed to create a temporary file for private ssh key: %w", err)
 	}
 	defer func() {
-		err := sshKey.Close()
-		if err != nil {
-			// It is not critical if we can't close the file.
-			instanceScope.Logger.Error(err, fmt.Sprintf("failed to close temporary file '%s' with private ssh key", sshKey.Name()))
-		}
-
-		err = os.Remove(sshKey.Name())
-		if err != nil {
-			// It is not critical if we can't remove the file.
-			instanceScope.Logger.Error(err, fmt.Sprintf("failed to remove temporary file '%s' with private ssh key", sshKey.Name()))
-		}
+		// It is not critical if we can't close the file.
+		_ = sshKey.Close()
+		// It is not critical if we can't remove the file.
+		_ = os.Remove(sshKey.Name())
 	}()
 
 	_, err = io.Copy(sshKey, bytes.NewReader(privateSSHKey))
 	if err != nil {
-		return errors.Wrapf(err, "failed to write private ssh key to temporary file '%s'", sshKey.Name())
+		return fmt.Errorf("failed to write private ssh key to temporary file '%s': %w", sshKey.Name(), err)
 	}
 
 	args := []string{
@@ -76,15 +71,15 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		sshKey.Name(),
 		"-o",
 		"StrictHostKeyChecking=no",
-		fmt.Sprintf("-p %d", instanceScope.Credentials.Spec.SSHPort),
+		fmt.Sprintf("-p %d", s.credentials.SSHPort),
 	}
 
 	var stdin io.Reader
 
 	// If the sudo password is set, we need to pipe it to the ssh command.
 
-	if instanceScope.Credentials.Spec.SudoPasswordEncoded != "" {
-		pass, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.SudoPasswordEncoded)
+	if s.credentials.SudoPasswordEncoded != "" {
+		pass, err := base64.StdEncoding.DecodeString(s.credentials.SudoPasswordEncoded)
 		if err != nil {
 			return err
 		}
@@ -97,7 +92,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		command = fmt.Sprintf(`sudo sh -c "%s"`, command)
 	}
 
-	for _, arg := range strings.Split(instanceScope.Credentials.Spec.SSHExtraArgs, " ") {
+	for _, arg := range strings.Split(s.credentials.SSHExtraArgs, " ") {
 		if arg == "" {
 			continue
 		}
@@ -106,7 +101,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	}
 
 	args = append(args, []string{
-		fmt.Sprintf("%s@%s", instanceScope.Credentials.Spec.User, instanceScope.Instance.Spec.Address),
+		fmt.Sprintf("%s@%s", s.credentials.User, s.address),
 		command,
 	}...)
 
@@ -115,92 +110,42 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	cmd.Stdin = stdin
 
 	if stdout == nil {
-		stdout = genssh.NewLogger(instanceScope.Logger.WithName("stdout"))
+		stdout = &bytes.Buffer{}
 	}
 
 	if stderr == nil {
-		stderr = genssh.NewLogger(instanceScope.Logger.WithName("stderr"))
+		stderr = &bytes.Buffer{}
 	}
 
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
-	instanceScope.Logger.Info(
-		"Exec ssh command",
-		"user", instanceScope.Credentials.Spec.User,
-		"address", instanceScope.Instance.Spec.Address,
-		"port", instanceScope.Credentials.Spec.SSHPort,
-		"command", formatCommand(cmd.Args),
-		"args", formatArgs(cmd.Args),
-	)
-
 	err = cmd.Run()
 	if err != nil {
-		return errors.Wrap(err, "failed to run ssh command")
+		return fmt.Errorf("failed to run ssh command: %w", err)
 	}
 
 	return nil
 }
 
 // ExecSSHCommandToString executes a command on the StaticInstance and returns the output as a string.
-func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
+func (s *SSH) ExecSSHCommandToString(command string) (string, error) {
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
-	err := s.ExecSSHCommand(instanceScope, command, stdout, stderr)
+	err := s.ExecSSHCommand(command, stdout, stderr)
 	if err != nil {
 		stderrBytes, err2 := io.ReadAll(stderr)
 		if err2 != nil {
-			return "", errors.Wrap(err2, "failed to read stderr from ssh command")
+			return "", fmt.Errorf("failed to read stderr from ssh command: %w", err2)
 		}
 		str := strings.TrimSpace(string(stderrBytes))
-		logSSHOutput(instanceScope.Logger, "stderr", str)
 		return str, err
 	}
 
 	stdoutBytes, err := io.ReadAll(stdout)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read stdout from ssh command")
+		return "", fmt.Errorf("failed to read stdout from ssh command: %w", err)
 	}
 
 	return strings.TrimSpace(string(stdoutBytes)), nil
-}
-
-func formatCommand(args []string) string {
-	const maxCommandLength = 1024
-	runes := []rune(strings.Join(args, " "))
-	if len(runes) <= maxCommandLength {
-		return string(runes)
-	}
-
-	return fmt.Sprintf("%s... (truncated, total length %d)", string(runes[:maxCommandLength]), len(runes))
-}
-
-func formatArgs(args []string) []string {
-	const maxArgLength = 512
-
-	formatted := make([]string, 0, len(args))
-	for _, arg := range args {
-		runes := []rune(arg)
-		if len(runes) <= maxArgLength {
-			formatted = append(formatted, arg)
-			continue
-		}
-
-		formatted = append(formatted, fmt.Sprintf("%s... (truncated, total length %d)", string(runes[:maxArgLength]), len(runes)))
-	}
-
-	return formatted
-}
-
-func logSSHOutput(logger logr.Logger, stream, raw string) {
-	if raw == "" {
-		return
-	}
-
-	text := strings.ReplaceAll(raw, "\r\n", "\n")
-	text = strings.ReplaceAll(text, "\r", "\n")
-
-	for _, line := range strings.Split(text, "\n") {
-		logger.Info(line, "stream", stream)
-	}
 }

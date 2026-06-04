@@ -1,0 +1,21 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-volume-types
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.volumes[].type
+      level: pod
+
+      description: Volume type used in pod spec.volumes entries
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.volumes.types.allowedValues
+      level: pod
+      description: SPE override for allowed volume types
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: false

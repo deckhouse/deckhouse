@@ -16,9 +16,35 @@ package dhctl
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+// newRequestOptions returns a per-request *options.Options seeded with the
+// values every RPC handler used to write into the dhctl/pkg/app globals.
+//
+// Building a fresh struct per request — instead of mutating package-level vars —
+// is what makes the gRPC server safe to handle concurrent operations.
+//
+// resourcesTimeout/deckhouseTimeout default to zero when unset (Bootstrap does
+// not carry these in its request); the consuming operation falls back to its
+// own default in that case.
+func newRequestOptions(cacheDir string, skipPreflightChecks []string, timeouts ...time.Duration) *options.Options {
+	opts := options.New()
+	opts.Global.SanityCheck = true
+	opts.Cache.UseTfCache = options.UseStateCacheYes
+	opts.Cache.Dir = cacheDir
+	opts.Preflight.ApplySkips(skipPreflightChecks)
+	if len(timeouts) > 0 {
+		opts.Bootstrap.ResourcesTimeout = timeouts[0]
+	}
+	if len(timeouts) > 1 {
+		opts.Bootstrap.DeckhouseTimeout = timeouts[1]
+	}
+	return opts
+}
 
 type logAfterReturnFunc func()
 

@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allowed-flex-volumes
+spec:
+  testDirectory: allowed-flex-volumes
+  suite:
+    expectedTestBlockNames:
+      - security-policy

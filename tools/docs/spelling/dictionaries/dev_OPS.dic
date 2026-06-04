@@ -1,4 +1,4 @@
-2574
+2619
 1GB
 2GB
 5XX
@@ -20,6 +20,7 @@ Addon
 addresspools
 addressPools
 admin
+AEAD
 AES
 Affero
 aggregator
@@ -122,6 +123,7 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
+Basis Dynamix
 baz
 bcrypt
 BDU
@@ -183,6 +185,7 @@ certManager
 certSANs
 cgroup
 cgroups
+ChaCha
 changelog
 Changelog
 cheatsheet
@@ -396,6 +399,7 @@ DexProvider
 DHCP
 dhcpOptions
 dhctl
+DHE
 Diff
 dir
 disjoining
@@ -436,6 +440,7 @@ Dryrun
 DSA
 DSL
 DSR
+DSS
 dst
 DVCR
 dvp
@@ -448,6 +453,8 @@ earlyOOM
 eBPF
 EBS
 ECC
+ECDHE
+ECDSA
 ECMP
 ECR
 ECS
@@ -472,6 +479,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+EnvoyFilter
 EOF
 erlier
 ESXi
@@ -508,6 +516,7 @@ fallback
 FastCGI
 FC
 FCD
+FCGI
 Fibre
 filebeat
 FileManagement
@@ -543,6 +552,7 @@ Gb
 Gbps
 GCE
 gcloud
+GCM
 gcp
 GCP
 GCPClusterConfiguration
@@ -591,7 +601,6 @@ GRPC
 Habr
 hardcoded
 HardPodAntiAffinity
-HashiCorp
 HashiCorp
 hasn
 hdd
@@ -666,6 +675,7 @@ ingressClass
 IngressClass
 IngressClassParameters
 ingressgateway
+IngressGateway
 ingressgateways
 IngressIstioController
 ingressNginxController
@@ -783,6 +793,7 @@ Kubelet
 kubelets
 kubernetes
 Kubernetes
+KubernetesMetrics
 kubernetesPods
 kubernetesVersion
 Kubernets
@@ -835,6 +846,7 @@ LowNodeUtilization
 LRS
 lsblk
 LTS
+Lua
 LUN
 lv
 LV
@@ -900,6 +912,7 @@ MinIO
 MinIO’s
 minPerZone
 minReplicas
+misconfigured
 mkfs
 ModifySet
 moduleConfig
@@ -1007,6 +1020,7 @@ NotManaged
 Noto
 NotReady
 NotRegex
+nowrap
 npm
 NSX
 NTP
@@ -1019,6 +1033,7 @@ objectmeta
 OCI
 offline
 OFFLINE
+OfflineSessions
 offtopic
 OICD
 OIDC
@@ -1084,6 +1099,7 @@ PagerDutyConfig
 parametersSchema
 paravirtualization
 passphrase
+Passthrough
 passwordHash
 passwordless
 pathPrefix
@@ -1123,6 +1139,7 @@ PodLoggingConfig
 PodMonitor
 PodMonitors
 podSubnetCIDR
+Poly
 portForwarding
 POSIX
 postgresql
@@ -1199,6 +1216,7 @@ README
 readOnly
 READYTOUSE
 realised
+rebalancing
 rebase
 recordscontaining
 Reddit
@@ -1206,6 +1224,7 @@ redis
 Redis
 Redoc
 redos
+RefreshToken
 regex
 Regex
 regexes
@@ -1378,6 +1397,7 @@ StaticInstanceSpec
 StaticMachine
 status
 stderr
+stdin
 stdout
 storageclass
 storageClass
@@ -1419,7 +1439,6 @@ syscalls
 sysctl
 sysctls
 syslog
-syslog
 Syslog
 SysLog
 Sysprep
@@ -1451,6 +1470,7 @@ ThinLVM
 Thymeleaf
 TiB
 timeframe
+timelines
 TimeSlicing
 timeslot
 timestamp
@@ -1462,11 +1482,13 @@ TODO
 TolerationSeconds
 toolchain
 Tooltip
+TOTP
 Tproger
 trdl
 trivy
 Trivy
 TrustDomain
+tuf
 tunnelMode
 txt
 Ubuntu
@@ -1479,6 +1501,7 @@ UIs
 un
 uncordoned
 uninstall
+uninstalled
 uninstalling
 Unlabel
 UNPACKEDSIZE
@@ -1592,6 +1615,7 @@ webhooks
 webinar
 webpack
 webpacker
+WebSocket
 webui
 WeChat
 WeChatConfig
@@ -1688,6 +1712,7 @@ ZvirtInstanceClass
 аттрибутов
 Аудиофайлы
 аутентификатора
+аутентификаторе
 аутентификаторов
 аутентификаторы
 аутентификациии
@@ -1743,6 +1768,7 @@ ZvirtInstanceClass
 бэкендами
 бэкендах
 бэкендов
+бэкенду
 бэкенды
 валидатор
 валидацией
@@ -1759,7 +1785,9 @@ ZvirtInstanceClass
 вебхуки
 вебхуков
 вебхуком
+вендора
 вендором
+вендорской
 вендору
 вендоры
 версионирование
@@ -1784,6 +1812,7 @@ ZvirtInstanceClass
 внутрикластерной
 внутрикластерным
 воркеров
+выгрузок
 выдаватель
 высокогранулярной
 высокодоступном
@@ -1794,7 +1823,6 @@ ZvirtInstanceClass
 высокоуровневыми
 высокоуровневых
 г
-гайде
 гайде
 Гб
 Гбит
@@ -1868,6 +1896,9 @@ ZvirtInstanceClass
 закомментированы
 запустившемся
 запушить
+засчет
+захеширован
+захешированном
 иcпользовать
 ИБ
 иммутабельный
@@ -1947,6 +1978,7 @@ ZvirtInstanceClass
 коммиты
 компонентa
 компонента
+компрометационные
 конвержа
 консистентного
 консистентное
@@ -2013,7 +2045,6 @@ ZvirtInstanceClass
 масштабируемость
 масштабируется
 Мб
-Мб
 МБ
 медиафайлов
 медиафайлы
@@ -2058,15 +2089,19 @@ ZvirtInstanceClass
 мультимастерный
 мультиплатформенной
 мультитенантности
+мультитенантность
 МУЛЬТИФАКТОР
 мусорку
 мэтчем
 наблюдаемости
 наблюдаемость
+нативно
+неавторизованного
 неавторизованный
 невалидным
 недеструктивные
 недеструктивных
+недоиспользованных
 незапрошенные
 незапрошенных
 незашифрованном
@@ -2075,6 +2110,7 @@ ZvirtInstanceClass
 неймспейс
 неймспейсах
 неймспейсе
+неймспейсы
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2091,16 +2127,18 @@ ZvirtInstanceClass
 неподдерживаемые
 неподдерживаемых
 неподнимающийся
+неподписанным
 непринадлежности
 непубличного
 непубличный
 неразмеченным
-неразмеченным
+нерелевантного
 нереляционные
 несекретной
 несекретную
 несекретных
 несистемных
+неунифицированных
 неуспешные
 нешифрованные
 ноде
@@ -2129,6 +2167,7 @@ ZvirtInstanceClass
 отрисовки
 офлайн
 п
+Пайплайн
 пайплайна
 пайплайнами
 пайплайнов
@@ -2143,6 +2182,7 @@ ZvirtInstanceClass
 парсит
 парсится
 парсить
+парсятся
 паттерн
 паттерна
 паттернов
@@ -2154,6 +2194,7 @@ ZvirtInstanceClass
 патчится
 патчить
 Перебалансировке
+перебалансировки
 Перевыкат
 перевыписывает
 перевыпуск
@@ -2281,7 +2322,10 @@ ZvirtInstanceClass
 псевдоселектор
 пуллинга
 Р
+разблокировка
 раннера
+рантайма
+рантайме
 раскомментировать
 раскопировано
 распарсены
@@ -2425,7 +2469,6 @@ ZvirtInstanceClass
 сокеты
 соотвествущая
 соответствующий
-соответствующий
 Сохраняеем
 спецзаголовки
 спринты
@@ -2455,6 +2498,7 @@ ZvirtInstanceClass
 тенанта
 тенантами
 тенанте
+терминации
 терминацию
 Терминация
 терминирования
@@ -2485,6 +2529,8 @@ ZvirtInstanceClass
 туториала
 увереным
 уязвимостей
+уязвимостям
+уязвимостями
 файл
 фейловер
 фич
@@ -2511,11 +2557,11 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
-хеш
 Хеш
 хеша
 хешам
 хешей
+хешем
 хеши
 хеширование
 Хеширование
@@ -2523,7 +2569,6 @@ ZvirtInstanceClass
 хеширования
 хешированные
 хешированный
-хешированных
 хешированных
 хешировано
 хост

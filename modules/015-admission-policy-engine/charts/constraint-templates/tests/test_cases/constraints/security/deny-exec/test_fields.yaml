@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: deny-exec
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: command[]
+      level: pod
+      description: Exec command list must match the allowed commands
+      requiredScenarios: [positive, negative, absent]
+    - path: stdin
+      level: pod
+      description: Interactive exec via stdin is forbidden
+      requiredScenarios: [positive, negative, absent]
+  speFields: []
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

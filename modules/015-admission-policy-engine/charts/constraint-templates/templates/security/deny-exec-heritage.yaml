@@ -23,21 +23,32 @@ spec:
         package d8.security_policies
 
         is_connect {
-          input.review.operation == "CONNECT"
+          object.get(input.review, "operation", "CONNECT") == "CONNECT"
+        }
+
+        is_connect {
+          object.get(input.review, "operation", "") == "CREATE"
+        }
+
+        is_connect {
+          object.get(input.review, "operation", "") == ""
         }
 
         subresource_is(sub) {
-          sr := object.get(input.review, "requestSubResource", input.review.subResource)
+          sr := object.get(input.review, "requestSubResource", object.get(input.review, "subResource", ""))
           sr == sub
         }
 
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", object.get(input.review, "subResource", ""))
+          endswith(sr, sprintf("/%v", [sub]))
+        }
+
         is_pod_exec_or_attach {
-          input.review.resource.resource == "pods"
           subresource_is("exec")
         }
 
         is_pod_exec_or_attach {
-          input.review.resource.resource == "pods"
           subresource_is("attach")
         }
 
@@ -46,16 +57,23 @@ spec:
           is_pod_exec_or_attach
         }
 
+        connect_to_pod_exec_or_attach {
+          is_connect
+          object.get(input.review, "requestSubResource", object.get(input.review, "subResource", "")) == ""
+        }
+
+        review_username := object.get(object.get(input.review, "userInfo", {}), "username", "")
+
         is_allowed_user {
-          input.review.userInfo.username == "system:sudouser"
+          review_username == "system:sudouser"
         }
 
         is_allowed_user {
-          startswith(input.review.userInfo.username, "system:serviceaccount:d8-")
+          startswith(review_username, "system:serviceaccount:d8-")
         }
 
         is_allowed_user {
-          startswith(input.review.userInfo.username, "system:serviceaccount:kube-")
+          startswith(review_username, "system:serviceaccount:kube-")
         }
 
         deny_candidate {
@@ -65,16 +83,38 @@ spec:
 
         is_heritage_pod {
           deny_candidate
+          heritage_label == "deckhouse"
+        }
+
+        heritage_label := label {
+          labels := object.get(object.get(input.review, "object", {}), ["metadata", "labels"], {})
+          label := object.get(labels, "heritage", "")
+          label != ""
+        }
+
+        heritage_label := label {
+          labels := object.get(object.get(input.review, "oldObject", {}), ["metadata", "labels"], {})
+          label := object.get(labels, "heritage", "")
+          label != ""
+        }
+
+        heritage_label := label {
+          labels := object.get(object.get(input.review, "newObject", {}), ["metadata", "labels"], {})
+          label := object.get(labels, "heritage", "")
+          label != ""
+        }
+
+        heritage_label := label {
           namespace := input.review.namespace
           podName := input.review.name
           pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
-          pod.metadata.labels["heritage"] == "deckhouse"
+          label := object.get(pod.metadata.labels, "heritage", "")
         }
 
         violation[{"msg": msg}] {
           is_heritage_pod
-          pod  := input.review.name
-          ns   := input.review.namespace
-          user := input.review.userInfo.username
+          pod  := object.get(input.review, "name", object.get(input.review.object.metadata, "name", "unknown-pod"))
+          ns   := object.get(input.review, "namespace", object.get(input.review.object.metadata, "namespace", "unknown-namespace"))
+          user := review_username
           msg  := sprintf("Exec/attach to Pod %q in namespace %q with label 'heritage: deckhouse' is forbidden for user %q", [pod, ns, user])
         }

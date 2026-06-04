@@ -102,7 +102,7 @@ def _prepare_validation_binding_context(
             "userInfo": {
                 "username": "kubernetes-admin",
                 "groups": [
-                    "system:masters",
+                    "kubeadm:cluster-admins",
                     "system:authenticated"
                 ]
             },

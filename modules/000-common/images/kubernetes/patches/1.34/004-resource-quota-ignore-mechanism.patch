@@ -88,14 +88,14 @@ index c9ea96aae36..10fb8f6da17 100644
 +
  	return allErrs
  }
-
+ 
 @@ -4385,6 +4465,7 @@ func validatePodMetadataAndSpec(pod *core.Pod, opts PodValidationOptions) field.
-
+ 
  	allErrs := ValidateObjectMeta(&pod.ObjectMeta, true, ValidatePodName, metaPath)
  	allErrs = append(allErrs, ValidatePodSpecificAnnotations(pod.ObjectMeta.Annotations, &pod.Spec, metaPath.Child("annotations"), opts)...)
 +	allErrs = append(allErrs, validateResourceQuotaLabels(pod.ObjectMeta.Labels, metaPath)...)
  	allErrs = append(allErrs, ValidatePodSpec(&pod.Spec, &pod.ObjectMeta, specPath, opts)...)
-
+ 
  	// we do additional validation only pertinent for pods and not pod templates
 diff --git a/pkg/quota/v1/evaluator/core/persistent_volume_claims.go b/pkg/quota/v1/evaluator/core/persistent_volume_claims.go
 index 592f6080d52..a8b20a482c3 100644
@@ -104,7 +104,7 @@ index 592f6080d52..a8b20a482c3 100644
 @@ -193,6 +193,11 @@ func (p *pvcEvaluator) Usage(item runtime.Object) (corev1.ResourceList, error) {
  		return result, err
  	}
-
+ 
 +	// Check for ignore label
 +	if pvc.Labels != nil && pvc.Labels[corev1.LabelResourceQuotaIgnore] == "true" {
 +		return result, nil
@@ -120,7 +120,7 @@ index 8f91588db2e..d2fa603996e 100644
 @@ -374,6 +374,11 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
  		return corev1.ResourceList{}, err
  	}
-
+ 
 +	// Check for ignore label
 +	if pod.Labels != nil && pod.Labels[corev1.LabelResourceQuotaIgnore] == "true" {
 +		return corev1.ResourceList{}, nil
@@ -132,7 +132,7 @@ index 8f91588db2e..d2fa603996e 100644
 @@ -396,10 +401,73 @@ func PodUsageFunc(obj runtime.Object, clock clock.Clock) (corev1.ResourceList, e
  	requests := resourcehelper.PodRequests(pod, opts)
  	limits := resourcehelper.PodLimits(pod, opts)
-
+ 
 -	result = quota.Add(result, podComputeUsageHelper(requests, limits))
 +	podUsage := podComputeUsageHelper(requests, limits)
 +
@@ -143,7 +143,7 @@ index 8f91588db2e..d2fa603996e 100644
 +	result = quota.Add(result, podUsage)
  	return result, nil
  }
-
+ 
 +// applyQuotaModifiers applies discounts and caps to the resource in usage
 +func applyQuotaModifiers(usage corev1.ResourceList, labels map[string]string) {
 +	if labels == nil {
@@ -211,7 +211,7 @@ index 9a4ce799727..cf3211b7d3e 100644
 @@ -44,6 +44,11 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
  				return true
  			}
-
+ 
 +			// when resource quota labels changed
 +			if hasResourceQuotaLabelsChanged(oldPod.Labels, newPod.Labels) {
 +				return true
@@ -230,11 +230,11 @@ index 9a4ce799727..cf3211b7d3e 100644
 +			}
  			return core.RequiresQuotaReplenish(newPVC, oldPVC)
  		}
-
+ 
 @@ -59,6 +68,16 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
  	}
  }
-
+ 
 +// hasResourceQuotaLabelsChanged checks if any resource quota control labels have changed
 +func hasResourceQuotaLabelsChanged(oldLabels, newLabels map[string]string) bool {
 +	for _, label := range v1.ResourceQuotaLabels {

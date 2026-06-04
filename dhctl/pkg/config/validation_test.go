@@ -15,8 +15,10 @@
 package config
 
 import (
+	"os"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/stretchr/testify/require"
 )
 
@@ -177,7 +179,7 @@ metadata:
 
 func TestValidateClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(nil, []string{schemasDir})
+	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -270,8 +272,14 @@ clusterType: Static
 }
 
 func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
+	// CI builds candi/cloud-providers from modules/030-cloud-provider-*
+	// (see tools/build_includes/candi-cloud-providers-CE.yaml); skip locally
+	// when the prepared tree is not materialised.
 	const schemasDir = "./../../../candi/cloud-providers"
-	newStore := newSchemaStore(nil, []string{schemasDir})
+	if info, err := os.Stat(schemasDir); err != nil || !info.IsDir() {
+		t.Skipf("%s not present; run `make test` after werf bundles cloud-providers, or skip", schemasDir)
+	}
+	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 
 	tests := map[string]struct {
 		config        string
@@ -458,7 +466,7 @@ sshPublicKey: ssh-key`,
 
 func TestValidateStaticClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore(nil, []string{schemasDir})
+	newStore := newSchemaStore(&options.New().Global, []string{schemasDir})
 
 	tests := map[string]struct {
 		config      string

@@ -1,0 +1,113 @@
+diff --git a/manifest/provider/clients.go b/manifest/provider/clients.go
+index 537d0e6..0924497 100644
+--- a/manifest/provider/clients.go
++++ b/manifest/provider/clients.go
+@@ -5,8 +5,12 @@ package provider
+ 
+ import (
+ 	"context"
++	"crypto/sha256"
++	"encoding/hex"
+ 	"fmt"
+ 	"net/http"
++	"os"
++	"path/filepath"
+ 	"time"
+ 
+ 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+@@ -75,7 +79,16 @@ func (ps *RawProviderServer) getRestClient() (rest.Interface, error) {
+ 	})
+ }
+ 
+-// getOAPIv2Foundry returns an interface to request tftype types from an OpenAPIv2 spec
++// getOAPIv2Foundry returns an interface to request tftype types from an OpenAPIv2 spec.
++//
++// Deckhouse patch: cache the /openapi/v2 response on disk so repeated tofu plan/apply
++// invocations don't refetch ~10 MB of schema each time (the network round-trip alone
++// takes 15-17s against a parent DKP cluster). Cache key is a SHA-256 over the
++// apiserver host so different clusters get separate caches; default TTL is short
++// (default 10 minutes) — long enough to span a multi-pipeline bootstrap, short enough
++// that CRDs introduced mid-bootstrap show up on the next plan. Override via env vars
++// KUBE_PROVIDER_OPENAPI_CACHE_DIR and KUBE_PROVIDER_OPENAPI_CACHE_TTL (Go duration).
++// Setting KUBE_PROVIDER_OPENAPI_CACHE_DIR=off disables caching entirely.
+ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
+ 	return ps.OAPIFoundry.Get(func() (openapi.Foundry, error) {
+ 		rc, err := ps.getRestClient()
+@@ -83,6 +96,16 @@ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
+ 			return nil, fmt.Errorf("failed get OpenAPI spec: %s", err)
+ 		}
+ 
++		cachePath, ttl, cacheEnabled := openAPICachePathAndTTL(ps.clientConfig)
++		if cacheEnabled {
++			if data := readFreshOpenAPICache(cachePath, ttl); data != nil {
++				if oapif, fErr := openapi.NewFoundryFromSpecV2(data); fErr == nil {
++					return oapif, nil
++				}
++				// Cache file corrupted; fall through and refetch.
++			}
++		}
++
+ 		rq := rc.Verb("GET").Timeout(30*time.Second).AbsPath("openapi", "v2")
+ 		rs, err := rq.DoRaw(context.TODO())
+ 		if err != nil {
+@@ -94,10 +117,60 @@ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
+ 			return nil, fmt.Errorf("failed construct OpenAPI foundry: %s", err)
+ 		}
+ 
++		if cacheEnabled {
++			writeOpenAPICache(cachePath, rs)
++		}
+ 		return oapif, nil
+ 	})
+ }
+ 
++// openAPICachePathAndTTL computes the on-disk cache location and TTL for the
++// /openapi/v2 response. Returns enabled=false when caching is explicitly disabled.
++func openAPICachePathAndTTL(cfg *rest.Config) (path string, ttl time.Duration, enabled bool) {
++	dir := os.Getenv("KUBE_PROVIDER_OPENAPI_CACHE_DIR")
++	if dir == "off" || dir == "false" || dir == "0" {
++		return "", 0, false
++	}
++	if dir == "" {
++		dir = filepath.Join(os.TempDir(), "kube-provider-openapi-cache")
++	}
++	ttl = 10 * time.Minute
++	if v := os.Getenv("KUBE_PROVIDER_OPENAPI_CACHE_TTL"); v != "" {
++		if d, err := time.ParseDuration(v); err == nil && d > 0 {
++			ttl = d
++		}
++	}
++	host := ""
++	if cfg != nil {
++		host = cfg.Host
++	}
++	sum := sha256.Sum256([]byte(host))
++	return filepath.Join(dir, hex.EncodeToString(sum[:8])+".openapi.v2.json"), ttl, true
++}
++
++func readFreshOpenAPICache(path string, ttl time.Duration) []byte {
++	st, err := os.Stat(path)
++	if err != nil || time.Since(st.ModTime()) > ttl {
++		return nil
++	}
++	data, err := os.ReadFile(path)
++	if err != nil {
++		return nil
++	}
++	return data
++}
++
++func writeOpenAPICache(path string, data []byte) {
++	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
++		return
++	}
++	tmp := path + ".tmp"
++	if err := os.WriteFile(tmp, data, 0o600); err != nil {
++		return
++	}
++	_ = os.Rename(tmp, path)
++}
++
+ func loggingTransport(rt http.RoundTripper) http.RoundTripper {
+ 	return &loggingRountTripper{
+ 		ot: rt,
