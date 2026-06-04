@@ -248,6 +248,7 @@ ClusterLoggingConfig
 ClusterName
 ClusterPodLoggingConfig
 ClusterRole
+ClusterRoleBinding
 clusterType
 ClusterVirtualImage
 cmctl
@@ -611,6 +612,7 @@ helthcheck
 HighAvailability
 HighLoad
 HighNodeUtilization
+HH
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -2613,3 +2615,9 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+RoleBinding
+YYYY
+Перевыпустите
+валиден
+валидными
+мультимастерной
