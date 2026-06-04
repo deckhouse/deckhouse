@@ -23,13 +23,16 @@ properties:
         properties:
           cert:
             type: string
-            default: "-"
+            default: ""
+            x-dmt-default: "-"
           key:
             type: string
-            default: "-"
+            default: ""
+            x-dmt-default: "-"
           ca: 
             type: string
-            default: "-"
+            default: ""
+            x-dmt-default: "-"
       pvcSize:
         type: integer
         format: int64
