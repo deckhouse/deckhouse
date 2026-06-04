@@ -46,6 +46,8 @@ const (
 	capiNamespace = "d8-cloud-instance-manager"
 )
 
+// capiClusterInfo carries the cloud-provider registration data the hook needs.
+// It mirrors the relevant subset of d8-node-manager-cloud-provider Secret keys.
 type capiClusterInfo struct {
 	ClusterName       string
 	ClusterKind       string
@@ -85,6 +87,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/create-capi-cluster-resources",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
+			// Trigger when the cloud-provider registration secret appears or
+			// changes — that's also the moment `nodeManager.internal.cloudProvider`
+			// becomes meaningful for downstream hooks.
 			Name:       "cloud_provider_secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
