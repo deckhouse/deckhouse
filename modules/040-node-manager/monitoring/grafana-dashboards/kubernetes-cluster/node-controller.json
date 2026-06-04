@@ -24,7 +24,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of requests sent by node-controller to the Kubernetes API server per second",
       "fieldConfig": {
@@ -78,7 +78,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum(\nrate(\nrest_client_requests_total{\nnamespace=\"d8-cloud-instance-manager\",\njob=\"node-controller\"\n}[5m]\n))",
@@ -94,7 +94,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Current Go heap memory usage",
       "fieldConfig": {
@@ -148,7 +148,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -169,7 +169,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of reconcile loops executed per second",
       "fieldConfig": {
@@ -223,7 +223,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum (\n  rate(controller_runtime_reconcile_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
@@ -239,7 +239,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of objects waiting in the workqueue",
       "fieldConfig": {
@@ -293,7 +293,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum (\n  workqueue_depth{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }\n)",
@@ -309,7 +309,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Duration of the slowest reconcile loops",
       "fieldConfig": {
@@ -363,7 +363,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(\n  0.99,\n  sum by (le) (\n    rate(controller_runtime_reconcile_time_seconds_bucket{\n      namespace=\"d8-cloud-instance-manager\",\n      job=\"node-controller\"\n    }[1m])\n  )\n)",
@@ -379,7 +379,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Total number of objects in the informer cache",
       "fieldConfig": {
@@ -433,7 +433,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum (\nnode_controller_cache_objects{\nnamespace=\"d8-cloud-instance-manager\",\njob=\"node-controller\"\n}\n)",
@@ -449,7 +449,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of objects in Go heap",
       "fieldConfig": {
@@ -502,7 +502,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum(go_memstats_heap_objects{namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"})",
@@ -518,7 +518,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of goroutines",
       "fieldConfig": {
@@ -571,7 +571,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum(go_goroutines{namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"})",
@@ -587,7 +587,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Actual process memory usage in RAM",
       "fieldConfig": {
@@ -641,7 +641,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum(process_resident_memory_bytes{namespace=\"d8-cloud-instance-manager\", pod=~\"node-controller.*\"}) / 1024 / 1024",
@@ -657,7 +657,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of reconcile errors",
       "fieldConfig": {
@@ -711,7 +711,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum (\n  rate(controller_runtime_reconcile_errors_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
@@ -721,13 +721,13 @@
           "refId": "A"
         }
       ],
-      "title": "Erros count",
+      "title": "Errors count",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Number of controller-runtime client Get/List operations",
       "fieldConfig": {
@@ -809,10 +809,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (operation) (\n  rate(node_controller_cache_requests_total{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\"\n  }[$__rate_interval])\n)",
+          "expr": "sum by (operation) (\n  rate(node_controller_client_requests_total{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\"\n  }[$__rate_interval])\n)",
           "instant": false,
           "legendFormat": "__auto",
           "range": true,
@@ -825,7 +825,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Cache size by object type",
       "fieldConfig": {
@@ -914,7 +914,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (kind, api_group)(\nnode_controller_cache_objects{\nnamespace=\"d8-cloud-instance-manager\",\njob=\"node-controller\"\n}\n)",
@@ -925,13 +925,13 @@
           "refId": "A"
         }
       ],
-      "title": "Сache size",
+      "title": "Cache size",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Duration of kube-apiserver requests to the node-controller webhook",
       "fieldConfig": {
@@ -1012,7 +1012,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(\n  0.95,\n  sum by (le) (\n    rate(rest_client_request_duration_seconds_bucket{\n      job=\"kube-apiserver\",\n      host=\"node-controller-webhook.d8-cloud-instance-manager.svc:443\"\n    }[5m])\n  )\n)",
@@ -1028,7 +1028,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "GC pause duration",
       "fieldConfig": {
@@ -1109,7 +1109,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "max(\n  go_gc_duration_seconds{\n    namespace=\"d8-cloud-instance-manager\",\n    pod=~\"node-controller.*\",\n    quantile=\"0.75\"\n  }\n)",
@@ -1125,7 +1125,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Controllers with the longest reconcile duration",
       "fieldConfig": {
@@ -1209,7 +1209,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(\n  0.99,\n  sum by (controller, le) (\n    rate(controller_runtime_reconcile_time_seconds_bucket{\n      namespace=\"d8-cloud-instance-manager\",\n      job=\"node-controller\"\n    }[1m])\n  )\n)",
@@ -1225,7 +1225,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Controllers with the highest error rate",
       "fieldConfig": {
@@ -1305,7 +1305,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (controller) (\n  rate(controller_runtime_reconcile_errors_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
@@ -1321,7 +1321,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Controllers with the highest reconcile rate",
       "fieldConfig": {
@@ -1404,7 +1404,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (controller) (\n  rate(controller_runtime_reconcile_total{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }[1m])\n)",
@@ -1421,7 +1421,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${ds_prometheus}"
+        "uid": "$ds_prometheus"
       },
       "description": "Workqueues with accumulated backlog",
       "fieldConfig": {
@@ -1501,7 +1501,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${ds_prometheus}"
+            "uid": "$ds_prometheus"
           },
           "editorMode": "code",
           "expr": "sum by (name) (\n  workqueue_depth{\n    namespace=\"d8-cloud-instance-manager\",\n    job=\"node-controller\"\n  }\n)",
