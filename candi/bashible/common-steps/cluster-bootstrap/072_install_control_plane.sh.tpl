@@ -58,10 +58,6 @@ __sec wait_api_proxy
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
 
-# etcd runs as UID/GID 52 with capabilities: drop: ALL (no CAP_DAC_OVERRIDE).
-# Pre-create data dir and set PKI ownership before the static pod starts.
-# Keys: root:etcd 640 — CPM (root/owner) can read/write; etcd pod (GID 52/group) can read.
-# Certs: root:etcd 644 — world-readable for kube-apiserver peer TLS.
 mkdir -p /var/lib/etcd
 chown etcd:etcd /var/lib/etcd
 chmod 700 /var/lib/etcd
@@ -182,8 +178,6 @@ __sec rbac_label_taint
 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key}
-# etcd keys: root:etcd 640 (CPM as owner-root reads; etcd pod as group reads).
-# etcd certs: 644 (world-readable for kube-apiserver peer TLS).
 chmod 640 /etc/kubernetes/pki/etcd/*.key
 chmod 644 /etc/kubernetes/pki/etcd/*.crt
 
