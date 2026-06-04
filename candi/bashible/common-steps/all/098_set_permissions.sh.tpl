@@ -27,6 +27,7 @@ if [[ -d /var/lib/etcd ]]; then
 fi
 
 if [[ -d /etc/kubernetes/pki/etcd ]]; then
+    chmod 711 /etc/kubernetes/pki
     chown root:etcd /etc/kubernetes/pki/etcd
     chmod 750 /etc/kubernetes/pki/etcd
     chown root:etcd /etc/kubernetes/pki/etcd/*.key 2>/dev/null || true

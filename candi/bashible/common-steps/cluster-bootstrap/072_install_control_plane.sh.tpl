@@ -61,6 +61,7 @@ cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super
 mkdir -p /var/lib/etcd
 chown etcd:etcd /var/lib/etcd
 chmod 700 /var/lib/etcd
+chmod 711 /etc/kubernetes/pki
 chown root:etcd /etc/kubernetes/pki/etcd
 chmod 750 /etc/kubernetes/pki/etcd
 chown root:etcd /etc/kubernetes/pki/etcd/*.{crt,key}
