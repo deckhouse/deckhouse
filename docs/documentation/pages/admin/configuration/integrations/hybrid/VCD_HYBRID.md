@@ -9,10 +9,9 @@ The following describes the process of adding worker nodes from VMware Cloud Dir
 
 Integration with VCD uses the [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module. It provides interaction between DKP and VMware Cloud Director, creation and deletion of virtual machines, retrieval of information about the VCD infrastructure, and integration with StorageClass and other provider capabilities.
 
-This section describes three ways to add worker nodes:
+This section describes two ways to add worker nodes:
 
 - **Automatic node creation in VCD**. DKP creates virtual machines through the VCD API. VM parameters are defined by the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) resource, and the required number of nodes is defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) type.
-- **Connecting manually created nodes through CAPS**. A virtual machine is created by the user in advance, and DKP connects to it over SSH through Cluster API Provider Static. This uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the `Static` type, as well as the [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) and [StaticInstance](/modules/node-manager/cr.html#staticinstance) resources.
 - **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DKP bootstrap script. This scenario uses the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) type.
 
 ## Prerequisites for VCD
@@ -20,7 +19,7 @@ This section describes three ways to add worker nodes:
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- Network connectivity is configured between the network of static nodes and the network of virtual machines in VCD.
+- [Network connectivity](./overview#general-network-requirements) is configured between the network of static nodes and the network of virtual machines in VCD.
 - VCD nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections.
 - The requirements from the [Connection and authorization in VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html) section are met:
   - A tenant with allocated resources is configured in VCD.
@@ -148,241 +147,17 @@ Before you begin, make sure that the following conditions are met:
    d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
-## Adding manually created nodes through CAPS
-
-Before you begin, make sure that the following conditions are met:
-
-- The [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module is enabled and configured.
-- The `cloud-provider-vcd` module components are in the `Running` state:
-
-  ```shell
-  d8 k -n d8-cloud-provider-vcd get pods -o wide
-  ```
-
-- StorageClasses for VCD have been created in the cluster:
-  
-  ```shell
-  d8 k get sc
-  ```
-
-- A virtual machine that will be connected to the cluster has been created in VCD.
-- The virtual machine name in VCD matches the hostname inside the operating system.
-- The following value is set in the VM advanced parameters in VCD:
-
-  ```text
-  disk.EnableUUID = 1
-  ```
-
-- The virtual machine is connected to the VCD network used as the main network for the cluster's cloud nodes. Usually, this is the network specified in the [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) parameter of the `cloud-provider-vcd` configuration or in the VCDInstanceClass being used.
-- The virtual machine has administrative SSH access for initial configuration of the user that CAPS will use to connect to the node, or such a user has already been created in advance.
-- The SSH user can run commands through `sudo` without entering a password.
-- The virtual machine has the required base packages installed for the supported OS. For RED OS, install `which` and the package manager in advance if they are missing.
-
-1. On the master node, set the variables for the NodeGroup being created and the virtual machine being connected:
-
-   ```shell
-   export NODE_GROUP="vcd-caps"
-   export NODE_NAME="vcd-worker-caps"
-   export NODE_SSH_IP="<NODE_IP>"
-   export CAPS_USER="caps"
-   ```
-
-   Where:
-
-   - `NODE_GROUP`: Name of the NodeGroup to which the node will be added.
-   - `NODE_NAME`: Name of the node being connected. It must match the hostname inside the operating system and the VM name in VCD.
-   - `NODE_SSH_IP`: IP address of the virtual machine available over SSH.
-   - `CAPS_USER`: User that CAPS will use to connect to the virtual machine.
-
-1. On the master node, create a NodeGroup:
-
-   ```shell
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: ${NODE_GROUP}
-   spec:
-     nodeType: Static
-     staticInstances:
-       count: 1
-       labelSelector:
-         matchLabels:
-           role: ${NODE_GROUP}
-   EOF
-   ```
-
-   This scenario uses `nodeType: Static` because the virtual machine has already been created manually, and CAPS will only connect to it over SSH and configure it.
-
-1. Make sure that the NodeGroup has been created and synchronized:
-
-   ```shell
-   d8 k get nodegroup ${NODE_GROUP}
-   d8 k describe nodegroup ${NODE_GROUP}
-   ```
-
-   Example expected output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME       TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
-   vcd-caps   Static   0       0       0                                                               1m    True
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. On the master node, generate the SSH key that CAPS will use to connect to the virtual machine:
-
-   ```shell
-   ssh-keygen -t ed25519 \
-     -f /dev/shm/${NODE_GROUP}-id \
-     -C "" \
-     -N ""
-   ```
-
-   {% alert level="info" %}
-   The key is created with an empty passphrase because CAPS must use it automatically.
-   {% endalert %}  
-
-1. On the master node, create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource:
-
-   ```shell
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha2
-   kind: SSHCredentials
-   metadata:
-     name: ${NODE_GROUP}
-   spec:
-     user: ${CAPS_USER}
-     privateSSHKey: "$(base64 -w0 /dev/shm/${NODE_GROUP}-id)"
-   EOF
-   ```
-
-   The SSHCredentials resource stores the username and private SSH key that CAPS will use to connect to the virtual machine.
-
-1. Make sure that the SSHCredentials resource has been created:
-
-   ```shell
-   d8 k get sshcredentials
-   d8 k describe sshcredentials ${NODE_GROUP}
-   ```
-
-1. On the master node, print the public part of the SSH key:
-
-   ```shell
-   cat /dev/shm/${NODE_GROUP}-id.pub
-   ```
-
-   This key will be needed in the next step to configure the user on the virtual machine being connected.
-
-1. On the virtual machine being connected, create the user that CAPS will use to configure the node. Run the commands on the virtual machine being connected, specifying the public SSH key obtained in the previous step:
-
-   ```shell
-   export CAPS_USER="caps"
-   export KEY='<SSH_PUBLIC_KEY>'
-
-   useradd -m -s /bin/bash ${CAPS_USER}
-   usermod -aG sudo ${CAPS_USER}
-
-   echo "${CAPS_USER} ALL=(ALL) NOPASSWD: ALL" | EDITOR='tee -a' visudo
-
-   mkdir -p /home/${CAPS_USER}/.ssh
-   echo "${KEY}" > /home/${CAPS_USER}/.ssh/authorized_keys
-
-   chown -R ${CAPS_USER}:${CAPS_USER} /home/${CAPS_USER}
-   chmod 700 /home/${CAPS_USER}/.ssh
-   chmod 600 /home/${CAPS_USER}/.ssh/authorized_keys
-   ```
-
-   {% alert level="info" %}
-   The `KEY` value must be specified in quotes because the public SSH key contains spaces.
-   {% endalert %}
-
-   {% alert level="info" %}
-   For operating systems of the Astra Linux family, when using the Parsec mandatory integrity control module, additionally set the maximum integrity level for the user:
-
-   ```shell
-   pdpl-user -i 63 ${CAPS_USER}
-   ```
-
-   {% endalert %}
-
-1. On the master node, check that the CAPS user can connect to the virtual machine over SSH and run commands through `sudo` without a password:
-
-   ```shell
-   ssh -i /dev/shm/${NODE_GROUP}-id ${CAPS_USER}@${NODE_SSH_IP} \
-     'hostname; sudo -n true; echo OK'
-   ```
-
-   The output must contain the node name and the `OK` line.  
-
-1. On the master node, create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource for the virtual machine being connected:
-
-   ```shell
-   d8 k apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha2
-   kind: StaticInstance
-   metadata:
-     name: ${NODE_NAME}
-     labels:
-       role: ${NODE_GROUP}
-   spec:
-     address: "${NODE_SSH_IP}"
-     credentialsRef:
-       kind: SSHCredentials
-       name: ${NODE_GROUP}
-   EOF
-   ```
-
-   Where:
-
-   - `metadata.name`: Name of the node being connected.
-   - `metadata.labels.role`: Label by which NodeGroup selects this StaticInstance.
-   - `spec.address`: IP address of the virtual machine available over SSH.
-   - `spec.credentialsRef.name`: Name of the SSHCredentials resource created earlier.
-
-1. Check the StaticInstance status:
-
-   ```shell
-   d8 k get staticinstances
-   d8 k describe staticinstance ${NODE_NAME}
-   ```
-
-1. Wait for the node to connect and check its status:
-
-   ```shell
-   d8 k get nodes -o wide
-   ```
-
-   Example expected output:
-
-   <!-- markdownlint-disable MD031 -->
-   ```console
-   NAME             STATUS   ROLES      AGE   VERSION    INTERNAL-IP      EXTERNAL-IP
-   static-master-0  Ready    master     1h    v1.33.10   192.168.240.138  <none>
-   vcd-worker-caps  Ready    vcd-caps   5m    v1.33.10   192.168.240.151  <none>
-   ```
-   {: .nowrap-default }
-   <!-- markdownlint-enable MD031 -->
-
-1. If connection fails, check the NodeGroup, StaticInstance, Machine status, and cluster events:
-
-   ```shell
-   d8 k get nodegroup ${NODE_GROUP}
-   d8 k describe nodegroup ${NODE_GROUP}
-
-   d8 k get staticinstances
-   d8 k describe staticinstance ${NODE_NAME}
-
-   d8 k -n d8-cloud-instance-manager get machines,machinesets,machinedeployments -o wide
-   d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
-   ```
-
 ## Adding manually created nodes through a bootstrap script
 
 Before you begin, make sure that the following conditions are met:
 
-- The [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module is enabled and configured.
+- The [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) module is enabled and configured:
+
+  ```shell
+  d8 k get moduleconfig cloud-provider-vcd
+  d8 k get module cloud-provider-vcd -o wide
+  ```
+
 - The `cloud-provider-vcd` module components are in the `Running` state:
 
   ```shell
@@ -408,19 +183,14 @@ Before you begin, make sure that the following conditions are met:
 
 1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
 
-   ```yaml
+   ```shell
+   d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
      name: cloud-static
    spec:
      nodeType: CloudStatic
-   ```
-
-1. Apply the manifest:
-
-   ```shell
-   d8 k apply -f cloud-static-nodegroup.yaml
    ```
 
 1. Make sure that the NodeGroup has been created and synchronized:
