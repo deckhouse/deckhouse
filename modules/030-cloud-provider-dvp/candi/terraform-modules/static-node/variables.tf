@@ -222,4 +222,10 @@ locals {
     },
     var.additional_annotations
   )
+
+  cloudinit_secret_labels = {
+    "deckhouse.io/managed-by"       = "deckhouse"
+    "dvp.deckhouse.io/cluster-uuid" = var.cluster_uuid
+    "dvp.deckhouse.io/hostname"     = var.hostname
+  }
 }

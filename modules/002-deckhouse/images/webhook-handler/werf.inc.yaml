@@ -142,7 +142,8 @@ from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
-    add: /operator
+    add: /src
+    to: /operator
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -163,10 +164,10 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - cd /operator
+  - set -e
 git:
-- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator
-  to: /operator
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/operator
+  to: /src
   includePaths:
   - '**/*.go'
   - '**/*.mod'

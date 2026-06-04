@@ -61,7 +61,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Bashible bundle", labelChan, phasesChan)
+		pbParam := progressbar.NewPbParams(100, "Bashible bundle", labelChan, phasesChan, intLogger.GetLogChan())
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err
@@ -78,7 +78,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	sshClient, err := sshProvider.Client(ctx)
 	if err == nil {
 		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
-			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+			return fmt.Errorf("failed to wait for SSH connection on master: %w", err)
 		}
 	}
 

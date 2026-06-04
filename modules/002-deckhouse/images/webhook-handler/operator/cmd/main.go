@@ -39,7 +39,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -80,10 +80,21 @@ type shellRunner struct {
 
 	mu  sync.Mutex
 	cmd *exec.Cmd
+
+	// ready indicates that the shell-operator child process is running.
+	// It is set to true after a successful Start and cleared on process exit.
+	// Used by the readiness probe to avoid routing webhook traffic to a pod
+	// whose shell-operator is not yet (or no longer) serving.
+	ready atomic.Bool
 }
 
 func newShellRunner(logger *log.Logger) *shellRunner {
 	return &shellRunner{logger: logger}
+}
+
+// IsReady returns true when the shell-operator child process is running.
+func (r *shellRunner) IsReady() bool {
+	return r.ready.Load()
 }
 
 func (r *shellRunner) setCmd(c *exec.Cmd) {
@@ -135,11 +146,13 @@ func (r *shellRunner) Run(ctx context.Context) {
 		}
 
 		r.setCmd(c)
+		r.ready.Store(true)
 		r.logger.Info("shell-operator started", slog.Int("pid", c.Process.Pid))
 
 		startedAt := time.Now()
 		waitErr := c.Wait()
 		ran := time.Since(startedAt)
+		r.ready.Store(false)
 		r.setCmd(nil)
 
 		if waitErr != nil {
@@ -393,6 +406,53 @@ func main() {
 		}
 	}()
 
+	validationReconciler := controller.NewValidationWebhookReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		logger,
+		string(validationTpl),
+		&isReloadShellNeed,
+	)
+	if err := validationReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to setup controller", "controller", "ValidationWebhook")
+		os.Exit(1)
+	}
+
+	conversionReconciler := controller.NewConversionWebhookReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		logger,
+		string(conversionTpl),
+		&isReloadShellNeed,
+	)
+	if err := conversionReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to setup controller", "controller", "ConversionWebhook")
+		os.Exit(1)
+	}
+	// +kubebuilder:scaffold:builder
+
+	// Pre-populate dynamic webhook hook files from existing CRs before
+	// starting shell-operator. This eliminates the race where the
+	// controller reconciles CRs and sets isReloadShellNeed while
+	// shell-operator is still in the middle of EnableKubernetesBindings,
+	// causing an unnecessary SIGTERM and restart.
+	//
+	// We use a direct API client (not the manager's cached client) because
+	// the manager hasn't started yet and its informer cache is not populated.
+	presyncClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "presync: failed to create API client")
+		os.Exit(1)
+	}
+
+	setupLog.Info("presync: writing webhook files before starting shell-operator")
+	if err := controller.PresyncWebhookFiles(ctx, presyncClient, string(conversionTpl), string(validationTpl), logger); err != nil {
+		// Log and continue — if presync fails (e.g. API unavailable),
+		// the reconcilers will write files and trigger a reload later.
+		// This is degraded but not fatal.
+		setupLog.Error(err, "presync: failed to pre-populate webhook files, shell-operator may need a reload")
+	}
+
 	// Supervisor: keeps shell-operator alive with bounded-backoff respawns.
 	setupLog.Info("starting shell-operator supervisor")
 	go runner.Run(ctx)
@@ -421,31 +481,6 @@ func main() {
 		}
 	}()
 
-	validationReconciler := controller.NewValidationWebhookReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		logger,
-		string(validationTpl),
-		&isReloadShellNeed,
-	)
-	if err := validationReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to setup controller", "controller", "ValidationWebhook")
-		os.Exit(1)
-	}
-
-	conversionReconciler := controller.NewConversionWebhookReconciler(
-		mgr.GetClient(),
-		mgr.GetScheme(),
-		logger,
-		string(conversionTpl),
-		&isReloadShellNeed,
-	)
-	if err := conversionReconciler.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to setup controller", "controller", "ConversionWebhook")
-		os.Exit(1)
-	}
-	// +kubebuilder:scaffold:builder
-
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
 		if err := mgr.Add(metricsCertWatcher); err != nil {
@@ -471,8 +506,16 @@ func main() {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	// TODO: wait for preflight checks
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// The readyz check gates on the shell-operator child being alive.
+	// Without this, kube-proxy adds the pod to Service endpoints before
+	// shell-operator's webhook servers are listening, causing 30s timeouts
+	// on conversion webhook calls from the API server.
+	if err := mgr.AddReadyzCheck("readyz", func(req *http.Request) error {
+		if !runner.IsReady() {
+			return fmt.Errorf("shell-operator is not ready")
+		}
+		return nil
+	}); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}

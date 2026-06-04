@@ -1551,6 +1551,31 @@ alerts:
         The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"
       markupFormat: markdown
+    - name: D8HuaweiCloudMachineStuckInDeleting
+      sourceFile: ee/modules/030-cloud-provider-huaweicloud/monitoring/prometheus-rules/caphc-controller-manager.tpl
+      moduleUrl: 030-cloud-provider-huaweicloud
+      module: cloud-provider-huaweicloud
+      edition: ee
+      description: |
+        The HuaweiCloudMachine `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has been stuck in Deleting state for more than 24 hours.
+
+        This usually means the deletion job in HuaweiCloud is failing or the API is unavailable.
+
+        To inspect the machine status, run:
+
+        ```shell
+        d8 k get huaweicloudmachine -n {{ $labels.namespace }} {{ $labels.name }} -o yaml
+        ```
+
+        Check the controller logs for errors:
+
+        ```shell
+        d8 k logs -n d8-cloud-provider-huaweicloud -l app=caphc-controller-manager
+        ```
+      summary: |
+        HuaweiCloudMachine {{ $labels.name }} is stuck in Deleting for more than 24h.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -3196,54 +3221,6 @@ alerts:
         Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
       markupFormat: markdown
-    - name: D8SignatureErrorsDetected
-      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
-      moduleUrl: 040-control-plane-manager
-      module: control-plane-manager
-      edition: ee
-      description: |-
-        There have been errors while reading/writing signed data from etcd.
-        Errors may occur due to the following factors:
-
-        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
-        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
-        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
-        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
-
-        To investigate which records are generating alerts, follow instructions below.
-
-        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
-        ```bash
-        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
-        ```
-      summary: |
-        A significant number of signature errors detected.
-      severity: "2"
-      markupFormat: markdown
-    - name: D8SignatureErrorsDetected
-      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
-      moduleUrl: 040-control-plane-manager
-      module: control-plane-manager
-      edition: ee
-      description: |-
-        There have been errors while reading/writing signed data from etcd.
-        Errors can arise due to the following factors:
-
-        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
-        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
-        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
-        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
-
-        To investigate which records are generating alerts, follow instructions below.
-
-        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
-        ```bash
-        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
-        ```
-      summary: |
-        A significant number of signature errors detected.
-      severity: "7"
-      markupFormat: markdown
     - name: D8SmokeMiniNotBoundPersistentVolumeClaims
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-upmeter
@@ -3915,6 +3892,24 @@ alerts:
       summary: |
         Too many UpmeterHookProbe objects in the cluster.
       severity: "9"
+      markupFormat: markdown
+    - name: D8UserAuthzPermissionBrowserUnavailable
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Deckhouse has detected unavailable replicas in the `permission-browser-apiserver` deployment in the `d8-user-authz` namespace.
+        Permission Browser requests can fail while this alert is active.
+
+        Check deployment and pod states:
+        ```bash
+        d8 k -n d8-user-authz get deploy permission-browser-apiserver
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
+        ```
+      summary: |
+        Permission Browser API server has unavailable replicas.
+      severity: "6"
       markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -7329,6 +7324,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
@@ -7356,3 +7352,4 @@ modules-having-alerts:
     - terraform-manager
     - upmeter
     - user-authn
+    - user-authz

@@ -113,6 +113,7 @@ git:
     - documentation/pages/drafts
 {{ if ne .ModuleName "website-docs" }}
     - site/pages/*.html
+    - site/pages/404*.md
     - site/_includes/footer.html
     - site/_data/topnav.*
     - site/backends

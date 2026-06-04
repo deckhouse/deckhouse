@@ -142,10 +142,17 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 		}
 	}
 
-	scanInterval := defaultScanInterval
-	if interval := repo.Spec.ScanInterval; interval != nil {
-		scanInterval = max(interval.Duration, minScanInterval)
+	// Persist the default scan interval into the spec when it was not set at creation,
+	// so the effective interval is always visible on the resource.
+	if repo.Spec.ScanInterval == nil {
+		original := repo.DeepCopy()
+		repo.Spec.ScanInterval = &metav1.Duration{Duration: defaultScanInterval}
+		if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("set default scan interval: %w", err)
+		}
 	}
+
+	scanInterval := max(repo.Spec.ScanInterval.Duration, minScanInterval)
 
 	// Check if there are any existing PackageRepositoryOperations for this repository
 	operations := new(v1alpha1.PackageRepositoryOperationList)

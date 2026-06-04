@@ -99,33 +99,71 @@ __sec wait_cp_trio
 
 node_name="$(bb-d8-node-name)"
 
+export BB_KUBE_AUTH_TYPE="super-admin-cert"
+export BB_KUBE_APISERVER_URL=""
+bb-curl-helper-extract-super-admin-certs
+
 # admin.conf authenticates as user "kubernetes-admin" in group
 # "kubeadm:cluster-admins" — but that group has NO permissions until the
-# kubeadm:cluster-admins ClusterRoleBinding (created below via super-admin.conf)
-# exists. If we used admin.conf for the Node-wait loop before creating the
-# binding, every `kubectl get node` would 403, and the loop would burn its full
-# 200s timeout instead of breaking on the first successful poll. Measured cost
-# of that bug: ~220s on every fresh bootstrap. So: bind first, then wait.
-#
-# Step is bashible-retried on failure, so every mutation must be idempotent —
-# the `get … || create` guard and `--overwrite` cover that.
-if ! kubectl --kubeconfig=/etc/kubernetes/super-admin.conf get clusterrolebinding kubeadm:cluster-admins >/dev/null 2>&1; then
-  kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
+# kubeadm:cluster-admins ClusterRoleBinding exists. If the Node-wait loop
+# below used admin.conf before creating the binding, every Node GET would
+# 403 and the loop would burn its full 200s timeout instead of breaking on
+# the first successful poll (~220s measured on every fresh bootstrap).
+# So: bind via super-admin certs first (they bypass RBAC), then wait.
+# Idempotent via get-or-create guard (step is bashible-retried on failure).
+if ! bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/kubeadm:cluster-admins" >/dev/null 2>&1; then
+  bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    --data @- <<'EOF'
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "ClusterRoleBinding",
+  "metadata": { "name": "kubeadm:cluster-admins" },
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "ClusterRole",
+    "name": "cluster-admin"
+  },
+  "subjects": [
+    {
+      "apiGroup": "rbac.authorization.k8s.io",
+      "kind": "Group",
+      "name": "kubeadm:cluster-admins"
+    }
+  ]
+}
+EOF
 fi
+
+export BB_KUBE_AUTH_TYPE="admin-cert"
+export BB_KUBE_APISERVER_URL=""
+bb-curl-helper-extract-admin-certs
 
 # kubelet registers the Node object slightly after the control-plane containers
 # report running, so the label/taint below can race ahead of it. Wait for the
 # Node to appear (≤200s) before touching it.
 for _ in $(seq 1 100); do
-  if kubectl --kubeconfig=/etc/kubernetes/admin.conf get node "$node_name" >/dev/null 2>&1; then
+  if bb-curl-kube "/api/v1/nodes/${node_name}" >/dev/null 2>&1; then
     break
   fi
   sleep 2
 done
 __sec wait_node_register
 
-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$node_name" node-role.kubernetes.io/control-plane="" --overwrite
-kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$node_name" node-role.kubernetes.io/control-plane:NoSchedule --overwrite
+node_taints_patch="$(
+  bb-curl-kube "/api/v1/nodes/${node_name}" | jq -c '
+    (.spec.taints // [])
+    | map(select(.key != "node-role.kubernetes.io/control-plane"))
+    + [{"key":"node-role.kubernetes.io/control-plane","effect":"NoSchedule"}]
+  '
+)"
+
+bb-curl-helper-patch-node-metadata "$node_name" "labels" "node-role.kubernetes.io/control-plane="
+bb-curl-kube "/api/v1/nodes/${node_name}" \
+  -X PATCH \
+  -H "Content-Type: application/strategic-merge-patch+json" \
+  --data "$(jq -nc --argjson taints "$node_taints_patch" '{"spec":{"taints":$taints}}')"
 __sec rbac_label_taint
 
 # CIS benchmark purposes
@@ -133,11 +171,6 @@ chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
 
 # Restrict permissions on admin kubeconfig files for security
 chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true
-
-# Force admin-cert auth for operations requiring elevated privileges
-export BB_KUBE_AUTH_TYPE="admin-cert"
-export BB_KUBE_APISERVER_URL=""
-bb-curl-helper-extract-admin-certs
 
 # Upload pki for deckhouse
 declare -A pki_secret_files=(
@@ -205,21 +238,30 @@ if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
 fi
-
 # Allow kube-apiserver to proxy kubelet requests (kubectl logs/exec/port-forward) during bootstrap.
 # The same CRB is applied with heritage/module labels by module 040-control-plane-manager; nelm adopts it.
-kubectl --kubeconfig=/etc/kubernetes/super-admin.conf apply -f - <<EOF
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: d8:control-plane-manager:apiserver-kubelet-client
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:kubelet-api-admin
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: kube-apiserver-kubelet-client
+# Idempotent via get-or-create guard (step is bashible-retried on failure).
+if ! bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/d8:control-plane-manager:apiserver-kubelet-client" >/dev/null 2>&1; then
+  bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    --data @- <<'EOF'
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "ClusterRoleBinding",
+  "metadata": { "name": "d8:control-plane-manager:apiserver-kubelet-client" },
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "ClusterRole",
+    "name": "system:kubelet-api-admin"
+  },
+  "subjects": [
+    {
+      "apiGroup": "rbac.authorization.k8s.io",
+      "kind": "User",
+      "name": "kube-apiserver-kubelet-client"
+    }
+  ]
+}
 EOF
-
+fi

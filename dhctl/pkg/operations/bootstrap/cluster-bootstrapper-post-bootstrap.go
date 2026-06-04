@@ -44,7 +44,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	}
 
 	if err := cache.InitWithOptions(ctx, wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
-		return fmt.Errorf("Can not init cache: %v", err)
+		return fmt.Errorf("Can not init cache: %w", err)
 	}
 
 	bootstrapState := NewBootstrapState(cache.Global())
@@ -57,7 +57,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		}
 		labelChan := intLogger.GetPhaseChan()
 		phasesChan := make(chan phases.Progress, 5)
-		pbParam := progressbar.NewPbParams(100, "Executing post-bootstrap script", labelChan, phasesChan)
+		pbParam := progressbar.NewPbParams(100, "Executing post-bootstrap script", labelChan, phasesChan, intLogger.GetLogChan())
 
 		if err := progressbar.InitProgressBar(pbParam); err != nil {
 			return err

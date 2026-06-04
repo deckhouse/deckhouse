@@ -39,7 +39,7 @@ secrets:
 shell:
   install:
     - cd /src/cmd/control-plane-manager
-    {{ if $.isEE}}
+    {{ if eq $.Env "CSE"}}
     - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=true"
     {{ else }}
     - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-operation.SignatureEnabled=false"

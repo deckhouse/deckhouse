@@ -72,7 +72,7 @@ metadata:
   name: test-package
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
-    controller: true
+    controller: false
     kind: PackageRepository
     name: deckhouse
     uid: ""
@@ -97,10 +97,12 @@ status:
     reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
+  lastChangeTime: "2025-10-31T12:00:00Z"
+  lastNewVersions: 1
+  lastScanTime: "2025-10-31T12:00:00Z"
   packages:
   - name: test-package
     type: Module
   packagesCount: 1
   partialScanAvailable: false
   phase: Active
-  syncTime: "2025-10-31T12:00:00Z"
