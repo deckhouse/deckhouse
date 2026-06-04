@@ -9,7 +9,7 @@ The [`Virtualization`](/modules/virtualization/) module core is directly respons
 
 To manage VMs, the module core uses custom resources of the following API groups:
 
-1. `Internal.virtualization.deckhouse.io`: The main group, an analog of the `kubevirt.io` API group of the original KubeVirt. It includes the following custom resources:
+1. `internal.virtualization.deckhouse.io`: The main group, an analog of the `kubevirt.io` API group of the original KubeVirt. It includes the following custom resources:
 
    - InternalVirtualizationVirtualMachine: A resource that describes the VM configuration and status.
    - InternalVirtualizationVirtualMachineInstance: A resource that describes a running VM.
@@ -111,7 +111,7 @@ The module core consists of the following components:
 
 ## Module core interactions
 
-The module core (CORE) interacts with the following components:
+The module core interacts with the following components:
 
 1. **Kube-apiserver**:
 

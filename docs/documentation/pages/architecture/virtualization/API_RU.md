@@ -19,21 +19,21 @@ description: Архитектура компонента Virtualization API мо
 
    Ресурсами основной группы управляет компонент virtualization-сontroller.
 
-2. `subresources.virtualization.deckhouse.io` — группа субресурсов. Сабресурсы — это дополнительные операции или действия, которые можно выполнять над основными ресурсами (например, VirtualMachine) через API Kubernetes. Они предоставляют интерфейсы для управления конкретными аспектами ресурсов, не затрагивая весь объект. Вместо привычного для Kubernetes декларативного ресурса они представляют собой эндпойнт для императивных операций. Группа включает в себя следующие сабресурсы:
-   
-   - virtualmachines/console;
-   - virtualmachines/vnc;
-   - virtualmachines/portforward;
-   - virtualmachines/addvolume;
-   - virtualmachines/removevolume;
-   - virtualmachines/freeze;
-   - virtualmachines/unfreeze;
-   - virtualmachines/addresourceclaim;
-   - virtualmachines/removeresourceclaim.
+2. `subresources.virtualization.deckhouse.io` — группа субресурсов. Сабресурсы — это дополнительные операции или действия, которые можно выполнять над основными ресурсами (например, VirtualMachine) через API Kubernetes. Они предоставляют интерфейсы для управления конкретными аспектами ресурсов, не затрагивая весь объект. Вместо привычного для Kubernetes декларативного ресурса они представляют собой эндпойнт для императивных операций. Группа включает в себя следующие субресурсы:
+
+   - `virtualmachines/console`;
+   - `virtualmachines/vnc`;
+   - `virtualmachines/portforward`;
+   - `virtualmachines/addvolume`;
+   - `virtualmachines/removevolume`;
+   - `virtualmachines/freeze`;
+   - `virtualmachines/unfreeze`;
+   - `virtualmachines/addresourceclaim`;
+   - `virtualmachines/removeresourceclaim`.
 
    Сабресурсами управляет компонент virtualization-api.
 
-Компонент Virtualization API модуля для управления ВМ, дисками и образами ВМ использует в качестве бэкенда кастомные ресурсы KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления. 
+Компонент Virtualization API модуля для управления ВМ, дисками и образами ВМ использует в качестве бэкенда кастомные ресурсы KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
 
 ## Архитектура Virtualization API
 
@@ -47,13 +47,13 @@ description: Архитектура компонента Virtualization API мо
 Архитектура компонента Virtualization API модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента Virtualization API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-controller.ru.png)
+![Архитектура компонента Virtualization API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-api.ru.png)
 
 ## Компоненты Virtualization API
 
 Virtualization API состоит из следующих компонентов:
 
-1. **Virtualization-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к API-группе `subresources.virtualization.deckhouse.io`. В качестве бэкенда virtualization-api использует сабресурсы из API-группы `subresources.kubevirt.io`. Virtualization-api обращается напрямую на эндпойнт компонента virt-api, который является [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к аналогичным сабресурсам из API-группы `subresources.kubevirt.io`.
+1. **Virtualization-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к API-группе `subresources.virtualization.deckhouse.io`. В качестве бэкенда virtualization-api использует субресурсы из API-группы `subresources.kubevirt.io`. Virtualization-api обращается напрямую на эндпойнт компонента virt-api, который является [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к аналогичным субресурсам из API-группы `subresources.kubevirt.io`.
 
    Состоит из одного контейнера:
 
@@ -68,12 +68,12 @@ Virtualization API состоит из следующих компонентов
      - изменение статуса ресурса.
 
      В качестве бэкенда virtualization-controller использует кастомные ресурсы из API-группы `kubevirt.io`.
-   
-   - валидация ресурсов из API-группы `virtualization.deckhouse.io` с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/)
-   
+
+   - валидация ресурсов из API-группы `virtualization.deckhouse.io` с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
+
    - запуск подов dvcr-importer и dvcr-uploader для выполнения сценариев импорта и загрузки дисков и образов ВМ в хранилище образов DVCR. [DVCR (или Deckhouse Virtualization Container Registry)](dvcr.html) — специализированный реестр для хранения и кеширования образов ВМ.
 
-   - выполнение операций над виртуальными машинами посредством запросов к некоторым сабресурсам API-группы `subresources.virtualization.deckhouse.io`, например, `virtualmachines/freeze` и `virtualmachines/unfreeze`.
+   - выполнение операций над ВМ посредством запросов к некоторым субресурсам API-группы `subresources.virtualization.deckhouse.io`, например, `virtualmachines/freeze` и `virtualmachines/unfreeze`.
 
    Компонент содержит следующие контейнеры:
 
@@ -85,8 +85,8 @@ Virtualization API состоит из следующих компонентов
 
 Virtualization-api взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver** — читает список кастомных ресурсов VirtualMachine, которые нужны для обработки запросов к сабресурсам.
-1. **Virt-api** — отправляет запросы к сабресурсам KubeVirt. Запросы проходят через аналогичный сайдкар-контейнер **proxy**, который переименовывает метаданные из API-группы `subresources.virtualization.deckhouse.io` в API-группу `subresources.kubevirt.io` и проксирует их на эндпойнт virt-api (Kubernetes Extension API Server KubeVirt).
+1. **Kube-apiserver** — читает список кастомных ресурсов VirtualMachine, которые нужны для обработки запросов к субресурсам.
+1. **Virt-api** — отправляет запросы к субресурсам KubeVirt. Запросы проходят через аналогичный сайдкар-контейнер proxy, который переименовывает метаданные ресурсов из API-группы `subresources.virtualization.deckhouse.io` в метаданные API-группы `subresources.kubevirt.io` и проксирует их на эндпойнт virt-api (Kubernetes Extension API Server KubeVirt).
 
 Virtualization-controller взаимодействует со следующими компонентами:
 
@@ -99,7 +99,7 @@ Virtualization-controller взаимодействует со следующим
 
 1. **Kube-apiserver**:
 
-   - пересылает запросы к сабресурсам API-группы `subresources.virtualization.deckhouse.io`;
+   - пересылает запросы к субресурсам API-группы `subresources.virtualization.deckhouse.io`;
    - отправляет запросы на валидацию ресурсов API-группы `virtualization.deckhouse.io`.
 
 1. **Prometheus-main** — собирает метрики компонентов.
