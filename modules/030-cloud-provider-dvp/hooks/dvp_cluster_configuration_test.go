@@ -93,13 +93,11 @@ data:
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
-	// ---- State A: no PCC ----
-	Context("State A: no PCC (new v2 cluster)", func() {
-		f := HookExecutionConfigInit(emptyValues, `{}`)
-		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
-		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
-		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-
+	a := HookExecutionConfigInit(emptyValues, `{}`)
+	a.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	a.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+	a.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("Cluster without module configuration", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
