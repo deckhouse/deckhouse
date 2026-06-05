@@ -57,6 +57,17 @@ __sec wait_api_proxy
 
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
+
+mkdir -p /var/lib/etcd
+chown etcd:etcd /var/lib/etcd
+chmod 700 /var/lib/etcd
+chmod 711 /etc/kubernetes/pki
+chown root:etcd /etc/kubernetes/pki/etcd
+chmod 750 /etc/kubernetes/pki/etcd
+chown root:etcd /etc/kubernetes/pki/etcd/*.{crt,key}
+chmod 640 /etc/kubernetes/pki/etcd/*.key
+chmod 644 /etc/kubernetes/pki/etcd/*.crt
+
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd" || exit 1
 __sec wait_etcd
@@ -167,7 +178,9 @@ bb-curl-kube "/api/v1/nodes/${node_name}" \
 __sec rbac_label_taint
 
 # CIS benchmark purposes
-chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
+chmod 600 /etc/kubernetes/pki/*.{crt,key}
+chmod 640 /etc/kubernetes/pki/etcd/*.key
+chmod 644 /etc/kubernetes/pki/etcd/*.crt
 
 # Restrict permissions on admin kubeconfig files for security
 chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true

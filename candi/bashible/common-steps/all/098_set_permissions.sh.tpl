@@ -22,5 +22,16 @@ if [[ -d /etc/containerd ]]; then
 fi
 
 if [[ -d /var/lib/etcd ]]; then
+    chown -R etcd:etcd /var/lib/etcd
     chmod 700 /var/lib/etcd
+fi
+
+if [[ -d /etc/kubernetes/pki/etcd ]]; then
+    chmod 711 /etc/kubernetes/pki
+    chown root:etcd /etc/kubernetes/pki/etcd
+    chmod 750 /etc/kubernetes/pki/etcd
+    chown root:etcd /etc/kubernetes/pki/etcd/*.key 2>/dev/null || true
+    chmod 640 /etc/kubernetes/pki/etcd/*.key 2>/dev/null || true
+    chown root:etcd /etc/kubernetes/pki/etcd/*.crt 2>/dev/null || true
+    chmod 644 /etc/kubernetes/pki/etcd/*.crt 2>/dev/null || true
 fi

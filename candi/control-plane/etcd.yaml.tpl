@@ -93,9 +93,9 @@ spec:
         cpu: "{{ div (mul $millicpu 35) 100 }}m"
         memory: "{{ div (mul $memory 35) 100 }}"
     securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-      runAsGroup: 0
+      runAsNonRoot: true
+      runAsUser: 52
+      runAsGroup: 52
       capabilities:
         drop:
         - ALL
