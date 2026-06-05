@@ -18,11 +18,13 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -700,3 +702,90 @@ func TestResolveLockUntil(t *testing.T) {
 		})
 	}
 }
+
+// TestApplyUserOperationFilterNeverErrors guards the hard requirement that the
+// UserOperation FilterFunc never returns an error: addon-operator runs it while
+// loading existing objects to enable the hook's kubernetes bindings, so a single
+// malformed object that made the filter error would lock the whole hook queue.
+// A valid object must still convert in full; a structurally broken one must
+// capture the conversion error in FilterError so getUserOperations can mark it
+// Failed instead of the load failing.
+func TestApplyUserOperationFilterNeverErrors(t *testing.T) {
+	t.Run("valid object converts in full and carries no filter error", func(t *testing.T) {
+		res, err := applyUserOperationFilter(&unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "UserOperation",
+			"metadata":   map[string]any{"name": "ok"},
+			"spec": map[string]any{
+				"type":          "Lock",
+				"initiatorType": "Admin",
+				"user":          "admin",
+				"lock":          map[string]any{"for": "1h"},
+			},
+		}})
+		if err != nil {
+			t.Fatalf("filter must never return an error, got: %v", err)
+		}
+		op, ok := res.(*UserOperation)
+		if !ok || op == nil {
+			t.Fatalf("filter must return a *UserOperation, got %T", res)
+		}
+		if op.FilterError != "" {
+			t.Errorf("valid object must not carry a filter error, got %q", op.FilterError)
+		}
+		if op.Spec.Type != UserOperationTypeLock || op.Spec.Lock == nil || op.Spec.Lock.For != "1h" {
+			t.Errorf("valid object must convert in full, got %+v", op.Spec)
+		}
+	})
+
+	// Each of these would make sdk.FromUnstructured fail; none may lock the queue,
+	// and each must capture the error so the object is later marked Failed.
+	brokenObjects := map[string]map[string]any{
+		"spec is not an object": {
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "UserOperation",
+			"metadata":   map[string]any{"name": "broken-spec"},
+			"spec":       "this should be an object",
+		},
+		"spec.type is the wrong type": {
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "UserOperation",
+			"metadata":   map[string]any{"name": "broken-type"},
+			"spec":       map[string]any{"type": 12345},
+		},
+	}
+
+	for name, obj := range brokenObjects {
+		t.Run(name, func(t *testing.T) {
+			res, err := applyUserOperationFilter(&unstructured.Unstructured{Object: obj})
+			if err != nil {
+				t.Fatalf("filter must never return an error (it locks the hook queue), got: %v", err)
+			}
+			op, ok := res.(*UserOperation)
+			if !ok || op == nil {
+				t.Fatalf("filter must return a *UserOperation, got %T", res)
+			}
+			if op.Name == "" {
+				t.Errorf("snapshot must preserve metadata.name for the status patch and cleanup")
+			}
+			if op.FilterError == "" {
+				t.Errorf("snapshot must capture the conversion error so the object is marked Failed")
+			}
+		})
+	}
+}
+
+// TestExecuteUserOperationFailsOnFilterError verifies that a captured filter
+// error is surfaced by executeUserOperation, which is what drives the operation
+// into the Failed phase with a precise status.message.
+func TestExecuteUserOperationFailsOnFilterError(t *testing.T) {
+	op := UserOperation{FilterError: `time: unknown unit "d" in duration "456789d"`}
+	err := executeUserOperation(nil, op)
+	if err == nil {
+		t.Fatal("executeUserOperation must return an error when FilterError is set")
+	}
+	if !strings.Contains(err.Error(), "456789d") {
+		t.Errorf("returned error must carry the original conversion reason, got: %v", err)
+	}
+}
+

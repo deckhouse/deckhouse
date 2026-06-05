@@ -42,6 +42,15 @@ type UserOperation struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              UserOperationSpec   `json:"spec"`
 	Status            UserOperationStatus `json:"status"`
+
+	// FilterError carries the error produced by applyUserOperationFilter when
+	// the raw object could not be decoded into this struct. It is NOT part of
+	// the CRD: it travels only inside the hook snapshot (hence a plain json tag
+	// so it survives the snapshot round-trip) so getUserOperations can mark this
+	// specific object Failed with the exact reason instead of silently dropping
+	// it — all without the FilterFunc ever returning an error and locking the
+	// queue. It never reaches the API: status patches send only the status field.
+	FilterError string `json:"filterError,omitempty"`
 }
 
 type UserOperationSpec struct {
@@ -306,13 +315,41 @@ func applyRefreshTokenFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func applyUserOperationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var userOperation = &UserOperation{}
-	err := sdk.FromUnstructured(obj, userOperation)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %w", err)
+	userOperation := &UserOperation{}
+	if err := sdk.FromUnstructured(obj, userOperation); err != nil {
+		// A FilterFunc must never return an error. addon-operator runs it while
+		// loading existing objects to enable the hook's kubernetes bindings, and
+		// a returned error aborts that step and *locks the whole hook queue* — a
+		// single malformed UserOperation (e.g. an unparsable field) would wedge
+		// the entire feature for every other operation. So instead of failing
+		// the load, capture the conversion error in the snapshot: getUserOperations
+		// surfaces it by marking this specific object Failed with the exact
+		// reason, and the queue keeps draining.
+		return userOperationFromRawObject(obj, err), nil
 	}
 
 	return userOperation, nil
+}
+
+// userOperationFromRawObject builds a UserOperation snapshot directly from the
+// unstructured object when full conversion fails. It records the conversion
+// error in FilterError and preserves only the lifecycle fields the reconcile
+// loop needs — name (for the status patch, cleanup and logging), creation
+// timestamp (for retention) and the current status.phase. Spec is left empty on
+// purpose: the object is not executed, it is reported Failed with FilterError.
+func userOperationFromRawObject(obj *unstructured.Unstructured, filterErr error) *UserOperation {
+	op := &UserOperation{}
+	op.Name = obj.GetName()
+	op.Namespace = obj.GetNamespace()
+	op.CreationTimestamp = obj.GetCreationTimestamp()
+	op.Annotations = obj.GetAnnotations()
+	op.FilterError = filterErr.Error()
+	// Preserve the current phase so an already-completed but now-undecodable
+	// object is not reprocessed and is left to the normal retention cleanup.
+	if phase, found, _ := unstructured.NestedString(obj.Object, "status", "phase"); found {
+		op.Status.Phase = UserOperationStatusPhase(phase)
+	}
+	return op
 }
 
 // userOperationLogFields returns slog-style key/value pairs describing a
@@ -430,6 +467,13 @@ func findLocalPassword(input *go_hook.HookInput, username string) (*Password, er
 }
 
 func executeUserOperation(input *go_hook.HookInput, operation UserOperation) error {
+	// The object could not be decoded by applyUserOperationFilter (a returned
+	// error there would have locked the queue). Surface the exact conversion
+	// error now so the operation ends up Failed with a precise status.message.
+	if operation.FilterError != "" {
+		return fmt.Errorf("cannot decode UserOperation object: %s", operation.FilterError)
+	}
+
 	switch operation.Spec.Type {
 	case UserOperationTypeResetPass:
 		return executeResetPassword(input, operation)
