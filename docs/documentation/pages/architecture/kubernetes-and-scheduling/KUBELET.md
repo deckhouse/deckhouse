@@ -32,7 +32,7 @@ Kubelet interactions are shown in the following diagram:
 
 Kubelet monitors the state of containers in all pods running on the node, including both user workloads and DKP components, by performing Startup, Liveness, and Readiness probes according to the pod specification. For more information about probes, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
 
-Kubelet interacts with the following components:
+Kubelet also interacts with the following components:
 
 1. **containerd**: Receives commands from kubelet to manage the container lifecycle on the node via the [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/).
 1. **kubernetes-api-proxy**: Proxies requests to kube-apiserver that are sent to the `localhost` address. It is part of the [`control-plane-manager`](/modules/control-plane-manager/) module.
