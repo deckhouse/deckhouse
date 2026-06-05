@@ -174,6 +174,7 @@ block-until-image-is-not-ready:
 # - calculate ref to use in further checkout jobs
 # - detect if PR is 'external': checkout the head commit and fail if changes are not safe
 {!{ define "pull_request_info_job" }!}
+{!{ $ctx := . -}!}
 # <template: pull_request_info>
 pull_request_info:
   name: Get pull request reference
