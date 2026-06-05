@@ -108,12 +108,12 @@ spec:
             {{- end }}
             {{- with .Values.upmeter.virtualizationProbe }}
             {{- if .clusterImageName }}
-            - --virtualization-probe-cluster-image={{ .clusterImageName | quote }}
+            - --virtualization-probe-cluster-image={{ .clusterImageName }}
             {{- if .clusterImageURL }}
-            - --virtualization-probe-cluster-image-url={{ .clusterImageURL | quote }}
+            - --virtualization-probe-cluster-image-url={{ .clusterImageURL }}
             {{- end }}
             {{- if .vmClassName }}
-            - --virtualization-probe-vm-class={{ .vmClassName | quote }}
+            - --virtualization-probe-vm-class={{ .vmClassName }}
             {{- end }}
             {{- end }}
             {{- end }}
