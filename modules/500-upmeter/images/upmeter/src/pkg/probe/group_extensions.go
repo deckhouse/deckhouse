@@ -19,12 +19,14 @@ package probe
 import (
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe VirtualizationProbeConfig) []runnerConfig {
+func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe VirtualizationProbeConfig, logger *logrus.Logger) []runnerConfig {
 	const (
 		groupExtensions     = "extensions"
 		controlPlaneTimeout = 5 * time.Second
@@ -245,6 +247,11 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe 
 			config: checker.VirtualMachineLifecycle{
 				Access:           access,
 				PreflightChecker: controlPlanePinger,
+				Logger: logrus.NewEntry(logger).WithFields(logrus.Fields{
+					"group": groupExtensions,
+					"probe": "virtualization",
+					"check": "virtual-machine-lifecycle",
+				}),
 				AgentID:          run.ID(),
 				Namespace:        run.StaticIdentifier("upmeter-vm"),
 				ClusterImageName: virtProbe.ClusterImageName,
