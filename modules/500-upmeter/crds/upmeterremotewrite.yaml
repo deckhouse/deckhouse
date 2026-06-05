@@ -110,9 +110,15 @@ spec:
                     older than ~1h by default when out-of-order ingestion is disabled).
 
                     Set this slightly below your backend's acceptance window:
+
                       * Grafana Mimir (default): keep `3600` (1h).
                       * Grafana Cloud or Mimir with `out_of_order_time_window: 2h`: set to `7200`.
                       * VictoriaMetrics: typically tolerates 24h+, set to `86400` or higher.
+
+                    Configured per `UpmeterRemoteWrite` because different backends have different
+                    acceptance windows. `upmeter` agents automatically align their local backlog
+                    retention with the maximum value across all active `UpmeterRemoteWrite`
+                    resources — no separate agent-side configuration is required.
                   default: 3600
                   minimum: 60
     - name: v1
