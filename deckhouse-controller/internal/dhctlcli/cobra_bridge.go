@@ -181,40 +181,17 @@ func clusterConfigurationStdinFromCluster(opts *options.Options) func() error {
 }
 
 // newKubeClient builds a Kubernetes client from the deckhouse-controller's
-// dhctl options. It mirrors the client setup used by the edit commands so that
-// in-cluster (the deckhouse pod) and kubeconfig-based access behave the same.
-func newKubeClient(ctx context.Context, opts *options.Options) (*client.KubernetesClient, func(context.Context), error) {
-	logger := log.GetDefaultLogger()
-	loggerProvider := log.ExternalLoggerProvider(logger)
-	params := app.ProviderParams(&opts.Global, loggerProvider)
-
-	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-		ctx,
-		params,
-		providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-		providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-		providerinitializer.WithRequiredKubeProvider(),
-	)
-	if err != nil {
-		return nil, nil, err
+// dhctl kube options. deckhouse-controller runs in-cluster
+// (DECKHOUSE_KUBE_CONFIG_IN_CLUSTER defaults to true), so this resolves to the
+// pod's service-account credentials; it also honors an explicit kubeconfig.
+// Unlike the edit commands' provider initializer, it never sets up SSH — this
+// path only needs read access to a Secret.
+func newKubeClient(ctx context.Context, opts *options.Options) (*client.KubernetesClient, error) {
+	kubeCl := client.NewKubernetesClient()
+	if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams(&opts.Kube)); err != nil {
+		return nil, fmt.Errorf("initialize kubernetes client: %w", err)
 	}
-	if kubeProvider == nil {
-		return nil, nil, fmt.Errorf("kubernetes provider is not initialized")
-	}
-
-	kube, err := kubeProvider.Client(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cleanup := func(c context.Context) {
-		//nolint: errcheck
-		if sshProviderInitializer != nil {
-			sshProviderInitializer.Cleanup(c)
-		}
-	}
-
-	return &client.KubernetesClient{KubeClient: kube}, cleanup, nil
+	return kubeCl, nil
 }
 
 // parseFileFlagPresent reports whether the args contain the parse commands'
