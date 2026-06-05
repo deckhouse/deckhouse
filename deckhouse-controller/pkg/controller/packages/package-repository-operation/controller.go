@@ -101,6 +101,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	//lint:ignore SA4006 - we need to requeue to allow fresh object retrieval in next reconciliation
 	if res.Requeue {
 		return res, nil
 	}
