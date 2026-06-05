@@ -22,7 +22,7 @@ The following simplifications are made in the diagram:
 
 * The diagram shows containers in different pods interacting directly with each other. In reality, they communicate via the corresponding Kubernetes Services (internal load balancers). Service names are omitted if they are obvious from the diagram context. Otherwise, the Service name is shown above the arrow.
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
-* The diagram shows `pod-common`, which represents any pod managed by kubelet.
+* The diagram shows an `application` pod, which represents any pod in the cluster, both system and user-managed.
 {% endalert %}
 
 Kubelet interactions are shown in the following diagram:
@@ -30,11 +30,12 @@ Kubelet interactions are shown in the following diagram:
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Kubelet interactions](../../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.png)
 
+Kubelet monitors the state of containers in all pods running on the node, including both user workloads and DKP components, by performing Startup, Liveness, and Readiness probes according to the pod specification. For more information about probes, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
+
 Kubelet interacts with the following components:
 
 1. **containerd**: Receives commands from kubelet to manage the container lifecycle on the node via the [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/).
 1. **kubernetes-api-proxy**: Proxies requests to kube-apiserver that are sent to the `localhost` address. It is part of the [`control-plane-manager`](/modules/control-plane-manager/) module.
-1. **pod-common**: Monitors the state of pod containers by performing Startup, Liveness, and Readiness probes according to the pod specification. For more information about probes, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
 1. **kube-apiserver-healthcheck**: Checks the health of kube-apiserver.
 
 The following components interact with kubelet:
@@ -45,4 +46,4 @@ The following components interact with kubelet:
    * Executing commands in running pods (the `kubectl exec` command).
    * Port forwarding (the `kubectl port-forward` command).
 
-2. **prometheus-main**: Collects kubelet metrics.
+1. **prometheus-main**: Collects kubelet metrics.
