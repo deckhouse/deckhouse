@@ -70,6 +70,9 @@ spec:
         # Among known inexisting images, there is the one from Upmeter probe where we don't want a container to start.
         - --check-interval={{ .Values.extendedMonitoring.imageAvailability.imageCheckInterval }}
         - --default-registry={{ .Values.extendedMonitoring.imageAvailability.defaultRegistry }}
+        {{- if .Values.extendedMonitoring.imageAvailability.awsRegion }}
+        - --aws-region={{ .Values.extendedMonitoring.imageAvailability.awsRegion }}
+        {{- end }}
         {{- $ignoredImages := list ".*upmeter-nonexistent.*" }}
         {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
           {{- $ignoredImages = concat $ignoredImages .Values.extendedMonitoring.imageAvailability.ignoredImages }}
