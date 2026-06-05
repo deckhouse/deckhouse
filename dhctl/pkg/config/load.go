@@ -58,6 +58,7 @@ type validateOptions struct {
 	requiredSSHHost    bool
 	operation          string
 	downloadRootDir    string
+	extraSchemaPaths   []string
 }
 
 type ValidateOption func(o *validateOptions)

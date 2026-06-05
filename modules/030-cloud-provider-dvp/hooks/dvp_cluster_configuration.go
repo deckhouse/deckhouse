@@ -100,6 +100,7 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 			string(clusterConfigYAML),
 			infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()),
 			nil,
+			config.ValidateOptionExtraSchemaPaths(additionalOpenAPISchemasPaths...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
