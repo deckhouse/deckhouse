@@ -139,7 +139,7 @@ func (s *Sender) export() error {
 	if maxAge := s.serverMaxEpisodeAge(); maxAge > 0 {
 		ageDeadline := time.Now().Add(-maxAge)
 		if slot.Before(ageDeadline) {
-			log.Warnf("dropping stale episodes up to %s (older than %s, hinted by server)", ageDeadline.Format(time.RFC3339), maxAge)
+			log.Errorf("dropping stale episodes up to %s (older than %s, hinted by server)", ageDeadline.Format(time.RFC3339), maxAge)
 			if err := s.storage.Clean(ageDeadline); err != nil {
 				return fmt.Errorf("dropping stale episodes: %w", err)
 			}
