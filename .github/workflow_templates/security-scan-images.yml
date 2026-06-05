@@ -130,69 +130,75 @@ jobs:
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
 
       # Resolve the baseline: the first build-and-test_dev run of this PR
-      # whose `Build FE` job finished with conclusion=success. No
-      # retention/artifact filtering here on purpose — if the chosen run's
-      # build_report_FE has expired by now, the download step below stays
-      # soft and changed_images.py degrades to full-scan with an explicit
-      # log line. The very first PR build is naturally the current run
-      # itself (Build FE just succeeded, otherwise we would not be here).
+      # whose `Build FE` job finished with conclusion=success.
+      #
+      # API strategy (important for main `deckhouse/deckhouse` scale, where
+      # build-and-test_dev has ~40k total runs):
+      #   * Filter at the API layer by the PR's head branch + status=success.
+      #     `listWorkflowRunsForRepo?branch=<head>&workflow_id=...&status=success`
+      #     normally returns a single-digit list — usually 1..20 runs.
+      #   * A run with conclusion=success means every required top-level job
+      #     succeeded, so `Build FE` (which is required) is implicitly success.
+      #     This avoids the N+1 `listJobsForWorkflowRun` calls we used to do.
+      #
+      # Soft degrade: if for any reason we cannot resolve a baseline (API rate
+      # limit, branch came from a fork without success runs yet, etc.) — emit
+      # an empty `run_id` and let the download step / changed_images.py
+      # fall back to full-scan with a clear warning. We intentionally do NOT
+      # `setFailed` here, because changed_images is plumbing, not a scanner.
       - name: Find baseline Build FE run for this PR
         id: baseline
+        timeout-minutes: 3
         uses: {!{ index (ds "actions") "actions/github-script" }!}
         with:
           github-token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           script: |
-            const prNumber = context.payload.pull_request.number;
-            core.info(`Looking for the first successful Build FE run of PR #${prNumber}`);
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
+            const headRef  = pr.head.ref;
+            core.info(`PR #${prNumber} head ref: ${headRef}`);
 
-            const runs = await github.paginate(
-              github.rest.actions.listWorkflowRuns,
-              {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: 'build-and-test_dev.yml',
-                per_page: 100,
-              },
-            );
-
-            const candidates = runs
-              .filter(r => (r.pull_requests || []).some(p => p.number === prNumber))
-              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            core.info(`Found ${candidates.length} build-and-test_dev run(s) for PR #${prNumber}`);
-
-            let chosen = null;
-            for (const run of candidates) {
-              const jobs = await github.paginate(
-                github.rest.actions.listJobsForWorkflowRun,
+            try {
+              const runs = await github.paginate(
+                github.rest.actions.listWorkflowRunsForRepo,
                 {
                   owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  run_id: run.id,
+                  repo:  context.repo.repo,
+                  workflow_id: 'build-and-test_dev.yml',
+                  branch: headRef,
+                  status: 'success',
                   per_page: 100,
                 },
               );
-              const buildFe = jobs.find(j => j.name === 'Build FE');
-              const conclusion = buildFe ? buildFe.conclusion : 'absent';
-              core.info(`  run=${run.id} created_at=${run.created_at} Build FE=${conclusion}`);
-              if (buildFe && buildFe.conclusion === 'success') {
-                chosen = run.id;
-                break;
+              core.info(`Found ${runs.length} successful build-and-test_dev run(s) on '${headRef}'`);
+
+              if (runs.length === 0) {
+                core.warning(
+                  `No successful build-and-test_dev run on '${headRef}' yet. ` +
+                  `Emitting empty baseline -> downstream scanners run in full-scan mode.`,
+                );
+                core.setOutput('run_id', '');
+                return;
               }
-            }
 
-            if (!chosen) {
-              core.setFailed(
-                `No PR run with a successful Build FE job found for PR #${prNumber}. ` +
-                `This should be unreachable: changed_images runs as part of a Build ` +
-                `FE success chain, so at minimum the current run itself qualifies.`,
+              runs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+              const chosen = runs[0];
+              core.info(`Baseline run: id=${chosen.id} created_at=${chosen.created_at}`);
+              core.setOutput('run_id', String(chosen.id));
+            } catch (err) {
+              core.warning(
+                `Failed to resolve baseline run (${err.message}). ` +
+                `Emitting empty baseline -> downstream scanners run in full-scan mode.`,
               );
-              return;
+              core.setOutput('run_id', '');
             }
 
-            core.info(`Baseline Build FE run: ${chosen}`);
-            core.setOutput('run_id', chosen);
-
+      # Skipped when the baseline step could not find a successful Build FE
+      # run on this branch (empty run_id). In that case no build_report
+      # is fetched and changed_images.py degrades to full-scan with a
+      # warning logged from the "Compute changed images" step.
       - name: Download build_report_FE from baseline run
+        if: ${{ steps.baseline.outputs.run_id != '' }}
         uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
