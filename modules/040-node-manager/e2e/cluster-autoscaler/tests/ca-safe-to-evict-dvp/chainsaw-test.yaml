@@ -178,12 +178,12 @@ spec:
             file: ../common/manifests/pod-blocking-safe-to-evict.yaml
       cleanup:
         - description: Delete blocking pod
-          continueOnError: true
-          delete:
-            ref:
-              apiVersion: v1
-              kind: Pod
-              name: e2e-blocking-pod
+          script:
+            timeout: 30s
+            content: |
+              kubectl delete pod -n "$NAMESPACE" e2e-blocking-pod --ignore-not-found
+            check:
+              ($error == null): true
 
     - name: wait-for-blocking-pod-running
       try:
