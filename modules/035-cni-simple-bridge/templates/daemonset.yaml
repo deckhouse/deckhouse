@@ -111,10 +111,6 @@ spec:
           mountPath: /run
         - name: cni
           mountPath: /etc/cni/net.d
-        - name: etc-netplan
-          mountPath: /etc/netplan
-        - name: netplan
-          mountPath: /usr/local/bin/netplan
         - name: tmp
           mountPath: /tmp
         - mountPath: /sbin
@@ -148,12 +144,6 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 4Mi
-      - name: etc-netplan
-        hostPath:
-          path: /etc/netplan
-      - name: netplan
-        hostPath:
-          path: /sbin/netplan
       - name: net
         hostPath:
           path: /sys/class/net

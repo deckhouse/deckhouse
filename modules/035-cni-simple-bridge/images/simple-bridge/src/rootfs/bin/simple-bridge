@@ -11,7 +11,7 @@ function ensure_pod_network_route() {
   fi
 }
 
-function patch_netplan() {
+function add_iprule() {
   local pod_cidr=$1
 
   if ! ip rule show | grep -q "10000:.*to $pod_cidr"; then
@@ -95,9 +95,8 @@ while true; do
   ]
 }
 END
-    if command -v netplan >/dev/null 2>&1 && [ $(find /sys/class/net/ -type l ! -lname '*/devices/virtual/*' | wc -l) -ge 2 ]; then
-      echo "patching netplan"
-      patch_netplan "$podcidr"
+    if [ $(find /sys/class/net/ -type l ! -lname '*/devices/virtual/*' | wc -l) -ge 2 ]; then
+      add_iprule "$podcidr"
     fi
 
     if [ "$ROUTE_POD_NETWORK_TO_GW" == "true" ]; then
