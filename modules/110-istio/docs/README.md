@@ -1,18 +1,18 @@
 ---
 title: "The istio module"
-description: "Enables Istio Service Mesh in the Deckhouse Kubernetes Platform cluster."
+description: "Implements Service Mesh for centralized management of network traffic in the cluster: mutual TLS, authorization, traffic routing, load balancing, and observability."
 webIfaces:
 - name: istio
 ---
 
 ## Compatibility table for supported versions
 
-| Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
+| Istio version | [Kubernetes versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in DKP          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                                          | Supported |
 |     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                        | Deprecated and will be deleted |
 
-## What issues does Istio help to resolve?
+## Problems Istio helps to solve
 
 [Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
 
@@ -106,7 +106,7 @@ Deckhouse configures [`telemetryAPI.enabled`](configuration.html#parameters-tele
 
 The cluster components are divided into two categories:
 
-- Control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
+- Control plane — managing and maintaining services; "control-plane" usually refers to istiod pods;
 - Data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
 ![Architecture of the cluster with Istio enabled](images/istio-architecture.png)
@@ -120,12 +120,12 @@ Control plane components:
 
 - `istiod` — the main service with the following tasks:
   - Continuous connection to the Kubernetes API and collecting information about services.
-  - Processing and validating all Istio-related Custom Resources using the Kubernetes Validating Webhook mechanism.
+  - Processing and validating all Istio-related Custom Resources using the Kubernetes validating-webhook mechanism.
   - Configuring each sidecar proxy individually:
     - Generating authorization, routing, balancing rules, etc..
     - Distributing information about other application services in the cluster.
     - Issuing individual client certificates for implementing Mutual TLS. These certificates are unrelated to the certificates that Kubernetes uses for its own service needs.
-  - Automatic tuning of manifests that describe application Pods via the Kubernetes Mutating Webhook mechanism:
+  - Automatic tuning of manifests that describe application pods via the Kubernetes mutating-webhook mechanism:
     - Injecting an additional sidecar-proxy service container.
     - Injecting an additional init container for configuring the network subsystem (configuring DNAT to intercept application traffic).
     - Routing readiness and liveness probes through the sidecar-proxy.
@@ -137,7 +137,7 @@ Control plane components:
 
 The Ingress controller must be refined to receive user traffic:
 
-- You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
+- You need to add sidecar-proxy to the controller pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
 - Services not managed by Istio continue to function as before, requests to them are not intercepted by the controller sidecar.
 - Requests to services running under Istio are intercepted by the sidecar and processed according to Istio rules (read more about [activating Istio to work with the application](#activating-istio-to-work-with-the-application)).
 
@@ -147,19 +147,19 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 ### Details
 
-- Each service Pod gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
+- Each service pod gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
   - **Envoy** proxies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
   - **pilot-agent** is a part of Istio. It keeps the Envoy configurations up to date and has a built-in caching DNS server.
-- Each Pod has a DNAT configured for incoming and outgoing service requests to the sidecar-proxy. The additional init container is used for that. Thus, the traffic is routed transparently for applications.
+- Each pod has a DNAT configured for incoming and outgoing service requests to the sidecar-proxy. The additional init container is used for that. Thus, the traffic is routed transparently for applications.
 - Since incoming service traffic is redirected to the sidecar-proxy, this also applies to the readiness/liveness traffic. The Kubernetes subsystem that does this doesn't know how to probe containers under Mutual TLS. Thus, all the existing probes are automatically reconfigured to use a dedicated sidecar-proxy port that routes traffic to the application unchanged.
 - You have to configure the Ingress controller to receive requests from outside the cluster:
-  - The controller's Pods have additional sidecar-proxy containers.
+  - The controller's pods have additional sidecar-proxy containers.
   - Unlike application Pods, the Ingress controller's sidecar-proxy intercepts only outgoing traffic from the controller to the services. The incoming traffic from the users is handled directly by the controller itself;
 - Ingress resources require refinement in the form of adding annotations:
   - `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
   - `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"` — the Ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g. `Host: example.com`).
 - Resources of the Service type do not require any adaptation and continue to function properly. Just like before, applications have access to service addresses like `servicename`, `servicename.myns.svc`, etc;
-- DNS requests from within the Pods are transparently redirected to the sidecar-proxy for processing:
+- DNS requests from within the pods are transparently redirected to the sidecar-proxy for processing:
   - This way, domain names of the services in the neighboring clusters can be disassociated from their addresses.
 
 ### User request lifecycle
@@ -176,11 +176,11 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 ## Activating Istio to work with the application
 
-The main purpose of the activation is to add a sidecar container to the application Pods so that Istio can manage the traffic.
+The main purpose of the activation is to add a sidecar container to the application pods so that Istio can manage the traffic.
 
-The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
+The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
 
-- A label attached to a namespace allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
+- A label attached to a namespace allows the sidecar-injector to identify a group of pods to inject sidecar containers into:
   - `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);
   - `istio.io/rev=v1x21` — use the specific Istio version for a given namespace;
   - `istio.io/rev=default` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`).
@@ -203,7 +203,7 @@ The EnvoyFilter interface can be controlled by Lua plugins, but it is an interna
 
 It is also important to get the Ingress controller and the application's Ingress resources ready:
 
-- Enable [`enableIstioSidecar`](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
+- Enable [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
 - Add annotations to the application's Ingress resources:
   - `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is now handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
   - `nginx.ingress.kubernetes.io/upstream-vhost: "myservice.myns.svc"` — the Ingress controller's sidecar-proxy makes routing decisions based on the Host header. If this annotation is omitted, the controller will leave a header with the site address (e.g. `Host: example.com`).
@@ -211,7 +211,7 @@ It is also important to get the Ingress controller and the application's Ingress
 ## Federation and multicluster
 
 {% alert level="warning" %}
-Available in Enterprise Edition only.
+Available in Enterprise Edition and Certified Security Edition Pro only.
 {% endalert %}
 
 Deckhouse supports two schemes of inter-cluster interaction:
@@ -231,20 +231,21 @@ Below are their fundamental differences:
 
 #### Requirements for clusters
 
-- Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). The default value is `cluster.local`.
-- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) can be the same.
+- Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. None of the clusters should use the default `cluster.local`.
+- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource may overlap.
 
-* Each cluster must have a unique domain in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
+Istio uses traffic analysis as follows:
 
-  > `cluster.local` is an unmodified alias for the local cluster domain.
-  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`.
-  > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
-* There are no requirements for unique subnets of modules and services in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) when clusters are operating in a [federation](#federation).
+- HTTP and HTTPS traffic — identification and routing or blocking decisions are based on headers.
+- TCP traffic — decisions are based only on the destination IP address and port number.
 
-   - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-   - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
-  >
-  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+{% alert level="warning" %}
+`cluster.local` is an unmodified alias for the local cluster domain. Using `cluster.local` as a principal in `AuthorizationPolicy` always refers to the local cluster, even if another cluster in the mesh has [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly set to `cluster.local` (see [Istio trust domain migration best practices](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+{% endalert %}
+
+{% alert level="info" %}
+Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode: pods from different clusters can only communicate through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+{% endalert %}
 
 #### General principles of federation
 
@@ -284,16 +285,21 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 
 #### Requirements for clusters
 
-- Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
-- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) must be unique for each multicluster member.
+- Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource must be the same for all multicluster members. The default value is `cluster.local`.
+- Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource must be unique for each multicluster member.
 
-   - When analyzing HTTP and HTTPS traffic *(in Istio terminology)*, you can identify them and decide on further routing or blocking based on their headers.
-   - At the same time, when analyzing TCP traffic *(in Istio terminology)*, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
-  >
-  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
-  > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
-  >
-  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+Istio uses traffic analysis as follows:
+
+- HTTP and HTTPS traffic — identification and routing or blocking decisions are based on headers.
+- TCP traffic — decisions are based only on the destination IP address and port number.
+
+{% alert level="warning" %}
+If service or pod IP addresses overlap between clusters, requests from pods in other clusters may unintentionally match Istio's routing, allow, or deny rules. Overlapping service and pod subnets is not recommended (see [Istio network models](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
+{% endalert %}
+
+{% alert level="info" %}
+Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode: pods from different clusters can only communicate through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+{% endalert %}
 
 #### General principles
 
@@ -335,6 +341,27 @@ NAME          SECRET                                     STATUS     ISTIOD
 cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x21-5c57d85b54-k8pl7
 ```
 
+## Authentication
+
+By default, the [user-authn](/modules/user-authn/) module provides authentication for Kiali. External authentication can also be configured via `externalAuthentication`.
+If both are disabled, the module uses basic auth with an auto-generated password.
+
+To view the generated password:
+
+```shell
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values istio -o json | jq '.istio.internal.auth.password'
+```
+
+To re-generate the password, delete the Secret:
+
+```shell
+d8 k -n d8-istio delete secret/kiali-basic-auth
+```
+
+{% alert level="warning" %}
+The `auth.password` parameter is deprecated.
+{% endalert %}
+
 ## Estimating overhead
 
 Using Istio will incur additional resource costs for both **control-plane** (istiod controller) and **data-plane** (istio-sidecars).
@@ -344,7 +371,7 @@ Using Istio will incur additional resource costs for both **control-plane** (ist
 The istiod controller continuously monitors the cluster configuration, compiles the settings for the istio-sidecars and distributes them over the network. Accordingly, the more applications and their instances, the more services, and the more frequently this configuration changes, the more computational resources are required and the greater the load on the network. Two approaches are supported to reduce the load on controller instances:
 
 - horizontal scaling (module configuration [`controlPlane.replicasManagement`](configuration.html#parameters-controlplane-replicasmanagement)) — the more controller instances, the fewer instances of istio-sidecars to serve for each controller and the less CPU and network load.
-- data-plane segmentation using the [*Sidecar*](istio-cr.html#sidecar) resource (recommended approach) — the smaller the scope of an individual istio-sidecar, the less data in the data-plane needs to be updated and the less CPU and network overhead.
+- data-plane segmentation using the [Sidecar](istio-cr.html#sidecar) resource (recommended approach) — the smaller the scope of an individual istio-sidecar, the less data in the data-plane needs to be updated and the less CPU and network overhead.
 
 A rough estimate of overhead for a control-plane instance that serves 1000 services and 2000 istio-sidecars is 1 vCPU and 1.5 GB RAM.
 

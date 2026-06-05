@@ -43,7 +43,7 @@ spec:
                     * `NodePort` — Ingress controller is deployed and available through nodes' ports via `nodePort`.
                     * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
 
-                      **Caution!** There can be only one controller with this inlet type on a host.
+                      {% alert level="warning" %}There can be only one controller with this inlet type on a host.{% endalert %}
                   enum: ["LoadBalancer","HostPort","NodePort"]
                 nodeSelector:
                   type: object

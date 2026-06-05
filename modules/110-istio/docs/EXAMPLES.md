@@ -1,5 +1,6 @@
 ---
 title: "The istio module: examples"
+description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, and control plane upgrades."
 ---
 
 ## Circuit Breaker
@@ -293,7 +294,7 @@ spec:
 
 To use Ingress, you need to:
 
-* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/ingress-nginx/) module's [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
+* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](/modules/ingress-nginx/) module's [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar container can identify the application service that serves requests.
@@ -576,7 +577,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 Cluster A:
 
@@ -604,7 +605,7 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 Cluster A:
 
@@ -678,11 +679,11 @@ Wait until the `Istio` / `IstioOperator` resource in `d8-istio` reconciles and w
 Generate traffic between meshed pods, then on a pod with `istio-proxy`:
 
 ```shell
-# Prometheus text from the sidecar admin API (istio-proxy has pilot-agent, not curl)
-istio-proxy-pod="$(
-  kubectl -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
+# Prometheus text from the sidecar admin API (istio-proxy has pilot-agent, not curl).
+istio_proxy_pod="$(
+  d8 k -n my-namespace get pods -l app=my-app -o jsonpath='{.items[0].metadata.name}'
 )"
-kubectl exec -n my-namespace "${istio-proxy-pod}" -c istio-proxy -- \
+d8 k exec -n my-namespace "${istio_proxy_pod}" -c istio-proxy -- \
   /usr/local/bin/pilot-agent request GET stats/prometheus | head
 ```
 
@@ -690,7 +691,7 @@ You should see series such as `istio_requests_total` if metrics are wired correc
 
 ### Prometheus scraping and Grafana
 
-The module creates a [`PodMonitor`](../../modules/prometheus/) for sidecar metrics when the [`operator-prometheus`](../../modules/operator-prometheus/) module is enabled. Monitored namespaces are derived automatically from mesh membership (istio-injected workloads); you can exclude a namespace from scraping with label `istio.deckhouse.io/discard-metrics: "true"` on the `Namespace`.
+The module creates a [`PodMonitor`](/modules/prometheus/) for sidecar metrics when the [`operator-prometheus`](/modules/operator-prometheus/) module is enabled. Monitored namespaces are derived automatically from mesh membership (istio-injected workloads); you can exclude a namespace from scraping with label `istio.deckhouse.io/discard-metrics: "true"` on the `Namespace`.
 
 If workload dashboards stay empty while control plane dashboards work, confirm that:
 
@@ -871,7 +872,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ### Auto upgrading istio data-plane
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
 

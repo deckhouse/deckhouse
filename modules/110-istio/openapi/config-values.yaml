@@ -22,9 +22,9 @@ properties:
     enum: [AllowAny, RegistryOnly]
     x-examples: ["AllowAny"]
     description: |
-      How to handle requests directed to external services which aren't registered in service mesh.
-      - `AllowAny` — allow.
-      - `RegistryOnly` — deny. In this case to work with external services you need to register them with ServiceEntry custom resource or to organize egressgateway.
+      Policy for requests directed to external services that aren't registered in the service mesh.
+
+      With `RegistryOnly`, external services must be registered via a `ServiceEntry` custom resource or routed through an `egressgateway`.
     default: AllowAny
   ingressClass:
     type: string
@@ -177,7 +177,8 @@ properties:
     description: |
       Tracing parameters.
 
-      If the [`ingress-nginx`](/modules/ingress-nginx/) module is enabled (`global.enabledModules` contains `ingress-nginx`), Istio Telemetry resource `ingress-nginx-disable-span-reporting` is created in namespace `d8-ingress-nginx` so built-in Ingress controller pods with an Istio sidecar do not export spans to the tracing backend (reduces noise while keeping meshes functional).
+      If the [`ingress-nginx`](/modules/ingress-nginx/) module is enabled (`global.enabledModules` contains `ingress-nginx`), the module creates Istio `Telemetry` resource `ingress-nginx-disable-span-reporting` in namespace `d8-ingress-nginx`.
+      Built-in Ingress controller pods with an Istio sidecar stop exporting spans to the tracing backend (reduces noise while keeping meshes functional).
     default: {}
     properties:
       enabled:
@@ -207,10 +208,10 @@ properties:
       collector:
         type: object
         description: |
-          Tracing collection settings (single source for both legacy control-plane tracing and the Telemetry API path).
+          Tracing collection settings. Single source for both legacy control-plane tracing and the Telemetry API path.
 
           - If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `false` and [`tracing.enabled`](#parameters-tracing-enabled) is `true`, the module fills `meshConfig.defaultConfig.tracing.zipkin` from `collector.zipkin.address` (with [`tracing.sampling`](#parameters-tracing-sampling)). OpenTelemetry export requires the Telemetry API path.
-          - If `telemetryAPI.enabled` is `true` and tracing is enabled, configure **either** [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry) **or** [`collector.zipkin`](#parameters-tracing-collector-zipkin). When both are set, OpenTelemetry wins. In either case the extension provider is named **`deckhouse-tracing`** with `spec.tracing` on **`Telemetry`** `d8-main`.
+          - If `telemetryAPI.enabled` is `true` and tracing is enabled, configure either [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry) or [`collector.zipkin`](#parameters-tracing-collector-zipkin). When both are set, OpenTelemetry wins. In either case the extension provider is named `deckhouse-tracing` with `spec.tracing` on `Telemetry` `d8-main`.
         default: {}
         properties:
           opentelemetry:
@@ -284,11 +285,11 @@ properties:
     description: |
       [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) integration.
 
-      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the legacy `telemetry.v2` filters, and extends the always-present **`Telemetry`** `d8-main` in `d8-istio` with `spec.metrics` (and—when [`tracing.enabled`](#parameters-tracing-enabled) is `true` with a configured [`tracing.collector`](#parameters-tracing-collector)—`spec.tracing` via **`deckhouse-tracing`**) so Grafana/Kiali keep seeing `istio_*` series from sidecars.
+      When `enabled` is `true`, the module drives mesh metrics via the Telemetry API and `meshConfig.defaultProviders.metrics: [prometheus]`, keeps `values.telemetry.enabled` but disables the previous `telemetry.v2` filters, and extends the always-present `Telemetry` `d8-main` in `d8-istio` with `spec.metrics`. When [`tracing.enabled`](#parameters-tracing-enabled) is `true` with a configured [`tracing.collector`](#parameters-tracing-collector), `spec.tracing` is added via `deckhouse-tracing` so Grafana and Kiali keep seeing `istio_*` series from sidecars.
 
-      When `false` (default), the full legacy `telemetry.v2` stack stays on (including Sail’s `telemetry.v2.prometheus`), without `defaultProviders.metrics`, while **`Telemetry`** `d8-main` still enables access logs (backwards compatible with releases since the access-log Telemetry was introduced).
+      When `false` (default), the previous `telemetry.v2` stack stays on (including Sail's `telemetry.v2.prometheus`), without `defaultProviders.metrics`, while `Telemetry` `d8-main` still enables access logs (backwards compatible with releases since the access-log `Telemetry` was introduced).
 
-      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) defines the Envoy log template in `meshConfig.extensionProviders`; the **`Telemetry`** `d8-main` object selects that provider for access logging.
+      [`dataPlane.accessLog`](#parameters-dataplane-accesslog) defines the Envoy log template in `meshConfig.extensionProviders`; the `Telemetry` `d8-main` object selects that provider for access logging.
     default: {}
     properties:
       enabled:
@@ -472,13 +473,13 @@ properties:
         description: |
           Optional `nodeSelector` for istiod. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
       tolerations:
         type: array
         description: |
           Optional `tolerations` for istiod. The same as `spec.tolerations` for the Kubernetes pod.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
         items:
           type: object
           properties:
@@ -1017,13 +1018,13 @@ properties:
     description: |
       Optional `nodeSelector` for istio-operator, metadata-exporter and Kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       Optional `tolerations` for istio-operator, metadata-exporter and Kiali. The same as `spec.tolerations` for the Kubernetes pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -1110,7 +1111,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -1140,7 +1141,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](/modules/user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
