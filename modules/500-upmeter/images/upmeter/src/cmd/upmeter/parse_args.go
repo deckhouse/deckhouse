@@ -70,6 +70,21 @@ func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {
 	cmd.Flag("dynamic-probe-nodegroup", "Node Group name tracked by probes").
 		StringsVar(&config.DynamicProbes.NodeGroups)
 
+	cmd.Flag("virtualization-probe-cluster-image", "ClusterVirtualImage name for virtualization VM lifecycle probe").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE").
+		Default("alpine-3-23-bios-base").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageName)
+
+	cmd.Flag("virtualization-probe-cluster-image-url", "HTTP URL used to create ClusterVirtualImage when missing").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE_URL").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/alpine/alpine-3-23-bios-base.qcow2").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageURL)
+
+	cmd.Flag("virtualization-probe-vm-class", "VirtualMachineClass name for virtualization VM lifecycle probe").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_CLASS").
+		Default("generic").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VMClassName)
+
 	// User-Agent
 	// TODO generate from CI?
 	cmd.Flag("user-agent", "User Agent for HTTP client").
@@ -136,6 +151,21 @@ func parseAgentArgs(cmd *kingpin.CmdClause, config *agent.Config) {
 	// Zone prefix that can be used in some cloud providers
 	cmd.Flag("dynamic-probe-known-zoneprefix", "A known zone prefix for current cloud provider").
 		StringVar(&config.DynamicProbes.ZonePrefix)
+
+	cmd.Flag("virtualization-probe-cluster-image", "ClusterVirtualImage name for virtualization VM lifecycle probe").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE").
+		Default("alpine-3-23-bios-base").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageName)
+
+	cmd.Flag("virtualization-probe-cluster-image-url", "HTTP URL used to create ClusterVirtualImage when missing").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_CLUSTER_IMAGE_URL").
+		Default("https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/alpine/alpine-3-23-bios-base.qcow2").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.ClusterImageURL)
+
+	cmd.Flag("virtualization-probe-vm-class", "VirtualMachineClass name for virtualization VM lifecycle probe").
+		Envar("UPMETER_VIRTUALIZATION_PROBE_VM_CLASS").
+		Default("generic").
+		StringVar(&config.DynamicProbes.VirtualizationProbe.VMClassName)
 
 	// User-Agent
 	// TODO generate from CI?

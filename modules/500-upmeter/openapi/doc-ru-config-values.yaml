@@ -169,6 +169,20 @@ properties:
   smokeMiniDisabled:
     description: |
       Выключение smokeMini. Также отключает группу "synthetic".
+  virtualizationProbe:
+    description: |
+      Настройки e2e-пробы жизненного цикла виртуальной машины.
+    properties:
+      clusterImageName:
+        description: |
+          Имя ClusterVirtualImage для пробы. Создаётся автоматически, если отсутствует и задан clusterImageURL.
+          Если пусто, выполняется только проверка пода virtualization-controller.
+      clusterImageURL:
+        description: |
+          HTTP URL образа для автоматического создания ClusterVirtualImage.
+      vmClassName:
+        description: |
+          Имя VirtualMachineClass для пробы жизненного цикла ВМ.
   https:
     description: |
       Тип сертификата, используемого для веб-приложений webui и status.

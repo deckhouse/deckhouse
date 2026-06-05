@@ -104,6 +104,7 @@ func TestLoader_Probes(t *testing.T) {
 		{Group: "extensions", Probe: "observability-webhook"},
 		{Group: "extensions", Probe: "openvpn"},
 		{Group: "extensions", Probe: "prometheus-longterm"},
+		{Group: "extensions", Probe: "virtualization"},
 		{Group: "load-balancing", Probe: "load-balancer-configuration"},
 		{Group: "load-balancing", Probe: "metallb"},
 		{Group: "monitoring-and-autoscaling", Probe: "alertmanager"},

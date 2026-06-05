@@ -69,7 +69,14 @@ type DynamicConfig struct {
 	Zones                   []string
 	ZonePrefix              string
 
-	Converge ConvergeConfig
+	Converge            ConvergeConfig
+	VirtualizationProbe VirtualizationProbeConfig
+}
+
+type VirtualizationProbeConfig struct {
+	ClusterImageName string
+	ClusterImageURL  string
+	VMClassName      string
 }
 
 type ConvergeConfig struct {
@@ -149,7 +156,7 @@ func (l *Loader) collectConfigs() []runnerConfig {
 	l.configs = append(l.configs, initSynthetic(l.access, l.logger)...)
 	l.configs = append(l.configs, initControlPlane(l.access, l.preflight)...)
 	l.configs = append(l.configs, initMonitoringAndAutoscaling(l.access, l.nodeLister, l.preflight)...)
-	l.configs = append(l.configs, initExtensions(l.access, l.preflight)...)
+	l.configs = append(l.configs, initExtensions(l.access, l.preflight, l.dynamic.VirtualizationProbe)...)
 	l.configs = append(l.configs, initLoadBalancing(l.access, l.preflight)...)
 	l.configs = append(l.configs, initDeckhouse(l.access, l.preflight, l.dynamic.Converge, l.logger)...)
 	l.configs = append(l.configs, initNginx(l.access, l.preflight, l.dynamic.IngressNginxControllers)...)
