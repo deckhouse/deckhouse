@@ -91,6 +91,10 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		return fmt.Errorf("hook manager is not initialized")
 	}
 
+	// Snapshot the current registrations before any mutation.  These are
+	// compared against the rebuilt state later to determine which
+	// ValidatingWebhookConfigurations / MutatingWebhookConfigurations / CRD
+	// conversion settings are stale and must be unregistered.
 	oldValidatingResources := make(map[string]*admission.ValidatingWebhookResource)
 	oldMutatingResources := make(map[string]*admission.MutatingWebhookResource)
 	oldConversionClientConfigs := make(map[string]*conversion.CrdClientConfig)
@@ -102,25 +106,33 @@ func reloadHooks(ctx context.Context, shOp *shell_operator.ShellOperator, logger
 		for confID, resource := range shOp.AdmissionWebhookManager.MutatingResources {
 			oldMutatingResources[confID] = resource
 		}
-
-		// Rebuild runtime registration state from scratch to avoid stale webhook
-		// resources after hook removals.
-		shOp.AdmissionWebhookManager.ValidatingResources = make(map[string]*admission.ValidatingWebhookResource)
-		shOp.AdmissionWebhookManager.MutatingResources = make(map[string]*admission.MutatingWebhookResource)
 	}
 
 	if shOp.ConversionWebhookManager != nil {
 		for crdName, cfg := range shOp.ConversionWebhookManager.ClientConfigs {
 			oldConversionClientConfigs[crdName] = cfg
 		}
-
-		// Rebuild runtime conversion registrations from scratch to avoid stale
-		// CRD client configs after hook removals.
-		shOp.ConversionWebhookManager.ClientConfigs = make(map[string]*conversion.CrdClientConfig)
 	}
 
+	// Re-discover hooks from disk.  This is the step most likely to fail
+	// (e.g. malformed hook file), so it MUST happen before we clear the
+	// current registration maps — otherwise a failed Init leaves the
+	// shell-operator with empty maps and no way to unregister stale entries.
 	if err := shOp.HookManager.Init(); err != nil {
 		return fmt.Errorf("re-init hook manager: %w", err)
+	}
+
+	// Clear the current registration state AFTER Init has succeeded.
+	// Rebuilding from scratch avoids stale webhook resources after hook
+	// removals.  The Enable*Bindings calls below will repopulate these maps
+	// with fresh entries for every discovered hook.
+	if shOp.AdmissionWebhookManager != nil {
+		shOp.AdmissionWebhookManager.ValidatingResources = make(map[string]*admission.ValidatingWebhookResource)
+		shOp.AdmissionWebhookManager.MutatingResources = make(map[string]*admission.MutatingWebhookResource)
+	}
+
+	if shOp.ConversionWebhookManager != nil {
+		shOp.ConversionWebhookManager.ClientConfigs = make(map[string]*conversion.CrdClientConfig)
 	}
 
 	// Enable admission bindings on every newly loaded hook so that

@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 
@@ -118,10 +119,12 @@ func TestPresyncPreventsReloadOnFirstReconcile(t *testing.T) {
 	err = PresyncWebhookFiles(context.TODO(), k8sClient, string(conversionTpl), string(validationTpl), logger)
 	require.NoError(t, err)
 
-	// Record the file's ModTime before reconcile — presync already wrote it.
+	// Pin the file's mtime to a known past value so that any rewrite during
+	// reconcile is reliably detected regardless of filesystem timestamp
+	// resolution.
 	webhookFile := "hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py"
-	infoBefore, err := os.Stat(webhookFile)
-	require.NoError(t, err)
+	pinnedTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, os.Chtimes(webhookFile, pinnedTime, pinnedTime))
 
 	// Step 2: now create a reconciler and reconcile the same CR.
 	// reloadFn will be called because the finalizer is not yet set (presync
@@ -140,12 +143,13 @@ func TestPresyncPreventsReloadOnFirstReconcile(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// The file should not be rewritten because presync already wrote the
-	// identical content.
+	// The file must not be rewritten because presync already wrote the
+	// identical content.  A rewrite would advance ModTime past pinnedTime.
 	infoAfter, err := os.Stat(webhookFile)
 	require.NoError(t, err)
-	assert.Equal(t, infoBefore.ModTime(), infoAfter.ModTime(),
-		"reconciler should not rewrite the file that presync already wrote")
+	assert.True(t, infoAfter.ModTime().Equal(pinnedTime),
+		"reconciler should not rewrite the file that presync already wrote (mtime should remain %v, got %v)",
+		pinnedTime, infoAfter.ModTime())
 }
 
 func TestPresyncIsIdempotent(t *testing.T) {
