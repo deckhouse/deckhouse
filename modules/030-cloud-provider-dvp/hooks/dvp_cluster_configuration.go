@@ -88,7 +88,7 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	result := &pccSecretFilterResult{}
 
 	if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
-		if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, additionalOpenAPISchemasPaths); err != nil {
+		if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, nil); err != nil {
 			return nil, fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 		}
 		result.ProviderDiscoveryDataJSON = json.RawMessage(discoveryDataJSON)
@@ -100,7 +100,6 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 			string(clusterConfigYAML),
 			infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()),
 			nil,
-			config.ValidateOptionExtraSchemaPaths(additionalOpenAPISchemasPaths...),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
