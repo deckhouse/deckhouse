@@ -26,7 +26,7 @@ status:
 `
 		cluster = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: test-cluster
@@ -39,7 +39,7 @@ spec:
 `
 		clusterWithStatus = `
 ---
-apiVersion: cluster.x-k8s.io/v1beta2
+apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: test-cluster
@@ -50,14 +50,14 @@ spec:
     kind: VCDCluster
     name: test-cluster
 status:
-  initialization:
-    infrastructureProvisioned: true
+  controlPlaneReady: true
+  infrastructureReady: true
 `
 	)
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.29.0", "kubernetesVersions":["1.29.0"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}},"cloudProviderVcd":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1beta2", "VCDCluster", false)
-	f.RegisterCRD("cluster.x-k8s.io", "v1beta2", "Cluster", false)
+	f.RegisterCRD("cluster.x-k8s.io", "v1beta1", "Cluster", false)
 
 	Context("VCDCluster ready and Cluster without status", func() {
 		BeforeEach(func() {
@@ -65,7 +65,7 @@ status:
 			f.RunHook()
 		})
 
-		It("Hook must not fail and set infrastructureProvisioned", func() {
+		It("Hook must not fail and set cluster initialization status", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("Cluster", "d8-cloud-instance-manager", "test-cluster").ToYaml()).To(MatchYAML(clusterWithStatus))
 		})

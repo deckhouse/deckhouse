@@ -18,7 +18,11 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-const clusterAPINamespace = "d8-cloud-instance-manager"
+const (
+	clusterAPINamespace = "d8-cloud-instance-manager"
+	// node-manager creates Cluster as v1beta1; watch must match production path.
+	clusterWatchAPIVersion = "cluster.x-k8s.io/v1beta1"
+)
 
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
@@ -37,7 +41,7 @@ var _ = sdk.RegisterFunc(
 			},
 			{
 				Name:       "cluster",
-				ApiVersion: "cluster.x-k8s.io/v1beta2",
+				ApiVersion: clusterWatchAPIVersion,
 				Kind:       "Cluster",
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
@@ -57,10 +61,9 @@ type vcdCluster struct {
 }
 
 type cluster struct {
-	APIVersion string
-	Kind       string
-	Name       string
-	Namespace  string
+	Kind      string
+	Name      string
+	Namespace string
 }
 
 func filterVCDCluster(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -80,10 +83,9 @@ func filterVCDCluster(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 func filterCluster(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return cluster{
-		APIVersion: obj.GetAPIVersion(),
-		Kind:       obj.GetKind(),
-		Name:       obj.GetName(),
-		Namespace:  obj.GetNamespace(),
+		Kind:      obj.GetKind(),
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
 	}, nil
 }
 
@@ -99,11 +101,12 @@ func updateClusterInfrastructureProvisioned(_ context.Context, input *go_hook.Ho
 		}
 	}
 
+	// Patch v1beta1 status fields that CAPI maps to status.initialization.infrastructureProvisioned
+	// and status.initialization.controlPlaneInitialized (required by CAPI v1.12 / CAPVCD).
 	statusPatch := map[string]interface{}{
 		"status": map[string]interface{}{
-			"initialization": map[string]interface{}{
-				"infrastructureProvisioned": true,
-			},
+			"infrastructureReady": true,
+			"controlPlaneReady":   true,
 		},
 	}
 
@@ -118,7 +121,7 @@ func updateClusterInfrastructureProvisioned(_ context.Context, input *go_hook.Ho
 			// Patch cluster status
 			input.PatchCollector.PatchWithMerge(
 				statusPatch,
-				cluster.APIVersion,
+				clusterWatchAPIVersion,
 				cluster.Kind,
 				cluster.Namespace,
 				cluster.Name,
