@@ -114,7 +114,7 @@ resource "kubernetes_resource_ready_v1" "additional_disk_migration" {
 
   # status.storageClassName reflects the actual SC in use; it only changes once
   # DVP completes the live migration. For an explicit SC, this is the authoritative
-  # completion signal. For the default SC (null), we fall back to phase=Ready.
+  # completion signal. For the default SC (null), only metadata.name is checked.
   fields = merge(
     {
       "metadata.name" = ".+"
