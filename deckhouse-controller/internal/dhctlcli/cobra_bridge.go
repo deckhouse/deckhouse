@@ -145,6 +145,13 @@ func clusterConfigurationStdinFromCluster(opts *options.Options) func() error {
 			return nil
 		}
 
+		// A human is viewing the config interactively, so default to YAML.
+		// An explicit -o/--output (or DHCTL_CLI_OUTPUT, applied by kingpin)
+		// still wins.
+		if !outputFlagPresent(os.Args) {
+			opts.Render.ParseOutput = "yaml"
+		}
+
 		ctx := context.Background()
 
 		kubeCl, err := newKubeClient(ctx, opts)
@@ -202,6 +209,20 @@ func parseFileFlagPresent(args []string) bool {
 		case a == "-f", a == "--file":
 			return true
 		case strings.HasPrefix(a, "--file="), strings.HasPrefix(a, "-f="):
+			return true
+		}
+	}
+	return false
+}
+
+// outputFlagPresent reports whether the args contain the parse commands'
+// --output/-o flag in any of its accepted spellings.
+func outputFlagPresent(args []string) bool {
+	for _, a := range args {
+		switch {
+		case a == "-o", a == "--output":
+			return true
+		case strings.HasPrefix(a, "--output="), strings.HasPrefix(a, "-o="):
 			return true
 		}
 	}
