@@ -174,7 +174,7 @@ metadata:
 			b.RunHook()
 		})
 
-		It("should fill values from PCC and create migration artifacts", func() {
+		It("should fill values from PCC without creating migration artifacts (artifacts created by OnAfterHelm hook)", func() {
 			Expect(b).To(ExecuteSuccessfully())
 
 			// Root values should be set from PCC.
@@ -192,96 +192,12 @@ metadata:
 
 			Expect(b.ValuesGet("cloudProviderDvp.internal.providerDiscoveryData").String()).To(MatchJSON(stateACloudDiscoveryData))
 
-			// Migration resources secret should be created.
+			// Migration resources secret and configmap are created by the OnAfterHelm hook (dvp_migration_resources.go),
+			// NOT by this OnBeforeHelm hook. The namespace doesn't exist yet at OnBeforeHelm time.
 			migrationSecret := b.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
-			Expect(migrationSecret.Exists()).To(BeTrue())
-			resourcesManifest, err := base64.StdEncoding.DecodeString(migrationSecret.Field(`data.resources\.yaml`).String())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(resourcesManifest)).To(MatchYAML(`
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cloud-provider-dvp
-spec:
-  enabled: true
-  version: 2
-  settings:
-    provider:
-      parameters:
-        namespace: cloud-provider01
-    storage:
-      enabled: true
-      parameters: {}
-    nodes:
-      enabled: true
-      parameters:
-        layout: Standard
-        sshPublicKey: ssh-rsa AAAAB3N
-        region: ru-msk-1
-        zones:
-        - default
-        ipAddresses:
-          master:
-          - Auto
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-credentials
-  namespace: d8-cloud-provider-dvp
-type: cloud-provider.deckhouse.io/credentials
-stringData:
-  authScheme: kubeconfig
-  secret: YXBpVmV=
----
-apiVersion: deckhouse.io/v1alpha1
-kind: DVPInstanceClass
-metadata:
-  name: master-dvp
-spec:
-  etcdDisk:
-    size: 15Gi
-    storageClass: ceph-pool-r2-csi-rbd-immediate
-  rootDisk:
-    image:
-      kind: ClusterVirtualImage
-      name: ubuntu-2204
-    size: 50Gi
-    storageClass: ceph-pool-r2-csi-rbd-immediate
-  virtualMachine:
-    virtualMachineClassName: superbe-class
-    bootloader: EFI
-    cpu:
-      coreFraction: 100%
-      cores: 4
-    liveMigrationPolicy: PreferForced
-    runPolicy: AlwaysOnUnlessStoppedManually
-    memory:
-      size: 8Gi
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: master
-spec:
-  nodeType: CloudPermanent
-  cloudInstances:
-    zones:
-    - default
-    minPerZone: 3
-    maxPerZone: 3
-    classReference:
-      kind: DVPInstanceClass
-      name: master-dvp
-  nodeTemplate:
-    labels:
-      node-role.kubernetes.io/control-plane: ""
-      node-role.kubernetes.io/master: ""
-`))
-
-			// Migration configmap should be created.
+			Expect(migrationSecret.Exists()).To(BeFalse())
 			migrationCM := b.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
-			Expect(migrationCM.Exists()).To(BeTrue())
+			Expect(migrationCM.Exists()).To(BeFalse())
 
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")

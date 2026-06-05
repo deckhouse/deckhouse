@@ -39,10 +39,6 @@ import (
 	v1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal/v1"
 )
 
-const (
-	dvpMigrationConfigMapName = "d8-module-is-migrating"
-)
-
 // pccSecretFilterResult holds the parsed data from the PCC secret.
 type pccSecretFilterResult struct {
 	// ProviderClusterConfig is the raw JSON map from the cluster configuration.
@@ -202,38 +198,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          filterNamedResource,
 		},
-		// Binding 5: d8-migration-resources Secret in dvp namespace (does not trigger hook on change — read-only snapshot)
-		{
-			Name:       "migration_resources_secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpMigrationResourcesName},
-			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
-		},
-		// Binding 6: d8-module-is-migrating ConfigMap in dvp namespace (does not trigger hook on change — read-only snapshot)
-		{
-			Name:       "migration_configmap",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpMigrationConfigMapName},
-			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
-		},
 	},
 }, handleDVPClusterConfiguration)
 
@@ -297,14 +261,6 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 	if err := overrideValues(&pcc, &moduleConfiguration); err != nil {
 		return fmt.Errorf("override values: %w", err)
 	}
-
-	// Create d8-migration-resources Secret.
-	if err := createProviderClusterConfigurationResources(input, &pcc); err != nil {
-		return fmt.Errorf("create migration resources: %w", err)
-	}
-
-	// Create d8-module-is-migrating ConfigMap.
-	createMigrationConfigMap(input)
 
 	return mergeAndSetDiscoveryData(input, discoveryData)
 }

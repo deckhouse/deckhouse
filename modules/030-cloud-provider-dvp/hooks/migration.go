@@ -36,6 +36,7 @@ const (
 	dvpNamespace                  = "d8-cloud-provider-dvp"
 	dvpMigrationResourcesName     = "d8-migration-resources"
 	dvpMigrationResourcesFilename = "resources.yaml"
+	dvpMigrationConfigMapName     = "d8-module-is-migrating"
 	dvpCredentialSecretName       = "d8-credentials"
 	dvpInstanceClassKind          = "DVPInstanceClass"
 	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
