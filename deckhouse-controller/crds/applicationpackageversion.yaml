@@ -58,24 +58,25 @@ spec:
           metadata:
             type: object
           spec:
+            description: Defines the application package version parameters.
             properties:
               packageName:
                 description: Name of the application package.
                 type: string
               packageRepositoryName:
-                description: The name of the repository containing the package.
+                description: Name of the package repository containing the package.
                 type: string
               packageVersion:
                 description: Version of the application package.
                 type: string
             type: object
           status:
-            description: Status of an ApplicationPackageVersion.
+            description: Application package version status.
             properties:
               conditions:
-                description: Conditions represent the latest available observations of the package version's state.
+                description: Conditions reflecting the latest observations of the package version state.
                 items:
-                  description: Condition contains details for one aspect of the current state of this API Resource.
+                  description: Condition describing one aspect of the current package version state.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -178,7 +179,7 @@ spec:
                     description: The system requirements for this package.
                     properties:
                       deckhouse:
-                        description: Required Deckhouse version.
+                        description: Required Deckhouse Kubernetes Platform version.
                         properties:
                           constraint:
                             description: Semver constraint expression.

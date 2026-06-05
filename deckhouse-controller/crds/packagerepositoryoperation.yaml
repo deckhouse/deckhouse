@@ -50,7 +50,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the behavior of a PackageRepositoryOperation.
+            description: Defines parameters for the package repository operation.
             properties:
               packageRepositoryName:
                 description: Name of the package repository to operate on.
@@ -75,16 +75,20 @@ spec:
             - type
             type: object
           status:
-            description: Status of a PackageRepositoryOperation.
+            description: Package repository operation status.
             properties:
               completionTime:
                 description: Time when the operation completed.
                 format: date-time
                 type: string
               conditions:
-                description: Conditions represent the latest available observations of the operation's state.
+                description: |-
+                  Conditions reflecting the latest observations of the operation state.
+                  The operation phase is determined by the `Completed` condition: while its status is `False`,
+                  the operation is in one of the intermediate phases (`Discover`, `Processing`);
+                  when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
                 items:
-                  description: Condition contains details for one aspect of the current state of this API Resource.
+                  description: Condition describing one aspect of the current operation state.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -108,11 +112,9 @@ spec:
                       type: integer
                     reason:
                       description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                        Programmatic identifier for the reason of the condition's last transition.
+                        For the `Completed` condition, the values are: `Discover`, `Processing`,
+                        `Succeeded`, `Failed`.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -125,7 +127,9 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: |-
+                        Condition type. This resource uses the `Completed` condition,
+                        which reflects whether the operation has reached a terminal phase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string

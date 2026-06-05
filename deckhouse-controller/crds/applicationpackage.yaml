@@ -41,7 +41,7 @@ spec:
           metadata:
             type: object
           status:
-            description: Status of an ApplicationPackage.
+            description: Application package status.
             properties:
               availableRepositories:
                 description: List of repository names where this application package is available.
