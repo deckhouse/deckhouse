@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -262,7 +262,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseContainer := apiv1.Container{
 		Name:            "deckhouse",
 		Image:           params.Registry,
-		ImagePullPolicy: apiv1.PullAlways,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command: []string{
 			"/usr/bin/deckhouse-controller",
 			"start",
@@ -322,7 +322,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhouseInitContainer := apiv1.Container{
 		Name:            "init-downloaded-modules",
 		Image:           initContainerImage,
-		ImagePullPolicy: apiv1.PullAlways,
+		ImagePullPolicy: apiv1.PullIfNotPresent,
 		Command: []string{
 			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
