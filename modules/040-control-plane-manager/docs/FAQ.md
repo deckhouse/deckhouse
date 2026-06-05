@@ -512,9 +512,8 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
-   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
-   chmod +x /usr/local/bin/etcdutl
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
 1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
@@ -712,16 +711,16 @@ The control-plane-manager module maintains several kubeconfig files on master no
 
 | File | Identity | Purpose |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for control-plane-manager operations (kubeconfig renewal, cluster administration). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Restrict access to this file to trusted recovery scenarios. |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager. |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler. |
 
 ### RBAC-based admin access
 
-`admin.conf` is generated with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the RBAC binding objects for `kubeadm:cluster-admins`.
+Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the RBAC binding objects for `kubeadm:cluster-admins`.
 
-When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a standard Kubernetes cluster without extra RBAC).
+When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
 
 When **user-authz** is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second RBAC binding adds the ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
 
@@ -976,9 +975,8 @@ Follow these steps to restore a single-master cluster on master node:
 1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
-   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
-   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
-   chmod +x /usr/local/bin/etcdutl
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl` using the command:
@@ -1339,7 +1337,7 @@ When there is 5-10% (random value from the range) of time left before the certif
 
 ### Certificates lifetime
 
-By default, lifetime of certificates is 1 year (8760 hours).
+By default, lifetime of certificates is 1 year (8760 hours). If necessary, this value can be changed using `--cluster-signing-duration` argument in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. But to ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour.
 
 {% alert level="warning" %}
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.

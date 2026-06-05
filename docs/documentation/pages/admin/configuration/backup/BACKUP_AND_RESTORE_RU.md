@@ -14,9 +14,7 @@ lang: ru
 1. Подготовьте утилиту `etcdutl`. Найдите и скопируйте исполняемый файл на узле:
 
    ```shell
-   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
-   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
-   chmod +x /usr/local/bin/etcdutl
+   cp $(find /var/lib/containerd/ -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl`:
@@ -128,12 +126,6 @@ lang: ru
 
 1. Активируйте режим High Availability (HA). Это необходимо, чтобы сохранить хотя бы одну реплику Prometheus и его PVC, поскольку в кластере с одним master-узлом HA по умолчанию отключён.
 
-1. Включите режим обслуживания на оставшемся master-узле, чтобы `control-plane-manager` не создавал новых операций на нём во время процедуры восстановления (CPM при этом продолжит штатно убирать компоненты с отсоединяемых узлов):
-
-   ```shell
-   d8 k label cpn <ИМЯ_ОСТАВШЕГОСЯ_MASTER> control-plane-manager.deckhouse.io/maintenance=""
-   ```
-
 1. Переведите кластер в режим с одним master-узлом:
 
    - В облачном кластере воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
@@ -142,12 +134,6 @@ lang: ru
    - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#уменьшение-числа-master-узлов-в-облачном-кластере) для удаления лишних мастер-узлов и arbiter-узла.
 
 1. Восстановите etcd из резервной копии на единственном оставшемся master-узле. Следуйте [инструкции](#восстановление-кластера-с-одним-control-plane-узлом) для кластера с одним control-plane узлом.
-
-1. Убедитесь, что метка режима обслуживания снята с оставшегося master-узла (после восстановления из резервной копии она, как правило, уже отсутствует, но лучше проверить явно):
-
-   ```shell
-   d8 k label cpn <ИМЯ_ОСТАВШЕГОСЯ_MASTER> control-plane-manager.deckhouse.io/maintenance-
-   ```
 
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в первом пункте master-узлах, воспользовавшись следующей командой (укажите название узла):
 
@@ -355,20 +341,8 @@ lang: ru
    - Проверьте файлы манифестов компонентов Kubernetes, расположенные в `/etc/kubernetes/manifests/`.
    - Проверьте системные настройки kubelet (файлы в `/etc/systemd/system/kubelet.service.d/` или аналогичные директории).
    - При необходимости измените IP-адрес и в других конфигурациях, если они ссылаются на старый адрес.
-
-1. Создайте резервную копию текущих сертификатов:
-
-   ```shell
-   cp -r /etc/kubernetes/pki ./pki-backup
-   ```
-
-1. Перевыпустите сертификаты control-plane с новым IP-адресом в SANs:
-
-   ```shell
-   d8 tools pki certs renew all --san <NEW_IP>
-   ```
-
-1. Перезапустите сервисы, чтобы компоненты загрузили обновлённые сертификаты и конфигурации.
+1. Перевыпустите сертификаты, выданные для старого IP. Удалите или переместите старые сертификаты, связанные с apiserver и, при необходимости, с etcd. Сгенерируйте новые сертификаты, указав в качестве SAN (Subject Alternative Name) новый IP-адрес master-узла.
+1. Перезапустите все сервисы, использующие обновлённые конфигурации и сертификаты. Заставьте kubelet перезапустить манифесты control-plane (API-сервер, etcd и т.д.). Перезагрузите системные службы (например, `systemctl restart kubelet`) или убедитесь, что все нужные процессы перезапущены автоматически.
 1. Дождитесь, пока kubelet обновит собственный сертификат.
 
 Данные действия можно произвести как [автоматизировано](#автоматизированная-выгрузка-объектов-при-смене-ip-адреса) — с помощью скрипта, так и [вручную](#ручное-восстановление-объектов-при-смене-ip-адреса) — путем выполнения одиночных команд.
@@ -382,9 +356,11 @@ lang: ru
    - `OLD_IP` — старый IP-адрес master-узла, под которым создавалась резервная копия.
    - `NEW_IP` — новый IP-адрес master-узла.
 
+1. Убедитесь, что версия Kubernetes (`KUBERNETES_VERSION`) совпадает с установленной в кластере. Это необходимо для корректной загрузки соответствующей версии kubeadm.
+
 1. [Скачайте](#восстановление-кластера-с-одним-control-plane-узлом) утилиту `etcdutl`, если она не установлена.
 
-1. После выполнения скрипта дождитесь, пока kubelet обновит свой сертификат с новым IP-адресом. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
+1. После выполнения скрипта необходимо дождаться, пока kubelet обновит свой сертификат, учитывающий новый IP-адрес. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
 
 {% offtopic title="Скрипт для выгрузки объектов" %}
 
@@ -392,12 +368,12 @@ lang: ru
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
 OLD_IP=10.242.32.34                         # IP-адрес старого master-узла.
 NEW_IP=10.242.32.21                         # IP-адрес нового master-узла.
+KUBERNETES_VERSION=1.28.0                   # Версия Kubernetes.
 
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
-ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
+ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -407,9 +383,14 @@ find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 
-cp -r /etc/kubernetes/pki ./pki-backup
+mkdir -p ./old_certs/etcd
+mv /etc/kubernetes/pki/apiserver.* ./old_certs/
+mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
+mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
 
-d8 tools pki certs renew all --san $NEW_IP
+curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
+chmod +x kubeadm
+./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -444,8 +425,7 @@ systemctl restart kubelet.service
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
-     ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
-     ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
+     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \
@@ -471,19 +451,34 @@ systemctl restart kubelet.service
     find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     ```
 
-1. Создайте резервную копию текущих сертификатов:
+1. Перевыпустите сертификаты, выпущенные для старого IP-адреса:
 
-   ```shell
-   cp -r /etc/kubernetes/pki ./pki-backup
-   ```
+   - Подготовьте каталог для временного хранения старых сертификатов:
 
-1. Перевыпустите сертификаты control-plane с новым IP-адресом в SANs:
+      ```shell
+      mkdir -p ./old_certs/etcd
+      mv /etc/kubernetes/pki/apiserver.* ./old_certs/
+      mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
+      mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+      ```
 
-   ```shell
-   d8 tools pki certs renew all --san <NEW_IP>
-   ```
+   - Установите или скачайте kubeadm в соответствии с текущей версией Kubernetes:
 
-1. Перезапустите сервисы, чтобы компоненты загрузили обновлённые сертификаты и конфигурации:
+     ```shell
+     KUBERNETES_VERSION=1.28.0 # Версия Kubernetes.
+     curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
+     chmod +x kubeadm
+     ```
+
+   - Сгенерируйте новые сертификаты:
+
+     ```shell
+     ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
+     ```
+
+     В созданных сертификатах будет учтён новый IP-адрес.
+
+1. Перезапустите сервисы, использующие обновлённые конфигурации и сертификаты. Для немедленного прекращения работы запущенных контейнеров выполните:
 
     ```shell
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -493,6 +488,8 @@ systemctl restart kubelet.service
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
+
+    Kubelet перезапустит соответствующие поды, а компоненты Kubernetes загрузят новые сертификаты.
 
 1. Дождитесь, пока kubelet обновит собственный сертификат. Kubelet автоматически генерирует и обновляет свой сертификат, в котором будет прописан новый IP-адрес:
   
