@@ -240,6 +240,27 @@ properties:
 
                   This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
                 default: "false"
+  virtualizationProbe:
+    type: object
+    default: {}
+    properties:
+      clusterImageName:
+        type: string
+        default: alpine-3-23-bios-base
+        description: |
+          ClusterVirtualImage name used by the virtualization VM lifecycle probe.
+          Created automatically when missing if clusterImageURL is set.
+          When empty, only the virtualization-controller pod probe runs.
+      clusterImageURL:
+        type: string
+        default: https://89d64382-20df-4581-8cc7-80df331f67fa.selstorage.ru/alpine/alpine-3-23-bios-base.qcow2
+        description: |
+          HTTP URL of the VM image used to create ClusterVirtualImage when it does not exist.
+      vmClassName:
+        type: string
+        default: generic
+        description: |
+          VirtualMachineClass name for the virtualization VM lifecycle probe.
   disabledProbes:
     type: array
     default: []

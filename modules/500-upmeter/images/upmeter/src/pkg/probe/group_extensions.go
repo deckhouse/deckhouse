@@ -21,9 +21,10 @@ import (
 
 	"d8.io/upmeter/pkg/kubernetes"
 	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/probe/run"
 )
 
-func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
+func initExtensions(access kubernetes.Access, preflight checker.Doer, virtProbe VirtualizationProbeConfig) []runnerConfig {
 	const (
 		groupExtensions     = "extensions"
 		controlPlaneTimeout = 5 * time.Second
@@ -31,7 +32,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 
 	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
-	return []runnerConfig{
+	runners := []runnerConfig{
 		{
 			group:  groupExtensions,
 			probe:  "cluster-scaling",
@@ -220,6 +221,46 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 				Timeout:  5 * time.Second,
 				Endpoint: "https://dex.d8-user-authn/keys",
 			},
+		}, {
+			group:  groupExtensions,
+			probe:  "virtualization",
+			check:  "pod",
+			period: 10 * time.Second,
+			config: checker.AtLeastOnePodReady{
+				Access:           access,
+				Timeout:          5 * time.Second,
+				Namespace:        "d8-virtualization",
+				LabelSelector:    "app=virtualization-controller",
+				PreflightChecker: controlPlanePinger,
+			},
 		},
 	}
+
+	if virtProbe.ClusterImageName != "" {
+		runners = append(runners, runnerConfig{
+			group:  groupExtensions,
+			probe:  "virtualization",
+			check:  "virtual-machine-lifecycle",
+			period: 5 * time.Minute,
+			config: checker.VirtualMachineLifecycle{
+				Access:           access,
+				PreflightChecker: controlPlanePinger,
+				AgentID:          run.ID(),
+				Namespace:        run.StaticIdentifier("upmeter-vm"),
+				ClusterImageName: virtProbe.ClusterImageName,
+				ClusterImageURL:  virtProbe.ClusterImageURL,
+				VMClassName:      virtProbe.VMClassName,
+
+				RequestTimeout:              5 * time.Second,
+				WaitClusterImageTimeout:     15 * time.Minute,
+				WaitVirtualDiskTimeout:      3 * time.Minute,
+				WaitVirtualMachineTimeout:   5 * time.Minute,
+				WaitDeletionTimeout:         2 * time.Minute,
+				WaitNamespaceDeletedTimeout: 2 * time.Minute,
+				Timeout:                     25 * time.Minute,
+			},
+		})
+	}
+
+	return runners
 }
