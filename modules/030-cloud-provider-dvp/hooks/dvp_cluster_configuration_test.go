@@ -93,11 +93,13 @@ data:
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
 
-	a := HookExecutionConfigInit(emptyValues, `{}`)
-	a.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
-	a.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
-	a.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	Context("Cluster without module configuration", func() {
+	// ---- State A: no PCC ----
+	Context("State A: no PCC (new v2 cluster)", func() {
+		f := HookExecutionConfigInit(emptyValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
 		BeforeEach(func() {
 			f.KubeStateSet(``)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -280,6 +282,11 @@ spec:
 			// Migration configmap should be created.
 			migrationCM := b.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
 			Expect(migrationCM.Exists()).To(BeTrue())
+<<<<<<< HEAD
+=======
+			Expect(migrationCM.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
+			Expect(migrationCM.Field("metadata.labels.module").String()).To(Equal("cloud-provider-dvp"))
+>>>>>>> 2f1a9bafe1 (migrate providerclusterconfiguration)
 
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
@@ -359,7 +366,6 @@ metadata:
   namespace: d8-cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
-  authScheme: a3ViZWNvbmZpZw==
   secret: YXBpVmV=
 ---
 apiVersion: deckhouse.io/v1

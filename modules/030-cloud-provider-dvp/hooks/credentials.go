@@ -74,7 +74,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleCredentials)
 
 func handleCredentials(_ context.Context, input *go_hook.HookInput) error {
+<<<<<<< HEAD
 	result := make(map[string]any)
+=======
+	result := make(map[string]interface{})
+>>>>>>> 2f1a9bafe1 (migrate providerclusterconfiguration)
 
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[credentialSecretSnapshot](input.Snapshots, "credential_secrets")
 	if err != nil {
@@ -85,7 +89,11 @@ func handleCredentials(_ context.Context, input *go_hook.HookInput) error {
 		if snap.Name == "" {
 			continue
 		}
+<<<<<<< HEAD
 		entry := map[string]any{
+=======
+		entry := map[string]interface{}{
+>>>>>>> 2f1a9bafe1 (migrate providerclusterconfiguration)
 			"authScheme": snap.AuthScheme,
 			"secret":     snap.Secret,
 		}

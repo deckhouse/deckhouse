@@ -85,26 +85,22 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		result.ProviderDiscoveryDataJSON = json.RawMessage(discoveryDataJSON)
 	}
 
-	var moduleConfiguration v1.DvpModuleConfiguration
-	err = json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration)
-	if err != nil {
-		return err
+	result := &pccSecretFilterResult{}
+
+	if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
+		if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, additionalOpenAPISchemasPaths); err != nil {
+			return nil, fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
+		}
+		result.ProviderDiscoveryDataJSON = json.RawMessage(discoveryDataJSON)
 	}
 
-	err = overrideValues(&providerClusterConfiguration, &moduleConfiguration)
-	if err != nil {
-		return err
-	}
-	input.Values.Set("cloudProviderDvp.internal.providerClusterConfiguration", providerClusterConfiguration)
-
-	err = createProviderClusterConfigurationResources(input, &providerClusterConfiguration)
-	if err != nil {
-		return err
-	}
-
-	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
-	if providerDiscoveryData != nil {
-		err := sdk.FromUnstructured(providerDiscoveryData, &discoveryData)
+	if clusterConfigYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigYAML) > 0 {
+		m, err := config.ParseConfigFromData(
+			context.Background(),
+			string(clusterConfigYAML),
+			infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()),
+			nil,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 		}
@@ -817,7 +813,7 @@ func stringValue(value *string) string {
 	return *value
 }
 
-func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
+func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out any) error {
 	b, err := json.Marshal(in)
 	if err != nil {
 		return err
