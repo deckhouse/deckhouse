@@ -60,39 +60,35 @@ func LoadConfigFromFile(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
-	if dc == nil {
-		return nil, fmt.Errorf("directory config is nil")
-	}
+	if globalOptions.NeedDownload {
+		docs, err := FetchDocuments(paths)
+		if err != nil {
+			return nil, err
+		}
 
-	docs, err := FetchDocuments(paths)
-	if err != nil {
-		return nil, err
-	}
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return docs, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		remoteData, err := provider.RemoteData()
+		if err != nil {
+			return nil, err
+		}
 
-	provider, err := RegistryConfigProvider(func() ([]string, error) {
-		return docs, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	remoteData, err := provider.RemoteData()
-	if err != nil {
-		return nil, err
-	}
+		conf, err := image.NewRegistryConfig(
+			string(remoteData.Scheme),
+			remoteData.ImagesRepo,
+			remoteData.Username,
+			remoteData.Password,
+			remoteData.CA,
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	registryConf, err := image.NewRegistryConfig(
-		string(remoteData.Scheme),
-		remoteData.ImagesRepo,
-		remoteData.Username,
-		remoteData.Password,
-		remoteData.CA,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := checkDirs(); err != nil {
-		if err = prepareCandiDir(ctx, registryConf, dc); err != nil {
+		if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
 			return nil, err
 		}
 
@@ -106,19 +102,7 @@ func LoadConfigFromFile(
 			}
 		}
 	}
-
-	cloudProvider, err := fetchCloudProvider(docs)
-	if err != nil {
-		return nil, err
-	}
-	if cloudProvider != "" {
-		if err = prepareProviderCandiDir(ctx, cloudProvider, registryConf, dc); err != nil {
-			return nil, err
-		}
-	}
-
-	opts = append(opts, ValidateOptionDownloadRootDir(dc.DownloadDir))
-	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, dc, opts...)
+	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), preparatorProvider, globalOptions, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -249,10 +233,9 @@ func ParseConfigInCluster(
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, globalOptions *options.GlobalOptions) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{}
 
-	if dc != nil {
-		metaConfig.DownloadRootDir = dc.DownloadDir
-		metaConfig.DownloadCacheDir = dc.DownloadCacheDir
-		metaConfig.VersionFilePath = dc.VersionFilePath
+	// panic mitigation
+	if globalOptions == nil {
+		globalOptions = &options.GlobalOptions{}
 	}
 
 	clusterConfig, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
@@ -270,31 +253,19 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		return nil, err
 	}
 
-	// Download candi and provider schemas if not available locally.
-	// Must happen before NewSchemaStore so it picks up the provider schemas.
-	needCandi := dc != nil && checkDirs() != nil
-	needProvider := dc != nil && clusterType == CloudClusterType
-	if needCandi || needProvider {
+	if globalOptions.NeedDownload {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
 		if err != nil {
 			return nil, err
 		}
 
-		if needCandi {
-			if err = prepareCandiDir(ctx, conf, dc); err != nil {
-				return nil, err
-			}
-			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
-			candiDir = filepath.Join(deckhouseDir, "candi")
-			modulesDir = filepath.Join(deckhouseDir, "modules")
-			globalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
-			versionMap = filepath.Join(candiDir, "version_map.yml")
-			metaConfig.DeckhouseConfig.RegistryDockerCfg = b64dc
-			metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
-			metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
+		if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
+			return nil, err
 		}
 
-		if needProvider {
+		// For cloud clusters, also download provider's terraform-manager image
+		// so the provider-specific schemas are available before validation.
+		if clusterType == CloudClusterType {
 			var cloudSpec struct {
 				Provider string `json:"provider"`
 			}
@@ -302,14 +273,23 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 				return nil, fmt.Errorf("parse cloud provider from cluster config: %w", err)
 			}
 			if provider := strings.ToLower(cloudSpec.Provider); provider != "" {
-				if err := prepareProviderCandiDir(ctx, provider, conf, dc); err != nil {
+				if err := prepareProviderCandiDir(ctx, provider, conf, globalOptions); err != nil {
 					return nil, fmt.Errorf("prepare provider candi dir: %w", err)
 				}
 			}
 		}
+
+		metaConfig.DeckhouseConfig.RegistryDockerCfg = b64dc
+		metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
+		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
+		metaConfig.DeckhouseConfig.RegistryScheme = conf.GetScheme()
+		metaConfig.DownloadRootDir = globalOptions.DownloadDir
+		metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
+		metaConfig.VersionFilePath = filepath.Join(globalOptions.DeckhouseDir, "version")
+		metaConfig.ShowProgress = globalOptions.ShowProgress
 	}
 
-	schemaStore := NewSchemaStore(dc)
+	schemaStore := NewSchemaStore(globalOptions)
 
 	_, err = schemaStore.Validate(&clusterConfigData)
 	if err != nil {
@@ -492,7 +472,7 @@ func ParseConfigFromData(
 	for _, opt := range opts {
 		opt(&vopts)
 	}
-	schemaStore := NewSchemaStore(dc)
+	schemaStore := NewSchemaStore(globalOptions)
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
@@ -687,103 +667,14 @@ func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.R
 	return image.DownloadAndUnpackImage(ctx, imgName, filepath.Join(globalOptions.DownloadDir, provider), globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress)
 }
 
-func fetchCloudProvider(docs []string) (string, error) {
-	for _, doc := range docs {
-		if err := detectMergedDocuments(doc); err != nil {
-			return "", fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
-		}
-
-		var config struct {
-			Kind  string `yaml:"kind"`
-			Cloud struct {
-				Provider string `yaml:"provider"`
-			} `yaml:"cloud"`
-		}
-		if err := yaml.Unmarshal([]byte(doc), &config); err != nil {
-			return "", err
-		}
-		if config.Kind == "ClusterConfiguration" {
-			return strings.ToLower(config.Cloud.Provider), nil
-		}
-	}
-	return "", nil
-}
-
-// prepareProviderCandiDir downloads the provider's terraformManager OCI image
-// if its schemas are not already present. The image is unpacked into
-// dc.DownloadDir/<provider>/ so all provider-specific files stay under one directory.
-func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.RegistryConfig, dc *directoryconfig.DirectoryConfig) error {
-	systemSchemaPath := filepath.Join(candiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
-	if _, err := os.Stat(systemSchemaPath); err == nil {
-		return nil
-	}
-	downloadSchemaPath := filepath.Join(dc.DownloadDir, provider, "openapi", "cluster_configuration.yaml")
-	if _, err := os.Stat(downloadSchemaPath); err == nil {
-		return nil
-	}
-
-	sectionName := "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
-	providerImage, err := digests.GetImage(sectionName, "terraformManager")
-	if err != nil {
-		log.DebugF("No image digest for provider %s, skipping: %v\n", provider, err)
-		return nil
-	}
-
-	imgName := conf.GetRegistry() + "@" + providerImage
-	log.DebugF("Downloading provider schemas for %s\n", provider)
-	return image.DownloadAndUnpackImage(ctx, imgName, filepath.Join(dc.DownloadDir, provider), dc.DownloadCacheDir, *conf)
-}
-
-func fetchCloudProvider(docs []string) (string, error) {
-	for _, doc := range docs {
-		if err := detectMergedDocuments(doc); err != nil {
-			return "", fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
-		}
-
-		var config struct {
-			Kind  string `yaml:"kind"`
-			Cloud struct {
-				Provider string `yaml:"provider"`
-			} `yaml:"cloud"`
-		}
-		if err := yaml.Unmarshal([]byte(doc), &config); err != nil {
-			return "", err
-		}
-		if config.Kind == "ClusterConfiguration" {
-			return strings.ToLower(config.Cloud.Provider), nil
-		}
-	}
-	return "", nil
-}
-
-// prepareProviderCandiDir downloads the provider's terraformManager OCI image
-// if its schemas are not already present. The image is unpacked into
-// dc.DownloadDir/<provider>/ so all provider-specific files stay under one directory.
-func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.RegistryConfig, dc *directoryconfig.DirectoryConfig) error {
-	systemSchemaPath := filepath.Join(candiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
-	if _, err := os.Stat(systemSchemaPath); err == nil {
-		return nil
-	}
-	downloadSchemaPath := filepath.Join(dc.DownloadDir, provider, "openapi", "cluster_configuration.yaml")
-	if _, err := os.Stat(downloadSchemaPath); err == nil {
-		return nil
-	}
-
-	sectionName := "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
-	providerImage, err := digests.GetImage(sectionName, "terraformManager")
-	if err != nil {
-		log.DebugF("No image digest for provider %s, skipping: %v\n", provider, err)
-		return nil
-	}
-
-	imgName := conf.GetRegistry() + "@" + providerImage
-	log.DebugF("Downloading provider schemas for %s\n", provider)
-	return image.DownloadAndUnpackImage(ctx, imgName, filepath.Join(dc.DownloadDir, provider), dc.DownloadCacheDir, *conf)
-}
-
 // prepare CandiDir if not exists
-func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, dc *directoryconfig.DirectoryConfig) error {
-	if err := checkDirs(); err == nil {
+func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logger log.Logger, globalOptions *options.GlobalOptions) error {
+	// test only
+	if globalOptions == nil {
+		return nil
+	}
+
+	if !globalOptions.NeedDownload {
 		return nil
 	}
 

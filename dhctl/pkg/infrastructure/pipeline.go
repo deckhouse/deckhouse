@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -131,10 +130,8 @@ func ApplyPipeline(
 		span.AddEvent("Plan done")
 
 		defer func() {
-			var extractErr error
-			extractedData, extractErr = extractFn(ctx, r)
 			if err == nil {
-				err = extractErr
+				extractedData, err = extractFn(ctx, r, globalOptions)
 			}
 		}()
 
@@ -218,7 +215,7 @@ func CheckBaseInfrastructurePipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
-	dc *directoryconfig.DirectoryConfig,
+	globalOptions *options.GlobalOptions,
 ) (int, plan.Plan, *BaseInfrastructureDestructiveChanges, error) {
 	isChange := plan.HasNoChanges
 
@@ -250,7 +247,7 @@ func CheckBaseInfrastructurePipeline(
 			return nil
 		}
 
-		info, err := GetBaseInfraResult(ctx, r, dc)
+		info, err := GetBaseInfraResult(ctx, r, globalOptions)
 		if err != nil {
 			isChange = plan.HasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
@@ -334,13 +331,13 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 	)
 }
 
-func GetBaseInfraResult(ctx context.Context, r RunnerInterface, dc *directoryconfig.DirectoryConfig) (*PipelineOutputs, error) {
+func GetBaseInfraResult(ctx context.Context, r RunnerInterface, globalOptions *options.GlobalOptions) (*PipelineOutputs, error) {
 	cloudDiscovery, err := r.GetInfrastructureOutput(ctx, "cloud_discovery_data")
 	if err != nil {
 		return nil, err
 	}
 
-	schemaStore := config.NewSchemaStore(dc)
+	schemaStore := config.NewSchemaStore(globalOptions)
 	_, err = schemaStore.Validate(&cloudDiscovery)
 	if err != nil {
 		return nil, fmt.Errorf("validate cloud_discovery_data: %v", err)

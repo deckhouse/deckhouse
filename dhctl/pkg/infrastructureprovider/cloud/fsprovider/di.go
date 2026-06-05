@@ -27,7 +27,7 @@ import (
 type DIParams struct {
 	InfraVersionsFile string
 	BinariesDir       string
-	DownloadDir       string
+	CloudProviderDir  string
 	PluginsDir        string
 }
 
@@ -38,6 +38,18 @@ func isDir(dir, errPrefix string) error {
 
 	if !fs.IsDirExists(dir) {
 		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
+	}
+
+	return nil
+}
+
+func isNotRootDir(dir, errPrefix string) error {
+	if path.Clean(dir) == "/" {
+		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
+	}
+
+	if err := isDir(dir, errPrefix); err != nil {
+		return err
 	}
 
 	return nil
@@ -73,6 +85,10 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, err
 	}
 
+	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
+		return nil, err
+	}
+
 	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
 		return nil, err
 	}
@@ -81,6 +97,6 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
-		ModulesProvider:     newModulesProvider(logger, params.DownloadDir),
+		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
 	}, nil
 }

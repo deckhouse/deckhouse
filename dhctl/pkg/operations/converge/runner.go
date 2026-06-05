@@ -15,7 +15,6 @@
 package converge
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -516,9 +515,7 @@ func (r *runner) updateClusterState(ctx *convergecontext.Context, metaConfig *co
 			return err
 		}
 
-		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", func(c context.Context, r infrastructure.RunnerInterface) (*infrastructure.PipelineOutputs, error) {
-			return infrastructure.GetBaseInfraResult(c, r, nil)
-		})
+		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", r.switcher.GetGlobalOptions(), infrastructure.GetBaseInfraResult)
 		if err != nil {
 			return err
 		}

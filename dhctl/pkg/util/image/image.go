@@ -266,7 +266,7 @@ func saveHash(digest, hash, dstPath string) error {
 	return nil
 }
 
-func pullImage(_ context.Context, ref name.Reference, opts []remote.Option, digest, cacheDir string) (v1.Image, error) {
+func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, digest, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
@@ -277,7 +277,7 @@ func pullImage(_ context.Context, ref name.Reference, opts []remote.Option, dige
 	}
 	cached := cache.Image(img, layersCache)
 
-	checksum, err := saveImageAsTarGz(ref.String(), filepath.Join(cacheDir, digest), cached)
+	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, digest), cached, showProgress)
 	if err != nil {
 		return cached, fmt.Errorf("saving tar.gz: %w", err)
 	}
@@ -374,7 +374,7 @@ func getOptsFromRegistryConfig(ref name.Reference, cfg *RegistryConfig) ([]remot
 	return opts, nil
 }
 
-func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig) error {
+func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig, showProgress bool) error {
 	ctx, span := telemetry.StartSpan(ctx, "image.DownloadAndUnpack")
 	defer span.End()
 	span.SetAttributes(
@@ -388,7 +388,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	}
 
 	imgName := ref.Identifier()
-	img, err := tryToRestoreLocalImage(imgName, cacheDir)
+	img, err := tryToRestoreLocalImage(imgName, destDir)
 	if err == nil {
 		span.AddEvent("image.restored_from_cache")
 		return extractImage(img, destDir)
@@ -408,7 +408,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 	log.DebugF("hash: %s\n", desc.Digest.String())
 	span.SetAttributes(otattribute.String("image.digest", desc.Digest.String()))
 
-	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), cacheDir)
+	img, err = pullImage(ctx, ref, opts, desc.Digest.String(), destDir, cacheDir, showProgress)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}

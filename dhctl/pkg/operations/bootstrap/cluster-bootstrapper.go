@@ -487,9 +487,7 @@ func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *boot
 				return err
 			}
 
-			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", func(ctx context.Context, r infrastructure.RunnerInterface) (*infrastructure.PipelineOutputs, error) {
-				return infrastructure.GetBaseInfraResult(ctx, r, b.DirectoryConfig)
-			})
+			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}

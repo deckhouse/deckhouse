@@ -69,7 +69,7 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 
 	downloaded := filepath.Join(conf.DownloadRootDir, binaryName)
 	if _, err := os.Stat(downloaded); err != nil {
-		if err := downloadImage(ctx, conf, imageName, "terraformManager"); err != nil {
+		if err := downloadImage(ctx, conf, imageName, "terraformManager", conf.ShowProgress); err != nil {
 			return err
 		}
 	}

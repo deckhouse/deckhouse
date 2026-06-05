@@ -282,11 +282,6 @@ spec:
 			// Migration configmap should be created.
 			migrationCM := b.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
 			Expect(migrationCM.Exists()).To(BeTrue())
-<<<<<<< HEAD
-=======
-			Expect(migrationCM.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
-			Expect(migrationCM.Field("metadata.labels.module").String()).To(Equal("cloud-provider-dvp"))
->>>>>>> 2f1a9bafe1 (migrate providerclusterconfiguration)
 
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
@@ -366,6 +361,7 @@ metadata:
   namespace: d8-cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
+  authScheme: a3ViZWNvbmZpZw==
   secret: YXBpVmV=
 ---
 apiVersion: deckhouse.io/v1
