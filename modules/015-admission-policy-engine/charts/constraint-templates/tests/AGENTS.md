@@ -163,7 +163,14 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 4. **Never edit `rendered/`**: all files under `rendered/` are generated. Re-run `generate` after any matrix change.
 5. **SPE label**: SPE cases must set `metadata.labels.security.deckhouse.io/security-policy-exception: <exception-name>` on the Pod, where `<exception-name>` matches the SPE `metadata.name`.
 6. **Constraint naming**: use `pss_baseline.yaml`, `pss_restricted.yaml`, `policy_<n>.yaml` (numbering from 1).
-7. **external_data constraints** (e.g. `verify-image-signature`, `vulnerable-images`) are tested via the inventory-based mock pattern: set `parameters.isTest: true` in the constraint manifest, declare `spec.externalData.providers` in the matrix for default mock responses, and use per-case `externalData.providers` overrides to simulate errors/vulnerabilities. The Rego template's `external_data_from_inventory` helper reads mock data from gator inventory instead of calling real `external_data`.
+7. **external_data constraints** (e.g. `verify-image-signature`, `vulnerable-images`) are tested via the inventory-based mock pattern. The generator **automatically rewrites** `external_data()` calls to `external_data_from_inventory()` in the rendered constraint-template when `spec.externalData` is declared in the test matrix. This means:
+   - The **runtime Rego template** keeps the real `external_data({"provider": "X", "keys": Y})` builtin call — no changes needed.
+   - The **rendered test template** gets the call rewritten to `external_data_from_inventory("X", Y)` which reads mock data from gator inventory objects.
+   - Set `parameters.isTest: true` in the constraint manifest.
+   - Declare `spec.externalData.providers` in the matrix for default mock responses.
+   - Use per-case `externalData.providers` overrides to simulate errors/vulnerabilities.
+   - The Rego template must define the `external_data_from_inventory(provider, keys)` helper and `is_test_mode` rule.
+   - You can still use a manual `constraint-template.gator.yaml` override file if you need full control over the test template (it takes priority over auto-rewrite).
 8. **RFC1123 names are strict in `test-matrix.yaml`**: values provided directly in matrix for Kubernetes object names must already match RFC1123 subdomain (no auto-fix). This includes `spec.suiteName`, explicit `metadata.name` values in merged objects, `exception/exceptionRef` names, and `metadata.labels.security.deckhouse.io/security-policy-exception` (must exactly match valid exception name). Only generator-derived fallback names may be normalized deterministically.
 
 ## SPE case pattern
