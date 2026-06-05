@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +64,7 @@ var (
 type VirtualMachineLifecycle struct {
 	Access           kubernetes.Access
 	PreflightChecker check.Checker
+	Logger           *logrus.Entry
 
 	AgentID          string
 	Namespace        string
@@ -70,19 +72,20 @@ type VirtualMachineLifecycle struct {
 	ClusterImageURL  string
 	VMClassName      string
 
-	RequestTimeout            time.Duration
-	WaitClusterImageTimeout   time.Duration
-	WaitVirtualDiskTimeout    time.Duration
-	WaitVirtualMachineTimeout time.Duration
-	WaitDeletionTimeout       time.Duration
+	RequestTimeout              time.Duration
+	WaitClusterImageTimeout     time.Duration
+	WaitVirtualDiskTimeout      time.Duration
+	WaitVirtualMachineTimeout   time.Duration
+	WaitDeletionTimeout         time.Duration
 	WaitNamespaceDeletedTimeout time.Duration
-	Timeout                   time.Duration
+	Timeout                     time.Duration
 }
 
 func (c VirtualMachineLifecycle) Checker() check.Checker {
 	checker := &virtualMachineLifecycleChecker{
 		access:           c.Access,
 		preflightChecker: c.PreflightChecker,
+		logger:           c.Logger,
 		agentID:          fallbackString(c.AgentID, "unknown"),
 		namespace:        c.Namespace,
 		clusterImageName: c.ClusterImageName,
@@ -103,6 +106,7 @@ func (c VirtualMachineLifecycle) Checker() check.Checker {
 type virtualMachineLifecycleChecker struct {
 	access           kubernetes.Access
 	preflightChecker check.Checker
+	logger           *logrus.Entry
 
 	agentID          string
 	namespace        string
@@ -121,16 +125,20 @@ type virtualMachineLifecycleChecker struct {
 func (c *virtualMachineLifecycleChecker) Check() check.Error {
 	ctx := context.Background()
 
-	if err := c.preflight(); err != nil {
+	if err := c.runCheckStep("preflight", c.preflight); err != nil {
 		return err
 	}
 
-	hasGarbage, err := c.hasGarbage(ctx)
-	if err != nil {
+	var hasGarbage bool
+	if err := c.runStep("checking garbage", func() error {
+		var checkErr error
+		hasGarbage, checkErr = c.hasGarbage(ctx)
+		return checkErr
+	}); err != nil {
 		return check.ErrUnknown("checking garbage: %v", err)
 	}
 	if hasGarbage {
-		if cleanupErr := c.cleanup(ctx); cleanupErr != nil {
+		if cleanupErr := c.runStep("cleaning garbage", func() error { return c.cleanup(ctx) }); cleanupErr != nil {
 			return check.ErrUnknown("cleaning garbage: %v", cleanupErr)
 		}
 		return check.ErrUnknown("cleaned garbage")
@@ -150,7 +158,9 @@ func (c *virtualMachineLifecycleChecker) preflight() check.Error {
 }
 
 func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.Error {
-	if err := c.ensureClusterVirtualImageReady(ctx); err != nil {
+	if err := c.runStep("ensuring ClusterVirtualImage", func() error {
+		return c.ensureClusterVirtualImageReady(ctx)
+	}); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail(
 				"verification: ClusterVirtualImage %q is not Ready",
@@ -160,48 +170,66 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 		return lifecycleStepError("ensuring ClusterVirtualImage", err)
 	}
 
-	if err := c.createNamespace(ctx); err != nil {
+	if err := c.runStep("creating namespace", func() error { return c.createNamespace(ctx) }); err != nil {
 		return lifecycleStepError("creating namespace", err)
 	}
 
-	if err := c.createVirtualDisk(ctx); err != nil {
+	if err := c.runStep("creating VirtualDisk", func() error { return c.createVirtualDisk(ctx) }); err != nil {
 		return lifecycleStepError("creating VirtualDisk", err)
 	}
 
-	if err := c.waitVirtualDiskReady(ctx); err != nil {
+	if err := c.runStep("waiting for VirtualDisk", func() error { return c.waitVirtualDiskReady(ctx) }); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: VirtualDisk did not become Ready")
 		}
 		return lifecycleStepError("waiting for VirtualDisk", err)
 	}
 
-	if err := c.createVirtualMachine(ctx); err != nil {
+	if err := c.runStep("creating VirtualMachine", func() error { return c.createVirtualMachine(ctx) }); err != nil {
 		return lifecycleStepError("creating VirtualMachine", err)
 	}
 
-	if err := c.waitVirtualMachineRunning(ctx); err != nil {
+	if err := c.runStep("waiting for VirtualMachine Running", func() error {
+		return c.waitVirtualMachineRunning(ctx)
+	}); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: VirtualMachine did not reach Running phase")
 		}
 		return lifecycleStepError("waiting for VirtualMachine Running", err)
 	}
 
-	if err := c.deleteVirtualMachine(ctx); err != nil && !apierrors.IsNotFound(err) {
+	if err := c.runStep("deleting VirtualMachine", func() error {
+		err := c.deleteVirtualMachine(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return lifecycleStepError("deleting VirtualMachine", err)
 	}
 
-	if err := c.waitVirtualMachineAbsent(ctx); err != nil {
+	if err := c.runStep("waiting for VirtualMachine deletion", func() error {
+		return c.waitVirtualMachineAbsent(ctx)
+	}); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: VirtualMachine was not deleted")
 		}
 		return lifecycleStepError("waiting for VirtualMachine deletion", err)
 	}
 
-	if err := c.deleteVirtualDisk(ctx); err != nil && !apierrors.IsNotFound(err) {
+	if err := c.runStep("deleting VirtualDisk", func() error {
+		err := c.deleteVirtualDisk(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return lifecycleStepError("deleting VirtualDisk", err)
 	}
 
-	if err := c.waitVirtualDiskAbsent(ctx); err != nil {
+	if err := c.runStep("waiting for VirtualDisk deletion", func() error {
+		return c.waitVirtualDiskAbsent(ctx)
+	}); err != nil {
 		if errors.Is(err, errConditionTimeout) {
 			return check.ErrFail("verification: VirtualDisk was not deleted")
 		}
@@ -209,6 +237,31 @@ func (c *virtualMachineLifecycleChecker) doLifecycle(ctx context.Context) check.
 	}
 
 	return nil
+}
+
+func (c *virtualMachineLifecycleChecker) runStep(step string, fn func() error) error {
+	start := time.Now()
+	err := fn()
+	c.logStepDuration(step, time.Since(start))
+	return err
+}
+
+func (c *virtualMachineLifecycleChecker) runCheckStep(step string, fn func() check.Error) check.Error {
+	start := time.Now()
+	err := fn()
+	c.logStepDuration(step, time.Since(start))
+	return err
+}
+
+func (c *virtualMachineLifecycleChecker) logStepDuration(step string, duration time.Duration) {
+	if c.logger == nil {
+		return
+	}
+
+	c.logger.WithFields(logrus.Fields{
+		"step":     step,
+		"duration": duration,
+	}).Info("virtualization probe step completed")
 }
 
 func (c *virtualMachineLifecycleChecker) createNamespace(ctx context.Context) error {
@@ -466,28 +519,52 @@ func (c *virtualMachineLifecycleChecker) hasGarbage(ctx context.Context) (bool, 
 func (c *virtualMachineLifecycleChecker) cleanup(ctx context.Context) error {
 	var errs []error
 
-	if err := c.deleteVirtualMachine(ctx); err != nil && !apierrors.IsNotFound(err) {
+	if err := c.runStep("cleanup: delete VirtualMachine", func() error {
+		err := c.deleteVirtualMachine(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
 		errs = append(errs, fmt.Errorf("delete VirtualMachine: %w", err))
 	}
-	if err := c.waitVirtualMachineAbsent(ctx); err != nil {
+	if err := c.runStep("cleanup: wait VirtualMachine deletion", func() error {
+		return c.waitVirtualMachineAbsent(ctx)
+	}); err != nil {
 		errs = append(errs, fmt.Errorf("wait VirtualMachine deletion: %w", err))
 	}
-	if err := c.deleteVirtualDisk(ctx); err != nil && !apierrors.IsNotFound(err) {
+	if err := c.runStep("cleanup: delete VirtualDisk", func() error {
+		err := c.deleteVirtualDisk(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
 		errs = append(errs, fmt.Errorf("delete VirtualDisk: %w", err))
 	}
-	if err := c.waitVirtualDiskAbsent(ctx); err != nil {
+	if err := c.runStep("cleanup: wait VirtualDisk deletion", func() error {
+		return c.waitVirtualDiskAbsent(ctx)
+	}); err != nil {
 		errs = append(errs, fmt.Errorf("wait VirtualDisk deletion: %w", err))
 	}
-	if err := c.deleteNamespace(ctx); err != nil && !apierrors.IsNotFound(err) {
+	if err := c.runStep("cleanup: delete namespace", func() error {
+		err := c.deleteNamespace(ctx)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		return nil
+	}); err != nil {
 		errs = append(errs, fmt.Errorf("delete namespace: %w", err))
 	}
-	if err := waitNamespaceNotFound(
-		ctx,
-		c.access,
-		c.namespace,
-		c.waitNamespaceDeletedTimeout,
-		pollingInterval(c.waitNamespaceDeletedTimeout),
-	); err != nil {
+	if err := c.runStep("cleanup: wait namespace deletion", func() error {
+		return waitNamespaceNotFound(
+			ctx,
+			c.access,
+			c.namespace,
+			c.waitNamespaceDeletedTimeout,
+			pollingInterval(c.waitNamespaceDeletedTimeout),
+		)
+	}); err != nil {
 		errs = append(errs, fmt.Errorf("wait namespace deletion: %w", err))
 	}
 
