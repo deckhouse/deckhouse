@@ -35,6 +35,15 @@ type EpisodesPayload struct {
 	Episodes []check.Episode `json:"episodes"`
 }
 
+// EpisodesAck is the body returned by POST /downtime. Optional fields carry runtime
+// configuration hints that the agent uses to align itself with server-side settings
+// (currently just the largest acceptance window across all remote_write CRs).
+// Agents that don't understand a field simply ignore it; old servers respond with "{}"
+// and new agents fall back to safe defaults — so the protocol is rolling-upgrade safe.
+type EpisodesAck struct {
+	MaxEpisodeAgeSeconds int64 `json:"maxEpisodeAgeSeconds,omitempty"`
+}
+
 type AddEpisodesHandler struct {
 	DbCtx       *dbcontext.DbContext
 	RemoteWrite remotewrite.Exporter
@@ -70,9 +79,18 @@ func (h *AddEpisodesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with empty object if everything is ok
+	ack := EpisodesAck{}
+	if maxAge := h.RemoteWrite.MaxSampleAge(); maxAge > 0 {
+		ack.MaxEpisodeAgeSeconds = int64(maxAge / time.Second)
+	}
+
+	body, err := json.Marshal(ack)
+	if err != nil {
+		log.Errorf("encoding episodes ack: %v", err)
+		body = []byte("{}")
+	}
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "{}")
+	_, _ = w.Write(body)
 }
 
 // Save episodes to the database
