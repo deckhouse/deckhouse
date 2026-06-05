@@ -28,12 +28,10 @@ spec:
       rego: |-
         package d8.vulnerableimages
 
-        violation[{"msg": msg}] {
+        # Get data from external provider in production, or mocked data in test mode.
+        remote_data := response {
           images := [img | img = retrieve_images[_]]
           response := get_data(images)
-
-          response_deny_request(response, input.review.operation)
-          msg := sprintf("request denied: %v", [response])
         }
 
         get_data(images) = response {
@@ -69,6 +67,42 @@ spec:
 
         is_test_mode {
           object.get(input.parameters, "isTest", false)
+        }
+
+        violation[{"msg": msg}] {
+          response := remote_data
+
+          response_deny_request(response, input.review.operation)
+          msg := build_deny_message(response)
+        }
+
+        build_deny_message(response) = msg {
+          count(response.errors) > 0
+          msg := sprintf("image contains vulnerabilities: %v", [response.errors])
+        }
+
+        build_deny_message(response) = msg {
+          count(response.errors) == 0
+          ids := [id |
+            pair := response.responses[_]
+            details := pair[1]
+            vuln := object.get(details, "vulnerabilities", [])[_]
+            id := object.get(vuln, "id", "")
+            id != ""
+          ]
+          count(ids) > 0
+          msg := sprintf("image contains vulnerabilities: vulnerabilities: %v", [ids])
+        }
+
+        build_deny_message(response) = msg {
+          count(response.errors) == 0
+          count(response.system_error) > 0
+          msg := sprintf("request denied by external data provider: %v", [response.system_error])
+        }
+
+        build_deny_message(response) = "request denied by external data provider" {
+          count(response.errors) == 0
+          count(response.system_error) == 0
         }
 
         retrieve_images[imgs] {

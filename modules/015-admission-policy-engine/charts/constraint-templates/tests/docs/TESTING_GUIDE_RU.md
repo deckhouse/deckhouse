@@ -861,9 +861,25 @@ opa version
 
 ### Тестирование constraint-ов с external_data
 
-Constraint-ы, использующие `external_data` (например, `verify-image-signature`, `vulnerable-images`), **могут** быть протестированы через gator с помощью паттерна мок-данных через inventory. Подход:
+Constraint-ы, использующие `external_data` (например, `verify-image-signature`, `vulnerable-images`), **могут** быть протестированы через gator с помощью паттерна мок-данных через inventory.
 
-1. **Rego-шаблон** включает параметр `isTest`. Когда `isTest: true`, шаблон вызывает `external_data_from_inventory(provider, keys)` вместо реальной функции `external_data`. Этот хелпер читает мок-ответы из inventory-объектов gator.
+#### Автоматическая подмена
+
+Когда в тест-матрице объявлен `spec.externalData`, генератор **автоматически переписывает** вызовы `external_data()` в отрендеренном constraint-template Rego:
+
+- `external_data({"provider": "X", "keys": Y})` → `external_data_from_inventory("X", Y)`
+
+Это означает, что **runtime Rego-шаблон сохраняет настоящий вызов `external_data()`** — не нужно поддерживать отдельную тестовую версию. Подмена затрагивает только сгенерированные артефакты в `rendered/`.
+
+> **Ручной override**: если нужен полный контроль над тестовым шаблоном, положите файл `constraint-template.gator.yaml` рядом с тест-матрицей. Он имеет приоритет над автоподменой.
+
+#### Шаги настройки
+
+1. **Rego-шаблон** должен включать:
+   - Параметр `isTest` в CRD-схеме.
+   - Правило `is_test_mode`, проверяющее `input.parameters.isTest`.
+   - Хелпер `external_data_from_inventory(provider, keys)`, читающий мок-данные из `data.inventory`.
+   - Диспетчер `get_data`: вызывает `external_data_from_inventory` в тестовом режиме, `external_data` в продакшене.
 
 2. **Манифест constraint** устанавливает `parameters.isTest: true`:
 
