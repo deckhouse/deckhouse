@@ -330,14 +330,22 @@ jobs:
       changed_compact:  ${{ steps.diff.outputs.changed_compact }}
       baseline_run_id:  ${{ steps.baseline.outputs.run_id }}
     steps:
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
+      # IMPORTANT: do NOT checkout the PR head ref here. We deliberately
+      # check out the *base* branch (default for `pull_request_target`),
+      # because:
+      #   1. This job runs CI scripts (`.github/scripts/python/changed_images.py`)
+      #      that must come from trusted code, not from PR-author code. A PR
+      #      from an older branch would otherwise not have the script at all
+      #      (`python3 ... changed_images.py` -> exit 2 "No such file"),
+      #      and a malicious PR could swap the script for anything.
+      #   2. We do not read the PR working tree at all: `images_digests.json`
+      #      is pulled out of the PR's dev image via `regctl`, and the build
+      #      report comes from a downloaded artifact.
+      # fetch-depth: 1 is enough — we only need the script files.
+      - name: Checkout sources (base ref — CI scripts only, not PR code)
         uses: actions/checkout@v3.5.2
         with:
-          fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
-      # </template: checkout_full_step>
+          fetch-depth: 1
 
       - name: Set PR tag
         id: tag
