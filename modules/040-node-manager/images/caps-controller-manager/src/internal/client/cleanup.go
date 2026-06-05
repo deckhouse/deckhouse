@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
-	infrav1 "caps-controller-manager/api/infrastructure/v1beta2"
+	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/ssh"
 	"caps-controller-manager/internal/ssh/clissh"
 	"caps-controller-manager/internal/ssh/gossh"
