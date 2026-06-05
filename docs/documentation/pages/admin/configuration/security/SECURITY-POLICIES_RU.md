@@ -213,6 +213,7 @@ d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 - Параметр `settings.denyVulnerableImages.enabled` включает Trivy-провайдер, но не подменяет выбор namespace через лейбл.
 - Параметр `settings.denyVulnerableImages.allowedSeverityLevels` задает уровни уязвимостей, которые допускаются к запуску.
   Если параметр пустой или не задан, разрешенных уровней нет, и запуск будет запрещен при наличии уязвимостей любого уровня.
+  Это allowlist, а не denylist: чтобы блокировать `HIGH` и `CRITICAL`, не добавляйте их в `allowedSeverityLevels`.
 
 Для сценариев, соответствующих требованиям ФСТЭК по блокировке критических и высоких уязвимостей, укажите:
 
@@ -226,9 +227,11 @@ spec:
   settings:
     denyVulnerableImages:
       enabled: true
+      # Разрешаем только UNKNOWN/LOW/MEDIUM; HIGH и CRITICAL будут блокироваться.
       allowedSeverityLevels:
-        - HIGH
-        - CRITICAL
+        - UNKNOWN
+        - LOW
+        - MEDIUM
 ```
 
 И добавьте лейбл в namespace, где должна применяться проверка:
