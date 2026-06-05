@@ -17,17 +17,20 @@ All commands are executed on the master node of the existing cluster as the `roo
 {% endalert %}
 
 {% capture wait_queue %}
+
 ```bash
 d8 system queue list
 ```
 
 {% offtopic title="Example output (queues are empty)..." %}
+
 ```console
 Summary:
 - 'main' queue: empty.
 - 88 other queues (0 active, 88 empty): 0 tasks.
 - no tasks to handle.
 ```
+
 {% endofftopic %}
 {% endcapture %}
 
@@ -50,6 +53,7 @@ You can find the edition and version currently used in the cluster on the main p
   ```bash
   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
   ```
+
 - version:
 
   ```bash
@@ -59,6 +63,7 @@ You can find the edition and version currently used in the cluster on the main p
 ### Checking whether switching to the desired edition is possible
 
 {% capture check_new_modules %}
+
 ```shell
 (set -e
 trap 'echo "Execution error"' ERR
@@ -85,6 +90,7 @@ echo
 echo "Modules not supported in the desired edition (edition code - $NEW_EDITION, version - $DECKHOUSE_VERSION):"
 echo $MODULES_TO_DISABLE)
 ```
+
 {% endcapture %}
 
 {% capture disable_modules %}
@@ -95,9 +101,9 @@ echo $MODULES_TO_DISABLE)
    ```shell
    echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
-      
+
 1. Make sure all tasks in the DKP queue are complete before continuing the switching process:
-      
+
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
 
@@ -111,7 +117,7 @@ What to consider before switching:
 {% tab "To DKP CE" %}
 1. Determine the list of modules used in the cluster that are not supported in DKP CE. To do this, follow these steps:
 
-   1. Get the list of modules not supported in DKP CE: 
+   1. Get the list of modules not supported in DKP CE:
 
       {{ check_new_modules | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "^", "      " }}
 
@@ -124,24 +130,32 @@ What to consider before switching:
 
       {% tabs env-edition %}
       {% tab "DKP BE" %}
+
       ```shell
       NEW_EDITION=be
       ```
+
       {% endtab %}
       {% tab "DKP SE" %}
+
       ```shell
       NEW_EDITION=se
       ```
+
       {% endtab %}
       {% tab "DKP SE+" %}
+
       ```shell
       NEW_EDITION=se-plus
       ```
+
       {% endtab %}
       {% tab "DKP EE" %}
+
       ```shell
       NEW_EDITION=ee
       ```
+
       {% endtab %}
       {% endtabs %}
 
@@ -151,7 +165,7 @@ What to consider before switching:
       LICENSE_TOKEN=<LICENSE_KEY>
       ```
 
-   1. Get the list of modules not supported in the desired DKP edition: 
+   1. Get the list of modules not supported in the desired DKP edition:
 
       {{ check_new_modules | regex_replace: "<!/?REMOVE_FOR_CE>", "" | regex_replace: "^", "      " }}
 
@@ -184,12 +198,15 @@ The bashible log should contain `Configuration is in sync, nothing to do`:
 ```shell
 journalctl -u bashible -n 5
 ```
+
 {% endcapture %}
 
 {% capture check_old_pods_unmanaged %}
+
 ```shell
 d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<PREVIOUS_EDITION_CODE>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
 ```
+
 {% endcapture %}
 
 {% capture check_old_pods_direct %}
@@ -215,6 +232,7 @@ jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
   | .namespace + "\t" + .name
 ' | sort -u
 ```
+
 {% endcapture %}
 
 ### Switching using the registry module
@@ -224,6 +242,7 @@ Not applicable for managed Kubernetes (EKS, AKS, GKE).
 {% endalert %}
 
 {% capture change-registry-mc-deckhouse-direct %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -243,9 +262,11 @@ spec:
         imagesRepo: <REGISTRY_HOST>/deckhouse/<EDITION_CODE>
         scheme: HTTPS
 ```
+
 {% endcapture %}
 
 {% capture change-registry-mc-deckhouse-unmanaged %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -265,15 +286,19 @@ spec:
         imagesRepo: <REGISTRY_HOST>/deckhouse/<EDITION_CODE>
         scheme: HTTPS
 ```
+
 {% endcapture %}
 
 {% capture registry_status_cmd %}
+
 ```shell
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml) | {"conditions": [.conditions[] | select(.type == "Ready" or .type == "RegistryContainsRequiredImages")]}'
 ```
+
 {% endcapture %}
 
 {% capture registry_status_example %}
+
 ```yaml
 conditions:
   - lastTransitionTime: "2026-05-05T13:53:23Z"
@@ -289,6 +314,7 @@ conditions:
     status: "True"
     type: Ready
 ```
+
 {% endcapture %}
 
 1. In ModuleConfig `deckhouse`, set `imagesRepo` to the target edition and `checkMode: Relax`.
@@ -348,14 +374,18 @@ conditions:
 
    {% tabs switch-registry-relax %}
    {% tab "Direct" %}
+
    ```shell
    d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/direct/checkMode", "value": "Default"}]'
    ```
+
    {% endtab %}
    {% tab "Unmanaged" %}
+
    ```shell
    d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/unmanaged/checkMode", "value": "Default"}]'
    ```
+
    {% endtab %}
    {% endtabs %}
 
@@ -428,16 +458,20 @@ spec:
     EOF_TOML
 EOF
 ```
+
 {% endcapture %}
 
 {% capture change_registry_helper_ce %}
+
 ```shell
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
 ```
+
 {% endcapture %}
 
 {% capture change_registry_helper_commercial %}
+
 ```shell
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
@@ -445,9 +479,11 @@ DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"usernam
 d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
 d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
 ```
+
 {% endcapture %}
 
 {% capture ngc_cleanup_registry %}
+
 ```shell
 d8 k delete ngc containerd-$NEW_EDITION-config.sh
 d8 k apply -f - <<EOF
@@ -468,6 +504,7 @@ spec:
 EOF
 d8 k delete ngc del-temp-config.sh
 ```
+
 {% endcapture %}
 
 Choose the target edition:

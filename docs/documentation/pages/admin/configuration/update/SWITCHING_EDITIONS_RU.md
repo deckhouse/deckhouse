@@ -20,17 +20,20 @@ lang: ru
 {% endalert %}
 
 {% capture wait_queue %}
+
 ```bash
 d8 system queue list
 ```
 
 {% offtopic title="Пример вывода (очереди пусты)..." %}
+
 ```console
 Summary:
 - 'main' queue: empty.
 - 88 other queues (0 active, 88 empty): 0 tasks.
 - no tasks to handle.
 ```
+
 {% endofftopic %}
 {% endcapture %}
 
@@ -53,6 +56,7 @@ Summary:
   ```bash
   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values -o yaml | yq '.deckhouseEdition'
   ```
+
 - версия:
 
   ```bash
@@ -62,6 +66,7 @@ Summary:
 ### Определение возможности переключения на желаемую редакцию
 
 {% capture check_new_modules %}
+
 ```shell
 (set -e
 trap 'echo "Ошибка выполнения"' ERR
@@ -90,6 +95,7 @@ echo
 echo "Модули, которые не поддерживаются в желаемой редакции (код редакции - $NEW_EDITION, версия - $DECKHOUSE_VERSION):"
 echo $MODULES_TO_DISABLE)
 ```
+
 {% endcapture %}
 
 {% capture disable_modules %}
@@ -100,9 +106,9 @@ echo $MODULES_TO_DISABLE)
    ```shell
    echo $MODULES_TO_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
-      
+
 1. Убедитесь в выполнении всех задач в очереди DKP, прежде чем продолжить процесс переключения:
-      
+
    {{ wait_queue | regex_replace: "^", "   " }}
 {% endcapture %}
 
@@ -116,7 +122,7 @@ echo $MODULES_TO_DISABLE)
 {% tab "На DKP CE" %}
 1. Определите список модулей, которые используются в кластере и не поддерживаются в DKP CE. Для этого выполните следующие шаги:
 
-   1. Получите список модулей, которые не поддерживаются в DKP CE: 
+   1. Получите список модулей, которые не поддерживаются в DKP CE:
 
       {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", ""  | regex_replace: "(?m)<!REMOVE_FOR_CE>.+?<!/REMOVE_FOR_CE>\n?", "" | regex_replace: "\$NEW_EDITION", "ce" | regex_replace: "<!/?REMOVE_FOR_CSE>", "" | regex_replace: "^", "      " }}
 
@@ -129,24 +135,32 @@ echo $MODULES_TO_DISABLE)
 
       {% tabs env-edition %}
       {% tab "DKP BE" %}
+
       ```shell
       NEW_EDITION=be
       ```
+
       {% endtab %}
       {% tab "DKP SE" %}
+
       ```shell
       NEW_EDITION=se
       ```
+
       {% endtab %}
       {% tab "DKP SE+" %}
+
       ```shell
       NEW_EDITION=se-plus
       ```
+
       {% endtab %}
       {% tab "DKP EE" %}
+
       ```shell
       NEW_EDITION=ee
       ```
+
       {% endtab %}
       {% endtabs %}
 
@@ -156,7 +170,7 @@ echo $MODULES_TO_DISABLE)
       LICENSE_TOKEN=<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>
       ```
 
-   1. Получите список модулей, которые не поддерживаются в DKP желаемой редакции: 
+   1. Получите список модулей, которые не поддерживаются в DKP желаемой редакции:
 
       {{ check_new_modules | regex_replace: "<!/?REMOVE_FOR_CE>", "" | regex_replace: "<!/?REMOVE_FOR_CSE>", "" | regex_replace: "^", "      " }}
 
@@ -173,7 +187,7 @@ echo $MODULES_TO_DISABLE)
 1. Убедитесь, что версия Kubernetes, используемая в кластере, поддерживается в желаемой версии DKP CSE:
    - DKP CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27;
    - DKP CSE 1.67 поддерживает Kubernetes версий 1.27 и 1.29.
-   
+
    При необходимости, обновите версию Kubernetes в кластере до поддерживаемой:
    - Выполните команду:
 
@@ -199,7 +213,7 @@ echo $MODULES_TO_DISABLE)
       DECKHOUSE_VERSION=<ЖЕЛАЕМАЯ_ВЕРСИЯ_DKP_CSE>
       ```
 
-   1. Получите список модулей, которые не поддерживаются в DKP CSE: 
+   1. Получите список модулей, которые не поддерживаются в DKP CSE:
 
       {% assign new_edition="se-plus" %}
       {{ check_new_modules | regex_replace: "NEW_EDITION=<КОД_РЕДАКЦИИ>\n", "" | regex_replace: "<!/?REMOVE_FOR_CE>", "" | regex_replace: "(?m)<!REMOVE_FOR_CSE>.+?<!/REMOVE_FOR_CSE>\n?", "" | regex_replace: "registry.deckhouse.ru", "registry-cse.deckhouse.ru" | regex_replace: "\$NEW_EDITION", "cse" | regex_replace: "^", "      " }}
@@ -233,12 +247,15 @@ d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.sta
 ```shell
 journalctl -u bashible -n 5
 ```
+
 {% endcapture %}
 
 {% capture check_old_pods_unmanaged %}
+
 ```shell
 d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<КОД_ПРЕДЫДУЩЕЙ_РЕДАКЦИИ>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
 ```
+
 {% endcapture %}
 
 {% capture check_old_pods_direct %}
@@ -264,12 +281,15 @@ jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
   | .namespace + "\t" + .name
 ' | sort -u
 ```
+
 {% endcapture %}
 
 {% capture enable_chrony_cse %}
+
 ```shell
 d8 system module enable chrony
 ```
+
 {% endcapture %}
 
 ### Переключение с помощью модуля registry
@@ -279,6 +299,7 @@ d8 system module enable chrony
 {% endalert %}
 
 {% capture change-registry-mc-deckhouse-direct %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -298,9 +319,11 @@ spec:
         imagesRepo: <REGISTRY_HOST>/deckhouse/<КОД_РЕДАКЦИИ>
         scheme: HTTPS
 ```
+
 {% endcapture %}
 
 {% capture change-registry-mc-deckhouse-unmanaged %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -320,15 +343,19 @@ spec:
         imagesRepo: <REGISTRY_HOST>/deckhouse/<КОД_РЕДАКЦИИ>
         scheme: HTTPS
 ```
+
 {% endcapture %}
 
 {% capture registry_status_cmd %}
+
 ```shell
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml) | {"conditions": [.conditions[] | select(.type == "Ready" or .type == "RegistryContainsRequiredImages")]}'
 ```
+
 {% endcapture %}
 
 {% capture registry_status_example %}
+
 ```yaml
 conditions:
   - lastTransitionTime: "2026-05-05T13:53:23Z"
@@ -344,6 +371,7 @@ conditions:
     status: "True"
     type: Ready
 ```
+
 {% endcapture %}
 
 1. В ModuleConfig `deckhouse` укажите `imagesRepo` целевой редакции и `checkMode: Relax`.
@@ -412,14 +440,18 @@ conditions:
 
    {% tabs switch-registry-relax %}
    {% tab "Direct" %}
+
    ```shell
    d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/direct/checkMode", "value": "Default"}]'
    ```
+
    {% endtab %}
    {% tab "Unmanaged" %}
+
    ```shell
    d8 k patch moduleconfig deckhouse --type=json -p='[{"op": "replace", "path": "/spec/settings/registry/unmanaged/checkMode", "value": "Default"}]'
    ```
+
    {% endtab %}
    {% endtabs %}
 
@@ -499,16 +531,20 @@ spec:
     EOF_TOML
 EOF
 ```
+
 {% endcapture %}
 
 {% capture change_registry_helper_ce %}
+
 ```shell
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/ce
 ```
+
 {% endcapture %}
 
 {% capture change_registry_helper_commercial %}
+
 ```shell
 DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
 AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
@@ -516,9 +552,11 @@ DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.ru\": {\"usernam
 d8 k --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"
 d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
 ```
+
 {% endcapture %}
 
 {% capture ngc_cleanup_registry %}
+
 ```shell
 d8 k delete ngc containerd-$NEW_EDITION-config.sh
 d8 k apply -f - <<EOF
@@ -539,6 +577,7 @@ spec:
 EOF
 d8 k delete ngc del-temp-config.sh
 ```
+
 {% endcapture %}
 
 {% capture ngc_auth_cse %}
@@ -577,9 +616,11 @@ spec:
     EOF_TOML
 EOF
 ```
+
 {% endcapture %}
 
 {% capture cse_digests_from_pod %}
+
 ```shell
 d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
 d8 k wait --for=condition=ready pod/cse-image --timeout=300s
@@ -587,22 +628,28 @@ CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.js
 CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
 CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
 ```
+
 {% endcapture %}
 
 {% capture cse_set_image_158 %}
+
 ```shell
 d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 ```
+
 {% endcapture %}
 
 {% capture cse_set_image_164_plus %}
+
 ```shell
 CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
 d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 ```
+
 {% endcapture %}
 
 {% capture cse_cleanup %}
+
 ```shell
 d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
 d8 k delete pod cse-image --ignore-not-found
@@ -622,6 +669,7 @@ spec:
 EOF
 d8 k delete ngc del-temp-config.sh
 ```
+
 {% endcapture %}
 
 Выберите целевую редакцию:
@@ -737,24 +785,32 @@ d8 k delete ngc del-temp-config.sh
 
    {% tabs cse-switch-deckhouse-version %}
    {% tab "CSE 1.58" %}
+
    ```shell
    DECKHOUSE_VERSION=v1.58.2
    ```
+
    {% endtab %}
    {% tab "CSE 1.64" %}
+
    ```shell
    DECKHOUSE_VERSION=v1.64.1
    ```
+
    {% endtab %}
    {% tab "CSE 1.67" %}
+
    ```shell
    DECKHOUSE_VERSION=v1.67.4
    ```
+
    {% endtab %}
    {% tab "CSE 1.73" %}
+
    ```shell
    DECKHOUSE_VERSION=v1.73.3
    ```
+
    {% endtab %}
    {% endtabs %}
 
