@@ -34,16 +34,16 @@ Kubelet monitors the state of containers in all pods running on the node, includ
 
 Kubelet also interacts with the following components:
 
-1. **containerd**: Receives commands from kubelet to manage the container lifecycle on the node via the [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/).
-1. **kubernetes-api-proxy**: Proxies requests to kube-apiserver that are sent to the `localhost` address. It is part of the [`control-plane-manager`](/modules/control-plane-manager/) module.
-1. **kube-apiserver-healthcheck**: Checks the health of kube-apiserver.
+1. **Containerd**: Receives commands from kubelet to manage the container lifecycle on the node via the [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/).
+1. **Kubernetes-api-proxy**: Proxies requests to kube-apiserver that are sent to the `localhost` address. It is part of the [`control-plane-manager`](/modules/control-plane-manager/) module.
+1. **Kube-apiserver-healthcheck**: Checks the health of kube-apiserver.
 
 The following components interact with kubelet:
 
-1. **kube-apiserver**:
+1. **Kube-apiserver**:
 
    * Retrieving pod logs (the `kubectl logs` command).
    * Executing commands in running pods (the `kubectl exec` command).
    * Port forwarding (the `kubectl port-forward` command).
 
-1. **prometheus-main**: Collects kubelet metrics.
+1. **Prometheus-main**: Collects kubelet metrics.
