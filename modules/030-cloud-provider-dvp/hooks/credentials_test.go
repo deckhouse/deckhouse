@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -34,8 +37,7 @@ cloudProviderDvp:
 `
 	)
 
-	// a3ViZWNvbmZpZw== = base64("kubeconfig"), YXBpVmV= = base64("apiVe")
-	credSecret1 := `
+	credSecret1 := fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
 metadata:
@@ -46,12 +48,11 @@ metadata:
     module: cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
-  authScheme: a3ViZWNvbmZpZw==
-  secret: YXBpVmV=
-`
+  authScheme: %s
+  secret: %s
+`, base64.StdEncoding.EncodeToString([]byte("kubeconfig")), base64.StdEncoding.EncodeToString([]byte("apiVe")))
 
-	// dXNlcnBhc3M= = base64("userpass"), dXNlcjE= = base64("user1"), cGFzczE= = base64("pass1")
-	credSecret2 := `
+	credSecret2 := fmt.Sprintf(`
 apiVersion: v1
 kind: Secret
 metadata:
@@ -62,10 +63,10 @@ metadata:
     module: cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
-  authScheme: dXNlcnBhc3M=
-  identity: dXNlcjE=
-  secret: cGFzczE=
-`
+  authScheme: %s
+  identity: %s
+  secret: %s
+`, base64.StdEncoding.EncodeToString([]byte("userpass")), base64.StdEncoding.EncodeToString([]byte("user1")), base64.StdEncoding.EncodeToString([]byte("pass1")))
 
 	nonCredSecret := `
 apiVersion: v1
@@ -92,9 +93,7 @@ data:
 			Expect(secrets.Map()).To(HaveLen(1))
 
 			entry := secrets.Get("d8-credentials")
-			// a3ViZWNvbmZpZw== decodes to "kubeconfig"
 			Expect(entry.Get("authScheme").String()).To(Equal("kubeconfig"))
-			// YXBpVmV= decodes to "apiVe"
 			Expect(entry.Get("secret").String()).To(Equal("apiVe"))
 			Expect(entry.Get("identity").Exists()).To(BeFalse())
 		})
@@ -114,7 +113,6 @@ data:
 			Expect(secrets.Map()).To(HaveLen(2))
 
 			entry1 := secrets.Get("d8-credentials")
-			// a3ViZWNvbmZpZw== decodes to "kubeconfig"
 			Expect(entry1.Get("authScheme").String()).To(Equal("kubeconfig"))
 
 			entry2 := secrets.Get("d8-credentials-extra")

@@ -293,7 +293,7 @@ spec:
 	Context("State B: PCC present, real d8-credentials Secret already populated by credentials.go", func() {
 		// Simulate that credentials.go (Order 19) has already run and written the real secret
 		// into values by pre-seeding internal.credentialSecrets.d8-credentials.
-		valuesWithRealCred := `
+		valuesWithRealCred := fmt.Sprintf(`
 global:
   discovery: {}
 cloudProviderDvp:
@@ -301,10 +301,10 @@ cloudProviderDvp:
     credentialSecrets:
       d8-credentials:
         authScheme: kubeconfig
-        secret: cmVhbC1rdWJlY29uZmlnLWRhdGE=
+        secret: %s
   nodes: {}
   provider: {}
-`
+`, base64.StdEncoding.EncodeToString([]byte("real-kubeconfig-data")))
 		bReal := HookExecutionConfigInit(valuesWithRealCred, `{}`)
 		bReal.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 		bReal.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
@@ -361,8 +361,8 @@ metadata:
   namespace: d8-cloud-provider-dvp
 type: cloud-provider.deckhouse.io/credentials
 data:
-  authScheme: a3ViZWNvbmZpZw==
-  secret: YXBpVmV=
+  authScheme: %s
+  secret: %s
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -390,7 +390,7 @@ kind: ConfigMap
 metadata:
   name: d8-module-is-migrating
   namespace: d8-cloud-provider-dvp
-`, notEmptyPCCState)
+`, notEmptyPCCState, base64.StdEncoding.EncodeToString([]byte("kubeconfig")), base64.StdEncoding.EncodeToString([]byte("apiVe")))
 			c.KubeStateSet(stateCResources)
 			c.BindingContexts.Set(c.GenerateBeforeHelmContext())
 			c.RunHook()
