@@ -50,7 +50,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		ctx,
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
-		&b.Options.Global,
+		b.DirectoryConfig,
 		config.ValidateOptionOperation(string(preparatorParams.Operation)),
 	)
 	if err != nil {
@@ -123,7 +123,9 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 			return err
 		}
 
-		_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", &b.Options.Global, infrastructure.GetBaseInfraResult)
+		_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", func(ctx context.Context, r infrastructure.RunnerInterface) (*infrastructure.PipelineOutputs, error) {
+			return infrastructure.GetBaseInfraResult(ctx, r, b.Params.DirectoryConfig)
+		})
 		return err
 	})
 }

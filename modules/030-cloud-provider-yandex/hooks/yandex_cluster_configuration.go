@@ -35,6 +35,6 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-}, cluster_configuration.NewConfig(func(_, _ string) config.MetaConfigPreparator {
+}, cluster_configuration.NewConfig(func(provider, _ string) config.MetaConfigPreparator {
 	return yandex.NewMetaConfigPreparator(false, "hook")
 }))

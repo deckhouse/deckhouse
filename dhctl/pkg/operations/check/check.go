@@ -160,7 +160,7 @@ func checkClusterState(
 		return nil, err
 	}
 
-	change, pl, destructiveChanges, err := infrastructure.CheckBaseInfrastructurePipeline(ctx, baseRunner, "Kubernetes cluster", globalOptions)
+	change, pl, destructiveChanges, err := infrastructure.CheckBaseInfrastructurePipeline(ctx, baseRunner, "Kubernetes cluster", nil)
 	if err != nil {
 		return nil, err
 	}

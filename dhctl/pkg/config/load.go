@@ -22,7 +22,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
@@ -108,6 +107,18 @@ func ValidateOptionDownloadRootDir(dir string) ValidateOption {
 	}
 }
 
+func ValidateOptionOperation(op string) ValidateOption {
+	return func(o *validateOptions) {
+		o.operation = op
+	}
+}
+
+func ValidateOptionDownloadRootDir(dir string) ValidateOption {
+	return func(o *validateOptions) {
+		o.downloadRootDir = dir
+	}
+}
+
 
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
@@ -131,6 +142,15 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 			paths = append(paths, filepath.Join(globalOptions.DownloadDir, e.Name()))
 		}
 	}
+	if dc != nil {
+		// External provider images unpack into dc.DownloadDir/<provider>/.
+		entries, _ := os.ReadDir(dc.DownloadDir)
+		for _, e := range entries {
+			if e.IsDir() {
+				paths = append(paths, filepath.Join(dc.DownloadDir, e.Name()))
+			}
+		}
+	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
@@ -140,7 +160,7 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 		}
 	}
 
-	return newOnceSchemaStore(globalOptions, paths)
+	return newOnceSchemaStore(dc, paths)
 }
 
 func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
@@ -272,9 +292,9 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	return st
 }
 
-func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(globalOptions, schemasDir)
+		store = newSchemaStore(dc, schemasDir)
 	})
 	return store
 }

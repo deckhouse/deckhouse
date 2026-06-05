@@ -77,7 +77,7 @@ func SecretEdit(
 	configData := config.Data[dataKey]
 
 	var modifiedData []byte
-	err = dh_config.PrepareCandiDir(ctx, kubeCl, log.GetDefaultLogger(), globalOptions)
+	err = dh_config.PrepareCandiDir(ctx, kubeCl, dirConfig)
 	if err != nil {
 		return err
 	}

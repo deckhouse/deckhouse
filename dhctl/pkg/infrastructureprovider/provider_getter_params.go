@@ -89,7 +89,7 @@ func (p *CloudProviderGetterParams) getFSDIParams() (*fsprovider.DIParams, error
 	diDefaultParams := &fsprovider.DIParams{
 		InfraVersionsFile: infraVersionsFile,
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
-		CloudProviderDir:  filepath.Join(p.GlobalOptions.CandiDir, "cloud-providers"),
+		DownloadDir:       dDir,
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
 	}
 

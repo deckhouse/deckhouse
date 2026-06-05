@@ -26,9 +26,6 @@ import:
   add: /dhctl-provider-dvp
   to: /validator
   before: setup
-shell:
-  install:
-  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
