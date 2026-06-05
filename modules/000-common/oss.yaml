@@ -45,3 +45,6 @@
     - condition:
         k8s: "1.36"
       version: v3.7.1
+    - condition:
+        k8s: "1.36"
+      version: v3.7.1
