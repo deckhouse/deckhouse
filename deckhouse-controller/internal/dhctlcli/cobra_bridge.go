@@ -33,11 +33,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -150,11 +147,10 @@ func clusterConfigurationStdinFromCluster(opts *options.Options) func() error {
 
 		ctx := context.Background()
 
-		kubeCl, cleanup, err := newKubeClient(ctx, opts)
+		kubeCl, err := newKubeClient(ctx, opts)
 		if err != nil {
 			return err
 		}
-		defer cleanup(ctx)
 
 		secret, err := kubeCl.CoreV1().Secrets(clusterConfigurationSecretNS).
 			Get(ctx, clusterConfigurationSecretName, metav1.GetOptions{})
