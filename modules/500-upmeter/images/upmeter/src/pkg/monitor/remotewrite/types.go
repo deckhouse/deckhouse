@@ -40,6 +40,9 @@ type Spec struct {
 	Config           Config            `json:"config"`
 	AdditionalLabels map[string]string `json:"additionalLabels"`
 	IntervalSeconds  int64             `json:"intervalSeconds"`
+	// MaxSampleAgeSeconds is the upper bound on slot age for export. Slots older than that
+	// are dropped without being pushed. 0 means "use default" (1h).
+	MaxSampleAgeSeconds int64 `json:"maxSampleAgeSeconds"`
 }
 
 // RemoteWrite is the Schema for the upmeterremotewrites.deckhouse.io

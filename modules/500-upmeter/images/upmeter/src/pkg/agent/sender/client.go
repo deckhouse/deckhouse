@@ -69,30 +69,30 @@ func NewClient(config *ClientConfig, access kubernetes.Access) *Client {
 	}
 }
 
-func (c *Client) Send(reqBody []byte) error {
+func (c *Client) Send(reqBody []byte) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(reqBody))
 	if err != nil {
-		return fmt.Errorf("preparing POST request: %v", err)
+		return nil, fmt.Errorf("preparing POST request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", c.UserAgent)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("sending: %v", err)
+		return nil, fmt.Errorf("sending: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading server response body: %v", err)
+		return nil, fmt.Errorf("reading server response body: %v", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected upmeter response: status=%d, body=%q", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected upmeter response: status=%d, body=%q", resp.StatusCode, string(body))
 	}
 
-	return nil
+	return body, nil
 }
 
 func NewHTTPClient(config *ClientConfig, access kubernetes.Access) *http.Client {

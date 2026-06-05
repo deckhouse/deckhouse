@@ -100,6 +100,21 @@ spec:
                   enum:
                     - 30
                     - 300
+                maxSampleAgeSeconds:
+                  type: integer
+                  format: int64
+                  description: |
+                    Drop episodes older than this threshold without trying to push them to the
+                    remote storage. Helps to avoid endless 400 responses from time-series backends
+                    that reject samples outside their acceptance window (e.g. Mimir rejects samples
+                    older than ~1h by default when out-of-order ingestion is disabled).
+
+                    Set this slightly below your backend's acceptance window:
+                      * Grafana Mimir (default): keep `3600` (1h).
+                      * Grafana Cloud or Mimir with `out_of_order_time_window: 2h`: set to `7200`.
+                      * VictoriaMetrics: typically tolerates 24h+, set to `86400` or higher.
+                  default: 3600
+                  minimum: 60
     - name: v1
       served: true
       storage: true

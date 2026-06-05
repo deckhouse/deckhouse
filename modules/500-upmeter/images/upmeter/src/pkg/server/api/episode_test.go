@@ -93,6 +93,10 @@ func (e *exporterMock) Export(string, []*check.Episode, time.Duration) error {
 	return nil
 }
 
+func (e *exporterMock) MaxSampleAge() time.Duration {
+	return 0
+}
+
 func Test_EpisodePayload(t *testing.T) {
 	tests := []struct {
 		name string
