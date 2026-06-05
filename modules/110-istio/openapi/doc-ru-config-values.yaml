@@ -139,7 +139,7 @@ properties:
     properties:
       enabled:
         description: |
-          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, `spec.metrics` (и трассировка при необходимости) в **`Telemetry`** `d8-main`.
+          Режим Telemetry API для метрик: `defaultProviders.metrics`, отключённый `telemetry.v2`, `spec.metrics` (и трассировка при необходимости) в `Telemetry` `d8-main`.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:

@@ -7,6 +7,8 @@ webIfaces:
 
 ## Compatibility table for supported versions
 
+The table below shows Istio versions and their support status in Deckhouse Kubernetes Platform (DKP).
+
 | Istio version | [Kubernetes versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in DKP          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                                          | Supported |
@@ -98,7 +100,7 @@ Kiali is a tool for visualizing your application's service tree. It allows you t
 
 ### Mesh metrics and access logs (Telemetry API)
 
-Metrics for Grafana workloads graphs and quantitative in Kiali on Prometheus scraping metrics `istio_*` series from `istio-proxy`. Starting with Istio&nbsp;1.21+, Istio exposes those using **Telemetry API** mesh defaults instead of legacy `telemetry.v2` filters alone.
+Metrics for Grafana workloads graphs and quantitative in Kiali on Prometheus scraping metrics `istio_*` series from `istio-proxy`. Starting with Istio&nbsp;1.21+, Istio exposes those using Telemetry API mesh defaults instead of legacy `telemetry.v2` filters alone.
 
 Deckhouse configures [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): when `false` you keep the legacy stack; when `true` you switch to `meshConfig.defaultProviders`, bundled `Telemetry` resources, and the [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) template wired into access logs. Step-by-step examples, readiness checks, optional extra `Telemetry` policies, and tracing (`spec.tracing`) are in [Telemetry API for mesh metrics, tracing, and access logs](examples.html#telemetry-api-mesh-observability).
 
@@ -148,8 +150,8 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 ### Details
 
 - Each service pod gets a sidecar container — sidecar-proxy. From the technical standpoint, this container contains two applications:
-  - **Envoy** proxies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
-  - **pilot-agent** is a part of Istio. It keeps the Envoy configurations up to date and has a built-in caching DNS server.
+  - Envoy proxies service traffic. It is responsible for implementing all the Istio functionality, including routing, authentication, authorization, etc.
+  - pilot-agent is a part of Istio. It keeps the Envoy configurations up to date and has a built-in caching DNS server.
 - Each pod has a DNAT configured for incoming and outgoing service requests to the sidecar-proxy. The additional init container is used for that. Thus, the traffic is routed transparently for applications.
 - Since incoming service traffic is redirected to the sidecar-proxy, this also applies to the readiness/liveness traffic. The Kubernetes subsystem that does this doesn't know how to probe containers under Mutual TLS. Thus, all the existing probes are automatically reconfigured to use a dedicated sidecar-proxy port that routes traffic to the application unchanged.
 - You have to configure the Ingress controller to receive requests from outside the cluster:
@@ -184,7 +186,7 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
   - `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);
   - `istio.io/rev=v1x21` — use the specific Istio version for a given namespace;
   - `istio.io/rev=default` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`).
-- The `sidecar.istio.io/inject` (`"true"` or `"false"`) **Pod** annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
+- The `sidecar.istio.io/inject` (`"true"` or `"false"`) pod annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
@@ -364,7 +366,7 @@ The `auth.password` parameter is deprecated.
 
 ## Estimating overhead
 
-Using Istio will incur additional resource costs for both **control-plane** (istiod controller) and **data-plane** (istio-sidecars).
+Using Istio will incur additional resource costs for both control-plane (istiod controller) and data-plane (istio-sidecars).
 
 ### control-plane
 

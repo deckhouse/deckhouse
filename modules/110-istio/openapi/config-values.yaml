@@ -295,7 +295,7 @@ properties:
       enabled:
         type: boolean
         description: |
-          Telemetry API path: wires `defaultProviders.metrics`, turns off `telemetry.v2`, adds `spec.metrics` (and tracing when configured) to **`Telemetry`** `d8-main`.
+          Telemetry API path: wires `defaultProviders.metrics`, turns off `telemetry.v2`, adds `spec.metrics` (and tracing when configured) to `Telemetry` `d8-main`.
         default: false
         x-examples: [true]
   sidecar:
