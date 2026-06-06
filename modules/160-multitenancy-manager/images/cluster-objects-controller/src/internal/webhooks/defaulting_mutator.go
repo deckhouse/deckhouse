@@ -13,10 +13,8 @@ import (
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -27,20 +25,17 @@ var _ http.Handler = &DefaultingMutator{}
 type DefaultingMutator struct {
 	log             logr.Logger
 	cl              client.Client
-	dynamicCl       dynamic.Interface
 	jsonpathFactory jsonpath.Factory
 }
 
 func NewDefaultingMutator(
 	log logr.Logger,
 	client client.Client,
-	dynamicClient dynamic.Interface,
 	jsonpathFactory jsonpath.Factory,
 ) *DefaultingMutator {
 	return &DefaultingMutator{
 		log:             log.WithValues("component", "DefaultingWebhook"),
 		cl:              client,
-		dynamicCl:       dynamicClient,
 		jsonpathFactory: jsonpathFactory,
 	}
 }
@@ -326,19 +321,16 @@ func (m *DefaultingMutator) findDefaultValue(
 		return "", fmt.Errorf("invalid apiVersion in grantedResource: %w", err)
 	}
 
-	gk := schema.GroupKind{
-		Group: gv.Group,
-		Kind:  policy.Spec.GrantedResource.Kind,
-	}
-
-	kindResourceMapping, err := m.cl.RESTMapper().RESTMapping(gk, gv.Version)
-	if err != nil {
-		return "", fmt.Errorf("map kind to resource: %w", err)
-	}
-
-	list, err := m.dynamicCl.Resource(kindResourceMapping.Resource).List(ctx, v1.ListOptions{})
-	if err != nil {
-		return "", fmt.Errorf("search %q for possible default annotations: %w", kindResourceMapping.GroupVersionKind, err)
+	// Read through the cached client (informer-backed) instead of a per-request
+	// uncached List against the API server.
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   gv.Group,
+		Version: gv.Version,
+		Kind:    policy.Spec.GrantedResource.Kind + "List",
+	})
+	if err := m.cl.List(ctx, list); err != nil {
+		return "", fmt.Errorf("search %s for possible default annotations: %w", policy.Spec.GrantedResource.Kind, err)
 	}
 
 	annotatedItems := make([]*unstructured.Unstructured, 0, 1)
@@ -356,8 +348,8 @@ func (m *DefaultingMutator) findDefaultValue(
 		return annotatedItems[0].GetName(), nil
 	default:
 		return "", fmt.Errorf(
-			"multiple %+v resources are annotated with %q: %w",
-			gk,
+			"multiple %s resources are annotated with %q: %w",
+			policy.Spec.GrantedResource.Kind,
 			policy.Spec.GrantedResource.Defaults.AnnotationKey,
 			errMultipleDefaults,
 		)

@@ -304,3 +304,62 @@ To implement validation for resources with a different label (for example, `heri
      labels:
        heritage: my-custom-label
    ```
+
+## Granting cluster-scoped objects to projects
+
+The `cluster-objects-controller` lets cluster operators control which cluster-scoped
+objects (for example `StorageClass`) may be referenced from within project namespaces.
+
+Two resources drive it:
+
+- `ClusterObjectGrantPolicy` — declares which resource is governed and where references
+  to it must be validated (`usageReferences`), plus how its default is discovered.
+- `ClusterObjectGrant` — selects projects (by namespace labels via `projectSelector`) and,
+  per policy, the granted names (`allowed`, `allowedSelector`) and the per-project `default`.
+
+{% raw %}
+
+```yaml
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrantPolicy
+metadata:
+  name: storageclasses
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    defaults:
+      annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+  - apiVersion: v1
+    resource: persistentvolumeclaims
+    fieldPath: $.spec.storageClassName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrant
+metadata:
+  name: production-storage
+spec:
+  projectSelector:
+    matchLabels:
+      environment: production
+  clusterObjectGrantPolicies:
+  - name: storageclasses
+    default: fast-ssd          # overrides the annotation-based default
+    allowed: ["fast-ssd", "standard"]
+    allowedSelector:           # plus any StorageClass with label shared=true
+      matchLabels:
+        shared: "true"
+```
+
+{% endraw %}
+
+Enforcement notes:
+
+- The validating webhook denies creating/updating objects in matched projects whose
+  referenced value is not granted. On update, values already present in the object are
+  grandfathered in, so pre-existing objects are not broken.
+- The defaulting webhook fills in the granted default on creation only.
+- A grant that matches no project, or a project with no matching grant, imposes no
+  restriction.

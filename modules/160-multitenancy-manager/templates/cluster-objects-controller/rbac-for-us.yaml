@@ -10,6 +10,50 @@ metadata:
 automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    heritage: deckhouse
+    module: {{ .Chart.Name }}
+  name: d8:cluster-objects-grants-controller
+rules:
+# Own resources: grants and policies (+ status/finalizers).
+- apiGroups: ["multitenancy.deckhouse.io"]
+  resources:
+  - clusterobjectgrants
+  - clusterobjectgrantpolicies
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["multitenancy.deckhouse.io"]
+  resources:
+  - clusterobjectgrants/status
+  - clusterobjectgrantpolicies/status
+  verbs: ["get", "update", "patch"]
+# Namespaces: matched against projectSelector by the controller and the webhooks.
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+# Cluster-wide read of arbitrary granted resources is required for annotation-based
+# defaulting and allowedSelector resolution. Read-only: no write access anywhere.
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+# Leader election lease.
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Events emitted by the controller.
+- apiGroups: ["", "events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+# Required by the metrics server auth/authz filter (--metrics-secure).
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+- apiGroups: ["authorization.k8s.io"]
+  resources: ["subjectaccessreviews"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
@@ -19,22 +63,8 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: cluster-admin
+  name: d8:cluster-objects-grants-controller
 subjects:
   - kind: ServiceAccount
     name: cluster-objects-controller
     namespace: d8-{{ .Chart.Name }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: d8:cluster-objects-grants-controller
-rules:
-- apiGroups: ["multitenancy.deckhouse.io"]
-  resources: ["clusterobjectgrants"]
-  verbs: ["*"]
-- apiGroups: ["multitenancy.deckhouse.io"]
-  resources:
-  - clusterobjectgrants/status
-  - clusterobjectgrants/finalizers
-  verbs: ["*"]

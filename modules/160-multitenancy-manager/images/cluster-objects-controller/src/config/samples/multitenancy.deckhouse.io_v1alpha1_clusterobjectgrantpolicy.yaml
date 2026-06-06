@@ -1,9 +1,17 @@
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterObjectGrantPolicy
 metadata:
-  labels:
-    app.kubernetes.io/name: src
-    app.kubernetes.io/managed-by: kustomize
-  name: clusterobjectgrantpolicy-sample
+  name: storageclasses
 spec:
-  # TODO(user): Add fields here
+  # The cluster-scoped resource whose usage is governed by this policy.
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    defaults:
+      # An object annotated with this key is treated as the cluster-wide default.
+      annotationKey: storageclass.kubernetes.io/is-default-class
+  # Where references to the granted resource appear and must be validated.
+  usageReferences:
+  - apiVersion: v1
+    resource: persistentvolumeclaims
+    fieldPath: $.spec.storageClassName

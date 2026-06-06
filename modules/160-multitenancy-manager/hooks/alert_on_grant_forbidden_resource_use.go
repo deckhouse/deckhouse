@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/restmapper"
 )
 
 const (
@@ -49,9 +50,10 @@ type grant struct {
 }
 
 type policyReference struct {
-	Name    string   `json:"name"`
-	Default string   `json:"default"`
-	Allowed []string `json:"allowed"`
+	Name            string            `json:"name"`
+	Default         string            `json:"default"`
+	Allowed         []string          `json:"allowed"`
+	AllowedSelector *v1.LabelSelector `json:"allowedSelector"`
 }
 
 type violation struct {
@@ -69,6 +71,10 @@ type usageReference struct {
 
 type clusterObjectGrantPolicy struct {
 	Spec struct {
+		GrantedResource struct {
+			APIVersion string `json:"apiVersion"`
+			Kind       string `json:"kind"`
+		} `json:"grantedResource"`
 		UsageReferences []usageReference `json:"usageReferences"`
 	} `json:"spec"`
 }
@@ -227,6 +233,65 @@ func matchingNamespaces(ctx context.Context, kube k8s.Client, sel *v1.LabelSelec
 	return names, nil
 }
 
+// grantPolicyWhitelist mirrors the webhook's whitelist construction: explicit Allowed
+// names, the Default, plus the names of the policy's granted resource objects matching
+// AllowedSelector (union).
+func grantPolicyWhitelist(ctx context.Context, kube k8s.Client, policyRef policyReference, policy *clusterObjectGrantPolicy) ([]string, error) {
+	whitelist := slices.Clone(policyRef.Allowed)
+	if policyRef.Default != "" && !slices.Contains(whitelist, policyRef.Default) {
+		whitelist = append(whitelist, policyRef.Default)
+	}
+
+	if policyRef.AllowedSelector == nil {
+		return whitelist, nil
+	}
+
+	selector, err := v1.LabelSelectorAsSelector(policyRef.AllowedSelector)
+	if err != nil {
+		return nil, fmt.Errorf("invalid allowedSelector: %w", err)
+	}
+
+	gvr, err := grantedResourceGVR(kube, policy.Spec.GrantedResource.APIVersion, policy.Spec.GrantedResource.Kind)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := kube.Dynamic().Resource(gvr).List(ctx, v1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, fmt.Errorf("list granted resource %s: %w", policy.Spec.GrantedResource.Kind, err)
+	}
+	for i := range list.Items {
+		name := list.Items[i].GetName()
+		if !slices.Contains(whitelist, name) {
+			whitelist = append(whitelist, name)
+		}
+	}
+
+	return whitelist, nil
+}
+
+// grantedResourceGVR resolves the GroupVersionResource of a granted resource (given by
+// apiVersion + kind) using the cluster's discovery information.
+func grantedResourceGVR(kube k8s.Client, apiVersion, kind string) (schema.GroupVersionResource, error) {
+	gv, err := schema.ParseGroupVersion(apiVersion)
+	if err != nil {
+		return schema.GroupVersionResource{}, fmt.Errorf("parse grantedResource apiVersion %q: %w", apiVersion, err)
+	}
+
+	groupResources, err := restmapper.GetAPIGroupResources(kube.Discovery())
+	if err != nil {
+		return schema.GroupVersionResource{}, fmt.Errorf("discover api resources: %w", err)
+	}
+
+	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: gv.Group, Kind: kind}, gv.Version)
+	if err != nil {
+		return schema.GroupVersionResource{}, fmt.Errorf("map %s/%s to resource: %w", apiVersion, kind, err)
+	}
+
+	return mapping.Resource, nil
+}
+
 func validateGrantNotViolated(ctx context.Context, g *grant, kubeClient k8s.Client, log go_hook.Logger) ([]violation, error) {
 	projects, err := matchingNamespaces(ctx, kubeClient, g.Spec.ProjectSelector)
 	if err != nil {
@@ -255,12 +320,12 @@ func validateGrantNotViolated(ctx context.Context, g *grant, kubeClient k8s.Clie
 			return nil, fmt.Errorf("convert ClusterObjectGrantPolicy %s: %w", policyRef.Name, err)
 		}
 
-		// Match the admission webhook semantics: the default value is always
-		// considered allowed, otherwise objects admitted (and auto-defaulted) by the
-		// webhook would be reported here as false-positive violations.
-		whitelist := slices.Clone(policyRef.Allowed)
-		if policyRef.Default != "" && !slices.Contains(whitelist, policyRef.Default) {
-			whitelist = append(whitelist, policyRef.Default)
+		// Match the admission webhook semantics: the default value and any objects
+		// matching allowedSelector are considered allowed, otherwise objects admitted
+		// by the webhook would be reported here as false-positive violations.
+		whitelist, err := grantPolicyWhitelist(ctx, kubeClient, policyRef, policy)
+		if err != nil {
+			return nil, fmt.Errorf("build whitelist for policy %s: %w", policyRef.Name, err)
 		}
 
 		for _, ref := range policy.Spec.UsageReferences {

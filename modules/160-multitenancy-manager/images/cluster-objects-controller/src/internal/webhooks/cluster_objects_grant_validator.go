@@ -136,10 +136,11 @@ func (v *ClusterObjectGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.R
 					continue
 				}
 
-				whitelist := slices.Clone(ap.Allowed)
-				// Make sure the default is in the whitelist just in case.
-				if ap.Default != "" && !slices.Contains(whitelist, ap.Default) {
-					whitelist = append(whitelist, ap.Default)
+				whitelist, err := policyWhitelist(r.Context(), v.cl, ap, policy)
+				if err != nil {
+					log.Error(err, "Cannot build whitelist", "policy", ap.Name)
+					http.Error(w, "cannot build whitelist", http.StatusInternalServerError)
+					return
 				}
 				rules = append(rules, fieldRule{path: ref.FieldPath, whitelist: whitelist})
 			}
@@ -152,6 +153,18 @@ func (v *ClusterObjectGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.R
 		log.Error(err, "Invalid object")
 		http.Error(w, "invalid object", http.StatusBadRequest)
 		return
+	}
+
+	// On UPDATE, validation is diff-based: a value that already existed in the old
+	// object is grandfathered in. This avoids blocking updates to legacy objects that
+	// predate the policy (and whose field this update does not change).
+	var oldObj map[string]any
+	if review.Request.Operation == admissionv1.Update && len(review.Request.OldObject.Raw) > 0 {
+		if err := json.Unmarshal(review.Request.OldObject.Raw, &oldObj); err != nil {
+			log.Error(err, "Invalid old object")
+			http.Error(w, "invalid old object", http.StatusBadRequest)
+			return
+		}
 	}
 
 	for _, rule := range rules {
@@ -167,17 +180,35 @@ func (v *ClusterObjectGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.R
 			continue
 		}
 
+		// Values already present in the old object are exempt (diff-based UPDATE).
+		oldValues := make(map[string]struct{})
+		if oldObj != nil {
+			for _, ov := range parsedPath.Select(oldObj) {
+				if s, ok := ov.(string); ok {
+					oldValues[s] = struct{}{}
+				}
+			}
+		}
+
 		// Validate every matched value. A JSONPath may legitimately match more
 		// than one node (e.g. $.spec.containers[*].image); skipping multi-match
 		// results would silently bypass the whitelist.
 		for _, fv := range fieldValues {
 			s, ok := fv.(string)
-			if !ok || !slices.Contains(rule.whitelist, s) {
-				if err = v.deny(&review, w); err != nil {
-					log.Error(err, "admission response failed")
+			if ok {
+				if slices.Contains(rule.whitelist, s) {
+					continue
 				}
-				return
+				if _, unchanged := oldValues[s]; unchanged {
+					continue
+				}
 			}
+			// Non-string value, or a string that is neither whitelisted nor
+			// pre-existing in the old object.
+			if err = v.deny(&review, w); err != nil {
+				log.Error(err, "admission response failed")
+			}
+			return
 		}
 	}
 

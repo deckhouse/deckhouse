@@ -107,6 +107,7 @@ type ClusterObjectGrantPolicyStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // ClusterObjectGrantPolicy is the Schema for the clusterobjectgrantpolicies API
 type ClusterObjectGrantPolicy struct {

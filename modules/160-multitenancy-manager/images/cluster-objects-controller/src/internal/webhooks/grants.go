@@ -3,13 +3,16 @@ package webhooks
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"controller/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -53,4 +56,53 @@ func applicableGrants(
 	}
 
 	return out, nil
+}
+
+// policyWhitelist builds the set of granted resource names for an applicable policy:
+// the explicit Allowed names, the Default, plus every name of the policy's granted
+// resource whose labels match AllowedSelector (union semantics). Reads go through the
+// (cached) controller client.
+func policyWhitelist(
+	ctx context.Context,
+	cl client.Client,
+	ap v1alpha1.ApplicablePolicy,
+	policy *v1alpha1.ClusterObjectGrantPolicy,
+) ([]string, error) {
+	whitelist := slices.Clone(ap.Allowed)
+	if ap.Default != "" && !slices.Contains(whitelist, ap.Default) {
+		whitelist = append(whitelist, ap.Default)
+	}
+
+	if ap.AllowedSelector == nil {
+		return whitelist, nil
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(ap.AllowedSelector)
+	if err != nil {
+		return nil, fmt.Errorf("invalid allowedSelector: %w", err)
+	}
+
+	gv, err := schema.ParseGroupVersion(policy.Spec.GrantedResource.APIVersion)
+	if err != nil {
+		return nil, fmt.Errorf("parse grantedResource apiVersion %q: %w", policy.Spec.GrantedResource.APIVersion, err)
+	}
+
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   gv.Group,
+		Version: gv.Version,
+		Kind:    policy.Spec.GrantedResource.Kind + "List",
+	})
+	if err := cl.List(ctx, list, client.MatchingLabelsSelector{Selector: selector}); err != nil {
+		return nil, fmt.Errorf("list granted resource %s: %w", policy.Spec.GrantedResource.Kind, err)
+	}
+
+	for i := range list.Items {
+		name := list.Items[i].GetName()
+		if !slices.Contains(whitelist, name) {
+			whitelist = append(whitelist, name)
+		}
+	}
+
+	return whitelist, nil
 }

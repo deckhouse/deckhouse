@@ -305,3 +305,62 @@ data:
      labels:
        heritage: my-custom-label
    ```
+
+## Выдача кластерных объектов проектам
+
+Контроллер `cluster-objects-controller` позволяет операторам кластера управлять тем,
+какие кластерные объекты (например, `StorageClass`) можно использовать из namespace’ов
+проектов.
+
+Используются два ресурса:
+
+- `ClusterObjectGrantPolicy` — описывает контролируемый ресурс и места, где ссылки на него
+  должны проверяться (`usageReferences`), а также способ определения значения по умолчанию.
+- `ClusterObjectGrant` — выбирает проекты (по меткам namespace через `projectSelector`) и для
+  каждой политики задаёт разрешённые имена (`allowed`, `allowedSelector`) и `default` для проекта.
+
+{% raw %}
+
+```yaml
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrantPolicy
+metadata:
+  name: storageclasses
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    defaults:
+      annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+  - apiVersion: v1
+    resource: persistentvolumeclaims
+    fieldPath: $.spec.storageClassName
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrant
+metadata:
+  name: production-storage
+spec:
+  projectSelector:
+    matchLabels:
+      environment: production
+  clusterObjectGrantPolicies:
+  - name: storageclasses
+    default: fast-ssd          # перекрывает дефолт по аннотации
+    allowed: ["fast-ssd", "standard"]
+    allowedSelector:           # плюс любой StorageClass с меткой shared=true
+      matchLabels:
+        shared: "true"
+```
+
+{% endraw %}
+
+Особенности применения:
+
+- Валидирующий вебхук запрещает создание/обновление объектов в подходящих проектах, если
+  используемое значение не разрешено. При обновлении значения, уже присутствующие в объекте,
+  не блокируются — существующие объекты не ломаются.
+- Дефолтящий вебхук подставляет значение по умолчанию только при создании.
+- Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.
