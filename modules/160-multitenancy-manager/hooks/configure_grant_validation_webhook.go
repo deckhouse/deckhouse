@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -33,12 +34,22 @@ import (
 
 const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
 
+// projectNamespaceSelector restricts the webhook to namespaces managed by the
+// multitenancy-manager (i.e. project namespaces). Without it, with
+// failurePolicy: Fail, an unavailable controller would block create/update of
+// the configured resources in every namespace — including system ones — which
+// can deadlock the cluster. The in-handler IsSystem check remains as
+// defense-in-depth.
+var projectNamespaceSelector = &v1.LabelSelector{
+	MatchLabels: map[string]string{"heritage": "multitenancy-manager"},
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "policies",
-			ApiVersion: "projects.deckhouse.io/v1alpha1",
+			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
 			Kind:       "ClusterObjectGrantPolicy",
 			FilterFunc: filterPolicies,
 		},
@@ -65,12 +76,16 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	switch {
 	case k8serrors.IsNotFound(err):
 		caBundle := input.Values.Get("multitenancyManager.internal.clusterObjectsControllerWebhookCert.ca").String()
+		if caBundle == "" {
+			return errors.New("webhook certificate is not issued yet")
+		}
+
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: validatingWebhookConfigurationName},
 			Webhooks: []admissionregistrationv1.ValidatingWebhook{
 				{
-					Name: fmt.Sprintf("%s.projects.deckhouse.io", validatingWebhookConfigurationName),
+					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "cluster-objects-controller",
@@ -80,9 +95,11 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 						},
 						CABundle: []byte(caBundle),
 					},
+					NamespaceSelector:       projectNamespaceSelector,
 					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1"},
 					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+					TimeoutSeconds:          ptr.To(int32(10)),
 					Rules:                   []admissionregistrationv1.RuleWithOperations{},
 				},
 			},
@@ -92,6 +109,7 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	}
 
 	whRules := make([]admissionregistrationv1.RuleWithOperations, 0)
+	seenRules := make(map[string]struct{})
 	snaps := input.Snapshots.Get("policies")
 	for _, snap := range snaps {
 		policy := &unstructured.Unstructured{}
@@ -99,15 +117,24 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 			return fmt.Errorf("unmarshal snapshot: %w", err)
 		}
 
-		// Error is ignored as openapi gurantees its a slice
+		// Error is ignored as openapi guarantees it is a slice.
 		usageRefs, found, _ := unstructured.NestedSlice(policy.Object, "spec", "usageReferences")
 		if !found {
 			continue
 		}
 
 		for _, ref := range usageRefs {
-			apiVersion := ref.(map[string]any)["apiVersion"].(string)
-			res := ref.(map[string]any)["resource"].(string)
+			refMap, ok := ref.(map[string]any)
+			if !ok {
+				continue
+			}
+			apiVersion, _ := refMap["apiVersion"].(string)
+			res, _ := refMap["resource"].(string)
+			if apiVersion == "" || res == "" {
+				input.Logger.InfoContext(ctx, "Skipping usageReference with empty apiVersion/resource",
+					"policy", policy.GetName())
+				continue
+			}
 
 			gv, err := schema.ParseGroupVersion(apiVersion)
 			if err != nil {
@@ -120,6 +147,13 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 				continue
 			}
 
+			// Deduplicate rules: several policies may target the same group/resource.
+			ruleKey := gv.Group + "/" + res
+			if _, dup := seenRules[ruleKey]; dup {
+				continue
+			}
+			seenRules[ruleKey] = struct{}{}
+
 			whRules = append(whRules, admissionregistrationv1.RuleWithOperations{
 				Rule: admissionregistrationv1.Rule{
 					APIGroups:   []string{gv.Group},
@@ -131,11 +165,13 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 					admissionregistrationv1.Create, admissionregistrationv1.Update,
 				},
 			})
-
 		}
 	}
 
 	whConfig.Webhooks[0].Rules = whRules
+	// Reconcile selector/timeout on existing configurations too (e.g. upgrades).
+	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
+	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
 	} else {

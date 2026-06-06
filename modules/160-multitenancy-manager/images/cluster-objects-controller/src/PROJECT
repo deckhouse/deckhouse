@@ -3,7 +3,7 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: 4.11.1
-domain: projects.deckhouse.io
+domain: deckhouse.io
 layout:
 - go.kubebuilder.io/v4
 projectName: src
@@ -12,17 +12,17 @@ resources:
 - api:
     crdVersion: v1
   controller: true
-  domain: projects.deckhouse.io
-  group: projects.deckhouse.io
+  domain: deckhouse.io
+  group: multitenancy
   kind: ClusterObjectGrantPolicy
   path: controller/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
-  domain: projects.deckhouse.io
-  group: projects.deckhouse.io
-  kind: ClusterObjectsGrant
+  domain: deckhouse.io
+  group: multitenancy
+  kind: ClusterObjectGrant
   path: controller/api/v1alpha1
   version: v1alpha1
 version: "3"

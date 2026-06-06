@@ -1,4 +1,4 @@
-apiVersion: projects.deckhouse.io.projects.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterObjectGrantPolicy
 metadata:
   labels:

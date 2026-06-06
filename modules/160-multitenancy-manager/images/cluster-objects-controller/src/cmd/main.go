@@ -26,8 +26,7 @@ import (
 	"controller/internal/readyz"
 	"controller/internal/webhooks"
 
-	projectsv1a1 "controller/api/v1alpha1"
-	projectsv1a2 "controller/internal/extapi/deckhouse.io/v1alpha2"
+	grantsv1a1 "controller/api/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -51,8 +50,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(projectsv1a1.AddToScheme(scheme))
-	utilruntime.Must(projectsv1a2.AddToScheme(scheme))
+	utilruntime.Must(grantsv1a1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -168,7 +166,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "2e318131.projects.deckhouse.io",
+		LeaderElectionID:       "2e318131.multitenancy.deckhouse.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -186,11 +184,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controllers.ClusterObjectGrantLifecycleController{
+	if err := (&controllers.ClusterObjectGrantReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterObjectGrantLifecycleController")
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterObjectGrant")
 		os.Exit(1)
 	}
 	// nolint:goconst

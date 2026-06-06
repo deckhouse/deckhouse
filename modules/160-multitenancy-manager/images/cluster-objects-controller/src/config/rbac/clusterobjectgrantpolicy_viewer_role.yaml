@@ -1,7 +1,7 @@
 # This rule is not used by the project src itself.
 # It is provided to allow the cluster admin to help manage permissions for users.
 #
-# Grants read-only access to projects.deckhouse.io.projects.deckhouse.io resources.
+# Grants read-only access to multitenancy.deckhouse.io resources.
 # This role is intended for users who need visibility into these resources
 # without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
 
@@ -14,7 +14,7 @@ metadata:
   name: clusterobjectgrantpolicy-viewer-role
 rules:
 - apiGroups:
-  - projects.deckhouse.io.projects.deckhouse.io
+  - multitenancy.deckhouse.io
   resources:
   - clusterobjectgrantpolicies
   verbs:
@@ -22,7 +22,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - projects.deckhouse.io.projects.deckhouse.io
+  - multitenancy.deckhouse.io
   resources:
   - clusterobjectgrantpolicies/status
   verbs:

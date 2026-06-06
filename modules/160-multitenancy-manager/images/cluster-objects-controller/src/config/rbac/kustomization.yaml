@@ -22,9 +22,9 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the src itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- clusterobjectsgrant_admin_role.yaml
-- clusterobjectsgrant_editor_role.yaml
-- clusterobjectsgrant_viewer_role.yaml
+- clusterobjectgrant_admin_role.yaml
+- clusterobjectgrant_editor_role.yaml
+- clusterobjectgrant_viewer_role.yaml
 - clusterobjectgrantpolicy_admin_role.yaml
 - clusterobjectgrantpolicy_editor_role.yaml
 - clusterobjectgrantpolicy_viewer_role.yaml

@@ -5,10 +5,10 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - projects.deckhouse.io.projects.deckhouse.io
+  - multitenancy.deckhouse.io
   resources:
   - clusterobjectgrantpolicies
-  - clusterobjectsgrants
+  - clusterobjectgrants
   verbs:
   - create
   - delete
@@ -18,17 +18,17 @@ rules:
   - update
   - watch
 - apiGroups:
-  - projects.deckhouse.io.projects.deckhouse.io
+  - multitenancy.deckhouse.io
   resources:
   - clusterobjectgrantpolicies/finalizers
-  - clusterobjectsgrants/finalizers
+  - clusterobjectgrants/finalizers
   verbs:
   - update
 - apiGroups:
-  - projects.deckhouse.io.projects.deckhouse.io
+  - multitenancy.deckhouse.io
   resources:
   - clusterobjectgrantpolicies/status
-  - clusterobjectsgrants/status
+  - clusterobjectgrants/status
   verbs:
   - get
   - patch

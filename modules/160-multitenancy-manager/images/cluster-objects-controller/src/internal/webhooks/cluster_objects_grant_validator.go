@@ -1,7 +1,6 @@
 package webhooks
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -23,36 +23,50 @@ import (
 
 var ErrNoPolicyExists = errors.New("no ClusterObjectGrantPolicy exist for resource")
 
-var _ http.Handler = &ClusterObjectsGrantValidator{}
+var _ http.Handler = &ClusterObjectGrantValidator{}
 
-type ClusterObjectsGrantValidator struct {
+type ClusterObjectGrantValidator struct {
 	log             logr.Logger
 	cl              client.Client
 	jsonpathFactory jsonpath.Factory
+}
+
+// fieldRule is a single (JSONPath, whitelist) constraint to enforce on the
+// incoming object. Several policies may constrain the same field path with
+// different whitelists; each rule is evaluated independently so that no
+// constraint is lost (unlike a map keyed solely by field path).
+type fieldRule struct {
+	path      string
+	whitelist []string
 }
 
 func NewClusterResourceGrantValidator(
 	log logr.Logger,
 	client client.Client,
 	jsonpathFactory jsonpath.Factory,
-) *ClusterObjectsGrantValidator {
-	return &ClusterObjectsGrantValidator{
+) *ClusterObjectGrantValidator {
+	return &ClusterObjectGrantValidator{
 		log:             log.WithValues("component", "ClusterResourceGrantValidator"),
 		cl:              client,
 		jsonpathFactory: jsonpathFactory,
 	}
 }
 
-func (v *ClusterObjectsGrantValidator) InstallInto(srv webhook.Server) {
+func (v *ClusterObjectGrantValidator) InstallInto(srv webhook.Server) {
 	srv.Register("/is-granted", v)
 }
 
-func (v *ClusterObjectsGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (v *ClusterObjectGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	review := admissionv1.AdmissionReview{}
 	err := v.readAdmissionReview(r, &review)
 	if err != nil {
 		v.log.Error(err, "Invalid AdmissionReview")
 		http.Error(w, fmt.Sprintf("invalid AdmissionReview: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if review.Request == nil {
+		v.log.Error(nil, "AdmissionReview without request")
+		http.Error(w, "AdmissionReview without request", http.StatusBadRequest)
 		return
 	}
 
@@ -64,76 +78,70 @@ func (v *ClusterObjectsGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.
 
 	log.Info("Got AdmissionReview")
 
+	// System namespaces and subresources are out of scope.
 	if namespaces.IsSystem(review.Request.Namespace) || review.Request.SubResource != "" {
 		if err = v.allow(&review, w); err != nil {
 			log.Error(err, "Admission response failed")
-			return
 		}
 		return
 	}
 
 	if len(review.Request.Object.Raw) == 0 {
-		log.Error(err, "Missing object in AdmissionRequest")
+		log.Error(nil, "Missing object in AdmissionRequest")
 		http.Error(w, "missing object in AdmissionRequest", http.StatusBadRequest)
 		return
 	}
 
-	// Subresources are out of scope.
-	if review.Request.SubResource != "" {
+	grants, err := applicableGrants(r.Context(), v.cl, review.Request.Namespace)
+	if err != nil {
+		log.Error(err, "Cannot resolve applicable grants")
+		http.Error(w, "cannot resolve applicable grants", http.StatusInternalServerError)
+		return
+	}
+	if len(grants) == 0 {
+		// No grant applies to this project, nothing to enforce. This must not block
+		// admission, especially under failurePolicy: Fail.
 		if err = v.allow(&review, w); err != nil {
 			log.Error(err, "Admission response failed")
-			return
 		}
 		return
 	}
 
-	grant, err := v.grantByProjectName(r.Context(), review.Request.Namespace)
-	if err != nil {
-		log.Error(err, "Cannot find project grants")
-		http.Error(w, "cannot find project grants", http.StatusInternalServerError)
-		return
-	}
-	policies, err := v.policiesForGrant(r.Context(), grant)
-	if err != nil {
-		log.Error(err, "Cannot list policies")
-		http.Error(w, "cannot list policies", http.StatusInternalServerError)
-		return
-	}
-	if len(policies) == 0 {
-		// Grant is empty or contains only invalid references to policies, nothing to do
-		if err = v.allow(&review, w); err != nil {
-			log.Error(err, "Admission response failed")
-			return
-		}
-		return
-	}
-
-	fieldsAndValuesToValidate := make(map[string][]string) // JSONPath to value whitelist
-	for _, p := range policies {
-		for _, ref := range p.Spec.UsageReferences {
-			gv, err := schema.ParseGroupVersion(ref.APIVersion)
-			if err != nil {
-				log.Error(err, "Cannot parse apiVersion field",
-					"field_value", ref.APIVersion,
-					"usage_reference", ref,
-				)
-				http.Error(w, "cannot parse apiVersion: '"+ref.APIVersion+"'", http.StatusInternalServerError)
+	rules := make([]fieldRule, 0)
+	for _, grant := range grants {
+		for _, ap := range grant.Spec.Policies {
+			policy := &v1alpha1.ClusterObjectGrantPolicy{}
+			if err := v.cl.Get(r.Context(), client.ObjectKey{Name: ap.Name}, policy); err != nil {
+				if k8serrors.IsNotFound(err) {
+					// Grant references a policy that does not exist; skip it.
+					continue
+				}
+				log.Error(err, "Cannot get policy", "policy", ap.Name)
+				http.Error(w, "cannot get policy", http.StatusInternalServerError)
 				return
-
 			}
 
-			if gv.Group == review.Request.Kind.Group && ref.Resource == review.Request.Resource.Resource {
-				for _, g := range grant.Spec.Policies {
-					if g.Name == p.Name {
-						whitelist := g.Allowed
-
-						// Make sure that default is in whitelist just in case
-						if g.Default != "" && !slices.Contains(g.Allowed, g.Default) {
-							whitelist = append(whitelist, g.Default)
-						}
-						fieldsAndValuesToValidate[ref.FieldPath] = whitelist
-					}
+			for _, ref := range policy.Spec.UsageReferences {
+				gv, err := schema.ParseGroupVersion(ref.APIVersion)
+				if err != nil {
+					log.Error(err, "Cannot parse apiVersion field",
+						"field_value", ref.APIVersion,
+						"usage_reference", ref,
+					)
+					http.Error(w, "cannot parse apiVersion: '"+ref.APIVersion+"'", http.StatusInternalServerError)
+					return
 				}
+
+				if gv.Group != review.Request.Resource.Group || ref.Resource != review.Request.Resource.Resource {
+					continue
+				}
+
+				whitelist := slices.Clone(ap.Allowed)
+				// Make sure the default is in the whitelist just in case.
+				if ap.Default != "" && !slices.Contains(whitelist, ap.Default) {
+					whitelist = append(whitelist, ap.Default)
+				}
+				rules = append(rules, fieldRule{path: ref.FieldPath, whitelist: whitelist})
 			}
 		}
 	}
@@ -146,40 +154,39 @@ func (v *ClusterObjectsGrantValidator) ServeHTTP(w http.ResponseWriter, r *http.
 		return
 	}
 
-	for jsonPath, whitelist := range fieldsAndValuesToValidate {
-		parsedPath, err := v.jsonpathFactory.Path(jsonPath)
+	for _, rule := range rules {
+		parsedPath, err := v.jsonpathFactory.Path(rule.path)
 		if err != nil {
-			log.Error(err, "invalid JSONPath", "JSONPath", jsonPath)
+			log.Error(err, "invalid JSONPath", "JSONPath", rule.path)
 			continue
 		}
 
 		fieldValues := parsedPath.Select(obj.Object)
-		switch {
-		case len(fieldValues) == 0:
-			log.Info("Skipping non-existing field reference", "expr", jsonPath)
-			continue
-		case len(fieldValues) > 1:
-			log.Info("Skipping ambiguous field reference", "expr", jsonPath)
+		if len(fieldValues) == 0 {
+			log.Info("Skipping non-existing field reference", "expr", rule.path)
 			continue
 		}
 
-		if !slices.Contains(whitelist, fieldValues[0].(string)) {
-			err = v.deny(&review, w)
-			if err != nil {
-				log.Error(err, "admission response failed")
+		// Validate every matched value. A JSONPath may legitimately match more
+		// than one node (e.g. $.spec.containers[*].image); skipping multi-match
+		// results would silently bypass the whitelist.
+		for _, fv := range fieldValues {
+			s, ok := fv.(string)
+			if !ok || !slices.Contains(rule.whitelist, s) {
+				if err = v.deny(&review, w); err != nil {
+					log.Error(err, "admission response failed")
+				}
 				return
 			}
-			return
 		}
 	}
 
-	err = v.allow(&review, w)
-	if err != nil {
+	if err = v.allow(&review, w); err != nil {
 		log.Error(err, "admission response failed")
 	}
 }
 
-func (v *ClusterObjectsGrantValidator) readAdmissionReview(
+func (v *ClusterObjectGrantValidator) readAdmissionReview(
 	r *http.Request,
 	review *admissionv1.AdmissionReview,
 ) error {
@@ -203,51 +210,7 @@ func (v *ClusterObjectsGrantValidator) readAdmissionReview(
 	return nil
 }
 
-func (v *ClusterObjectsGrantValidator) policiesForGrant(
-	ctx context.Context,
-	grant *v1alpha1.ClusterObjectsGrant,
-) ([]*v1alpha1.ClusterObjectGrantPolicy, error) {
-	if len(grant.Spec.Policies) == 0 {
-		return []*v1alpha1.ClusterObjectGrantPolicy{}, nil
-	}
-
-	grantPoliciesIndex := make(map[string]struct{})
-	for _, p := range grant.Spec.Policies {
-		grantPoliciesIndex[p.Name] = struct{}{}
-	}
-
-	policiesList := &v1alpha1.ClusterObjectGrantPolicyList{}
-	v.cl.List(ctx, policiesList)
-
-	grantPolicies := make([]*v1alpha1.ClusterObjectGrantPolicy, 0)
-	for _, policy := range policiesList.Items {
-		_, found := grantPoliciesIndex[policy.Name]
-		if !found {
-			continue
-		}
-
-		grantPolicies = append(grantPolicies, policy.DeepCopy())
-	}
-
-	return grantPolicies, nil
-}
-
-func (v *ClusterObjectsGrantValidator) grantByProjectName(
-	ctx context.Context,
-	projectName string,
-) (*v1alpha1.ClusterObjectsGrant, error) {
-	grant := &v1alpha1.ClusterObjectsGrant{}
-
-	err := v.cl.Get(ctx, client.ObjectKey{Name: projectName}, grant)
-	if err != nil {
-		v.log.Error(err, "Cannot get grant for project", "project_name", projectName)
-		return nil, fmt.Errorf("get grant: %w", err)
-	}
-
-	return grant, nil
-}
-
-func (v *ClusterObjectsGrantValidator) allow(
+func (v *ClusterObjectGrantValidator) allow(
 	review *admissionv1.AdmissionReview,
 	w http.ResponseWriter,
 ) error {
@@ -271,7 +234,7 @@ func (v *ClusterObjectsGrantValidator) allow(
 	return nil
 }
 
-func (v *ClusterObjectsGrantValidator) deny(
+func (v *ClusterObjectGrantValidator) deny(
 	review *admissionv1.AdmissionReview,
 	w http.ResponseWriter,
 ) error {

@@ -14,7 +14,7 @@ import (
 func ProbeWithInformerCacheStatus(c cache.Cache) func(*http.Request) error {
 	return func(req *http.Request) error {
 		ctx := req.Context()
-		grantInformer, err := c.GetInformer(ctx, &v1alpha1.ClusterObjectsGrant{})
+		grantInformer, err := c.GetInformer(ctx, &v1alpha1.ClusterObjectGrant{})
 		if err != nil {
 			return fmt.Errorf("get grants informer: %w", err)
 		}

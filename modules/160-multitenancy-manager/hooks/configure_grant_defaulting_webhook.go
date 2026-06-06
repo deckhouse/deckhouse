@@ -43,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "policies",
-			ApiVersion: "projects.deckhouse.io/v1alpha1",
+			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
 			Kind:       "ClusterObjectGrantPolicy",
 			FilterFunc: filterPolicies,
 		},
@@ -73,7 +73,7 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 			ObjectMeta: v1.ObjectMeta{Name: mutatingWebhookConfigurationName},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				{
-					Name: fmt.Sprintf("%s.projects.deckhouse.io", mutatingWebhookConfigurationName),
+					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", mutatingWebhookConfigurationName),
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "cluster-objects-controller",
@@ -83,9 +83,11 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 						},
 						CABundle: []byte(caBundle),
 					},
+					NamespaceSelector:       projectNamespaceSelector,
 					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
 					AdmissionReviewVersions: []string{"v1"},
 					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+					TimeoutSeconds:          ptr.To(int32(10)),
 					Rules:                   []admissionregistrationv1.RuleWithOperations{},
 				},
 			},
@@ -95,6 +97,7 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	}
 
 	whRules := make([]admissionregistrationv1.RuleWithOperations, 0)
+	seenRules := make(map[string]struct{})
 	snaps := input.Snapshots.Get("policies")
 	for _, snap := range snaps {
 		policy := &unstructured.Unstructured{}
@@ -102,15 +105,24 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 			return fmt.Errorf("unmarshal snapshot: %w", err)
 		}
 
-		// Error is ignored as openapi gurantees its a slice
+		// Error is ignored as openapi guarantees it is a slice.
 		usageRefs, found, _ := unstructured.NestedSlice(policy.Object, "spec", "usageReferences")
 		if !found {
 			continue
 		}
 
 		for _, ref := range usageRefs {
-			apiVersion := ref.(map[string]any)["apiVersion"].(string)
-			res := ref.(map[string]any)["resource"].(string)
+			refMap, ok := ref.(map[string]any)
+			if !ok {
+				continue
+			}
+			apiVersion, _ := refMap["apiVersion"].(string)
+			res, _ := refMap["resource"].(string)
+			if apiVersion == "" || res == "" {
+				input.Logger.InfoContext(ctx, "Skipping usageReference with empty apiVersion/resource",
+					"policy", policy.GetName())
+				continue
+			}
 
 			gv, err := schema.ParseGroupVersion(apiVersion)
 			if err != nil {
@@ -123,6 +135,13 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 				continue
 			}
 
+			// Deduplicate rules: several policies may target the same group/resource.
+			ruleKey := gv.Group + "/" + res
+			if _, dup := seenRules[ruleKey]; dup {
+				continue
+			}
+			seenRules[ruleKey] = struct{}{}
+
 			whRules = append(whRules, admissionregistrationv1.RuleWithOperations{
 				Rule: admissionregistrationv1.Rule{
 					APIGroups:   []string{gv.Group},
@@ -134,11 +153,13 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 					admissionregistrationv1.Create, admissionregistrationv1.Update,
 				},
 			})
-
 		}
 	}
 
 	whConfig.Webhooks[0].Rules = whRules
+	// Reconcile selector/timeout on existing configurations too (e.g. upgrades).
+	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
+	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
 	} else {

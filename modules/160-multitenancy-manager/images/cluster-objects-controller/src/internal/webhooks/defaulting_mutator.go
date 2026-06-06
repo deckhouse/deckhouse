@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"controller/api/v1alpha1"
 	"controller/internal/jsonpath"
@@ -116,9 +115,20 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 		return nil, fmt.Errorf("failed to decode incoming object: %w", err)
 	}
 
-	grant, err := m.grantByProjectName(ctx, req.Namespace)
+	// Defaulting only applies on creation: do not re-inject a default on update, which
+	// would override a user intentionally clearing the field.
+	if req.Operation != admissionv1.Create {
+		return &admissionv1.AdmissionResponse{Allowed: true}, nil
+	}
+
+	grants, err := applicableGrants(ctx, m.cl, req.Namespace)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read project grants for %s: %w", req.Namespace, err)
+		return nil, fmt.Errorf("resolve applicable grants for %s: %w", req.Namespace, err)
+	}
+
+	var policyRefs []v1alpha1.ApplicablePolicy
+	for _, g := range grants {
+		policyRefs = append(policyRefs, g.Spec.Policies...)
 	}
 
 	objectGVR := schema.GroupVersionResource{
@@ -132,7 +142,7 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 	)
 
 	var patches []jsonPatchOperation
-	for _, grantPolicyRef := range grant.Spec.Policies {
+	for _, grantPolicyRef := range policyRefs {
 		policy, err := m.policyByName(ctx, grantPolicyRef.Name)
 		if err != nil {
 			log.Error(err, "failed to load ClusterObjectGrantPolicy", "policy_name", grantPolicyRef.Name)
@@ -166,6 +176,7 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 					"expr", ref.FieldPath,
 					"policy_name", grantPolicyRef.Name,
 				)
+				continue
 			}
 
 			fieldValues := fieldPath.SelectLocated(obj)
@@ -174,7 +185,7 @@ func (m *DefaultingMutator) applyDefaultsIfNecessary(
 				log.Info("Skipping non-existing field reference", "expr", ref.FieldPath, "policy_name", grantPolicyRef.Name)
 				continue
 			case len(fieldValues) > 1:
-				log.Info("Skipping ambiguous field reference", "expr", ref.FieldPath, "policy_name", grantPolicyRef)
+				log.Info("Skipping ambiguous field reference", "expr", ref.FieldPath, "policy_name", grantPolicyRef.Name)
 				continue
 			}
 
@@ -235,38 +246,14 @@ func (m *DefaultingMutator) isFieldNotSet(v any) bool {
 	if v == nil {
 		return true
 	}
-	return v.(string) == ""
-}
-
-func (m *DefaultingMutator) jsonPathToJSONPointer(jsonPath string) (string, error) {
-	path := jsonPath
-	switch {
-	case strings.HasPrefix(path, "$."):
-		path = path[2:]
-	case strings.HasPrefix(path, "$"):
-		path = path[1:]
+	// Only string-typed fields are subject to name-based defaulting. A
+	// non-string value is considered "set" so we never attempt to default it
+	// (and never panic on a type assertion of attacker-controlled input).
+	s, ok := v.(string)
+	if !ok {
+		return false
 	}
-
-	if path == "" {
-		return "", errors.New("root cannot be patched")
-	}
-
-	// Escape json pointer special chars, probably will never see those in the input, but just in case.
-	parts := strings.Split(path, ".")
-	for i, p := range parts {
-		p = strings.ReplaceAll(p, "~", "~0")
-		p = strings.ReplaceAll(p, "/", "~1")
-		parts[i] = p
-	}
-	path = strings.Join(parts, ".")
-
-	// Now replace [ with "/" and drop ] so that array[0].abc
-	// turns into  array/0.abc, and then dot-split and join
-	// will give us the correct json pointer of /array/0/abc.
-	path = strings.ReplaceAll(path, "[", "/")
-	path = strings.ReplaceAll(path, "]", "")
-
-	return "/" + strings.Join(strings.Split(path, "."), "/"), nil
+	return s == ""
 }
 
 type jsonPatchOperation struct {
@@ -299,21 +286,6 @@ func (m *DefaultingMutator) readAdmissionReview(
 	return nil
 }
 
-func (m *DefaultingMutator) grantByProjectName(
-	ctx context.Context,
-	projectName string,
-) (*v1alpha1.ClusterObjectsGrant, error) {
-	grant := &v1alpha1.ClusterObjectsGrant{}
-
-	err := m.cl.Get(ctx, client.ObjectKey{Name: projectName}, grant)
-	if err != nil {
-		m.log.Error(err, "Cannot get grant for project", "project_name", projectName)
-		return nil, fmt.Errorf("get grant: %w", err)
-	}
-
-	return grant, nil
-}
-
 func (m *DefaultingMutator) policyByName(
 	ctx context.Context,
 	policyName string,
@@ -339,11 +311,14 @@ func (m *DefaultingMutator) findDefaultValue(
 	grantPolicyReference *v1alpha1.ApplicablePolicy,
 	policy *v1alpha1.ClusterObjectGrantPolicy,
 ) (string, error) {
-	if policy.Spec.GrantedResource.Defaults.AnnotationKey == "" {
-		if grantPolicyReference.Default == "" {
-			return "", errNoDefault
-		}
+	// Precedence: an explicit per-grant default overrides the cluster-wide
+	// annotation-based default.
+	if grantPolicyReference.Default != "" {
 		return grantPolicyReference.Default, nil
+	}
+
+	if policy.Spec.GrantedResource.Defaults.AnnotationKey == "" {
+		return "", errNoDefault
 	}
 
 	gv, err := schema.ParseGroupVersion(policy.Spec.GrantedResource.APIVersion)
@@ -367,10 +342,10 @@ func (m *DefaultingMutator) findDefaultValue(
 	}
 
 	annotatedItems := make([]*unstructured.Unstructured, 0, 1)
-	for _, item := range list.Items {
-		_, hasAnnotation := item.GetAnnotations()[policy.Spec.GrantedResource.Defaults.AnnotationKey]
+	for i := range list.Items {
+		_, hasAnnotation := list.Items[i].GetAnnotations()[policy.Spec.GrantedResource.Defaults.AnnotationKey]
 		if hasAnnotation {
-			annotatedItems = append(annotatedItems, &item)
+			annotatedItems = append(annotatedItems, &list.Items[i])
 		}
 	}
 

@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
-  name: clusterobjectgrantpolicies.projects.deckhouse.io
+  name: clusterobjectgrantpolicies.multitenancy.deckhouse.io
 spec:
-  group: projects.deckhouse.io
+  group: multitenancy.deckhouse.io
   names:
     kind: ClusterObjectGrantPolicy
     listKind: ClusterObjectGrantPolicyList
@@ -76,7 +76,7 @@ spec:
                   properties:
                     description:
                       description: Descriptions holds a set of human readable descriptions
-                        of a field in diffirent languages.
+                        of a field in different languages.
                       properties:
                         en:
                           type: string
@@ -114,7 +114,7 @@ spec:
                       type: string
                     resource:
                       description: Resource is the plural name of the resource to
-                        be covered under thos policy.
+                        be covered under this policy.
                       type: string
                   required:
                   - apiVersion

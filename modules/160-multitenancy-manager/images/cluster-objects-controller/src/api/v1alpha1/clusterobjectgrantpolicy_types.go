@@ -45,7 +45,7 @@ type GrantedResourceUsageReference struct {
 	// +required
 	APIVersion string `json:"apiVersion"`
 
-	// Resource is the plural name of the resource to be covered under thos policy.
+	// Resource is the plural name of the resource to be covered under this policy.
 	// +required
 	Resource string `json:"resource"`
 
@@ -63,7 +63,7 @@ type ObjectPolicyStatusField struct {
 	// +required
 	FieldPath string `json:"fieldPath"`
 
-	// Descriptions holds a set of human readable descriptions of a field in diffirent languages.
+	// Descriptions holds a set of human readable descriptions of a field in different languages.
 	// +required
 	Descriptions ObjectStatusFieldDescription `json:"description"`
 }
@@ -76,10 +76,6 @@ type ObjectStatusFieldDescription struct {
 
 // ClusterObjectGrantPolicySpec defines the desired state of ClusterObjectGrantPolicy
 type ClusterObjectGrantPolicySpec struct {
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
-
 	// GrantedResource defines which resource should be taken under access control of this policy.
 	GrantedResource GrantedResource `json:"grantedResource"`
 
@@ -93,8 +89,6 @@ type ClusterObjectGrantPolicySpec struct {
 
 // ClusterObjectGrantPolicyStatus defines the observed state of ClusterObjectGrantPolicy.
 type ClusterObjectGrantPolicyStatus struct {
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Conditions represent the current state of the ClusterObjectGrantPolicy resource.
 	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
 	//

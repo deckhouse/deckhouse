@@ -34,7 +34,14 @@ multitenancyManager:
 `
 
 	const kubeStateOneViolation = `
-apiVersion: projects.deckhouse.io/v1alpha1
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: testproj
+  labels:
+    heritage: multitenancy-manager
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterObjectGrantPolicy
 metadata:
   name: testpolicy
@@ -47,11 +54,14 @@ spec:
     fieldPath: $.data.scName
     resource: configmaps
 ---
-apiVersion: projects.deckhouse.io/v1alpha1
-kind: ClusterObjectsGrant
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrant
 metadata:
-  name: testproj
+  name: testgrant
 spec:
+  projectSelector:
+    matchLabels:
+      heritage: multitenancy-manager
   clusterObjectGrantPolicies:
   - name: testpolicy
     allowed: ["local", "abcd"]
@@ -77,8 +87,8 @@ data:
 `
 
 	f := HookExecutionConfigInit(initValues, `{}`)
-	f.RegisterCRD("projects.deckhouse.io", "v1alpha1", "ClusterObjectsGrant", false)
-	f.RegisterCRD("projects.deckhouse.io", "v1alpha1", "ClusterObjectGrantPolicy", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterObjectGrant", false)
+	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "ClusterObjectGrantPolicy", false)
 
 	Context("No violations", func() {
 		BeforeEach(func() {
@@ -86,10 +96,15 @@ data:
 			f.RunHook()
 		})
 
-		It("Hook should not publish any violations in metrics", func() {
+		It("Hook should only expire the shared metric group and publish no violations", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(0))
+			Expect(metrics).To(ConsistOf(
+				operation.MetricOperation{
+					Group:  grantViolationMetricGroup,
+					Action: operation.ActionExpireMetrics,
+				},
+			))
 		})
 	})
 
@@ -102,20 +117,21 @@ data:
 		It("Should detect and report one violation in metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(2))
 			Expect(metrics).To(ConsistOf(
 				operation.MetricOperation{
-					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Group:  grantViolationMetricGroup,
 					Action: operation.ActionExpireMetrics,
 				},
 				operation.MetricOperation{
 					Action: operation.ActionGaugeSet,
 					Name:   grantViolationMetricName,
 					Value:  ptr.To(1.0),
-					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Group:  grantViolationMetricGroup,
 					Labels: map[string]string{
+						"grant":                 "testgrant",
 						"project":               "testproj",
 						"violating_object_name": "testcm",
+						"violating_field":       "$.data.scName",
 						"violating_resource":    "configmaps",
 					},
 				}))
@@ -131,20 +147,21 @@ data:
 		It("Should detect and report 2 violations in metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			metrics := f.MetricsCollector.CollectedMetrics()
-			Expect(metrics).To(HaveLen(3))
 			Expect(metrics).To(ConsistOf(
 				operation.MetricOperation{
-					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Group:  grantViolationMetricGroup,
 					Action: operation.ActionExpireMetrics,
 				},
 				operation.MetricOperation{
 					Action: operation.ActionGaugeSet,
 					Name:   grantViolationMetricName,
 					Value:  ptr.To(1.0),
-					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Group:  grantViolationMetricGroup,
 					Labels: map[string]string{
+						"grant":                 "testgrant",
 						"project":               "testproj",
 						"violating_object_name": "testcm",
+						"violating_field":       "$.data.scName",
 						"violating_resource":    "configmaps",
 					},
 				},
@@ -152,10 +169,12 @@ data:
 					Action: operation.ActionGaugeSet,
 					Name:   grantViolationMetricName,
 					Value:  ptr.To(1.0),
-					Group:  grantViolationMetricGroupPrefix + "testproj",
+					Group:  grantViolationMetricGroup,
 					Labels: map[string]string{
+						"grant":                 "testgrant",
 						"project":               "testproj",
 						"violating_object_name": "secondcm",
+						"violating_field":       "$.data.scName",
 						"violating_resource":    "configmaps",
 					},
 				},

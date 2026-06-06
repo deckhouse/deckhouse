@@ -3,17 +3,17 @@ kind: ClusterRole
 metadata:
   name: d8:cluster-objects-grants-admin
 rules:
-- apiGroups: ["projects.deckhouse.io"]
-  resources: ["clusterobjectsgrants"]
+- apiGroups: ["multitenancy.deckhouse.io"]
+  resources: ["clusterobjectgrants"]
   verbs:
   - get
   - list
   - watch
   - update
   - patch
-- apiGroups: ["projects.deckhouse.io"]
+- apiGroups: ["multitenancy.deckhouse.io"]
   resources:
-  - clusterobjectsgrants/status
+  - clusterobjectgrants/status
   verbs:
   - get
   - list
@@ -24,6 +24,6 @@ kind: ClusterRole
 metadata:
   name: d8:cluster-object-grant-policies-reader
 rules:
-- apiGroups: ["projects.deckhouse.io"]
+- apiGroups: ["multitenancy.deckhouse.io"]
   resources: ["clusterobjectgrantpolicies"]
   verbs: ["get", "list", "watch"]

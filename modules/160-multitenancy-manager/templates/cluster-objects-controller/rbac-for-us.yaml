@@ -30,11 +30,11 @@ kind: ClusterRole
 metadata:
   name: d8:cluster-objects-grants-controller
 rules:
-- apiGroups: ["projects.deckhouse.io"]
-  resources: ["clusterobjectsgrants"]
+- apiGroups: ["multitenancy.deckhouse.io"]
+  resources: ["clusterobjectgrants"]
   verbs: ["*"]
-- apiGroups: ["projects.deckhouse.io"]
+- apiGroups: ["multitenancy.deckhouse.io"]
   resources:
-  - clusterobjectsgrants/status
-  - clusterobjectsgrants/finalizers
+  - clusterobjectgrants/status
+  - clusterobjectgrants/finalizers
   verbs: ["*"]
