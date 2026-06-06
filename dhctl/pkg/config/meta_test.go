@@ -493,18 +493,19 @@ func TestValidateAndPrepareMetaConfig_NilProviderClusterConfig_NoPanic(t *testin
 		ProviderClusterConfig: nil,
 	}
 	prep := stubPreparator{result: providerdata.PrepareResult{
-		ProviderClusterConfig: map[string]interface{}{"layout": map[string]interface{}{"k": "v"}},
+		ProviderClusterConfig: map[string]interface{}{"layout": "Standard"},
 	}}
 
 	out, err := validateAndPrepareMetaConfig(context.Background(), stubPreparatorProvider(prep), m)
 	require.NoError(t, err)
 	require.NotNil(t, out.ProviderClusterConfig)
 	require.Contains(t, out.ProviderClusterConfig, "layout")
+	require.Equal(t, "standard", out.Layout)
 }
 
-func TestApplyModuleConfigSettings_TakesSpecSettings(t *testing.T) {
+func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
 	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
-	mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
 	mc.SetName("cloud-provider-dvp")
 
 	m := &MetaConfig{
@@ -515,5 +516,12 @@ func TestApplyModuleConfigSettings_TakesSpecSettings(t *testing.T) {
 	require.NoError(t, m.applyCloudProviderModuleSettings())
 
 	require.NotNil(t, m.CloudProviderVars)
-	require.Equal(t, map[string]interface{}(settings), m.CloudProviderVars.Settings)
+	spec, ok := m.CloudProviderVars.Settings["spec"].(map[string]interface{})
+	require.True(t, ok, "expected spec object in CloudProviderVars.Settings")
+	require.Equal(t, float64(2), spec["version"])
+	specSettings, ok := spec["settings"].(map[string]interface{})
+	require.True(t, ok)
+	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, float64(3), masterPool["replicas"])
 }

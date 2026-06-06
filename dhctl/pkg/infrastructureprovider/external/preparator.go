@@ -179,11 +179,10 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 	}, nil
 }
 
-// mergeResourcesYAML forwards user-supplied resources verbatim when present
-// (bootstrap-from-file path: CloudProviderVars were parsed from this same
-// YAML, so re-emitting encoded would duplicate every NodeGroup / InstanceClass
-// / Secret). Falls back to the encoded CloudProviderVars docs on cluster-loaded
-// paths (converge/check/destroy), where the user YAML is empty.
+// mergeResourcesYAML prefers user-supplied YAML when present (bootstrap-from-
+// file: CloudProviderVars were parsed from this same YAML, so re-emitting
+// encoded would duplicate every resource). On cluster-loaded paths
+// (converge/check/destroy) user is empty and we fall back to encoded.
 func mergeResourcesYAML(user, encoded string) string {
 	if user = strings.TrimSpace(user); user != "" {
 		return user

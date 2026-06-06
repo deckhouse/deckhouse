@@ -43,18 +43,15 @@ const (
 )
 
 // CloudProviderVarsFromCluster fetches NodeGroups, InstanceClasses and credential
-// Secrets from the cluster and returns them as CloudProviderVars directly,
-// without serializing to YAML.
+// Secrets from the cluster. Settings is intentionally left empty here — it is
+// later populated by metaConfig.applyCloudProviderModuleSettings from the
+// cloud-provider-<name> ModuleConfig loaded into metaConfig.ModuleConfigs,
+// keeping the cluster-side and bootstrap-from-file flows symmetric.
 func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*providerdata.CloudProviderVars, error) {
 	ctx, span := telemetry.StartSpan(ctx, "CloudProviderVarsFromCluster")
 	defer span.End()
 
 	span.SetAttributes(otattribute.String("provider.name", providerName))
-
-	settings, err := fetchModuleConfigFromCluster(ctx, kubeCl, providerdata.CloudProviderModuleName(providerName))
-	if err != nil {
-		return nil, err
-	}
 
 	nodeGroups, err := fetchCloudPermanentNodeGroupsFromCluster(ctx, kubeCl)
 	if err != nil {
@@ -78,22 +75,10 @@ func CloudProviderVarsFromCluster(ctx context.Context, kubeCl *client.Kubernetes
 	)
 
 	return &providerdata.CloudProviderVars{
-		Settings:        settings,
 		NodeGroups:      nodeGroups,
 		InstanceClasses: instanceClasses,
 		Secrets:         secrets,
 	}, nil
-}
-
-func fetchModuleConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, name string) (map[string]interface{}, error) {
-	mc, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("get module config %s: %w", name, err)
-	}
-	return mc.Object, nil
 }
 
 func fetchCloudPermanentNodeGroupsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {

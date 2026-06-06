@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
 type MetaConfig struct {
@@ -152,6 +153,13 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		m.ProviderClusterConfig[k] = raw
 	}
 
+	// A preparator may mutate ProviderClusterConfig (the protocol explicitly
+	// permits this). Re-extract typed fields so any new layout/masterNodeGroup/
+	// nodeGroups produced by the preparator land in m.Layout / etc.
+	if err := m.extractProviderClusterFields(); err != nil {
+		return nil, err
+	}
+
 	return m, nil
 }
 
@@ -215,22 +223,8 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 	m.ClusterPrefix = cloudSpec.Prefix
 
-	if len(m.ProviderClusterConfig) > 0 {
-		if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal layout from cluster configuration: %v", err)
-		}
-		m.Layout = strcase.ToKebab(m.Layout)
-
-		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &m.MasterNodeGroupSpec); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
-		}
-
-		m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
-		if nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]; ok {
-			if err := json.Unmarshal(nodeGroups, &m.TerraNodeGroupSpecs); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal static nodes from provider cluster configuration: %v", err)
-			}
-		}
+	if err := m.extractProviderClusterFields(); err != nil {
+		return nil, err
 	}
 
 	if m.CloudProviderVars == nil && m.ResourcesYAML != "" {
@@ -248,23 +242,114 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 }
 
-// applyCloudProviderModuleSettings fills CloudProviderVars.Settings from the
-// cloud-provider-<name> ModuleConfig when present and Settings is not set.
-// Used on bootstrap-from-file path so external preparator and terraform-modules
-// see real settings when <Provider>ClusterConfiguration is not supplied.
-func (m *MetaConfig) applyCloudProviderModuleSettings() error {
-	mc := m.findModuleConfig(providerdata.CloudProviderModuleName(m.ProviderName))
-	if mc == nil {
+// extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
+// and TerraNodeGroupSpecs from m.ProviderClusterConfig — the classic flow
+// where <Provider>ClusterConfiguration is on disk.
+func (m *MetaConfig) extractProviderClusterFields() error {
+	if len(m.ProviderClusterConfig) == 0 {
 		return nil
+	}
+	if raw, ok := m.ProviderClusterConfig["layout"]; ok && len(raw) > 0 {
+		var layout string
+		if err := json.Unmarshal(raw, &layout); err != nil {
+			return fmt.Errorf("unmarshal layout from provider cluster configuration: %w", err)
+		}
+		if layout != "" {
+			m.Layout = strcase.ToKebab(layout)
+		}
+	}
+	if raw, ok := m.ProviderClusterConfig["masterNodeGroup"]; ok && len(raw) > 0 {
+		if err := json.Unmarshal(raw, &m.MasterNodeGroupSpec); err != nil {
+			return fmt.Errorf("unmarshal master node group from provider cluster configuration: %w", err)
+		}
+	}
+	if raw, ok := m.ProviderClusterConfig["nodeGroups"]; ok && len(raw) > 0 {
+		m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
+		if err := json.Unmarshal(raw, &m.TerraNodeGroupSpecs); err != nil {
+			return fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
+		}
+	}
+	return nil
+}
+
+// cloudProviderModuleSettings is the typed view of the fields dhctl reads
+// out of the cloud-provider-<name> ModuleConfig in the ModuleConfig-only flow.
+type cloudProviderModuleSettings struct {
+	Nodes struct {
+		Parameters struct {
+			Layout string `json:"layout"`
+		} `json:"parameters"`
+	} `json:"nodes"`
+}
+
+// applyCloudProviderModuleSettings fills CloudProviderVars.Settings from the
+// cloud-provider-<name> ModuleConfig and extracts the typed Layout. Used on
+// bootstrap-from-file when <Provider>ClusterConfiguration is not supplied —
+// the external preparator and terraform-modules read settings from the MC
+// instead.
+//
+// CloudProviderVars.Settings holds the *full* ModuleConfig object (apiVersion,
+// kind, metadata, spec.{version, settings, enabled}), not just spec.settings.
+// terraform-modules/migration reads var.settings.spec.version and
+// var.settings.spec.settings.*; the DVP external validator forwards
+// input.ModuleConfig back as result.vars.settings unchanged.
+//
+// Users can supply multiple ModuleConfigs with the same name (e.g. a base v1
+// "enabled: true" entry plus a v2 overlay with the actual settings). We pick
+// the *last* entry that carries non-empty Spec.Settings so that overlays win.
+func (m *MetaConfig) applyCloudProviderModuleSettings() error {
+	name := providerdata.CloudProviderModuleName(m.ProviderName)
+	var picked *ModuleConfig
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == name && len(mc.Spec.Settings) > 0 {
+			picked = mc
+		}
+	}
+	if picked == nil {
+		return nil
+	}
+
+	mcMap, err := moduleConfigToMap(picked)
+	if err != nil {
+		return err
 	}
 	if m.CloudProviderVars == nil {
 		m.CloudProviderVars = &CloudProviderVars{}
 	}
-	if m.CloudProviderVars.Settings != nil {
-		return nil
+	if len(m.CloudProviderVars.Settings) == 0 {
+		m.CloudProviderVars.Settings = mcMap
 	}
-	m.CloudProviderVars.Settings = map[string]interface{}(mc.Spec.Settings)
+
+	if m.Layout == "" {
+		if layout := picked.Spec.layoutString(); layout != "" {
+			m.Layout = strcase.ToKebab(layout)
+		}
+	}
 	return nil
+}
+
+func moduleConfigToMap(mc *ModuleConfig) (map[string]interface{}, error) {
+	raw, err := json.Marshal(mc)
+	if err != nil {
+		return nil, fmt.Errorf("marshal cloud-provider module config: %w", err)
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("unmarshal cloud-provider module config: %w", err)
+	}
+	return out, nil
+}
+
+func (s ModuleConfigSpec) layoutString() string {
+	raw, err := json.Marshal(s.Settings)
+	if err != nil {
+		return ""
+	}
+	var typed cloudProviderModuleSettings
+	if err := json.Unmarshal(raw, &typed); err != nil {
+		return ""
+	}
+	return typed.Nodes.Parameters.Layout
 }
 
 func (m *MetaConfig) findModuleConfig(name string) *ModuleConfig {
@@ -688,14 +773,14 @@ func (m *MetaConfig) CachePath() string {
 func (m *MetaConfig) DeepCopy() *MetaConfig {
 	out := *m
 	out.Registry = *m.Registry.DeepCopy()
-	out.ClusterConfig = cloneRawMessageMap(m.ClusterConfig)
-	out.InitClusterConfig = cloneRawMessageMap(m.InitClusterConfig)
-	out.ProviderClusterConfig = cloneRawMessageMap(m.ProviderClusterConfig)
-	out.StaticClusterConfig = cloneRawMessageMap(m.StaticClusterConfig)
+	out.ClusterConfig = cloneMap(m.ClusterConfig)
+	out.InitClusterConfig = cloneMap(m.InitClusterConfig)
+	out.ProviderClusterConfig = cloneMap(m.ProviderClusterConfig)
+	out.StaticClusterConfig = cloneMap(m.StaticClusterConfig)
 	out.CloudProviderVars = cloneCloudProviderVars(m.CloudProviderVars)
 	out.ModuleConfigs = cloneModuleConfigs(m.ModuleConfigs)
-	out.VersionMap = cloneAnyMap(m.VersionMap)
-	out.Images = cloneImagesDigests(m.Images)
+	out.VersionMap = cloneMap(m.VersionMap)
+	out.Images = cloneNestedMap(m.Images)
 	if m.TerraNodeGroupSpecs != nil {
 		out.TerraNodeGroupSpecs = make([]TerraNodeGroupSpec, len(m.TerraNodeGroupSpecs))
 		copy(out.TerraNodeGroupSpecs, m.TerraNodeGroupSpecs)
@@ -707,35 +792,22 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	return &out
 }
 
-func cloneRawMessageMap(in map[string]json.RawMessage) map[string]json.RawMessage {
+// cloneMap is a thin nil-preserving wrapper over maputil.Clone — DeepCopy
+// callers rely on nil staying nil (matters for json.Marshal omitempty).
+func cloneMap[K comparable, V any](in map[K]V) map[K]V {
 	if in == nil {
 		return nil
 	}
-	out := make(map[string]json.RawMessage, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
+	return maputil.Clone(in)
 }
 
-func cloneAnyMap(in map[string]interface{}) map[string]interface{} {
+func cloneNestedMap[K comparable, V any](in map[K]map[K]V) map[K]map[K]V {
 	if in == nil {
 		return nil
 	}
-	out := make(map[string]interface{}, len(in))
+	out := make(map[K]map[K]V, len(in))
 	for k, v := range in {
-		out[k] = v
-	}
-	return out
-}
-
-func cloneNestedAnyMap(in map[string]map[string]interface{}) map[string]map[string]interface{} {
-	if in == nil {
-		return nil
-	}
-	out := make(map[string]map[string]interface{}, len(in))
-	for k, v := range in {
-		out[k] = cloneAnyMap(v)
+		out[k] = cloneMap(v)
 	}
 	return out
 }
@@ -745,22 +817,11 @@ func cloneCloudProviderVars(v *CloudProviderVars) *CloudProviderVars {
 		return nil
 	}
 	return &CloudProviderVars{
-		Settings:        cloneAnyMap(v.Settings),
-		NodeGroups:      cloneNestedAnyMap(v.NodeGroups),
-		InstanceClasses: cloneNestedAnyMap(v.InstanceClasses),
-		Secrets:         cloneNestedAnyMap(v.Secrets),
+		Settings:        cloneMap(v.Settings),
+		NodeGroups:      cloneNestedMap(v.NodeGroups),
+		InstanceClasses: cloneNestedMap(v.InstanceClasses),
+		Secrets:         cloneNestedMap(v.Secrets),
 	}
-}
-
-func cloneImagesDigests(in imagesDigests) imagesDigests {
-	if in == nil {
-		return nil
-	}
-	out := make(imagesDigests, len(in))
-	for k, v := range in {
-		out[k] = cloneAnyMap(v)
-	}
-	return out
 }
 
 func cloneModuleConfigs(in []*ModuleConfig) []*ModuleConfig {
@@ -773,7 +834,7 @@ func cloneModuleConfigs(in []*ModuleConfig) []*ModuleConfig {
 			continue
 		}
 		cp := *mc
-		cp.Spec.Settings = SettingsValues(cloneAnyMap(map[string]interface{}(mc.Spec.Settings)))
+		cp.Spec.Settings = SettingsValues(cloneMap(map[string]interface{}(mc.Spec.Settings)))
 		if mc.Spec.Enabled != nil {
 			enabled := *mc.Spec.Enabled
 			cp.Spec.Enabled = &enabled

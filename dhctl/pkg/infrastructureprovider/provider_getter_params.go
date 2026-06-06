@@ -91,6 +91,7 @@ func (p *CloudProviderGetterParams) getFSDIParams() (*fsprovider.DIParams, error
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
 		CloudProviderDir:  filepath.Join(p.GlobalOptions.CandiDir, "cloud-providers"),
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
+		DownloadDir:       p.GlobalOptions.DownloadDir,
 	}
 
 	if _, err := os.Stat(diDefaultParams.BinariesDir); err != nil {

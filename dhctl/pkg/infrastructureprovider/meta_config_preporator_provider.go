@@ -56,10 +56,6 @@ func (p *PreparatorProviderParams) WithOperationConverge() {
 	p.WithOperation(DhctlOperationConverge)
 }
 
-func (p *PreparatorProviderParams) WithOperationDestroy() {
-	p.WithOperation(DhctlOperationDestroy)
-}
-
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
 	return PreparatorProviderParams{logger: logger}
 }

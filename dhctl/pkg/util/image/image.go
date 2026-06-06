@@ -270,6 +270,9 @@ func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, di
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
 	}
+	if err := os.MkdirAll(dstPath, 0o755); err != nil {
+		return nil, fmt.Errorf("create destination directory %s: %w", dstPath, err)
+	}
 	layersCache := cache.NewFilesystemCache(cacheDir)
 	img, err := remote.Image(ref, opts...)
 	if err != nil {
