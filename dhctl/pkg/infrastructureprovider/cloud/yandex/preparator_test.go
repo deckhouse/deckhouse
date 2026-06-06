@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestValidateClusterPrefix(t *testing.T) {
@@ -40,8 +41,6 @@ func TestValidateClusterPrefix(t *testing.T) {
 	assertClusterPrefix(t, "1abbbs", true)
 	assertClusterPrefix(t, strings.Repeat("a", 100), true)
 	assertClusterPrefix(t, "abc-abc", false)
-
-	assertValidation(t, false, getInput(""), false)
 }
 
 func TestValidateMasterNodeGroupSpec(t *testing.T) {
@@ -99,7 +98,7 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 
 	assertSkipValidationWithNATInstance := func(t *testing.T, settings string, nodeGroups json.RawMessage) {
 		input := getInput(t, settings, nodeGroups)
-		preparator := NewMetaConfigPreparator(true, "")
+		preparator := NewMetaConfigPreparator(log.NewSilentLogger(), "")
 
 		err := preparator.Validate(context.TODO(), input)
 		require.NoError(t, err)
@@ -114,12 +113,11 @@ func TestWithNATInstanceLayoutSpec(t *testing.T) {
 	)
 }
 
-func TestSetIncorrectLogDoesNotPanic(t *testing.T) {
+func TestNilLoggerDoesNotPanic(t *testing.T) {
 	input := getTestInputForMaster(t, 1, []string{"1.1.1.1"})
 
 	do := func() {
-		preparator := NewMetaConfigPreparator(true, "")
-		preparator.WithLogger(nil)
+		preparator := NewMetaConfigPreparator(nil, "")
 		_ = preparator.Validate(context.TODO(), input)
 	}
 
@@ -178,8 +176,8 @@ func fillTestWithNatInstanceLayout(t *testing.T, input *config.ProviderInput, se
 	}
 }
 
-func assertValidation(t *testing.T, validatePrefix bool, input config.ProviderInput, hasError bool) {
-	preparator := NewMetaConfigPreparator(validatePrefix, "bootstrap")
+func assertValidation(t *testing.T, _ bool, input config.ProviderInput, hasError bool) {
+	preparator := NewMetaConfigPreparator(log.NewSilentLogger(), "bootstrap")
 
 	err := preparator.Validate(context.TODO(), input)
 	if hasError {

@@ -16,8 +16,10 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
 	corev1 "k8s.io/api/core/v1"
@@ -150,25 +152,42 @@ func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.Kuber
 		if secret.Type != CloudProviderCredentialsSecretType {
 			continue
 		}
-		result[secret.Name] = secretToMap(&secret)
+		key := secret.Namespace + "/" + secret.Name
+		result[key] = secretToMap(&secret)
 	}
 	return result, nil
 }
 
 func secretToMap(secret *corev1.Secret) map[string]interface{} {
-	stringData := make(map[string]string, len(secret.Data))
+	var stringData, data map[string]string
 	for k, v := range secret.Data {
-		stringData[k] = string(v)
+		if utf8.Valid(v) {
+			if stringData == nil {
+				stringData = make(map[string]string)
+			}
+			stringData[k] = string(v)
+			continue
+		}
+		if data == nil {
+			data = make(map[string]string)
+		}
+		data[k] = base64.StdEncoding.EncodeToString(v)
 	}
 
-	return map[string]interface{}{
+	result := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Secret",
 		"metadata": map[string]interface{}{
 			"name":      secret.Name,
 			"namespace": secret.Namespace,
 		},
-		"type":       string(secret.Type),
-		"stringData": stringData,
+		"type": string(secret.Type),
 	}
+	if stringData != nil {
+		result["stringData"] = stringData
+	}
+	if data != nil {
+		result["data"] = data
+	}
+	return result
 }

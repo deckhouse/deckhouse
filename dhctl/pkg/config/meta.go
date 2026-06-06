@@ -104,17 +104,22 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 	providerPreparator := preparatorProvider(m.ProviderName, m.DownloadRootDir)
 	providerInput := m.buildProviderInput()
 
-	rawInput, _ := json.Marshal(providerInput.ProviderClusterConfig)
-	rawVars, _ := json.Marshal(providerInput.CloudProviderVars)
 	span.SetAttributes(
 		otattribute.String("provider.name", m.ProviderName),
 		otattribute.String("provider.layout", m.Layout),
 		otattribute.String("provider.clusterPrefix", m.ClusterPrefix),
 		otattribute.String("provider.operation", m.Operation),
 		otattribute.String("provider.downloadRootDir", m.DownloadRootDir),
-		otattribute.String("provider.input.providerClusterConfig", string(rawInput)),
-		otattribute.String("provider.input.cloudProviderVars", string(rawVars)),
+		otattribute.Int("provider.input.providerClusterConfigKeys", len(providerInput.ProviderClusterConfig)),
 	)
+	if cv := providerInput.CloudProviderVars; cv != nil {
+		span.SetAttributes(
+			otattribute.Int("provider.input.settingsKeys", len(cv.Settings)),
+			otattribute.Int("provider.input.nodeGroupsCount", len(cv.NodeGroups)),
+			otattribute.Int("provider.input.instanceClassesCount", len(cv.InstanceClasses)),
+			otattribute.Int("provider.input.secretsCount", len(cv.Secrets)),
+		)
+	}
 
 	if err := providerPreparator.Validate(ctx, providerInput); err != nil {
 		return nil, err
@@ -126,9 +131,7 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 		return nil, err
 	}
 	span.AddEvent("provider prepared")
-
-	rawResult, _ := json.Marshal(result)
-	span.SetAttributes(otattribute.String("provider.output", string(rawResult)))
+	span.SetAttributes(otattribute.Int("provider.output.providerClusterConfigKeys", len(result.ProviderClusterConfig)))
 
 	if result.Vars != nil {
 		m.CloudProviderVars = result.Vars
@@ -137,6 +140,9 @@ func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaCo
 			otattribute.Int("provider.output.instanceClassesCount", len(result.Vars.InstanceClasses)),
 			otattribute.Int("provider.output.secretsCount", len(result.Vars.Secrets)),
 		)
+	}
+	if len(result.ProviderClusterConfig) > 0 && m.ProviderClusterConfig == nil {
+		m.ProviderClusterConfig = make(map[string]json.RawMessage, len(result.ProviderClusterConfig))
 	}
 	for k, v := range result.ProviderClusterConfig {
 		raw, err := json.Marshal(v)
@@ -235,27 +241,30 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		m.CloudProviderVars = cv
 	}
 
-	// For bootstrap-from-file: pick up cloud-provider-<name> ModuleConfig as Settings
-	// so the provider preparator and terraform-modules can use it when
-	// <Provider>ClusterConfiguration is not supplied.
-	if mc := m.findModuleConfig(providerdata.CloudProviderModuleName(m.ProviderName)); mc != nil {
-		if m.CloudProviderVars == nil {
-			m.CloudProviderVars = &CloudProviderVars{}
-		}
-		if m.CloudProviderVars.Settings == nil {
-			raw, err := json.Marshal(mc)
-			if err != nil {
-				return nil, fmt.Errorf("marshal %s module config: %w", providerdata.CloudProviderModuleName(m.ProviderName), err)
-			}
-			var obj map[string]interface{}
-			if err := json.Unmarshal(raw, &obj); err != nil {
-				return nil, fmt.Errorf("unmarshal %s module config: %w", providerdata.CloudProviderModuleName(m.ProviderName), err)
-			}
-			m.CloudProviderVars.Settings = obj
-		}
+	if err := m.applyCloudProviderModuleSettings(); err != nil {
+		return nil, err
 	}
 
 	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+}
+
+// applyCloudProviderModuleSettings fills CloudProviderVars.Settings from the
+// cloud-provider-<name> ModuleConfig when present and Settings is not set.
+// Used on bootstrap-from-file path so external preparator and terraform-modules
+// see real settings when <Provider>ClusterConfiguration is not supplied.
+func (m *MetaConfig) applyCloudProviderModuleSettings() error {
+	mc := m.findModuleConfig(providerdata.CloudProviderModuleName(m.ProviderName))
+	if mc == nil {
+		return nil
+	}
+	if m.CloudProviderVars == nil {
+		m.CloudProviderVars = &CloudProviderVars{}
+	}
+	if m.CloudProviderVars.Settings != nil {
+		return nil
+	}
+	m.CloudProviderVars.Settings = map[string]interface{}(mc.Spec.Settings)
+	return nil
 }
 
 func (m *MetaConfig) findModuleConfig(name string) *ModuleConfig {
@@ -295,6 +304,7 @@ func (m *MetaConfig) buildProviderInput() ProviderInput {
 		Operation:             m.Operation,
 		ProviderClusterConfig: m.ProviderClusterConfig,
 		CloudProviderVars:     m.CloudProviderVars,
+		ResourcesYAML:         m.ResourcesYAML,
 	}
 }
 
@@ -676,84 +686,100 @@ func (m *MetaConfig) CachePath() string {
 }
 
 func (m *MetaConfig) DeepCopy() *MetaConfig {
-	out := &MetaConfig{}
-
-	if m.ClusterConfig != nil {
-		config := make(map[string]json.RawMessage, len(m.ClusterConfig))
-		for k, v := range m.ClusterConfig {
-			config[k] = v
-		}
-		out.ClusterConfig = config
-	}
-
-	if m.InitClusterConfig != nil {
-		config := make(map[string]json.RawMessage, len(m.InitClusterConfig))
-		for k, v := range m.InitClusterConfig {
-			config[k] = v
-		}
-		out.InitClusterConfig = config
-	}
-
-	if m.ProviderClusterConfig != nil {
-		config := make(map[string]json.RawMessage, len(m.ProviderClusterConfig))
-		for k, v := range m.ProviderClusterConfig {
-			config[k] = v
-		}
-		out.ProviderClusterConfig = config
-	}
-
-	if m.StaticClusterConfig != nil {
-		config := make(map[string]json.RawMessage, len(m.StaticClusterConfig))
-		for k, v := range m.StaticClusterConfig {
-			config[k] = v
-		}
-		out.StaticClusterConfig = config
-	}
-
+	out := *m
 	out.Registry = *m.Registry.DeepCopy()
-
-	if m.ClusterType != "" {
-		out.ClusterType = m.ClusterType
+	out.ClusterConfig = cloneRawMessageMap(m.ClusterConfig)
+	out.InitClusterConfig = cloneRawMessageMap(m.InitClusterConfig)
+	out.ProviderClusterConfig = cloneRawMessageMap(m.ProviderClusterConfig)
+	out.StaticClusterConfig = cloneRawMessageMap(m.StaticClusterConfig)
+	out.CloudProviderVars = cloneCloudProviderVars(m.CloudProviderVars)
+	out.ModuleConfigs = cloneModuleConfigs(m.ModuleConfigs)
+	out.VersionMap = cloneAnyMap(m.VersionMap)
+	out.Images = cloneImagesDigests(m.Images)
+	if m.TerraNodeGroupSpecs != nil {
+		out.TerraNodeGroupSpecs = make([]TerraNodeGroupSpec, len(m.TerraNodeGroupSpecs))
+		copy(out.TerraNodeGroupSpecs, m.TerraNodeGroupSpecs)
 	}
-
-	if m.ClusterPrefix != "" {
-		out.ClusterPrefix = m.ClusterPrefix
-	}
-
-	if m.Layout != "" {
-		out.Layout = m.Layout
-	}
-
-	if m.ProviderName != "" {
-		out.ProviderName = m.ProviderName
-	}
-
-	if m.UUID != "" {
-		out.UUID = m.UUID
-	}
-
-	if m.Operation != "" {
-		out.Operation = m.Operation
-	}
-
-	if m.CloudProviderVars != nil {
-		cv := *m.CloudProviderVars
-		out.CloudProviderVars = &cv
-	}
-
-	if m.ResourceManagementTimeout != "" {
-		out.ResourceManagementTimeout = m.ResourceManagementTimeout
-	}
-
-	if m.ClusterDomain != "" {
-		out.ClusterDomain = m.ClusterDomain
-	}
-
 	if m.ClusterMasterEndpoints != nil {
 		out.ClusterMasterEndpoints = make([]ClusterMasterEndpoint, len(m.ClusterMasterEndpoints))
 		copy(out.ClusterMasterEndpoints, m.ClusterMasterEndpoints)
 	}
+	return &out
+}
 
+func cloneRawMessageMap(in map[string]json.RawMessage) map[string]json.RawMessage {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]json.RawMessage, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func cloneAnyMap(in map[string]interface{}) map[string]interface{} {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+func cloneNestedAnyMap(in map[string]map[string]interface{}) map[string]map[string]interface{} {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]map[string]interface{}, len(in))
+	for k, v := range in {
+		out[k] = cloneAnyMap(v)
+	}
+	return out
+}
+
+func cloneCloudProviderVars(v *CloudProviderVars) *CloudProviderVars {
+	if v == nil {
+		return nil
+	}
+	return &CloudProviderVars{
+		Settings:        cloneAnyMap(v.Settings),
+		NodeGroups:      cloneNestedAnyMap(v.NodeGroups),
+		InstanceClasses: cloneNestedAnyMap(v.InstanceClasses),
+		Secrets:         cloneNestedAnyMap(v.Secrets),
+	}
+}
+
+func cloneImagesDigests(in imagesDigests) imagesDigests {
+	if in == nil {
+		return nil
+	}
+	out := make(imagesDigests, len(in))
+	for k, v := range in {
+		out[k] = cloneAnyMap(v)
+	}
+	return out
+}
+
+func cloneModuleConfigs(in []*ModuleConfig) []*ModuleConfig {
+	if in == nil {
+		return nil
+	}
+	out := make([]*ModuleConfig, len(in))
+	for i, mc := range in {
+		if mc == nil {
+			continue
+		}
+		cp := *mc
+		cp.Spec.Settings = SettingsValues(cloneAnyMap(map[string]interface{}(mc.Spec.Settings)))
+		if mc.Spec.Enabled != nil {
+			enabled := *mc.Spec.Enabled
+			cp.Spec.Enabled = &enabled
+		}
+		out[i] = &cp
+	}
 	return out
 }
 

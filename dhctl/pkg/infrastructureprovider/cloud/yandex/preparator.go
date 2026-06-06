@@ -31,32 +31,23 @@ import (
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
 type MetaConfigPreparator struct {
-	validatePrefix bool
-	operation      string
-	logger         log.Logger
+	operation string
+	logger    log.Logger
 }
 
-func NewMetaConfigPreparator(validatePrefix bool, operation string) *MetaConfigPreparator {
+func NewMetaConfigPreparator(logger log.Logger, operation string) *MetaConfigPreparator {
+	if govalue.IsNil(logger) {
+		logger = log.NewSilentLogger()
+	}
 	return &MetaConfigPreparator{
-		validatePrefix: validatePrefix,
-		operation:      operation,
-		logger:         log.NewSilentLogger(),
+		operation: operation,
+		logger:    logger,
 	}
-}
-
-func (p *MetaConfigPreparator) WithLogger(logger log.Logger) *MetaConfigPreparator {
-	if !govalue.IsNil(logger) {
-		p.logger = logger
-	}
-
-	return p
 }
 
 func (p *MetaConfigPreparator) Validate(_ context.Context, input config.ProviderInput) error {
-	if p.validatePrefix {
-		if !prefixRegex.MatchString(input.ClusterPrefix) {
-			return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", input.ClusterPrefix, ProviderName, prefixRegex.String())
-		}
+	if !prefixRegex.MatchString(input.ClusterPrefix) {
+		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", input.ClusterPrefix, ProviderName, prefixRegex.String())
 	}
 
 	if err := p.validateMasterNodeGroup(input); err != nil {

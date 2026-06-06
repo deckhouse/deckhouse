@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
@@ -423,4 +424,96 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 	mingetBytes, err := base64.StdEncoding.DecodeString(mingetB64)
 	require.NoError(t, err)
 	require.Equal(t, expectedMingetBytes, mingetBytes)
+}
+
+func TestMetaConfig_DeepCopy_PreservesPrepareInputs(t *testing.T) {
+	src := &MetaConfig{
+		DownloadRootDir:  "/tmp/dl",
+		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "/tmp/v.yaml",
+		ResourcesYAML:    "kind: X\n",
+		ModuleConfigs:    []*ModuleConfig{{Spec: ModuleConfigSpec{Settings: SettingsValues{"k": "v"}}}},
+		Images:           imagesDigests{"a": map[string]interface{}{"b": "c"}},
+		VersionMap:       map[string]interface{}{"k": "v"},
+		InstallerVersion: "1.2.3",
+		ShowProgress:     true,
+	}
+	src.ModuleConfigs[0].SetName("x")
+
+	cp := src.DeepCopy()
+
+	require.Equal(t, src.DownloadRootDir, cp.DownloadRootDir)
+	require.Equal(t, src.DownloadCacheDir, cp.DownloadCacheDir)
+	require.Equal(t, src.VersionFilePath, cp.VersionFilePath)
+	require.Equal(t, src.ResourcesYAML, cp.ResourcesYAML)
+	require.Equal(t, src.InstallerVersion, cp.InstallerVersion)
+	require.True(t, cp.ShowProgress)
+	require.Len(t, cp.ModuleConfigs, 1)
+	require.Equal(t, "x", cp.ModuleConfigs[0].GetName())
+	require.Equal(t, "v", cp.VersionMap["k"])
+	require.Equal(t, "c", cp.Images["a"]["b"])
+}
+
+func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
+	src := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			Settings:   map[string]interface{}{"k": "v"},
+			NodeGroups: map[string]map[string]interface{}{"ng": {"replicas": 1}},
+		},
+	}
+	cp := src.DeepCopy()
+
+	cp.CloudProviderVars.Settings["k"] = "mutated"
+	cp.CloudProviderVars.NodeGroups["ng"]["replicas"] = 99
+
+	require.Equal(t, "v", src.CloudProviderVars.Settings["k"])
+	require.Equal(t, 1, src.CloudProviderVars.NodeGroups["ng"]["replicas"])
+}
+
+type stubPreparator struct {
+	result providerdata.PrepareResult
+}
+
+func (s stubPreparator) Validate(_ context.Context, _ ProviderInput) error {
+	return nil
+}
+
+func (s stubPreparator) Prepare(_ context.Context, _ ProviderInput) (providerdata.PrepareResult, error) {
+	return s.result, nil
+}
+
+func stubPreparatorProvider(s stubPreparator) MetaConfigPreparatorProvider {
+	return func(_, _ string) MetaConfigPreparator { return s }
+}
+
+func TestValidateAndPrepareMetaConfig_NilProviderClusterConfig_NoPanic(t *testing.T) {
+	m := &MetaConfig{
+		ClusterType:           CloudClusterType,
+		ProviderName:          "dvp",
+		ProviderClusterConfig: nil,
+	}
+	prep := stubPreparator{result: providerdata.PrepareResult{
+		ProviderClusterConfig: map[string]interface{}{"layout": map[string]interface{}{"k": "v"}},
+	}}
+
+	out, err := validateAndPrepareMetaConfig(context.Background(), stubPreparatorProvider(prep), m)
+	require.NoError(t, err)
+	require.NotNil(t, out.ProviderClusterConfig)
+	require.Contains(t, out.ProviderClusterConfig, "layout")
+}
+
+func TestApplyModuleConfigSettings_TakesSpecSettings(t *testing.T) {
+	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Settings: settings}}
+	mc.SetName("cloud-provider-dvp")
+
+	m := &MetaConfig{
+		ProviderName:  "dvp",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+
+	require.NotNil(t, m.CloudProviderVars)
+	require.Equal(t, map[string]interface{}(settings), m.CloudProviderVars.Settings)
 }

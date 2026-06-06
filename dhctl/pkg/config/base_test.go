@@ -462,7 +462,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 func TestParseConfigFromCluster(t *testing.T) {
 	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
-		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{})
+		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{}, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
@@ -477,7 +477,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	}
 
 	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
-		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{})
+		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{}, "")
 
 		require.Error(t, err)
 		require.Nil(t, metaConfig)
@@ -924,9 +924,9 @@ deckhouse:
 
 func TestRegistryConfigProvider(t *testing.T) {
 	t.Run("Parse mocks config paths with wildcard", func(t *testing.T) {
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
-		})
+		docs, err := FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		require.NoError(t, err)
+		provider, err := RegistryConfigProvider(docs)
 		require.NoError(t, err)
 
 		remote, err := provider.RemoteData()
@@ -963,9 +963,7 @@ spec:
   version: 1
 `
 
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return []string{mcDeckhouse}, nil
-		})
+		provider, err := RegistryConfigProvider([]string{mcDeckhouse})
 		require.NoError(t, err)
 
 		remote, err := provider.RemoteData()
@@ -992,9 +990,7 @@ deckhouse:
   registryCA: "-----BEGIN CERTIFICATE-----"
 `
 
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return []string{initConfig}, nil
-		})
+		provider, err := RegistryConfigProvider([]string{initConfig})
 		require.NoError(t, err)
 
 		remote, err := provider.RemoteData()

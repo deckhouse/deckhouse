@@ -31,10 +31,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-type DhctlOperation string
+type DhctlOperation = string
 
 const (
 	DhctlOperationBootstrap DhctlOperation = providerdata.OperationBootstrap
+	DhctlOperationConverge  DhctlOperation = providerdata.OperationConverge
+	DhctlOperationDestroy   DhctlOperation = providerdata.OperationDestroy
 )
 
 type PreparatorProviderParams struct {
@@ -50,43 +52,47 @@ func (p *PreparatorProviderParams) WithOperationBootstrap() {
 	p.WithOperation(DhctlOperationBootstrap)
 }
 
+func (p *PreparatorProviderParams) WithOperationConverge() {
+	p.WithOperation(DhctlOperationConverge)
+}
+
+func (p *PreparatorProviderParams) WithOperationDestroy() {
+	p.WithOperation(DhctlOperationDestroy)
+}
+
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: logger,
-	}
+	return PreparatorProviderParams{logger: logger}
 }
 
 func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
-	return PreparatorProviderParams{
-		logger: log.NewSilentLogger(),
-	}
+	return PreparatorProviderParams{logger: log.NewSilentLogger()}
 }
 
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
 	logger := params.logger
-
 	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
-
+	operation := params.Operation
 	return func(provider, downloadRootDir string) config.MetaConfigPreparator {
-		switch provider {
+		return selectPreparator(provider, downloadRootDir, logger, operation)
+	}
+}
+
+func selectPreparator(provider, downloadRootDir string, logger log.Logger, operation DhctlOperation) config.MetaConfigPreparator {
+	switch provider {
+	case "":
 		// static cluster
-		case "":
-			return config.DummyPreparatorProvider()("", "")
-		case yandex.ProviderName:
-			return yandex.NewMetaConfigPreparator(true, string(params.Operation)).WithLogger(logger)
-		case vcd.ProviderName:
-			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
-				PrepareMetaConfig:     true,
-				ValidateClusterPrefix: true,
-			}, logger)
-		default:
-			if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
-				return external.NewBinaryPreparator(binaryPath)
-			}
-			return &defaultCloudOnlyPrefixValidatorPreparator{}
+		return config.DummyPreparatorProvider()("", "")
+	case yandex.ProviderName:
+		return yandex.NewMetaConfigPreparator(logger, operation)
+	case vcd.ProviderName:
+		return vcd.NewMetaConfigPreparator(logger)
+	default:
+		if binaryPath := findExternalPreparatorBinary(downloadRootDir, provider); binaryPath != "" {
+			return external.NewBinaryPreparator(binaryPath)
 		}
+		return &defaultCloudOnlyPrefixValidatorPreparator{}
 	}
 }
 

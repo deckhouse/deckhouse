@@ -163,10 +163,6 @@ func (p *CloudProviderGetterParams) getLogger() (log.Logger, error) {
 	return p.Logger, nil
 }
 
-func (p *CloudProviderGetterParams) isDebug() bool {
-	return p.IsDebug
-}
-
 func (p *CloudProviderGetterParams) getAdditionalParams() cloud.ProviderAdditionalParams {
 	return p.AdditionalParams
 }

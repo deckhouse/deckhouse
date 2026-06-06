@@ -133,13 +133,14 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
+		preparatorParams := infrastructureprovider.NewPreparatorProviderParams(logger)
+		preparatorParams.WithOperationConverge()
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
-			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(logger),
-			),
+			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 			&opts.Global,
+			string(infrastructureprovider.DhctlOperationConverge),
 		)
 		if err != nil {
 			return err

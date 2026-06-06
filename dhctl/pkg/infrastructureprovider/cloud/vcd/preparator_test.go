@@ -25,25 +25,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPreparator {
-	p := NewMetaConfigPreparator(MetaConfigPreparatorParams{
-		PrepareMetaConfig:     prepareConfig,
-		ValidateClusterPrefix: true,
-	}, log.GetDefaultLogger())
+func newTestPreparator(_ bool, client cloudClient) *MetaConfigPreparator {
+	p := NewMetaConfigPreparator(log.GetDefaultLogger())
 
 	p.clientProvider = func(_ map[string]json.RawMessage, _ log.Logger) (cloudClient, error) {
 		return client, nil
 	}
 
 	return p
-}
-
-func TestDisableMetaConfigPreparator(t *testing.T) {
-	preparator := newTestPreparator(false, testGetLegacyClient())
-	result, err := preparator.Prepare(context.TODO(), config.ProviderInput{})
-
-	require.NoError(t, err)
-	require.Nil(t, result.ProviderClusterConfig)
 }
 
 func TestPreparatorWithCurrentAPI(t *testing.T) {
@@ -104,11 +93,6 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "abc-abc", false)
 
 	preparator := newTestPreparator(false, testGetLegacyClient())
-	preparator.params.ValidateClusterPrefix = false
-
-	err := preparator.Validate(context.TODO(), makeInput(validServer, ""))
-	require.NoError(t, err)
-
-	err = preparator.Validate(context.TODO(), makeInput("https://myserver:8080/api/", "test"))
+	err := preparator.Validate(context.TODO(), makeInput("https://myserver:8080/api/", "test"))
 	require.Error(t, err)
 }

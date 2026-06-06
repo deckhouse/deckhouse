@@ -66,9 +66,7 @@ func LoadConfigFromFile(
 			return nil, err
 		}
 
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return docs, nil
-		})
+		provider, err := RegistryConfigProvider(docs)
 		if err != nil {
 			return nil, err
 		}
@@ -195,6 +193,7 @@ func ParseConfigFromCluster(
 	kubeCl *client.KubernetesClient,
 	preparatorProvider MetaConfigPreparatorProvider,
 	globalOptions *options.GlobalOptions,
+	operation string,
 ) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
@@ -202,7 +201,7 @@ func ParseConfigFromCluster(
 	return metaConfig, log.ProcessCtx(ctx, "common", "Get Cluster configuration", func(ctx context.Context) error {
 		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
 			RunContext(ctx, func() error {
-				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
+				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
 				return err
 			})
 	})
@@ -213,6 +212,7 @@ func ParseConfigInCluster(
 	kubeCl *client.KubernetesClient,
 	preparatorProvider MetaConfigPreparatorProvider,
 	globalOptions *options.GlobalOptions,
+	operation string,
 ) (*MetaConfig, error) {
 	var (
 		metaConfig *MetaConfig
@@ -221,7 +221,7 @@ func ParseConfigInCluster(
 
 	err = retry.NewSilentLoop("Get Cluster configuration from inside Kubernetes cluster", 5, 5*time.Second).
 		RunContext(ctx, func() error {
-			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions)
+			metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, globalOptions, operation)
 			return err
 		})
 	if err != nil {
@@ -230,8 +230,8 @@ func ParseConfigInCluster(
 	return metaConfig, nil
 }
 
-func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, globalOptions *options.GlobalOptions) (*MetaConfig, error) {
-	metaConfig := &MetaConfig{}
+func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
+	metaConfig := &MetaConfig{Operation: operation}
 
 	// panic mitigation
 	if globalOptions == nil {
@@ -558,12 +558,7 @@ func FetchDocuments(paths []string) ([]string, error) {
 	return docs, nil
 }
 
-func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.ConfigProvider, error) {
-	docs, err := docsFetcher()
-	if err != nil {
-		return nil, err
-	}
-
+func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 	var (
 		initConfig        *initconfig.Config
 		deckhouseSettings *moduleconfig.DeckhouseSettings
@@ -646,6 +641,9 @@ func fetchCloudProvider(docs []string) (string, error) {
 // if its schemas are not already present. The image is unpacked into
 // <DownloadDir>/<provider>/ so all provider-specific files stay under one directory.
 func prepareProviderCandiDir(ctx context.Context, provider string, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
+	if provider == "" {
+		return fmt.Errorf("provider is empty")
+	}
 	systemSchemaPath := filepath.Join(globalOptions.CandiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
 	if _, err := os.Stat(systemSchemaPath); err == nil {
 		return nil
