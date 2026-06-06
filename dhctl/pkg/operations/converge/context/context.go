@@ -212,7 +212,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts, string(infrastructureprovider.DhctlOperationConverge))
+	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return nil, err
 	}

@@ -114,7 +114,6 @@ func ValidateOptionDownloadRootDir(dir string) ValidateOption {
 	}
 }
 
-
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
 	candiDir := options.DefaultCandiDir

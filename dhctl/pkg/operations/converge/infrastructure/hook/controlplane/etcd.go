@@ -28,15 +28,26 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
+func waitEtcdHasMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
 	attempt := 0
 
 	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
 		attempt++
+
+		// Re-resolve the client on every attempt — during destructive master
+		// replace the SSH-tunnel / kube-proxy used by the previously-captured
+		// client can die (kube-apiserver on the host we're tunnelling through
+		// restarts on etcd reconfig). The getter returns a fresh tunnel.
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
 
 		members, err := getEtcdMembers(ctx, client, "")
 		if err != nil {
@@ -64,13 +75,19 @@ func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName s
 	})
 }
 
-func waitEtcdHasNoMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
+func waitEtcdHasNoMember(ctx context.Context, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string) error {
 	const maxAttempts = 45
 	attempt := 0
 
 	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 5*time.Second).RunContext(ctx, func() error {
 		attempt++
 		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
+
+		kc, err := kubeGetter.KubeClientCtx(ctx)
+		if err != nil {
+			return fmt.Errorf("get kube client: %w", err)
+		}
+		client := kc.KubeClient.(libcon.KubeClient)
 
 		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
 		if err != nil {

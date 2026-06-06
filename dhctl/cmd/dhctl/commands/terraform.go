@@ -134,7 +134,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			kubeCl,
 			infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 			&opts.Global,
-			string(infrastructureprovider.DhctlOperationConverge),
+			infrastructureprovider.DhctlOperationConverge,
 		)
 		if err != nil {
 			return err

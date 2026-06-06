@@ -247,11 +247,29 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		return nil, err
 	}
 
+	// Extract provider name early so we can decide whether to download the
+	// provider's terraform-manager image even when the bundled candi tree is
+	// already on disk (EnsureCandiAvailable=false). Bundled installer images
+	// ship cluster_configuration.yaml schema but NOT the validator binary or
+	// terraform-manager plugins — providerCandiPresent also checks for the
+	// validator file for external providers.
+	var cloudProvider string
+	if clusterType == CloudClusterType {
+		var cloudSpec struct {
+			Provider string `json:"provider"`
+		}
+		if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloudSpec); err != nil {
+			return nil, fmt.Errorf("parse cloud provider from cluster config: %w", err)
+		}
+		cloudProvider = strings.ToLower(cloudSpec.Provider)
+	}
+	needProviderCandi := cloudProvider != "" && !providerCandiPresent(cloudProvider, globalOptions)
+
 	// Registry data is needed when we owe a candi download OR when the cluster
 	// is Cloud (provider plugins are pulled lazily by downloadImage and need
 	// metaConfig.DeckhouseConfig.RegistryDockerCfg even on a fresh dhctl run
 	// that didn't have to refresh the install tree).
-	needRegistryData := globalOptions.EnsureCandiAvailable || clusterType == CloudClusterType
+	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterType == CloudClusterType
 	if needRegistryData {
 		conf, b64dc, err := registrydata.GetRegistryData(ctx, kubeCl)
 		if err != nil {
@@ -262,19 +280,10 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 			if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
 				return nil, err
 			}
-
-			if clusterType == CloudClusterType {
-				var cloudSpec struct {
-					Provider string `json:"provider"`
-				}
-				if err := json.Unmarshal(parsedClusterConfig["cloud"], &cloudSpec); err != nil {
-					return nil, fmt.Errorf("parse cloud provider from cluster config: %w", err)
-				}
-				if provider := strings.ToLower(cloudSpec.Provider); provider != "" {
-					if err := prepareProviderCandiDir(ctx, provider, conf, globalOptions); err != nil {
-						return nil, fmt.Errorf("prepare provider candi dir: %w", err)
-					}
-				}
+		}
+		if needProviderCandi {
+			if err := prepareProviderCandiDir(ctx, cloudProvider, conf, globalOptions); err != nil {
+				return nil, fmt.Errorf("prepare provider candi dir: %w", err)
 			}
 		}
 
@@ -587,12 +596,18 @@ func providerCandiPresent(provider string, globalOptions *options.GlobalOptions)
 	if _, err := os.Stat(downloadPath); err == nil {
 		schemaPresent = true
 	}
-	if !schemaPresent {
-		return false
-	}
+
 	if _, inTree := inTreePreparatorProviders[provider]; inTree {
-		return true
+		// in-tree providers (yandex, vcd) ship their preparator inside dhctl
+		// and only need the openapi schema for validation
+		return schemaPresent
 	}
+
+	// External providers (DVP, future ones) need the validator binary that
+	// ships in the terraform-manager OCI image. Bundled installer images
+	// typically do NOT carry their openapi schemas — the terraform-manager
+	// download is what brings the validator. So the binary alone is enough
+	// to consider provider-candi present.
 	validatorPath := filepath.Join(globalOptions.DownloadDir, provider, "validator")
 	if _, err := os.Stat(validatorPath); err == nil {
 		return true

@@ -100,30 +100,35 @@ func fetchCloudPermanentNodeGroupsFromCluster(ctx context.Context, kubeCl *clien
 	return result, nil
 }
 
+// instanceClassAPIVersions lists the API versions to probe for
+// <provider>instanceclasses. Legacy providers (yandex, vcd, aws, ...) register
+// under v1; newer external providers (DVP) ship as v1alpha1. We try v1 first
+// to keep the happy path one round-trip for the common case.
+var instanceClassAPIVersions = []string{"v1", "v1alpha1"}
+
 func fetchInstanceClassesFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (map[string]map[string]interface{}, error) {
 	if providerName == "" {
 		return nil, nil
 	}
 
 	resource := strings.ToLower(providerName) + "instanceclasses"
-	gvr := schema.GroupVersionResource{Group: instanceClassAPIGroup, Version: "v1", Resource: resource}
-
-	list, err := kubeCl.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) || apierrors.IsMethodNotSupported(err) {
-			return nil, nil
+	for _, version := range instanceClassAPIVersions {
+		gvr := schema.GroupVersionResource{Group: instanceClassAPIGroup, Version: version, Resource: resource}
+		list, err := kubeCl.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
+		if err == nil {
+			result := make(map[string]map[string]interface{}, len(list.Items))
+			for _, item := range list.Items {
+				if name := item.GetName(); name != "" {
+					result[name] = item.Object
+				}
+			}
+			return result, nil
 		}
-		return nil, fmt.Errorf("list instance classes for provider %s: %w", providerName, err)
-	}
-
-	result := make(map[string]map[string]interface{}, len(list.Items))
-	for _, item := range list.Items {
-		name := item.GetName()
-		if name != "" {
-			result[name] = item.Object
+		if !apierrors.IsNotFound(err) && !apierrors.IsMethodNotSupported(err) {
+			return nil, fmt.Errorf("list instance classes for provider %s (version %s): %w", providerName, version, err)
 		}
 	}
-	return result, nil
+	return nil, nil
 }
 
 func fetchCredentialSecretsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string]map[string]interface{}, error) {

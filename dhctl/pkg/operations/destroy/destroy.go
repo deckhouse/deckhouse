@@ -136,7 +136,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
 	}
 
-	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger, string(infrastructureprovider.DhctlOperationDestroy)).
+	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger, infrastructureprovider.DhctlOperationDestroy).
 		WithForceFromCache(params.forceFromCache)
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }

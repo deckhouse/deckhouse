@@ -243,12 +243,9 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
-// and TerraNodeGroupSpecs from m.ProviderClusterConfig — the classic flow
-// where <Provider>ClusterConfiguration is on disk.
+// and TerraNodeGroupSpecs from m.ProviderClusterConfig (legacy PCC flow) and
+// falls back to CloudProviderVars.NodeGroups when PCC is empty (mc-flow).
 func (m *MetaConfig) extractProviderClusterFields() error {
-	if len(m.ProviderClusterConfig) == 0 {
-		return nil
-	}
 	if raw, ok := m.ProviderClusterConfig["layout"]; ok && len(raw) > 0 {
 		var layout string
 		if err := json.Unmarshal(raw, &layout); err != nil {
@@ -269,7 +266,79 @@ func (m *MetaConfig) extractProviderClusterFields() error {
 			return fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
 		}
 	}
+
+	// mc-flow: PCC is absent, so MasterNodeGroupSpec and TerraNodeGroupSpecs
+	// stay empty after the PCC reads above. Derive them from the cluster's
+	// NodeGroup resources (already loaded into CloudProviderVars.NodeGroups by
+	// CloudProviderVarsFromCluster). Most consumers — converge/runner.go,
+	// MasterNodeGroupController, cluster-bootstrapper preflight,
+	// cloud_prefix_length — read these typed fields directly, so leaving
+	// them at zero misroutes converge into "decrease to 0" logic.
+	applyNodeGroupReplicasFromCloudProviderVars(m)
 	return nil
+}
+
+func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) {
+	if m.CloudProviderVars == nil {
+		return
+	}
+	if m.MasterNodeGroupSpec.Replicas == 0 {
+		if r := nodeGroupMinPerZone(m.CloudProviderVars.NodeGroups, "master"); r > 0 {
+			m.MasterNodeGroupSpec.Replicas = r
+		}
+	}
+	if len(m.TerraNodeGroupSpecs) == 0 && len(m.CloudProviderVars.NodeGroups) > 0 {
+		for name, ng := range m.CloudProviderVars.NodeGroups {
+			if name == "master" {
+				continue
+			}
+			r := nodeGroupMinPerZone(m.CloudProviderVars.NodeGroups, name)
+			nodeTemplate, _ := nestedMap(ng, "spec", "nodeTemplate")
+			m.TerraNodeGroupSpecs = append(m.TerraNodeGroupSpecs, TerraNodeGroupSpec{
+				Name:         name,
+				Replicas:     r,
+				NodeTemplate: nodeTemplate,
+			})
+		}
+	}
+}
+
+func nodeGroupMinPerZone(ngs map[string]map[string]interface{}, name string) int {
+	ng, ok := ngs[name]
+	if !ok {
+		return 0
+	}
+	ci, ok := nestedMap(ng, "spec", "cloudInstances")
+	if !ok {
+		return 0
+	}
+	switch v := ci["minPerZone"].(type) {
+	case float64:
+		if v > 0 {
+			return int(v)
+		}
+	case int64:
+		if v > 0 {
+			return int(v)
+		}
+	case int:
+		if v > 0 {
+			return v
+		}
+	}
+	return 0
+}
+
+func nestedMap(obj map[string]interface{}, path ...string) (map[string]interface{}, bool) {
+	cur := obj
+	for _, p := range path {
+		next, ok := cur[p].(map[string]interface{})
+		if !ok {
+			return nil, false
+		}
+		cur = next
+	}
+	return cur, true
 }
 
 // cloudProviderModuleSettings is the typed view of the fields dhctl reads

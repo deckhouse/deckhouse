@@ -293,12 +293,12 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		&b.Options.Global,
 		config.ValidateOptionValidateExtensions(true),
-		config.ValidateOptionOperation(string(preparatorParams.Operation)),
+		config.ValidateOptionOperation(preparatorParams.Operation),
 	)
 	if err != nil {
 		return err
 	}
-	metaConfig.Operation = string(preparatorParams.Operation)
+	metaConfig.Operation = preparatorParams.Operation
 
 	log.DebugLn("MetaConfig was loaded")
 

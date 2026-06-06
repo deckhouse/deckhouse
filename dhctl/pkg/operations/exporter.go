@@ -278,7 +278,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 		c.kubeCl,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		c.globalOptions,
-		string(infrastructureprovider.DhctlOperationConverge),
+		infrastructureprovider.DhctlOperationConverge,
 	)
 	if err != nil {
 		log.ErrorLn(err)
