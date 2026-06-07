@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resource-controller
+  namespace: d8-cloud-provider-openstack
+  {{- include "helm_lib_module_labels" (list . (dict "app" "resource-controller")) | nindent 2 }}
+spec:
+  ports:
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+  selector:
+    app: "resource-controller"

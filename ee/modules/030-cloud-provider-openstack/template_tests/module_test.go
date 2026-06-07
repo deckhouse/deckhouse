@@ -93,6 +93,10 @@ const moduleValues = `
   csiDriver:
     fsGroupPolicy: ReadWriteOnceWithFSType
   internal:
+    capoControllerManagerWebhookCert:
+      ca: myca
+      key: mykey
+      crt: mycrt
     storageClasses:
       - name: fastssd
         type: Fast HDD
@@ -126,6 +130,10 @@ const moduleValues = `
 
 const badModuleValues = `
   internal:
+    capoControllerManagerWebhookCert:
+      ca: myca
+      key: mykey
+      crt: mycrt
     connection:
       authURL: http://my.cloud.lalla/123/
       username: myuser
