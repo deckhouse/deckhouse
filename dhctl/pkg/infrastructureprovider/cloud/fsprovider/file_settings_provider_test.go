@@ -24,7 +24,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
@@ -44,7 +43,6 @@ var tofuProviders = []string{
 	yandex.ProviderName,
 	"dynamix",
 	"zvirt",
-	dvp.ProviderName,
 	"vsphere",
 	"huaweicloud",
 }
@@ -81,6 +79,7 @@ func TestProvidersSettings(t *testing.T) {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.True(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "1.12.0")
+			require.Nil(t, settings.VMChange())
 		})
 	}
 
@@ -88,6 +87,7 @@ func TestProvidersSettings(t *testing.T) {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.False(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "0.14.8")
+			require.Nil(t, settings.VMChange())
 		})
 	}
 }
