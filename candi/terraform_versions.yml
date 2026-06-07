@@ -157,3 +157,13 @@ huaweicloud:
   destinationBinary: terraform-provider-huaweicloud
   vmResourceType: huaweicloud_compute_instance
   useOpentofu: true
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
