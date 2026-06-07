@@ -213,5 +213,15 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 		}
 	}
 
+	for cloudName, set := range res {
+		simple, ok := set.(*settings.Simple)
+		if !ok {
+			continue
+		}
+		if cloudName == "dvp" && simple.VMChangeVal == nil {
+			return nil, fmt.Errorf("provider DVP requires plan_rules.yml with vmChange next to %s", filename)
+		}
+	}
+
 	return res, nil
 }

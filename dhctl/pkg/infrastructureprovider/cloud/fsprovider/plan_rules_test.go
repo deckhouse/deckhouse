@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 func TestLoadPlanRules_FileAbsent(t *testing.T) {
@@ -63,4 +65,62 @@ func TestLoadPlanRules_MalformedYAML(t *testing.T) {
 
 	_, err := loadPlanRules(infraVersionsFile)
 	require.Error(t, err)
+}
+
+func TestLoadSettings_DVPRequiresPlanRules(t *testing.T) {
+	dir := t.TempDir()
+	infraVersionsFile := filepath.Join(dir, "terraform_versions.yml")
+
+	require.NoError(t, os.WriteFile(infraVersionsFile, []byte(`
+opentofu: 1.12.0
+terraform: 0.14.8
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
+`), 0o644))
+
+	_, err := loadTerraformVersionFileSettings(infraVersionsFile, log.GetDefaultLogger())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "DVP")
+	require.Contains(t, err.Error(), "plan_rules.yml")
+}
+
+func TestLoadSettings_DVPWithPlanRulesSucceeds(t *testing.T) {
+	dir := t.TempDir()
+	infraVersionsFile := filepath.Join(dir, "terraform_versions.yml")
+
+	require.NoError(t, os.WriteFile(infraVersionsFile, []byte(`
+opentofu: 1.12.0
+terraform: 0.14.8
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
+`), 0o644))
+
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "plan_rules.yml"), []byte(`
+dvp:
+  vmChange:
+    resourceType: kubernetes_manifest
+    fieldEquals:
+      path: manifest.kind
+      value: VirtualMachine
+`), 0o644))
+
+	store, err := loadTerraformVersionFileSettings(infraVersionsFile, log.GetDefaultLogger())
+	require.NoError(t, err)
+	require.NotNil(t, store["dvp"].VMChange())
 }
