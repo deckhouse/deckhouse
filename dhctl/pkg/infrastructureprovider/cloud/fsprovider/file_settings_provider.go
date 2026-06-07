@@ -197,5 +197,21 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 		res[cloudName] = set
 	}
 
+	planRules, err := loadPlanRules(filename)
+	if err != nil {
+		return nil, err
+	}
+	for providerKey, rule := range planRules {
+		set, ok := res[providerKey].(*settings.Simple)
+		if !ok {
+			logger.LogDebugF("plan_rules.yml entry %q has no matching provider in %s, skipping\n", providerKey, filename)
+			continue
+		}
+		set.VMChangeVal = rule
+		if err := set.Validate(false); err != nil {
+			return nil, fmt.Errorf("validate provider %s after plan_rules merge: %w", providerKey, err)
+		}
+	}
+
 	return res, nil
 }
