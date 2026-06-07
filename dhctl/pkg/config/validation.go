@@ -649,6 +649,8 @@ const (
 	ErrKindChangesValidationFailed ErrorKind = iota + 1
 	ErrKindValidationFailed
 	ErrKindInvalidYAML
+	ErrKindCNIMismatch
+	ErrKindCNISettingsMismatch
 )
 
 func (k ErrorKind) String() string {
@@ -659,6 +661,10 @@ func (k ErrorKind) String() string {
 		return "ValidationFailed"
 	case ErrKindInvalidYAML:
 		return "InvalidYAML"
+	case ErrKindCNIMismatch:
+		return "CNIMismatch"
+	case ErrKindCNISettingsMismatch:
+		return "CNISettingsMismatch"
 	default:
 		return "unknown"
 	}
@@ -669,11 +675,30 @@ type ValidationError struct {
 	Errors []Error
 }
 
-func (v *ValidationError) Append(kind ErrorKind, e Error) {
-	if v.Kind < kind {
-		v.Kind = kind
+func (v *ValidationError) Append(reason ErrorKind, e Error) {
+	e.Reason = reason
+	if isLegacyKind(reason) && v.Kind < reason {
+		v.Kind = reason
 	}
 	v.Errors = append(v.Errors, e)
+}
+
+func isLegacyKind(k ErrorKind) bool {
+	switch k {
+	case ErrKindChangesValidationFailed, ErrKindValidationFailed, ErrKindInvalidYAML:
+		return true
+	default:
+		return false
+	}
+}
+
+func (v *ValidationError) Merge(other *ValidationError) {
+	if other == nil {
+		return
+	}
+	for _, e := range other.Errors {
+		v.Append(e.Reason, e)
+	}
 }
 
 func (v *ValidationError) Error() string {
@@ -719,7 +744,12 @@ func (v *ValidationError) ErrorOrNil() error {
 	return v
 }
 
+// Error fields other than Reason intentionally have no json tags: the JSON
+// shape must stay byte-equivalent to main, where these fields are emitted
+// even when zero. Reason is the only new field and is omitempty so old
+// clients see it as absent.
 type Error struct {
+	Reason   ErrorKind `json:"Reason,omitempty"`
 	Index    *int
 	Group    string
 	Version  string

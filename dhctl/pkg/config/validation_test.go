@@ -15,6 +15,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -529,3 +530,74 @@ internalNetworkCIDRs:
 }
 
 var validateOpts = []ValidateOption{ValidateOptionCommanderMode(true)}
+
+func TestValidationError_Append_SetsReasonAndLegacyKind(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"bad apiVersion"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind)
+	require.Len(t, ve.Errors, 1)
+	require.Equal(t, ErrKindValidationFailed, ve.Errors[0].Reason)
+}
+
+func TestValidationError_Append_NewReasonDoesNotBumpTopLevelKind(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni mismatch"}})
+
+	require.Equal(t, ErrorKind(0), ve.Kind)
+	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason)
+}
+
+func TestValidationError_Append_MixedReasons(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindCNIMismatch, Error{Messages: []string{"cni"}})
+	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"bad"}})
+	ve.Append(ErrKindCNISettingsMismatch, Error{Messages: []string{"cni s"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "top-level Kind must reflect only legacy-range reasons")
+	require.Equal(t, ErrKindCNIMismatch, ve.Errors[0].Reason)
+	require.Equal(t, ErrKindValidationFailed, ve.Errors[1].Reason)
+	require.Equal(t, ErrKindCNISettingsMismatch, ve.Errors[2].Reason)
+}
+
+func TestValidationError_Append_LegacyKindMonotonicity(t *testing.T) {
+	ve := &ValidationError{}
+	ve.Append(ErrKindValidationFailed, Error{Messages: []string{"a"}})
+	ve.Append(ErrKindChangesValidationFailed, Error{Messages: []string{"b"}})
+
+	require.Equal(t, ErrKindValidationFailed, ve.Kind, "lower legacy reason must not lower top-level Kind")
+}
+
+func TestValidationError_Merge(t *testing.T) {
+	a := &ValidationError{}
+	a.Append(ErrKindValidationFailed, Error{Messages: []string{"a1"}})
+
+	b := &ValidationError{}
+	b.Append(ErrKindCNIMismatch, Error{Messages: []string{"b1"}})
+	b.Append(ErrKindInvalidYAML, Error{Messages: []string{"b2"}})
+
+	a.Merge(b)
+
+	require.Equal(t, ErrKindInvalidYAML, a.Kind)
+	require.Len(t, a.Errors, 3)
+	require.Equal(t, ErrKindValidationFailed, a.Errors[0].Reason)
+	require.Equal(t, ErrKindCNIMismatch, a.Errors[1].Reason)
+	require.Equal(t, ErrKindInvalidYAML, a.Errors[2].Reason)
+}
+
+func TestValidationError_Merge_NilNoop(t *testing.T) {
+	a := &ValidationError{}
+	a.Append(ErrKindValidationFailed, Error{Messages: []string{"a"}})
+	a.Merge(nil)
+	require.Len(t, a.Errors, 1)
+	require.Equal(t, ErrKindValidationFailed, a.Kind)
+}
+
+func TestError_JSONOmitemptyReasonOnly(t *testing.T) {
+	// Reason omitempty: zero value disappears. All other fields are present
+	// even when zero, matching main wire-format byte-for-byte.
+	e := Error{Index: nil, Group: "", Version: "", Kind: "", Name: "", Messages: nil}
+	b, err := json.Marshal(e)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"Index":null,"Group":"","Version":"","Kind":"","Name":"","Messages":null}`, string(b))
+}

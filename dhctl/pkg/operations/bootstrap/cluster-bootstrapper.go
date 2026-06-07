@@ -300,6 +300,10 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 
 	log.DebugLn("MetaConfig was loaded")
 
+	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
+		return fmt.Errorf("apply cni bootstrap: %w", err)
+	}
+
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	// Check if static cluster without ssh-host

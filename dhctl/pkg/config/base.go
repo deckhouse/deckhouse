@@ -295,6 +295,7 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 		return false, nil
 	}
 
+	options := applyOptions(opts...)
 	docData := []byte(doc)
 
 	var index SchemaIndex
@@ -312,25 +313,29 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 
 		log.DebugF("Found ModuleConfig in config file %s\n", moduleConfig.Name)
 
-		_, err = schemaStore.Validate(&docData, opts...)
-		if err != nil {
-			if errors.Is(err, ErrSchemaNotFound) {
-				log.DebugF("Schema not found for module %s\n", moduleConfig.Name)
-				return false, nil
+		if !options.skipSchemaValidation {
+			_, err = schemaStore.Validate(&docData, opts...)
+			if err != nil {
+				if errors.Is(err, ErrSchemaNotFound) {
+					log.DebugF("Schema not found for module %s\n", moduleConfig.Name)
+					return false, nil
+				}
+				return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 			}
-			return false, fmt.Errorf("Module config validation failed: %w\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &moduleConfig)
 		return true, nil
 	}
 
-	_, err = schemaStore.Validate(&docData, opts...)
-	if err != nil {
-		if errors.Is(err, ErrSchemaNotFound) {
-			return false, nil
+	if !options.skipSchemaValidation {
+		_, err = schemaStore.Validate(&docData, opts...)
+		if err != nil {
+			if errors.Is(err, ErrSchemaNotFound) {
+				return false, nil
+			}
+			return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 		}
-		return false, fmt.Errorf("Config document validation failed: %v\ndata: \n%s\n", err, numerateManifestLines(docData))
 	}
 
 	var data map[string]json.RawMessage
@@ -425,23 +430,34 @@ func ParseConfigFromData(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
+	options := applyOptions(opts...)
 	schemaStore := NewSchemaStore(globalOptions)
 
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 
 	resourcesDocs := make([]string, 0, len(docs))
+	errs := &ValidationError{}
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
 		// Check for merged documents before parsing
 		if err := detectMergedDocuments(doc); err != nil {
-			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
+			wrapped := fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
+			if !options.collectAllErrors {
+				return nil, wrapped
+			}
+			errs.Append(ErrKindInvalidYAML, Error{Messages: []string{wrapped.Error()}})
+			continue
 		}
 
 		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
-			return nil, err
+			if !options.collectAllErrors {
+				return nil, err
+			}
+			errs.Append(ErrKindValidationFailed, Error{Messages: []string{err.Error()}})
+			continue
 		}
 		if !found && strings.TrimSpace(doc) != "" {
 			var index SchemaIndex
@@ -451,6 +467,14 @@ func ParseConfigFromData(
 			}
 			resourcesDocs = append(resourcesDocs, doc)
 		}
+	}
+
+	if options.collectAllErrors && len(errs.Errors) > 0 {
+		// Return the partially-built MetaConfig together with accumulated
+		// errors. Callers (e.g. validateCNIBootstrap) can keep analyzing on
+		// top of the partial result, so a parse error in one document does
+		// not hide a semantic problem in another.
+		return &metaConfig, errs
 	}
 
 	metaConfig.ResourcesYAML = strings.TrimSpace(strings.Join(resourcesDocs, "\n\n---\n\n"))
