@@ -79,7 +79,7 @@ func TestProvidersSettings(t *testing.T) {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.True(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "1.12.0")
-			require.Nil(t, settings.VMChange())
+			require.Nil(t, settings.VMResource())
 		})
 	}
 
@@ -87,7 +87,7 @@ func TestProvidersSettings(t *testing.T) {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.False(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "0.14.8")
-			require.Nil(t, settings.VMChange())
+			require.Nil(t, settings.VMResource())
 		})
 	}
 }

@@ -1,6 +1,5 @@
-kubernetes:
-  vmChange:
-    resourceType: kubernetes_manifest
-    fieldEquals:
-      path: manifest.kind
-      value: VirtualMachine
+vmResource:
+  type: kubernetes_manifest
+  fieldEquals:
+    path: manifest.kind
+    value: VirtualMachine

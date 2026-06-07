@@ -35,7 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmchange"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -127,8 +127,8 @@ func (p *Provider) NeedToUseTofu() bool {
 }
 
 func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
-	if rule := p.settings.VMChange(); rule != nil {
-		return vmchange.Match(rc, rule)
+	if rule := p.settings.VMResource(); rule != nil {
+		return vmresource.Match(rc, rule)
 	}
 	return rc.Type == p.settings.VMResourceType()
 }

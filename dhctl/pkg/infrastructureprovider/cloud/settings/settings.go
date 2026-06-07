@@ -14,7 +14,7 @@
 
 package settings
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmchange"
+import "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 
 type ProviderSettings interface {
 	Namespace() string
@@ -22,7 +22,7 @@ type ProviderSettings interface {
 	Versions() []string
 	DestinationBinary() string
 	VMResourceType() string
-	VMChange() *vmchange.Rule
+	VMResource() *vmresource.Rule
 	UseOpenTofu() bool
 	InfrastructureVersion() string
 	Type() string

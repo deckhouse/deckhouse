@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vmchange
+package vmresource
 
 import (
 	"strings"
@@ -24,7 +24,7 @@ func Match(rc plan.ResourceChange, rule *Rule) bool {
 	if rule == nil {
 		return false
 	}
-	if rc.Type != rule.ResourceType {
+	if rc.Type != rule.Type {
 		return false
 	}
 	if rule.FieldEquals == nil {

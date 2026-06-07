@@ -23,19 +23,20 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmchange"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 )
 
 const planRulesFilename = "plan_rules.yml"
 
-type planRulesEntry struct {
-	VMChange *vmchange.Rule `json:"vmChange,omitempty"`
+type planRulesFile struct {
+	VMResource *vmresource.Rule `json:"vmResource,omitempty"`
 }
 
 // loadPlanRules reads plan_rules.yml sitting next to the infrastructure
-// versions file. Missing file is not an error — providers without a rule fall
-// back to VMResourceType matching. Returns a nil map when the file is absent.
-func loadPlanRules(infraVersionsFile string) (map[string]*vmchange.Rule, error) {
+// versions file. The file describes a single provider's bundle, so it has no
+// provider-key wrapper. Missing file is not an error — providers without a
+// rule fall back to VMResourceType matching.
+func loadPlanRules(infraVersionsFile string) (*vmresource.Rule, error) {
 	path := filepath.Join(filepath.Dir(infraVersionsFile), planRulesFilename)
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -45,16 +46,10 @@ func loadPlanRules(infraVersionsFile string) (map[string]*vmchange.Rule, error) 
 		return nil, fmt.Errorf("read plan rules file %s: %w", path, err)
 	}
 
-	raw := map[string]planRulesEntry{}
-	if err := yaml.Unmarshal(data, &raw); err != nil {
+	var file planRulesFile
+	if err := yaml.Unmarshal(data, &file); err != nil {
 		return nil, fmt.Errorf("unmarshal plan rules file %s: %w", path, err)
 	}
 
-	out := make(map[string]*vmchange.Rule, len(raw))
-	for providerKey, entry := range raw {
-		if entry.VMChange != nil {
-			out[providerKey] = entry.VMChange
-		}
-	}
-	return out, nil
+	return file.VMResource, nil
 }

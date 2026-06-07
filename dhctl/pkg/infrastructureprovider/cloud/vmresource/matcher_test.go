@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vmchange
+package vmresource
 
 import (
 	"testing"
@@ -31,20 +31,20 @@ func TestMatch(t *testing.T) {
 	}{
 		{
 			name: "type match without fieldEquals",
-			rule: &Rule{ResourceType: "yandex_compute_instance"},
+			rule: &Rule{Type: "yandex_compute_instance"},
 			rc:   plan.ResourceChange{Type: "yandex_compute_instance"},
 			want: true,
 		},
 		{
 			name: "type mismatch without fieldEquals",
-			rule: &Rule{ResourceType: "yandex_compute_instance"},
+			rule: &Rule{Type: "yandex_compute_instance"},
 			rc:   plan.ResourceChange{Type: "yandex_compute_disk"},
 			want: false,
 		},
 		{
 			name: "type match plus fieldEquals match",
 			rule: &Rule{
-				ResourceType: "kubernetes_manifest",
+				Type:        "kubernetes_manifest",
 				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
 			},
 			rc: plan.ResourceChange{
@@ -58,7 +58,7 @@ func TestMatch(t *testing.T) {
 		{
 			name: "type match but fieldEquals value differs",
 			rule: &Rule{
-				ResourceType: "kubernetes_manifest",
+				Type:        "kubernetes_manifest",
 				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
 			},
 			rc: plan.ResourceChange{
@@ -72,7 +72,7 @@ func TestMatch(t *testing.T) {
 		{
 			name: "type match but fieldEquals path missing",
 			rule: &Rule{
-				ResourceType: "kubernetes_manifest",
+				Type:        "kubernetes_manifest",
 				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
 			},
 			rc: plan.ResourceChange{
@@ -84,7 +84,7 @@ func TestMatch(t *testing.T) {
 		{
 			name: "type mismatch ignores fieldEquals",
 			rule: &Rule{
-				ResourceType: "kubernetes_manifest",
+				Type:        "kubernetes_manifest",
 				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
 			},
 			rc: plan.ResourceChange{
@@ -98,7 +98,7 @@ func TestMatch(t *testing.T) {
 		{
 			name: "fieldEquals path value is not a string",
 			rule: &Rule{
-				ResourceType: "kubernetes_manifest",
+				Type:        "kubernetes_manifest",
 				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
 			},
 			rc: plan.ResourceChange{
@@ -112,7 +112,7 @@ func TestMatch(t *testing.T) {
 		{
 			name: "fieldEquals path traverses non-map intermediate",
 			rule: &Rule{
-				ResourceType: "kubernetes_manifest",
+				Type:        "kubernetes_manifest",
 				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
 			},
 			rc: plan.ResourceChange{

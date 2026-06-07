@@ -27,9 +27,9 @@ import (
 func TestLoadPlanRules_FileAbsent(t *testing.T) {
 	dir := t.TempDir()
 
-	rules, err := loadPlanRules(filepath.Join(dir, "terraform_versions.yml"))
+	rule, err := loadPlanRules(filepath.Join(dir, "terraform_versions.yml"))
 	require.NoError(t, err)
-	require.Nil(t, rules)
+	require.Nil(t, rule)
 }
 
 func TestLoadPlanRules_ValidFile(t *testing.T) {
@@ -38,21 +38,17 @@ func TestLoadPlanRules_ValidFile(t *testing.T) {
 	planRulesFile := filepath.Join(dir, "plan_rules.yml")
 
 	require.NoError(t, os.WriteFile(planRulesFile, []byte(`
-kubernetes:
-  vmChange:
-    resourceType: kubernetes_manifest
-    fieldEquals:
-      path: manifest.kind
-      value: VirtualMachine
+vmResource:
+  type: kubernetes_manifest
+  fieldEquals:
+    path: manifest.kind
+    value: VirtualMachine
 `), 0o644))
 
-	rules, err := loadPlanRules(infraVersionsFile)
+	rule, err := loadPlanRules(infraVersionsFile)
 	require.NoError(t, err)
-	require.Len(t, rules, 1)
-
-	rule := rules["kubernetes"]
 	require.NotNil(t, rule)
-	require.Equal(t, "kubernetes_manifest", rule.ResourceType)
+	require.Equal(t, "kubernetes_manifest", rule.Type)
 	require.NotNil(t, rule.FieldEquals)
 	require.Equal(t, "manifest.kind", rule.FieldEquals.Path)
 	require.Equal(t, "VirtualMachine", rule.FieldEquals.Value)
@@ -112,15 +108,14 @@ kubernetes:
 `), 0o644))
 
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "plan_rules.yml"), []byte(`
-dvp:
-  vmChange:
-    resourceType: kubernetes_manifest
-    fieldEquals:
-      path: manifest.kind
-      value: VirtualMachine
+vmResource:
+  type: kubernetes_manifest
+  fieldEquals:
+    path: manifest.kind
+    value: VirtualMachine
 `), 0o644))
 
 	store, err := loadTerraformVersionFileSettings(infraVersionsFile, log.GetDefaultLogger())
 	require.NoError(t, err)
-	require.NotNil(t, store["dvp"].VMChange())
+	require.NotNil(t, store["dvp"].VMResource())
 }

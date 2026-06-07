@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vmchange
+package vmresource
 
-// Rule describes how to recognise a terraform resource as a VM in a plan.
+// Rule identifies a terraform resource as a VM in a plan.
 type Rule struct {
-	ResourceType string       `json:"resourceType"`
-	FieldEquals  *FieldEquals `json:"fieldEquals,omitempty"`
+	Type        string       `json:"type"`
+	FieldEquals *FieldEquals `json:"fieldEquals,omitempty"`
 }
 
 // FieldEquals is an optional refinement: the matcher must find a string at

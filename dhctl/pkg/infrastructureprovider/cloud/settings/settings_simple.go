@@ -17,20 +17,20 @@ package settings
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmchange"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 )
 
 type Simple struct {
-	NamespaceVal             *string        `json:"namespace,omitempty"`
-	TypeVal                  *string        `json:"type,omitempty"`
-	CloudNameVal             *string        `json:"cloudName,omitempty"`
-	VersionVal               *string        `json:"version,omitempty"`
-	VersionsVal              *[]string      `json:"versions,omitempty"`
-	DestinationBinaryVal     *string        `json:"destinationBinary,omitempty"`
-	VMResourceTypeVal        *string        `json:"vmResourceType,omitempty"`
-	UseOpenTofuVal           *bool          `json:"useOpentofu,omitempty"`
-	InfrastructureVersionVal *string        `json:"infrastructureVersion,omitempty"`
-	VMChangeVal              *vmchange.Rule `json:"vmChange,omitempty"`
+	NamespaceVal             *string          `json:"namespace,omitempty"`
+	TypeVal                  *string          `json:"type,omitempty"`
+	CloudNameVal             *string          `json:"cloudName,omitempty"`
+	VersionVal               *string          `json:"version,omitempty"`
+	VersionsVal              *[]string        `json:"versions,omitempty"`
+	DestinationBinaryVal     *string          `json:"destinationBinary,omitempty"`
+	VMResourceTypeVal        *string          `json:"vmResourceType,omitempty"`
+	UseOpenTofuVal           *bool            `json:"useOpentofu,omitempty"`
+	InfrastructureVersionVal *string          `json:"infrastructureVersion,omitempty"`
+	VMResourceVal            *vmresource.Rule `json:"vmResource,omitempty"`
 }
 
 func (s *Simple) Validate(strictInfraVersion bool) error {
@@ -66,16 +66,16 @@ func (s *Simple) Validate(strictInfraVersion bool) error {
 		return fmt.Errorf("infrastructureVersion is required")
 	}
 
-	if s.VMChangeVal != nil {
-		if s.VMChangeVal.ResourceType == "" {
-			return fmt.Errorf("vmChange.resourceType is required when vmChange is set")
+	if s.VMResourceVal != nil {
+		if s.VMResourceVal.Type == "" {
+			return fmt.Errorf("vmResource.type is required when vmResource is set")
 		}
-		if s.VMChangeVal.FieldEquals != nil {
-			if s.VMChangeVal.FieldEquals.Path == "" {
-				return fmt.Errorf("vmChange.fieldEquals.path is required when fieldEquals is set")
+		if s.VMResourceVal.FieldEquals != nil {
+			if s.VMResourceVal.FieldEquals.Path == "" {
+				return fmt.Errorf("vmResource.fieldEquals.path is required when fieldEquals is set")
 			}
-			if s.VMChangeVal.FieldEquals.Value == "" {
-				return fmt.Errorf("vmChange.fieldEquals.value is required when fieldEquals is set")
+			if s.VMResourceVal.FieldEquals.Value == "" {
+				return fmt.Errorf("vmResource.fieldEquals.value is required when fieldEquals is set")
 			}
 		}
 	}
@@ -154,6 +154,6 @@ func (s *Simple) InfrastructureVersion() string {
 	return *s.InfrastructureVersionVal
 }
 
-func (s *Simple) VMChange() *vmchange.Rule {
-	return s.VMChangeVal
+func (s *Simple) VMResource() *vmresource.Rule {
+	return s.VMResourceVal
 }
