@@ -1,0 +1,28 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package vmchange
+
+// Rule describes how to recognise a terraform resource as a VM in a plan.
+type Rule struct {
+	ResourceType string       `json:"resourceType"`
+	FieldEquals  *FieldEquals `json:"fieldEquals,omitempty"`
+}
+
+// FieldEquals is an optional refinement: the matcher must find a string at
+// Path inside ResourceChange.Change.After that equals Value.
+type FieldEquals struct {
+	Path  string `json:"path"`
+	Value string `json:"value"`
+}
