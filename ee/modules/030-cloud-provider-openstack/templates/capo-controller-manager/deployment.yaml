@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: capo-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "capo-controller-manager"
