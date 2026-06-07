@@ -60,13 +60,15 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 		return nil, err
 	}
 
+	// Load both ModuleConfig and PCC: during a mc-flow migration both can
+	// coexist. extractProviderClusterFields prefers PCC for typed fields and
+	// falls back to the ModuleConfig when PCC is gone (post-migration state).
 	mc, err := loadCloudProviderModuleConfig(ctx, f.kubeCl, metaConfig.ProviderName)
 	if err != nil {
 		return nil, err
 	}
 	if mc != nil {
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, mc)
-		return nil, nil
 	}
 
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
@@ -75,15 +77,18 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	}
 	if pcc != nil {
 		metaConfig.ProviderClusterConfig = pcc
-		return nil, nil
 	}
 
-	return nil, fmt.Errorf(
-		"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
-		providerdata.CloudProviderModuleName(metaConfig.ProviderName),
-		legacyProviderClusterConfigSecretName,
-		global.ConfigsNS,
-	)
+	if mc == nil && pcc == nil {
+		return nil, fmt.Errorf(
+			"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
+			providerdata.CloudProviderModuleName(metaConfig.ProviderName),
+			legacyProviderClusterConfigSecretName,
+			global.ConfigsNS,
+		)
+	}
+
+	return nil, nil
 }
 
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*ModuleConfig, error) {
