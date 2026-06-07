@@ -33,7 +33,7 @@ webhooks:
     caBundle: {{ .Values.cloudProviderOpenstack.internal.capoControllerManagerWebhookCert.ca | b64enc }}
     service:
       name: capo-controller-manager-webhook-service
-      namespace: system
+      namespace: d8-cloud-provider-openstack
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-openstackclustertemplate
   failurePolicy: Fail
   matchPolicy: Equivalent
