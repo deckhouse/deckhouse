@@ -66,7 +66,7 @@ The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/
 
    * Automatic USB devices detection on cluster nodes and publishing them as a ResourceSlice resource. Virtualization-controller synchronizes this data into NodeUSBDevice custom resources, which are used to configure USB device forwarding then. For more information about configuring USB devices forwarding, refer to the [module documentation](/modules/virtualization/stable/user_guide.html#usb-%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%B0).
 
-   * Registration in [kubelet](../kubernetes-and-scheduling/kubelet.html) as the DRA kubelet plugin. The DRA kubelet plugin prepares and releases allocated resources for pods through the PrepareResourceClaims and UnrepareResourceClaims operations. The PrepareResourceClaims method returns CDI (Container Device Interface) devices IDs that kubelet passes to containerd. Data on available USB devices is published via ResourceSlice, and device selection is performed by the Kubernetes DRA mechanism based on ResourceClaim/ResourceClaimTemplate and DeviceClass.
+   * Registration in [kubelet](../kubernetes-and-scheduling/kubelet.html) as the DRA kubelet plugin. The DRA kubelet plugin prepares and releases allocated resources for pods through the PrepareResourceClaims and UnprepareResourceClaims operations. The PrepareResourceClaims method returns CDI (Container Device Interface) devices IDs that kubelet passes to containerd. Data on available USB devices is published via ResourceSlice, and device selection is performed by the Kubernetes DRA mechanism based on ResourceClaim/ResourceClaimTemplate and DeviceClass.
 
    The DRA driver interacts with kubelet via the gRPC protocol and Unix sockets.
 
