@@ -1,102 +1,102 @@
 ---
-title: Вспомогательные компоненты
+title: Auxiliary components
 permalink: en/architecture/virtualization/auxiliary.html
 search: virtualization-audit, virtualization-dra, dra
-description: Архитектура вспомогательных компонентов модуля virtualization в Deckhouse Kubernetes Platform.
+description: Architecture of the virtualization module auxiliary components in Deckhouse Kubernetes Platform.
 ---
 
-В модуле [`virtualization`](/modules/virtualization/) используются компоненты, реализующие следующие вспомогательные функции:
+The [`virtualization`](/modules/virtualization/) module uses components that implement the following auxiliary functions:
 
-- аудит событий безопасности;
-- проброс USB-устройств в виртуальные машины;
-- обновление сетевых маршрутов;
-- удаление ресурсов перед деактивацией модуля [`virtualization`](/modules/virtualization/).
+* Security events audit.
+* Forwarding USB devices to virtual machines (VMs).
+* Updating network routes.
+* Deleting resources before deactivating the [`virtualization`](/modules/virtualization/) module.
 
-## Аудит событий безопасности
+## Security events audit
 
-С инструкцией по активации аудита событий безопасности модуля [`virtualization`](/modules/virtualization/) можно ознакомиться в [документации модуля](/modules/virtualization/stable/admin_guide.html#%D0%BE%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D0%BE%D0%B2).
+For instructions on [`virtualization`](/modules/virtualization/) module security events audit activation, refer to the [module documentation](/modules/virtualization/stable/admin_guide.html#%D0%BE%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D0%BE%D0%B2).
 
-### Архитектура
+### Architecture
 
 {% alert level="info" %}
-Для упрощения схемы приняты следующие допущения:
+The following simplifications are made in the diagram:
 
-- На схеме контейнеры разных подов показаны как взаимодействующие напрямую. Фактически обмен выполняется через соответствующие сервисы Kubernetes (внутренние балансировщики). Названия сервисов не указываются, если они очевидны из контекста. В остальных случаях название сервиса приводится над стрелкой.
-- Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
+* The diagram shows containers in different pods interacting directly with each other. In reality, they communicate via the corresponding Kubernetes Services (internal load balancers). Service names are omitted if they are obvious from the diagram context. Otherwise, the Service name is shown above the arrow.
+* Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-Архитектура компонентов, реализующих аудит событий безопасности модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 изображена на следующей диаграмме:
+The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module auxiliary components and its interactions with other components of DKP are shown in the following diagrams:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента virtualization-audit модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-audit.ru.png)
+![Architecture of the virtualization-audit component of the virtualization module](../../../images/architecture/virtualization/c4-l2-virtualization-audit.png)
 
-### Компоненты
+### Components
 
-Аудит событий безопасности реализован одним компонентом:
+Security events audit is implemented by following component:
 
-- **Virtualization-audit** — компонент, состоящий из одного контейнера и принимающий поток событий безопасности модуля [`virtualization`](/modules/virtualization/). Отправка событий реализована с использованием модуля [`log-shipper`](/modules/log-shipper/). Агент логирования vector согласно настройкам в кастомных ресурсах ClusterLoggingConfig  отбирает из аудит-лога кластера события, связанные с кастомными ресурсами модуля [`virtualization`](/modules/virtualization/) и отправляет их на эндпойнт сервиса virtualization-audit. Virtualization-audit обрабатывает полученные audit-события, обогащает их данными из Kubernetes API и сохраняет обработанные события в собственный лог.
+* **Virtualization-audit**: A component that receives the [`virtualization`](/modules/virtualization/) module security events stream. Sending events is implemented by the [`log-shipper`](/modules/log-shipper/) module. Vector logging agent, according to the settings in the ClusterLoggingConfig custom resources, selects events, related to the [`virtualization`](/modules/virtualization/) module custom resources, from the cluster's audit log and sends them to the virtualization-audit service endpoint. Virtualization-audit processes the received audit events, enriches them with data from the Kubernetes API, and saves the processed events to its own log. It consists of a single container.
 
-Можно перенаправить события безопасности в систему логирования кластера (например, Loki). В этом случае аналогичным образом используются ресурсы ClusterLoggingConfig и агент vector модуля [`log-shipper`](/modules/log-shipper/).
+You can forward security events to the cluster logging system (for example, Loki). In this case, ClusterLoggingConfig resources and the vector agent of the [`log-shipper`](/modules/log-shipper/) module are used in a similar way.
 
-### Взаимодействия
+### Interactions
 
-Virtualization-audit взаимодействует со следующими компонентами:
+Virtualization-audit interacts with the following components:
 
-1. **Kube-apiserver** — cледит за изменениями кастомных ресурсов модуля [`virtualization`](/modules/virtualization/).
+1. **Kube-apiserver**: Watches for [`virtualization`](/modules/virtualization/) module custom resources.
 
-С virtualization-audit взаимодействуют следующие внешние компоненты:
+The following external components interact with the virtualization-audit:
 
 1. **Log-shipper-agent**:
 
-   - отправляет события безопасности модуля [`virtualization`](/modules/virtualization/);
-   - cобирает обработанные аудит-логи.
+   * Sends [`virtualization`](/modules/virtualization/) module security events.
+   * Collects processed audit logs.
 
-## Virtualization-DRA и прочие компоненты
+## Virtualization-DRA and other components
 
-### Архитектура
+### Architecture
 
-Архитектура прочих вспомогательных компонентов модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 изображена на следующей диаграмме:
+The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/) module auxiliary components are shown in the following diagrams:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура прочих вспомогательных компонентов модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-misc.ru.png)
+![Architecture of other virtualization module auxiliary components](../../../images/architecture/virtualization/c4-l2-virtualization-misc.png)
 
-### Компоненты
+### Components
 
-1. **Virtualization-dra** (DaemonSet) — драйвер DRA, с помощью которого реализуется проброс USB-устройств в виртуальные машины. Для проброса USB-устройств используется технология [DRA (Dynamic Resource Allocation)](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/). DRA — это механизм Kubernetes API, scheduler и kubelet для описания, планирования и подготовки динамически выделяемых ресурсов через внешние драйверы. Драйвер DRA выполняет следующие операции:
+1. **Virtualization-dra** (DaemonSet): The DRA driver, that is implemented to forward USB devices to VMs. The [DRA (Dynamic Resource Allocation)](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) technology is used to forward USB devices. DRA is a Kubernetes API, scheduler, and kubelet engine for describing, scheduling, and provisioning dynamically allocated resources through external drivers. The DRA driver performs the following operations:
 
-   - автоматически обнаруживает USB-устройства на узлах кластера и публикует их как ресурс ResourceSlice. Virtualization-controller синхронизирует эти данные в кастомные ресурсы NodeUSBDevice, которые дальше используются для настройки проброса USB-устройств. Подробнее с настройкой проброса USB-устройств можно ознакомиться в [документации модуля](/modules/virtualization/stable/user_guide.html#usb-%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%B0);
+   * Automatic USB devices detection on cluster nodes and publishing them as a ResourceSlice resource. Virtualization-controller synchronizes this data into NodeUSBDevice custom resources, which are used to configure USB device forwarding then. For more information about configuring USB devices forwarding, refer to the [module documentation](/modules/virtualization/stable/user_guide.html#usb-%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%B0).
 
-   - регистрируется в [kubelet](../kubernetes-and-scheduling/kubelet.html) как DRA kubelet plugin. DRA kubelet plugin подготавливает и освобождает выделенные ресурсы для подов через операции PrepareResourceClaims и UnprepareResourceClaims. Метод PrepareResourceClaims возвращает ID устройств CDI (Container Device Interface), которые kubelet передает в containerd. Данные о доступных USB-устройствах публикуются через ResourceSlice, а выбор устройств выполняется механизмом Kubernetes DRA на основе ResourceClaim/ResourceClaimTemplate и DeviceClass.
-   
-     DRA-драйвер взаимодействует с kubelet по протоколу gRPC через Unix-сокеты.
+   * Registration in [kubelet](../kubernetes-and-scheduling/kubelet.html) as the DRA kubelet plugin. The DRA kubelet plugin prepares and releases allocated resources for pods through the PrepareResourceClaims and UnrepareResourceClaims operations. The PrepareResourceClaims method returns CDI (Container Device Interface) devices IDs that kubelet passes to containerd. Data on available USB devices is published via ResourceSlice, and device selection is performed by the Kubernetes DRA mechanism based on ResourceClaim/ResourceClaimTemplate and DeviceClass.
 
-   - реализует USBIP-сервер, благодаря чему USB-устройство автоматически по сети пробрасывается на узел, где запущена виртуальная машина. Нет необходимости вручную размещать ВМ на том же узле, где находится устройство.
+   The DRA driver interacts with kubelet via the gRPC protocol and Unix sockets.
 
-   Cостоит из следующих контейнеров:
+   * USBIP server implementation, so that the USB device is automatically forwarded over the network to the node where the VM is running. There is no need to manually place the VM on the same node where the device is located.
 
-   - **init-load** — init-контейнер, загружающий модули ядра Linux, необходимые для работы DRA-драйвера;
-   - **virtualization-dra** — основной контейнер.
+   It consists of the following containers:
 
-1. **Vm-route-forge** — контроллер, следящий за кастомными ресурсами VirtualMachines из `virtualization.deckhouse.io` API group и обновляющий сетевые маршруты на узле через Linux netlink/eBPF в таблицах маршрутизации, используемых [CNI Cilium](/modules/cni-cilium/) для маршрутизации трафика между ВМ.
+   * **init-load**: Init container that loads the Linux kernel modules necessary for the DRA driver operation.
+   * **virtualization-dra**: Main container.
 
-1. **Pre-delete-hook** (Job) — задание, запускаемое контроллером Deckhouse перед удалением модуля [`virtualization`](/modules/virtualization/), которое удаляет кастомные ресурсы InternalVirtualizationKubeVirt и InternalVirtualizationCDI с именем `config`.
+1. **Vm-route-forge**: A controller that monitors `virtualization.deckhouse.io` API group VirtualMachine custom resources and updates via Linux netlink/eBPF network routes on a node in routing tables used by [CNI Cilium](/modules/cni-cilium/) for routing traffic between VMs.
 
-### Взаимодействия
+1. **Pre-delete-hook** (Job): A job started by the Deckhouse controller before deleting the [`virtualization`](/modules/virtualization/) module, that deletes the InternalVirtualizationKubeVirt and InternalVirtualizationCDI custom resources named `config`.
 
-Virtualization-dra взаимодействует со следующими компонентами:
+### Interactions
 
-1. **Kubelet** — регистрируется в kubelet как DRA kubelet plugin.
+Virtualization-dra interacts with the following components:
 
-Vm-route-forge взаимодействует со следующими компонентами:
+1. **Kubelet**: Registers in kubelet as the DRA kubelet plugin.
 
-1. **Kube-apiserver** — получает события по ресурсам VirtualMachines, CiliumNode и Node.
-1. **Сеть хоста/ядро Linux** — обновляет маршруты и правила маршрутизации на узле.
-1. **Cilium data plane** — использует данные CiliumNode и таблиц маршрутизации Cilium для маршрутизации трафика ВМ.
+Vm-route-forge interacts with the following components:
 
-Pre-delete-hook взаимодействует со следующими компонентами:
+1. **Kube-apiserver**: Receive events on VirtualMachines, CiliumNode and Node resources.
+1. **Host network/Linux kernel**: Updates routes and routing rules on the node.
+1. **Cilium data plane**: Uses data from the CiliumNode and Cilium routing tables to route VM traffic.
 
-1. **Kube-apiserver** — удаляет ресурсы InternalVirtualizationKubeVirt и InternalVirtualizationCDI с именем `config`.
+Pre-delete-hook interacts with the following components:
 
-С Virtualization-dra взаимодействуют следующие внешние компоненты:
+1. **Kube-apiserver**: Deletes InternalVirtualizationKubeVirt and InternalVirtualizationCDI resources named `config`.
 
-1. **Kubelet** — вызывает gRPC-методы PrepareResourceClaims и UnprepareResourceClaims для подготовки и освобождения ресурсов, связанных с USB-устройствами.
+The following external components interact with virtualization-dra:
+
+1. **Kubelet**: Calls PrepareResourceClaims and UnprepareResourceClaims gRPC methods to prepare and release resources associated with USB devices.
