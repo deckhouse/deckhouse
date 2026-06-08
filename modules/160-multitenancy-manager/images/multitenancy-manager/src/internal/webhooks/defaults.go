@@ -147,12 +147,14 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 				// A parent object is missing, so a JSON Patch "add" would be unsafe.
 				continue
 			}
-			// Inject the project default when the field is empty, and coerce it when it carries a
-			// value not available to the project — most importantly the cluster-default StorageClass
-			// that the built-in DefaultStorageClass admission injects before this webhook runs.
-			// Setting a default in the grant is the cluster admin's explicit opt-in to this coercion
-			// (an explicit out-of-list value is rewritten to the default, not rejected).
-			if value == "" || !available[value] {
+			// Always inject the project default into an empty field. Additionally, when the
+			// registration opts in via coerceToDefault, rewrite a non-empty value that is not
+			// available to the project — this is for fields a built-in admission controller
+			// pre-populates with a cluster default (e.g. the DefaultStorageClass on PVCs), where the
+			// field is never empty by the time this webhook runs. Without the opt-in an explicit
+			// out-of-list value is left as-is and rejected by /is-granted, never silently rewritten.
+			coerce := value == "" || (reg.Spec.CoerceToDefault && !available[value])
+			if coerce {
 				patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: def})
 			}
 		}

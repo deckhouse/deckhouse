@@ -189,6 +189,14 @@ type ClusterGrantableResourceSpec struct {
 	// +optional
 	DefaultFrom *DefaultFrom `json:"defaultFrom,omitempty"`
 
+	// CoerceToDefault, when true, makes the /defaults webhook rewrite a referencing value that is not
+	// available to the project to the project default, instead of letting /is-granted reject it. Enable
+	// it only for fields a built-in admission controller pre-populates with a cluster default that the
+	// project may not allow — e.g. PVC spec.storageClassName (DefaultStorageClass). For fields with no
+	// such defaulter, leave it false so an explicit out-of-list value is rejected, not silently rewritten.
+	// +optional
+	CoerceToDefault bool `json:"coerceToDefault,omitempty"`
+
 	// UsageReferences declares where the granted name is referenced and what is measurable.
 	// +optional
 	UsageReferences []UsageReference `json:"usageReferences,omitempty"`

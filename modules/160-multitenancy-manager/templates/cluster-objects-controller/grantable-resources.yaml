@@ -17,6 +17,10 @@ spec:
   defaultAvailability: All
   defaultFrom:
     annotationKey: storageclass.kubernetes.io/is-default-class
+  # The built-in DefaultStorageClass admission injects the cluster-default StorageClass into PVCs that
+  # omit spec.storageClassName, before this module's webhook runs. Coerce such a value to the project
+  # default when the cluster default is not available to the project, instead of rejecting the PVC.
+  coerceToDefault: true
   usageReferences:
   - rule:
       apiGroups:

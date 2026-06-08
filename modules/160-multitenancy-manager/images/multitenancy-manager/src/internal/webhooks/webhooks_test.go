@@ -255,9 +255,11 @@ func TestDefaults_NoOverrideOnUpdate(t *testing.T) {
 }
 
 func TestDefaults_CoercesUnavailableValue(t *testing.T) {
-	// Grant allows {external, internal} with default internal; the cluster default behaviour is
-	// simulated by an explicit out-of-list value that must be coerced to the project default.
-	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), lbRegistration(v1alpha1.AvailabilityNone), lbGrant())
+	// Grant allows {external, internal} with default internal. With coerceToDefault enabled an explicit
+	// out-of-list value must be rewritten to the project default.
+	reg := lbRegistration(v1alpha1.AvailabilityNone)
+	reg.Spec.CoerceToDefault = true
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), reg, lbGrant())
 	m := NewDefaultsMutator(logr.Discard(), cl, jsonpath.NewWithCache())
 
 	// Not-available value -> coerced to the project default.
@@ -277,6 +279,25 @@ func TestDefaults_CoercesUnavailableValue(t *testing.T) {
 		"spec": map[string]any{"type": "LoadBalancer", "loadBalancerClass": "external"}})
 	if resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", good, nil)); len(resp.Patch) != 0 {
 		t.Fatalf("available value must not be coerced, got patch %s", resp.Patch)
+	}
+}
+
+func TestDefaults_NoCoerceWithoutOptIn(t *testing.T) {
+	// Without coerceToDefault, an explicit out-of-list value is NOT rewritten — it is left for
+	// /is-granted to reject (so a tenant is never silently given a different object, e.g. a
+	// self-signed issuer in place of the one they named).
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), lbRegistration(v1alpha1.AvailabilityNone), lbGrant())
+	m := NewDefaultsMutator(logr.Discard(), cl, jsonpath.NewWithCache())
+	bad := raw(t, map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec": map[string]any{"type": "LoadBalancer", "loadBalancerClass": "forbidden"}})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", bad, nil)); len(resp.Patch) != 0 {
+		t.Fatalf("explicit value must not be coerced without opt-in, got patch %s", resp.Patch)
+	}
+	// But an empty field is still filled with the project default.
+	empty := raw(t, map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec": map[string]any{"type": "LoadBalancer"}})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", empty, nil)); len(resp.Patch) == 0 {
+		t.Fatal("empty field must still be defaulted")
 	}
 }
 
