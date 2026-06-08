@@ -1654,6 +1654,15 @@ spec:
     dockerCfg: ""
     scheme: HTTPS
 ---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-policy
+spec:
+  releaseChannel: Stable
+  update:
+    mode: Auto
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
@@ -1661,6 +1670,7 @@ metadata:
   labels:
     source: deckhouse
     module: parca
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: parca
   version: 1.26.2
@@ -1676,6 +1686,7 @@ metadata:
   labels:
     source: deckhouse
     module: commander
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: commander
   version: 1.0.3
@@ -1691,6 +1702,7 @@ metadata:
   labels:
     source: deckhouse
     module: upmeter
+    modules.deckhouse.io/update-policy: test-policy
 spec:
   moduleName: upmeter
   version: 1.70.0
