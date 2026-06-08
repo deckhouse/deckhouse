@@ -39,17 +39,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-var (
-	once  sync.Once
-	store *SchemaStore
-)
-
 type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
 	modulesCache       map[string]struct{}
 	conversionsStore   *conversion.ConversionsStore
 }
+
+// TODO(dhctl-server): SchemaStore is currently a process-wide sync.Once
+// singleton. This works for the dhctl CLI but is unsafe in the dhctl-server
+// where concurrent requests may need different DownloadDir/CandiDir layouts —
+// the first request's schemas leak to all subsequent requests. A path-keyed
+// cache would be correct, but several tests rely on the existing singleton
+// behavior. Switching them is a separate task.
+var (
+	once  sync.Once
+	store *SchemaStore
+)
 
 type validateOptions struct {
 	omitDocInError     bool
@@ -108,7 +114,6 @@ func ValidateOptionDownloadRootDir(dir string) ValidateOption {
 	}
 }
 
-
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
 	candiDir := options.DefaultCandiDir
@@ -120,7 +125,10 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 	// External provider images unpack into <DownloadDir>/<provider>/.
 	// Add each provider subdir so its schemas (openapi/, etc.) are picked up.
 	if globalOptions != nil && globalOptions.DownloadDir != "" {
-		entries, _ := os.ReadDir(globalOptions.DownloadDir)
+		entries, err := os.ReadDir(globalOptions.DownloadDir)
+		if err != nil && !os.IsNotExist(err) {
+			log.WarnF("read download dir %s: %v\n", globalOptions.DownloadDir, err)
+		}
 		for _, e := range entries {
 			if !e.IsDir() {
 				continue
@@ -141,6 +149,13 @@ func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *Sche
 	}
 
 	return newOnceSchemaStore(globalOptions, paths)
+}
+
+func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
+	once.Do(func() {
+		store = newSchemaStore(globalOptions, schemasDir)
+	})
+	return store
 }
 
 func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
@@ -270,13 +285,6 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 	}
 
 	return st
-}
-
-func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
-	once.Do(func() {
-		store = newSchemaStore(globalOptions, schemasDir)
-	})
-	return store
 }
 
 func (s *SchemaStore) Get(index *SchemaIndex) *spec.Schema {

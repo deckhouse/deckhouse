@@ -25,6 +25,8 @@ import (
 	"github.com/name212/govalue"
 	"github.com/pterm/pterm"
 	otattribute "go.opentelemetry.io/otel/attribute"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -36,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -290,12 +293,12 @@ func (b *ClusterBootstrapper) bootstrapLoadConfig(ctx context.Context, bctx *boo
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		&b.Options.Global,
 		config.ValidateOptionValidateExtensions(true),
-		config.ValidateOptionOperation(string(preparatorParams.Operation)),
+		config.ValidateOptionOperation(preparatorParams.Operation),
 	)
 	if err != nil {
 		return err
 	}
-	metaConfig.Operation = string(preparatorParams.Operation)
+	metaConfig.Operation = preparatorParams.Operation
 
 	log.DebugLn("MetaConfig was loaded")
 
@@ -1025,17 +1028,70 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
-		if annotations == nil || annotations["dhctl.deckhouse.io/bootstrap-resource-place"] != "before-deckhouse" {
-			log.DebugF("Add resource %s - %s to after queue\n", resource.String(), resource.Object.GetName())
-			after = append(after, resource)
+		hasBeforeAnnotation := annotations != nil && annotations["dhctl.deckhouse.io/bootstrap-resource-place"] == "before-deckhouse"
+
+		if hasBeforeAnnotation || isCloudProviderCredentialSecret(resource) {
+			log.DebugF("Add resource %s - %s to before queue\n", resource.String(), resource.Object.GetName())
+			before = append(before, resource)
 			continue
 		}
 
-		log.DebugF("Add resource %s - %s to before queue\n", resource.String(), resource.Object.GetName())
-		before = append(before, resource)
+		log.DebugF("Add resource %s - %s to after queue\n", resource.String(), resource.Object.GetName())
+		after = append(after, resource)
 	}
 
+	before = prependMissingNamespaces(before)
+
 	return before, after
+}
+
+// isCloudProviderCredentialSecret returns true for Secret resources carrying
+// the cloud-provider.deckhouse.io/credentials type. Such Secrets must reach
+// the cluster before the cloud-provider-<name> module rolls out, otherwise the
+// module's credentials hook sees an empty snapshot and the cloud-controller
+// boots with empty credentials.
+func isCloudProviderCredentialSecret(resource *template.Resource) bool {
+	if resource.GVK.GroupKind() != (schema.GroupKind{Group: "", Kind: "Secret"}) {
+		return false
+	}
+	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
+	return secretType == providerdata.CloudProviderCredentialsSecretType
+}
+
+// prependMissingNamespaces inserts a minimal Namespace stub for every distinct
+// namespace referenced by the given resources, unless a Namespace with that
+// name is already present in the slice. The cloud-provider-<name> module owns
+// the namespace via its helm chart; the stub created here gets enriched with
+// labels via merge-patch when the module rolls out.
+func prependMissingNamespaces(resources template.Resources) template.Resources {
+	needed := make(map[string]struct{})
+	present := make(map[string]struct{})
+	for _, r := range resources {
+		if r.GVK.GroupKind() == (schema.GroupKind{Group: "", Kind: "Namespace"}) {
+			present[r.Object.GetName()] = struct{}{}
+			continue
+		}
+		if ns := r.Object.GetNamespace(); ns != "" {
+			needed[ns] = struct{}{}
+		}
+	}
+
+	stubs := make(template.Resources, 0, len(needed))
+	for ns := range needed {
+		if _, ok := present[ns]; ok {
+			continue
+		}
+		stub := unstructured.Unstructured{}
+		stub.SetAPIVersion("v1")
+		stub.SetKind("Namespace")
+		stub.SetName(ns)
+		stubs = append(stubs, &template.Resource{
+			GVK:    schema.FromAPIVersionAndKind("v1", "Namespace"),
+			Object: stub,
+		})
+	}
+
+	return append(stubs, resources...)
 }
 
 func createResources(

@@ -99,9 +99,11 @@ func InitFromConfig(
 ) (Stop, error) {
 	nop := func() {}
 
-	configProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
-		return config.FetchDocuments(configPaths)
-	})
+	docs, err := config.FetchDocuments(configPaths)
+	if err != nil {
+		return nop, err
+	}
+	configProvider, err := config.RegistryConfigProvider(docs)
 	if err != nil {
 		return nop, err
 	}

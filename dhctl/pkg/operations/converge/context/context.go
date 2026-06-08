@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -211,7 +212,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return nil, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.opts, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return nil, err
 	}

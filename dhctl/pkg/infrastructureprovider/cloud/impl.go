@@ -33,9 +33,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vmresource"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -127,11 +127,14 @@ func (p *Provider) NeedToUseTofu() bool {
 }
 
 func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
-	if p.name == dvp.ProviderName {
-		return dvp.IsVMManifest(rc, p.logger)
+	rule := p.settings.VMResource()
+	if rule == nil {
+		// Legacy bundle: no vmResource rule in plan_rules.yml. Synthesise a
+		// plain type-match rule from vmResourceType so the matcher path is
+		// uniform.
+		rule = &vmresource.Rule{Type: p.settings.VMResourceType()}
 	}
-
-	return rc.Type == p.settings.VMResourceType()
+	return vmresource.Match(rc, rule)
 }
 
 func (p *Provider) String() string {

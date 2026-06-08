@@ -596,7 +596,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 	require.NoError(t, err, p.testName)
 
 	opts := options.New()
-	opts.Global.NeedDownload = false
+	opts.Global.EnsureCandiAvailable = false
 	options.SetPaths("/", &opts.Global)
 
 	return &testCheckClusterConfig{

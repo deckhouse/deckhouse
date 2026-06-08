@@ -92,25 +92,32 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 func copyTFVersionFile(downloadRootDir, terraformManagerDir string) error {
 	downloadCandiPath := filepath.Join(downloadRootDir, "deckhouse", "candi")
 	src := filepath.Join(terraformManagerDir, versionFile)
+	dstPath := filepath.Join(downloadCandiPath, versionFile)
 
-	f, err := os.OpenFile(src, os.O_RDONLY, 0o644)
+	f, err := os.Open(src)
 	if err != nil {
-		return fmt.Errorf("could not read file %s: %w\n", src, err)
+		return fmt.Errorf("open %s: %w", src, err)
+	}
+	defer f.Close()
+
+	if err := os.MkdirAll(downloadCandiPath, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", downloadCandiPath, err)
+	}
+	if err := os.RemoveAll(dstPath); err != nil {
+		return fmt.Errorf("remove %s: %w", dstPath, err)
 	}
 
-	if err = os.MkdirAll(downloadCandiPath, 0o755); err != nil {
-		return fmt.Errorf("could not create dir %s: %w", downloadCandiPath, err)
-	}
-
-	if err = os.RemoveAll(filepath.Join(downloadCandiPath, versionFile)); err != nil {
-		return fmt.Errorf("could not delete %s: %w", versionFile, err)
-	}
-
-	dst, err := os.OpenFile(filepath.Join(downloadCandiPath, versionFile), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	dst, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
-		return fmt.Errorf("could not open file %s: %w\n", filepath.Join(downloadCandiPath, versionFile), err)
+		return fmt.Errorf("create %s: %w", dstPath, err)
 	}
-	_, err = io.Copy(dst, f)
+	defer dst.Close()
 
-	return err
+	if _, err := io.Copy(dst, f); err != nil {
+		return fmt.Errorf("copy %s -> %s: %w", src, dstPath, err)
+	}
+	if err := dst.Sync(); err != nil {
+		return fmt.Errorf("sync %s: %w", dstPath, err)
+	}
+	return nil
 }

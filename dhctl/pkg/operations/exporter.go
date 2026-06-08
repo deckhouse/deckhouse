@@ -271,13 +271,14 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.TmpCleaner) (*check.Statistics, bool) {
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(c.logger)
+	preparatorParams.WithOperationConverge()
 	metaConfig, err := config.ParseConfigInCluster(
 		ctx,
 		c.kubeCl,
-		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(c.logger),
-		),
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		c.globalOptions,
+		infrastructureprovider.DhctlOperationConverge,
 	)
 	if err != nil {
 		log.ErrorLn(err)

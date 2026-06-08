@@ -19,7 +19,11 @@ package providerdata
 
 import proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
-const OperationBootstrap = proto.OperationBootstrap
+const (
+	OperationBootstrap = proto.OperationBootstrap
+	OperationConverge  = proto.OperationConverge
+	OperationDestroy   = proto.OperationDestroy
+)
 
 type CloudProviderVars = proto.CloudProviderVars
 type PrepareInput = proto.PrepareInput
