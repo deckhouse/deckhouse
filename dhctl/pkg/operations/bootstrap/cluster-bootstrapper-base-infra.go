@@ -51,12 +51,12 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		&b.Options.Global,
-		config.ValidateOptionOperation(string(preparatorParams.Operation)),
+		config.ValidateOptionOperation(preparatorParams.Operation),
 	)
 	if err != nil {
 		return err
 	}
-	metaConfig.Operation = string(preparatorParams.Operation)
+	metaConfig.Operation = preparatorParams.Operation
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,

@@ -82,9 +82,9 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 	var err error
 	var imageName string
 	if govalue.NotNil(conf.DeckhouseConfig) {
-		dc, err2 := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
-		if err2 != nil {
-			return err
+		dc, decodeErr := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
+		if decodeErr != nil {
+			return decodeErr
 		}
 		scheme := "HTTPS"
 		if strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTP" || strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTPS" {

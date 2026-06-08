@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
@@ -462,7 +463,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 func TestParseConfigFromCluster(t *testing.T) {
 	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
-		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{})
+		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{}, "")
 
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
@@ -477,7 +478,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	}
 
 	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
-		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{})
+		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{}, "")
 
 		require.Error(t, err)
 		require.Nil(t, metaConfig)
@@ -788,7 +789,100 @@ provider:
 
 			createAndAssertCloudConfigEmptyOrInvalidError(t, tst, pointer.String(cloudConfig))
 		})
+
+		t.Run("mc-flow: only ModuleConfig, no PCC Secret", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
+
+			metaConfig := doParseFromClusterNoError(t, tst)
+
+			require.Empty(t, metaConfig.ProviderClusterConfig, "PCC must remain unset in mc-flow")
+			require.Len(t, metaConfig.ModuleConfigs, 1)
+			require.Equal(t, "cloud-provider-yandex", metaConfig.ModuleConfigs[0].GetName())
+		})
+
+		t.Run("mc-flow wins over legacy: both markers present", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
+			createCloudConfigSecret(t, tst, pointer.String(`
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    etcdDiskSizeGb: 10
+    platform: standard-v2
+    cores: 4
+    memory: 8192
+    imageID: imageId
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`))
+
+			metaConfig := doParseFromClusterNoError(t, tst)
+
+			require.Empty(t, metaConfig.ProviderClusterConfig, "legacy PCC must be ignored when MC is present")
+			require.Len(t, metaConfig.ModuleConfigs, 1)
+		})
+
+		t.Run("neither marker present", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			_, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{}, "")
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "ModuleConfig")
+			require.Contains(t, err.Error(), "d8-provider-cluster-configuration")
+		})
+
+		t.Run("cloud cluster loads registry-fields even when EnsureCandiAvailable=false", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
+
+			dockerCfg := `{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`
+			secret := &apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "deckhouse-registry", Namespace: "d8-system"},
+				Data: map[string][]byte{
+					".dockerconfigjson": []byte(dockerCfg),
+					"imagesRegistry":    []byte("registry.example.com/deckhouse"),
+					"scheme":            []byte("HTTPS"),
+				},
+			}
+			_, err := tst.kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), secret, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, &options.GlobalOptions{EnsureCandiAvailable: false}, "")
+			require.NoError(t, err)
+			require.NotEmpty(t, metaConfig.DeckhouseConfig.RegistryDockerCfg, "registry docker cfg must be populated for cloud cluster")
+			require.NotEmpty(t, metaConfig.DeckhouseConfig.ImagesRepo)
+		})
 	})
+}
+
+func testCreateCloudProviderModuleConfig(t *testing.T, kubeCl *client.KubernetesClient, providerName string) {
+	t.Helper()
+
+	mc := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleConfig",
+		"metadata":   map[string]interface{}{"name": "cloud-provider-" + providerName},
+		"spec": map[string]interface{}{
+			"version": float64(2),
+			"enabled": true,
+			"settings": map[string]interface{}{
+				"nodes": map[string]interface{}{
+					"parameters": map[string]interface{}{"layout": "Standard"},
+				},
+			},
+		},
+	}}
+
+	_, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Create(t.Context(), mc, metav1.CreateOptions{})
+	require.NoError(t, err)
 }
 
 type testParseConfigFromClusterParams struct {
@@ -924,9 +1018,9 @@ deckhouse:
 
 func TestRegistryConfigProvider(t *testing.T) {
 	t.Run("Parse mocks config paths with wildcard", func(t *testing.T) {
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
-		})
+		docs, err := FetchDocuments([]string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"})
+		require.NoError(t, err)
+		provider, err := RegistryConfigProvider(docs)
 		require.NoError(t, err)
 
 		remote, err := provider.RemoteData()
@@ -963,9 +1057,7 @@ spec:
   version: 1
 `
 
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return []string{mcDeckhouse}, nil
-		})
+		provider, err := RegistryConfigProvider([]string{mcDeckhouse})
 		require.NoError(t, err)
 
 		remote, err := provider.RemoteData()
@@ -992,9 +1084,7 @@ deckhouse:
   registryCA: "-----BEGIN CERTIFICATE-----"
 `
 
-		provider, err := RegistryConfigProvider(func() ([]string, error) {
-			return []string{initConfig}, nil
-		})
+		provider, err := RegistryConfigProvider([]string{initConfig})
 		require.NoError(t, err)
 
 		remote, err := provider.RemoteData()

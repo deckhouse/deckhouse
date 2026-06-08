@@ -32,6 +32,12 @@ type ProviderInput struct {
 	Operation             string
 	ProviderClusterConfig map[string]json.RawMessage
 	CloudProviderVars     *providerdata.CloudProviderVars
+	// ResourcesYAML is the raw multi-doc YAML the user passed in on bootstrap.
+	// Forwarded verbatim to external preparators so user-supplied manifests
+	// (ConfigMaps, custom resources, non-CloudPermanent NodeGroups, etc.) reach
+	// the validator binary instead of being dropped by the CloudProviderVars filter.
+	// Empty on cluster-loaded MetaConfig paths (converge/check/destroy).
+	ResourcesYAML string
 }
 
 type MetaConfigPreparator interface {

@@ -31,8 +31,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os/exec"
+	"sort"
 	"strings"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
@@ -48,11 +48,10 @@ import (
 
 type Preparator struct {
 	binaryPath string
-	logger     *slog.Logger
 }
 
 func NewBinaryPreparator(binaryPath string) *Preparator {
-	return &Preparator{binaryPath: binaryPath, logger: slog.Default()}
+	return &Preparator{binaryPath: binaryPath}
 }
 
 func (p *Preparator) Validate(ctx context.Context, input config.ProviderInput) error {
@@ -158,10 +157,11 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 		pcc[k] = val
 	}
 
-	resourcesYAML, err := encodeResourcesYAML(input.CloudProviderVars)
+	encoded, err := encodeResourcesYAML(input.CloudProviderVars)
 	if err != nil {
 		return providerdata.PrepareInput{}, fmt.Errorf("encode resources yaml: %w", err)
 	}
+	resourcesYAML := mergeResourcesYAML(input.ResourcesYAML, encoded)
 
 	var moduleConfig map[string]interface{}
 	if input.CloudProviderVars != nil {
@@ -179,34 +179,51 @@ func toWireInput(input config.ProviderInput) (providerdata.PrepareInput, error) 
 	}, nil
 }
 
+// mergeResourcesYAML prefers user-supplied YAML when present (bootstrap-from-
+// file: CloudProviderVars were parsed from this same YAML, so re-emitting
+// encoded would duplicate every resource). On cluster-loaded paths
+// (converge/check/destroy) user is empty and we fall back to encoded.
+func mergeResourcesYAML(user, encoded string) string {
+	if user = strings.TrimSpace(user); user != "" {
+		return user
+	}
+	return strings.TrimSpace(encoded)
+}
+
 func encodeResourcesYAML(cv *providerdata.CloudProviderVars) (string, error) {
 	if cv == nil {
 		return "", nil
 	}
 
 	var docs []string
-	for _, obj := range cv.NodeGroups {
-		doc, err := yaml.Marshal(obj)
+	for _, group := range []map[string]map[string]interface{}{cv.NodeGroups, cv.InstanceClasses, cv.Secrets} {
+		groupDocs, err := marshalSortedYAMLDocs(group)
 		if err != nil {
 			return "", err
 		}
-		docs = append(docs, string(doc))
-	}
-	for _, obj := range cv.InstanceClasses {
-		doc, err := yaml.Marshal(obj)
-		if err != nil {
-			return "", err
-		}
-		docs = append(docs, string(doc))
-	}
-	for _, obj := range cv.Secrets {
-		doc, err := yaml.Marshal(obj)
-		if err != nil {
-			return "", err
-		}
-		docs = append(docs, string(doc))
+		docs = append(docs, groupDocs...)
 	}
 	return strings.Join(docs, "\n---\n"), nil
+}
+
+func marshalSortedYAMLDocs(group map[string]map[string]interface{}) ([]string, error) {
+	if len(group) == 0 {
+		return nil, nil
+	}
+	keys := make([]string, 0, len(group))
+	for k := range group {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	docs := make([]string, 0, len(group))
+	for _, k := range keys {
+		doc, err := yaml.Marshal(group[k])
+		if err != nil {
+			return nil, err
+		}
+		docs = append(docs, string(doc))
+	}
+	return docs, nil
 }
 
 func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) ([]byte, error) {
@@ -225,7 +242,7 @@ func (p *Preparator) run(ctx context.Context, subcommand string, stdin []byte) (
 	}
 
 	if stderr.Len() > 0 {
-		p.logger.Warn("provider binary stderr", slog.String("subcommand", subcommand), slog.String("output", stderr.String()))
+		log.WarnF("provider binary stderr subcommand=%s output=%s\n", subcommand, stderr.String())
 	}
 
 	return stdout.Bytes(), nil

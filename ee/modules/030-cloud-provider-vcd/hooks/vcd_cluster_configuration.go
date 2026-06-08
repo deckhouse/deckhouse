@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks/internal/v1"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
@@ -73,15 +72,12 @@ var _ = cluster_configuration.RegisterHook(
 		input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
 
 		return nil
-	}, cluster_configuration.NewConfig(func(_, _ string) config.MetaConfigPreparator {
-		// PrepareMetaConfig and ValidateClusterPrefix are disabled: this hook runs after
-		// installation, when metaconfig is already prepared. VCD version check happens
-		// via the data discoverer (legacy_mode.go hook, order 10) which runs before this hook (order 20).
-		return vcd.NewMetaConfigPreparatorWithoutLogger(vcd.MetaConfigPreparatorParams{
-			PrepareMetaConfig:     false,
-			ValidateClusterPrefix: false,
-		})
-	}),
+	},
+	// Prepare and prefix validation are skipped: this hook runs after installation,
+	// metaconfig is already prepared, and VCD version discovery happens in the
+	// data-discoverer hook (order 10). Validation that matters is done locally by
+	// validateProviderClusterConfig.
+	cluster_configuration.NewConfig(config.DummyPreparatorProvider()),
 )
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
