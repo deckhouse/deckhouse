@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dvp
+package vmresource
 
-import (
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-)
+// Rule identifies a terraform resource as a VM in a plan.
+type Rule struct {
+	Type        string       `json:"type"`
+	FieldEquals *FieldEquals `json:"fieldEquals,omitempty"`
+}
 
-func IsVMManifest(rc plan.ResourceChange, logger log.Logger) bool {
-	return kubernetes.IsManifest(rc.Change, "VirtualMachine", logger)
+// FieldEquals is an optional refinement: the matcher must find a string at
+// Path inside ResourceChange.Change.After that equals Value.
+type FieldEquals struct {
+	Path  string `json:"path"`
+	Value string `json:"value"`
 }
