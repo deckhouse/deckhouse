@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -52,23 +53,33 @@ func newFromClusterMetaConfigFiller(kubeCl *client.KubernetesClient, schemaStore
 //   - mc-flow:     ModuleConfig cloud-provider-<name> exists.
 //   - legacy:      Secret d8-provider-cluster-configuration exists.
 //
-// We prefer mc-flow when both are present (mid-migration cluster): the legacy
-// Secret is treated as a stale artifact. If neither marker exists, the cluster
-// has no provider configuration and we return a descriptive error.
+// Preference rules (mc-flow ALWAYS wins when present):
+//
+//  1. mc-flow present, legacy present (mid-migration): keep ModuleConfig,
+//     **ignore** the legacy Secret. Treating PCC as authoritative during
+//     migration would silently use the pre-migration values forever,
+//     because extractProviderClusterFields prefers PCC over CloudProviderVars
+//     for typed fields. Wiping ProviderClusterConfig here forces the
+//     mc-flow path.
+//  2. mc-flow present, legacy absent (post-migration): use ModuleConfig.
+//  3. mc-flow absent, legacy present (pre-migration): use PCC.
+//  4. Both absent: descriptive error — the cluster has no provider config.
 func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
 	if err := metaConfig.prepareProviderName(); err != nil {
 		return nil, err
 	}
 
-	// Load both ModuleConfig and PCC: during a mc-flow migration both can
-	// coexist. extractProviderClusterFields prefers PCC for typed fields and
-	// falls back to the ModuleConfig when PCC is gone (post-migration state).
-	mc, err := loadCloudProviderModuleConfig(ctx, f.kubeCl, metaConfig.ProviderName)
+	mc, err := loadCloudProviderModuleConfig(ctx, f.kubeCl, metaConfig.ProviderName, f.schemaStore)
 	if err != nil {
 		return nil, err
 	}
 	if mc != nil {
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, mc)
+		// mc-flow wins: do not touch the legacy Secret. Skipping the
+		// load also avoids parseLegacyProviderClusterConfig's schema
+		// validation, which is irrelevant once the ModuleConfig is the
+		// authoritative source.
+		return nil, nil
 	}
 
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
@@ -77,21 +88,18 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 	}
 	if pcc != nil {
 		metaConfig.ProviderClusterConfig = pcc
+		return nil, nil
 	}
 
-	if mc == nil && pcc == nil {
-		return nil, fmt.Errorf(
-			"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
-			providerdata.CloudProviderModuleName(metaConfig.ProviderName),
-			legacyProviderClusterConfigSecretName,
-			global.ConfigsNS,
-		)
-	}
-
-	return nil, nil
+	return nil, fmt.Errorf(
+		"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
+		providerdata.CloudProviderModuleName(metaConfig.ProviderName),
+		legacyProviderClusterConfigSecretName,
+		global.ConfigsNS,
+	)
 }
 
-func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string) (*ModuleConfig, error) {
+func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	name := providerdata.CloudProviderModuleName(providerName)
 	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
@@ -100,14 +108,34 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 	if err != nil {
 		return nil, fmt.Errorf("get ModuleConfig %q: %w", name, err)
 	}
-	return moduleConfigFromUnstructured(obj)
+	return moduleConfigFromUnstructured(obj, schemaStore)
 }
 
-func moduleConfigFromUnstructured(obj *unstructured.Unstructured) (*ModuleConfig, error) {
+// moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
+// cluster and validates it against its registered schema. Validation matches
+// the legacy PCC path (parseLegacyProviderClusterConfig also calls
+// schemaStore.Validate) so a kubectl-patched invalid ModuleConfig fails fast
+// here instead of surfacing as a confusing downstream error from the
+// external preparator. When no schema is registered for the module (e.g.
+// the module-config schemas weren't loaded into this SchemaStore) we accept
+// the document — Validate-without-schema is what HasSchemaForModuleConfig
+// guards us from in higher-level paths.
+func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("marshal ModuleConfig: %w", err)
 	}
+
+	if schemaStore != nil {
+		yamlDoc, err := yaml.JSONToYAML(raw)
+		if err != nil {
+			return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
+		}
+		if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+			return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
+		}
+	}
+
 	mc := &ModuleConfig{}
 	if err := json.Unmarshal(raw, mc); err != nil {
 		return nil, fmt.Errorf("unmarshal ModuleConfig: %w", err)
