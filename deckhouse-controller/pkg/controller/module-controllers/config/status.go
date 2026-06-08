@@ -216,7 +216,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 	case d7sversionextender.Name:
 		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
-		_, errMsg := r.exts.DeckhouseVersion.Filter(module.Name, map[string]string{})
+		_, errMsg := r.exts.GetDeckhouseVersion().Filter(module.Name, map[string]string{})
 		message = v1alpha1.ModuleMessageDeckhouseVersionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()
@@ -225,7 +225,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case editionavailablextender.Name:
 		module.Status.Phase = v1alpha1.ModulePhaseUnavailable
 		reason = v1alpha1.ModuleReasonEditionAvailableExtender
-		_, errMsg := r.exts.EditionAvailable.Filter(module.Name, map[string]string{})
+		_, errMsg := r.exts.GetEditionAvailable().Filter(module.Name, map[string]string{})
 		if errMsg != nil {
 			message = errMsg.Error()
 		}
@@ -233,7 +233,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case editionenabledextender.Name:
 		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 		reason = v1alpha1.ModuleReasonEditionEnabledExtender
-		_, errMsg := r.exts.EditionEnabled.Filter(module.Name, map[string]string{})
+		_, errMsg := r.exts.GetEditionEnabled().Filter(module.Name, map[string]string{})
 		if errMsg != nil {
 			message = errMsg.Error()
 		}
