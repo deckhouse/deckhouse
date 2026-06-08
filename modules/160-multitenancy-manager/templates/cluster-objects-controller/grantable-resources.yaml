@@ -91,3 +91,62 @@ spec:
     fieldPath: $.metadata.annotations['cert-manager.io/cluster-issuer']
     countable: true
 {{- end }}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterGrantableResource
+metadata:
+  name: clusterroles
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+  enforcement: Managed
+  # Deny by default: binding an arbitrary ClusterRole (e.g. cluster-admin) in a project namespace is a
+  # privilege escalation. The shipped clusterroles ClusterObjectGrant below opens only the safe set.
+  defaultAvailability: None
+  usageReferences:
+  # RoleBindings in project namespaces that reference a ClusterRole by name.
+  - rule:
+      apiGroups:
+      - rbac.authorization.k8s.io
+      apiVersions:
+      - v1
+      resources:
+      - rolebindings
+    fieldPath: $.roleRef.name
+    match:
+      fieldPath: $.roleRef.kind
+      equals: ClusterRole
+    countable: true
+---
+# Default policy: in every project, only delegatable ClusterRoles may be referenced from RoleBindings —
+# the "use" capability/aggregate roles (rbac.deckhouse.io/kind: use) and the user-authz access-level
+# roles (module: user-authz, no rbac.deckhouse.io/kind, which excludes the "manage" permission roles).
+# Tune or remove this grant to change the policy.
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterObjectGrant
+metadata:
+  name: clusterroles
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  projectSelector: {}
+  resources:
+  - resourceRef: clusterroles
+    availabilityDefault: None
+    allowedSelector:
+      matchExpressions:
+      - key: rbac.deckhouse.io/kind
+        operator: In
+        values:
+        - use
+  - resourceRef: clusterroles
+    availabilityDefault: None
+    allowedSelector:
+      matchExpressions:
+      - key: module
+        operator: In
+        values:
+        - user-authz
+      - key: rbac.deckhouse.io/kind
+        operator: DoesNotExist
