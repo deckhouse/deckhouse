@@ -47,10 +47,8 @@ func validateCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
 	return nil
 }
 
-// validateRootCert checks whether an existing root CA certificate is still fit for use.
-// Unlike validateCert, it does NOT check the encryption algorithm, because root CA certificates
-// are never rotated on algorithm changes — they are only created during initial cluster bootstrap.
-// Changing encryptionAlgorithm in cluster configuration only affects leaf certificate re-issuance.
+// validateRootCert is like validateCert but skips the encryption algorithm check,
+// because root CA certificates are never rotated on algorithm changes.
 func validateRootCert(oldCert *x509.Certificate, newCertCfg certConfig) error {
 	if certificateExpiresSoon(oldCert, 30*24*time.Hour) {
 		return fmt.Errorf("expired at %s", oldCert.NotAfter.UTC().Format(time.RFC3339))
