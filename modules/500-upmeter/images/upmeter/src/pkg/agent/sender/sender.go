@@ -123,7 +123,9 @@ func (s *Sender) cleanupLoop() {
 }
 
 func (s *Sender) export() error {
+	listStart := time.Now()
 	episodes, err := s.storage.List(s.batchSlots)
+	listDur := time.Since(listStart)
 	if err != nil {
 		return err
 	}
@@ -132,31 +134,70 @@ func (s *Sender) export() error {
 		return nil
 	}
 
-	err = s.send(episodes)
+	earliest, latest := slotRange(episodes)
+	slots := countSlots(episodes)
+
+	log.Infof("export batch start: episodes=%d slots=%d earliest=%s latest=%s listDur=%s",
+		len(episodes), slots, fmtSlot(earliest), fmtSlot(latest), listDur)
+
+	// The batch may span several slots, so clean up to the latest one sent.
+	sendStart := time.Now()
+	sentBytes, err := s.send(episodes)
+	sendDur := time.Since(sendStart)
 	if err != nil {
+		log.Errorf("export batch failed: episodes=%d slots=%d earliest=%s latest=%s bytes=%d sendDur=%s: %v",
+			len(episodes), slots, fmtSlot(earliest), fmtSlot(latest), sentBytes, sendDur, err)
 		return err
 	}
 
-	// The batch may span several slots, so clean up to the latest one sent.
-	slot := latestSlot(episodes)
-	err = s.storage.Clean(slot)
+	cleanStart := time.Now()
+	err = s.storage.Clean(latest)
+	cleanDur := time.Since(cleanStart)
 	if err != nil {
-		return fmt.Errorf("cleaning send storage, slot=%v: %v", slot, err)
+		return fmt.Errorf("cleaning send storage, slot=%v: %v", latest, err)
 	}
+
+	remaining, cntErr := s.storage.CountSlots()
+	if cntErr != nil {
+		log.Errorf("cannot count remaining backlog: %v", cntErr)
+		remaining = -1
+	}
+
+	log.Infof("export batch ok: episodes=%d slots=%d earliest=%s latest=%s bytes=%d backlogSlotsRemaining=%d listDur=%s sendDur=%s cleanDur=%s totalDur=%s",
+		len(episodes), slots, fmtSlot(earliest), fmtSlot(latest), sentBytes, remaining,
+		listDur, sendDur, cleanDur, time.Since(listStart))
 	return nil
 }
 
-func latestSlot(episodes []check.Episode) time.Time {
-	latest := episodes[0].TimeSlot
+// slotRange returns the earliest and the latest time slot found in the batch.
+func slotRange(episodes []check.Episode) (earliest, latest time.Time) {
+	earliest = episodes[0].TimeSlot
+	latest = episodes[0].TimeSlot
 	for _, ep := range episodes[1:] {
+		if ep.TimeSlot.Before(earliest) {
+			earliest = ep.TimeSlot
+		}
 		if ep.TimeSlot.After(latest) {
 			latest = ep.TimeSlot
 		}
 	}
-	return latest
+	return earliest, latest
 }
 
-func (s *Sender) send(episodes []check.Episode) error {
+// countSlots counts how many distinct time slots the batch spans.
+func countSlots(episodes []check.Episode) int {
+	seen := make(map[int64]struct{}, len(episodes))
+	for _, ep := range episodes {
+		seen[ep.TimeSlot.Unix()] = struct{}{}
+	}
+	return len(seen)
+}
+
+func fmtSlot(t time.Time) string {
+	return t.Format("15:04:05")
+}
+
+func (s *Sender) send(episodes []check.Episode) (int, error) {
 	data := api.EpisodesPayload{
 		Origin:   run.ID(),
 		Episodes: episodes,
@@ -164,10 +205,10 @@ func (s *Sender) send(episodes []check.Episode) error {
 
 	body, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("marshalling to JSON: %v", err)
+		return 0, fmt.Errorf("marshalling to JSON: %v", err)
 	}
 
-	return s.client.Send(body)
+	return len(body), s.client.Send(body)
 }
 
 func (s *Sender) Stop() {

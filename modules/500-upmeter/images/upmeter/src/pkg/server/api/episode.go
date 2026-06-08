@@ -54,25 +54,71 @@ func (h *AddEpisodesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Decode Episodes json from body
+	reqStart := time.Now()
 	decoder := json.NewDecoder(r.Body)
 	var data EpisodesPayload
 	err := decoder.Decode(&data)
+	decodeDur := time.Since(reqStart)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusBadRequest, err)
 		return
 	}
 
+	earliest, latest := episodesSlotRange(data.Episodes)
+	log.Infof("received episodes: origin=%s episodes=%d slots=%d earliest=%s latest=%s decodeDur=%s",
+		data.Origin, len(data.Episodes), countEpisodeSlots(data.Episodes),
+		fmtSlot(earliest), fmtSlot(latest), decodeDur)
+
+	saveStart := time.Now()
 	err = save(h.DbCtx, h.RemoteWrite, data)
+	saveDur := time.Since(saveStart)
 	if err != nil {
+		log.Errorf("processing episodes failed: origin=%s episodes=%d saveDur=%s totalDur=%s: %v",
+			data.Origin, len(data.Episodes), saveDur, time.Since(reqStart), err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%d Error: %s\n", http.StatusBadRequest, err)
 		return
 	}
+
+	log.Infof("processed episodes: origin=%s episodes=%d saveDur=%s totalDur=%s",
+		data.Origin, len(data.Episodes), saveDur, time.Since(reqStart))
 
 	// Respond with empty object if everything is ok
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, "{}")
+}
+
+// episodesSlotRange returns the earliest and latest time slot in the payload. Zero times are returned
+// for an empty payload.
+func episodesSlotRange(episodes []check.Episode) (earliest, latest time.Time) {
+	if len(episodes) == 0 {
+		return earliest, latest
+	}
+	earliest = episodes[0].TimeSlot
+	latest = episodes[0].TimeSlot
+	for _, ep := range episodes[1:] {
+		if ep.TimeSlot.Before(earliest) {
+			earliest = ep.TimeSlot
+		}
+		if ep.TimeSlot.After(latest) {
+			latest = ep.TimeSlot
+		}
+	}
+	return earliest, latest
+}
+
+// countEpisodeSlots counts how many distinct time slots the payload spans.
+func countEpisodeSlots(episodes []check.Episode) int {
+	seen := make(map[int64]struct{}, len(episodes))
+	for _, ep := range episodes {
+		seen[ep.TimeSlot.Unix()] = struct{}{}
+	}
+	return len(seen)
+}
+
+func fmtSlot(t time.Time) string {
+	return t.Format("15:04:05")
 }
 
 // Save episodes to the database
@@ -83,13 +129,20 @@ func save(dbctx *dbcontext.DbContext, remoteWrite remotewrite.Exporter, data Epi
 	episodes := data.Episodes
 	origin := data.Origin
 
+	save30sStart := time.Now()
 	saved30s := entity.Save30sEpisodes(ctx, episodes)
+	save30sDur := time.Since(save30sStart)
+
+	update5mStart := time.Now()
 	saved5m := entity.Update5mEpisodes(ctx, saved30s)
+	update5mDur := time.Since(update5mStart)
+
+	log.Infof("saved episodes to db: origin=%s received=%d saved30s=%d updated5m=%d save30sDur=%s update5mDur=%s",
+		origin, len(episodes), len(saved30s), len(saved5m), save30sDur, update5mDur)
 
 	// Send episodes to metrics storage
 
-	log.Debugf("Storing for export 30s episodes by agent=%s", origin)
-
+	rwStart := time.Now()
 	err := remoteWrite.Export(origin, saved30s, 30*time.Second)
 	if err != nil {
 		return fmt.Errorf("error saving 30s episode for remote_write export: %v", err)
@@ -97,15 +150,18 @@ func save(dbctx *dbcontext.DbContext, remoteWrite remotewrite.Exporter, data Epi
 
 	fulfilled5m := chooseByLatestSubSlot(saved30s, saved5m)
 	if len(fulfilled5m) == 0 {
+		log.Infof("queued for remote_write: origin=%s queued30s=%d queued5m=0 remoteWriteDur=%s",
+			origin, len(saved30s), time.Since(rwStart))
 		return nil
 	}
-
-	log.Debugf("Storing for export 5m episodes by agent=%s", origin)
 
 	err = remoteWrite.Export(origin, fulfilled5m, 5*time.Minute)
 	if err != nil {
 		return fmt.Errorf("error saving 5m episode for remote_write export: %v", err)
 	}
+
+	log.Infof("queued for remote_write: origin=%s queued30s=%d queued5m=%d remoteWriteDur=%s",
+		origin, len(saved30s), len(fulfilled5m), time.Since(rwStart))
 
 	return nil
 }
