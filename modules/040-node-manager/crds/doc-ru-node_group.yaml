@@ -234,6 +234,9 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+                    seccompDefault:
+                      description: |
+                        Использовать seccomp-профиль `RuntimeDefault` для workload'ов, где seccomp-профиль не задан явно.
     - name: v1alpha2
       schema:
         openAPIV3Schema:
@@ -462,6 +465,9 @@ spec:
                         > **Внимание.** Параметр не влияет на работу, если тип CRI — `Docker`.
 
                         > **Внимание.** `Docker` считается **устаревшим**, не используйте его.
+                    seccompDefault:
+                      description: |
+                        Использовать seccomp-профиль `RuntimeDefault` для workload'ов, где seccomp-профиль не задан явно.
     - name: v1
       schema:
         openAPIV3Schema:
@@ -843,6 +849,9 @@ spec:
                     containerLogMaxFiles:
                       description: |
                         Максимальное количество файлов журналов с учетом ротации.
+                    seccompDefault:
+                      description: |
+                        Использовать seccomp-профиль `RuntimeDefault` для workload'ов, где seccomp-профиль не задан явно.
                     resourceReservation:
                       description: |
                         Управление резервированием ресурсов для системных служб на узле.

@@ -635,6 +635,10 @@ spec:
                         How many rotated log files to store before deleting them.
 
                         > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
     - name: v1alpha2
       served: true
       storage: false
@@ -1249,6 +1253,10 @@ spec:
                         How many rotated log files to store before deleting them.
 
                         > **WARNING!** This parameter does nothing if CRI type is `Docker`.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
     - name: v1
       served: true
       storage: true
@@ -2201,6 +2209,10 @@ spec:
                       default: 4
                       description: |
                         How many rotated log files to store before deleting them.
+                    seccompDefault:
+                      type: boolean
+                      description: |
+                        Use `RuntimeDefault` seccomp profile for workloads that don't specify seccomp profile explicitly.
                     resourceReservation:
                       default: {}
                       type: object
