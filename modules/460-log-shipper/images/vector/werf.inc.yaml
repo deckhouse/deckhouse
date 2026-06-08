@@ -88,7 +88,7 @@ shell:
   - chmod 0755 /vector
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

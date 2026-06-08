@@ -51,7 +51,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang" "builder/golang-alt-svace" ) }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-1.25" "builder/golang-alt-svace" ) }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/trickster
@@ -84,7 +84,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 final: false
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint

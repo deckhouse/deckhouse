@@ -22,7 +22,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src

@@ -30,7 +30,7 @@ git:
         - "**/*"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

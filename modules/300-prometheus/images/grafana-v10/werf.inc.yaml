@@ -28,7 +28,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -52,7 +52,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
 final: false
-from: {{ index $.Images "builder/golang" }}
+from: {{ index $.Images "builder/golang-1.25" }}
 mount:
 {{ include "mount points for golang builds" . }}
 git:
