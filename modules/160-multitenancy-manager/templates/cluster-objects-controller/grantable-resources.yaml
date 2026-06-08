@@ -1,0 +1,55 @@
+{{- /*
+  Example, module-shipped ClusterGrantableResource registrations so the feature works out of the box.
+  Both use defaultAvailability: All, so nothing is restricted until a cluster admin creates a
+  ClusterObjectGrant (to narrow availability) and/or a GrantQuota (to cap usage).
+*/}}
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterGrantableResource
+metadata:
+  name: storageclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  grantedResource:
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+  enforcement: Managed
+  defaultAvailability: All
+  defaultFrom:
+    annotationKey: storageclass.kubernetes.io/is-default-class
+  usageReferences:
+  - rule:
+      apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      resources:
+      - persistentvolumeclaims
+    fieldPath: $.spec.storageClassName
+    countable: true
+    quantities:
+    - name: requests.storage
+      fieldPath: $.spec.resources.requests.storage
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterGrantableResource
+metadata:
+  name: loadbalancerclasses
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  # value-backed: no grantedResource — the names are values of spec.loadBalancerClass, not objects.
+  enforcement: Managed
+  defaultAvailability: All
+  usageReferences:
+  - rule:
+      apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      resources:
+      - services
+    fieldPath: $.spec.loadBalancerClass
+    match:
+      fieldPath: $.spec.type
+      equals: LoadBalancer
+    countable: true

@@ -2,11 +2,10 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-    add: /src/cluster-objects-controller
-    to: /cluster-objects-controller
-    before: setup
-git:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/cluster-objects-controller
+  to: /cluster-objects-controller
+  before: setup
 {{- include "image mount points" . }}
 imageSpec:
   config:
