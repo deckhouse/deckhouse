@@ -3,7 +3,6 @@ title: "Managing DRBD‑based replicated storage"
 permalink: en/admin/configuration/storage/sds/lvm-replicated-faq.html
 ---
 
-
 {% alert level="warning" %}
 Functionality is guaranteed only if the [system requirements](#system-requirements) are met. Using it under other conditions is possible, but stable operation is not guaranteed.
 {% endalert %}
