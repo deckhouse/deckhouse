@@ -28,12 +28,17 @@ import (
 
 // Cluster / MachineHealthCheck (cluster.x-k8s.io/v1beta1) go through a
 // conversion webhook served by capi-webhook-service → capi-controller-manager.
-// They must be created AFTER the webhook endpoint is available and the CA
-// bundle has been injected into the CRDs. Running this hook in AfterHelm
-// (Order 10) guarantees that:
-//   - capi-controller-manager Deployment is running (deployed in pre-install phase)
-//   - TLS Secret is created (deployed in Helm main phase)
-//   - CA bundle is injected into CRDs by capi_crds_cabundle_injection hook (AfterHelm Order 1)
+// Rendering them via the node-manager helm release races the very first install
+// of that Deployment: apiserver calls the webhook during SSA, gets connection-
+// refused, helm retries with 45s backoff (~4 retries = ~3 minutes lost on the
+// main queue).
+//
+// Owning them in a hook on a dedicated queue removes them from helm's apply
+// list — helm install of node-manager succeeds on the first try, and the hook
+// retries the create until the webhook backend is up. The objects are not on
+// the bootstrap critical path: nothing helm-rendered references them during
+// initial install (MachineDeployment is only emitted for Cloud/CloudEphemeral
+// NodeGroups, and master NG is CloudPermanent).
 //
 // Hook is idempotent (CreateIfNotExists), so retries are safe.
 
@@ -68,13 +73,14 @@ func filterCapiClusterSecret(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// Run after Helm so that the conversion webhook (capi-controller-manager) is
-	// already deployed and the CA bundle has been injected into CRDs by the
-	// capi_crds_cabundle_injection hook (AfterHelm Order 1).
-	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:       "/modules/node-manager/create-capi-cluster-resources",
+	// Own queue so a transient failure to create Cluster/MHC (capi conversion
+	// webhook still warming up on first install) doesn't block the main queue.
+	Queue: "/modules/node-manager/create-capi-cluster-resources",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
+			// Trigger when the cloud-provider registration secret appears or
+			// changes — that's also the moment `nodeManager.internal.cloudProvider`
+			// becomes meaningful for downstream hooks.
 			Name:       "cloud_provider_secret",
 			ApiVersion: "v1",
 			Kind:       "Secret",
