@@ -57,9 +57,42 @@ func (p *ProtectValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeReview(w, review)
 }
 
+// systemBypassGroups mirror the exemptions Deckhouse uses to protect its own
+// heritage objects (see modules/002-deckhouse validation): cluster components and
+// system controllers must never be blocked by the catalog protection. Without this,
+// the kube-system namespace-controller and garbage-collector cannot delete the
+// controller-owned AvailableResource objects during namespace teardown, which
+// deadlocks namespace deletion.
+var systemBypassGroups = []string{
+	"system:nodes",
+	"system:masters",
+	"system:serviceaccounts:kube-system",
+	"system:serviceaccounts:d8-system",
+}
+
+// isSystemRequest reports whether the request comes from a cluster component or
+// system controller that must bypass catalog protection.
+func isSystemRequest(req *admissionv1.AdmissionRequest) bool {
+	for _, g := range req.UserInfo.Groups {
+		for _, b := range systemBypassGroups {
+			if g == b {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (p *ProtectValidator) decide(req *admissionv1.AdmissionRequest) *admissionv1.AdmissionResponse {
 	// The controller may always write its own objects.
 	if p.controllerSA != "" && req.UserInfo.Username == p.controllerSA {
+		return allowedResponse(req.UID)
+	}
+
+	// System controllers and cluster components bypass protection (namespace
+	// teardown, garbage collection, kubelet, masters) — mirrors how Deckhouse
+	// protects its heritage:deckhouse objects.
+	if isSystemRequest(req) {
 		return allowedResponse(req.UID)
 	}
 

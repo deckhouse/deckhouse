@@ -310,6 +310,15 @@ func TestProtect(t *testing.T) {
 	if resp := serve(t, p, "/protect", mk(arGVK, "", "system:serviceaccount:d8-multitenancy-manager:coc")); !resp.Allowed {
 		t.Fatal("controller must write AvailableResource")
 	}
+	// System controllers (kube-system namespace-controller / GC, masters) bypass
+	// protection so namespace teardown and garbage collection can delete the
+	// controller-owned catalog without deadlocking.
+	sysReview := mk(arGVK, "", "system:serviceaccount:kube-system:namespace-controller")
+	sysReview.Request.Operation = admissionv1.Delete
+	sysReview.Request.UserInfo.Groups = []string{"system:serviceaccounts:kube-system"}
+	if resp := serve(t, p, "/protect", sysReview); !resp.Allowed {
+		t.Fatal("system controller must bypass AvailableResource protection")
+	}
 	// GrantQuota status: user denied; spec: user allowed (RBAC governs).
 	if resp := serve(t, p, "/protect", mk(gqGVK, "status", "alice")); resp.Allowed {
 		t.Fatal("user must not write GrantQuota status")
