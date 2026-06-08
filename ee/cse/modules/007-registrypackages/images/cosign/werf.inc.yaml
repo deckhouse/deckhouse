@@ -26,16 +26,12 @@ from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
-  stageDependencies:
-    install:
-    - '**/*'
 import:
 - image: {{ index $.Images "tools/cosign" }} 
   add: /usr/bin/cosign
   to: /cosign
   before: install
-shell:
-  install:
-  - set -e
-  # usage after update to cosign 3 
-  # - pm install cosign
+# usage after update to cosign 3
+#shell:
+#  install:
+#   - pm install cosign
