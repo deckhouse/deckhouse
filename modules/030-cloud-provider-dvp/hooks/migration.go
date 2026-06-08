@@ -209,12 +209,12 @@ func ensureMigrationNamespace(input *go_hook.HookInput) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpNamespace,
 			Labels: map[string]string{
-				"heritage":                                            "deckhouse",
-				"module":                                              dvpModuleLabel,
-				"prometheus.deckhouse.io/rules-watcher-enabled":       "true",
-				"extended-monitoring.deckhouse.io/enabled":            "",
-				"security.deckhouse.io/pod-policy":                    "restricted",
-				"security.deckhouse.io/enable-security-policy-check":  "true",
+				"heritage": "deckhouse",
+				"module":   dvpModuleLabel,
+				"prometheus.deckhouse.io/rules-watcher-enabled":      "true",
+				"extended-monitoring.deckhouse.io/enabled":           "",
+				"security.deckhouse.io/pod-policy":                   "restricted",
+				"security.deckhouse.io/enable-security-policy-check": "true",
 			},
 		},
 	}

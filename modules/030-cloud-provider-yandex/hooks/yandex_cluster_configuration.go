@@ -23,10 +23,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
+// The preparator is intentionally a dummy: this hook runs post-installation
+// against the cluster's PCC, whose schema/prefix/masterNodeGroup are already
+// validated at bootstrap. Re-running validation here would force the user-
+// supplied prefix to round-trip through the cluster-side test fixtures.
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 	if !secretFound {
 		return fmt.Errorf("kube-system/d8-provider-cluster-configuration secret not found")
@@ -35,6 +38,4 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-}, cluster_configuration.NewConfig(func(_, _ string) config.MetaConfigPreparator {
-	return yandex.NewMetaConfigPreparator(nil, "hook")
-}))
+}, cluster_configuration.NewConfig(config.DummyPreparatorProvider()))
