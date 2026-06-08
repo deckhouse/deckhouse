@@ -1,5 +1,5 @@
 ---
-title: The module core
+title: The virtualization core
 permalink: en/architecture/virtualization/core.html
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, kubevirt, virt-operator, core
 description: Architecture of the virtualization module core in Deckhouse Kubernetes Platform.

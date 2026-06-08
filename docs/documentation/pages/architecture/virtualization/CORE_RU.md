@@ -1,5 +1,5 @@
 ---
-title: Ядро модуля
+title: Ядро виртуализации
 permalink: ru/architecture/virtualization/core.html
 lang: ru
 search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, субресурсы, kubevirt, virt-operator, core
