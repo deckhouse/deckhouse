@@ -658,11 +658,14 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 }
 
 func serializeLabels(info NodeGroupCrdInfo) string {
-	if len(info.Spec.NodeTemplate.Labels) == 0 {
-		return ""
+	merged := make(map[string]string, len(info.Spec.NodeTemplate.Labels)+3)
+	for k, v := range info.Spec.NodeTemplate.Labels {
+		merged[k] = v
 	}
-
-	return labels.FormatLabels(info.Spec.NodeTemplate.Labels)
+	merged["node.deckhouse.io/group"] = info.Name
+	merged["node.deckhouse.io/type"] = string(info.Spec.NodeType)
+	merged["node-role.kubernetes.io/"+info.Name] = ""
+	return labels.FormatLabels(merged)
 }
 
 func serializeTaints(info NodeGroupCrdInfo) string {

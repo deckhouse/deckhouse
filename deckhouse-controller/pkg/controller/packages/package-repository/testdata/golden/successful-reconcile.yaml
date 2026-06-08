@@ -8,16 +8,17 @@ metadata:
   finalizers:
   - packages.deckhouse.io/package-version-exists
   name: deckhouse
-  resourceVersion: "3"
+  resourceVersion: "4"
 spec:
   registry:
     ca: test-ca
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
+  scanInterval: 6h0m0s
 status:
+  lastNewVersions: 0
   partialScanAvailable: false
-  syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation

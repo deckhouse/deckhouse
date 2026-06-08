@@ -22,12 +22,16 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/relay"
 )
 
 const (
@@ -35,15 +39,22 @@ const (
 )
 
 var (
-	alreadyRunDefaultOpts    = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	prepareDefaultOpts       = retry.AttemptsWithWaitOpts(30, 10*time.Second)
-	executeBundleDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(30, 10*time.Second)
+	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(30, 10*time.Second)
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(10, 3*time.Second)
 )
 
 type LoopsParams struct {
-	AlreadyRun    retry.Params
-	Prepare       retry.Params
-	ExecuteBundle retry.Params
+	AlreadyRun      retry.Params
+	Prepare         retry.Params
+	ExecuteBundle   retry.Params
+	ReadFileForInfo retry.Params
+}
+
+type NodeInfo struct {
+	NodeName string
+	NodeIP   string
 }
 
 type Runner struct {
@@ -109,9 +120,47 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 	return isReady, err
 }
 
+func (r *Runner) ReadNodeInfo(ctx context.Context) (*NodeInfo, error) {
+	res := NodeInfo{}
+
+	infoFiles := map[string]*string{
+		"/var/lib/bashible/discovered-node-name": &res.NodeName,
+		"/var/lib/bashible/discovered-node-ip":   &res.NodeIP,
+	}
+
+	logger := r.loggerProvider()
+
+	for fileName, resPointer := range infoFiles {
+		loopParams := retry.SafeCloneOrNewParams(r.loopsParams.ReadFileForInfo, readFileForInfoDefaultOpts...).
+			Clone(
+				retry.WithName("Read info file %s", fileName),
+				retry.WithLogger(logger),
+			)
+
+		err := retry.NewLoopWithParams(loopParams).
+			RunContext(ctx, func() error {
+				f := r.nodeInterface.File()
+				content, err := f.DownloadBytes(ctx, fileName)
+				if err != nil {
+					return err
+				}
+
+				*resPointer = strings.TrimSpace(string(content))
+				return nil
+			})
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &res, nil
+}
+
 type ExecuteBundleParams struct {
 	BundleDir     string
 	CommanderMode bool
+	GlobalOpts    *options.GlobalOptions
 }
 
 func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
@@ -123,6 +172,35 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 			retry.WithName("Execute bundle"),
 			retry.WithLogger(r.loggerProvider()),
 		)
+
+	var relaySpanUpdater = func(trace.Span) {}
+
+	if telemetry.IsEnabled() {
+		stopRelay, updateRelaySpan, err := relay.InitRelay(ctx, relay.RelayParams{
+			TracerName: "bashible",
+			Span:       span,
+			Node:       r.nodeInterface,
+			Logger:     r.loggerProvider(),
+			GlobalOpts: params.GlobalOpts,
+		})
+		if err != nil {
+			return fmt.Errorf("init OTel relay: %w", err)
+		}
+		defer stopRelay()
+		relaySpanUpdater = updateRelaySpan
+
+		telemetryEnvs := fmt.Sprintf(
+			"DHCTL_TELEMETRY_ENABLED=%t\nOTEL_RELAY_ADDRESS=%s\n",
+			telemetry.IsEnabled(),
+			fmt.Sprintf("http://%s:%s", relay.RelayAddress, relay.RelayPort),
+		)
+		writeTelemetryCmd := r.nodeInterface.Command(fmt.Sprintf("echo -e %q > /var/lib/bashible/telemetry.env", telemetryEnvs))
+		writeTelemetryCmd.Sudo(ctx)
+
+		if err := writeTelemetryCmd.Run(ctx); err != nil {
+			r.loggerProvider().ErrorF("failed to write telemetry.env: %v", err)
+		}
+	}
 
 	return retry.NewLoopWithParams(loopParams).
 		RunContext(ctx, func() error {
@@ -137,13 +215,20 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 
 			logger.DebugF("Start execute bashible bundle routine")
 
-			return r.attemptExecuteBundle(ctx, params)
+			return r.attemptExecuteBundle(ctx, params, relaySpanUpdater)
 		})
 }
 
-func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
+func (r *Runner) attemptExecuteBundle(
+	ctx context.Context,
+	params ExecuteBundleParams,
+	spanUpdater func(trace.Span),
+) error {
 	ctx, span := telemetry.StartSpan(ctx, "BashibleRunner.attemptExecuteBundle")
 	defer span.End()
+
+	// we need this, due to not create relay in every attempt, but we need to correct hook data from bashible
+	spanUpdater(span)
 
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
@@ -155,10 +240,10 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
-			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
+			return fmt.Errorf("bundle '%s' error: %w\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
 
-		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
 	return nil
 }

@@ -14,7 +14,7 @@ shell:
   - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -49,7 +49,6 @@ import:
   add: /src/safe-agent-updater
   to: /safe-agent-updater
   before: install
-git:
 {{- include "image mount points" . }}
 imageSpec:
   config:

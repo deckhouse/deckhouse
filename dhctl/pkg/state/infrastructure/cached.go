@@ -20,8 +20,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -37,7 +37,7 @@ func NewFileTerraStateLoader(stateCache state.Cache, metaConfig *config.MetaConf
 	}
 }
 
-func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, _ *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
+func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, _ *options.GlobalOptions) (*config.MetaConfig, error) {
 	return s.metaConfig, nil
 }
 

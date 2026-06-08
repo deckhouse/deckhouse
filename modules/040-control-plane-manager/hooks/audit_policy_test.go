@@ -208,6 +208,31 @@ rules:
 					Expect(actualRule.Namespaces).To(Equal(expectedRule.Namespaces), "Namespaces in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
 				}
 			}
+
+			hasKubectlLogsRule := false
+			for _, rule := range policy.Rules {
+				if rule.Level != audit.LevelRequest {
+					continue
+				}
+				if len(rule.Verbs) != 1 || rule.Verbs[0] != "get" {
+					continue
+				}
+				for _, resource := range rule.Resources {
+					for _, resourceName := range resource.Resources {
+						if resourceName == "pods/log" {
+							hasKubectlLogsRule = true
+							break
+						}
+					}
+					if hasKubectlLogsRule {
+						break
+					}
+				}
+				if hasKubectlLogsRule {
+					break
+				}
+			}
+			Expect(hasKubectlLogsRule).To(BeTrue(), "audit policy should contain request-level get rule for pods/log (kubectl get logs)")
 		})
 	})
 

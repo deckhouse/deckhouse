@@ -37,7 +37,7 @@ permissions:
 jobs:
   create_release_issue_for_milestone:
     name: Create issue for milestone
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-slim"
     steps:
 
       # <template: checkout_step>

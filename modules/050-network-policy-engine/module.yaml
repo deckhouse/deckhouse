@@ -1,5 +1,5 @@
 name: network-policy-engine
-stage: Deprecated
+stage: General Availability
 subsystems:
   - networking
 namespace: d8-system

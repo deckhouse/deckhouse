@@ -18,6 +18,10 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
+	"path"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
@@ -33,7 +37,13 @@ var (
 	defaultLogger Logger = newExternalLogger(external.NewDummyLogger(false))
 	emptyLogger   Logger = newExternalLogger(external.NewSilentLogger())
 	debugEnabled  bool
+	loggerOpts    logOpts
 )
+
+type logOpts struct {
+	LoggerPath string
+	Operation  string
+}
 
 const (
 	ProcessPreflight = "preflight"
@@ -96,6 +106,13 @@ func InitLogger(loggerType string, interactive bool) error {
 
 func SetDebugEnabled(enabled bool) {
 	debugEnabled = enabled
+}
+
+func SetLoggerOpts(path, op string) {
+	loggerOpts = logOpts{
+		LoggerPath: path,
+		Operation:  op,
+	}
 }
 
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions, interactive bool) {
@@ -399,7 +416,7 @@ func ExternalLoggerProvider(logger Logger) external.LoggerProvider {
 		l = ext.logger
 	} else {
 		i := logger.(*InteractiveLogger)
-		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan}
+		wrapper := &InteractiveLoggerWrapper{logger: i.logger, interactive: i.interactive, phaseChan: i.phaseChan, logChan: i.logChan}
 		return external.SimpleLoggerProvider(wrapper)
 	}
 
@@ -425,4 +442,25 @@ func GetSilentLogger() Logger {
 		}
 		return defaultLogger.(*InteractiveLogger).NewSilentLogger()
 	}
+}
+
+func NewLogToFile(prefix string) (Logger, error) {
+	cmdStr := strings.Join([]string{loggerOpts.Operation, prefix}, "-")
+	logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+	logPath := path.Join(loggerOpts.LoggerPath, logFile)
+
+	outFile, err := os.Create(logPath)
+	if err != nil {
+		return nil, err
+	}
+
+	bufSize := 1024
+	logger := ExternalLoggerProvider(emptyLogger)()
+
+	tee, err := external.WrapWithTeeLogger(logger, outFile, bufSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExternalLogger{logger: tee}, nil
 }

@@ -4,8 +4,7 @@ from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
-  before: setup
-git:  
+  before: setup 
 {{- include "image mount points" . }}  
 imageSpec:
   config:

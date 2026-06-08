@@ -98,7 +98,7 @@ spec:
                     
                     Заполняется только для статических подов компонентов (etcd, kube-apiserver, kube-controller-manager, kube-scheduler).
                   properties:
-                    certificatesExpirationDate:
+                    certificatesExpirationTime:
                       description: |
                         Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
 

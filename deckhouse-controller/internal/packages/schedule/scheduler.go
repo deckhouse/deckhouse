@@ -169,6 +169,14 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
+	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewAnyOfChecker(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	}
+
+	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
+		checkers = append(checkers, dependency.NewNoneOfChecker(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	}
+
 	if res := checker.Check(checkers...); !res.Enabled {
 		return errors.New(res.Message)
 	}

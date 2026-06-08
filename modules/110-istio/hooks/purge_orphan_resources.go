@@ -20,15 +20,18 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -70,6 +73,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(purgeOrphanResources))
 
+func isOperatorSupportedRevision(versionMap istio_versions.IstioVersionsMap, revision string) bool {
+	if revision == "" {
+		return true
+	}
+	version := versionMap.GetVersionByRevision(revision)
+	if version == "" {
+		return true
+	}
+	return versionMap.DoesVersionSupportOperator(version)
+}
+
+func isOperatorResourceByName(versionMap istio_versions.IstioVersionsMap, name string) bool {
+	revision := regexp.MustCompile(`v\d+x\d+`).FindString(name)
+	return isOperatorSupportedRevision(versionMap, revision)
+}
+
 func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	patch, err := json.Marshal(deleteFinalizersPatch)
 	if err != nil {
@@ -79,6 +98,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 	if err != nil {
 		return err
 	}
+	versionMap := istio_versions.VersionMapJSONToVersionMap(input.Values.Get("istio.internal.versionMap").String())
 
 	// Clean up cluster-wide IstioFederation resources
 	federations, err := k8sClient.Dynamic().Resource(istioFederationGVR).List(context.TODO(), metav1.ListOptions{})
@@ -138,6 +158,10 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 			input.Logger.Warn("Failed to list IstioOperator resources", log.Err(err))
 		} else {
 			for _, iop := range iops.Items {
+				revision, _, _ := unstructured.NestedString(iop.Object, "spec", "revision")
+				if !isOperatorSupportedRevision(versionMap, revision) {
+					continue
+				}
 				_, err = k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Patch(context.TODO(), iop.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 				if err != nil {
 					input.Logger.Warn("Failed to remove finalizers from IstioOperator",
@@ -173,6 +197,10 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 			input.Logger.Warn("Failed to list Istio resources", log.Err(err))
 		} else {
 			for _, istio := range istios.Items {
+				revision, _, _ := unstructured.NestedString(istio.Object, "spec", "revision")
+				if !isOperatorSupportedRevision(versionMap, revision) {
+					continue
+				}
 				_, err = k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Patch(context.TODO(), istio.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 				if err != nil {
 					input.Logger.Warn("Failed to remove finalizers from Istio",
@@ -246,6 +274,9 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		input.Logger.Warn("Failed to list ClusterRoles", log.Err(err))
 	} else {
 		for _, icr := range icrs.Items {
+			if !isOperatorResourceByName(versionMap, icr.GetName()) {
+				continue
+			}
 			err := k8sClient.RbacV1().ClusterRoles().Delete(context.TODO(), icr.GetName(), metav1.DeleteOptions{})
 			if err != nil {
 				input.Logger.Warn("Failed to delete ClusterRole",
@@ -263,6 +294,9 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		input.Logger.Warn("Failed to list ClusterRoleBindings", log.Err(err))
 	} else {
 		for _, icrb := range icrbs.Items {
+			if !isOperatorResourceByName(versionMap, icrb.GetName()) {
+				continue
+			}
 			err := k8sClient.RbacV1().ClusterRoleBindings().Delete(context.TODO(), icrb.GetName(), metav1.DeleteOptions{})
 			if err != nil {
 				input.Logger.Warn("Failed to delete ClusterRoleBinding",
@@ -280,6 +314,9 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		input.Logger.Warn("Failed to list MutatingWebhookConfigurations", log.Err(err))
 	} else {
 		for _, imwc := range imwcs.Items {
+			if !isOperatorResourceByName(versionMap, imwc.GetName()) {
+				continue
+			}
 			err := k8sClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.TODO(), imwc.GetName(), metav1.DeleteOptions{})
 			if err != nil {
 				input.Logger.Warn("Failed to delete MutatingWebhookConfiguration",
@@ -297,6 +334,9 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		input.Logger.Warn("Failed to list ValidatingWebhookConfigurations", log.Err(err))
 	} else {
 		for _, ivwc := range ivwcs.Items {
+			if !isOperatorResourceByName(versionMap, ivwc.GetName()) {
+				continue
+			}
 			err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(context.TODO(), ivwc.GetName(), metav1.DeleteOptions{})
 			if err != nil {
 				input.Logger.Warn("Failed to delete ValidatingWebhookConfiguration",

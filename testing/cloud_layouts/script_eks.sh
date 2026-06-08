@@ -63,6 +63,7 @@ function prepare_environment() {
   export INITIAL_IMAGE_TAG="$INITIAL_IMAGE_TAG"
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
   export PREFIX="$PREFIX"
+  export EDITION=$(echo "${WERF_ENV:-FE}" | tr '[:upper:]' '[:lower:]')
 
   if [[ -z "$KUBERNETES_VERSION" ]]; then
     # shellcheck disable=SC2016
@@ -91,7 +92,11 @@ function prepare_environment() {
   fi
 
   decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
-  IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]] || [[ "$DEV_BRANCH" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/deckhouse/${EDITION}
+  else
+    IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+  fi
 
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.

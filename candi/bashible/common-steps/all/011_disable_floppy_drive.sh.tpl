@@ -27,7 +27,7 @@ if lsmod | grep floppy -q ; then
   elif command -v make-initrd >/dev/null 2>&1; then
     make-initrd
   else
-    bb-log-warning "update-initramfs or make-initrd not found. If you observe the ‘blkid’ hang problem, try to update initramfs without the floppy module."
+    bb-log-warning "Neither update-initramfs nor make-initrd is installed. If blkid hangs on this node, rebuild the initramfs without the floppy module."
     exit 0
   fi
 

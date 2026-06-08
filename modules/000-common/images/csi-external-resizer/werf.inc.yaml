@@ -13,13 +13,12 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
-git:
-{{- include "image mount points" $ }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /csi-resizer
   to: /csi-resizer
   before: setup
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/csi-resizer"]
@@ -70,5 +69,7 @@ shell:
   - cp bin/csi-resizer /csi-resizer
   - chown 64535:64535 /csi-resizer
   - chmod 0755 /csi-resizer
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
   {{- end }}
 {{- end }}

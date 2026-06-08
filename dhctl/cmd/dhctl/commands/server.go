@@ -35,10 +35,10 @@ func DefineServerCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin
 			ctx,
 			settings.ServerParams{
 				ServerGeneralParams: settings.ServerGeneralParams{
-					Network:           opts.Server.Network,
-					Address:           opts.Server.Address,
-					TmpDir:            opts.Global.TmpDir,
-					DownloadDirConfig: opts.DirConfig(),
+					Network:       opts.Server.Network,
+					Address:       opts.Server.Address,
+					TmpDir:        opts.Global.TmpDir,
+					GlobalOptions: &opts.Global,
 				},
 				ParallelTasksLimit:         opts.Server.ParallelTasksLimit,
 				RequestsCounterMaxDuration: opts.Server.RequestsCounterMaxDuration,
@@ -57,10 +57,10 @@ func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause, opts *options.Opt
 			ctx,
 			settings.ServerSingleshotParams{
 				ServerGeneralParams: settings.ServerGeneralParams{
-					Network:           opts.Server.Network,
-					Address:           opts.Server.Address,
-					TmpDir:            opts.Global.TmpDir,
-					DownloadDirConfig: opts.DirConfig(),
+					Network:       opts.Server.Network,
+					Address:       opts.Server.Address,
+					TmpDir:        opts.Global.TmpDir,
+					GlobalOptions: &opts.Global,
 				},
 			},
 		)

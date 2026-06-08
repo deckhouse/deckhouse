@@ -169,12 +169,6 @@ read:
     - cert-manager.io/issuers
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
-    - cluster.x-k8s.io/clusters
-    - cluster.x-k8s.io/machinedeployments
-    - cluster.x-k8s.io/machinehealthchecks
-    - cluster.x-k8s.io/machinepools
-    - cluster.x-k8s.io/machines
-    - cluster.x-k8s.io/machinesets
     - config.gatekeeper.sh/configs
     - configmaps
     - connection.gatekeeper.sh/connections
@@ -196,11 +190,15 @@ read:
     - deckhouse.io/deschedulers
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
+    - deckhouse.io/dvpinstanceclasses
+    - deckhouse.io/dynamixinstanceclasses
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/ingressmetrics
+    - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/moduledocumentations
     - deckhouse.io/modulepulloverrides
     - deckhouse.io/modulereleases
@@ -220,6 +218,7 @@ read:
     - deckhouse.io/securitypolicyexceptions
     - deckhouse.io/servicemetrics
     - deckhouse.io/statefulsetmetrics
+    - deckhouse.io/vcdaffinityrules
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
     - deckhouse.io/yandexinstanceclasses
@@ -246,24 +245,23 @@ read:
     - gateway.networking.k8s.io/tcproutes
     - gateway.networking.k8s.io/tlsroutes
     - gateway.networking.k8s.io/udproutes
+    - infrastructure.cluster.x-k8s.io/deckhouseclusters
+    - infrastructure.cluster.x-k8s.io/deckhousemachines
     - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
+    - infrastructure.cluster.x-k8s.io/dynamixclusters
+    - infrastructure.cluster.x-k8s.io/dynamixmachines
     - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
+    - infrastructure.cluster.x-k8s.io/huaweicloudclusters
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachines
     - infrastructure.cluster.x-k8s.io/huaweicloudmachinetemplates
-    - infrastructure.cluster.x-k8s.io/staticmachinetemplates
+    - infrastructure.cluster.x-k8s.io/vcdclusters
+    - infrastructure.cluster.x-k8s.io/vcdclustertemplates
+    - infrastructure.cluster.x-k8s.io/vcdmachines
     - infrastructure.cluster.x-k8s.io/vcdmachinetemplates
+    - infrastructure.cluster.x-k8s.io/zvirtclusters
+    - infrastructure.cluster.x-k8s.io/zvirtmachines
     - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
     - limitranges
-    - machine.sapcloud.io/alicloudmachineclasses
-    - machine.sapcloud.io/awsmachineclasses
-    - machine.sapcloud.io/azuremachineclasses
-    - machine.sapcloud.io/gcpmachineclasses
-    - machine.sapcloud.io/machinedeployments
-    - machine.sapcloud.io/machines
-    - machine.sapcloud.io/machinesets
-    - machine.sapcloud.io/openstackmachineclasses
-    - machine.sapcloud.io/packetmachineclasses
-    - machine.sapcloud.io/vspheremachineclasses
-    - machine.sapcloud.io/yandexmachineclasses
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
     - mutations.gatekeeper.sh/assign
@@ -335,7 +333,6 @@ read:
     - deckhouse.io/customprometheusrules
     - deckhouse.io/grafanaadditionaldatasources
     - deckhouse.io/grafanadashboarddefinitions
-    - deckhouse.io/ingressnginxcontrollers
 read-write:
     - deckhouse.io/podloggingconfigs
 write:
@@ -348,6 +345,7 @@ write:
     - cert-manager.io/certificates
     - cert-manager.io/issuers
     - configmaps
+    - deckhouse.io/daemonsetmetrics
     - deckhouse.io/deploymentmetrics
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -433,8 +431,11 @@ delete,deletecollection:
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
     - cert-manager.io/challenges
+patch,update:
+    - nodes
 read:
     - deckhouse.io/ingressistiocontrollers
+    - deckhouse.io/ingressnginxcontrollers/status
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - 'deckhouse.io/moduleconfigs (resourceNames: deckhouse)'
@@ -447,7 +448,11 @@ read:
     - sailoperator.io/istios
     - sailoperator.io/ztunnels
 read-write:
+    - apps.kruise.io/daemonsets
     - deckhouse.io/downtimes
+    - deckhouse.io/ingressnginxcontrollers
+    - deckhouse.io/nodegroupconfigurations
+    - deckhouse.io/staticinstances
     - deckhouse.io/upmeterremotewrites
 write:
     - apiextensions.k8s.io/customresourcedefinitions
@@ -457,6 +462,7 @@ write:
     - deckhouse.io/applicationpackages
     - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
+    - deckhouse.io/clusterdaemonsetmetrics
     - deckhouse.io/clusterdeploymentmetrics
     - deckhouse.io/clusteringressmetrics
     - deckhouse.io/clusterlogdestinations
@@ -469,7 +475,7 @@ write:
     - deckhouse.io/grafanaadditionaldatasources
     - deckhouse.io/grafanadashboarddefinitions
     - deckhouse.io/hubblemonitoringconfigs
-    - deckhouse.io/ingressnginxcontrollers
+    - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/moduleconfigs
     - deckhouse.io/moduledocumentations
@@ -494,7 +500,7 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
-delete,deletecollection,patch,update:
+delete,deletecollection,get,list,patch,update,watch:
     - machine.sapcloud.io/alicloudmachineclasses
     - machine.sapcloud.io/awsmachineclasses
     - machine.sapcloud.io/azuremachineclasses
@@ -512,17 +518,50 @@ list:
     - dex.coreos.com/offlinesessionses
     - dex.coreos.com/passwords
 patch,update:
+    - deckhouse.io/vcdaffinityrules
+    - infrastructure.cluster.x-k8s.io/deckhouseclusters
+    - infrastructure.cluster.x-k8s.io/deckhousemachines
+    - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
+    - infrastructure.cluster.x-k8s.io/dynamixclusters
+    - infrastructure.cluster.x-k8s.io/dynamixmachines
+    - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
+    - infrastructure.cluster.x-k8s.io/huaweicloudclusters
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachines
+    - infrastructure.cluster.x-k8s.io/huaweicloudmachinetemplates
+    - infrastructure.cluster.x-k8s.io/vcdclusters
+    - infrastructure.cluster.x-k8s.io/vcdclustertemplates
+    - infrastructure.cluster.x-k8s.io/vcdmachines
+    - infrastructure.cluster.x-k8s.io/vcdmachinetemplates
+    - infrastructure.cluster.x-k8s.io/zvirtclusters
+    - infrastructure.cluster.x-k8s.io/zvirtmachines
+    - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
     - machine.sapcloud.io/machinedeployments/scale
 proxy:
     - nodes
 read:
+    - cluster.x-k8s.io/machinedrainrules
     - control-plane.deckhouse.io/controlplaneoperations
+    - infrastructure.cluster.x-k8s.io/deckhousecontrolplanes
+    - infrastructure.cluster.x-k8s.io/staticclusters
+    - infrastructure.cluster.x-k8s.io/staticmachines
+    - nfd.k8s-sigs.io/nodefeaturegroups
+    - nfd.k8s-sigs.io/nodefeaturerules
+    - nfd.k8s-sigs.io/nodefeatures
 read-write:
+    - cluster.x-k8s.io/clusters
+    - cluster.x-k8s.io/machinedeployments
+    - cluster.x-k8s.io/machinehealthchecks
+    - cluster.x-k8s.io/machinepools
+    - cluster.x-k8s.io/machines
+    - cluster.x-k8s.io/machinesets
     - deckhouse.io/clusterauthorizationrules
     - deckhouse.io/dexproviders
     - deckhouse.io/groups
+    - deckhouse.io/nodeusers
+    - deckhouse.io/sshcredentials
     - deckhouse.io/useroperations
     - deckhouse.io/users
+    - infrastructure.cluster.x-k8s.io/staticmachinetemplates
     - nodes/configz
     - nodes/healthz
     - nodes/log
@@ -533,24 +572,21 @@ read-write:
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
-    - cluster.x-k8s.io/clusters
-    - cluster.x-k8s.io/machinedeployments
     - cluster.x-k8s.io/machinedeployments/scale
-    - cluster.x-k8s.io/machinehealthchecks
-    - cluster.x-k8s.io/machinepools
-    - cluster.x-k8s.io/machines
-    - cluster.x-k8s.io/machinesets
     - config.gatekeeper.sh/configs
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
     - deckhouse.io/deschedulers
+    - deckhouse.io/dvpinstanceclasses
+    - deckhouse.io/dynamixinstanceclasses
     - deckhouse.io/gcpinstanceclasses
     - deckhouse.io/huaweicloudinstanceclasses
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
+    - deckhouse.io/localpathprovisioners
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projects
@@ -562,12 +598,6 @@ write:
     - deckhouse.io/zvirtinstanceclasses
     - expansion.gatekeeper.sh/expansiontemplate
     - externaldata.gatekeeper.sh/providers
-    - infrastructure.cluster.x-k8s.io/deckhousemachinetemplates
-    - infrastructure.cluster.x-k8s.io/dynamixmachinetemplates
-    - infrastructure.cluster.x-k8s.io/huaweicloudmachinetemplates
-    - infrastructure.cluster.x-k8s.io/staticmachinetemplates
-    - infrastructure.cluster.x-k8s.io/vcdmachinetemplates
-    - infrastructure.cluster.x-k8s.io/zvirtmachinetemplates
     - install.istio.io/istiooperators
     - limitranges
     - mutations.gatekeeper.sh/assign

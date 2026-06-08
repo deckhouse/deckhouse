@@ -139,10 +139,13 @@ After a successful start, the virtual machine should change to the `Running` sta
 
 Example of the output:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME   PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 vm     Running   1       100%           1Gi      False          False   True         virtlab-pt-1   10.66.10.19   6m18s
 ```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Connect to the virtual machine, enter the login (in the example — `test-user`) and the password:
 

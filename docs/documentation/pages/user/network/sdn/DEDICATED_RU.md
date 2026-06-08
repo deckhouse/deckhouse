@@ -306,11 +306,14 @@ spec:
 
    Пример вывода:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    NAME               TYPE   KIND      NAME    ADDRESS        NETWORK           PHASE       AGE
    ipaddress-auto-1   Auto   Network   mynet   192.168.12.1   192.168.12.0/24   Allocated   4d1h
    ipaddress-auto-2   Auto   Network   mynet   192.168.12.2   192.168.12.0/24   Allocated   4d1h
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Проверьте аннотацию пода `network.deckhouse.io/networks-status` (включая `ipAddressConfigs` и маршруты):
 

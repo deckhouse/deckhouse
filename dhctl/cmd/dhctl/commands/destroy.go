@@ -70,6 +70,8 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
+		defer providerinitializer.CleanupSSHProvider(ctx, logger, sshProviderInitializer)
+
 		if !opts.Global.SanityCheck {
 			log.InteractiveWarnLn(destroyApprovalsMessage)
 
@@ -93,15 +95,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		destroyerParams := &destroy.Params{
-			SSHProvider:     sshProvider,
-			KubeProvider:    kubeProvider,
-			StateCache:      cache.Global(),
-			SkipResources:   opts.Destroy.SkipResources,
-			LoggerProvider:  log.SimpleLoggerProvider(logger),
-			IsDebug:         opts.Global.IsDebug,
-			TmpDir:          opts.Global.TmpDir,
-			DirectoryConfig: opts.DirConfig(),
-			Options:         opts,
+			SSHProvider:    sshProvider,
+			KubeProvider:   kubeProvider,
+			StateCache:     cache.Global(),
+			SkipResources:  opts.Destroy.SkipResources,
+			LoggerProvider: log.SimpleLoggerProvider(logger),
+			IsDebug:        opts.Global.IsDebug,
+			TmpDir:         opts.Global.TmpDir,
+			Options:        opts,
 		}
 		interactive := input.IsTerminal() && !opts.Global.ShowProgress
 		if interactive {

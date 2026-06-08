@@ -15,6 +15,7 @@
 package rpp
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
@@ -39,4 +40,11 @@ func NewClientConfigGetter(config registry_config.Data) *ClientConfigGetter {
 
 func (r *ClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
 	return &r.ClientConfig, nil
+}
+
+// GetPackagesConfig is unsupported during bootstrap: dhctl never serves the
+// /v1/packages/* routes (no PackageRepository CRs to read), so we satisfy the
+// interface with an explicit error rather than a half-built config.
+func (r *ClientConfigGetter) GetPackagesConfig(_ string) (*registry.PackagesConfig, error) {
+	return nil, errors.New("packages config is not available during bootstrap")
 }

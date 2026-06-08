@@ -33,6 +33,7 @@ import (
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
+	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
@@ -93,12 +94,8 @@ func start(logger *log.Logger, cfg *aoapp.Config) func(cmd *cobra.Command, args 
 			}
 		}
 
-		// addon-operator owns its own AppStartMessage starting with the
-		// "pass completely config when init" refactor; setting the shell-operator
-		// global as well keeps any legacy reader happy without affecting
-		// addon-operator's startup log line.
+		// addon-operator prints its own startup banner via its AppStartMessage.
 		aoapp.AppStartMessage = version()
-		shapp.AppStartMessage = version()
 		shapp.KubeClientFieldManager = "deckhouse-hook"
 
 		ctx := context.Background()
@@ -368,9 +365,6 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					rm.Unlock()
 					go func() {
 						defer rm.Release()
-						// give some time to real parent processes to reap their children if any
-						time.Sleep(time.Second)
-
 						processes, err := process.Processes()
 						if err != nil {
 							logger.Debug("get processes", log.Err(err))
@@ -391,7 +385,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 									continue
 								}
 
-								if ppid == 1 {
+								if ppid == 1 && !executor.Tracker().IsActive(int(ps.Pid)) {
 									var status syscall.WaitStatus
 									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
 									if err != nil {

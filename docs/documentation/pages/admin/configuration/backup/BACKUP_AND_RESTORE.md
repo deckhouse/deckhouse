@@ -13,7 +13,9 @@ To properly restore the cluster, follow these steps on the master node:
 1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
    ```shell
-   cp $(find /var/lib/containerd/ -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+   cp /proc/${ETCD_PID}/root/usr/bin/etcdutl /usr/local/bin/etcdutl
+   chmod +x /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl`:
@@ -61,6 +63,18 @@ To properly restore the cluster, follow these steps on the master node:
 
    This backup will allow you to roll back in case of issues.
 
+1. Place the etcd snapshot file. Copy or move the [`etcd-backup.snapshot`](#creating-backups-with-deckhouse-cli) file to the current user's (root) home directory:
+
+   ```shell
+   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
+   ```
+
+   Ensure the file is readable:
+
+   ```shell
+   ls -la ~/etcd-backup.snapshot
+   ```
+
 1. Clean the etcd directory. Remove old data to prepare for restore:
 
    ```shell
@@ -71,18 +85,6 @@ To properly restore the cluster, follow these steps on the master node:
 
    ```shell
    ls -la /var/lib/etcd
-   ```
-
-1. Place the etcd snapshot file. Copy or move the `etcd-backup.snapshot` file to the current user's (root) home directory:
-
-   ```shell
-   cp /path/to/backup/etcd-backup.snapshot ~/etcd-backup.snapshot
-   ```
-
-   Ensure the file is readable:
-
-   ```shell
-   ls -la ~/etcd-backup.snapshot
    ```
 
 1. Restore the etcd database from the snapshot using `etcdutl`:
@@ -109,10 +111,13 @@ To properly restore the cluster, follow these steps on the master node:
 
    Output example:
 
+   <!-- markdownlint-disable MD031 -->
    ```console
    CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
    4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
 
 1. Restart the master node.
 
@@ -122,6 +127,12 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
 
+1. Enable maintenance mode on the remaining master node to prevent `control-plane-manager` from creating new operations on it during the restore procedure (CPM will continue to remove components from the nodes being detached):
+
+   ```shell
+   d8 k label cpn <REMAINING_MASTER_NAME> control-plane-manager.deckhouse.io/maintenance=""
+   ```
+
 1. Switch the cluster to single master mode:
 
    - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
@@ -130,6 +141,12 @@ To properly restore a multi-master cluster, follow these steps:
    - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
+
+1. Make sure the maintenance mode label is removed from the remaining master node (after restoring from the backup it is usually already gone, but it is better to verify explicitly):
+
+   ```shell
+   d8 k label cpn <REMAINING_MASTER_NAME> control-plane-manager.deckhouse.io/maintenance-
+   ```
 
 1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
@@ -338,9 +355,19 @@ To restore etcd objects after changing the master node's IP address, follow thes
    - Review kubelet's system configuration files (typically found in `/etc/systemd/system/kubelet.service.d/` or similar directories).
    - Update the IP address in any other configurations that reference the old address, if necessary.
 
-1. Regenerate certificates that were issued for the old IP. Delete or move old certificates related to the API server and etcd (if applicable). Then generate new certificates, specifying the new master node IP address as a SAN (Subject Alternative Name).
+1. Back up the current certificates:
 
-1. Restart all services that use the updated configurations and certificates. Force kubelet to restart control-plane manifests (API server, etcd, etc.). Either restart the system services manually (e.g., `systemctl restart kubelet`) or ensure they restart automatically.
+   ```shell
+   cp -r /etc/kubernetes/pki ./pki-backup
+   ```
+
+1. Renew control-plane certificates with the new IP address added to SANs:
+
+   ```shell
+   d8 tools pki certs renew all --san <NEW_IP>
+   ```
+
+1. Restart all services so that components load the updated certificates and configurations.
 
 1. Wait for kubelet to regenerate its own certificate.
 
@@ -355,8 +382,6 @@ To simplify cluster recovery after the master node's IP address changes, use the
    - `OLD_IP`: The old master node IP address used when the backup was created.
    - `NEW_IP`: The new IP address of the master node.
 
-1. Make sure the Kubernetes version (`KUBERNETES_VERSION`) matches the one used in the cluster. This is necessary for downloading the correct version of kubeadm.
-
 1. [Download](#restoring-a-cluster-with-a-single-control-plane-node) `etcdutl` if it is not installed.
 
 1. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
@@ -367,12 +392,12 @@ To simplify cluster recovery after the master node's IP address changes, use the
 ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
 OLD_IP=10.242.32.34                         # Old master node IP address.
 NEW_IP=10.242.32.21                         # New master node IP address.
-KUBERNETES_VERSION=1.28.0                   # Kubernetes version.
 
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
+ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -382,14 +407,9 @@ find /etc/kubernetes/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find /etc/systemd/system/kubelet.service.d -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
 
-mkdir -p ./old_certs/etcd
-mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
+cp -r /etc/kubernetes/pki ./pki-backup
 
-curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-chmod +x kubeadm
-./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
+d8 tools pki certs renew all --san $NEW_IP
 
 crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
 crictl ps --name 'kubernetes-api-proxy' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -424,7 +444,8 @@ If you prefer to manually make changes during cluster recovery after the master 
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
-     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
+     ETCD_PID=$(crictl inspect $(crictl ps --name etcd -q | head -1) | jq .info.pid)
+     ETCDUTL_PATH=/proc/${ETCD_PID}/root/usr/bin/etcdutl
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \
@@ -450,34 +471,19 @@ If you prefer to manually make changes during cluster recovery after the master 
     find  /var/lib/bashible/ -type f -exec sed -i "s/$OLD_IP/$NEW_IP/g" {} ';'
     ```
 
-1. Regenerate certificates issued for the old IP address:
+1. Back up the current certificates:
 
-   - Prepare a directory to store the old certificates:
+   ```shell
+   cp -r /etc/kubernetes/pki ./pki-backup
+   ```
 
-     ```shell
-     mkdir -p ./old_certs/etcd
-     mv /etc/kubernetes/pki/apiserver.* ./old_certs/
-     mv /etc/kubernetes/pki/etcd/server.* ./old_certs/etcd/
-     mv /etc/kubernetes/pki/etcd/peer.* ./old_certs/etcd/
-     ```
+1. Renew control-plane certificates with the new IP address added to SANs:
 
-   - Install or download kubeadm to match the current Kubernetes version:
+   ```shell
+   d8 tools pki certs renew all --san <NEW_IP>
+   ```
 
-     ```shell
-     KUBERNETES_VERSION=1.28.0 # Kubernetes version.
-     curl -LO https://dl.k8s.io/v$KUBERNETES_VERSION/bin/linux/amd64/kubeadm
-     chmod +x kubeadm
-     ```
-
-   - Generate new certificates with the updated IP:
-
-     ```shell
-     ./kubeadm init phase certs all --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
-     ```
-
-     The new IP address will be included in the generated certificates.
-
-1. Restart all services that use the updated configuration and certificates. To immediately stop active containers, run:
+1. Restart all services so that components load the updated certificates and configurations. To immediately stop active containers, run:
 
     ```shell
     crictl ps --name 'kube-apiserver' -o json | jq -r '.containers[0].id' | xargs crictl stop
@@ -487,8 +493,6 @@ If you prefer to manually make changes during cluster recovery after the master 
     systemctl daemon-reload
     systemctl restart kubelet.service
     ```
-
-    Kubelet will restart the necessary pods, and Kubernetes components will load the new certificates.
 
 1. Wait for kubelet to regenerate its own certificate. Kubelet will automatically generate a new certificate with the updated IP address:
 

@@ -338,6 +338,7 @@ featureGates:
 {{- if semverCompare ">=1.33" .kubernetesVersion }}
 {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */}}
   DRAPartitionableDevices: true
+  KubeletEnsureSecretPulledImages: true
 {{- end }}
 {{- if semverCompare ">=1.34" .kubernetesVersion }}
 {{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
