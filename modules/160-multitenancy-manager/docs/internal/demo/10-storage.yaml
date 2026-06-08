@@ -5,27 +5,43 @@
 #                             which is not allowed, so it is rewritten to the project default `local`.
 # COERCE  pvc-replicated   -> explicit replicated is rewritten to `local` (coerceToDefault).
 #
-# Check the result:  k -n demo get pvc -o custom-columns=NAME:.metadata.name,SC:.spec.storageClassName
+# Check the result:
+#   k -n demo get pvc -o custom-columns=NAME:.metadata.name,SC:.spec.storageClassName
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
-metadata: {name: pvc-local, namespace: demo}
+metadata:
+  name: pvc-local
+  namespace: demo
 spec:
-  accessModes: [ReadWriteOnce]
+  accessModes:
+    - ReadWriteOnce
   storageClassName: local
-  resources: {requests: {storage: 1Gi}}
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
-metadata: {name: pvc-omitted, namespace: demo}
+metadata:
+  name: pvc-omitted
+  namespace: demo
 spec:
-  accessModes: [ReadWriteOnce]
-  resources: {requests: {storage: 1Gi}}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
-metadata: {name: pvc-replicated, namespace: demo}
+metadata:
+  name: pvc-replicated
+  namespace: demo
 spec:
-  accessModes: [ReadWriteOnce]
+  accessModes:
+    - ReadWriteOnce
   storageClassName: replicated
-  resources: {requests: {storage: 1Gi}}
+  resources:
+    requests:
+      storage: 1Gi

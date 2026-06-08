@@ -90,7 +90,7 @@ func TestEvalMatch(t *testing.T) {
 	}
 }
 
-func reg(defAvail v1alpha1.AvailabilityDefault, excluded *v1alpha1.ResourceFilter) *v1alpha1.ClusterGrantableResource {
+func reg(defAvail v1alpha1.AvailabilityDefault, excluded []v1alpha1.ResourceFilter) *v1alpha1.ClusterGrantableResource {
 	return &v1alpha1.ClusterGrantableResource{
 		Spec: v1alpha1.ClusterGrantableResourceSpec{DefaultAvailability: defAvail, Excluded: excluded},
 	}
@@ -98,7 +98,7 @@ func reg(defAvail v1alpha1.AvailabilityDefault, excluded *v1alpha1.ResourceFilte
 
 func TestAvailabilityPrecedence(t *testing.T) {
 	// excluded beats allowed.
-	r := reg(v1alpha1.AvailabilityAll, &v1alpha1.ResourceFilter{Names: []string{"sys"}})
+	r := reg(v1alpha1.AvailabilityAll, []v1alpha1.ResourceFilter{{Names: []string{"sys"}}})
 	grants := []v1alpha1.GrantResource{{Allowed: []string{"sys", "standard"}}}
 	if ok, _ := Available(r, grants, "sys", nil); ok {
 		t.Fatal("excluded must deny even when allowed")
@@ -135,6 +135,42 @@ func TestAvailabilityPrecedence(t *testing.T) {
 	gNone := []v1alpha1.GrantResource{{AvailabilityDefault: v1alpha1.AvailabilityNone}}
 	if ok, _ := Available(rAll2, gNone, "z", nil); ok {
 		t.Fatal("grant availabilityDefault None must override registration All")
+	}
+}
+
+func TestExcludedUnion(t *testing.T) {
+	// clusterroles pattern: available by default, but keep only the delegatable roles —
+	// (kind=use) OR (module=user-authz with no kind) — by unioning two excluded filters.
+	excluded := []v1alpha1.ResourceFilter{
+		{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "rbac.deckhouse.io/kind", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"use"}},
+			{Key: "module", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"user-authz"}},
+		}},
+		{MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "rbac.deckhouse.io/kind", Operator: metav1.LabelSelectorOpIn, Values: []string{"manage"}},
+		}},
+	}
+	r := reg(v1alpha1.AvailabilityAll, excluded)
+	cases := []struct {
+		name string
+		lbls labels.Set
+		want bool
+	}{
+		{"use-role", labels.Set{"rbac.deckhouse.io/kind": "use", "module": "user-authz"}, true},
+		{"use-cap-other-module", labels.Set{"rbac.deckhouse.io/kind": "use", "module": "deckhouse"}, true},
+		{"userauthz-access-level", labels.Set{"module": "user-authz"}, true},
+		{"manage-role", labels.Set{"rbac.deckhouse.io/kind": "manage", "module": "user-authz"}, false},
+		{"generic-role", labels.Set{}, false},
+		{"cluster-admin-like", labels.Set{"kubernetes.io/bootstrapping": "rbac-defaults"}, false},
+	}
+	for _, c := range cases {
+		got, err := Available(r, nil, c.name, c.lbls)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if got != c.want {
+			t.Fatalf("%s: got available=%v want %v", c.name, got, c.want)
+		}
 	}
 }
 

@@ -188,8 +188,10 @@ func (in *ClusterGrantableResourceSpec) DeepCopyInto(out *ClusterGrantableResour
 	}
 	if in.Excluded != nil {
 		in, out := &in.Excluded, &out.Excluded
-		*out = new(ResourceFilter)
-		(*in).DeepCopyInto(*out)
+		*out = make([]ResourceFilter, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.DefaultFrom != nil {
 		in, out := &in.DefaultFrom, &out.DefaultFrom

@@ -106,9 +106,31 @@ spec:
     apiVersion: rbac.authorization.k8s.io/v1
     kind: ClusterRole
   enforcement: Managed
-  # Deny by default: binding an arbitrary ClusterRole (e.g. cluster-admin) in a project namespace is a
-  # privilege escalation. The shipped clusterroles ClusterObjectGrant below opens only the safe set.
-  defaultAvailability: None
+  # Available by default to every project — but only the delegatable cluster roles: the "use"
+  # capability/aggregate roles (rbac.deckhouse.io/kind: use) and the user-authz access-level roles
+  # (module: user-authz, with no rbac.deckhouse.io/kind). Everything else (cluster-admin, the
+  # d8:manage:* permission roles, raw component roles) is hard-excluded, so binding it from a project
+  # RoleBinding is rejected. The two excluded filters are unioned: a role is excluded if it matches
+  # either, which keeps exactly (kind=use) OR (module=user-authz AND no kind).
+  defaultAvailability: All
+  excluded:
+  # Exclude everything that is neither a "use" role nor a user-authz-module role.
+  - matchExpressions:
+    - key: rbac.deckhouse.io/kind
+      operator: NotIn
+      values:
+      - use
+    - key: module
+      operator: NotIn
+      values:
+      - user-authz
+  # Exclude the "manage" permission roles (these carry module: user-authz, so the filter above keeps
+  # them; drop them explicitly).
+  - matchExpressions:
+    - key: rbac.deckhouse.io/kind
+      operator: In
+      values:
+      - manage
   usageReferences:
   # RoleBindings in project namespaces that reference a ClusterRole by name.
   - rule:
@@ -123,34 +145,3 @@ spec:
       fieldPath: $.roleRef.kind
       equals: ClusterRole
     countable: true
----
-# Default policy: in every project, only delegatable ClusterRoles may be referenced from RoleBindings —
-# the "use" capability/aggregate roles (rbac.deckhouse.io/kind: use) and the user-authz access-level
-# roles (module: user-authz, no rbac.deckhouse.io/kind, which excludes the "manage" permission roles).
-# Tune or remove this grant to change the policy.
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterObjectGrant
-metadata:
-  name: clusterroles
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-spec:
-  projectSelector: {}
-  resources:
-  - resourceRef: clusterroles
-    availabilityDefault: None
-    allowedSelector:
-      matchExpressions:
-      - key: rbac.deckhouse.io/kind
-        operator: In
-        values:
-        - use
-  - resourceRef: clusterroles
-    availabilityDefault: None
-    allowedSelector:
-      matchExpressions:
-      - key: module
-        operator: In
-        values:
-        - user-authz
-      - key: rbac.deckhouse.io/kind
-        operator: DoesNotExist

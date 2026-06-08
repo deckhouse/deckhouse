@@ -92,53 +92,60 @@ spec:
                 - External
                 type: string
               excluded:
-                description: Excluded lists objects never available to tenants, regardless
-                  of any grant (hard deny).
-                properties:
-                  matchExpressions:
-                    description: MatchExpressions is a list of label selector requirements
-                      matched against the granted object labels.
-                    items:
-                      description: |-
-                        A label selector requirement is a selector that contains values, a key, and an operator that
-                        relates the key and values.
-                      properties:
-                        key:
-                          description: key is the label key that the selector applies
-                            to.
-                          type: string
-                        operator:
-                          description: |-
-                            operator represents a key's relationship to a set of values.
-                            Valid operators are In, NotIn, Exists and DoesNotExist.
-                          type: string
-                        values:
-                          description: |-
-                            values is an array of string values. If the operator is In or NotIn,
-                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                            the values array must be empty. This array is replaced during a strategic
-                            merge patch.
-                          items:
+                description: |-
+                  Excluded lists filters of objects never available to tenants, regardless of any grant (hard
+                  deny). An object is excluded if it matches ANY of the filters (the filters are unioned), which
+                  lets a registration express "available by default to set A OR set B" by excluding everything
+                  outside both sets.
+                items:
+                  description: ResourceFilter matches granted objects by explicit
+                    names and/or labels.
+                  properties:
+                    matchExpressions:
+                      description: MatchExpressions is a list of label selector requirements
+                        matched against the granted object labels.
+                      items:
+                        description: |-
+                          A label selector requirement is a selector that contains values, a key, and an operator that
+                          relates the key and values.
+                        properties:
+                          key:
+                            description: key is the label key that the selector applies
+                              to.
                             type: string
-                          type: array
-                          x-kubernetes-list-type: atomic
-                      required:
-                      - key
-                      - operator
+                          operator:
+                            description: |-
+                              operator represents a key's relationship to a set of values.
+                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                            type: string
+                          values:
+                            description: |-
+                              values is an array of string values. If the operator is In or NotIn,
+                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                              the values array must be empty. This array is replaced during a strategic
+                              merge patch.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: MatchLabels is a map of {key,value} pairs matched
+                        against the granted object labels.
                       type: object
-                    type: array
-                  matchLabels:
-                    additionalProperties:
-                      type: string
-                    description: MatchLabels is a map of {key,value} pairs matched
-                      against the granted object labels.
-                    type: object
-                  names:
-                    description: Names is an explicit list of object names.
-                    items:
-                      type: string
-                    type: array
-                type: object
+                    names:
+                      description: Names is an explicit list of object names.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                type: array
               grantedResource:
                 description: GrantedResource is the cluster-scoped resource being
                   governed (absent ⇒ value-backed).

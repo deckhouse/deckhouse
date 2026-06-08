@@ -1,33 +1,65 @@
-# RoleBinding referencing a ClusterRole. The module's shipped cluster-wide grant allows only
-# delegatable roles: the "use" capability/aggregate roles (rbac.deckhouse.io/kind: use) and the
-# user-authz access-level roles (module: user-authz). Everything else (cluster-admin, the d8:manage:*
-# permission roles, raw component roles) is rejected.
+# RoleBinding referencing a ClusterRole. The clusterroles ClusterGrantableResource makes only the
+# delegatable roles available by default in every project: the "use" capability/aggregate roles
+# (rbac.deckhouse.io/kind: use) and the user-authz access-level roles (module: user-authz). Everything
+# else (cluster-admin, the d8:manage:* permission roles, raw component roles) is rejected.
 #
-# ALLOW  rb-use         -> ClusterRole d8:use:role:viewer
-# ALLOW  rb-userauthz   -> ClusterRole user-authz:admin
-# DENY   rb-clusteradmin-> ClusterRole cluster-admin
-# DENY   rb-manage      -> ClusterRole d8:manage:all:manager
+# ALLOW  rb-use          -> ClusterRole d8:use:role:viewer
+# ALLOW  rb-userauthz    -> ClusterRole user-authz:admin
+# DENY   rb-clusteradmin -> ClusterRole cluster-admin
+# DENY   rb-manage       -> ClusterRole d8:manage:all:manager
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
-metadata: {name: rb-use, namespace: demo}
-roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: d8:use:role:viewer}
-subjects: [{apiGroup: rbac.authorization.k8s.io, kind: Group, name: demo-team}]
+metadata:
+  name: rb-use
+  namespace: demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:use:role:viewer
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: demo-team
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
-metadata: {name: rb-userauthz, namespace: demo}
-roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: user-authz:admin}
-subjects: [{apiGroup: rbac.authorization.k8s.io, kind: Group, name: demo-team}]
+metadata:
+  name: rb-userauthz
+  namespace: demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:admin
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: demo-team
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
-metadata: {name: rb-clusteradmin, namespace: demo}
-roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin}   # DENY
-subjects: [{apiGroup: rbac.authorization.k8s.io, kind: Group, name: demo-team}]
+metadata:
+  name: rb-clusteradmin
+  namespace: demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin   # DENY: not delegatable
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: demo-team
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
-metadata: {name: rb-manage, namespace: demo}
-roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: d8:manage:all:manager}   # DENY
-subjects: [{apiGroup: rbac.authorization.k8s.io, kind: Group, name: demo-team}]
+metadata:
+  name: rb-manage
+  namespace: demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:manage:all:manager   # DENY: manage permission role, not delegatable
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: demo-team

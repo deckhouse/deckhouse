@@ -7,16 +7,28 @@
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
-metadata: {name: cert-ok, namespace: demo}
+metadata:
+  name: cert-ok
+  namespace: demo
 spec:
   secretName: cert-ok-tls
-  dnsNames: [ok.demo.example.com]
-  issuerRef: {name: selfsigned, kind: ClusterIssuer, group: cert-manager.io}
+  dnsNames:
+    - ok.demo.example.com
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
-metadata: {name: cert-bad, namespace: demo}
+metadata:
+  name: cert-bad
+  namespace: demo
 spec:
   secretName: cert-bad-tls
-  dnsNames: [bad.demo.example.com]
-  issuerRef: {name: letsencrypt, kind: ClusterIssuer, group: cert-manager.io}   # DENY
+  dnsNames:
+    - bad.demo.example.com
+  issuerRef:
+    name: letsencrypt   # DENY: not available to the project
+    kind: ClusterIssuer
+    group: cert-manager.io

@@ -224,9 +224,9 @@ func Resolve(
 			r.anyNone = true
 		}
 	}
-	// Registration excluded literal names.
-	if reg.Spec.Excluded != nil {
-		for _, n := range reg.Spec.Excluded.Names {
+	// Registration excluded literal names (union across all excluded filters).
+	for i := range reg.Spec.Excluded {
+		for _, n := range reg.Spec.Excluded[i].Names {
 			r.excluded[n] = struct{}{}
 		}
 	}
@@ -243,16 +243,25 @@ func Resolve(
 			return nil, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
 		}
 
-		excludedSel, err := filterSelector(reg.Spec.Excluded)
-		if err != nil {
-			return nil, err
+		excludedSels := make([]labels.Selector, 0, len(reg.Spec.Excluded))
+		for i := range reg.Spec.Excluded {
+			sel, err := filterSelector(&reg.Spec.Excluded[i])
+			if err != nil {
+				return nil, err
+			}
+			if sel != nil {
+				excludedSels = append(excludedSels, sel)
+			}
 		}
 		for i := range list.Items {
 			name := list.Items[i].GetName()
 			objLabels := labels.Set(list.Items[i].GetLabels())
 			r.liveNames = append(r.liveNames, name)
-			if excludedSel != nil && excludedSel.Matches(objLabels) {
-				r.excluded[name] = struct{}{}
+			for _, sel := range excludedSels {
+				if sel.Matches(objLabels) {
+					r.excluded[name] = struct{}{}
+					break
+				}
 			}
 			for j := range entries {
 				if matchSel(entries[j].DeniedSelector, objLabels) {

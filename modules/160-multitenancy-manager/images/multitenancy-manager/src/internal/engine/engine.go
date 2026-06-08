@@ -186,11 +186,13 @@ func Available(
 	name string,
 	objLabels labels.Set,
 ) (bool, error) {
-	// 1. registration excluded — hard deny.
-	if excluded, err := filterMatches(reg.Spec.Excluded, name, objLabels); err != nil {
-		return false, err
-	} else if excluded {
-		return false, nil
+	// 1. registration excluded — hard deny if any filter matches.
+	for i := range reg.Spec.Excluded {
+		if excluded, err := filterMatches(&reg.Spec.Excluded[i], name, objLabels); err != nil {
+			return false, err
+		} else if excluded {
+			return false, nil
+		}
 	}
 
 	// 2. grant denied / deniedSelector — admin exclusion.

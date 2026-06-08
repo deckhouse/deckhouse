@@ -181,9 +181,12 @@ type ClusterGrantableResourceSpec struct {
 	// +kubebuilder:default=All
 	DefaultAvailability AvailabilityDefault `json:"defaultAvailability,omitempty"`
 
-	// Excluded lists objects never available to tenants, regardless of any grant (hard deny).
+	// Excluded lists filters of objects never available to tenants, regardless of any grant (hard
+	// deny). An object is excluded if it matches ANY of the filters (the filters are unioned), which
+	// lets a registration express "available by default to set A OR set B" by excluding everything
+	// outside both sets.
 	// +optional
-	Excluded *ResourceFilter `json:"excluded,omitempty"`
+	Excluded []ResourceFilter `json:"excluded,omitempty"`
 
 	// DefaultFrom marks the cluster-wide default object by annotation (fallback default).
 	// +optional

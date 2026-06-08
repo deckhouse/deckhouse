@@ -7,16 +7,22 @@
 ---
 apiVersion: v1
 kind: Service
-metadata: {name: lb-1, namespace: demo}
+metadata:
+  name: lb-1
+  namespace: demo
 spec:
   type: LoadBalancer
   loadBalancerClass: internal
-  ports: [{port: 80}]
+  ports:
+    - port: 80
 ---
 apiVersion: v1
 kind: Service
-metadata: {name: lb-2, namespace: demo}
+metadata:
+  name: lb-2
+  namespace: demo
 spec:
   type: LoadBalancer
   loadBalancerClass: internal   # DENY: 2nd LoadBalancer, quota = 1
-  ports: [{port: 80}]
+  ports:
+    - port: 80
