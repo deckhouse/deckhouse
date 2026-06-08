@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	dvpModuleConfigName           = "cloud-provider-dvp"
+	dvpModuleName                 = "cloud-provider-dvp"
 	dvpNamespace                  = "d8-cloud-provider-dvp"
 	dvpMigrationResourcesName     = "d8-migration-resources"
 	dvpMigrationResourcesFilename = "resources.yaml"
@@ -42,8 +42,7 @@ const (
 	dvpInstanceClassAPI           = "deckhouse.io/v1alpha1"
 	dvpAuthSchemeKubeconfig       = "kubeconfig"
 	dvpCredentialSecretType       = "cloud-provider.deckhouse.io/credentials"
-	dvpModuleConfigAPIVersion     = "deckhouse.io/v1alpha1"
-	dvpModuleLabel                = "cloud-provider-dvp"
+	moduleConfigAPIVersion        = "deckhouse.io/v1alpha1"
 )
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
@@ -108,10 +107,10 @@ func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *
 	}
 
 	moduleConfig := map[string]any{
-		"apiVersion": dvpModuleConfigAPIVersion,
+		"apiVersion": moduleConfigAPIVersion,
 		"kind":       "ModuleConfig",
 		"metadata": map[string]any{
-			"name": dvpModuleConfigName,
+			"name": dvpModuleName,
 		},
 		"spec": map[string]any{
 			"enabled": true,
@@ -195,6 +194,32 @@ func createMigrationResourcesSecret(input *go_hook.HookInput, resources []any) e
 	input.PatchCollector.CreateOrUpdate(secret)
 
 	return nil
+}
+
+// createMigrationConfigMap creates (or updates) the d8-module-is-migrating ConfigMap.
+func createMigrationConfigMap(input *go_hook.HookInput) {
+	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dvpMigrationConfigMapName,
+			Namespace: dvpNamespace,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   dvpModuleName,
+			},
+		},
+	}
+	input.PatchCollector.CreateOrUpdate(cm)
+}
+
+// deleteMigrationArtifacts removes d8-migration-resources Secret and
+// d8-module-is-migrating ConfigMap. Missing objects are ignored by the patch collector.
+func deleteMigrationArtifacts(input *go_hook.HookInput) {
+	input.PatchCollector.Delete("v1", "Secret", dvpNamespace, dvpMigrationResourcesName)
+	input.PatchCollector.Delete("v1", "ConfigMap", dvpNamespace, dvpMigrationConfigMapName)
 }
 
 func marshalResourcesManifest(resources []any) ([]byte, error) {

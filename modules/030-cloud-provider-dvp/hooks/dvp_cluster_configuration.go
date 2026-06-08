@@ -26,7 +26,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -158,10 +157,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		// Binding 1: ModuleConfig for the DVP module (does not trigger hook on change — read-only snapshot)
 		{
 			Name:       "module_config",
-			ApiVersion: dvpModuleConfigAPIVersion,
+			ApiVersion: moduleConfigAPIVersion,
 			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpModuleConfigName},
+				MatchNames: []string{dvpModuleName},
 			},
 			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          filterModuleConfig,
@@ -193,7 +192,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		// Binding 4: DVPInstanceClass CRs (does not trigger hook on change — read-only snapshot)
 		{
 			Name:                "dvp_instance_classes",
-			ApiVersion:          dvpModuleConfigAPIVersion,
+			ApiVersion:          moduleConfigAPIVersion,
 			Kind:                dvpInstanceClassKind,
 			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          filterNamedResource,
@@ -404,32 +403,6 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 	}
 
 	return nil
-}
-
-// deleteMigrationArtifacts removes d8-migration-resources Secret and
-// d8-module-is-migrating ConfigMap. Missing objects are ignored by the patch collector.
-func deleteMigrationArtifacts(input *go_hook.HookInput) {
-	input.PatchCollector.Delete("v1", "Secret", dvpNamespace, dvpMigrationResourcesName)
-	input.PatchCollector.Delete("v1", "ConfigMap", dvpNamespace, dvpMigrationConfigMapName)
-}
-
-// createMigrationConfigMap creates (or updates) the d8-module-is-migrating ConfigMap.
-func createMigrationConfigMap(input *go_hook.HookInput) {
-	cm := &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dvpMigrationConfigMapName,
-			Namespace: dvpNamespace,
-			Labels: map[string]string{
-				"heritage": "deckhouse",
-				"module":   dvpModuleLabel,
-			},
-		},
-	}
-	input.PatchCollector.CreateOrUpdate(cm)
 }
 
 // mergeAndSetDiscoveryData merges the provided discovery data with any existing values

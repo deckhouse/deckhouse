@@ -45,19 +45,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-provider-cluster-configuration"},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterPCCSecret,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterPCCSecret,
 		},
 		// Binding 1: ModuleConfig (read-only snapshot)
 		{
 			Name:       "module_config",
-			ApiVersion: dvpModuleConfigAPIVersion,
+			ApiVersion: moduleConfigAPIVersion,
 			Kind:       "ModuleConfig",
 			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpModuleConfigName},
+				MatchNames: []string{dvpModuleName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterModuleConfig,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterModuleConfig,
 		},
 		// Binding 2: d8-credentials Secret (read-only snapshot)
 		{
@@ -72,24 +74,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpCredentialSecretName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterCredentialSecret,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterCredentialSecret,
 		},
 		// Binding 3: NodeGroup CRs (read-only snapshot)
 		{
-			Name:                "node_groups",
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			Name:                         "node_groups",
+			ApiVersion:                   "deckhouse.io/v1",
+			Kind:                         "NodeGroup",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterNamedResource,
 		},
 		// Binding 4: DVPInstanceClass CRs (read-only snapshot)
 		{
-			Name:                "dvp_instance_classes",
-			ApiVersion:          dvpModuleConfigAPIVersion,
-			Kind:                dvpInstanceClassKind,
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			Name:                         "dvp_instance_classes",
+			ApiVersion:                   moduleConfigAPIVersion,
+			Kind:                         dvpInstanceClassKind,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterNamedResource,
 		},
 		// Binding 5: d8-migration-resources Secret (read-only snapshot)
 		{
@@ -104,8 +109,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpMigrationResourcesName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterNamedResource,
 		},
 		// Binding 6: d8-module-is-migrating ConfigMap (read-only snapshot)
 		{
@@ -120,8 +126,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpMigrationConfigMapName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterNamedResource,
 		},
 	},
 }, handleDVPMigrationResources)
