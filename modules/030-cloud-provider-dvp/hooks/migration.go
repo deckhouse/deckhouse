@@ -24,6 +24,7 @@ import (
 	"maps"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -43,6 +44,9 @@ const (
 	dvpAuthSchemeKubeconfig       = "kubeconfig"
 	dvpCredentialSecretType       = "cloud-provider.deckhouse.io/credentials"
 	moduleConfigAPIVersion        = "deckhouse.io/v1alpha1"
+	pccSecretName                 = "d8-provider-cluster-configuration"
+	pccSecretNamespace            = "kube-system"
+	pccClusterConfigKey           = "cloud-provider-cluster-configuration.yaml"
 )
 
 func createProviderClusterConfigurationResources(input *go_hook.HookInput, cfg *v1.DvpProviderClusterConfiguration) error {
@@ -220,6 +224,16 @@ func createMigrationConfigMap(input *go_hook.HookInput) {
 func deleteMigrationArtifacts(input *go_hook.HookInput) {
 	input.PatchCollector.Delete("v1", "Secret", dvpNamespace, dvpMigrationResourcesName)
 	input.PatchCollector.Delete("v1", "ConfigMap", dvpNamespace, dvpMigrationConfigMapName)
+}
+
+func cleanupProviderClusterConfiguration(input *go_hook.HookInput) {
+	patch := map[string]any{
+		"data": map[string]any{
+			pccClusterConfigKey: nil,
+		},
+	}
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", pccSecretNamespace, pccSecretName,
+		object_patch.WithIgnoreMissingObject())
 }
 
 func marshalResourcesManifest(resources []any) ([]byte, error) {

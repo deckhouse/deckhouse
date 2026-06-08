@@ -206,6 +206,7 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		// Values come from ModuleConfig v2 via addon-operator (already in input.Values).
 		// Clean up migration artifacts if they exist.
 		deleteMigrationArtifacts(input)
+		cleanupProviderClusterConfiguration(input)
 		return mergeAndSetDiscoveryData(input, cloudDataV1.DVPCloudProviderDiscoveryData{})
 	}
 
@@ -238,6 +239,7 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 		// Values come from MC v2 (root path) — do NOT override from PCC.
 		// Clean up migration artifacts.
 		deleteMigrationArtifacts(input)
+		cleanupProviderClusterConfiguration(input)
 		return mergeAndSetDiscoveryData(input, discoveryData)
 	}
 
