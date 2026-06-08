@@ -55,6 +55,7 @@ type AvailableResourceStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=available
 // +kubebuilder:printcolumn:name="Kind",type=string,JSONPath=`.status.grantedResourceKind`
+// +kubebuilder:printcolumn:name="Available",type=string,priority=1,JSONPath=`.status.available[*].name`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // AvailableResource is the per-project, controller-owned catalog (discovery only) for one

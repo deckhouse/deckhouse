@@ -23,6 +23,10 @@ spec:
     - jsonPath: .status.grantedResourceKind
       name: Kind
       type: string
+    - jsonPath: .status.available[*].name
+      name: Available
+      priority: 1
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date

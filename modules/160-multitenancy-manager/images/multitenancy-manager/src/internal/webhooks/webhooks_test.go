@@ -254,6 +254,32 @@ func TestDefaults_NoOverrideOnUpdate(t *testing.T) {
 	}
 }
 
+func TestDefaults_CoercesUnavailableValue(t *testing.T) {
+	// Grant allows {external, internal} with default internal; the cluster default behaviour is
+	// simulated by an explicit out-of-list value that must be coerced to the project default.
+	cl := newClient(t, projectNS("proj", map[string]string{"env": "prod"}), lbRegistration(v1alpha1.AvailabilityNone), lbGrant())
+	m := NewDefaultsMutator(logr.Discard(), cl, jsonpath.NewWithCache())
+
+	// Not-available value -> coerced to the project default.
+	bad := raw(t, map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec": map[string]any{"type": "LoadBalancer", "loadBalancerClass": "forbidden"}})
+	resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", bad, nil))
+	var patches []map[string]any
+	if err := json.Unmarshal(resp.Patch, &patches); err != nil {
+		t.Fatal(err)
+	}
+	if len(patches) != 1 || patches[0]["path"] != "/spec/loadBalancerClass" || patches[0]["value"] != "internal" {
+		t.Fatalf("expected coercion to internal, got: %v", patches)
+	}
+
+	// An already-available value is left untouched.
+	good := raw(t, map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec": map[string]any{"type": "LoadBalancer", "loadBalancerClass": "external"}})
+	if resp := serve(t, m, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", good, nil)); len(resp.Patch) != 0 {
+		t.Fatalf("available value must not be coerced, got patch %s", resp.Patch)
+	}
+}
+
 func TestIsGranted_ObjectBackedSelector(t *testing.T) {
 	reg := &v1alpha1.ClusterGrantableResource{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},

@@ -120,7 +120,13 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		}
 		def := resolved.Default()
 		if def == "" {
+			// No project default configured: leave the field as-is. An unavailable value is then
+			// rejected by the /is-granted validating webhook rather than silently rewritten here.
 			continue
+		}
+		available := make(map[string]bool, len(resolved.Available()))
+		for _, a := range resolved.Available() {
+			available[a.Name] = true
 		}
 		for i := range reg.Spec.UsageReferences {
 			ref := &reg.Spec.UsageReferences[i]
@@ -136,10 +142,19 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 			if !ok {
 				continue
 			}
-			if !parentExistsAndFieldEmpty(obj, segs) {
+			parentOK, value := fieldState(obj, segs)
+			if !parentOK {
+				// A parent object is missing, so a JSON Patch "add" would be unsafe.
 				continue
 			}
-			patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: def})
+			// Inject the project default when the field is empty, and coerce it when it carries a
+			// value not available to the project — most importantly the cluster-default StorageClass
+			// that the built-in DefaultStorageClass admission injects before this webhook runs.
+			// Setting a default in the grant is the cluster admin's explicit opt-in to this coercion
+			// (an explicit out-of-list value is rewritten to the default, not rejected).
+			if value == "" || !available[value] {
+				patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: def})
+			}
 		}
 	}
 
@@ -206,28 +221,20 @@ func parsePathSegments(expr string) ([]string, bool) {
 	return segs, true
 }
 
-// parentExistsAndFieldEmpty reports whether all parent objects of the field exist (so a JSON Patch
-// "add" is safe) and the field itself is absent or an empty string.
-func parentExistsAndFieldEmpty(obj map[string]any, segs []string) bool {
+// fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe)
+// and returns the field's current string value (empty string if the field is absent, nil, or not a
+// string).
+func fieldState(obj map[string]any, segs []string) (parentOK bool, value string) {
 	cur := obj
 	for i := 0; i < len(segs)-1; i++ {
-		next, ok := cur[segs[i]]
+		m, ok := cur[segs[i]].(map[string]any)
 		if !ok {
-			return false
-		}
-		m, ok := next.(map[string]any)
-		if !ok {
-			return false
+			return false, ""
 		}
 		cur = m
 	}
-	last := segs[len(segs)-1]
-	v, present := cur[last]
-	if !present || v == nil {
-		return true
-	}
-	s, ok := v.(string)
-	return ok && s == ""
+	v, _ := cur[segs[len(segs)-1]].(string)
+	return true, v
 }
 
 // jsonPointer builds an RFC6901 JSON Pointer from path segments.
