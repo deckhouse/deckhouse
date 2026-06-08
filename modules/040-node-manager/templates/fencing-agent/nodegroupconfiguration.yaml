@@ -48,16 +48,37 @@ spec:
     MODE="{{ $mode }}"
 
     start_wd() {
-      if [ -e "${WD}" ]; then
-        ls -lha /dev/watchdog* 2>/dev/null
-        rm -rf "${WD}"
-      fi
-
       if [ "${MODE}" = "Notify" ]; then
         echo "[NOTIFY] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
-      else
-        modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+        return 0
       fi
+
+      if lsmod | grep -qw softdog; then
+        if [ -e "${WD}" ]; then
+          ls -lha /dev/watchdog* 2>/dev/null
+        fi
+        rmmod softdog || true
+        sleep 1
+      elif [ -e "${WD}" ]; then
+        ls -lha /dev/watchdog* 2>/dev/null
+        rm -f "${WD}"
+      fi
+
+      modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+
+      local retries=0
+      while [ ! -e "${WD}" ] && [ "${retries}" -lt 10 ]; do
+        sleep 0.5
+        retries=$((retries + 1))
+      done
+
+      if [ ! -e "${WD}" ]; then
+        echo "ERROR: ${WD} was not created after modprobe softdog" >&2
+        exit 1
+      fi
+
+      chown 64535:root "${WD}"
+      chmod 0660 "${WD}"
     }
 
     stop_wd() {
