@@ -27,7 +27,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -154,7 +153,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: filterPCCSecret,
 		},
-		// Binding 1: ModuleConfig for the DVP module (does not trigger hook on change — read-only snapshot)
+		// Binding 1: ModuleConfig for the DVP module — triggers hook on change to detect migration completion.
 		{
 			Name:       "module_config",
 			ApiVersion: moduleConfigAPIVersion,
@@ -162,10 +161,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpModuleName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterModuleConfig,
+			FilterFunc: filterModuleConfig,
 		},
-		// Binding 2: d8-credentials Secret (does not trigger hook on change — read-only snapshot)
+		// Binding 2: d8-credentials Secret — triggers hook on change to detect migration completion.
 		{
 			Name:       "credential_secret_d8",
 			ApiVersion: "v1",
@@ -178,24 +176,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{dvpCredentialSecretName},
 			},
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterCredentialSecret,
+			FilterFunc: filterCredentialSecret,
 		},
-		// Binding 3: NodeGroup CRs (does not trigger hook on change — read-only snapshot)
+		// Binding 3: NodeGroup CRs — triggers hook on change to detect migration completion.
 		{
-			Name:                "node_groups",
-			ApiVersion:          "deckhouse.io/v1",
-			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			Name:       "node_groups",
+			ApiVersion: "deckhouse.io/v1",
+			Kind:       "NodeGroup",
+			FilterFunc: filterNamedResource,
 		},
-		// Binding 4: DVPInstanceClass CRs (does not trigger hook on change — read-only snapshot)
+		// Binding 4: DVPInstanceClass CRs — triggers hook on change to detect migration completion.
 		{
-			Name:                "dvp_instance_classes",
-			ApiVersion:          moduleConfigAPIVersion,
-			Kind:                dvpInstanceClassKind,
-			ExecuteHookOnEvents: ptr.To(false),
-			FilterFunc:          filterNamedResource,
+			Name:       "dvp_instance_classes",
+			ApiVersion: moduleConfigAPIVersion,
+			Kind:       dvpInstanceClassKind,
+			FilterFunc: filterNamedResource,
 		},
 	},
 }, handleDVPClusterConfiguration)

@@ -32,7 +32,7 @@ import (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
-		// Binding 0: PCC secret in kube-system
+		// Binding 0: PCC secret — read-only snapshot; no events (deletion is handled by dvp_cluster_configuration.go).
 		{
 			Name:       "provider_cluster_configuration",
 			ApiVersion: "v1",
@@ -49,7 +49,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterPCCSecret,
 		},
-		// Binding 1: ModuleConfig (read-only snapshot)
+		// Binding 1: ModuleConfig — read-only snapshot for State B value override.
+		// ExecuteHookOnSynchronization=false: hook must not fire before the namespace exists (created by Helm).
 		{
 			Name:       "module_config",
 			ApiVersion: moduleConfigAPIVersion,
@@ -61,83 +62,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterModuleConfig,
 		},
-		// Binding 2: d8-credentials Secret (read-only snapshot)
-		{
-			Name:       "credential_secret_d8",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpCredentialSecretName},
-			},
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterCredentialSecret,
-		},
-		// Binding 3: NodeGroup CRs (read-only snapshot)
-		{
-			Name:                         "node_groups",
-			ApiVersion:                   "deckhouse.io/v1",
-			Kind:                         "NodeGroup",
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterNamedResource,
-		},
-		// Binding 4: DVPInstanceClass CRs (read-only snapshot)
-		{
-			Name:                         "dvp_instance_classes",
-			ApiVersion:                   moduleConfigAPIVersion,
-			Kind:                         dvpInstanceClassKind,
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterNamedResource,
-		},
-		// Binding 5: d8-migration-resources Secret (read-only snapshot)
-		{
-			Name:       "migration_resources_secret",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpMigrationResourcesName},
-			},
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterNamedResource,
-		},
-		// Binding 6: d8-module-is-migrating ConfigMap (read-only snapshot)
-		{
-			Name:       "migration_configmap",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{dvpNamespace},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{dvpMigrationConfigMapName},
-			},
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterNamedResource,
-		},
 	},
 }, handleDVPMigrationResources)
 
 func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) error {
 	pccSnaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(pccSnaps) == 0 {
-		// State A: no PCC — clean up migration artifacts.
-		deleteMigrationArtifacts(input)
+		// State A: no PCC — nothing to create; deletion is handled by dvp_cluster_configuration.go.
 		return nil
 	}
 
@@ -153,13 +84,11 @@ func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) er
 		}
 	}
 
-	if isNewResourcesComplete(input, &pcc) {
-		// State C: migration done — clean up artifacts.
-		deleteMigrationArtifacts(input)
-		return nil
-	}
-
 	// State B: PCC present, migration in progress — create artifacts in namespace (which now exists after Helm).
+	// State C (migration complete) is detected and handled by dvp_cluster_configuration.go (OnBeforeHelm),
+	// which fires on NodeGroup/DVPInstanceClass/ModuleConfig/Secret events and calls deleteMigrationArtifacts.
+	// Running createProviderClusterConfigurationResources in State C is safe: CreateOrUpdate is idempotent
+	// and dvp_cluster_configuration.go will delete the secret on the next (or concurrent) cycle.
 	var moduleConfiguration v1.DvpModuleConfiguration
 	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
 		return fmt.Errorf("parse module configuration: %w", err)
