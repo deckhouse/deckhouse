@@ -29,9 +29,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
@@ -408,6 +410,76 @@ func TestReloadRetriedAfterPreviousFailure(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 2, reloadCalls, "reloadFn should be called twice (initial attempt + retry)")
+
+	// Verify finalizer was added on the successful retry.
+	err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)
+	assert.NoError(t, err)
+	assert.True(t, controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer))
+}
+
+func TestValidationFileNotRemovedOnFinalizerUpdateFailure(t *testing.T) {
+	t.Cleanup(func() { os.RemoveAll("hooks") })
+
+	reloadFn := func(_ context.Context) error { return nil }
+
+	sch := runtime.NewScheme()
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
+
+	// Intercept Update calls: the first Update on a ValidationWebhook
+	// (adding finalizer) returns a conflict error; subsequent calls succeed.
+	var updateCalls atomic.Int32
+	k8sClient := fake.NewClientBuilder().
+		WithScheme(sch).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if _, ok := obj.(*deckhouseiov1alpha1.ValidationWebhook); ok {
+					if updateCalls.Add(1) == 1 {
+						return apierrors.NewConflict(
+							schema.GroupResource{Group: "deckhouse.io", Resource: "validationwebhooks"},
+							obj.GetName(),
+							fmt.Errorf("simulated conflict"),
+						)
+					}
+				}
+				return c.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
+	if err != nil {
+		panic(err)
+	}
+
+	r := NewValidationWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		reloadFn,
+	)
+
+	vh, err := getStructFromYamlFile("testdata/validating/validationwebhook-sample.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	// First reconcile: file written, reloadFn succeeds, but Update (add finalizer) conflicts.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.Error(t, err)
+	assert.True(t, apierrors.IsConflict(err), "expected conflict error, got: %v", err)
+
+	// Webhook file must still exist on disk after the failed Update.
+	webhookFile := r.webhookFilePath(vh.Name)
+	_, statErr := os.Stat(webhookFile)
+	assert.NoError(t, statErr, "webhook file must still exist after finalizer update failure")
+
+	// Second reconcile: file unchanged, finalizer missing → retry reload + Update → success.
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}})
+	assert.NoError(t, err)
 
 	// Verify finalizer was added on the successful retry.
 	err = k8sClient.Get(context.TODO(), types.NamespacedName{Namespace: vh.Namespace, Name: vh.Name}, vh)

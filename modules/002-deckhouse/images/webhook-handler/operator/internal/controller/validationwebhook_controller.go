@@ -183,9 +183,6 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		controllerutil.AddFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vwh); err != nil {
-			if removeErr := os.Remove(webhookFile); removeErr != nil {
-				logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
-			}
 			return fmt.Errorf("add finalizer: %w", err)
 		}
 	}
