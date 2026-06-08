@@ -31,7 +31,7 @@ var _ http.Handler = &ProtectValidator{}
 // GrantQuota pool spec itself is governed by RBAC (cluster-admin only), so spec writes pass here.
 type ProtectValidator struct {
 	log          logr.Logger
-	controllerSA string // e.g. system:serviceaccount:d8-multitenancy-manager:cluster-objects-controller
+	controllerSA string // e.g. system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
 }
 
 // NewProtectValidator builds the /protect validating webhook. controllerSA is the username of the

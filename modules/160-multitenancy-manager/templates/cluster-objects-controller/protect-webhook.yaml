@@ -1,4 +1,4 @@
-{{- if .Values.multitenancyManager.internal.clusterObjectsControllerWebhookCert.ca }}
+{{- if .Values.multitenancyManager.internal.admissionWebhookCert.ca }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -26,9 +26,9 @@ webhooks:
     failurePolicy: Ignore
     timeoutSeconds: 5
     clientConfig:
-      caBundle: {{ .Values.multitenancyManager.internal.clusterObjectsControllerWebhookCert.ca | b64enc }}
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
       service:
-        name: cluster-objects-controller
+        name: multitenancy-manager
         namespace: d8-{{ .Chart.Name }}
         port: 9443
         path: /protect

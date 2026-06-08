@@ -35,15 +35,19 @@ import (
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	grantsv1alpha1 "controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
+	grantcontrollers "controller/internal/controllers"
 	"controller/internal/helm"
+	"controller/internal/jsonpath"
 	namespacewebhook "controller/internal/webhook/namespace"
 	projectwebhook "controller/internal/webhook/project"
 	templatewebhook "controller/internal/webhook/template"
+	grantwebhooks "controller/internal/webhooks"
 )
 
 var (
@@ -113,6 +117,19 @@ func main() {
 		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
 	}
 
+	// register cluster object grants: catalog/quota reconciler and the grant webhooks.
+	jsonpathFactory := jsonpath.NewWithCache()
+	if err = (&grantcontrollers.ProjectReconciler{
+		Client:  runtimeManager.GetClient(),
+		Mapper:  runtimeManager.GetRESTMapper(),
+		Factory: jsonpathFactory,
+	}).SetupWithManager(runtimeManager); err != nil {
+		panic(err)
+	}
+	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetClient(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetClient(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
+
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
 		panic(err)
@@ -123,6 +140,7 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		grantsv1alpha1.AddToScheme,
 		corev1.AddToScheme,
 	}
 

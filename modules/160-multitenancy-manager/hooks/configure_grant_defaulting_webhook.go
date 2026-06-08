@@ -33,7 +33,7 @@ import (
 const (
 	mutatingWebhookConfigurationName = "cluster-objects-grants-defaulting"
 
-	certCAValuesPath = "multitenancyManager.internal.clusterObjectsControllerWebhookCert.ca"
+	certCAValuesPath = "multitenancyManager.internal.admissionWebhookCert.ca"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -74,7 +74,7 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", mutatingWebhookConfigurationName),
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "cluster-objects-controller",
+							Name:      "multitenancy-manager",
 							Namespace: "d8-multitenancy-manager",
 							Path:      ptr.To("/defaults"),
 							Port:      ptr.To(int32(9443)),

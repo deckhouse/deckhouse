@@ -264,6 +264,8 @@ read:
     - limitranges
     - metrics.k8s.io/nodes
     - metrics.k8s.io/pods
+    - multitenancy.deckhouse.io/availableresources
+    - multitenancy.deckhouse.io/grantquotas
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata
@@ -562,6 +564,8 @@ read-write:
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - infrastructure.cluster.x-k8s.io/staticmachinetemplates
+    - multitenancy.deckhouse.io/clustergrantableresources
+    - multitenancy.deckhouse.io/clusterobjectgrants
     - nodes/configz
     - nodes/healthz
     - nodes/log
@@ -600,6 +604,7 @@ write:
     - externaldata.gatekeeper.sh/providers
     - install.istio.io/istiooperators
     - limitranges
+    - multitenancy.deckhouse.io/grantquotas
     - mutations.gatekeeper.sh/assign
     - mutations.gatekeeper.sh/assignimage
     - mutations.gatekeeper.sh/assignmetadata

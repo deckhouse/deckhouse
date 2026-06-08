@@ -69,7 +69,7 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
-		caBundle := input.Values.Get("multitenancyManager.internal.clusterObjectsControllerWebhookCert.ca").String()
+		caBundle := input.Values.Get("multitenancyManager.internal.admissionWebhookCert.ca").String()
 		if caBundle == "" {
 			return errors.New("webhook certificate is not issued yet")
 		}
@@ -82,7 +82,7 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "cluster-objects-controller",
+							Name:      "multitenancy-manager",
 							Namespace: "d8-multitenancy-manager",
 							Path:      ptr.To("/is-granted"),
 							Port:      ptr.To(int32(9443)),
